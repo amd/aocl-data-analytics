@@ -1,0 +1,4262 @@
+!  NOTE: This is the slightly modified lbfgsb.f file to be more C friendly from
+!  lbfgsbC, which is under the same BSD license. Mainly replaces the characters
+!  and logical arrays with integers
+!  taken from: https://cran.r-project.org/web/packages/lbfgsb3c/
+!  FIXME check licences and how to credit authors
+!
+!
+!
+!  L-BFGS-B is released under the "New BSD License" (aka "Modified BSD License"
+!  or "3-clause license")
+!  Please read attached file License.txt
+!
+!===========   L-BFGS-B (version 3.0.  April 25, 2011  ===================
+!
+!     This is a modified version of L-BFGS-B. Minor changes in the updated
+!     code appear preceded by a line comment as follows
+!
+!     c-jlm-jn
+!
+!     Major changes are described in the accompanying paper:
+!
+!         Jorge Nocedal and Jose Luis Morales, Remark on "Algorithm 778:
+!         L-BFGS-B: Fortran Subroutines for Large-Scale Bound Constrained
+!         Optimization"  (2011). To appear in  ACM Transactions on
+!         Mathematical Software,
+!
+!     The paper describes an improvement and a correction to Algorithm 778.
+!     It is shown that the performance of the algorithm can be improved
+!     significantly by making a relatively simple modication to the subspace
+!     minimization phase. The correction concerns an error caused by the use
+!     of routine dpmeps to estimate machine precision.
+!
+!     The total work space **wa** required by the new version is
+!
+!                  2*m*n + 11m*m + 5*n + 8*m
+!
+!     the old version required
+!
+!                  2*m*n + 12m*m + 4*n + 12*m
+!
+!
+!            J. Nocedal  Department of Electrical Engineering and
+!                        Computer Science.
+!                        Northwestern University. Evanston, IL. USA
+!
+!
+!           J.L Morales  Departamento de Matematicas,
+!                        Instituto Tecnologico Autonomo de Mexico
+!                        Mexico D.F. Mexico.
+!
+!                        March  2011
+!
+!=============================================================================
+! JN 20150118 change name PREC(setulb) to lbfgsb3
+! MLF 20180818 changed name back lbfgsb3 in c wrapper
+#ifdef SINGLE_PREC
+#define SUFF _s
+#define PREF s
+#else
+#define SUFF _d
+#define PREF d
+#endif
+
+! ## doesn't work for concatenation, redefine it
+#define PASTE(a) a
+#define CONCAT(a,b) PASTE(a)b
+
+! add precision suffix to the function names
+#define PREC(f) CONCAT(f,SUFF)
+#define LPREC(f) CONCAT(PREF,f)
+
+    Subroutine PREC(setulb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, &
+      iprint, icsave, lsavei, isave, dsave)
+      Use working_precision, Only: wp
+!     Berend noted earlier format beyond column 72
+      Integer :: lsavei(4)
+      Integer :: n, m, iprint, itask, icsave, nbd(n), iwa(3*n), isave(44)
+!
+!-jlm-jn
+      Real (Kind=wp) :: f, factr, pgtol, x(n), l(n), u(n), g(n), &
+        wa(2*m*n+5*n+11*m*m+8*m), dsave(29)
+      Logical :: lsave(4)
+!     ************
+!
+!     Subroutine PREC(setulb)
+!
+!     This subroutine partitions the working arrays wa and iwa, and
+!       then uses the limited memory BFGS method to solve the bound
+!       constrained optimization problem by calling PREC(mainlb).
+!       (The direct method will be used in the subspace minimization.)
+!
+!     n is an integer variable.
+!       On entry n is the dimension of the problem.
+!       On exit n is unchanged.
+!
+!     m is an integer variable.
+!       On entry m is the maximum number of variable metric corrections
+!         used to define the limited memory matrix.
+!       On exit m is unchanged.
+!
+!     x is a double precision array of dimension n.
+!       On entry x is an approximation to the solution.
+!       On exit x is the current approximation.
+!
+!     l is a double precision array of dimension n.
+!       On entry l is the lower bound on x.
+!       On exit l is unchanged.
+!
+!     u is a double precision array of dimension n.
+!       On entry u is the upper bound on x.
+!       On exit u is unchanged.
+!
+!     nbd is an integer array of dimension n.
+!       On entry nbd represents the type of bounds imposed on the
+!         variables, and must be specified as follows:
+!         nbd(i)=0 if x(i) is unbounded,
+!                1 if x(i) has only a lower bound,
+!                2 if x(i) has both lower and upper bounds, and
+!                3 if x(i) has only an upper bound.
+!       On exit nbd is unchanged.
+!
+!     f is a double precision variable.
+!       On first entry f is unspecified.
+!       On final exit f is the value of the function at x.
+!
+!     g is a double precision array of dimension n.
+!       On first entry g is unspecified.
+!       On final exit g is the value of the gradient at x.
+!
+!     factr is a double precision variable.
+!       On entry factr >= 0 is specified by the user.  The iteration
+!         will stop when
+!
+!         (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= factr*epsmch
+!
+!         where epsmch is the machine precision, which is automatically
+!         generated by the code. Typical values for factr: 1.d+12 for
+!         low accuracy; 1.d+7 for moderate accuracy; 1.d+1 for extremely
+!         high accuracy.
+!       On exit factr is unchanged.
+!
+!     pgtol is a double precision variable.
+!       On entry pgtol >= 0 is specified by the user.  The iteration
+!         will stop when
+!
+!                 max{|proj g_i | i = 1, ..., n} <= pgtol
+!
+!         where pg_i is the ith component of the projected gradient.
+!       On exit pgtol is unchanged.
+!
+!     wa is a double precision working array of length
+!       (2mmax + 5)nmax + 12mmax^2 + 12mmax.
+!
+!     iwa is an integer working array of length 3nmax.
+!
+!     itask is an integer indicating
+!       the current job when entering and quitting this subroutine.
+!
+!     iprint is an integer variable that must be set by the user.
+!       It controls the frequency and type of output generated:
+!        iprint<0    no output is generated;
+!        iprint=0    print only one line at the last iteration;
+!        0<iprint<99 print also f and |proj g| every iprint iterations;
+!        iprint=99   print details of every iteration except n-vectors;
+!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint>100  print details of every iteration including x and g;
+!       When iprint > 0, the file iterate.dat will be created to
+!                        summarize the iteration.
+!
+!     icsave is a working integer
+!
+!     lsave is a logical working array of dimension 4.
+!       On exit with 'task' = NEW_X, the following information is
+!                                                             available:
+!         If lsave(1) = .true.  then  the initial X has been replaced by
+!                                     its projection in the feasible set;
+!         If lsave(2) = .true.  then  the problem is constrained;
+!         If lsave(3) = .true.  then  each variable has upper and lower
+!                                     bounds;
+!
+!     isave is an integer working array of dimension 44.
+!       On exit with 'task' = NEW_X, the following information is
+!                                                             available:
+!         isave(22) = the total number of intervals explored in the
+!                         search of Cauchy points;
+!         isave(26) = the total number of skipped BFGS updates before
+!                         the current iteration;
+!         isave(30) = the number of current iteration;
+!         isave(31) = the total number of BFGS updates prior the current
+!                         iteration;
+!         isave(33) = the number of intervals explored in the search of
+!                         Cauchy point in the current iteration;
+!         isave(34) = the total number of function and gradient
+!                         evaluations;
+!         isave(36) = the number of function value or gradient
+!                                  evaluations in the current iteration;
+!         if isave(37) = 0  then the subspace argmin is within the box;
+!         if isave(37) = 1  then the subspace argmin is beyond the box;
+!         isave(38) = the number of free variables in the current
+!                         iteration;
+!         isave(39) = the number of PREC(active) constraints in the current
+!                         iteration;
+!         n + 1 - isave(40) = the number of variables leaving the set of
+!                           PREC(active) constraints in the current iteration;
+!         isave(41) = the number of variables entering the set of PREC(active)
+!                         constraints in the current iteration.
+!
+!     dsave is a double precision working array of dimension 29.
+!       On exit with 'task' = NEW_X, the following information is
+!                                                             available:
+!         dsave(1) = current 'theta' in the BFGS matrix;
+!         dsave(2) = f(x) in the previous iteration;
+!         dsave(3) = factr*epsmch;
+!         dsave(4) = 2-norm of the line search direction vector;
+!         dsave(5) = the machine precision epsmch generated by the code;
+!         dsave(7) = the accumulated time spent on searching for
+!                                                         Cauchy points;
+!         dsave(8) = the accumulated time spent on
+!                                                 subspace minimization;
+!         dsave(9) = the accumulated time spent on line search;
+!         dsave(11) = the slope of the line search function at
+!                                  the current point of line search;
+!         dsave(12) = the maximum relative step length imposed in
+!                                                           line search;
+!         dsave(13) = the infinity norm of the projected gradient;
+!         dsave(14) = the relative step length in the line search;
+!         dsave(15) = the slope of the line search function at
+!                                 the starting point of the line search;
+!         dsave(16) = the square of the 2-norm of the line search
+!                                                      direction vector.
+!
+!     Subprograms called:
+!
+!       L-BFGS-B Library ... PREC(mainlb).
+!
+!
+!     References:
+!
+!       [1] R. H. Byrd, P. Lu, J. Nocedal and C. Zhu, ``A limited
+!       memory algorithm for bound constrained optimization'',
+!       SIAM J. Scientific Computing 16 (1995), no. 5, pp. 1190--1208.
+!
+!       [2] C. Zhu, R.H. Byrd, P. Lu, J. Nocedal, ``L-BFGS-B: a
+!       limited memory FORTRAN code for solving bound constrained
+!       optimization problems'', Tech. Report, NAM-11, EECS Department,
+!       Northwestern University, 1994.
+!
+!       (Postscript files of these papers are available via anonymous
+!        ftp to eecs.nwu.edu in the directory pub/lbfgs/lbfgs_bcm.)
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+!-jlm-jn
+      Integer :: lws, lr, lz, lt, ld, lxp, lwa, lwy, lsy, lss, lwt, lwn, lsnd
+      Integer :: a_d = 9
+      If (lsavei(1)==1) Then
+        lsave(1) = .True.
+      Else
+        lsave(1) = .False.
+      End If
+      If (lsavei(2)==1) Then
+        lsave(2) = .True.
+      Else
+        lsave(2) = .False.
+      End If
+
+      If (lsavei(3)==1) Then
+        lsave(3) = .True.
+      Else
+        lsave(3) = .False.
+      End If
+
+      If (lsavei(4)==1) Then
+        lsave(4) = .True.
+      Else
+        lsave(4) = .False.
+      End If
+
+!j      integer ia(10)
+
+!j       ia(1) = itask
+!j      call intpr('  The incoming task no. is ', -1, itask, 1)
+!w      write(6,*) '  The incoming task no. is ', itask
+      If ((itask<1) .Or. (itask>26)) Then
+!x        call intpr("TASK NOT IN VALID RANGE", -1, 0,0)
+        itask = -999
+        Return
+      End If
+!      if (task .eq. 'START') then
+      If (itask==2) Then
+        isave(1) = m*n
+        isave(2) = m**2
+        isave(3) = 4*m**2
+        isave(4) = 1 ! ws      m*n
+        isave(5) = isave(4) + isave(1) ! wy      m*n
+        isave(6) = isave(5) + isave(1) ! wsy     m**2
+        isave(7) = isave(6) + isave(2) ! wss     m**2
+        isave(8) = isave(7) + isave(2) ! wt      m**2
+        isave(9) = isave(8) + isave(2) ! wn      4*m**2
+        isave(10) = isave(9) + isave(3) ! wsnd    4*m**2
+        isave(11) = isave(10) + isave(3) ! wz      n
+        isave(12) = isave(11) + n ! wr      n
+        isave(13) = isave(12) + n ! wd      n
+        isave(14) = isave(13) + n ! wt      n
+        isave(15) = isave(14) + n ! wxp     n
+        isave(16) = isave(15) + n ! wa      8*m
+      End If
+      lws = isave(4)
+      lwy = isave(5)
+      lsy = isave(6)
+      lss = isave(7)
+      lwt = isave(8)
+      lwn = isave(9)
+      lsnd = isave(10)
+      lz = isave(11)
+      lr = isave(12)
+      ld = isave(13)
+      lt = isave(14)
+      lxp = isave(15)
+      lwa = isave(16)
+
+      Call PREC(mainlb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa(lws), wa(lwy), &
+        wa(lsy), wa(lss), wa(lwt), wa(lwn), wa(lsnd), wa(lz), wa(lr), wa(ld), &
+        wa(lt), wa(lxp), wa(lwa), iwa(1), iwa(n+1), iwa(2*n+1), itask, iprint, &
+        icsave, lsave, isave(22), dsave)
+
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(setulb) =============================
+! PREC(mainlb) here
+
+    Subroutine PREC(mainlb)(n, m, x, l, u, nbd, f, g, factr, pgtol, ws, wy, sy, ss, &
+      wt, wn, snd, z, r, d, t, xp, wa, index, iwhere, indx2, itask, iprint, &
+      icsave, lsave, isave, dsave)
+      Use working_precision, Only: wp
+      Implicit None
+      Logical :: lsave(4)
+      Integer :: n, m, iprint, itask, icsave, nbd(n), index(n), iwhere(n), &
+        indx2(n), isave(23)
+!-jlm-jn
+      Real (Kind=wp) :: f, factr, pgtol, x(n), l(n), u(n), g(n), z(n), r(n), &
+        d(n), t(n), xp(n), wa(8*m), ws(n, m), wy(n, m), sy(m, m), ss(m, m), &
+        wt(m, m), wn(2*m, 2*m), snd(2*m, 2*m), dsave(29)
+
+!     ************
+!
+!     Subroutine PREC(mainlb)
+!
+!     This subroutine solves bound constrained optimization problems by
+!       using the compact formula of the limited memory BFGS updates.
+!
+!     n is an integer variable.
+!       On entry n is the number of variables.
+!       On exit n is unchanged.
+!
+!     m is an integer variable.
+!       On entry m is the maximum number of variable metric
+!          corrections allowed in the limited memory matrix.
+!       On exit m is unchanged.
+!
+!     x is a double precision array of dimension n.
+!       On entry x is an approximation to the solution.
+!       On exit x is the current approximation.
+!
+!     l is a double precision array of dimension n.
+!       On entry l is the lower bound of x.
+!       On exit l is unchanged.
+!
+!     u is a double precision array of dimension n.
+!       On entry u is the upper bound of x.
+!       On exit u is unchanged.
+!
+!     nbd is an integer array of dimension n.
+!       On entry nbd represents the type of bounds imposed on the
+!         variables, and must be specified as follows:
+!         nbd(i)=0 if x(i) is unbounded,
+!                1 if x(i) has only a lower bound,
+!                2 if x(i) has both lower and upper bounds,
+!                3 if x(i) has only an upper bound.
+!       On exit nbd is unchanged.
+!
+!     f is a double precision variable.
+!       On first entry f is unspecified.
+!       On final exit f is the value of the function at x.
+!
+!     g is a double precision array of dimension n.
+!       On first entry g is unspecified.
+!       On final exit g is the value of the gradient at x.
+!
+!     factr is a double precision variable.
+!       On entry factr >= 0 is specified by the user.  The iteration
+!         will stop when
+!
+!         (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= factr*epsmch
+!
+!         where epsmch is the machine precision, which is automatically
+!         generated by the code.
+!       On exit factr is unchanged.
+!
+!     pgtol is a double precision variable.
+!       On entry pgtol >= 0 is specified by the user.  The iteration
+!         will stop when
+!
+!                 max{|proj g_i | i = 1, ..., n} <= pgtol
+!
+!         where pg_i is the ith component of the projected gradient.
+!       On exit pgtol is unchanged.
+!
+!     ws, wy, sy, and wt are double precision working arrays used to
+!       store the following information defining the limited memory
+!          BFGS matrix:
+!          ws, of dimension n x m, stores S, the matrix of s-vectors;
+!          wy, of dimension n x m, stores Y, the matrix of y-vectors;
+!          sy, of dimension m x m, stores S'Y;
+!          ss, of dimension m x m, stores S'S;
+!          yy, of dimension m x m, stores Y'Y;
+!          wt, of dimension m x m, stores the Cholesky factorization
+!                                  of (theta*S'S+LD^(-1)L'); see eq.
+!                                  (2.26) in [3].
+!
+!     wn is a double precision working array of dimension 2m x 2m
+!       used to store the LEL^T factorization of the indefinite matrix
+!                 K = [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
+!                     [L_a -R_z           theta*S'AA'S ]
+!
+!       where     E = [-I  0]
+!                     [ 0  I]
+!
+!     snd is a double precision working array of dimension 2m x 2m
+!       used to store the lower triangular part of
+!                 N = [Y' ZZ'Y   L_a'+R_z']
+!                     [L_a +R_z  S'AA'S   ]
+!
+!     z(n),r(n),d(n),t(n), xp(n),wa(8*m) are double precision working arrays.
+!       z  is used at different times to store the Cauchy point and
+!          the Newton point.
+!       xp is used to safeguard the projected Newton direction
+!
+!     sg(m),sgo(m),yg(m),ygo(m) are double precision working arrays.
+!
+!     index is an integer working array of dimension n.
+!       In subroutine PREC(freev), index is used to store the free and fixed
+!          variables at the Generalized Cauchy Point (GCP).
+!
+!     iwhere is an integer working array of dimension n used to record
+!       the status of the vector x for GCP computation.
+!       iwhere(i)=0 or -3 if x(i) is free and has bounds,
+!                 1       if x(i) is fixed at l(i), and l(i) .ne. u(i)
+!                 2       if x(i) is fixed at u(i), and u(i) .ne. l(i)
+!                 3       if x(i) is always fixed, i.e.,  u(i)=x(i)=l(i)
+!                -1       if x(i) is always free, i.e., no bounds on it.
+!
+!     indx2 is an integer working array of dimension n.
+!       Within subroutine PREC(cauchy), indx2 corresponds to the array iorder.
+!       In subroutine PREC(freev), a list of variables entering and leaving
+!       the free set is stored in indx2, and it is passed on to
+!       subroutine PREC(formk) with this information.
+!
+!     task is a working string of characters of length 60 indicating
+!       the current job when entering and leaving this subroutine.
+!
+!     iprint is an INTEGER variable that must be set by the user.
+!       It controls the frequency and type of output generated:
+!        iprint<0    no output is generated;
+!        iprint=0    print only one line at the last iteration;
+!        0<iprint<99 print also f and |proj g| every iprint iterations;
+!        iprint=99   print details of every iteration except n-vectors;
+!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint>100  print details of every iteration including x and g;
+!       When iprint > 0, the file iterate.dat will be created to
+!                        summarize the iteration.
+!
+!     icsave is a working integer
+!
+!     lsave is a logical working array of dimension 4.
+!
+!     isave is an integer working array of dimension 23.
+!
+!     dsave is a double precision working array of dimension 29.
+!
+!
+!     Subprograms called
+!
+!       L-BFGS-B Library ... PREC(cauchy), PREC(subsm), PREC(lnsrlb), PREC(formk),
+!
+!        PREC(errclb), PREC(prn1lb), PREC(prn2lb), PREC(prn3lb), PREC(active), PREC(projgr),
+!
+!        PREC(freev), PREC(cmprlb), PREC(matupd), PREC(formt).
+!
+!       Minpack2 Library PREC(... timer)
+!
+!       Linpack Library ... LPREC(copy), LPREC(dot).
+!
+!
+!     References:
+!
+!       [1] R. H. Byrd, P. Lu, J. Nocedal and C. Zhu, ``A limited
+!       memory algorithm for bound constrained optimization'',
+!       SIAM J. Scientific Computing 16 (1995), no. 5, pp. 1190--1208.
+!
+!       [2] C. Zhu, R.H. Byrd, P. Lu, J. Nocedal, ``L-BFGS-B: FORTRAN
+!       Subroutines for Large Scale Bound Constrained Optimization''
+!       Tech. Report, NAM-11, EECS Department, Northwestern University,
+!       1994.
+!
+!       [3] R. Byrd, J. Nocedal and R. Schnabel "Representations of
+!       Quasi-Newton Matrices and their use in Limited Memory Methods'',
+!       Mathematical Programming 63 (1994), no. 4, pp. 129-156.
+!
+!       (Postscript files of these papers are available via anonymous
+!        ftp to eecs.nwu.edu in the directory pub/lbfgs/lbfgs_bcm.)
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Logical :: prjctd, cnstnd, boxed, updatd, wrk
+      Integer :: i, k, nintol, iback, nskip, head, col, iter, itail, iupdat, &
+        nseg, nfgv, info, ifun, iword, nfree, nact, ileave, nenter
+!j itmp for use in R output
+      Integer :: itmp
+      Real (Kind=wp) :: theta, fold, LPREC(dot), dr, rr, tol, xstep, sbgnrm, ddum, &
+        dnorm, dtd, epsmch, cpu1, cpu2, sbtime, lnscht, time1, time2, gd, &
+        gdold, stp, stpmx, time
+      Real (Kind=wp) :: one, zero
+      Parameter (one=1.0E0_wp, zero=0.0E0_wp)
+
+      If (itask==2) Then
+
+        epsmch = epsilon(one)
+
+!j Arbitrarily zero these.
+        time1 = 0.0_wp
+
+!        Initialize counters and scalars when task='START'.
+
+!           for the limited memory BFGS matrices:
+        col = 0
+        head = 1
+        theta = one
+        iupdat = 0
+        updatd = .False.
+        iback = 0
+        itail = 0
+        iword = 0
+        nact = 0
+        ileave = 0
+        nenter = 0
+        fold = zero
+        dnorm = zero
+        cpu1 = zero
+        gd = zero
+        stpmx = zero
+        sbgnrm = zero
+        stp = zero
+        gdold = zero
+        dtd = zero
+
+!           for operation counts:
+        iter = 0
+        nfgv = 0
+        nseg = 0
+        nintol = 0
+        nskip = 0
+        nfree = n
+        ifun = 0
+!           for stopping tolerance:
+        tol = factr*epsmch
+
+!           for measuring running time:
+!y         cachyt = 0
+        sbtime = 0
+        lnscht = 0
+
+!           'word' records the status of subspace solutions.
+!$$$         word = '---'
+
+!           'info' records the termination information.
+        info = 0
+
+!w         itfile = 8
+!w  leave itfile to avoid messing up subroutines
+!w         if (iprint .ge. 1) then
+!                                open a summary file 'iterate.dat'
+!w            open (8, file = 'iterate.dat', status = 'unknown')
+!w         endif
+
+!        Check the input arguments for errors.
+
+        Call PREC(errclb)(n, m, factr, l, u, nbd, itask, info, k)
+!  ERROR return
+        If ((itask>=9) .And. (itask<=19)) Then
+          Call PREC(prn3lb)(n, x, f, itask, iprint, info, k)
+          Return
+        End If
+
+        Call PREC(prn1lb)(n, m, l, u, x, iprint, epsmch)
+
+!        Initialize iwhere & project x onto the feasible set.
+
+        Call PREC(active)(n, l, u, nbd, x, iwhere, iprint, prjctd, cnstnd, boxed)
+
+!        The end of the initialization.
+
+      Else
+!          restore local variables.
+
+        prjctd = lsave(1)
+        cnstnd = lsave(2)
+        boxed = lsave(3)
+        updatd = lsave(4)
+
+        nintol = isave(1)
+!y         itfile = isave(3)
+        iback = isave(4)
+        nskip = isave(5)
+        head = isave(6)
+        col = isave(7)
+        itail = isave(8)
+        iter = isave(9)
+        iupdat = isave(10)
+        nseg = isave(12)
+        nfgv = isave(13)
+        info = isave(14)
+        ifun = isave(15)
+        iword = isave(16)
+        nfree = isave(17)
+        nact = isave(18)
+        ileave = isave(19)
+        nenter = isave(20)
+
+        theta = dsave(1)
+        fold = dsave(2)
+        tol = dsave(3)
+        dnorm = dsave(4)
+        epsmch = dsave(5)
+        cpu1 = dsave(6)
+!y         cachyt = dsave(7)
+        sbtime = dsave(8)
+        lnscht = dsave(9)
+        time1 = dsave(10)
+        gd = dsave(11)
+        stpmx = dsave(12)
+        sbgnrm = dsave(13)
+        stp = dsave(14)
+        gdold = dsave(15)
+        dtd = dsave(16)
+
+!        After returning from the driver go to the point where execution
+!        is to resume.
+
+!         if (task(1:5) .eq. 'FG_LN') goto 666
+        If (itask==20) Go To 150
+!         if (task(1:5) .eq. 'NEW_X') goto 777
+        If (itask==1) Go To 160
+!         if (task(1:5) .eq. 'FG_ST') goto 111
+        If (itask==21) Go To 100
+!         if (task(1:4) .eq. 'STOP') then
+!         if (itask .eq. 3) then
+!            if (task(7:9) .eq. 'CPU') then
+!   NOTE: Cannot happen in R driver.
+!                                          restore the previous iterate.
+!               call LPREC(copy)(n,t,1,x,1)
+!               call LPREC(copy)(n,r,1,g,1)
+!               f = fold
+!            endif
+!            goto 999
+!         endif
+      End If
+
+!     Compute f0 and g0.
+
+!      task = 'FG_START'
+      itask = 21
+!          return to the driver to calculate f and g; reenter at 111.
+      Go To 190
+100   Continue
+      nfgv = 1
+
+!     Compute the infinity norm of the (-) projected gradient.
+
+      Call PREC(projgr)(n, l, u, nbd, x, g, sbgnrm)
+
+!x      if (iprint .ge. 1) then
+!x         call intpr("At iterate", -1, iter, 1)
+!x         call dblepr(" f=",-1, f, 1)
+!x         call dblepr(" |proj g|= ",-1, sbgnrm, 1)
+!x      endif
+      If (sbgnrm<=pgtol) Then
+!                                terminate the algorithm.
+!         task = 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
+        itask = 7
+        Go To 180
+      End If
+
+! ----------------- the beginning of the loop --------------------------
+
+110   Continue
+      If (iprint>=99) Then
+        itmp = iter + 1
+!x         call intpr('ITERATION ', -1, itmp, 1)
+      End If
+      iword = -1
+!
+      If (.Not. cnstnd .And. col>0) Then
+!                                            skip the search for GCP.
+        Call LPREC(copy)(n, x, 1, z, 1)
+        wrk = updatd
+        nseg = 0
+        Go To 120
+      End If
+
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!
+!     Compute the Generalized Cauchy Point (GCP).
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+!j      call PREC(timer)(cpu1)
+      cpu1 = 0.0E0_wp
+      Call PREC(cauchy)(n, x, l, u, nbd, g, indx2, iwhere, t, d, z, m, wy, ws, sy, &
+        wt, theta, col, head, wa(1), wa(2*m+1), wa(4*m+1), wa(6*m+1), nseg, &
+        iprint, sbgnrm, info, epsmch)
+      If (info/=0) Then
+!         singular triangular system detected; refresh the lbfgs memory.
+!x         call intpr(' Singular triangular system detected;', -1,0,0)
+!x         call intpr(
+!x     +  '   refresh the lbfgs memory and restart the iteration.',
+!x     +    -1,0,0)
+
+        info = 0
+        col = 0
+        head = 1
+        theta = one
+        iupdat = 0
+        updatd = .False.
+        cpu2 = 0.0E0_wp
+!y         cachyt = cachyt + cpu2 - cpu1
+        Go To 110
+      End If
+      cpu2 = 0.0E0_wp
+!y      cachyt = cachyt + cpu2 - cpu1
+      nintol = nintol + nseg
+
+!     Count the entering and leaving variables for iter > 0;
+!     find the index set of free and PREC(active) variables at the GCP.
+
+      Call PREC(freev)(n, nfree, index, nenter, ileave, indx2, iwhere, wrk, updatd, &
+        cnstnd, iprint, iter)
+      nact = n - nfree
+
+120   Continue
+
+!     If there are no free variables or B=theta*I, then
+!                                        skip the subspace minimization.
+
+      If (nfree==0 .Or. col==0) Go To 140
+
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!
+!     Subspace minimization.
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+      cpu1 = 0.0E0_wp
+
+!     Form  the LEL^T factorization of the indefinite
+!       matrix    K = [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
+!                     [L_a -R_z           theta*S'AA'S ]
+!       where     E = [-I  0]
+!                     [ 0  I]
+
+      If (wrk) Call PREC(formk)(n, nfree, index, nenter, ileave, indx2, iupdat, &
+        updatd, wn, snd, m, ws, wy, sy, theta, col, head, info)
+      If (info/=0) Then
+!          nonpositive definiteness in Cholesky factorization;
+!          refresh the lbfgs memory and restart the iteration.
+!w         if(iprint .ge. 1) write (6, 1006)
+        If (iprint>=1) Then
+!x           call intpr(
+!x     + ' Nonpositive definiteness in Cholesky factorization in PREC(formk);',
+!x     + -1, 0, 0)
+!x           call intpr(
+!x     + '   refresh the lbfgs memory and restart the iteration.',
+!x     + -1, 0, 0)
+
+        End If
+
+        info = 0
+        col = 0
+        head = 1
+        theta = one
+        iupdat = 0
+        updatd = .False.
+!j       call PREC(timer)(cpu2)
+        cpu2 = 0.0E0_wp
+        sbtime = sbtime + cpu2 - cpu1
+        Go To 110
+      End If
+
+!        compute r=-Z'B(xcp-xk)-Z'g (using wa(2m+1)=W'(xcp-x)
+!                                                   from 'PREC(cauchy)').
+      Call PREC(cmprlb)(n, m, x, g, ws, wy, sy, wt, z, r, wa, index, theta, col, &
+        head, nfree, cnstnd, info)
+      If (info/=0) Go To 130
+
+!-jlm-jn   call the direct method.
+
+      Call PREC(subsm)(n, m, nfree, index, l, u, nbd, z, r, xp, ws, wy, theta, x, g, &
+        col, head, iword, wa, wn, iprint, info)
+130   Continue
+      If (info/=0) Then
+!          singular triangular system detected;
+!          refresh the lbfgs memory and restart the iteration.
+!w         if(iprint .ge. 1) write (6, 1005)
+!x         call intpr(' Singular triangular system detected;', -1,0,0)
+!x         call intpr(
+!x     +  '   refresh the lbfgs memory and restart the iteration.',
+!x     +    -1,0,0)
+        info = 0
+        col = 0
+        head = 1
+        theta = one
+        iupdat = 0
+        updatd = .False.
+!j       call PREC(timer)(cpu2)
+        cpu2 = 0.0E0_wp
+        sbtime = sbtime + cpu2 - cpu1
+        Go To 110
+      End If
+
+!j       call PREC(timer)(cpu2)
+      cpu2 = 0.0E0_wp
+      sbtime = sbtime + cpu2 - cpu1
+140   Continue
+
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!
+!     Line search and optimality tests.
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+!     Generate the search direction d:=z-x.
+
+      Do i = 1, n
+        d(i) = z(i) - x(i)
+      End Do
+!j    call PREC(timer)(cpu1)
+      cpu1 = 0.0E0_wp
+150   Continue
+      Call PREC(lnsrlb)(n, l, u, nbd, x, f, fold, gd, gdold, g, d, r, t, z, stp, &
+        dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, itask, boxed, &
+        cnstnd, icsave, isave(22), dsave(17))
+      If (info/=0 .Or. iback>=20) Then
+!          restore the previous iterate.
+        Call LPREC(copy)(n, t, 1, x, 1)
+        Call LPREC(copy)(n, r, 1, g, 1)
+        f = fold
+        If (col==0) Then
+!             abnormal termination.
+          If (info==0) Then
+            info = -9
+!                restore the actual number of f and g evaluations etc.
+            nfgv = nfgv - 1
+            ifun = ifun - 1
+            iback = iback - 1
+          End If
+!            task = 'ABNORMAL_TERMINATION_IN_LNSRCH'
+          itask = 5
+          iter = iter + 1
+          Go To 180
+        Else
+!             refresh the lbfgs memory and restart the iteration.
+!w            if(iprint .ge. 1) write (6, 1008)
+          If (iprint>=1) Then
+!x              call intpr(
+!x     + ' Bad direction in the line search;',
+!x     + -1, 0, 0)
+!x              call intpr(
+!x     + '   refresh the lbfgs memory and restart the iteration.',
+!x     + -1, 0, 0)
+          End If
+
+          If (info==0) nfgv = nfgv - 1
+          info = 0
+          col = 0
+          head = 1
+          theta = one
+          iupdat = 0
+          updatd = .False.
+!            task   = 'RESTART_FROM_LNSRCH'
+          itask = 22
+!j       call PREC(timer)(cpu2)
+          cpu2 = 0.0E0_wp
+          lnscht = lnscht + cpu2 - cpu1
+          Go To 110
+        End If
+!      else if (task(1:5) .eq. 'FG_LN') then
+      Else If (itask==20) Then
+!          return to the driver for calculating f and g; reenter at 666.
+        Go To 190
+      Else
+!          calculate and print out the quantities related to the new X.
+!j       call PREC(timer)(cpu2)
+        cpu2 = 0.0E0_wp
+        lnscht = lnscht + cpu2 - cpu1
+        iter = iter + 1
+
+!        Compute the infinity norm of the projected (-)gradient.
+
+        Call PREC(projgr)(n, l, u, nbd, x, g, sbgnrm)
+
+!        Print iteration information.
+
+        Call PREC(prn2lb)(f, iprint, iter, sbgnrm, iback, xstep)
+
+        Go To 190
+      End If
+160   Continue
+
+!     Test for termination.
+
+      If (sbgnrm<=pgtol) Then
+!                                terminate the algorithm.
+!         task = 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
+        itask = 7
+        Go To 180
+      End If
+
+      ddum = max(abs(fold), abs(f), one)
+      If ((fold-f)<=tol*ddum) Then
+!                                        terminate the algorithm.
+!         task = 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH'
+        itask = 8
+        If (iback>=10) info = -5
+!           i.e., to issue a warning if iback>10 in the line search.
+        Go To 180
+      End If
+
+!     Compute d=newx-oldx, r=newg-oldg, rr=y'y and dr=y's.
+
+      Do i = 1, n
+        r(i) = g(i) - r(i)
+      End Do
+      rr = LPREC(dot)(n, r, 1, r, 1)
+      If (stp==one) Then
+        dr = gd - gdold
+        ddum = -gdold
+      Else
+        dr = (gd-gdold)*stp
+        Call dscal(n, stp, d, 1)
+        ddum = -gdold*stp
+      End If
+
+      If (dr<=epsmch*ddum) Then
+!                            skip the L-BFGS update.
+        nskip = nskip + 1
+        updatd = .False.
+!w         if (iprint .ge. 1) write (6,1004) dr, ddum
+!x         if (iprint .ge. 1) then
+!x           call dblepr(' ys =',-1, dr, 1)
+!x           call dblepr(' BFGS update skipped for +gs=',-1, ddum, 1)
+!x         endif
+!w 1004 format ('  ys=',1p,e10.3,'  -gs=',1p,e10.3,' BFGS update SKIPPED')
+        Go To 170
+      End If
+
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+!
+!     Update the L-BFGS matrix.
+!
+!ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+      updatd = .True.
+      iupdat = iupdat + 1
+
+!     Update matrices WS and WY and form the middle matrix in B.
+
+      Call PREC(matupd)(n, m, ws, wy, sy, ss, d, r, itail, iupdat, col, head, theta, &
+        rr, dr, stp, dtd)
+
+!     Form the upper half of the pds T = theta*SS + L*D^(-1)*L';
+!        Store T in the upper triangular of the array wt;
+!        Cholesky factorize T to J*J' with
+!           J' stored in the upper triangular of wt.
+
+      Call PREC(formt)(m, wt, sy, ss, col, theta, info)
+
+      If (info/=0) Then
+!          nonpositive definiteness in Cholesky factorization;
+!          refresh the lbfgs memory and restart the iteration.
+!w         if(iprint .ge. 1) write (6, 1007)
+        If (iprint>=1) Then
+!x            call intpr(
+!x     +  ' Nonpositive definiteness in Cholesky factorization in PREC(formt);',
+!x     + -1, 0, 0)
+!x            call intpr(
+!x     +  '   refresh the lbfgs memory and restart the iteration.',
+!x     + -1, 0, 0)
+
+        End If
+
+        info = 0
+        col = 0
+        head = 1
+        theta = one
+        iupdat = 0
+        updatd = .False.
+        Go To 110
+      End If
+
+!     Now the inverse of the middle matrix in B is
+
+!       [  D^(1/2)      O ] [ -D^(1/2)  D^(-1/2)*L' ]
+!       [ -L*D^(-1/2)   J ] [  0        J'          ]
+
+170   Continue
+
+! -------------------- the end of the loop -----------------------------
+
+      Go To 110
+180   Continue
+!j    call PREC(timer)(time2)
+      time2 = 0.0E0_wp
+      time = time2 - time1
+      Call PREC(prn3lb)(n, x, f, itask, iprint, info, k)
+190   Continue
+
+!     Save local variables.
+
+      lsave(1) = prjctd
+      lsave(2) = cnstnd
+      lsave(3) = boxed
+      lsave(4) = updatd
+
+      isave(1) = nintol
+!y      isave(3)  = itfile
+      isave(4) = iback
+      isave(5) = nskip
+      isave(6) = head
+      isave(7) = col
+      isave(8) = itail
+      isave(9) = iter
+      isave(10) = iupdat
+      isave(12) = nseg
+      isave(13) = nfgv
+      isave(14) = info
+      isave(15) = ifun
+      isave(16) = iword
+      isave(17) = nfree
+      isave(18) = nact
+      isave(19) = ileave
+      isave(20) = nenter
+
+      dsave(1) = theta
+      dsave(2) = fold
+      dsave(3) = tol
+      dsave(4) = dnorm
+      dsave(5) = epsmch
+      dsave(6) = cpu1
+!y      dsave(7)  = cachyt
+      dsave(8) = sbtime
+      dsave(9) = lnscht
+      dsave(10) = time1
+      dsave(11) = gd
+      dsave(12) = stpmx
+      dsave(13) = sbgnrm
+      dsave(14) = stp
+      dsave(15) = gdold
+      dsave(16) = dtd
+
+!w 1001 format (//,'ITERATION ',i5)
+!w 1002 format
+!w     +  (/,'At iterate',i5,4x,'f= ',1p,d12.5,4x,'|proj g|= ',1p,d12.5)
+!w 1003 format (2(1x,i4),5x,'-',5x,'-',3x,'-',5x,'-',5x,'-',8x,'-',3x,
+!w     +        1p,2(1x,d10.3))
+!w 1004 format ('  ys=',1p,e10.3,'  -gs=',1p,e10.3,' BFGS update SKIPPED')
+!w 1005 format (/,
+!w     +' Singular triangular system detected;',/,
+!w     +'   refresh the lbfgs memory and restart the iteration.')
+!w 1006 format (/,
+!w     +' Nonpositive definiteness in Cholesky factorization in PREC(formk);',/,
+!w     +'   refresh the lbfgs memory and restart the iteration.')
+!w 1007 format (/,
+!w     +' Nonpositive definiteness in Cholesky factorization in PREC(formt);',/,
+!w     +'   refresh the lbfgs memory and restart the iteration.')
+!w 1008 format (/,
+!w     +' Bad direction in the line search;',/,
+!w     +'   refresh the lbfgs memory and restart the iteration.')
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(mainlb) =============================
+
+    Subroutine PREC(active)(n, l, u, nbd, x, iwhere, iprint, prjctd, cnstnd, boxed)
+      Use working_precision, Only: wp
+
+      Logical :: prjctd, cnstnd, boxed
+      Integer :: n, iprint, nbd(n), iwhere(n)
+      Real (Kind=wp) :: x(n), l(n), u(n)
+
+!     ************
+!
+!     Subroutine PREC(active)
+!
+!     This subroutine initializes iwhere and projects the initial x to
+!       the feasible set if necessary.
+!
+!     iwhere is an integer array of dimension n.
+!       On entry iwhere is unspecified.
+!       On exit iwhere(i)=-1  if x(i) has no bounds
+!                         3   if l(i)=u(i)
+!                         0   otherwise.
+!       In PREC(cauchy), iwhere is given finer gradations.
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: nbdd, i
+      Real (Kind=wp) :: zero
+      Parameter (zero=0.0E0_wp)
+
+!     Initialize nbdd, prjctd, cnstnd and boxed.
+
+      nbdd = 0
+      prjctd = .False.
+      cnstnd = .False.
+      boxed = .True.
+
+!     Project the initial x to the easible set if necessary.
+
+      Do i = 1, n
+        If (nbd(i)>0) Then
+          If (nbd(i)<=2 .And. x(i)<=l(i)) Then
+            If (x(i)<l(i)) Then
+              prjctd = .True.
+              x(i) = l(i)
+            End If
+            nbdd = nbdd + 1
+          Else If (nbd(i)>=2 .And. x(i)>=u(i)) Then
+            If (x(i)>u(i)) Then
+              prjctd = .True.
+              x(i) = u(i)
+            End If
+            nbdd = nbdd + 1
+          End If
+        End If
+      End Do
+
+!     Initialize iwhere and assign values to cnstnd and boxed.
+
+      Do i = 1, n
+        If (nbd(i)/=2) boxed = .False.
+        If (nbd(i)==0) Then
+!                                this variable is always free
+          iwhere(i) = -1
+
+!           otherwise set x(i)=mid(x(i), u(i), l(i)).
+        Else
+          cnstnd = .True.
+          If (nbd(i)==2 .And. u(i)-l(i)<=zero) Then
+!                   this variable is always fixed
+            iwhere(i) = 3
+          Else
+            iwhere(i) = 0
+          End If
+        End If
+      End Do
+
+!x      if (iprint .ge. 0) then
+!x         if (prjctd) then
+!x         call intpr('initial X infeasible. Restart with projection.',
+!x     +  -1, 0, 0)
+!x         endif
+!x         if (.not. cnstnd) then
+!x          call intpr('This problem is unconstrained.', -1, 0,0)
+!x         endif
+!x      endif
+
+!w      if (iprint .gt. 0) write (6,1001) nbdd
+!x      if (iprint .gt. 0) then
+!x         call intpr(' Variables exactly at bounds for X0 ',-1,
+!x     +      nbdd, 1)
+!x      endif
+!w 1001 format (/,'At X0 ',i9,' variables are exactly at the bounds')
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(active) =============================
+
+    Subroutine PREC(bmv)(m, sy, wt, col, v, p, info)
+      Use working_precision, Only: wp
+
+      Integer :: m, col, info
+      Real (Kind=wp) :: sy(m, m), wt(m, m), v(2*col), p(2*col)
+
+!     ************
+!
+!     Subroutine PREC(bmv)
+!
+!     This subroutine computes the product of the 2m x 2m middle matrix
+!       in the compact L-BFGS formula of B and a 2m vector v;
+!       it returns the product in p.
+!
+!     m is an integer variable.
+!       On entry m is the maximum number of variable metric corrections
+!         used to define the limited memory matrix.
+!       On exit m is unchanged.
+!
+!     sy is a double precision array of dimension m x m.
+!       On entry sy specifies the matrix S'Y.
+!       On exit sy is unchanged.
+!
+!     wt is a double precision array of dimension m x m.
+!       On entry wt specifies the upper triangular matrix J' which is
+!         the Cholesky factor of (thetaS'S+LD^(-1)L').
+!       On exit wt is unchanged.
+!
+!     col is an integer variable.
+!       On entry col specifies the number of s-vectors (or y-vectors)
+!         stored in the compact L-BFGS formula.
+!       On exit col is unchanged.
+!
+!     v is a double precision array of dimension 2col.
+!       On entry v specifies vector v.
+!       On exit v is unchanged.
+!
+!     p is a double precision array of dimension 2col.
+!       On entry p is unspecified.
+!       On exit p is the product Mv.
+!
+!     info is an integer variable.
+!       On entry info is unspecified.
+!       On exit info = 0       for normal return,
+!                    = nonzero for abnormal return when the system
+!                                to be solved by LPREC(trsl) is singular.
+!
+!     Subprograms called:
+!
+!       Linpack ... LPREC(trsl).
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: i, k, i2
+      Real (Kind=wp) :: sum
+
+      If (col==0) Return
+
+!     PART I: solve [  D^(1/2)      O ] [ p1 ] = [ v1 ]
+!                   [ -L*D^(-1/2)   J ] [ p2 ]   [ v2 ].
+
+!       solve Jp2=v2+LD^(-1)v1.
+      p(col+1) = v(col+1)
+      Do i = 2, col
+        i2 = col + i
+        sum = 0.0E0_wp
+        Do k = 1, i - 1
+          sum = sum + sy(i, k)*v(k)/sy(k, k)
+        End Do
+        p(i2) = v(i2) + sum
+      End Do
+!     Solve the triangular system
+      Call LPREC(trsl)(wt, m, col, p(col+1), 11, info)
+      If (info/=0) Return
+
+!       solve D^(1/2)p1=v1.
+      Do i = 1, col
+        p(i) = v(i)/sqrt(sy(i,i))
+      End Do
+
+!     PART II: solve [ -D^(1/2)   D^(-1/2)*L'  ] [ p1 ] = [ p1 ]
+!                    [  0         J'           ] [ p2 ]   [ p2 ].
+
+!       solve J^Tp2=p2.
+      Call LPREC(trsl)(wt, m, col, p(col+1), 01, info)
+      If (info/=0) Return
+
+!       compute p1=-D^(-1/2)(p1-D^(-1/2)L'p2)
+!                 =-D^(-1/2)p1+D^(-1)L'p2.
+      Do i = 1, col
+        p(i) = -p(i)/sqrt(sy(i,i))
+      End Do
+      Do i = 1, col
+        sum = 0.E0_wp
+        Do k = i + 1, col
+          sum = sum + sy(k, i)*p(col+k)/sy(i, i)
+        End Do
+        p(i) = p(i) + sum
+      End Do
+
+      Return
+
+    End Subroutine
+
+!======================== The end of PREC(bmv) ===============================
+
+    Subroutine PREC(cauchy)(n, x, l, u, nbd, g, iorder, iwhere, t, d, xcp, m, wy, &
+      ws, sy, wt, theta, col, head, p, c, wbp, v, nseg, iprint, sbgnrm, info, &
+      epsmch)
+      Use working_precision, Only: wp
+      Implicit None
+      Integer :: n, m, head, col, nseg, iprint, info, nbd(n), iorder(n), &
+        iwhere(n)
+      Real (Kind=wp) :: theta, epsmch, x(n), l(n), u(n), g(n), t(n), d(n), &
+        xcp(n), wy(n, col), ws(n, col), sy(m, m), wt(m, m), p(2*m), c(2*m), &
+        wbp(2*m), v(2*m)
+
+!     ************
+!
+!     Subroutine PREC(cauchy)
+!
+!     For given x, l, u, g (with sbgnrm > 0), and a limited memory
+!       BFGS matrix B defined in terms of matrices WY, WS, WT, and
+!       scalars head, col, and theta, this subroutine computes the
+!       generalized Cauchy point (GCP), defined as the first local
+!       minimizer of the quadratic
+!
+!                  Q(x + s) = g's + 1/2 s'Bs
+!
+!       along the projected gradient direction P(x-tg,l,u).
+!       The routine returns the GCP in xcp.
+!
+!     n is an integer variable.
+!       On entry n is the dimension of the problem.
+!       On exit n is unchanged.
+!
+!     x is a double precision array of dimension n.
+!       On entry x is the starting point for the GCP computation.
+!       On exit x is unchanged.
+!
+!     l is a double precision array of dimension n.
+!       On entry l is the lower bound of x.
+!       On exit l is unchanged.
+!
+!     u is a double precision array of dimension n.
+!       On entry u is the upper bound of x.
+!       On exit u is unchanged.
+!
+!     nbd is an integer array of dimension n.
+!       On entry nbd represents the type of bounds imposed on the
+!         variables, and must be specified as follows:
+!         nbd(i)=0 if x(i) is unbounded,
+!                1 if x(i) has only a lower bound,
+!                2 if x(i) has both lower and upper bounds, and
+!                3 if x(i) has only an upper bound.
+!       On exit nbd is unchanged.
+!
+!     g is a double precision array of dimension n.
+!       On entry g is the gradient of f(x).  g must be a nonzero vector.
+!       On exit g is unchanged.
+!
+!     iorder is an integer working array of dimension n.
+!       iorder will be used to store the breakpoints in the piecewise
+!       linear path and free variables encountered. On exit,
+!         iorder(1),...,iorder(nleft) are indices of breakpoints
+!                                which have not been encountered;
+!         iorder(nleft+1),...,iorder(nbreak) are indices of
+!                                     encountered breakpoints; and
+!         iorder(nfree),...,iorder(n) are indices of variables which
+!                 have no bound constraits along the search direction.
+!
+!     iwhere is an integer array of dimension n.
+!       On entry iwhere indicates only the permanently fixed (iwhere=3)
+!       or free (iwhere= -1) components of x.
+!       On exit iwhere records the status of the current x variables.
+!       iwhere(i)=-3  if x(i) is free and has bounds, but is not moved
+!                 0   if x(i) is free and has bounds, and is moved
+!                 1   if x(i) is fixed at l(i), and l(i) .ne. u(i)
+!                 2   if x(i) is fixed at u(i), and u(i) .ne. l(i)
+!                 3   if x(i) is always fixed, i.e.,  u(i)=x(i)=l(i)
+!                 -1  if x(i) is always free, i.e., it has no bounds.
+!
+!     t is a double precision working array of dimension n.
+!       t will be used to store the break points.
+!
+!     d is a double precision array of dimension n used to store
+!       the Cauchy direction P(x-tg)-x.
+!
+!     xcp is a double precision array of dimension n used to return the
+!       GCP on exit.
+!
+!     m is an integer variable.
+!       On entry m is the maximum number of variable metric corrections
+!         used to define the limited memory matrix.
+!       On exit m is unchanged.
+!
+!     ws, wy, sy, and wt are double precision arrays.
+!       On entry they store information that defines the
+!                             limited memory BFGS matrix:
+!         ws(n,m) stores S, a set of s-vectors;
+!         wy(n,m) stores Y, a set of y-vectors;
+!         sy(m,m) stores S'Y;
+!         wt(m,m) stores the
+!                 Cholesky factorization of (theta*S'S+LD^(-1)L').
+!       On exit these arrays are unchanged.
+!
+!     theta is a double precision variable.
+!       On entry theta is the scaling factor specifying B_0 = theta I.
+!       On exit theta is unchanged.
+!
+!     col is an integer variable.
+!       On entry col is the actual number of variable metric
+!         corrections stored so far.
+!       On exit col is unchanged.
+!
+!     head is an integer variable.
+!       On entry head is the location of the first s-vector (or y-vector)
+!         in S (or Y).
+!       On exit col is unchanged.
+!
+!     p is a double precision working array of dimension 2m.
+!       p will be used to store the vector p = W^(T)d.
+!
+!     c is a double precision working array of dimension 2m.
+!       c will be used to store the vector c = W^(T)(xcp-x).
+!
+!     wbp is a double precision working array of dimension 2m.
+!       wbp will be used to store the row of W corresponding
+!         to a breakpoint.
+!
+!     v is a double precision working array of dimension 2m.
+!
+!     nseg is an integer variable.
+!       On exit nseg records the number of quadratic segments explored
+!         in searching for the GCP.
+!
+!     sg and yg are double precision arrays of dimension m.
+!       On entry sg  and yg store S'g and Y'g correspondingly.
+!       On exit they are unchanged.
+!
+!     iprint is an INTEGER variable that must be set by the user.
+!       It controls the frequency and type of output generated:
+!        iprint<0    no output is generated;
+!        iprint=0    print only one line at the last iteration;
+!        0<iprint<99 print also f and |proj g| every iprint iterations;
+!        iprint=99   print details of every iteration except n-vectors;
+!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint>100  print details of every iteration including x and g;
+!       When iprint > 0, the file iterate.dat will be created to
+!                        summarize the iteration.
+!
+!     sbgnrm is a double precision variable.
+!       On entry sbgnrm is the norm of the projected gradient at x.
+!       On exit sbgnrm is unchanged.
+!
+!     info is an integer variable.
+!       On entry info is 0.
+!       On exit info = 0       for normal return,
+!                    = nonzero for abnormal return when the the system
+!                              used in routine PREC(bmv) is singular.
+!
+!     Subprograms called:
+!
+!       L-BFGS-B Library ... PREC(hpsolb), PREC(bmv).
+!
+!       Linpack ... dscal LPREC(copy), LPREC(axpy).
+!
+!
+!     References:
+!
+!       [1] R. H. Byrd, P. Lu, J. Nocedal and C. Zhu, ``A limited
+!       memory algorithm for bound constrained optimization'',
+!       SIAM J. Scientific Computing 16 (1995), no. 5, pp. 1190--1208.
+!
+!       [2] C. Zhu, R.H. Byrd, P. Lu, J. Nocedal, ``L-BFGS-B: FORTRAN
+!       Subroutines for Large Scale Bound Constrained Optimization''
+!       Tech. Report, NAM-11, EECS Department, Northwestern University,
+!       1994.
+!
+!       (Postscript files of these papers are available via anonymous
+!        ftp to eecs.nwu.edu in the directory pub/lbfgs/lbfgs_bcm.)
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Logical :: xlower, xupper, bnded
+      Integer :: i, j, col2, nfree, nbreak, pointr, ibp, nleft, ibkmin, iter
+      Integer :: nprt
+      Real (Kind=wp) :: f1, f2, dt, dtm, tsum, dibp, zibp, dibp2, bkmin, tu, &
+        tl, wmc, wmp, wmw, LPREC(dot), tj, tj0, neggi, sbgnrm, f2_org
+      Real (Kind=wp) :: one, zero
+      Parameter (one=1.0E0_wp, zero=0.0E0_wp)
+
+!     Check the status of the variables, reset iwhere(i) if necessary;
+!       compute the Cauchy direction d and the breakpoints t; initialize
+!       the derivative f1 and the vector p = W'd (for theta = 1).
+
+      If (sbgnrm<=zero) Then
+!x         if (iprint .ge. 0) then
+!x            call intpr('Subgnorm =0, GCP = X.', -1, 0, 0)
+!x         endif
+!w         if (iprint .ge. 0) write (6,*) 'Subgnorm = 0.  GCP = X.'
+        Call LPREC(copy)(n, x, 1, xcp, 1)
+        Return
+      End If
+      bnded = .True.
+      nfree = n + 1
+      nbreak = 0
+      ibkmin = 0
+      bkmin = zero
+      col2 = 2*col
+      f1 = zero
+!w      if (iprint .ge. 99) write (6,3010)
+!x      if (iprint .ge. 99) then
+!x        call intpr('--- CAUCHY entered---',-1,0,0)
+!x      endif
+!     We set p to zero and build it up as we determine d.
+
+      Do i = 1, col2
+        p(i) = zero
+      End Do
+
+!     In the following loop we determine for each variable its bound
+!        status and its breakpoint, and update p accordingly.
+!        Smallest breakpoint is identified.
+
+      Do i = 1, n
+        neggi = -g(i)
+        If (iwhere(i)/=3 .And. iwhere(i)/=-1) Then
+!             if x(i) is not a constant and has bounds,
+!             compute the difference between x(i) and its bounds.
+          If (nbd(i)<=2) tl = x(i) - l(i)
+          If (nbd(i)>=2) tu = u(i) - x(i)
+
+!           If a variable is close enough to a bound
+!             we treat it as at bound.
+          xlower = nbd(i) <= 2 .And. tl <= zero
+          xupper = nbd(i) >= 2 .And. tu <= zero
+
+!              reset iwhere(i).
+          iwhere(i) = 0
+          If (xlower) Then
+            If (neggi<=zero) iwhere(i) = 1
+          Else If (xupper) Then
+            If (neggi>=zero) iwhere(i) = 2
+          Else
+            If (abs(neggi)<=zero) iwhere(i) = -3
+          End If
+        End If
+        pointr = head
+        If (iwhere(i)/=0 .And. iwhere(i)/=-1) Then
+          d(i) = zero
+        Else
+          d(i) = neggi
+          f1 = f1 - neggi*neggi
+!             calculate p := p - W'e_i* (g_i).
+          Do j = 1, col
+            p(j) = p(j) + wy(i, pointr)*neggi
+            p(col+j) = p(col+j) + ws(i, pointr)*neggi
+            pointr = mod(pointr, m) + 1
+          End Do
+          If (nbd(i)<=2 .And. nbd(i)/=0 .And. neggi<zero) Then
+!                                 x(i) + d(i) is bounded; compute t(i).
+            nbreak = nbreak + 1
+            iorder(nbreak) = i
+            t(nbreak) = tl/(-neggi)
+            If (nbreak==1 .Or. t(nbreak)<bkmin) Then
+              bkmin = t(nbreak)
+              ibkmin = nbreak
+            End If
+          Else If (nbd(i)>=2 .And. neggi>zero) Then
+!                                 x(i) + d(i) is bounded; compute t(i).
+            nbreak = nbreak + 1
+            iorder(nbreak) = i
+            t(nbreak) = tu/neggi
+            If (nbreak==1 .Or. t(nbreak)<bkmin) Then
+              bkmin = t(nbreak)
+              ibkmin = nbreak
+            End If
+          Else
+!                x(i) + d(i) is not bounded.
+            nfree = nfree - 1
+            iorder(nfree) = i
+            If (abs(neggi)>zero) bnded = .False.
+          End If
+        End If
+      End Do
+
+!     The indices of the nonzero components of d are now stored
+!       in iorder(1),...,iorder(nbreak) and iorder(nfree),...,iorder(n).
+!       The smallest of the nbreak breakpoints is in t(ibkmin)=bkmin.
+
+      If (theta/=one) Then
+!                   complete the initialization of p for theta not= one.
+        Call dscal(col, theta, p(col+1), 1)
+      End If
+
+!     Initialize GCP xcp = x.
+
+      Call LPREC(copy)(n, x, 1, xcp, 1)
+
+      If (nbreak==0 .And. nfree==n+1) Then
+!                  is a zero vector, return with the initial xcp as GCP.
+!w         if (iprint .gt. 100) write (6,1010) (xcp(i), i = 1, n)
+!x           if (iprint .gt. 100) then
+!x             nprt = n
+!x             if (nprt .gt. 5) nprt = 5
+!x             call dblepr('Cauchy X[1:5] =  ',-1, xcp, nprt)
+!x           endif
+        Return
+      End If
+
+!     Initialize c = W'(xcp - x) = 0.
+
+      Do j = 1, col2
+        c(j) = zero
+      End Do
+
+!     Initialize derivative f2.
+
+      f2 = -theta*f1
+      f2_org = f2
+      If (col>0) Then
+        Call PREC(bmv)(m, sy, wt, col, p, v, info)
+        If (info/=0) Return
+        f2 = f2 - LPREC(dot)(col2, v, 1, p, 1)
+      End If
+      dtm = -f1/f2
+      tsum = zero
+      nseg = 1
+!x      if (iprint .ge. 99) then
+!w     +   write (6,*) 'There are ',nbreak,'  breakpoints '
+!x         call intpr('no. of breakpoints =',-1, nbreak, 1)
+!x      endif
+
+!     If there are no breakpoints, locate the GCP and return.
+
+      If (nbreak==0) Go To 110
+
+      nleft = nbreak
+      iter = 1
+
+
+      tj = zero
+
+!------------------- the beginning of the loop -------------------------
+
+100   Continue
+
+!     Find the next smallest breakpoint;
+!       compute dt = t(nleft) - t(nleft + 1).
+
+      tj0 = tj
+      If (iter==1) Then
+!         Since we already have the smallest breakpoint we need not do
+!         heapsort yet. Often only one breakpoint is used and the
+!         cost of heapsort is avoided.
+        tj = bkmin
+        ibp = iorder(ibkmin)
+      Else
+        If (iter==2) Then
+!             Replace the already used smallest breakpoint with the
+!             breakpoint numbered nbreak > nlast, before heapsort call.
+          If (ibkmin/=nbreak) Then
+            t(ibkmin) = t(nbreak)
+            iorder(ibkmin) = iorder(nbreak)
+          End If
+!        Update heap structure of breakpoints
+!           (if iter=2, initialize heap).
+        End If
+        Call PREC(hpsolb)(nleft, t, iorder, iter-2)
+        tj = t(nleft)
+        ibp = iorder(nleft)
+      End If
+
+      dt = tj - tj0
+
+!x      if (dt .ne. zero .and. iprint .ge. 100) then
+!w         write (6,4011) nseg,f1,f2
+!x         call intpr('Piece ',-1, nseg, 1)
+!x         call dblepr('f1 at start point =',-1, f1, 1)
+!x         call dblepr('f2 at start point =',-1, f1, 1)
+!w         write (6,5010) dt
+!x         call dblepr('Distance to the next break point =  ',
+!x     +  -1, dt, 1)
+!x         call dblepr('Distance to the stationary point =  ',
+!x     +  -1, dtm, 1)
+!w         write (6,6010) dtm
+!x      endif
+
+!     If a minimizer is within this interval, locate the GCP and return.
+
+      If (dtm<dt) Go To 110
+
+!     Otherwise fix one variable and
+!       reset the corresponding component of d to zero.
+
+      tsum = tsum + dt
+      nleft = nleft - 1
+      iter = iter + 1
+      dibp = d(ibp)
+      d(ibp) = zero
+      If (dibp>zero) Then
+        zibp = u(ibp) - x(ibp)
+        xcp(ibp) = u(ibp)
+        iwhere(ibp) = 2
+      Else
+        zibp = l(ibp) - x(ibp)
+        xcp(ibp) = l(ibp)
+        iwhere(ibp) = 1
+      End If
+!w      if (iprint .ge. 100) write (6,*) 'Variable  ',ibp,'  is fixed.'
+!x      if (iprint .ge. 100)
+!x     +   call intpr('Variable fixed, index ',-1,ibp, 1)
+      If (nleft==0 .And. nbreak==n) Then
+!                                             all n variables are fixed,
+!                                                return with xcp as GCP.
+        dtm = dt
+        Go To 120
+      End If
+
+!     Update the derivative information.
+
+      nseg = nseg + 1
+      dibp2 = dibp**2
+
+!     Update f1 and f2.
+
+!        temporarily set f1 and f2 for col=0.
+      f1 = f1 + dt*f2 + dibp2 - theta*dibp*zibp
+      f2 = f2 - theta*dibp2
+
+      If (col>0) Then
+!                          update c = c + dt*p.
+        Call LPREC(axpy)(col2, dt, p, 1, c, 1)
+
+!           choose wbp,
+!           the row of W corresponding to the breakpoint encountered.
+        pointr = head
+        Do j = 1, col
+          wbp(j) = wy(ibp, pointr)
+          wbp(col+j) = theta*ws(ibp, pointr)
+          pointr = mod(pointr, m) + 1
+        End Do
+
+!           compute (wbp)Mc, (wbp)Mp, and (wbp)M(wbp)'.
+        Call PREC(bmv)(m, sy, wt, col, wbp, v, info)
+        If (info/=0) Return
+        wmc = LPREC(dot)(col2, c, 1, v, 1)
+        wmp = LPREC(dot)(col2, p, 1, v, 1)
+        wmw = LPREC(dot)(col2, wbp, 1, v, 1)
+
+!           update p = p - dibp*wbp.
+        Call LPREC(axpy)(col2, -dibp, wbp, 1, p, 1)
+
+!           complete updating f1 and f2 while col > 0.
+        f1 = f1 + dibp*wmc
+        f2 = f2 + 2.0E0_wp*dibp*wmp - dibp2*wmw
+      End If
+
+      f2 = max(epsmch*f2_org, f2)
+      If (nleft>0) Then
+        dtm = -f1/f2
+        Go To 100
+!                 to repeat the loop for unsearched intervals.
+      Else If (bnded) Then
+        f1 = zero
+        f2 = zero
+        dtm = zero
+      Else
+        dtm = -f1/f2
+      End If
+
+!------------------- the end of the loop -------------------------------
+
+110   Continue
+!x      if (iprint .ge. 99) then
+!w         write (6,*)
+!w         write (6,*) 'GCP found in this segment'
+!w         write (6,4010) nseg,f1,f2
+!x         call intpr('Piece ',-1, nseg, 1)
+!x         call dblepr('f1 at start point =',-1, f1, 1)
+!x         call dblepr('f2 at start point =',-1, f1, 1)
+!w         write (6,6010) dtm
+!x         call dblepr('Distance to the stationary point =  ',
+!x     +  -1, dtm, 1)
+
+!x      endif
+      If (dtm<=zero) dtm = zero
+      tsum = tsum + dtm
+
+!     Move free variables (i.e., the ones w/o breakpoints) and
+!       the variables whose breakpoints haven't been reached.
+
+      Call LPREC(axpy)(n, tsum, d, 1, xcp, 1)
+
+120   Continue
+
+!     Update c = c + dtm*p = W'(x^c - x)
+!       which will be used in computing r = Z'(B(x^c - x) + g).
+
+      If (col>0) Call LPREC(axpy)(col2, dtm, p, 1, c, 1)
+!x      if (iprint .gt. 100) then
+!w         write (6,1010) (xcp(i),i = 1,n)
+!x           nprt = n
+!x           if (nprt .gt. 5) nprt = 5
+!x           call dblepr('Cauchy X[1:5] =  ',-1, xcp, nprt)
+!x      endif
+!x      if (iprint .ge. 99) then
+!w       write (6,2010)
+!x         call intpr('--- exit CAUCHY---',-1, 0,0)
+!x      endif
+!w 1010 format ('Cauchy X =  ',/,(4x,1p,6(1x,d11.4)))
+!x 2010 format (/,'---------------- exit CAUCHY----------------------',/)
+!w 3010 format (/,'---------------- CAUCHY entered-------------------')
+!w 4010 format ('Piece    ',i3,' --f1, f2 at start point ',1p,2(1x,d11.4))
+!w 4011 format (/,'Piece    ',i3,' --f1, f2 at start point ',
+!w     +        1p,2(1x,d11.4))
+!w 5010 format ('Distance to the next break point =  ',1p,d11.4)
+!w 6010 format ('Distance to the stationary point =  ',1p,d11.4)
+
+      Return
+
+    End Subroutine
+
+!====================== The end of PREC(cauchy) ==============================
+
+    Subroutine PREC(cmprlb)(n, m, x, g, ws, wy, sy, wt, z, r, wa, index, theta, col, &
+      head, nfree, cnstnd, info)
+      Use working_precision, Only: wp
+
+      Logical :: cnstnd
+      Integer :: n, m, col, head, nfree, info, index(n)
+      Real (Kind=wp) :: theta, x(n), g(n), z(n), r(n), wa(4*m), ws(n, m), &
+        wy(n, m), sy(m, m), wt(m, m)
+
+!     ************
+!
+!     Subroutine PREC(cmprlb)
+!
+!       This subroutine computes r=-Z'B(xcp-xk)-Z'g by using
+!         wa(2m+1)=W'(xcp-x) from subroutine PREC(cauchy).
+!
+!     Subprograms called:
+!
+!       L-BFGS-B Library ... PREC(bmv).
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: i, j, k, pointr
+      Real (Kind=wp) :: a1, a2
+
+      If (.Not. cnstnd .And. col>0) Then
+        Do i = 1, n
+          r(i) = -g(i)
+        End Do
+      Else
+        Do i = 1, nfree
+          k = index(i)
+          r(i) = -theta*(z(k)-x(k)) - g(k)
+        End Do
+        Call PREC(bmv)(m, sy, wt, col, wa(2*m+1), wa(1), info)
+        If (info/=0) Then
+          info = -8
+          Return
+        End If
+        pointr = head
+        Do j = 1, col
+          a1 = wa(j)
+          a2 = theta*wa(col+j)
+          Do i = 1, nfree
+            k = index(i)
+            r(i) = r(i) + wy(k, pointr)*a1 + ws(k, pointr)*a2
+          End Do
+          pointr = mod(pointr, m) + 1
+        End Do
+      End If
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(cmprlb) =============================
+
+    Subroutine PREC(errclb)(n, m, factr, l, u, nbd, itask, info, k)
+      Use working_precision, Only: wp
+
+!      character*255     task
+      Integer :: n, m, itask, info, k, nbd(n)
+      Real (Kind=wp) :: factr, l(n), u(n)
+
+!     ************
+!
+!     Subroutine PREC(errclb)
+!
+!     This subroutine checks the validity of the input data.
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: i
+      Real (Kind=wp) :: zero
+      Parameter (zero=0.0E0_wp)
+
+!     Check the input arguments for errors.
+
+      If (n<=0) Then
+        itask = 13
+!x         call intpr("  ERROR: N .LE. 0", -1, 0, 0)
+        Return
+      End If
+!      if (m .le. 0) task = 'ERROR: M .LE. 0'
+      If (m<=0) Then
+!x           call intpr("  ERROR: M .LE. 0", -1, 0, 0)
+        Return
+      End If
+
+!      if (factr .lt. zero) task = 'ERROR: FACTR .LT. 0'
+      If (factr<=zero) Then
+!x           call intpr('  ERROR: FACTR .LT. 0', -1, 0, 0)
+        Return
+      End If
+
+!     Check the validity of the arrays nbd(i), u(i), and l(i).
+
+      Do i = 1, n
+        If (nbd(i)<0 .Or. nbd(i)>3) Then
+!                                                   return
+!            task = 'ERROR: INVALID NBD'
+          itask = 12
+          info = -6
+          k = i
+        End If
+        If (nbd(i)==2) Then
+          If (l(i)>u(i)) Then
+!                                    return
+!               task = 'ERROR: NO FEASIBLE SOLUTION'
+            itask = 14
+            info = -7
+            k = i
+          End If
+        End If
+      End Do
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(errclb) =============================
+
+    Subroutine PREC(formk)(n, nsub, ind, nenter, ileave, indx2, iupdat, updatd, wn, &
+      wn1, m, ws, wy, sy, theta, col, head, info)
+      Use working_precision, Only: wp
+
+      Integer :: n, nsub, m, col, head, nenter, ileave, iupdat, info, ind(n), &
+        indx2(n)
+      Real (Kind=wp) :: theta, wn(2*m, 2*m), wn1(2*m, 2*m), ws(n, m), &
+        wy(n, m), sy(m, m)
+      Logical :: updatd
+
+!     ************
+!
+!     Subroutine PREC(formk)
+!
+!     This subroutine forms  the LEL^T factorization of the indefinite
+!
+!       matrix    K = [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
+!                     [L_a -R_z           theta*S'AA'S ]
+!                                                    where E = [-I  0]
+!                                                              [ 0  I]
+!     The matrix K can be shown to be equal to the matrix M^[-1]N
+!       occurring in section 5.1 of [1], as well as to the matrix
+!       Mbar^[-1] Nbar in section 5.3.
+!
+!     n is an integer variable.
+!       On entry n is the dimension of the problem.
+!       On exit n is unchanged.
+!
+!     nsub is an integer variable
+!       On entry nsub is the number of subspace variables in free set.
+!       On exit nsub is not changed.
+!
+!     ind is an integer array of dimension nsub.
+!       On entry ind specifies the indices of subspace variables.
+!       On exit ind is unchanged.
+!
+!     nenter is an integer variable.
+!       On entry nenter is the number of variables entering the
+!         free set.
+!       On exit nenter is unchanged.
+!
+!     ileave is an integer variable.
+!       On entry indx2(ileave),...,indx2(n) are the variables leaving
+!         the free set.
+!       On exit ileave is unchanged.
+!
+!     indx2 is an integer array of dimension n.
+!       On entry indx2(1),...,indx2(nenter) are the variables entering
+!         the free set, while indx2(ileave),...,indx2(n) are the
+!         variables leaving the free set.
+!       On exit indx2 is unchanged.
+!
+!     iupdat is an integer variable.
+!       On entry iupdat is the total number of BFGS updates made so far.
+!       On exit iupdat is unchanged.
+!
+!     updatd is a logical variable.
+!       On entry 'updatd' is true if the L-BFGS matrix is updatd.
+!       On exit 'updatd' is unchanged.
+!
+!     wn is a double precision array of dimension 2m x 2m.
+!       On entry wn is unspecified.
+!       On exit the upper triangle of wn stores the LEL^T factorization
+!         of the 2*col x 2*col indefinite matrix
+!                     [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
+!                     [L_a -R_z           theta*S'AA'S ]
+!
+!     wn1 is a double precision array of dimension 2m x 2m.
+!       On entry wn1 stores the lower triangular part of
+!                     [Y' ZZ'Y   L_a'+R_z']
+!                     [L_a+R_z   S'AA'S   ]
+!         in the previous iteration.
+!       On exit wn1 stores the corresponding updated matrices.
+!       The purpose of wn1 is just to store these inner products
+!       so they can be easily updated and inserted into wn.
+!
+!     m is an integer variable.
+!       On entry m is the maximum number of variable metric corrections
+!         used to define the limited memory matrix.
+!       On exit m is unchanged.
+!
+!     ws, wy, sy, and wtyy are double precision arrays;
+!     theta is a double precision variable;
+!     col is an integer variable;
+!     head is an integer variable.
+!       On entry they store the information defining the
+!                                          limited memory BFGS matrix:
+!         ws(n,m) stores S, a set of s-vectors;
+!         wy(n,m) stores Y, a set of y-vectors;
+!         sy(m,m) stores S'Y;
+!         wtyy(m,m) stores the Cholesky factorization
+!                                   of (theta*S'S+LD^(-1)L')
+!         theta is the scaling factor specifying B_0 = theta I;
+!         col is the number of variable metric corrections stored;
+!         head is the location of the 1st s- (or y-) vector in S (or Y).
+!       On exit they are unchanged.
+!
+!     info is an integer variable.
+!       On entry info is unspecified.
+!       On exit info =  0 for normal return;
+!                    = -1 when the 1st Cholesky factorization failed;
+!                    = -2 when the 2st Cholesky factorization failed.
+!
+!     Subprograms called:
+!
+!       Linpack ... LPREC(copy), LPREC(pofa), LPREC(trsl).
+!
+!
+!     References:
+!       [1] R. H. Byrd, P. Lu, J. Nocedal and C. Zhu, ``A limited
+!       memory algorithm for bound constrained optimization'',
+!       SIAM J. Scientific Computing 16 (1995), no. 5, pp. 1190--1208.
+!
+!       [2] C. Zhu, R.H. Byrd, P. Lu, J. Nocedal, ``L-BFGS-B: a
+!       limited memory FORTRAN code for solving bound constrained
+!       optimization problems'', Tech. Report, NAM-11, EECS Department,
+!       Northwestern University, 1994.
+!
+!       (Postscript files of these papers are available via anonymous
+!        ftp to eecs.nwu.edu in the directory pub/lbfgs/lbfgs_bcm.)
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: m2, ipntr, jpntr, iy, is, jy, js, is1, js1, k1, i, k, col2, &
+        pbegin, pend, dbegin, dend, upcl
+      Real (Kind=wp) :: LPREC(dot), temp1, temp2, temp3, temp4
+      Real (Kind=wp) :: zero
+      Parameter (zero=0.0E0_wp)
+
+!     Form the lower triangular part of
+!               WN1 = [Y' ZZ'Y   L_a'+R_z']
+!                     [L_a+R_z   S'AA'S   ]
+!        where L_a is the strictly lower triangular part of S'AA'Y
+!              R_z is the upper triangular part of S'ZZ'Y.
+
+      If (updatd) Then
+        If (iupdat>m) Then
+!                                 shift old part of WN1.
+          Do jy = 1, m - 1
+            js = m + jy
+            Call LPREC(copy)(m-jy, wn1(jy+1,jy+1), 1, wn1(jy,jy), 1)
+            Call LPREC(copy)(m-jy, wn1(js+1,js+1), 1, wn1(js,js), 1)
+            Call LPREC(copy)(m-1, wn1(m+2,jy+1), 1, wn1(m+1,jy), 1)
+          End Do
+        End If
+
+!          put new rows in blocks (1,1), (2,1) and (2,2).
+        pbegin = 1
+        pend = nsub
+        dbegin = nsub + 1
+        dend = n
+        iy = col
+        is = m + col
+        ipntr = head + col - 1
+        If (ipntr>m) ipntr = ipntr - m
+        jpntr = head
+        Do jy = 1, col
+          js = m + jy
+          temp1 = zero
+          temp2 = zero
+          temp3 = zero
+!             compute element jy of row 'col' of Y'ZZ'Y
+          Do k = pbegin, pend
+            k1 = ind(k)
+            temp1 = temp1 + wy(k1, ipntr)*wy(k1, jpntr)
+          End Do
+!             compute elements jy of row 'col' of L_a and S'AA'S
+          Do k = dbegin, dend
+            k1 = ind(k)
+            temp2 = temp2 + ws(k1, ipntr)*ws(k1, jpntr)
+            temp3 = temp3 + ws(k1, ipntr)*wy(k1, jpntr)
+          End Do
+          wn1(iy, jy) = temp1
+          wn1(is, js) = temp2
+          wn1(is, jy) = temp3
+          jpntr = mod(jpntr, m) + 1
+        End Do
+
+!          put new column in block (2,1).
+        jy = col
+        jpntr = head + col - 1
+        If (jpntr>m) jpntr = jpntr - m
+        ipntr = head
+        Do i = 1, col
+          is = m + i
+          temp3 = zero
+!             compute element i of column 'col' of R_z
+          Do k = pbegin, pend
+            k1 = ind(k)
+            temp3 = temp3 + ws(k1, ipntr)*wy(k1, jpntr)
+          End Do
+          ipntr = mod(ipntr, m) + 1
+          wn1(is, jy) = temp3
+        End Do
+        upcl = col - 1
+      Else
+        upcl = col
+      End If
+
+!       modify the old parts in blocks (1,1) and (2,2) due to changes
+!       in the set of free variables.
+      ipntr = head
+      Do iy = 1, upcl
+        is = m + iy
+        jpntr = head
+        Do jy = 1, iy
+          js = m + jy
+          temp1 = zero
+          temp2 = zero
+          temp3 = zero
+          temp4 = zero
+          Do k = 1, nenter
+            k1 = indx2(k)
+            temp1 = temp1 + wy(k1, ipntr)*wy(k1, jpntr)
+            temp2 = temp2 + ws(k1, ipntr)*ws(k1, jpntr)
+          End Do
+          Do k = ileave, n
+            k1 = indx2(k)
+            temp3 = temp3 + wy(k1, ipntr)*wy(k1, jpntr)
+            temp4 = temp4 + ws(k1, ipntr)*ws(k1, jpntr)
+          End Do
+          wn1(iy, jy) = wn1(iy, jy) + temp1 - temp3
+          wn1(is, js) = wn1(is, js) - temp2 + temp4
+          jpntr = mod(jpntr, m) + 1
+        End Do
+        ipntr = mod(ipntr, m) + 1
+      End Do
+
+!       modify the old parts in block (2,1).
+      ipntr = head
+      Do is = m + 1, m + upcl
+        jpntr = head
+        Do jy = 1, upcl
+          temp1 = zero
+          temp3 = zero
+          Do k = 1, nenter
+            k1 = indx2(k)
+            temp1 = temp1 + ws(k1, ipntr)*wy(k1, jpntr)
+          End Do
+          Do k = ileave, n
+            k1 = indx2(k)
+            temp3 = temp3 + ws(k1, ipntr)*wy(k1, jpntr)
+          End Do
+          If (is<=jy+m) Then
+            wn1(is, jy) = wn1(is, jy) + temp1 - temp3
+          Else
+            wn1(is, jy) = wn1(is, jy) - temp1 + temp3
+          End If
+          jpntr = mod(jpntr, m) + 1
+        End Do
+        ipntr = mod(ipntr, m) + 1
+      End Do
+
+!     Form the upper triangle of WN = [D+Y' ZZ'Y/theta   -L_a'+R_z' ]
+!                                     [-L_a +R_z        S'AA'S*theta]
+
+      m2 = 2*m
+      Do iy = 1, col
+        is = col + iy
+        is1 = m + iy
+        Do jy = 1, iy
+          js = col + jy
+          js1 = m + jy
+          wn(jy, iy) = wn1(iy, jy)/theta
+          wn(js, is) = wn1(is1, js1)*theta
+        End Do
+        Do jy = 1, iy - 1
+          wn(jy, is) = -wn1(is1, jy)
+        End Do
+        Do jy = iy, col
+          wn(jy, is) = wn1(is1, jy)
+        End Do
+        wn(iy, iy) = wn(iy, iy) + sy(iy, iy)
+      End Do
+
+!     Form the upper triangle of WN= [  LL'            L^-1(-L_a'+R_z')]
+!                                    [(-L_a +R_z)L'^-1   S'AA'S*theta  ]
+
+!        first Cholesky factor (1,1) block of wn to get LL'
+!                          with L' stored in the upper triangle of wn.
+      Call LPREC(pofa)(wn, m2, col, info)
+      If (info/=0) Then
+        info = -1
+        Return
+      End If
+!        then form L^-1(-L_a'+R_z') in the (1,2) block.
+      col2 = 2*col
+      Do js = col + 1, col2
+        Call LPREC(trsl)(wn, m2, col, wn(1,js), 11, info)
+      End Do
+
+!     Form S'AA'S*theta + (L^-1(-L_a'+R_z'))'L^-1(-L_a'+R_z') in the
+!        upper triangle of (2,2) block of wn.
+
+
+      Do is = col + 1, col2
+        Do js = is, col2
+          wn(is, js) = wn(is, js) + LPREC(dot)(col, wn(1,is), 1, wn(1,js), 1)
+        End Do
+      End Do
+
+!     Cholesky factorization of (2,2) block of wn.
+
+      Call LPREC(pofa)(wn(col+1,col+1), m2, col, info)
+      If (info/=0) Then
+        info = -2
+        Return
+      End If
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(formk) ==============================
+
+    Subroutine PREC(formt)(m, wt, sy, ss, col, theta, info)
+      Use working_precision, Only: wp
+
+      Integer :: m, col, info
+      Real (Kind=wp) :: theta, wt(m, m), sy(m, m), ss(m, m)
+
+!     ************
+!
+!     Subroutine PREC(formt)
+!
+!       This subroutine forms the upper half of the pos. def. and symm.
+!         T = theta*SS + L*D^(-1)*L', stores T in the upper triangle
+!         of the array wt, and performs the Cholesky factorization of T
+!         to produce J*J', with J' stored in the upper triangle of wt.
+!
+!     Subprograms called:
+!
+!       Linpack ... LPREC(pofa).
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: i, j, k, k1
+      Real (Kind=wp) :: ddum
+      Real (Kind=wp) :: zero
+      Parameter (zero=0.0E0_wp)
+
+
+!     Form the upper half of  T = theta*SS + L*D^(-1)*L',
+!        store T in the upper triangle of the array wt.
+
+      Do j = 1, col
+        wt(1, j) = theta*ss(1, j)
+      End Do
+      Do i = 2, col
+        Do j = i, col
+          k1 = min(i, j) - 1
+          ddum = zero
+          Do k = 1, k1
+            ddum = ddum + sy(i, k)*sy(j, k)/sy(k, k)
+          End Do
+          wt(i, j) = ddum + theta*ss(i, j)
+        End Do
+      End Do
+
+!     Cholesky factorize T to J*J' with
+!        J' stored in the upper triangle of wt.
+
+      Call LPREC(pofa)(wt, m, col, info)
+      If (info/=0) Then
+        info = -3
+      End If
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(formt) ==============================
+
+    Subroutine PREC(freev)(n, nfree, index, nenter, ileave, indx2, iwhere, wrk, &
+      updatd, cnstnd, iprint, iter)
+
+      Integer :: n, nfree, nenter, ileave, iprint, iter, index(n), indx2(n), &
+        iwhere(n)
+      Logical :: wrk, updatd, cnstnd
+
+!     ************
+!
+!     Subroutine PREC(freev)
+!
+!     This subroutine counts the entering and leaving variables when
+!       iter > 0, and finds the index set of free and PREC(active) variables
+!       at the GCP.
+!
+!     cnstnd is a logical variable indicating whether bounds are present
+!
+!     index is an integer array of dimension n
+!       for i=1,...,nfree, index(i) are the indices of free variables
+!       for i=nfree+1,...,n, index(i) are the indices of bound variables
+!       On entry after the first iteration, index gives
+!         the free variables at the previous iteration.
+!       On exit it gives the free variables based on the determination
+!         in PREC(cauchy) using the array iwhere.
+!
+!     indx2 is an integer array of dimension n
+!       On entry indx2 is unspecified.
+!       On exit with iter>0, indx2 indicates which variables
+!          have changed status since the previous iteration.
+!       For i= 1,...,nenter, indx2(i) have changed from bound to free.
+!       For i= ileave+1,...,n, indx2(i) have changed from free to bound.
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: iact, i, k
+      Integer :: itmp
+
+      nenter = 0
+      ileave = n + 1
+      If (iter>0 .And. cnstnd) Then
+!                           count the entering and leaving variables.
+        Do i = 1, nfree
+          k = index(i)
+
+!jn            write(6,*) ' k  = index(i) ', k
+!jn            write(6,*) ' index = ', i
+
+          If (iwhere(k)>0) Then
+            ileave = ileave - 1
+            indx2(ileave) = k
+            If (iprint>=100) Then
+!x                  call intpr(
+!x     +   'Variable k leaves the set of free variables for k =',
+!x     +   -1, k, 1)
+            End If
+!w               if (iprint .ge. 100) write (6,*)
+!w     +             'Variable ',k,' leaves the set of free variables'
+          End If
+        End Do
+        Do i = 1 + nfree, n
+          k = index(i)
+          If (iwhere(k)<=0) Then
+            nenter = nenter + 1
+            indx2(nenter) = k
+!x               if (iprint .ge. 100) then
+!x                 call intpr('Var entering free vars is k=',-1,k,1)
+!w                write (6,*)
+!w     +             'Variable ',k,' enters the set of free variables'
+!x               endif
+          End If
+        End Do
+!x         if (iprint .ge. 99) then
+!w            write (6,*)
+!w     +       n+1-ileave,' variables leave; ',nenter,' variables enter'
+!x            itmp = n+1-ileave
+!x            call intpr(' no. variables leaving  =',-1,itmp, 1)
+!x            call intpr(' no. variables entering =',-1,nenter, 1)
+!x         endif
+      End If
+      wrk = (ileave<n+1) .Or. (nenter>0) .Or. updatd
+
+!     Find the index set of free and PREC(active) variables at the GCP.
+
+      nfree = 0
+      iact = n + 1
+      Do i = 1, n
+        If (iwhere(i)<=0) Then
+          nfree = nfree + 1
+          index(nfree) = i
+        Else
+          iact = iact - 1
+          index(iact) = i
+        End If
+      End Do
+!x      if (iprint .ge. 99) then
+!w        write (6,*)
+!w     +      nfree,' variables are free at GCP ',iter + 1
+!x         call intpr(' no. variables free =',-1, nfree,1)
+!x         itmp = iter + 1
+!x         call intpr(' at GCP ',-1,itmp,1)
+!x      endif
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(freev) ==============================
+
+    Subroutine PREC(hpsolb)(n, t, iorder, iheap)
+      Use working_precision, Only: wp
+      Integer :: iheap, n, iorder(n)
+      Real (Kind=wp) :: t(n)
+
+!     ************
+!
+!     Subroutine PREC(hpsolb)
+!
+!     This subroutine sorts out the least element of t, and puts the
+!       remaining elements of t in a heap.
+!
+!     n is an integer variable.
+!       On entry n is the dimension of the arrays t and iorder.
+!       On exit n is unchanged.
+!
+!     t is a double precision array of dimension n.
+!       On entry t stores the elements to be sorted,
+!       On exit t(n) stores the least elements of t, and t(1) to t(n-1)
+!         stores the remaining elements in the form of a heap.
+!
+!     iorder is an integer array of dimension n.
+!       On entry iorder(i) is the index of t(i).
+!       On exit iorder(i) is still the index of t(i), but iorder may be
+!         permuted in accordance with t.
+!
+!     iheap is an integer variable specifying the task.
+!       On entry iheap should be set as follows:
+!         iheap .eq. 0 if t(1) to t(n) is not in the form of a heap,
+!         iheap .ne. 0 if otherwise.
+!       On exit iheap is unchanged.
+!
+!
+!     References:
+!       Algorithm 232 of CACM (J. W. J. Williams): HEAPSORT.
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!     ************
+
+      Integer :: i, j, k, indxin, indxou
+      Real (Kind=wp) :: ddum, out
+
+      If (iheap==0) Then
+
+!        Rearrange the elements t(1) to t(n) to form a heap.
+
+        Do k = 2, n
+          ddum = t(k)
+          indxin = iorder(k)
+
+!           Add ddum to the heap.
+          i = k
+100       Continue
+          If (i>1) Then
+            j = i/2
+            If (ddum<t(j)) Then
+              t(i) = t(j)
+              iorder(i) = iorder(j)
+              i = j
+              Go To 100
+            End If
+          End If
+          t(i) = ddum
+          iorder(i) = indxin
+        End Do
+      End If
+
+!     Assign to 'out' the value of t(1), the least member of the heap,
+!        and rearrange the remaining members to form a heap as
+!        elements 1 to n-1 of t.
+
+      If (n>1) Then
+        i = 1
+        out = t(1)
+        indxou = iorder(1)
+        ddum = t(n)
+        indxin = iorder(n)
+
+!        Restore the heap
+110     Continue
+        j = i + i
+        If (j<=n-1) Then
+          If (t(j+1)<t(j)) j = j + 1
+          If (t(j)<ddum) Then
+            t(i) = t(j)
+            iorder(i) = iorder(j)
+            i = j
+            Go To 110
+          End If
+        End If
+        t(i) = ddum
+        iorder(i) = indxin
+
+!     Put the least member in t(n).
+
+        t(n) = out
+        iorder(n) = indxou
+      End If
+
+      Return
+
+    End Subroutine
+
+!====================== The end of PREC(hpsolb) ==============================
+
+    Subroutine PREC(lnsrlb)(n, l, u, nbd, x, f, fold, gd, gdold, g, d, r, t, z, stp, &
+      dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, itask, boxed, &
+      cnstnd, icsave, isave, dsave)
+      Use working_precision, Only: wp
+
+      Logical :: boxed, cnstnd
+      Integer :: n, iter, ifun, iback, nfgv, info, itask, icsave, nbd(n), &
+        isave(2)
+      Real (Kind=wp) :: f, fold, gd, gdold, stp, dnorm, dtd, xstep, stpmx, &
+        x(n), l(n), u(n), g(n), d(n), r(n), t(n), z(n), dsave(13)
+!     **********
+!
+!     Subroutine PREC(lnsrlb)
+!
+!     This subroutine calls subroutine PREC(dcsrch) from the Minpack2 library
+!       to perform the line search.  Subroutine dscrch is safeguarded so
+!       that all trial points lie within the feasible region.
+!
+!     Subprograms called:
+!
+!       Minpack2 Library ... PREC(dcsrch).
+!
+!       Linpack ... LPREC(trsl), LPREC(dot).
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     **********
+
+      Integer :: i
+      Real (Kind=wp) :: LPREC(dot), a1, a2
+      Real (Kind=wp) :: one, zero, big
+      Parameter (one=1.0E0_wp, zero=0.0E0_wp, big=1.0E+10_wp)
+      Real (Kind=wp) :: ftol, gtol, xtol
+      Parameter (ftol=1.0E-3_wp, gtol=0.9E0_wp, xtol=0.1E0_wp)
+
+!      if (task(1:5) .eq. 'FG_LN') goto 556
+      If (itask==20) Go To 100
+      dtd = LPREC(dot)(n, d, 1, d, 1)
+      dnorm = sqrt(dtd)
+
+!     Determine the maximum step length.
+
+      stpmx = big
+      If (cnstnd) Then
+        If (iter==0) Then
+          stpmx = one
+        Else
+          Do i = 1, n
+            a1 = d(i)
+            If (nbd(i)/=0) Then
+              If (a1<zero .And. nbd(i)<=2) Then
+                a2 = l(i) - x(i)
+                If (a2>=zero) Then
+                  stpmx = zero
+                Else If (a1*stpmx<a2) Then
+                  stpmx = a2/a1
+                End If
+              Else If (a1>zero .And. nbd(i)>=2) Then
+                a2 = u(i) - x(i)
+                If (a2<=zero) Then
+                  stpmx = zero
+                Else If (a1*stpmx>a2) Then
+                  stpmx = a2/a1
+                End If
+              End If
+            End If
+          End Do
+        End If
+      End If
+
+      If (iter==0 .And. .Not. boxed) Then
+        stp = min(one/dnorm, stpmx)
+      Else
+        stp = one
+      End If
+
+      Call LPREC(copy)(n, x, 1, t, 1)
+      Call LPREC(copy)(n, g, 1, r, 1)
+      fold = f
+      ifun = 0
+      iback = 0
+!      csave = 'START'
+      icsave = 2
+100   Continue
+      gd = LPREC(dot)(n, g, 1, d, 1)
+      If (ifun==0) Then
+        gdold = gd
+        If (gd>=zero) Then
+!                               the directional derivative >=0.
+!                               Line search is impossible.
+!w            write(6,*)' ascent direction in projection gd = ', gd
+!x              call dblepr(' ascent direction in projection gd = ',
+!x     +     -1, gd,1)
+          info = -4
+          Return
+        End If
+      End If
+
+      Call PREC(dcsrch)(f, gd, stp, ftol, gtol, xtol, zero, stpmx, icsave, isave, &
+        dsave)
+
+      xstep = stp*dnorm
+!      if (csave(1:4) .ne. 'CONV' .and. csave(1:4) .ne. 'WARN') then
+!2345678901234567890123456789012345678901234567890123456789012345678901234567890
+      If ((icsave<6) .Or. ((icsave>8) .And. (icsave<23))) Then
+!         task = 'FG_LNSRCH'
+        itask = 20
+        ifun = ifun + 1
+        nfgv = nfgv + 1
+        iback = ifun - 1
+        If (stp==one) Then
+          Call LPREC(copy)(n, z, 1, x, 1)
+        Else
+          Do i = 1, n
+            x(i) = stp*d(i) + t(i)
+          End Do
+        End If
+      Else
+!         task = 'NEW_X'
+        itask = 1
+      End If
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(lnsrlb) =============================
+
+    Subroutine PREC(matupd)(n, m, ws, wy, sy, ss, d, r, itail, iupdat, col, head, &
+      theta, rr, dr, stp, dtd)
+      Use working_precision, Only: wp
+
+      Integer :: n, m, itail, iupdat, col, head
+      Real (Kind=wp) :: theta, rr, dr, stp, dtd, d(n), r(n), ws(n, m), &
+        wy(n, m), sy(m, m), ss(m, m)
+
+!     ************
+!
+!     Subroutine PREC(matupd)
+!
+!       This subroutine updates matrices WS and WY, and forms the
+!         middle matrix in B.
+!
+!     Subprograms called:
+!
+!       Linpack ... LPREC(copy), LPREC(dot).
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: j, pointr
+      Real (Kind=wp) :: LPREC(dot)
+      Real (Kind=wp) :: one
+      Parameter (one=1.0E0_wp)
+
+!     Set pointers for matrices WS and WY.
+
+      If (iupdat<=m) Then
+        col = iupdat
+        itail = mod(head+iupdat-2, m) + 1
+      Else
+        itail = mod(itail, m) + 1
+        head = mod(head, m) + 1
+      End If
+
+!     Update matrices WS and WY.
+
+      Call LPREC(copy)(n, d, 1, ws(1,itail), 1)
+      Call LPREC(copy)(n, r, 1, wy(1,itail), 1)
+
+!     Set theta=yy/ys.
+
+      theta = rr/dr
+
+!     Form the middle matrix in B.
+
+!        update the upper triangle of SS,
+!                                         and the lower triangle of SY:
+      If (iupdat>m) Then
+!                              move old information
+        Do j = 1, col - 1
+          Call LPREC(copy)(j, ss(2,j+1), 1, ss(1,j), 1)
+          Call LPREC(copy)(col-j, sy(j+1,j+1), 1, sy(j,j), 1)
+        End Do
+      End If
+!        add new information: the last row of SY
+!                                             and the last column of SS:
+      pointr = head
+      Do j = 1, col - 1
+        sy(col, j) = LPREC(dot)(n, d, 1, wy(1,pointr), 1)
+        ss(j, col) = LPREC(dot)(n, ws(1,pointr), 1, d, 1)
+        pointr = mod(pointr, m) + 1
+      End Do
+      If (stp==one) Then
+        ss(col, col) = dtd
+      Else
+        ss(col, col) = stp*stp*dtd
+      End If
+      sy(col, col) = dr
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(matupd) =============================
+
+    Subroutine PREC(prn1lb)(n, m, l, u, x, iprint, epsmch)
+      Use working_precision, Only: wp
+
+      Integer :: n, m
+      Real (Kind=wp) :: epsmch, x(n), l(n), u(n)
+
+!     ************
+!
+!     Subroutine PREC(prn1lb)
+!
+!     This subroutine prints the input data, initial point, upper and
+!       lower bounds of each variable, machine precision, as well as
+!       the headings of the output.
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+!$$$      integer i
+      Integer :: nprt
+
+!  limit output to 1st 5 elements
+      nprt = n
+      If (nprt>5) nprt = 5
+!x      if (iprint .ge. 0) then
+!x         if (iprint .ge. 1) then
+!w         write (6,7001) epsmch
+!x         call dblepr('RUNNING THE L-BFGS-B CODE with eps=',
+!x     +     -1, epsmch, 1)
+!w         write (6,*) 'N = ',n,'    M = ',m
+!x         call intpr(' N =',-1, n, 1)
+!x         call intpr(' M =',-1, m, 1)
+!w            write (itfile,2001) epsmch
+!w            write (itfile,*)'N = ',n,'    M = ',m
+!w            write (itfile,9001)
+!x            if (iprint .gt. 100) then
+!w               write (6,1004) 'L =',(l(i),i = 1,n)
+!w               write (6,1004) 'X0 =',(x(i),i = 1,n)
+!w               write (6,1004) 'U =',(u(i),i = 1,n)
+!x               call dblepr('L =',-1, l, nprt)
+!x               call dblepr('X0=',-1, x, nprt)
+!x               call dblepr('U =',-1, u, nprt)
+!x            endif
+!x         endif
+!x      endif
+
+!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
+!w 2001 format ('RUNNING THE L-BFGS-B CODE',/,/,
+!w     + 'it    = iteration number',/,
+!w     + 'nf    = number of function evaluations',/,
+!w     + 'nseg  = number of segments explored during the Cauchy search',/,
+!w     + 'nact  = number of PREC(active) bounds at the generalized Cauchy point'
+!w     + ,/,
+!w     + 'sub   = manner in which the subspace minimization terminated:'
+!w     + ,/,'        con = converged, bnd = a bound was reached',/,
+!w     + 'itls  = number of iterations performed in the line search',/,
+!w     + 'stepl = step length used',/,
+!w     + 'tstep = norm of the displacement (total step)',/,
+!w     + 'projg = norm of the projected gradient',/,
+!w     + 'f     = function value',/,/,
+!w     + '           * * *',/,/,
+!w     + 'Machine precision =',1p,d10.3)
+!w 7001 format ('RUNNING THE L-BFGS-B CODE',/,/,
+!w     + '           * * *',/,/,
+!w     + 'Machine precision =',1p,d10.3)
+!w 9001 format (/,3x,'it',3x,'nf',2x,'nseg',2x,'nact',2x,'sub',2x,'itls',
+!w     +        2x,'stepl',4x,'tstep',5x,'projg',8x,'f')
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(prn1lb) =============================
+
+    Subroutine PREC(prn2lb)(f, iprint, iter, sbgnrm, iback, xstep)
+      Use working_precision, Only: wp
+
+      Integer :: iprint, iter, iback
+      Real (Kind=wp) :: f, sbgnrm, xstep
+
+!     ************
+!
+!     Subroutine PREC(prn2lb)
+!
+!     This subroutine prints out new information after a successful
+!       line search.
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: imod
+
+!           'word' records the status of subspace solutions.
+!$$$      if (iword .eq. 0) then
+!$$$c                            the subspace minimization converged.
+!$$$         word = 'con'
+!$$$      else if (iword .eq. 1) then
+!$$$c                          the subspace minimization stopped at a bound.
+!$$$         word = 'bnd'
+!$$$      else if (iword .eq. 5) then
+!$$$c                             the truncated Newton step has been used.
+!$$$         word = 'TNT'
+!$$$      else
+!$$$         word = '---'
+!$$$      endif
+!x      if (iprint .ge. 99) then
+!w         write (6,*) 'LINE SEARCH',iback,' times; norm of step = ',xstep
+!x         call intpr('LINE SEARCH iback=',-1, iback, 1)
+!x         call dblepr('norm of step =',-1, xstep, 1)
+!w         write (6,2001) iter,f,sbgnrm
+!x         call intpr('At iterate ',-1, iter, 1)
+!x         call dblepr('f =',-1, f, 1)
+!x         call dblepr('|proj g| =',-1, sbgnrm, 1)
+!x         if (iprint .gt. 100) then
+!w            write (6,1004) 'X =',(x(i), i = 1, n)
+!w            write (6,1004) 'G =',(g(i), i = 1, n)
+!x         endif
+!x      else if (iprint .gt. 0) then
+!x         imod = mod(iter,iprint)
+!w         if (imod .eq. 0) write (6,2001) iter,f,sbgnrm
+!x      endif
+!w      if (iprint .ge. 1) write (itfile,3001)
+!w     +          iter,nfgv,nseg,nact,word,iback,stp,xstep,sbgnrm,f
+
+!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
+!w 2001 format
+!w     +  (/,'At iterate',i5,4x,'f= ',1p,d12.5,4x,'|proj g|= ',1p,d12.5)
+!w 3001 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),1p,2(1x,d10.3))
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(prn2lb) =============================
+
+    Subroutine PREC(prn3lb)(n, x, f, itask, iprint, info, k)
+      Use working_precision, Only: wp
+
+!      character*255     task
+      Integer :: n, iprint, info, k, itask
+      Real (Kind=wp) :: f, x(n)
+
+!     ************
+!
+!     Subroutine PREC(prn3lb)
+!
+!     This subroutine prints out information when either a built-in
+!       convergence test is satisfied or when an error message is
+!       generated.
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+!$$$      integer i
+      Integer :: nprt
+
+!      if (task(1:5) .eq. 'ERROR') goto 999
+      If ((itask>=9) .And. (itask<=19)) Go To 100
+
+!x      if (iprint .ge. 0) then
+!w       write (6,3003)
+!w 3003 format (/,
+!w     + '           * * *',/,/,
+!w     + 'Tit   = total number of iterations',/,
+!w     + 'Tnf   = total number of function evaluations',/,
+!w     + 'Tnint = total number of segments explored during',
+!w     +           ' Cauchy searches',/,
+!w     + 'Skip  = number of BFGS updates skipped',/,
+!w     + 'Nact  = number of PREC(active) bounds at final generalized',
+!w     +          ' Cauchy point',/,
+!w     + 'Projg = norm of the final projected gradient',/,
+!w     + 'F     = final function value',/,/,
+!w     + '           * * *')
+!w       write (6,3004)
+!w 3004 format (/,3x,'N',4x,'Tit',5x,'Tnf',2x,'Tnint',2x,
+!w     +       'Skip',2x,'Nact',5x,'Projg',8x,'F')
+!w       write(6,3005) n,iter,nfgv,nintol,nskip,nact,sbgnrm,f
+!w 3005 format (i5,2(1x,i6),(1x,i6),(2x,i4),(1x,i5),1p,2(2x,d10.3))
+!x         if (iprint .ge. 100) then
+!x            nprt = n
+!x            if (nprt .gt. 5) nprt = 5
+!x            call dblepr('X=', -1, x, nprt)
+!w            write (6,1004) 'X =',(x(i),i = 1,n)
+!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
+!x         endif
+!w       if (iprint .ge. 1) write (6,*) ' F =',f
+!x         if (iprint .ge. 1) call dblepr(' F =',-1,f, 1)
+!x      endif
+100   Continue
+!x      if (iprint .ge. 0) then
+!w         write (6,3009) itask
+!x         if (info .ne. 0) then
+!w            if (info .eq. -1) write (6,9011)
+!x           if (info .eq. -1) then
+!x             call intpr(
+!x     +' Matrix in 1st Cholesky factorization in PREC(formk) is not Pos. Def.',
+!x     +  -1, 0, 0)
+!x           endif
+!w            if (info .eq. -2) write (6,9012)
+!x            if (info .eq. -2) then
+!x              call intpr(
+!x     +' Matrix in 2nd Cholesky factorization in PREC(formk) is not Pos. Def.',
+!x     +  -1, 0, 0)
+
+!x            endif
+!w            if (info .eq. -3) write (6,9013)
+!x            if (info .eq. -3) then
+!x              call intpr(
+!x     +  ' Matrix in Cholesky factorization in PREC(formt) is not Pos. Def.',
+!x     +  -1, 0, 0)
+!x            endif
+!w            if (info .eq. -4) write (6,9014)
+!x            if (info .eq. -4) then
+!x              call intpr(
+!x     +' Derivative >= 0, backtracking line search impossible.',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +'   Previous x, f and g restored.',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +' Possible causes: 1 error in function or gradient evaluation;',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +'                  2 rounding errors dominate computation.',
+!x     +  -1, 0, 0)
+!x            endif
+!w            if (info .eq. -5) write (6,9015)
+!x            if (info .eq. -5) then
+!x              call intpr(
+!x     +' Warning:  more than 10 function and gradient',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +'   evaluations in the last line search.  Termination',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +'   may possibly be caused by a bad search direction.',
+!x     +  -1, 0, 0)
+!x            endif
+!w            if (info .eq. -6) write (6,*)' Input nbd(',k,') is invalid.'
+!x            if (info .eq. -6) then
+!x              call intpr(
+!x     + ' Input nbd(k) is invalid for k = ',
+!x     +  -1, k, 1)
+!x            endif
+!w            if (info .eq. -7)
+!x            if (info .eq. -7) then
+!x              call intpr(
+!x     +  ' l(k) > u(k).  No feasible solution for k=', -1, k, 1)
+!x            endif
+!w     +      write (6,*)' l(',k,') > u(',k,').  No feasible solution.'
+!w            if (info .eq. -8) write (6,9018)
+!x            if (info .eq. -8) then
+!x              call intpr(' The triangular system is singular.',
+!x     +  -1, 0, 0)
+!x            endif
+!w            if (info .eq. -9) write (6,9019)
+!x            if (info .eq. -9) then
+!x              call intpr(
+!x     +' Line search cannot locate an adequate point after 20 function',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +'  and gradient evaluations.  Previous x, f and g restored.',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +' Possible causes: 1 error in function or gradient evaluation;',
+!x     +  -1, 0, 0)
+!x              call intpr(
+!x     +'                  2 rounding error dominate computation.',
+!x     +  -1, 0, 0)
+!x            endif
+!x         endif
+!w         if (iprint .ge. 1)
+!w        write (6,3007) cachyt,sbtime,lnscht
+!w   suppressing time output
+
+!w         write (6,3008) time
+!w Note -- suppress time computations here -- use R stuff
+!w         if (iprint .ge. 1) then
+!w            if (info .eq. -4 .or. info .eq. -9) then
+!w               write (itfile,3002)
+!w     +             iter,nfgv,nseg,nact,word,iback,stp,xstep
+!w            endif
+!w            write (itfile,3009) itask
+!w            if (info .ne. 0) then
+!w               if (info .eq. -1) write (itfile,9011)
+!w               if (info .eq. -2) write (itfile,9012)
+!w               if (info .eq. -3) write (itfile,9013)
+!w               if (info .eq. -4) write (itfile,9014)
+!w               if (info .eq. -5) write (itfile,9015)
+!w               if (info .eq. -8) write (itfile,9018)
+!w               if (info .eq. -9) write (itfile,9019)
+!w            endif
+!w            write (itfile,3008) time
+!w         endif
+!x      endif
+
+!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
+!w 3002 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),6x,'-',10x,'-')
+!w 3003 format (/,
+!w     + '           * * *',/,/,
+!w     + 'Tit   = total number of iterations',/,
+!w     + 'Tnf   = total number of function evaluations',/,
+!w     + 'Tnint = total number of segments explored during',
+!w     +           ' Cauchy searches',/,
+!w     + 'Skip  = number of BFGS updates skipped',/,
+!w     + 'Nact  = number of PREC(active) bounds at final generalized',
+!w     +          ' Cauchy point',/,
+!w     + 'Projg = norm of the final projected gradient',/,
+!w     + 'F     = final function value',/,/,
+!w     + '           * * *')
+!w 3007 format (/,' Cauchy                time',1p,e10.3,' seconds.',/
+!w     +        ' Subspace minimization time',1p,e10.3,' seconds.',/
+!w     +        ' Line search           time',1p,e10.3,' seconds.')
+!w 3008 format (/,' Total User time',1p,e10.3,' seconds.',/)
+!w 3009 format (/,i4)
+!w 9011 format (/,
+!w     +' Matrix in 1st Cholesky factorization in PREC(formk) is not Pos. Def.')
+!w 9012 format (/,
+!w     +' Matrix in 2st Cholesky factorization in PREC(formk) is not Pos. Def.')
+!w 9013 format (/,
+!w     +' Matrix in the Cholesky factorization in PREC(formt) is not Pos. Def.')
+!w 9014 format (/,
+!w     +' Derivative >= 0, backtracking line search impossible.',/,
+!w     +'   Previous x, f and g restored.',/,
+!w     +' Possible causes: 1 error in function or gradient evaluation;',/,
+!w     +'                  2 rounding errors dominate computation.')
+!w 9015 format (/,
+!w     +' Warning:  more than 10 function and gradient',/,
+!w     +'   evaluations in the last line search.  Termination',/,
+!w     +'   may possibly be caused by a bad search direction.')
+!w 9018 format (/,' The triangular system is singular.')
+!w 9019 format (/,
+!w     +' Line search cannot locate an adequate point after 20 function',/
+!w     +,'  and gradient evaluations.  Previous x, f and g restored.',/,
+!w     +' Possible causes: 1 error in function or gradient evaluation;',/,
+!w     +'                  2 rounding error dominate computation.')
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(prn3lb) =============================
+
+    Subroutine PREC(projgr)(n, l, u, nbd, x, g, sbgnrm)
+      Use working_precision, Only: wp
+
+      Integer :: n, nbd(n)
+      Real (Kind=wp) :: sbgnrm, x(n), l(n), u(n), g(n)
+
+!     ************
+!
+!     Subroutine PREC(projgr)
+!
+!     This subroutine computes the infinity norm of the projected
+!       gradient.
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: i
+      Real (Kind=wp) :: gi
+      Real (Kind=wp) :: zero
+      Parameter (zero=0.0E0_wp)
+
+      sbgnrm = zero
+      Do i = 1, n
+        gi = g(i)
+        If (nbd(i)/=0) Then
+          If (gi<zero) Then
+            If (nbd(i)>=2) gi = max((x(i)-u(i)), gi)
+          Else
+            If (nbd(i)<=2) gi = min((x(i)-l(i)), gi)
+          End If
+        End If
+        sbgnrm = max(sbgnrm, abs(gi))
+      End Do
+
+      Return
+
+    End Subroutine
+
+!======================= The end of PREC(projgr) =============================
+
+    Subroutine PREC(subsm)(n, m, nsub, ind, l, u, nbd, x, d, xp, ws, wy, theta, xx, &
+      gg, col, head, iword, wv, wn, iprint, info)
+      Use working_precision, Only: wp
+      Implicit None
+      Integer :: n, m, nsub, col, head, iword, iprint, info, ind(nsub), nbd(n)
+      Real (Kind=wp) :: theta, l(n), u(n), x(n), d(n), xp(n), xx(n), gg(n), &
+        ws(n, m), wy(n, m), wv(2*m), wn(2*m, 2*m)
+
+!     **********************************************************************
+!
+!     This routine contains the major changes in the updated version.
+!     The changes are described in the accompanying paper
+!
+!      Jose Luis Morales, Jorge Nocedal
+!      "Remark On Algorithm 788: L-BFGS-B: Fortran Subroutines for Large-Scale
+!       Bound Constrained Optimization". Decemmber 27, 2010.
+!
+!             J.L. Morales  Departamento de Matematicas,
+!                           Instituto Tecnologico Autonomo de Mexico
+!                           Mexico D.F.
+!
+!             J, Nocedal    Department of Electrical Engineering and
+!                           Computer Science.
+!                           Northwestern University. Evanston, IL. USA
+!
+!                           January 17, 2011
+!
+!      **********************************************************************
+!
+!
+!     Subroutine PREC(subsm)
+!
+!     Given xcp, l, u, r, an index set that specifies
+!       the PREC(active) set at xcp, and an l-BFGS matrix B
+!       (in terms of WY, WS, SY, WT, head, col, and theta),
+!       this subroutine computes an approximate solution
+!       of the subspace problem
+!
+!       (P)   min Q(x) = r'(x-xcp) + 1/2 (x-xcp)' B (x-xcp)
+!
+!             subject to l<=x<=u
+!                       x_i=xcp_i for all i in A(xcp)
+!
+!       along the subspace unconstrained Newton direction
+!
+!          d = -(Z'BZ)^(-1) r.
+!
+!       The formula for the Newton direction, given the L-BFGS matrix
+!       and the Sherman-Morrison formula, is
+!
+!          d = (1/theta)r + (1/theta*2) Z'WK^(-1)W'Z r.
+!
+!       where
+!                 K = [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
+!                     [L_a -R_z           theta*S'AA'S ]
+!
+!     Note that this procedure for computing d differs
+!     from that described in [1]. One can show that the matrix K is
+!     equal to the matrix M^[-1]N in that paper.
+!
+!     n is an integer variable.
+!       On entry n is the dimension of the problem.
+!       On exit n is unchanged.
+!
+!     m is an integer variable.
+!       On entry m is the maximum number of variable metric corrections
+!         used to define the limited memory matrix.
+!       On exit m is unchanged.
+!
+!     nsub is an integer variable.
+!       On entry nsub is the number of free variables.
+!       On exit nsub is unchanged.
+!
+!     ind is an integer array of dimension nsub.
+!       On entry ind specifies the coordinate indices of free variables.
+!       On exit ind is unchanged.
+!
+!     l is a double precision array of dimension n.
+!       On entry l is the lower bound of x.
+!       On exit l is unchanged.
+!
+!     u is a double precision array of dimension n.
+!       On entry u is the upper bound of x.
+!       On exit u is unchanged.
+!
+!     nbd is a integer array of dimension n.
+!       On entry nbd represents the type of bounds imposed on the
+!         variables, and must be specified as follows:
+!         nbd(i)=0 if x(i) is unbounded,
+!                1 if x(i) has only a lower bound,
+!                2 if x(i) has both lower and upper bounds, and
+!                3 if x(i) has only an upper bound.
+!       On exit nbd is unchanged.
+!
+!     x is a double precision array of dimension n.
+!       On entry x specifies the Cauchy point xcp.
+!       On exit x(i) is the minimizer of Q over the subspace of
+!                                                        free variables.
+!
+!     d is a double precision array of dimension n.
+!       On entry d is the reduced gradient of Q at xcp.
+!       On exit d is the Newton direction of Q.
+!
+!    xp is a double precision array of dimension n.
+!       used to safeguard the projected Newton direction
+!
+!    xx is a double precision array of dimension n
+!       On entry it holds the current iterate
+!       On output it is unchanged
+
+!    gg is a double precision array of dimension n
+!       On entry it holds the gradient at the current iterate
+!       On output it is unchanged
+!
+!     ws and wy are double precision arrays;
+!     theta is a double precision variable;
+!     col is an integer variable;
+!     head is an integer variable.
+!       On entry they store the information defining the
+!                                          limited memory BFGS matrix:
+!         ws(n,m) stores S, a set of s-vectors;
+!         wy(n,m) stores Y, a set of y-vectors;
+!         theta is the scaling factor specifying B_0 = theta I;
+!         col is the number of variable metric corrections stored;
+!         head is the location of the 1st s- (or y-) vector in S (or Y).
+!       On exit they are unchanged.
+!
+!     iword is an integer variable.
+!       On entry iword is unspecified.
+!       On exit iword specifies the status of the subspace solution.
+!         iword = 0 if the solution is in the box,
+!                 1 if some bound is encountered.
+!
+!     wv is a double precision working array of dimension 2m.
+!
+!     wn is a double precision array of dimension 2m x 2m.
+!       On entry the upper triangle of wn stores the LEL^T factorization
+!         of the indefinite matrix
+!
+!              K = [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
+!                  [L_a -R_z           theta*S'AA'S ]
+!                                                    where E = [-I  0]
+!                                                              [ 0  I]
+!       On exit wn is unchanged.
+!
+!     iprint is an INTEGER variable that must be set by the user.
+!       It controls the frequency and type of output generated:
+!        iprint<0    no output is generated;
+!        iprint=0    print only one line at the last iteration;
+!        0<iprint<99 print also f and |proj g| every iprint iterations;
+!        iprint=99   print details of every iteration except n-vectors;
+!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint>100  print details of every iteration including x and g;
+!       When iprint > 0, the file iterate.dat will be created to
+!                        summarize the iteration.
+!
+!     info is an integer variable.
+!       On entry info is unspecified.
+!       On exit info = 0       for normal return,
+!                    = nonzero for abnormal return
+!                                  when the matrix K is ill-conditioned.
+!
+!     Subprograms called:
+!
+!       Linpack LPREC(trsl).
+!
+!
+!     References:
+!
+!       [1] R. H. Byrd, P. Lu, J. Nocedal and C. Zhu, ``A limited
+!       memory algorithm for bound constrained optimization'',
+!       SIAM J. Scientific Computing 16 (1995), no. 5, pp. 1190--1208.
+!
+!
+!
+!                           *  *  *
+!
+!     NEOS, November 1994. (Latest revision June 1996.)
+!     Optimization Technology Center.
+!     Argonne National Laboratory and Northwestern University.
+!     Written by
+!                        Ciyou Zhu
+!     in collaboration with R.H. Byrd, P. Lu-Chen and J. Nocedal.
+!
+!
+!     ************
+
+      Integer :: pointr, m2, col2, ibd, jy, js, i, j, k
+      Real (Kind=wp) :: alpha, xk, dk, temp1, temp2
+      Real (Kind=wp) :: one, zero
+      Parameter (one=1.0E0_wp, zero=0.0E0_wp)
+!
+      Real (Kind=wp) :: dd_p
+
+      If (nsub<=0) Return
+!w      if (iprint .ge. 99) write (6,1001)
+!x      if (iprint .ge. 99) then
+!x         call intpr(' ----- SUBSM entered -----', -1, 0, 0)
+!w 1001 format (/,'----------------SUBSM entered-----------------',/)
+!x      endif
+!     Compute wv = W'Zd.
+
+      pointr = head
+      Do i = 1, col
+        temp1 = zero
+        temp2 = zero
+        Do j = 1, nsub
+          k = ind(j)
+          temp1 = temp1 + wy(k, pointr)*d(j)
+          temp2 = temp2 + ws(k, pointr)*d(j)
+        End Do
+        wv(i) = temp1
+        wv(col+i) = theta*temp2
+        pointr = mod(pointr, m) + 1
+      End Do
+
+!     Compute wv:=K^(-1)wv.
+
+      m2 = 2*m
+      col2 = 2*col
+      Call LPREC(trsl)(wn, m2, col2, wv, 11, info)
+      If (info/=0) Return
+      Do i = 1, col
+        wv(i) = -wv(i)
+      End Do
+      Call LPREC(trsl)(wn, m2, col2, wv, 01, info)
+      If (info/=0) Return
+
+!     Compute d = (1/theta)d + (1/theta**2)Z'W wv.
+
+      pointr = head
+      Do jy = 1, col
+        js = col + jy
+        Do i = 1, nsub
+          k = ind(i)
+          d(i) = d(i) + wy(k, pointr)*wv(jy)/theta + ws(k, pointr)*wv(js)
+        End Do
+        pointr = mod(pointr, m) + 1
+      End Do
+
+      Call dscal(nsub, one/theta, d, 1)
+!
+!-----------------------------------------------------------------
+!     Let us try the projection, d is the Newton direction
+
+      iword = 0
+
+      Call LPREC(copy)(n, x, 1, xp, 1)
+!
+      Do i = 1, nsub
+        k = ind(i)
+        dk = d(i)
+        xk = x(k)
+        If (nbd(k)/=0) Then
+!
+          If (nbd(k)==1) Then ! lower bounds only
+            x(k) = max(l(k), xk+dk)
+            If (x(k)==l(k)) iword = 1
+          Else
+!
+            If (nbd(k)==2) Then ! upper and lower bounds
+              xk = max(l(k), xk+dk)
+              x(k) = min(u(k), xk)
+              If (x(k)==l(k) .Or. x(k)==u(k)) Then
+                iword = 1
+              End If
+            Else
+!
+              If (nbd(k)==3) Then ! upper bounds only
+                x(k) = min(u(k), xk+dk)
+                If (x(k)==u(k)) iword = 1
+              End If
+            End If
+          End If
+!
+        Else ! free variables
+          x(k) = xk + dk
+        End If
+      End Do
+!
+      If (iword==0) Then
+        Go To 100
+      End If
+!
+!     check sign of the directional derivative
+!
+      dd_p = zero
+      Do i = 1, n
+        dd_p = dd_p + (x(i)-xx(i))*gg(i)
+      End Do
+      If (dd_p>zero) Then
+        Call LPREC(copy)(n, xp, 1, x, 1)
+!x         call intpr(' Positive dir derivative in projection ', -1,0,0)
+!w       write(6,*) ' Positive dir derivative in projection '
+!x         call intpr(' Using the backtracking step ', -1,0,0)
+!w       write(6,*) ' Using the backtracking step '
+      Else
+        Go To 100
+      End If
+!
+!-----------------------------------------------------------------
+!
+      alpha = one
+      temp1 = alpha
+      ibd = 0
+      Do i = 1, nsub
+        k = ind(i)
+        dk = d(i)
+        If (nbd(k)/=0) Then
+          If (dk<zero .And. nbd(k)<=2) Then
+            temp2 = l(k) - x(k)
+            If (temp2>=zero) Then
+              temp1 = zero
+            Else If (dk*alpha<temp2) Then
+              temp1 = temp2/dk
+            End If
+          Else If (dk>zero .And. nbd(k)>=2) Then
+            temp2 = u(k) - x(k)
+            If (temp2<=zero) Then
+              temp1 = zero
+            Else If (dk*alpha>temp2) Then
+              temp1 = temp2/dk
+            End If
+          End If
+          If (temp1<alpha) Then
+            alpha = temp1
+            ibd = i
+          End If
+        End If
+      End Do
+
+      If (alpha<one) Then
+        dk = d(ibd)
+        k = ind(ibd)
+        If (dk>zero) Then
+          x(k) = u(k)
+          d(ibd) = zero
+        Else If (dk<zero) Then
+          x(k) = l(k)
+          d(ibd) = zero
+        End If
+      End If
+      Do i = 1, nsub
+        k = ind(i)
+        x(k) = x(k) + alpha*d(i)
+      End Do
+!ccccc
+100   Continue
+
+!w        if (iprint .ge. 99) write (6,1004)
+!x         if (iprint .ge. 99) call intpr(' exit SUBSM ', -1, 0,0)
+
+!w 1001 format (/,'----------------SUBSM entered-----------------',/)
+!w 1004 format (/,'----------------exit SUBSM --------------------',/)
+
+      Return
+
+    End Subroutine
+!====================== The end of PREC(subsm) ===============================
+
+    Subroutine PREC(dcsrch)(f, g, stp, ftol, gtol, xtol, stpmin, stpmax, itask, &
+      isave, dsave)
+      Use working_precision, Only: wp
+!      character*(*) task
+      Integer :: itask, isave(2)
+      Real (Kind=wp) :: f, g, stp, ftol, gtol, xtol, stpmin, stpmax
+      Real (Kind=wp) :: dsave(13)
+!     **********
+!
+!     Subroutine PREC(dcsrch)
+!
+!     This subroutine finds a step that satisfies a sufficient
+!     decrease condition and a curvature condition.
+!
+!     Each call of the subroutine updates an interval with
+!     endpoints stx and sty. The interval is initially chosen
+!     so that it contains a minimizer of the modified function
+!
+!           psi(stp) = f(stp) - f(0) - ftol*stp*f'(0).
+!
+!     If psi(stp) <= 0 and f'(stp) >= 0 for some step, then the
+!     interval is chosen so that it contains a minimizer of f.
+!
+!     The algorithm is designed to find a step that satisfies
+!     the sufficient decrease condition
+!
+!           f(stp) <= f(0) + ftol*stp*f'(0),
+!
+!     and the curvature condition
+!
+!           abs(f'(stp)) <= gtol*abs(f'(0)).
+!
+!     If ftol is less than gtol and if, for example, the function
+!     is bounded below, then there is always a step which satisfies
+!     both conditions.
+!
+!     If no step can be found that satisfies both conditions, then
+!     the algorithm stops with a warning. In this case stp only
+!     satisfies the sufficient decrease condition.
+!
+!     A typical invocation of PREC(dcsrch) has the following outline:
+!
+!     task = 'START'
+!  10 continue
+!        call PREC(dcsrch)( ... )
+!        if (task .eq. 'FG') then
+!           Evaluate the function and the gradient at stp
+!           goto 10
+!           end if
+!
+!     NOTE: The user must no alter work arrays between calls.
+!
+!     The subroutine statement is
+!
+!        subroutine PREC(dcsrch)(f,g,stp,ftol,gtol,xtol,stpmin,stpmax,
+!                          task,isave,dsave)
+!     where
+!
+!       f is a double precision variable.
+!         On initial entry f is the value of the function at 0.
+!            On subsequent entries f is the value of the
+!            function at stp.
+!         On exit f is the value of the function at stp.
+!
+!       g is a double precision variable.
+!         On initial entry g is the derivative of the function at 0.
+!            On subsequent entries g is the derivative of the
+!            function at stp.
+!         On exit g is the derivative of the function at stp.
+!
+!       stp is a double precision variable.
+!         On entry stp is the current estimate of a satisfactory
+!            step. On initial entry, a positive initial estimate
+!            must be provided.
+!         On exit stp is the current estimate of a satisfactory step
+!            if task = 'FG'. If task = 'CONV' then stp satisfies
+!            the sufficient decrease and curvature condition.
+!
+!       ftol is a double precision variable.
+!         On entry ftol specifies a nonnegative tolerance for the
+!            sufficient decrease condition.
+!         On exit ftol is unchanged.
+!
+!       gtol is a double precision variable.
+!         On entry gtol specifies a nonnegative tolerance for the
+!            curvature condition.
+!         On exit gtol is unchanged.
+!
+!       xtol is a double precision variable.
+!         On entry xtol specifies a nonnegative relative tolerance
+!            for an acceptable step. The subroutine exits with a
+!            warning if the relative difference between sty and stx
+!            is less than xtol.
+!         On exit xtol is unchanged.
+!
+!       stpmin is a double precision variable.
+!         On entry stpmin is a nonnegative lower bound for the step.
+!         On exit stpmin is unchanged.
+!
+!       stpmax is a double precision variable.
+!         On entry stpmax is a nonnegative upper bound for the step.
+!         On exit stpmax is unchanged.
+!
+!       task is a character variable of length at least 60.
+!         On initial entry task must be set to 'START'.
+!         On exit task indicates the required action:
+!
+!            If task(1:2) = 'FG' then evaluate the function and
+!            derivative at stp and call PREC(dcsrch) again.
+!
+!            If task(1:4) = 'CONV' then the search is successful.
+!
+!            If task(1:4) = 'WARN' then the subroutine is not able
+!            to satisfy the convergence conditions. The exit value of
+!            stp contains the best point found during the search.
+!
+!            If task(1:5) = 'ERROR' then there is an error in the
+!            input arguments.
+!
+!         On exit with convergence, a warning or an error, the
+!            variable task contains additional information.
+!
+!       isave is an integer work array of dimension 2.
+!
+!       dsave is a double precision work array of dimension 13.
+!
+!     Subprograms called
+!
+!       MINPACK-2 ... PREC(dcstep)
+!
+!     MINPACK-1 Project. June 1983.
+!     Argonne National Laboratory.
+!     Jorge J. More' and David J. Thuente.
+!
+!     MINPACK-2 Project. October 1993.
+!     Argonne National Laboratory and University of Minnesota.
+!     Brett M. Averick, Richard G. Carter, and Jorge J. More'.
+!
+!     **********
+      Real (Kind=wp) :: zero, p5, p66
+      Parameter (zero=0.0E0_wp, p5=0.5E0_wp, p66=0.66E0_wp)
+      Real (Kind=wp) :: xtrapl, xtrapu
+      Parameter (xtrapl=1.1E0_wp, xtrapu=4.0E0_wp)
+
+      Logical :: brackt
+      Integer :: stage
+      Real (Kind=wp) :: finit, ftest, fm, fx, fxm, fy, fym, ginit, gtest, gm, &
+        gx, gxm, gy, gym, stx, sty, stmin, stmax, width, width1
+
+!     Initialization block.
+
+!      if (task(1:5) .eq. 'START') then
+      If (itask==2) Then
+
+!        Check the input arguments for errors.
+
+!         if (stp .lt. stpmin) task = 'ERROR: STP .LT. STPMIN'
+!         if (stp .gt. stpmax) task = 'ERROR: STP .GT. STPMAX'
+!         if (g .ge. zero) task = 'ERROR: INITIAL G .GE. ZERO'
+!         if (ftol .lt. zero) task = 'ERROR: FTOL .LT. ZERO'
+!         if (gtol .lt. zero) task = 'ERROR: GTOL .LT. ZERO'
+!         if (xtol .lt. zero) task = 'ERROR: XTOL .LT. ZERO'
+!         if (stpmin .lt. zero) task = 'ERROR: STPMIN .LT. ZERO'
+!         if (stpmax .lt. stpmin) task = 'ERROR: STPMAX .LT. STPMIN'
+
+        If (stp<stpmin) itask = 16
+        If (stp>stpmax) itask = 15
+        If (g>=zero) itask = 11
+        If (ftol<zero) itask = 9
+        If (gtol<zero) itask = 10
+        If (xtol<zero) itask = 19
+        If (stpmin<zero) itask = 18
+        If (stpmax<stpmin) itask = 17
+
+!        Exit if there are errors on input.
+
+!         if (task(1:5) .eq. 'ERROR') return
+        If ((itask>=9) .And. (itask<=19)) Return
+
+!        Initialize local variables.
+
+        brackt = .False.
+        stage = 1
+        finit = f
+        ginit = g
+        gtest = ftol*ginit
+        width = stpmax - stpmin
+        width1 = width/p5
+
+!        The variables stx, fx, gx contain the values of the step,
+!        function, and derivative at the best step.
+!        The variables sty, fy, gy contain the value of the step,
+!        function, and derivative at sty.
+!        The variables stp, f, g contain the values of the step,
+!        function, and derivative at stp.
+
+        stx = zero
+        fx = finit
+        gx = ginit
+        sty = zero
+        fy = finit
+        gy = ginit
+        stmin = zero
+        stmax = stp + xtrapu*stp
+!         task = 'FG'
+        itask = 4
+
+        Go To 100
+
+      Else
+
+!        Restore local variables.
+
+        If (isave(1)==1) Then
+          brackt = .True.
+        Else
+          brackt = .False.
+        End If
+        stage = isave(2)
+        ginit = dsave(1)
+        gtest = dsave(2)
+        gx = dsave(3)
+        gy = dsave(4)
+        finit = dsave(5)
+        fx = dsave(6)
+        fy = dsave(7)
+        stx = dsave(8)
+        sty = dsave(9)
+        stmin = dsave(10)
+        stmax = dsave(11)
+        width = dsave(12)
+        width1 = dsave(13)
+
+      End If
+
+!     If psi(stp) <= 0 and f'(stp) >= 0 for some step, then the
+!     algorithm enters the second stage.
+
+      ftest = finit + stp*gtest
+      If (stage==1 .And. f<=ftest .And. g>=zero) stage = 2
+
+!     Test for warnings.
+
+!     +   task = 'WARNING: ROUNDING ERRORS PREVENT PROGRESS'
+      If (brackt .And. (stp<=stmin .Or. stp>=stmax)) itask = 23
+!     +   task = 'WARNING: XTOL TEST SATISFIED'
+      If (brackt .And. stmax-stmin<=xtol*stmax) itask = 26
+!     +   task = 'WARNING: STP = STPMAX'
+      If (stp==stpmax .And. f<=ftest .And. g<=gtest) itask = 24
+!     +   task = 'WARNING: STP = STPMIN'
+      If (stp==stpmin .And. (f>ftest .Or. g>=gtest)) itask = 25
+!     Test for convergence.
+
+!     +   task = 'CONVERGENCE'
+      If (f<=ftest .And. abs(g)<=gtol*(-ginit)) itask = 6
+
+!     Test for termination.
+
+!      if (task(1:4) .eq. 'WARN' .or. task(1:4) .eq. 'CONV') goto 1000
+      If ((itask>=23) .Or. ((itask<=8) .And. (itask>=6))) Go To 100
+
+
+!     A modified function is used to predict the step during the
+!     first stage if a lower function value has been obtained but
+!     the decrease is not sufficient.
+
+      If (stage==1 .And. f<=fx .And. f>ftest) Then
+
+!        Define the modified function and derivative values.
+
+        fm = f - stp*gtest
+        fxm = fx - stx*gtest
+        fym = fy - sty*gtest
+        gm = g - gtest
+        gxm = gx - gtest
+        gym = gy - gtest
+
+!        Call PREC(dcstep) to update stx, sty, and to compute the new step.
+
+        Call PREC(dcstep)(stx, fxm, gxm, sty, fym, gym, stp, fm, gm, brackt, stmin, &
+          stmax)
+
+!        Reset the function and derivative values for f.
+
+        fx = fxm + stx*gtest
+        fy = fym + sty*gtest
+        gx = gxm + gtest
+        gy = gym + gtest
+
+      Else
+
+!       Call PREC(dcstep) to update stx, sty, and to compute the new step.
+
+        Call PREC(dcstep)(stx, fx, gx, sty, fy, gy, stp, f, g, brackt, stmin, stmax)
+
+      End If
+
+!     Decide if a bisection step is needed.
+
+      If (brackt) Then
+        If (abs(sty-stx)>=p66*width1) stp = stx + p5*(sty-stx)
+        width1 = width
+        width = abs(sty-stx)
+      End If
+
+!     Set the minimum and maximum steps allowed for stp.
+
+      If (brackt) Then
+        stmin = min(stx, sty)
+        stmax = max(stx, sty)
+      Else
+        stmin = stp + xtrapl*(stp-stx)
+        stmax = stp + xtrapu*(stp-stx)
+      End If
+
+!     Force the step to be within the bounds stpmax and stpmin.
+
+      stp = max(stp, stpmin)
+      stp = min(stp, stpmax)
+
+!     If further progress is not possible, let stp be the best
+!     point obtained during the search.
+
+      If (brackt .And. (stp<=stmin .Or. stp>=stmax) .Or. &
+        (brackt .And. stmax-stmin<=xtol*stmax)) stp = stx
+
+!     Obtain another function and derivative.
+
+!      task = 'FG'
+      itask = 4
+
+100   Continue
+
+!     Save local variables.
+
+      If (brackt) Then
+        isave(1) = 1
+      Else
+        isave(1) = 0
+      End If
+      isave(2) = stage
+      dsave(1) = ginit
+      dsave(2) = gtest
+      dsave(3) = gx
+      dsave(4) = gy
+      dsave(5) = finit
+      dsave(6) = fx
+      dsave(7) = fy
+      dsave(8) = stx
+      dsave(9) = sty
+      dsave(10) = stmin
+      dsave(11) = stmax
+      dsave(12) = width
+      dsave(13) = width1
+
+      Return
+    End Subroutine
+
+!====================== The end of PREC(dcsrch) ==============================
+
+    Subroutine PREC(dcstep)(stx, fx, dx, sty, fy, dy, stp, fp, dp, brackt, stpmin, &
+      stpmax)
+      Use working_precision, Only: wp
+      Logical :: brackt
+      Real (Kind=wp) :: stx, fx, dx, sty, fy, dy, stp, fp, dp, stpmin, stpmax
+!     **********
+!
+!     Subroutine PREC(dcstep)
+!
+!     This subroutine computes a safeguarded step for a search
+!     procedure and updates an interval that contains a step that
+!     satisfies a sufficient decrease and a curvature condition.
+!
+!     The parameter stx contains the step with the least function
+!     value. If brackt is set to .true. then a minimizer has
+!     been bracketed in an interval with endpoints stx and sty.
+!     The parameter stp contains the current step.
+!     The subroutine assumes that if brackt is set to .true. then
+!
+!           min(stx,sty) < stp < max(stx,sty),
+!
+!     and that the derivative at stx is negative in the direction
+!     of the step.
+!
+!     The subroutine statement is
+!
+!       subroutine PREC(dcstep)(stx,fx,dx,sty,fy,dy,stp,fp,dp,brackt,
+!                         stpmin,stpmax)
+!
+!     where
+!
+!       stx is a double precision variable.
+!         On entry stx is the best step obtained so far and is an
+!            endpoint of the interval that contains the minimizer.
+!         On exit stx is the updated best step.
+!
+!       fx is a double precision variable.
+!         On entry fx is the function at stx.
+!         On exit fx is the function at stx.
+!
+!       dx is a double precision variable.
+!         On entry dx is the derivative of the function at
+!            stx. The derivative must be negative in the direction of
+!            the step, that is, dx and stp - stx must have opposite
+!            signs.
+!         On exit dx is the derivative of the function at stx.
+!
+!       sty is a double precision variable.
+!         On entry sty is the second endpoint of the interval that
+!            contains the minimizer.
+!         On exit sty is the updated endpoint of the interval that
+!            contains the minimizer.
+!
+!       fy is a double precision variable.
+!         On entry fy is the function at sty.
+!         On exit fy is the function at sty.
+!
+!       dy is a double precision variable.
+!         On entry dy is the derivative of the function at sty.
+!         On exit dy is the derivative of the function at the exit sty.
+!
+!       stp is a double precision variable.
+!         On entry stp is the current step. If brackt is set to .true.
+!            then on input stp must be between stx and sty.
+!         On exit stp is a new trial step.
+!
+!       fp is a double precision variable.
+!         On entry fp is the function at stp
+!         On exit fp is unchanged.
+!
+!       dp is a double precision variable.
+!         On entry dp is the the derivative of the function at stp.
+!         On exit dp is unchanged.
+!
+!       brackt is an logical variable.
+!         On entry brackt specifies if a minimizer has been bracketed.
+!            Initially brackt must be set to .false.
+!         On exit brackt specifies if a minimizer has been bracketed.
+!            When a minimizer is bracketed brackt is set to .true.
+!
+!       stpmin is a double precision variable.
+!         On entry stpmin is a lower bound for the step.
+!         On exit stpmin is unchanged.
+!
+!       stpmax is a double precision variable.
+!         On entry stpmax is an upper bound for the step.
+!         On exit stpmax is unchanged.
+!
+!     MINPACK-1 Project. June 1983
+!     Argonne National Laboratory.
+!     Jorge J. More' and David J. Thuente.
+!
+!     MINPACK-2 Project. October 1993.
+!     Argonne National Laboratory and University of Minnesota.
+!     Brett M. Averick and Jorge J. More'.
+!
+!     **********
+      Real (Kind=wp) :: zero, p66, two, three
+      Parameter (zero=0.0E0_wp, p66=0.66E0_wp, two=2.0E0_wp, three=3.0E0_wp)
+
+      Real (Kind=wp) :: gamma, p, q, r, s, sgnd, stpc, stpf, stpq, theta
+
+      sgnd = dp*(dx/abs(dx))
+
+!     First case: A higher function value. The minimum is bracketed.
+!     If the cubic step is closer to stx than the quadratic step, the
+!     cubic step is taken, otherwise the average of the cubic and
+!     quadratic steps is taken.
+
+      If (fp>fx) Then
+        theta = three*(fx-fp)/(stp-stx) + dx + dp
+        s = max(abs(theta), abs(dx), abs(dp))
+        gamma = s*sqrt((theta/s)**2-(dx/s)*(dp/s))
+        If (stp<stx) gamma = -gamma
+        p = (gamma-dx) + theta
+        q = ((gamma-dx)+gamma) + dp
+        r = p/q
+        stpc = stx + r*(stp-stx)
+        stpq = stx + ((dx/((fx-fp)/(stp-stx)+dx))/two)*(stp-stx)
+        If (abs(stpc-stx)<abs(stpq-stx)) Then
+          stpf = stpc
+        Else
+          stpf = stpc + (stpq-stpc)/two
+        End If
+        brackt = .True.
+
+!     Second case: A lower function value and derivatives of opposite
+!     sign. The minimum is bracketed. If the cubic step is farther from
+!     stp than the secant step, the cubic step is taken, otherwise the
+!     secant step is taken.
+
+      Else If (sgnd<zero) Then
+        theta = three*(fx-fp)/(stp-stx) + dx + dp
+        s = max(abs(theta), abs(dx), abs(dp))
+        gamma = s*sqrt((theta/s)**2-(dx/s)*(dp/s))
+        If (stp>stx) gamma = -gamma
+        p = (gamma-dp) + theta
+        q = ((gamma-dp)+gamma) + dx
+        r = p/q
+        stpc = stp + r*(stx-stp)
+        stpq = stp + (dp/(dp-dx))*(stx-stp)
+        If (abs(stpc-stp)>abs(stpq-stp)) Then
+          stpf = stpc
+        Else
+          stpf = stpq
+        End If
+        brackt = .True.
+
+!     Third case: A lower function value, derivatives of the same sign,
+!     and the magnitude of the derivative decreases.
+
+      Else If (abs(dp)<abs(dx)) Then
+
+!        The cubic step is computed only if the cubic tends to infinity
+!        in the direction of the step or if the minimum of the cubic
+!        is beyond stp. Otherwise the cubic step is defined to be the
+!        secant step.
+
+        theta = three*(fx-fp)/(stp-stx) + dx + dp
+        s = max(abs(theta), abs(dx), abs(dp))
+
+!        The case gamma = 0 only arises if the cubic does not tend
+!        to infinity in the direction of the step.
+
+        gamma = s*sqrt(max(zero,(theta/s)**2-(dx/s)*(dp/s)))
+        If (stp>stx) gamma = -gamma
+        p = (gamma-dp) + theta
+        q = (gamma+(dx-dp)) + gamma
+        r = p/q
+        If (r<zero .And. abs(gamma-zero)>1E-5_wp) Then
+          stpc = stp + r*(stx-stp)
+        Else If (stp>stx) Then
+          stpc = stpmax
+        Else
+          stpc = stpmin
+        End If
+        stpq = stp + (dp/(dp-dx))*(stx-stp)
+
+        If (brackt) Then
+
+!           A minimizer has been bracketed. If the cubic step is
+!           closer to stp than the secant step, the cubic step is
+!           taken, otherwise the secant step is taken.
+
+          If (abs(stpc-stp)<abs(stpq-stp)) Then
+            stpf = stpc
+          Else
+            stpf = stpq
+          End If
+          If (stp>stx) Then
+            stpf = min(stp+p66*(sty-stp), stpf)
+          Else
+            stpf = max(stp+p66*(sty-stp), stpf)
+          End If
+        Else
+
+!           A minimizer has not been bracketed. If the cubic step is
+!           farther from stp than the secant step, the cubic step is
+!           taken, otherwise the secant step is taken.
+
+          If (abs(stpc-stp)>abs(stpq-stp)) Then
+            stpf = stpc
+          Else
+            stpf = stpq
+          End If
+          stpf = min(stpmax, stpf)
+          stpf = max(stpmin, stpf)
+        End If
+
+!     Fourth case: A lower function value, derivatives of the same sign,
+!     and the magnitude of the derivative does not decrease. If the
+!     minimum is not bracketed, the step is either stpmin or stpmax,
+!     otherwise the cubic step is taken.
+
+      Else
+        If (brackt) Then
+          theta = three*(fp-fy)/(sty-stp) + dy + dp
+          s = max(abs(theta), abs(dy), abs(dp))
+          gamma = s*sqrt((theta/s)**2-(dy/s)*(dp/s))
+          If (stp>sty) gamma = -gamma
+          p = (gamma-dp) + theta
+          q = ((gamma-dp)+gamma) + dy
+          r = p/q
+          stpc = stp + r*(sty-stp)
+          stpf = stpc
+        Else If (stp>stx) Then
+          stpf = stpmax
+        Else
+          stpf = stpmin
+        End If
+      End If
+
+!     Update the interval which contains a minimizer.
+
+      If (fp>fx) Then
+        sty = stp
+        fy = fp
+        dy = dp
+      Else
+        If (sgnd<zero) Then
+          sty = stx
+          fy = fx
+          dy = dx
+        End If
+        stx = stp
+        fx = fp
+        dx = dp
+      End If
+
+!     Compute the new step.
+
+      stp = stpf
+
+      Return
+    End Subroutine
