@@ -74,7 +74,7 @@ da_status convert_tokenizer_errors(int ierror) {
     return error;
 }
 
-da_status parse_file(da_csv_opts opts, char *filename) {
+da_status parse_file(da_csv_opts opts, const char *filename) {
 
     da_status error = da_status_success;
     int err;
@@ -146,7 +146,7 @@ da_status populate_data_array(da_csv_opts opts, T **a, size_t *nrows, size_t *nc
 }
 
 template <typename T>
-da_status da_read_csv(da_csv_opts opts, char *filename, T **a, size_t *nrows,
+da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, size_t *nrows,
                       size_t *ncols) {
 
     da_status error = da_status_success, tmp_error = da_status_success;
@@ -167,7 +167,7 @@ da_status da_read_csv(da_csv_opts opts, char *filename, T **a, size_t *nrows,
 }
 
 template <typename T>
-da_status da_read_csv(da_csv_opts opts, char *filename, T **a, size_t *nrows,
+da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, size_t *nrows,
                       size_t *ncols, char ***headings) {
     da_status error = da_status_success, tmp_error = da_status_success;
 
