@@ -78,15 +78,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   endif()
 endif()
 
+if(CHECK_MEM)
+  list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
+  link_libraries("-fsanitize=address")
+endif()
+
 if(COVERAGE)
   # Include coverage flags and targets
   include(Coverage)
   set(COV_EXECUTABLES "")
-endif()
-
-if(CHECK_MEM)
-  list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
-  link_libraries("-fsanitize=address")
 endif()
 
 add_compile_options(
@@ -103,8 +103,3 @@ add_subdirectory(source)
 # build example and unit test programs
 include(CTest)
 add_subdirectory(tests)
-
-if(COVERAGE)
-  message("${COV_EXECUTABLES}")
-  exec_cov_target(${COV_EXECUTABLES})
-endif()
