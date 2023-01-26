@@ -1,21 +1,31 @@
-add_executable(lbfgsb_rc_example lbfgsb_rc_example.cpp)
-target_include_directories(lbfgsb_rc_example PRIVATE ${CMAKE_SOURCE_DIR}/source/core/drivers ${CMAKE_SOURCE_DIR}/source/core/optimization)
-target_link_libraries(lbfgsb_rc_example lbfgsb)
+include_directories(${CMAKE_SOURCE_DIR}/source/include)
+
+add_executable(lbfgsb_rc lbfgsb_rc.cpp)
+target_include_directories(
+  lbfgsb_rc PRIVATE ${CMAKE_SOURCE_DIR}/source/core/drivers
+                    ${CMAKE_SOURCE_DIR}/source/core/optimization)
+target_link_libraries(lbfgsb_rc lbfgsb)
 
 add_executable(basic_statistics_test basic_statistics_test.cpp)
-target_include_directories(basic_statistics_test PRIVATE ${CMAKE_SOURCE_DIR}/source/include)
 target_link_libraries(basic_statistics_test da_core)
 
 add_executable(linear_model linear_model.cpp)
-set(LINMOD)
-target_include_directories(linear_model PRIVATE ${CMAKE_SOURCE_DIR}/source/include)
 target_link_libraries(linear_model da_core)
 
+set(EXAMPLE_EXES linear_model basic_statistics_test lbfgsb_rc)
+
+# add all example programs to CTEST
+foreach(EX_NAME ${EXAMPLE_EXES})
+  string(CONCAT TNAME ${EX_NAME} "_ex")
+  add_test(${TNAME} ${EX_NAME})
+endforeach()
+
 # Add all executables to the coverage test
-# TODO Gather all executables automatically
-if (COVERAGE)
-    list(APPEND COV_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/linear_model")
-    list(APPEND COV_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/lbfgsb_rc_example")
-    list(APPEND COV_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/basic_statistics_test")
-    set(COV_EXECUTABLES ${COV_EXECUTABLES} PARENT_SCOPE)
+if(COVERAGE)
+  foreach(EX_NAME ${EXAMPLE_EXES})
+    list(APPEND COV_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/${EX_NAME}")
+  endforeach()
+  set(COV_EXECUTABLES
+      ${COV_EXECUTABLES}
+      PARENT_SCOPE)
 endif()

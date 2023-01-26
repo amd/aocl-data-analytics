@@ -2,6 +2,9 @@
 #define DRIVERS_HPP
 
 #include "callbacks.hpp"
+#include <cmath>
+#include <iostream>
+#include <limits>
 #include <vector>
 
 extern "C" {
@@ -31,6 +34,16 @@ inline void setulb(int *n, int *m, float *x, float *l, float *u, int *nbd, float
               lsavei, isave, dsave);
 }
 
+template <typename T> void lbfgs_prec(T &factr, T &pgtol) {
+    /* double => pgtol ~ 1.0e-05
+     *           factr ~ 1.0e07
+     * single => pgtol ~ 6.0e-03
+     *        => factr ~ 1.0e03
+     */
+    pgtol = pow(std::numeric_limits<T>::epsilon(), 0.32);
+    factr = pow(10., std::numeric_limits<T>::digits10 / 2);
+}
+
 /* Internal memory for lbfgsb */
 template <typename T> struct lbfgsb_data {
     int m = 0; // number of vectors of memory used
@@ -46,11 +59,11 @@ template <typename T> struct lbfgsb_data {
 
 template <typename T> void free_lbfgsb_data(lbfgsb_data<T> **d) {
     if ((*d)->iwa)
-        delete[](*d)->iwa;
+        delete[] (*d)->iwa;
     if ((*d)->wa)
-        delete[](*d)->wa;
+        delete[] (*d)->wa;
     if ((*d)->nbd)
-        delete[](*d)->nbd;
+        delete[] (*d)->nbd;
 
     delete *d;
     *d = nullptr;
@@ -94,6 +107,7 @@ int init_lbfgsb_data(lbfgsb_data<T> *d, int n, int m, T bigbnd, std::vector<T> &
                 d->nbd[i] = 0;
         }
     }
+    lbfgs_prec<T>(d->factr, d->pgtol);
 
     return 0;
 }
