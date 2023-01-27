@@ -166,52 +166,52 @@ da_status da_csv_set_option(da_csv_opts opts, csv_option option, char *str) {
 
 /* Rountines for reading in a csv and storing an array of data, with or without a headings
  * row*/
-da_status da_read_csv_d(da_csv_opts opts, const char *filename, double **a, size_t *nrows,
-                        size_t *ncols) {
+da_status da_read_csv_d(da_csv_opts opts, const char *filename, double **a, da_int *nrows,
+                        da_int *ncols) {
     return da_read_csv(opts, filename, a, nrows, ncols);
 }
 
-da_status da_read_csv_s(da_csv_opts opts, const char *filename, float **a, size_t *nrows,
-                        size_t *ncols) {
+da_status da_read_csv_s(da_csv_opts opts, const char *filename, float **a, da_int *nrows,
+                        da_int *ncols) {
     return da_read_csv(opts, filename, a, nrows, ncols);
 }
 
-da_status da_read_csv_int64(da_csv_opts opts, const char *filename, int64_t **a, size_t *nrows,
-                            size_t *ncols) {
+da_status da_read_csv_int64(da_csv_opts opts, const char *filename, int64_t **a, da_int *nrows,
+                            da_int *ncols) {
     return da_read_csv(opts, filename, a, nrows, ncols);
 }
 
 da_status da_read_csv_uint64(da_csv_opts opts, const char *filename, uint64_t **a,
-                             size_t *nrows, size_t *ncols) {
+                             da_int *nrows, da_int *ncols) {
     return da_read_csv(opts, filename, a, nrows, ncols);
 }
 
-da_status da_read_csv_uint8(da_csv_opts opts, const char *filename, uint8_t **a, size_t *nrows,
-                            size_t *ncols) {
+da_status da_read_csv_uint8(da_csv_opts opts, const char *filename, uint8_t **a, da_int *nrows,
+                            da_int *ncols) {
     return da_read_csv(opts, filename, a, nrows, ncols);
 }
 
-da_status da_read_csv_d_h(da_csv_opts opts, const char *filename, double **a, size_t *nrows,
-                          size_t *ncols, char ***headings) {
+da_status da_read_csv_d_h(da_csv_opts opts, const char *filename, double **a, da_int *nrows,
+                          da_int *ncols, char ***headings) {
     return da_read_csv(opts, filename, a, nrows, ncols, headings);
 }
 
-da_status da_read_csv_s_h(da_csv_opts opts, const char *filename, float **a, size_t *nrows,
-                          size_t *ncols, char ***headings) {
+da_status da_read_csv_s_h(da_csv_opts opts, const char *filename, float **a, da_int *nrows,
+                          da_int *ncols, char ***headings) {
     return da_read_csv(opts, filename, a, nrows, ncols, headings);
 }
 
 da_status da_read_csv_int64_h(da_csv_opts opts, const char *filename, int64_t **a,
-                              size_t *nrows, size_t *ncols, char ***headings) {
+                              da_int *nrows, da_int *ncols, char ***headings) {
     return da_read_csv(opts, filename, a, nrows, ncols, headings);
 }
 
 da_status da_read_csv_uint64_h(da_csv_opts opts, const char *filename, uint64_t **a,
-                               size_t *nrows, size_t *ncols, char ***headings) {
+                               da_int *nrows, da_int *ncols, char ***headings) {
     return da_read_csv(opts, filename, a, nrows, ncols, headings);
 }
 
 da_status da_read_csv_uint8_h(da_csv_opts opts, const char *filename, uint8_t **a,
-                              size_t *nrows, size_t *ncols, char ***headings) {
+                              da_int *nrows, da_int *ncols, char ***headings) {
     return da_read_csv(opts, filename, a, nrows, ncols, headings);
 }

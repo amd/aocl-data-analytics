@@ -11,7 +11,7 @@
 
 // used to pass pointers to optimization callbacks
 template <typename T> struct fit_usrdata {
-    int m;
+    da_int m;
     T *A = nullptr;
     T *b = nullptr, *y = nullptr;
 };
@@ -34,7 +34,7 @@ template <typename T> class linear_model_data {
      * function b[m]: model response, pointer to user data - will not be modified by any
      * function
      */
-    int n = 0, m = 0;
+    da_int n = 0, m = 0;
     bool intercept = false;
     T *b = nullptr;
     T *A = nullptr;
@@ -42,7 +42,7 @@ template <typename T> class linear_model_data {
     /* Training data
      * coef[n/n+1]: vector containing the trained coefficients of the model
      */
-    int ncoef = 0;
+    da_int ncoef = 0;
     std::vector<T> coef;
 
     /* optimization object to call generic algorithms */
@@ -52,19 +52,19 @@ template <typename T> class linear_model_data {
     /* private methods to allocate memory */
     da_status
     init_opt_model(fit_opt_type opt_type,
-                   std::function<void(int n, T *x, T *f, void *usrdata)> objfun,
-                   std::function<void(int n, T *x, T *grad, void *usrdata)> objgrd);
+                   std::function<void(da_int n, T *x, T *f, void *usrdata)> objfun,
+                   std::function<void(da_int n, T *x, T *grad, void *usrdata)> objgrd);
     void init_usrdata();
 
   public:
     linear_model_data(){};
     ~linear_model_data();
 
-    da_status define_features(int n, int m, T *A, T *b);
+    da_status define_features(da_int n, da_int m, T *A, T *b);
     da_status select_model(linreg_model mod);
     da_status fit();
-    da_status get_coef(int &nx, T *x);
-    da_status evaluate_model(int n, int m, T *X, T *predictions);
+    da_status get_coef(da_int &nx, T *x);
+    da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
 };
 
 struct _da_linreg {
@@ -88,7 +88,7 @@ template <typename T> linear_model_data<T>::~linear_model_data() {
 }
 
 template <typename T>
-da_status linear_model_data<T>::define_features(int n, int m, T *A, T *b) {
+da_status linear_model_data<T>::define_features(da_int n, da_int m, T *A, T *b) {
     if (n <= 0 || m <= 0 || b == nullptr)
         return da_status_invalid_input;
 
@@ -126,74 +126,74 @@ template <typename T> void linear_model_data<T>::init_usrdata() {
 ////////////////////////////////////// Objective Function
 ///////////////////////////////////////
 
-template <typename T> void objfun_mse(int n, T *x, T *f, void *usrdata) {
+template <typename T> void objfun_mse(da_int n, T *x, T *f, void *usrdata) {
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
 
     T alpha = 1.0, beta = 0.0;
 
-    da_cblas_gemv(CblasRowMajor, CblasNoTrans, data->m, n, alpha, data->A, n, x, 1, beta,
+    da_cblas_gemv(CblasRowMajor, CblasNoTrans, (int)data->m, (int)n, alpha, data->A, (int)n, x, 1, beta,
                   data->y, 1);
     *f = 0.0;
-    for (int i = 0; i < data->m; i++)
+    for (da_int i = 0; i < data->m; i++)
         *f += pow(data->y[i] - data->b[i], 2.0);
 }
 
-template <typename T> void objgrd_mse(int n, T *x, T *grad, void *usrdata) {
+template <typename T> void objgrd_mse(da_int n, T *x, T *grad, void *usrdata) {
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
 
     T alpha = 1.0, beta = 0.0;
-    da_cblas_gemv(CblasRowMajor, CblasNoTrans, data->m, n, alpha, data->A, n, x, 1, beta,
+    da_cblas_gemv(CblasRowMajor, CblasNoTrans, (int)data->m, (int)n, alpha, data->A, (int)n, x, 1, beta,
                   data->y, 1);
     alpha = -1.0;
-    da_cblas_axpy(data->m, alpha, data->b, 1, data->y, 1);
-    for (int i = 0; i < n; i++) {
-        grad[i] = 2.0 * da_cblas_dot(data->m, &data->A[i], n, data->y, 1);
+    da_cblas_axpy((int)data->m, alpha, data->b, 1, data->y, 1);
+    for (da_int i = 0; i < n; i++) {
+        grad[i] = 2.0 * da_cblas_dot((int)data->m, &data->A[i], (int)n, data->y, 1);
     }
 }
 
 template <typename T> T log_loss(T y, T p) { return -y * log(p) - (1 - y) * log(1 - p); }
 template <typename T> T logistic(T x) { return 1 / (1 + exp(-x)); }
 
-template <typename T> void objfun_logistic(int n, T *x, T *f, void *usrdata) {
+template <typename T> void objfun_logistic(da_int n, T *x, T *f, void *usrdata) {
     // Extract user data
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
     T *b = data->b, *y = data->y, *A = data->A;
-    int m = data->m;
+    da_int m = data->m;
 
     // Comput A*x[0:n-2] = y
     T alpha = 1.0, beta = 0.0;
-    da_cblas_gemv(CblasRowMajor, CblasNoTrans, m, n - 1, alpha, A, n - 1, x, 1, beta,
+    da_cblas_gemv(CblasRowMajor, CblasNoTrans, (int)m, (int)n - 1, alpha, A, (int)n - 1, x, 1, beta,
                   data->y, 1);
 
     // sum of log loss of logistic function for all observations
     *f = 0.0;
-    for (int i = 0; i < m; i++) {
+    for (da_int i = 0; i < m; i++) {
         *f += log_loss(b[i], logistic(x[n - 1] + y[i]));
     }
 }
 
-template <typename T> void objgrd_logistic(int n, T *x, T *grad, void *usrdata) {
+template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdata) {
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
     T *b = data->b, *y = data->y, *A = data->A;
-    int m = data->m;
+    da_int m = data->m;
 
     // Comput A*x[0:n-2] = y
     T alpha = 1.0, beta = 0.0;
-    da_cblas_gemv(CblasRowMajor, CblasNoTrans, m, n - 1, alpha, data->A, n - 1, x, 1,
+    da_cblas_gemv(CblasRowMajor, CblasNoTrans, (int)m, (int)n - 1, alpha, data->A, (int)n - 1, x, 1,
                   beta, data->y, 1);
 
-    for (int i = 0; i < n - 1; i++) {
+    for (da_int i = 0; i < n - 1; i++) {
         grad[i] = 0.;
-        for (int j = 0; j < m; j++) {
+        for (da_int j = 0; j < m; j++) {
             grad[i] += (logistic(x[n - 1] + y[j]) - b[j]) * A[(n - 1) * i + j];
         }
     }
     grad[n - 1] = 0.0;
-    for (int j = 0; j < m; j++) {
+    for (da_int j = 0; j < m; j++) {
         grad[n - 1] += (logistic(x[n - 1] + y[j]) - b[j]);
     }
 }
@@ -202,9 +202,9 @@ template <typename T> void objgrd_logistic(int n, T *x, T *grad, void *usrdata) 
 
 template <typename T>
 da_status linear_model_data<T>::init_opt_model(
-    fit_opt_type opt_type, std::function<void(int n, T *x, T *f, void *usrdata)> objfun,
-    std::function<void(int n, T *x, T *grad, void *usrdata)> objgrd) {
-    int nvar = n;
+    fit_opt_type opt_type, std::function<void(da_int n, T *x, T *f, void *usrdata)> objfun,
+    std::function<void(da_int n, T *x, T *grad, void *usrdata)> objgrd) {
+    da_int nvar = n;
     switch (opt_type) {
     case fit_opt_nln:
         opt = new da_optimization<T>();
@@ -226,7 +226,7 @@ da_status linear_model_data<T>::init_opt_model(
     return da_status_success;
 }
 
-template <typename T> da_status linear_model_data<T>::get_coef(int &nx, T *x) {
+template <typename T> da_status linear_model_data<T>::get_coef(da_int &nx, T *x) {
     if (nx != ncoef) {
         nx = ncoef;
         return da_status_invalid_input;
@@ -234,7 +234,7 @@ template <typename T> da_status linear_model_data<T>::get_coef(int &nx, T *x) {
     if (!model_trained)
         return da_status_out_of_date;
 
-    int i;
+    da_int i;
     for (i = 0; i < ncoef; i++)
         x[i] = coef[i];
 
@@ -242,8 +242,8 @@ template <typename T> da_status linear_model_data<T>::get_coef(int &nx, T *x) {
 }
 
 template <typename T>
-da_status linear_model_data<T>::evaluate_model(int n, int m, T *X, T *predictions) {
-    int i;
+da_status linear_model_data<T>::evaluate_model(da_int n, da_int m, T *X, T *predictions) {
+    da_int i;
 
     if (n != this->n)
         return da_status_invalid_input;
@@ -256,7 +256,7 @@ da_status linear_model_data<T>::evaluate_model(int n, int m, T *X, T *prediction
     // b is assumed to be of size m
     // start by computing X*coef = predictions
     T alpha = 1.0, beta = 0.0;
-    da_cblas_gemv(CblasRowMajor, CblasNoTrans, m, n, alpha, X, n, coef.data(), 1, beta,
+    da_cblas_gemv(CblasRowMajor, CblasNoTrans, (int)m, (int)n, alpha, X, n, coef.data(), 1, beta,
                   predictions, 1);
     if (intercept) {
         for (i = 0; i < m; i++)

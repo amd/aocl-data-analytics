@@ -16,12 +16,12 @@ TEST(csvtest, single_head) {
     float *a = nullptr;
     char **headings = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 5;
+    da_int nrows_expected = 3, ncols_expected = 5;
     float a_expected[15] = {1.1,     1e3, 4.1e-3, 0.03e6, 2,   -1,  -3.2,  -4.5e4,
                             -5.6e-7, -10, 0.0,    0.0,    0.0, 0.0, 4.5e+5};
     char headings_expected[5][10] = {"one", "cat two", "three", "FOUR", "Five"};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_s_h(opts, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
@@ -29,13 +29,13 @@ TEST(csvtest, single_head) {
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
 
-    for (size_t j = 0; j < ncols; j++) {
+    for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
@@ -45,7 +45,7 @@ TEST(csvtest, single_head) {
         free(a);
 
     if (headings) {
-        for (size_t i = 0; i < ncols; i++) {
+        for (da_int i = 0; i < ncols; i++) {
             if (headings[i])
                 free(headings[i]);
         }
@@ -64,12 +64,12 @@ TEST(csvtest, double_head) {
     double *a = nullptr;
     char **headings = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 5;
+    da_int nrows_expected = 3, ncols_expected = 5;
     double a_expected[15] = {1.1,     1e3, 4.1e-3, 0.03e6, 2,   -1,  -3.2,  -4.5e4,
                              -5.6e-7, -10, 0.0,    0.0,    0.0, 0.0, 4.5e+5};
     char headings_expected[5][10] = {"one", "cat two", "three", "FOUR", "Five"};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_d_h(opts, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
@@ -77,13 +77,13 @@ TEST(csvtest, double_head) {
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
 
-    for (size_t j = 0; j < ncols; j++) {
+    for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
@@ -93,7 +93,7 @@ TEST(csvtest, double_head) {
         free(a);
 
     if (headings) {
-        for (size_t i = 0; i < ncols; i++) {
+        for (da_int i = 0; i < ncols; i++) {
             if (headings[i])
                 free(headings[i]);
         }
@@ -111,11 +111,11 @@ TEST(csvtest, single) {
     da_status err = da_csv_init(&opts);
     float *a = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 5;
+    da_int nrows_expected = 3, ncols_expected = 5;
     float a_expected[15] = {1.1,     1e3, 4.1e-3, 0.03e6, 2,   -1,  -3.2,  -4.5e4,
                             -5.6e-7, -10, 0.0,    0.0,    0.0, 0.0, 4.5e+5};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_s(opts, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
@@ -123,8 +123,8 @@ TEST(csvtest, single) {
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
@@ -145,20 +145,19 @@ TEST(csvtest, double) {
     da_status err = da_csv_init(&opts);
     double *a = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 5;
+    da_int nrows_expected = 3, ncols_expected = 5;
     double a_expected[15] = {1.1,     1e3, 4.1e-3, 0.03e6, 2,   -1,  -3.2,  -4.5e4,
                              -5.6e-7, -10, 0.0,    0.0,    0.0, 0.0, 4.5e+5};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_d(opts, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
-
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
@@ -179,7 +178,7 @@ TEST(csvtest, int64) {
     da_status err = da_csv_init(&opts);
     int64_t *a = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 4;
+    da_int nrows_expected = 3, ncols_expected = 4;
     int64_t a_expected[12] = {1,
                               5,
                               3,
@@ -193,7 +192,7 @@ TEST(csvtest, int64) {
                               -9223372036854775806,
                               67};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_int64(opts, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
@@ -201,8 +200,8 @@ TEST(csvtest, int64) {
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
@@ -224,7 +223,7 @@ TEST(csvtest, int64_head) {
     int64_t *a = nullptr;
     char **headings = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 4;
+    da_int nrows_expected = 3, ncols_expected = 4;
     int64_t a_expected[12] = {1,
                               5,
                               3,
@@ -240,7 +239,7 @@ TEST(csvtest, int64_head) {
 
     char headings_expected[4][10] = {"one", "two", "three", "four"};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_int64_h(opts, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
@@ -248,20 +247,20 @@ TEST(csvtest, int64_head) {
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
 
-    for (size_t j = 0; j < ncols; j++) {
+    for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
     da_csv_destroy(&opts);
 
     if (headings) {
-        for (size_t i = 0; i < ncols; i++) {
+        for (da_int i = 0; i < ncols; i++) {
             if (headings[i])
                 free(headings[i]);
         }
@@ -282,7 +281,7 @@ TEST(csvtest, uint64) {
     da_status err = da_csv_init(&opts);
     uint64_t *a = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 4;
+    da_int nrows_expected = 3, ncols_expected = 4;
     uint64_t a_expected[12] = {1,
                                5,
                                3,
@@ -296,7 +295,7 @@ TEST(csvtest, uint64) {
                                18446744073709551614UL,
                                67};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_uint64(opts, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
@@ -306,8 +305,8 @@ TEST(csvtest, uint64) {
 
     da_csv_destroy(&opts);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
@@ -327,7 +326,7 @@ TEST(csvtest, uint64_head) {
     uint64_t *a = nullptr;
     char **headings = nullptr;
 
-    size_t nrows_expected = 3, ncols_expected = 4;
+    da_int nrows_expected = 3, ncols_expected = 4;
     uint64_t a_expected[12] = {1,
                                5,
                                3,
@@ -343,7 +342,7 @@ TEST(csvtest, uint64_head) {
 
     char headings_expected[4][10] = {"one", "two", "three", "four"};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_uint64_h(opts, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
@@ -351,20 +350,20 @@ TEST(csvtest, uint64_head) {
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
 
-    for (size_t j = 0; j < ncols; j++) {
+    for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
     da_csv_destroy(&opts);
 
     if (headings) {
-        for (size_t i = 0; i < ncols; i++) {
+        for (da_int i = 0; i < ncols; i++) {
             if (headings[i])
                 free(headings[i]);
         }
@@ -385,10 +384,10 @@ TEST(csvtest, bool) {
     da_status err = da_csv_init(&opts);
     uint8_t *a = nullptr;
 
-    size_t nrows_expected = 2, ncols_expected = 4;
+    da_int nrows_expected = 2, ncols_expected = 4;
     uint8_t a_expected[8] = {1, 1, 1, 1, 1, 0, 0, 0};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_uint8(opts, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
@@ -398,8 +397,8 @@ TEST(csvtest, bool) {
 
     da_csv_destroy(&opts);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
@@ -419,12 +418,12 @@ TEST(csvtest, bool_head) {
     uint8_t *a = nullptr;
     char **headings = nullptr;
 
-    size_t nrows_expected = 2, ncols_expected = 4;
+    da_int nrows_expected = 2, ncols_expected = 4;
     uint8_t a_expected[12] = {1, 1, 1, 1, 1, 0, 0, 0};
 
     char headings_expected[4][10] = {"one", "two", "three", "four"};
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_uint8_h(opts, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
@@ -432,20 +431,20 @@ TEST(csvtest, bool_head) {
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    for (size_t i = 0; i < nrows; i++) {
-        for (size_t j = 0; j < ncols; j++) {
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
             ASSERT_EQ(a[j + ncols * i], a_expected[j + ncols * i]);
         }
     }
 
-    for (size_t j = 0; j < ncols; j++) {
+    for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
     da_csv_destroy(&opts);
 
     if (headings) {
-        for (size_t i = 0; i < ncols; i++) {
+        for (da_int i = 0; i < ncols; i++) {
             if (headings[i])
                 free(headings[i]);
         }
@@ -465,7 +464,7 @@ TEST(csvtest, missing_file) {
     da_status err = da_csv_init(&opts);
     double *a = nullptr;
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     err = da_read_csv_d(opts, filepath, &a, &nrows, &ncols);
     ASSERT_EQ(err, da_status_file_not_found);
 
@@ -485,21 +484,21 @@ TEST(csvtest, tmptest) {
     double *a = nullptr;
     char **headings = nullptr;
 
-    size_t nrows = 0, ncols = 0;
+    da_int nrows = 0, ncols = 0;
     char one[] = "1";
     err = da_csv_set_option(opts, csv_option_warn_for_missing_data, one);
     err = da_read_csv_d_h(opts, filepath, &a, &nrows, &ncols, &headings);
 
-    for (size_t i = 0; i < nrows; i++) {
+    for (da_int i = 0; i < nrows; i++) {
         printf("\n");
-        for (size_t j = 0; j < ncols; j++) {
+        for (da_int j = 0; j < ncols; j++) {
             printf("   %f  ", a[j + ncols * i]);
         }
     }
     printf("\n");
 
     if (headings) {
-        for (size_t j = 0; j < ncols; j++) {
+        for (da_int j = 0; j < ncols; j++) {
             printf("%s", headings[j]);
         }
     }
@@ -515,7 +514,7 @@ TEST(csvtest, tmptest) {
         free(a);
 
     if (headings) {
-        for (size_t i = 0; i < ncols; i++) {
+        for (da_int i = 0; i < ncols; i++) {
             if (headings[i])
                 free(headings[i]);
         }

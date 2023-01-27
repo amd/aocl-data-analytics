@@ -37,12 +37,12 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
     ASSERT_EQ(da_csv_init(&opts_coef), da_status_success);
     T *a = nullptr, *b = nullptr, *coef_exp = nullptr;
 
-    size_t n = 0, m = 0;
+    da_int n = 0, m = 0;
     ASSERT_EQ(da_read_csv(opts, A_file.c_str(), &a, &m, &n), da_status_success);
-    size_t nb, mb;
+    da_int nb, mb;
     ASSERT_EQ(da_read_csv(opts_b, b_file.c_str(), &b, &mb, &nb), da_status_success);
     ASSERT_EQ(m, nb); // b is stored in one row
-    size_t nc, mc;
+    da_int nc, mc;
     ASSERT_EQ(da_read_csv(opts_coef, coef_file.c_str(), &coef_exp, &mc, &nc),
               da_status_success);
     // ASSERT_EQ(n, nc); // TODO add check once the intersect has been solved
@@ -58,7 +58,7 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
 
     // Extract and compare solution
     T *coef = new T[nc];
-    int ncc = nc;
+    da_int ncc = nc;
     EXPECT_EQ(da_linreg_get_coef(handle, &ncc, coef), da_status_success);
     EXPECT_ARR_NEAR(ncc, coef_exp, coef, expected_precision<T>());
 

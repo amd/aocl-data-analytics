@@ -17,13 +17,13 @@ using FPTypes = ::testing::Types<float, double>;
 TYPED_TEST_SUITE(FPTest, FPTypes);
 
 TYPED_TEST(FPTest, mean) {
-    int n = 4;
+    da_int n = 4;
     TypeParam *x = nullptr;
 
     x = (TypeParam *)malloc(n * sizeof(TypeParam));
 
     // Starting point
-    for (int i = 0; i < n; i++)
+    for (da_int i = 0; i < n; i++)
         x[i] = (TypeParam)i;
 
     TypeParam mean;
@@ -44,13 +44,13 @@ TYPED_TEST(FPTest, mean) {
 }
 
 TYPED_TEST(FPTest, mean2) {
-    int n = 4;
+    da_int n = 4;
     TypeParam *x = nullptr;
 
     x = (TypeParam *)malloc(n * sizeof(TypeParam));
 
     // Starting point
-    for (int i = 0; i < n; i++)
+    for (da_int i = 0; i < n; i++)
         x[i] = 0.0;
 
     TypeParam mean;
@@ -71,13 +71,13 @@ TYPED_TEST(FPTest, mean2) {
 }
 
 TEST(doublestats, mean) {
-    int n = 4;
+    da_int n = 4;
     double *x = nullptr;
 
     x = (double *)malloc(n * sizeof(double));
 
     // Starting point
-    for (int i = 0; i < n; i++)
+    for (da_int i = 0; i < n; i++)
         x[i] = (double)i;
 
     double mean;
@@ -98,13 +98,13 @@ TEST(doublestats, mean) {
 }
 
 TEST(floatstats, mean) {
-    int n = 4;
+    da_int n = 4;
     float *x = nullptr;
 
     x = (float *)malloc(n * sizeof(float));
 
     // Starting point
-    for (int i = 0; i < n; i++)
+    for (da_int i = 0; i < n; i++)
         x[i] = 0.25;
 
     float mean;

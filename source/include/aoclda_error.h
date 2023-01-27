@@ -1,5 +1,5 @@
-#ifndef DA_ERROR_H
-#define DA_ERROR_H
+#ifndef AOCLDA_ERROR_H
+#define AOCLDA_ERROR_H
 
 typedef enum da_status_ {
     // Common errors 0-99
@@ -10,12 +10,12 @@ typedef enum da_status_ {
     da_status_not_implemented,
     da_status_out_of_date,
     da_status_wrong_type,
+    da_status_overflow,
     
     // CSV errors 100-199
     da_status_file_not_found = 100,
     da_status_range_error,
     da_status_no_digits,
-    da_status_overflow,
     da_status_invalid_chars,
     da_status_invalid_boolean,
     da_status_sign_error,

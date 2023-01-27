@@ -66,7 +66,7 @@ da_status da_linreg_s_select_model(da_linreg handle, linreg_model mod) {
     return handle->linreg_s->select_model(mod);
 }
 
-da_status da_linreg_d_define_features(da_linreg handle, int n, int m, double *A,
+da_status da_linreg_d_define_features(da_linreg handle, da_int n, da_int m, double *A,
                                       double *b) {
     if (handle == nullptr)
         return da_status_invalid_pointer;
@@ -76,7 +76,7 @@ da_status da_linreg_d_define_features(da_linreg handle, int n, int m, double *A,
     return handle->linreg_d->define_features(n, m, A, b);
 }
 
-da_status da_linreg_s_define_features(da_linreg handle, int n, int m, float *A,
+da_status da_linreg_s_define_features(da_linreg handle, da_int n, da_int m, float *A,
                                       float *b) {
     if (handle == nullptr)
         return da_status_invalid_pointer;
@@ -103,21 +103,21 @@ da_status da_linreg_s_fit(da_linreg handle) {
     return handle->linreg_s->fit();
 }
 
-da_status da_linreg_d_get_coef(da_linreg handle, int *nc, double *x) {
+da_status da_linreg_d_get_coef(da_linreg handle, da_int *nc, double *x) {
     if (handle == nullptr)
         return da_status_invalid_pointer;
 
     return handle->linreg_d->get_coef(*nc, x);
 }
 
-da_status da_linreg_s_get_coef(da_linreg handle, int *nc, float *x) {
+da_status da_linreg_s_get_coef(da_linreg handle, da_int *nc, float *x) {
     if (handle == nullptr)
         return da_status_invalid_pointer;
 
     return handle->linreg_s->get_coef(*nc, x);
 }
 
-da_status da_linreg_d_evaluate_model(da_linreg handle, int n, int m, double *X,
+da_status da_linreg_d_evaluate_model(da_linreg handle, da_int n, da_int m, double *X,
                                      double *predictions) {
     if (handle == nullptr)
         return da_status_invalid_pointer;
@@ -125,7 +125,7 @@ da_status da_linreg_d_evaluate_model(da_linreg handle, int n, int m, double *X,
     return handle->linreg_d->evaluate_model(n, m, X, predictions);
 }
 
-da_status da_linreg_s_evaluate_model(da_linreg handle, int n, int m, float *X,
+da_status da_linreg_s_evaluate_model(da_linreg handle, da_int n, da_int m, float *X,
                                      float *predictions) {
     if (handle == nullptr)
         return da_status_invalid_pointer;

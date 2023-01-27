@@ -10,10 +10,10 @@ int main() {
     std::cout.precision(5);
 
     // problem data
-    int m = 5, n = 2;
-    double Al[10] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
-    double bl[5] = {1, 1, 1, 1, 1};
-    int nx = 2;
+    da_int m = 5, n = 2;
+    double Al[m * n] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
+    double bl[m] = {1, 1, 1, 1, 1};
+    da_int nx = 2;
     double x[2];
 
     // Initialize the linear regression

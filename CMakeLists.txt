@@ -20,6 +20,7 @@ option(BUILD_EXAMPLES "Build the example programs" ON)
 option(BUILD_GTEST "Build gtest unit tests" ON)
 option(COVERAGE "Builds coverage of all the gtests and example programs" OFF)
 option(CHECK_MEM "Use google's asan tool on all C/C++ code." OFF)
+option(BUILD_ILP64 "ILP64 Support" OFF)
 
 # modules directory for easy include
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
@@ -57,6 +58,11 @@ if(COVERAGE AND (NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU"
   message(
     FATAL_ERROR "Coverage builds are only compatible with GNU debug builds")
 endif()
+
+if(BUILD_ILP64)
+  message(STATUS "BUILD_ILP64 = ON")
+  add_definitions(-DAOCLDA_ILP64)
+endif(BUILD_ILP64)
 
 # compiler flags
 message(

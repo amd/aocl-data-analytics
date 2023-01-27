@@ -99,12 +99,20 @@ da_status parse_file(da_csv_opts opts, const char *filename) {
 }
 
 template <typename T>
-da_status populate_data_array(da_csv_opts opts, T **a, size_t *nrows, size_t *ncols,
-                              size_t first_line) {
+da_status populate_data_array(da_csv_opts opts, T **a, da_int *nrows, da_int *ncols,
+                              da_int first_line) {
 
     da_status tmp_error = da_status_success, error = da_status_success;
 
-    size_t fields_per_line = (size_t)(opts->words_len / opts->lines);
+    //the parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
+
+    uint64_t fields_per_line = opts->words_len / opts->lines;
+    int64_t fields_per_line_signed;
+    if (fields_per_line > DA_INT_MAX || opts->lines > DA_INT_MAX) {
+        return da_status_overflow;
+    } else {
+        fields_per_line_signed = (int64_t)(fields_per_line);
+    }
 
     T *data;
     data = (T *)malloc(sizeof(T) * fields_per_line * (opts->lines - first_line));
@@ -115,20 +123,20 @@ da_status populate_data_array(da_csv_opts opts, T **a, size_t *nrows, size_t *nc
 
     char *p_end = NULL;
 
-    for (size_t i = first_line; i < (size_t)opts->lines; i++) {
+    for (uint64_t i = (uint64_t)first_line; i < opts->lines; i++) {
         // check for ragged matrix
-        if (opts->line_fields[i] != fields_per_line) {
+        if (opts->line_fields[i] != fields_per_line_signed) {
             if (data)
                 free(data);
             return da_status_ragged_csv;
         }
-        for (size_t j = opts->line_start[i];
-             j < (size_t)(opts->line_start[i] + opts->line_fields[i]); j++) {
+        for (int64_t j = opts->line_start[i];
+             j < (opts->line_start[i] + opts->line_fields[i]); j++) {
             tmp_error = char_to_num(opts, opts->words[j], &p_end,
-                                    &data[j - first_line * fields_per_line], NULL);
+                                    &data[j - (int64_t)first_line * fields_per_line_signed], NULL);
             if (tmp_error != da_status_success) {
                 if (opts->warn_for_missing_data) {
-                    missing_data(&data[j - first_line * fields_per_line]);
+                    missing_data(&data[j - (int64_t)first_line * fields_per_line_signed]);
                     error = da_status_warn_missing_data;
                 } else {
                     if (data)
@@ -139,15 +147,15 @@ da_status populate_data_array(da_csv_opts opts, T **a, size_t *nrows, size_t *nc
         }
     }
 
-    *nrows = (size_t)opts->lines - first_line;
+    *nrows = (da_int)opts->lines - first_line;
     *ncols = fields_per_line;
     *a = data;
     return error;
 }
 
 template <typename T>
-da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, size_t *nrows,
-                      size_t *ncols) {
+da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nrows,
+                      da_int *ncols) {
 
     da_status error = da_status_success, tmp_error = da_status_success;
 
@@ -167,8 +175,8 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, size_t *nro
 }
 
 template <typename T>
-da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, size_t *nrows,
-                      size_t *ncols, char ***headings) {
+da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nrows,
+                      da_int *ncols, char ***headings) {
     da_status error = da_status_success, tmp_error = da_status_success;
 
     error = parse_file(opts, filename);
@@ -198,7 +206,7 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, size_t *nro
     }
 
     char *p = NULL;
-    for (size_t i = 0; i < *ncols; i++) {
+    for (da_int i = 0; i < *ncols; i++) {
         p = opts->words[i];
         // Skip leading whitespace.
         if (opts->skipinitialspace){
@@ -210,7 +218,7 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, size_t *nro
         if ((*headings)[i] == NULL) {
             if (*a)
                 free(*a);
-            for (size_t j = 0; j < i; j++) {
+            for (da_int j = 0; j < i; j++) {
                 if ((*headings)[j])
                     free((*headings)[j]);
             }

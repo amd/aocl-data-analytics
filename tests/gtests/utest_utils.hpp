@@ -4,7 +4,7 @@
 #include <iostream>
 
 #define EXPECT_ARR_NEAR(n, x, y, abs_error)                                              \
-    for (int j = 0; j < (n); j++)                                                        \
+    for (da_int j = 0; j < (n); j++)                                                        \
     EXPECT_NEAR((x[j]), (y[j]), abs_error)                                               \
         << "Vectors " #x " and " #y " different at index j=" << j << "."
 
@@ -12,27 +12,27 @@
  * This is a workaround for now
  */
 inline da_status da_read_csv(da_csv_opts opts, const char *filename, double **a,
-                             size_t *nrows, size_t *ncols) {
+                             da_int *nrows, da_int *ncols) {
     return da_read_csv_d(opts, filename, a, nrows, ncols);
 }
 
 inline da_status da_read_csv(da_csv_opts opts, const char *filename, float **a,
-                             size_t *nrows, size_t *ncols) {
+                             da_int *nrows, da_int *ncols) {
     return da_read_csv_s(opts, filename, a, nrows, ncols);
 }
 
 inline da_status da_read_csv(da_csv_opts opts, const char *filename, int64_t **a,
-                             size_t *nrows, size_t *ncols) {
+                             da_int *nrows, da_int *ncols) {
     return da_read_csv_int64(opts, filename, a, nrows, ncols);
 }
 
 inline da_status da_read_csv(da_csv_opts opts, const char *filename, uint64_t **a,
-                             size_t *nrows, size_t *ncols) {
+                             da_int *nrows, da_int *ncols) {
     return da_read_csv_uint64(opts, filename, a, nrows, ncols);
 }
 
-inline da_status da_read_csv(da_csv_opts opts, const char *filename, uint8_t **a,
-                                   size_t *nrows, size_t *ncols) {
+inline da_status da_read_csv_uint8(da_csv_opts opts, const char *filename, uint8_t **a,
+                                   da_int *nrows, da_int *ncols) {
     return da_read_csv_uint8(opts, filename, a, nrows, ncols);
 }
 
@@ -53,11 +53,11 @@ template <> da_status da_linreg_select_model<float>(da_linreg handle, linreg_mod
     return da_linreg_s_select_model(handle, mod);
 }
 
-inline da_status da_linreg_define_features(da_linreg handle, int n, int m, double *A,
+inline da_status da_linreg_define_features(da_linreg handle, da_int n, da_int m, double *A,
                                            double *b) {
     return da_linreg_d_define_features(handle, n, m, A, b);
 }
-inline da_status da_linreg_define_features(da_linreg handle, int n, int m, float *A,
+inline da_status da_linreg_define_features(da_linreg handle, da_int n, da_int m, float *A,
                                            float *b) {
     return da_linreg_s_define_features(handle, n, m, A, b);
 }
@@ -70,18 +70,18 @@ template <> da_status da_linreg_fit<float>(da_linreg handle) {
     return da_linreg_s_fit(handle);
 }
 
-inline da_status da_linreg_get_coef(da_linreg handle, int *nc, double *x) {
+inline da_status da_linreg_get_coef(da_linreg handle, da_int *nc, double *x) {
     return da_linreg_d_get_coef(handle, nc, x);
 }
-inline da_status da_linreg_get_coef(da_linreg handle, int *nc, float *x) {
+inline da_status da_linreg_get_coef(da_linreg handle, da_int *nc, float *x) {
     return da_linreg_s_get_coef(handle, nc, x);
 }
 
-inline da_status da_linreg_evaluate_model(da_linreg handle, int n, int m, double *X,
+inline da_status da_linreg_evaluate_model(da_linreg handle, da_int n, da_int m, double *X,
                                           double *predictions) {
     return da_linreg_d_evaluate_model(handle, n, m, X, predictions);
 }
-inline da_status da_linreg_evaluate_model(da_linreg handle, int n, int m, float *X,
+inline da_status da_linreg_evaluate_model(da_linreg handle, da_int n, da_int m, float *X,
                                           float *predictions) {
     return da_linreg_s_evaluate_model(handle, n, m, X, predictions);
 }
