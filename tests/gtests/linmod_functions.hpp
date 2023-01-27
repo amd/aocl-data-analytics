@@ -57,7 +57,7 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
     EXPECT_EQ(da_linreg_fit<T>(handle), da_status_success);
 
     // Extract and compare solution
-    T *coef = new T[n];
+    T *coef = new T[nc];
     int ncc = nc;
     EXPECT_EQ(da_linreg_get_coef(handle, &ncc, coef), da_status_success);
     EXPECT_ARR_NEAR(ncc, coef_exp, coef, expected_precision<T>());
