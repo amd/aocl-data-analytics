@@ -142,15 +142,13 @@ int parser_clear_data_buffers(parser_t *self) {
     free_if_not_null((void *)&self->line_start);
     free_if_not_null((void *)&self->line_fields);
     free_if_not_null((void *)&self->data);
+    free_if_not_null((void *)&self->error_msg);
+    free_if_not_null((void *)&self->warn_msg);
     return 0;
 }
 
 int parser_cleanup(parser_t *self) {
     int status = 0;
-
-    // XXX where to put this
-    free_if_not_null((void *)&self->error_msg);
-    free_if_not_null((void *)&self->warn_msg);
 
     if (self->skipset != NULL) {
         kh_destroy_int64((kh_int64_t *)self->skipset);
@@ -169,6 +167,52 @@ int parser_cleanup(parser_t *self) {
     }
 
     return status;
+}
+
+/* Added by AMD to allow the same parser to be used multiple times */
+int parser_reset(parser_t *self){
+
+    parser_clear_data_buffers(self);
+
+    int64_t sz;
+
+    sz = STREAM_INIT_SIZE / 10;
+    sz = sz ? sz : 1;
+    self->stream = malloc(STREAM_INIT_SIZE * sizeof(char));
+    self->words = malloc(sz * sizeof(char *));
+    self->word_starts = malloc(sz * sizeof(int64_t));
+    self->line_start = malloc(sz * sizeof(int64_t));
+    self->line_fields = malloc(sz * sizeof(int64_t));
+
+    if (self->stream == NULL || self->words == NULL || self->word_starts == NULL ||
+        self->line_start == NULL || self->line_fields == NULL) {
+        parser_cleanup(self);
+
+        return PARSER_OUT_OF_MEMORY;
+    }
+
+    /* Reset scalar quantities */
+    self->line_start[0] = 0;
+    self->line_fields[0] = 0;
+    self->chunksize = DEFAULT_CHUNKSIZE;
+    self->stream_cap = STREAM_INIT_SIZE;
+    self->stream_len = 0;
+    self->max_words_cap = sz;
+    self->words_cap = sz;
+    self->words_len = 0;
+    self->lines_cap = sz;
+    self->lines = 0;
+    self->file_lines = 0;
+    self->datalen = 0;
+    self->datapos = 0;
+    self->pword_start = self->stream;
+    self->word_start = 0;
+    self->state = START_RECORD;
+    self->error_msg = NULL;
+    self->warn_msg = NULL;
+
+    return 0;
+
 }
 
 int parser_init(parser_t *self) {

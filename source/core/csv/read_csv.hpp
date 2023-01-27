@@ -51,7 +51,7 @@ int cleanup(void *source) {
     return 0;
 }
 
-/* We don't want to edit tokenize.c in case it needs updating, so convert the error exits
+/* We don't want to edit tokenize.c much in case it needs updating, so convert the error exits
  * here */
 da_status convert_tokenizer_errors(int ierror) {
     da_status error;
@@ -94,6 +94,9 @@ da_status parse_file(da_csv_opts opts, const char *filename) {
     if (opts->file_lines != opts->lines) {
         error = da_status_warn_bad_lines;
     }
+
+    fclose(fp);
+    opts->source = nullptr;
 
     return error;
 }
@@ -166,7 +169,11 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nro
     }
 
     tmp_error = populate_data_array(opts, a, nrows, ncols, 0);
+    if (!(tmp_error == da_status_success)) {
+        error = tmp_error;
+    }
 
+    tmp_error = convert_tokenizer_errors(parser_reset(opts));
     if (!(tmp_error == da_status_success)) {
         error = tmp_error;
     }
@@ -195,6 +202,7 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nro
     if (!(*ncols == opts->line_fields[0])) {
         if (*a)
             free(*a);
+        parser_reset(opts);
         return da_status_ragged_csv;
     }
 
@@ -202,6 +210,7 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nro
     if (*headings == NULL) {
         if (*a)
             free(*a);
+        parser_reset(opts);
         return da_status_memory_error;
     }
 
@@ -224,9 +233,15 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nro
             }
             if ((*headings))
                 free((*headings));
+            parser_reset(opts);
             return da_status_memory_error;
         }
         strcpy((*headings)[i], p);
+    }
+
+    tmp_error = convert_tokenizer_errors(parser_reset(opts));
+    if (!(tmp_error == da_status_success)) {
+        error = tmp_error;
     }
 
     return error;

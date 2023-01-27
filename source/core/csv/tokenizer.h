@@ -209,6 +209,8 @@ void parser_free(parser_t *self);
 
 void parser_del(parser_t *self);
 
+int parser_reset(parser_t *self);
+
 void parser_set_default_options(parser_t *self);
 
 int tokenize_nrows(parser_t *self, size_t nrows, const char *encoding_errors);

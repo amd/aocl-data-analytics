@@ -31,19 +31,17 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
     coef_file = std::string(DATA_DIR) + "/" + csvname + "_" + modname + "_coeffs.csv";
 
     // Read features
-    da_csv_opts opts = nullptr, opts_b = nullptr, opts_coef = nullptr;
+    da_csv_opts opts = nullptr;
     ASSERT_EQ(da_csv_init(&opts), da_status_success);
-    ASSERT_EQ(da_csv_init(&opts_b), da_status_success);
-    ASSERT_EQ(da_csv_init(&opts_coef), da_status_success);
     T *a = nullptr, *b = nullptr, *coef_exp = nullptr;
 
     da_int n = 0, m = 0;
     ASSERT_EQ(da_read_csv(opts, A_file.c_str(), &a, &m, &n), da_status_success);
     da_int nb, mb;
-    ASSERT_EQ(da_read_csv(opts_b, b_file.c_str(), &b, &mb, &nb), da_status_success);
+    ASSERT_EQ(da_read_csv(opts, b_file.c_str(), &b, &mb, &nb), da_status_success);
     ASSERT_EQ(m, nb); // b is stored in one row
     da_int nc, mc;
-    ASSERT_EQ(da_read_csv(opts_coef, coef_file.c_str(), &coef_exp, &mc, &nc),
+    ASSERT_EQ(da_read_csv(opts, coef_file.c_str(), &coef_exp, &mc, &nc),
               da_status_success);
     // ASSERT_EQ(n, nc); // TODO add check once the intersect has been solved
 
@@ -71,8 +69,6 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
     if (coef)
         delete[] coef;
     da_csv_destroy(&opts);
-    da_csv_destroy(&opts_b);
-    da_csv_destroy(&opts_coef);
     da_linreg_destroy(&handle);
 
     return;
