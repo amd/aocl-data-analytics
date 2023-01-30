@@ -81,7 +81,6 @@ opt_status da_optimization<T>::add_bound_const(std::vector<T> &l, std::vector<T>
 
     this->def_constraints[cons_bounds] = true;
 
-    int i;
     this->l = std::vector<T>(l);
     this->u = std::vector<T>(u);
 

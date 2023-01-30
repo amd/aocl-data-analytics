@@ -63,8 +63,14 @@ message(
   STATUS
     "CXX Compiler ID= ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}"
 )
-# GCC compiler flags
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+# Check for CL compatibility layer of clang
+if(COMPILER_BASENAME MATCHES "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
+  set(CLANG_OPTIONS_STYLE "MSVC")
+else()
+  set(CLANG_OPTIONS_STYLE "GNU")
+endif()
+# GNU style compiler flags
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL "GNU"))
   # Common flags
   set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma")
   # Release flags
@@ -76,6 +82,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(COMPILER_FLAGS_COMMON
         "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
   endif()
+# TODO add MSVC style flags
 endif()
 
 if(CHECK_MEM)

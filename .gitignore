@@ -1,6 +1,4 @@
 # Vscode temporary files
 .vscode
 # build artifacts
-build
-build_cov
-tests/sandbox
+build*

@@ -31,7 +31,7 @@ inline da_status da_read_csv(da_csv_opts opts, const char *filename, uint64_t **
     return da_read_csv_uint64(opts, filename, a, nrows, ncols);
 }
 
-inline da_status da_read_csv_uint8(da_csv_opts opts, const char *filename, uint8_t **a,
+inline da_status da_read_csv(da_csv_opts opts, const char *filename, uint8_t **a,
                                    size_t *nrows, size_t *ncols) {
     return da_read_csv_uint8(opts, filename, a, nrows, ncols);
 }

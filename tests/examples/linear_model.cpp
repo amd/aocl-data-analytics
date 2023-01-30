@@ -11,8 +11,8 @@ int main() {
 
     // problem data
     int m = 5, n = 2;
-    double Al[m * n] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
-    double bl[m] = {1, 1, 1, 1, 1};
+    double Al[10] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
+    double bl[5] = {1, 1, 1, 1, 1};
     int nx = 2;
     double x[2];
 
@@ -37,8 +37,8 @@ int main() {
 
     // Solve the same model with single precision
     // problem data
-    float As[m * n] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
-    float bs[m] = {1, 1, 1, 1, 1};
+    float As[10] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
+    float bs[5] = {1, 1, 1, 1, 1};
     float xs[2];
 
     std::cout.precision(2);
