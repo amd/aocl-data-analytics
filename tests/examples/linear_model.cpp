@@ -17,9 +17,9 @@ int main() {
     double x[2];
 
     // Initialize the linear regression
-    da_linreg handle = nullptr;
+    da_handle handle = nullptr;
     da_status status;
-    status = da_linreg_d_init(&handle);
+    status = da_handle_init_d(&handle, da_handle_linreg);
     status = da_linreg_d_select_model(handle, linreg_model_mse);
     status = da_linreg_d_define_features(handle, n, m, Al, bl);
     // compute regression
@@ -43,8 +43,8 @@ int main() {
 
     std::cout.precision(2);
     // Initialize the linear regression
-    da_linreg handle_s = nullptr;
-    status = da_linreg_s_init(&handle_s);
+    da_handle handle_s = nullptr;
+    status = da_handle_init_s(&handle_s, da_handle_linreg);
     std::cout << "init status " << status << std::endl;
     status = da_linreg_s_select_model(handle_s, linreg_model_mse);
     std::cout << "model status " << status << std::endl;
@@ -62,8 +62,8 @@ int main() {
     }
     std::cout << "----------------------------------------" << std::endl;
 
-    da_linreg_destroy(&handle);
-    da_linreg_destroy(&handle_s);
+    da_handle_destroy(&handle);
+    da_handle_destroy(&handle_s);
 
     return 0;
 }

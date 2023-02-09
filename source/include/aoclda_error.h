@@ -11,7 +11,10 @@ typedef enum da_status_ {
     da_status_out_of_date,
     da_status_wrong_type,
     da_status_overflow,
-    
+    da_status_invalid_handle_type,
+    da_status_handle_not_initialized,
+    da_status_invalid_option,
+
     // CSV errors 100-199
     da_status_file_not_found = 100,
     da_status_range_error,
@@ -21,7 +24,7 @@ typedef enum da_status_ {
     da_status_sign_error,
     da_status_file_reading_error,
     da_status_parsing_error,
-    da_status_invalid_option,
+
     da_status_ragged_csv,
     da_status_warn_bad_lines,
     da_status_warn_missing_data,

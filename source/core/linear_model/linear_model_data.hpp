@@ -67,12 +67,6 @@ template <typename T> class linear_model_data {
     da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
 };
 
-struct _da_linreg {
-    da_precision prec = da_double;
-    linear_model_data<double> *linreg_d = nullptr;
-    linear_model_data<float> *linreg_s = nullptr;
-};
-
 template <typename T> linear_model_data<T>::~linear_model_data() {
     // A and b are passed from (internal) user, do not deallocate
     A = nullptr;

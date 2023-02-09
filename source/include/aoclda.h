@@ -6,5 +6,6 @@
 #include "aoclda_csv.h"
 #include "aoclda_error.h"
 #include "aoclda_linreg.h"
+#include "aoclda_handle.h"
 
 #endif // AOCLDA

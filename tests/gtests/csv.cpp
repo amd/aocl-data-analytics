@@ -11,8 +11,8 @@ TEST(csvtest, single_head) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     float *a = nullptr;
     char **headings = nullptr;
 
@@ -22,7 +22,7 @@ TEST(csvtest, single_head) {
     char headings_expected[5][10] = {"one", "cat two", "three", "FOUR", "Five"};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_s_h(opts, filepath, &a, &nrows, &ncols, &headings);
+    err = da_read_csv_s_h(handle, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
 
@@ -39,7 +39,7 @@ TEST(csvtest, single_head) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (a)
         free(a);
@@ -59,8 +59,8 @@ TEST(csvtest, double_head) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     double *a = nullptr;
     char **headings = nullptr;
 
@@ -70,7 +70,7 @@ TEST(csvtest, double_head) {
     char headings_expected[5][10] = {"one", "cat two", "three", "FOUR", "Five"};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_d_h(opts, filepath, &a, &nrows, &ncols, &headings);
+    err = da_read_csv_d_h(handle, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
 
@@ -87,7 +87,7 @@ TEST(csvtest, double_head) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (a)
         free(a);
@@ -107,8 +107,8 @@ TEST(csvtest, single) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     float *a = nullptr;
 
     da_int nrows_expected = 3, ncols_expected = 5;
@@ -116,7 +116,7 @@ TEST(csvtest, single) {
                             -5.6e-7, -10, 0.0,    0.0,    0.0, 0.0, 4.5e+5};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_s(opts, filepath, &a, &nrows, &ncols);
+    err = da_read_csv_s(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
 
@@ -129,7 +129,7 @@ TEST(csvtest, single) {
         }
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (a)
         free(a);
@@ -141,8 +141,8 @@ TEST(csvtest, double) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     double *a = nullptr;
 
     da_int nrows_expected = 3, ncols_expected = 5;
@@ -150,7 +150,7 @@ TEST(csvtest, double) {
                              -5.6e-7, -10, 0.0,    0.0,    0.0, 0.0, 4.5e+5};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_d(opts, filepath, &a, &nrows, &ncols);
+    err = da_read_csv_d(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
     ASSERT_EQ(nrows, nrows_expected);
@@ -162,7 +162,7 @@ TEST(csvtest, double) {
         }
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (a)
         free(a);
@@ -174,8 +174,8 @@ TEST(csvtest, int64) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     int64_t *a = nullptr;
 
     da_int nrows_expected = 3, ncols_expected = 4;
@@ -193,7 +193,7 @@ TEST(csvtest, int64) {
                               67};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_int64(opts, filepath, &a, &nrows, &ncols);
+    err = da_read_csv_int64(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
 
@@ -206,7 +206,7 @@ TEST(csvtest, int64) {
         }
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (a)
         free(a);
@@ -218,8 +218,8 @@ TEST(csvtest, int64_head) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     int64_t *a = nullptr;
     char **headings = nullptr;
 
@@ -240,7 +240,7 @@ TEST(csvtest, int64_head) {
     char headings_expected[4][10] = {"one", "two", "three", "four"};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_int64_h(opts, filepath, &a, &nrows, &ncols, &headings);
+    err = da_read_csv_int64_h(handle, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
 
@@ -257,7 +257,7 @@ TEST(csvtest, int64_head) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (headings) {
         for (da_int i = 0; i < ncols; i++) {
@@ -277,8 +277,8 @@ TEST(csvtest, uint64) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     uint64_t *a = nullptr;
 
     da_int nrows_expected = 3, ncols_expected = 4;
@@ -296,14 +296,14 @@ TEST(csvtest, uint64) {
                                67};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_uint64(opts, filepath, &a, &nrows, &ncols);
+    err = da_read_csv_uint64(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
 
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
@@ -321,8 +321,8 @@ TEST(csvtest, uint64_head) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     uint64_t *a = nullptr;
     char **headings = nullptr;
 
@@ -343,7 +343,7 @@ TEST(csvtest, uint64_head) {
     char headings_expected[4][10] = {"one", "two", "three", "four"};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_uint64_h(opts, filepath, &a, &nrows, &ncols, &headings);
+    err = da_read_csv_uint64_h(handle, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
 
@@ -360,7 +360,7 @@ TEST(csvtest, uint64_head) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (headings) {
         for (da_int i = 0; i < ncols; i++) {
@@ -380,22 +380,22 @@ TEST(csvtest, bool) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     uint8_t *a = nullptr;
 
     da_int nrows_expected = 2, ncols_expected = 4;
     uint8_t a_expected[8] = {1, 1, 1, 1, 1, 0, 0, 0};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_uint8(opts, filepath, &a, &nrows, &ncols);
+    err = da_read_csv_uint8(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
 
     ASSERT_EQ(nrows, nrows_expected);
     ASSERT_EQ(ncols, ncols_expected);
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
@@ -413,8 +413,8 @@ TEST(csvtest, bool_head) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     uint8_t *a = nullptr;
     char **headings = nullptr;
 
@@ -424,7 +424,7 @@ TEST(csvtest, bool_head) {
     char headings_expected[4][10] = {"one", "two", "three", "four"};
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_uint8_h(opts, filepath, &a, &nrows, &ncols, &headings);
+    err = da_read_csv_uint8_h(handle, filepath, &a, &nrows, &ncols, &headings);
 
     ASSERT_EQ(err, da_status_success);
 
@@ -441,7 +441,7 @@ TEST(csvtest, bool_head) {
         EXPECT_STREQ(headings[j], headings_expected[j]);
     }
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (headings) {
         for (da_int i = 0; i < ncols; i++) {
@@ -460,15 +460,15 @@ TEST(csvtest, missing_file) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     double *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
-    err = da_read_csv_d(opts, filepath, &a, &nrows, &ncols);
+    err = da_read_csv_d(handle, filepath, &a, &nrows, &ncols);
     ASSERT_EQ(err, da_status_file_not_found);
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (a)
         free(a);
@@ -479,15 +479,15 @@ TEST(csvtest, tmptest) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, filename);
 
-    da_csv_opts opts = nullptr;
-    da_status err = da_csv_init(&opts);
+    da_handle handle = nullptr;
+    da_status err = da_handle_init_d(&handle, da_handle_csv_opts);
     double *a = nullptr;
     char **headings = nullptr;
 
     da_int nrows = 0, ncols = 0;
     char one[] = "1";
-    err = da_csv_set_option(opts, csv_option_warn_for_missing_data, one);
-    err = da_read_csv_d_h(opts, filepath, &a, &nrows, &ncols, &headings);
+    err = da_handle_set_option(handle, csv_option_warn_for_missing_data, one);
+    err = da_read_csv_d_h(handle, filepath, &a, &nrows, &ncols, &headings);
 
     for (da_int i = 0; i < nrows; i++) {
         printf("\n");
@@ -505,10 +505,10 @@ TEST(csvtest, tmptest) {
 
     char G[] = "G";
     char G2[] = "45";
-    err = da_csv_set_option(opts, csv_option_escapechar, G);
-    err = da_csv_set_option(opts, csv_option_header_end, G2);
+    err = da_handle_set_option(handle, csv_option_escapechar, G);
+    err = da_handle_set_option(handle, csv_option_header_end, G2);
 
-    da_csv_destroy(&opts);
+    da_handle_destroy(&handle);
 
     if (a)
         free(a);

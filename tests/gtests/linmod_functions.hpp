@@ -31,33 +31,33 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
     coef_file = std::string(DATA_DIR) + "/" + csvname + "_" + modname + "_coeffs.csv";
 
     // Read features
-    da_csv_opts opts = nullptr;
-    ASSERT_EQ(da_csv_init(&opts), da_status_success);
+    da_handle csv_handle = nullptr;
+    ASSERT_EQ(da_handle_init_s(&csv_handle, da_handle_csv_opts), da_status_success);
     T *a = nullptr, *b = nullptr, *coef_exp = nullptr;
 
     da_int n = 0, m = 0;
-    ASSERT_EQ(da_read_csv(opts, A_file.c_str(), &a, &m, &n), da_status_success);
+    ASSERT_EQ(da_read_csv(csv_handle, A_file.c_str(), &a, &m, &n), da_status_success);
     da_int nb, mb;
-    ASSERT_EQ(da_read_csv(opts, b_file.c_str(), &b, &mb, &nb), da_status_success);
+    ASSERT_EQ(da_read_csv(csv_handle, b_file.c_str(), &b, &mb, &nb), da_status_success);
     ASSERT_EQ(m, nb); // b is stored in one row
     da_int nc, mc;
-    ASSERT_EQ(da_read_csv(opts, coef_file.c_str(), &coef_exp, &mc, &nc),
+    ASSERT_EQ(da_read_csv(csv_handle, coef_file.c_str(), &coef_exp, &mc, &nc),
               da_status_success);
     // ASSERT_EQ(n, nc); // TODO add check once the intersect has been solved
 
     // Create problem
-    da_linreg handle = nullptr;
-    ASSERT_EQ(da_linreg_init<T>(&handle), da_status_success);
-    ASSERT_EQ(da_linreg_select_model<T>(handle, mod), da_status_success);
-    ASSERT_EQ(da_linreg_define_features(handle, n, m, a, b), da_status_success);
+    da_handle linreg_handle = nullptr;
+    ASSERT_EQ(da_linreg_init<T>(&linreg_handle), da_status_success);
+    ASSERT_EQ(da_linreg_select_model<T>(linreg_handle, mod), da_status_success);
+    ASSERT_EQ(da_linreg_define_features(linreg_handle, n, m, a, b), da_status_success);
 
     // compute regression
-    EXPECT_EQ(da_linreg_fit<T>(handle), da_status_success);
+    EXPECT_EQ(da_linreg_fit<T>(linreg_handle), da_status_success);
 
     // Extract and compare solution
     T *coef = new T[nc];
     da_int ncc = nc;
-    EXPECT_EQ(da_linreg_get_coef(handle, &ncc, coef), da_status_success);
+    EXPECT_EQ(da_linreg_get_coef(linreg_handle, &ncc, coef), da_status_success);
     EXPECT_ARR_NEAR(ncc, coef_exp, coef, expected_precision<T>());
 
     if (a)
@@ -68,8 +68,8 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
         free(coef_exp);
     if (coef)
         delete[] coef;
-    da_csv_destroy(&opts);
-    da_linreg_destroy(&handle);
+    da_handle_destroy(&csv_handle);
+    da_handle_destroy(&linreg_handle);
 
     return;
 }

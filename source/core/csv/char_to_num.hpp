@@ -42,18 +42,20 @@ Modifications Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserve
 #include <math.h>
 #include <string.h>
 
-void missing_data(int64_t *data) { *data = INT64_MAX; }
+/* Routines for converting individual strings to floats or integers */
 
-void missing_data(uint64_t *data) { *data = UINT64_MAX; }
+inline void missing_data(int64_t *data) { *data = INT64_MAX; }
 
-void missing_data(uint8_t *data) { *data = UINT8_MAX; }
+inline void missing_data(uint64_t *data) { *data = UINT64_MAX; }
 
-void missing_data(double *data) { *data = nan(""); }
+inline void missing_data(uint8_t *data) { *data = UINT8_MAX; }
 
-void missing_data(float *data) { *data = nanf(""); }
+inline void missing_data(double *data) { *data = nan(""); }
 
-da_status char_to_num(parser_t *parser, const char *str, char **endptr, double *number,
-                      int *maybe_int) {
+inline void missing_data(float *data) { *data = nanf(""); }
+
+inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
+                             double *number, int *maybe_int) {
     // get some data from the parser
     int skip_trailing = parser->skip_trailing;
     char decimal = parser->decimal;
@@ -228,8 +230,8 @@ da_status char_to_num(parser_t *parser, const char *str, char **endptr, double *
     return error;
 }
 
-da_status char_to_num(parser_t *parser, const char *str, char **endptr, float *number,
-                      int *maybe_int) {
+inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
+                             float *number, int *maybe_int) {
     // get some data from the parser
     int skip_trailing = parser->skip_trailing;
     char decimal = parser->decimal;
@@ -379,8 +381,8 @@ da_status char_to_num(parser_t *parser, const char *str, char **endptr, float *n
     return error;
 }
 
-da_status char_to_num(parser_t *parser, const char *str, char **endptr, int64_t *number,
-                      int *maybe_int) {
+inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
+                             int64_t *number, int *maybe_int) {
 
     // Get some information from the parser
     int64_t int_min = parser->int_min;
@@ -510,8 +512,8 @@ da_status char_to_num(parser_t *parser, const char *str, char **endptr, int64_t 
     return error;
 }
 
-da_status char_to_num(parser_t *parser, const char *str, char **endptr, uint64_t *number,
-                      int *maybe_int) {
+inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
+                             uint64_t *number, int *maybe_int) {
 
     // Get some data from the parser
     char tsep = parser->thousands;
@@ -617,8 +619,8 @@ da_status char_to_num(parser_t *parser, const char *str, char **endptr, uint64_t
  * leaves the value of *val unmodified.
  */
 
-da_status char_to_num(parser_t *parser, const char *str, char **endptr, uint8_t *number,
-                      int *maybe_int) {
+inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
+                             uint8_t *number, int *maybe_int) {
 
     da_status error = da_status_invalid_boolean;
     *number = 0;

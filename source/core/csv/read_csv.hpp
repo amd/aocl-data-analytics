@@ -6,119 +6,59 @@
 #include <string.h>
 
 #include "aoclda.h"
+#include "da_handle.hpp"
+#include "parser.hpp"
 #include "tokenizer.h"
 
-/* This callback is as required by the code in tokenizer.c - it reads data from the csv
- * file*/
-void *read_bytes(void *source, size_t nbytes, size_t *bytes_read, int *status,
-                 const char *encoding_errors) {
-    FILE *fp = (FILE *)source;
-    char *buffer = (char *)malloc(nbytes);
-    if (buffer == NULL && nbytes > 0) {
-        *status = PARSER_OUT_OF_MEMORY;
-        return NULL;
-    }
+/* Contains routines for parsing a csv file */
 
-    size_t read_status = fread(buffer, 1, nbytes, fp);
-    *bytes_read = read_status;
-
-    if (read_status == nbytes) {
-        *status = 0;
-        return (void *)buffer;
-    } else { // error handling
-        if (read_status == 0) {
-            *status = REACHED_EOF;
-            return (void *)buffer;
-        } else if (ferror(fp)) {
-            *status = CALLING_READ_FAILED;
-            free(buffer);
-            return NULL;
-        } else {
-            return (void *)buffer;
-        }
-    }
-
-    free(buffer);
-    return NULL;
-}
-
-int cleanup(void *source) {
-    if (source) {
-        FILE *fp = (FILE *)source;
-        fclose(fp);
-        source = NULL;
-    }
-    return 0;
-}
-
-/* We don't want to edit tokenize.c much in case it needs updating, so convert the error exits
- * here */
-da_status convert_tokenizer_errors(int ierror) {
-    da_status error;
-
-    switch (ierror) {
-    case 0:
-        error = da_status_success;
-        break;
-    case CALLING_READ_FAILED:
-        error = da_status_file_reading_error;
-        break;
-    case PARSER_OUT_OF_MEMORY:
-        error = da_status_memory_error;
-        break;
-    case -1:
-        error = da_status_parsing_error;
-        break;
-    }
-
-    return error;
-}
-
-da_status parse_file(da_csv_opts opts, const char *filename) {
+da_status parse_file(da_handle handle, const char *filename) {
 
     da_status error = da_status_success;
+    parser_t *parser = handle->parser;
     int err;
 
     FILE *fp = nullptr;
     fp = fopen(filename, "r");
 
-    if (fp == nullptr){
+    if (fp == nullptr) {
         return da_status_file_not_found;
     }
 
-    opts->source = (void *)fp;
+    parser->source = (void *)fp;
     char *encoding_errors = NULL;
 
-    err = tokenize_all_rows(opts, encoding_errors);
+    err = tokenize_all_rows(parser, encoding_errors);
     error = convert_tokenizer_errors(err);
-    if (opts->file_lines != opts->lines) {
+    if (parser->file_lines != parser->lines) {
         error = da_status_warn_bad_lines;
     }
 
     fclose(fp);
-    opts->source = nullptr;
+    parser->source = nullptr;
 
     return error;
 }
 
 template <typename T>
-da_status populate_data_array(da_csv_opts opts, T **a, da_int *nrows, da_int *ncols,
+da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *ncols,
                               da_int first_line) {
 
     da_status tmp_error = da_status_success, error = da_status_success;
+    parser_t *parser = handle->parser;
 
     //the parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
 
-    uint64_t fields_per_line = opts->words_len / opts->lines;
+    uint64_t fields_per_line = parser->words_len / parser->lines;
     int64_t fields_per_line_signed;
-    if (fields_per_line > DA_INT_MAX || opts->lines > DA_INT_MAX) {
+    if (fields_per_line > DA_INT_MAX || parser->lines > DA_INT_MAX) {
         return da_status_overflow;
     } else {
         fields_per_line_signed = (int64_t)(fields_per_line);
     }
 
     T *data;
-    data = (T *)malloc(sizeof(T) * fields_per_line * (opts->lines - first_line));
+    data = (T *)malloc(sizeof(T) * fields_per_line * (parser->lines - first_line));
 
     if (data == NULL) {
         return da_status_memory_error;
@@ -126,20 +66,28 @@ da_status populate_data_array(da_csv_opts opts, T **a, da_int *nrows, da_int *nc
 
     char *p_end = NULL;
 
-    for (uint64_t i = (uint64_t)first_line; i < opts->lines; i++) {
+    for (uint64_t i = (uint64_t)first_line; i < parser->lines; i++) {
         // check for ragged matrix
-        if (opts->line_fields[i] != fields_per_line_signed) {
+        if (parser->line_fields[i] != fields_per_line_signed) {
             if (data)
                 free(data);
+            snprintf(
+                handle->error_message, ERR_MSG_LEN,
+                "Line %i had an unexpected number of fields (fields %i, expected %i).", i,
+                parser->line_fields[i], fields_per_line_signed);
             return da_status_ragged_csv;
         }
-        for (int64_t j = opts->line_start[i];
-             j < (opts->line_start[i] + opts->line_fields[i]); j++) {
-            tmp_error = char_to_num(opts, opts->words[j], &p_end,
-                                    &data[j - (int64_t)first_line * fields_per_line_signed], NULL);
+        for (int64_t j = parser->line_start[i];
+             j < (parser->line_start[i] + parser->line_fields[i]); j++) {
+            tmp_error = char_to_num(
+                parser, parser->words[j], &p_end,
+                &data[j - (int64_t)first_line * fields_per_line_signed], NULL);
             if (tmp_error != da_status_success) {
-                if (opts->warn_for_missing_data) {
-                    missing_data(&data[j - (int64_t)first_line * fields_per_line_signed]);
+                if (parser->warn_for_missing_data) {
+                    missing_data(
+                        &data[j - (int64_t)first_line * fields_per_line_signed]);
+                    snprintf(handle->error_message, ERR_MSG_LEN,
+                             "Missing data on line %i.", j);
                     error = da_status_warn_missing_data;
                 } else {
                     if (data)
@@ -150,30 +98,34 @@ da_status populate_data_array(da_csv_opts opts, T **a, da_int *nrows, da_int *nc
         }
     }
 
-    *nrows = (da_int)opts->lines - first_line;
+    *nrows = (da_int)parser->lines - first_line;
     *ncols = fields_per_line;
     *a = data;
     return error;
 }
 
 template <typename T>
-da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nrows,
+da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nrows,
                       da_int *ncols) {
 
     da_status error = da_status_success, tmp_error = da_status_success;
 
-    error = parse_file(opts, filename);
+    error = da_check_handle_type(handle, da_handle_csv_opts);
+    if (error != da_status_success)
+        return error;
+
+    error = parse_file(handle, filename);
 
     if (!(error == da_status_success) && !(error == da_status_warn_bad_lines)) {
         return error;
     }
 
-    tmp_error = populate_data_array(opts, a, nrows, ncols, 0);
+    tmp_error = populate_data_array(handle, a, nrows, ncols, 0);
     if (!(tmp_error == da_status_success)) {
         error = tmp_error;
     }
 
-    tmp_error = convert_tokenizer_errors(parser_reset(opts));
+    tmp_error = convert_tokenizer_errors(parser_reset(handle->parser));
     if (!(tmp_error == da_status_success)) {
         error = tmp_error;
     }
@@ -182,27 +134,32 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nro
 }
 
 template <typename T>
-da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nrows,
+da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nrows,
                       da_int *ncols, char ***headings) {
+
     da_status error = da_status_success, tmp_error = da_status_success;
 
-    error = parse_file(opts, filename);
+    error = da_check_handle_type(handle, da_handle_csv_opts);
+    if (error != da_status_success)
+        return error;
+
+    error = parse_file(handle, filename);
 
     if (!(error == da_status_success) && !(error == da_status_warn_bad_lines)) {
         return error;
     }
 
-    tmp_error = populate_data_array(opts, a, nrows, ncols, 1);
+    tmp_error = populate_data_array(handle, a, nrows, ncols, 1);
 
     if (!(tmp_error == da_status_success)) {
         error = tmp_error;
     }
 
     // now deal with headings
-    if (!(*ncols == opts->line_fields[0])) {
+    if (!(*ncols == handle->parser->line_fields[0])) {
         if (*a)
             free(*a);
-        parser_reset(opts);
+        parser_reset(handle->parser);
         return da_status_ragged_csv;
     }
 
@@ -210,17 +167,17 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nro
     if (*headings == NULL) {
         if (*a)
             free(*a);
-        parser_reset(opts);
+        parser_reset(handle->parser);
         return da_status_memory_error;
     }
 
     char *p = NULL;
     for (da_int i = 0; i < *ncols; i++) {
-        p = opts->words[i];
+        p = handle->parser->words[i];
         // Skip leading whitespace.
-        if (opts->skipinitialspace){
-        while (isspace_ascii(*p))
-           p++;
+        if (handle->parser->skipinitialspace) {
+            while (isspace_ascii(*p))
+                p++;
         }
 
         (*headings)[i] = (char *)malloc(sizeof(char) * (1 + strlen(p)));
@@ -233,13 +190,13 @@ da_status da_read_csv(da_csv_opts opts, const char *filename, T **a, da_int *nro
             }
             if ((*headings))
                 free((*headings));
-            parser_reset(opts);
+            parser_reset(handle->parser);
             return da_status_memory_error;
         }
         strcpy((*headings)[i], p);
     }
 
-    tmp_error = convert_tokenizer_errors(parser_reset(opts));
+    tmp_error = convert_tokenizer_errors(parser_reset(handle->parser));
     if (!(tmp_error == da_status_success)) {
         error = tmp_error;
     }
