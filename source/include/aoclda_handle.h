@@ -25,9 +25,7 @@ typedef enum da_handle_option_ {
     csv_option_skip_empty_lines,
     csv_option_skip_footer,
     csv_option_skip_initial_space,
-    csv_option_header,
-    csv_option_header_start,
-    csv_option_header_end,
+    csv_option_add_skiprow,
     csv_option_warn_for_missing_data,
 } da_handle_option;
 

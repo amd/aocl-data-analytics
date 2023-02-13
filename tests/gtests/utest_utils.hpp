@@ -31,9 +31,34 @@ inline da_status da_read_csv(da_handle handle, const char *filename, uint64_t **
     return da_read_csv_uint64(handle, filename, a, nrows, ncols);
 }
 
-inline da_status da_read_csv_uint8(da_handle handle, const char *filename, uint8_t **a,
+inline da_status da_read_csv(da_handle handle, const char *filename, uint8_t **a,
                                    da_int *nrows, da_int *ncols) {
     return da_read_csv_uint8(handle, filename, a, nrows, ncols);
+}
+
+inline da_status da_read_csv(da_handle handle, const char *filename, double **a,
+                             da_int *nrows, da_int *ncols, char ***headings) {
+    return da_read_csv_d_h(handle, filename, a, nrows, ncols, headings);
+}
+
+inline da_status da_read_csv(da_handle handle, const char *filename, float **a,
+                             da_int *nrows, da_int *ncols, char ***headings) {
+    return da_read_csv_s_h(handle, filename, a, nrows, ncols, headings);
+}
+
+inline da_status da_read_csv(da_handle handle, const char *filename, int64_t **a,
+                             da_int *nrows, da_int *ncols, char ***headings) {
+    return da_read_csv_int64_h(handle, filename, a, nrows, ncols, headings);
+}
+
+inline da_status da_read_csv(da_handle handle, const char *filename, uint64_t **a,
+                             da_int *nrows, da_int *ncols, char ***headings) {
+    return da_read_csv_uint64_h(handle, filename, a, nrows, ncols, headings);
+}
+
+inline da_status da_read_csv(da_handle handle, const char *filename, uint8_t **a,
+                                   da_int *nrows, da_int *ncols, char ***headings) {
+    return da_read_csv_uint8_h(handle, filename, a, nrows, ncols, headings);
 }
 
 /* linmod overloaded functions */

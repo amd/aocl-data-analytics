@@ -517,7 +517,6 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
     // Get some data from the parser
     char tsep = parser->thousands;
-    int64_t int_max = parser->int_max;
     uint64_t uint_max = parser->uint_max;
 
     da_status error = da_status_success;

@@ -78,6 +78,8 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
 
 da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_type) {
 
+    if (handle == nullptr) return da_status_handle_not_initialized;
+
     if (handle->handle_type == da_handle_uninitialized) {
         snprintf(handle->error_message, ERR_MSG_LEN,
                  "The handle must be initialized before calling this routine.");
@@ -103,6 +105,10 @@ void da_handle_print_error_message(da_handle handle) {
 da_status da_handle_set_option(da_handle handle, da_handle_option option, char *str) {
 
     da_status error = da_status_success;
+
+    if (handle == nullptr) {
+        return da_status_handle_not_initialized;
+    }
 
     switch (handle->handle_type) {
     case da_handle_csv_opts:

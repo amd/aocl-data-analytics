@@ -24,10 +24,10 @@ typedef enum da_status_ {
     da_status_sign_error,
     da_status_file_reading_error,
     da_status_parsing_error,
-
     da_status_ragged_csv,
     da_status_warn_bad_lines,
     da_status_warn_missing_data,
+    da_status_warn_no_data,
 
     // linreg errors 200-299
     // PCA errors 300-399

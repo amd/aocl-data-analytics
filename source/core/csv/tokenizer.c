@@ -589,7 +589,6 @@ int parser_add_skiprow(parser_t *self, int64_t row) {
     khiter_t k;
     kh_int64_t *set;
     int ret = 0;
-
     if (self->skipset == NULL) {
         self->skipset = (void *)kh_init_int64();
     }
@@ -734,14 +733,14 @@ static int parser_buffer_bytes(parser_t *self, size_t nbytes,
     }
 
 int skip_this_line(parser_t *self, int64_t rownum) {
-    int should_skip;
+    int should_skip = 0;
 
     if (self->skipset != NULL) {
-        return (kh_get_int64((kh_int64_t *)self->skipset, self->file_lines) !=
+        should_skip = (kh_get_int64((kh_int64_t *)self->skipset, self->file_lines) !=
                 ((kh_int64_t *)self->skipset)->n_buckets);
-    } else {
-        return (rownum <= self->skip_first_N_rows);
     }
+
+    return ((rownum <= self->skip_first_N_rows) || should_skip);
 }
 
 int tokenize_bytes(parser_t *self, size_t line_limit, uint64_t start_lines) {

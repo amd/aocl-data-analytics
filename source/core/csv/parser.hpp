@@ -182,7 +182,7 @@ inline da_status da_parser_set_option(da_handle handle, da_handle_option option,
     case csv_option_skip_first_N_rows:
         error = char_to_num(parser, str, &p_end, &i64temp, NULL);
         if (error == da_status_success) {
-            parser->skip_first_N_rows = i64temp;
+            parser_set_skipfirstnrows(parser, i64temp);
         }
         break;
 
@@ -207,24 +207,10 @@ inline da_status da_parser_set_option(da_handle handle, da_handle_option option,
         }
         break;
 
-    case csv_option_header:
+    case csv_option_add_skiprow:
         error = char_to_num(parser, str, &p_end, &i64temp, NULL);
         if (error == da_status_success) {
-            parser->header = (int)i64temp;
-        }
-        break;
-
-    case csv_option_header_start:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->header_start = (int)i64temp;
-        }
-        break;
-
-    case csv_option_header_end:
-        error = char_to_num(parser, str, &p_end, &ui64temp, NULL);
-        if (error == da_status_success) {
-            parser->header_end = ui64temp;
+            parser_add_skiprow(parser, i64temp);
         }
         break;
 

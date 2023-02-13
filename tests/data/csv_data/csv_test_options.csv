@@ -1,0 +1,16 @@
+skip this row
+and this one
+and this one too
+
+1p1x 1G3 x  1000,000,000x  0p03g6x 2 } this is a comment
+skip row 5
+}comment on an empty row
+
+    
+skip row 9
+    -1x -3p2  x -4p5G4 x -5p6g-7 x -0p001g4 } so is this
+
+
+    +0 x -00x 0x +000p0000 x +4p5G+5
+
+1 2;3 4;5 6;7 8;9 10;11 12} This x line x contains the footer and x should be ignored if skip_footer is set

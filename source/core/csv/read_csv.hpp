@@ -32,6 +32,8 @@ da_status parse_file(da_handle handle, const char *filename) {
     error = convert_tokenizer_errors(err);
     if (parser->file_lines != parser->lines) {
         error = da_status_warn_bad_lines;
+        snprintf(handle->error_message, ERR_MSG_LEN,
+                 "Some lines were ignored - this may be because they were empty.");
     }
 
     fclose(fp);
@@ -47,18 +49,43 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
     da_status tmp_error = da_status_success, error = da_status_success;
     parser_t *parser = handle->parser;
 
-    //the parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
+    uint64_t lines = parser->lines;
+    uint64_t words_len = parser->words_len;
 
-    uint64_t fields_per_line = parser->words_len / parser->lines;
+    // Guard against empty csv file
+    if (lines == 0 || (parser->skip_footer && lines == 1)) {
+        *nrows = 0;
+        *ncols = 0;
+        *a = nullptr;
+        snprintf(handle->error_message, ERR_MSG_LEN,
+                 "No data was found in the csv file.");
+        return da_status_warn_no_data;
+    }
+
+    if (parser->skip_footer) {
+        lines--;
+        words_len -= parser->line_fields[lines];
+    }
+
+    //Guard against header-only csv file
+    if (lines == first_line) {
+        *nrows = 0;
+        *ncols = words_len;
+        *a = nullptr;
+        return da_status_success;
+    }
+
+    //The parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
+    uint64_t fields_per_line = words_len / lines;
     int64_t fields_per_line_signed;
-    if (fields_per_line > DA_INT_MAX || parser->lines > DA_INT_MAX) {
+    if (fields_per_line > DA_INT_MAX || lines > DA_INT_MAX) {
         return da_status_overflow;
     } else {
         fields_per_line_signed = (int64_t)(fields_per_line);
     }
 
     T *data;
-    data = (T *)malloc(sizeof(T) * fields_per_line * (parser->lines - first_line));
+    data = (T *)malloc(sizeof(T) * fields_per_line * (lines - first_line));
 
     if (data == NULL) {
         return da_status_memory_error;
@@ -66,7 +93,7 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
 
     char *p_end = NULL;
 
-    for (uint64_t i = (uint64_t)first_line; i < parser->lines; i++) {
+    for (uint64_t i = (uint64_t)first_line; i < lines; i++) {
         // check for ragged matrix
         if (parser->line_fields[i] != fields_per_line_signed) {
             if (data)
@@ -79,17 +106,20 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
         }
         for (int64_t j = parser->line_start[i];
              j < (parser->line_start[i] + parser->line_fields[i]); j++) {
+
             tmp_error = char_to_num(
                 parser, parser->words[j], &p_end,
                 &data[j - (int64_t)first_line * fields_per_line_signed], NULL);
             if (tmp_error != da_status_success) {
                 if (parser->warn_for_missing_data) {
-                    missing_data(
-                        &data[j - (int64_t)first_line * fields_per_line_signed]);
+                    missing_data(&data[j - (int64_t)first_line * fields_per_line_signed]);
                     snprintf(handle->error_message, ERR_MSG_LEN,
-                             "Missing data on line %i.", j);
+                             "Missing data on line %i, entry %i.", i, j);
                     error = da_status_warn_missing_data;
                 } else {
+                    snprintf(handle->error_message, ERR_MSG_LEN,
+                             "Unable to parse entry on line %i entry %i.", i, j);
+                    *a = nullptr;
                     if (data)
                         free(data);
                     return tmp_error;
@@ -98,7 +128,7 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
         }
     }
 
-    *nrows = (da_int)parser->lines - first_line;
+    *nrows = (da_int)lines - first_line;
     *ncols = fields_per_line;
     *a = data;
     return error;
@@ -111,12 +141,14 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
     da_status error = da_status_success, tmp_error = da_status_success;
 
     error = da_check_handle_type(handle, da_handle_csv_opts);
-    if (error != da_status_success)
+    if (error != da_status_success) {
         return error;
+    }
 
     error = parse_file(handle, filename);
 
     if (!(error == da_status_success) && !(error == da_status_warn_bad_lines)) {
+        parser_reset(handle->parser);
         return error;
     }
 
@@ -140,12 +172,14 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
     da_status error = da_status_success, tmp_error = da_status_success;
 
     error = da_check_handle_type(handle, da_handle_csv_opts);
-    if (error != da_status_success)
+    if (error != da_status_success) {
         return error;
+    }
 
     error = parse_file(handle, filename);
 
     if (!(error == da_status_success) && !(error == da_status_warn_bad_lines)) {
+        parser_reset(handle->parser);
         return error;
     }
 
@@ -156,6 +190,11 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
     }
 
     // now deal with headings
+    if (*ncols == 0) {
+        parser_reset(handle->parser);
+        return tmp_error;
+    }
+
     if (!(*ncols == handle->parser->line_fields[0])) {
         if (*a)
             free(*a);
