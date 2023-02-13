@@ -48,7 +48,11 @@ find_library(BLIS name blis PATHS $ENV{AOCL_INSTALL}/lib REQUIRED)
 
 find_library(FLAME name flame PATHS $ENV{AOCL_INSTALL}/lib REQUIRED)
 
-include_directories($ENV{AOCL_INSTALL}/include_LP64)
+if (NOT BUILD_ILP64)
+  include_directories($ENV{AOCL_INSTALL}/include_LP64)
+else()
+  include_directories($ENV{AOCL_INSTALL}/include_ILP64)
+endif()
 
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
 

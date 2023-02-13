@@ -3,7 +3,7 @@
 
 #include "aoclda.h"
 #include "callbacks.hpp"
-#include "cblas.hh"
+#include "da_cblas.hh"
 #include "optimization.hpp"
 #include <cstdlib>
 #include <iostream>
@@ -126,8 +126,8 @@ template <typename T> void objfun_mse(da_int n, T *x, T *f, void *usrdata) {
 
     T alpha = 1.0, beta = 0.0;
 
-    blis::cblas_gemv(CblasRowMajor, CblasNoTrans, (int)data->m, (int)n, alpha, data->A,
-                     (int)n, x, 1, beta, data->y, 1);
+    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, data->m, n, alpha, data->A, n, x, 1,
+                        beta, data->y, 1);
     *f = 0.0;
     for (da_int i = 0; i < data->m; i++)
         *f += pow(data->y[i] - data->b[i], 2.0);
@@ -138,12 +138,12 @@ template <typename T> void objgrd_mse(da_int n, T *x, T *grad, void *usrdata) {
     data = (fit_usrdata<T> *)usrdata;
 
     T alpha = 1.0, beta = 0.0;
-    blis::cblas_gemv(CblasRowMajor, CblasNoTrans, (int)data->m, (int)n, alpha, data->A,
-                     (int)n, x, 1, beta, data->y, 1);
+    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, data->m, n, alpha, data->A, n, x, 1,
+                        beta, data->y, 1);
     alpha = -1.0;
-    blis::cblas_axpy((int)data->m, alpha, data->b, 1, data->y, 1);
+    da_blas::cblas_axpy(data->m, alpha, data->b, 1, data->y, 1);
     for (da_int i = 0; i < n; i++) {
-        grad[i] = 2.0 * blis::cblas_dot((int)data->m, &data->A[i], (int)n, data->y, 1);
+        grad[i] = 2.0 * da_blas::cblas_dot(data->m, &data->A[i], n, data->y, 1);
     }
 }
 
@@ -159,8 +159,8 @@ template <typename T> void objfun_logistic(da_int n, T *x, T *f, void *usrdata) 
 
     // Comput A*x[0:n-2] = y
     T alpha = 1.0, beta = 0.0;
-    blis::cblas_gemv(CblasRowMajor, CblasNoTrans, (int)m, (int)n - 1, alpha, A,
-                     (int)n - 1, x, 1, beta, data->y, 1);
+    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, m, n - 1, alpha, A, n - 1, x, 1,
+                        beta, data->y, 1);
 
     // sum of log loss of logistic function for all observations
     *f = 0.0;
@@ -177,8 +177,8 @@ template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdat
 
     // Comput A*x[0:n-2] = y
     T alpha = 1.0, beta = 0.0;
-    blis::cblas_gemv(CblasRowMajor, CblasNoTrans, (int)m, (int)n - 1, alpha, data->A,
-                     (int)n - 1, x, 1, beta, data->y, 1);
+    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, m, n - 1, alpha, data->A, n - 1, x,
+                        1, beta, data->y, 1);
 
     for (da_int i = 0; i < n - 1; i++) {
         grad[i] = 0.;
@@ -251,8 +251,8 @@ da_status linear_model_data<T>::evaluate_model(da_int n, da_int m, T *X, T *pred
     // b is assumed to be of size m
     // start by computing X*coef = predictions
     T alpha = 1.0, beta = 0.0;
-    blis::cblas_gemv(CblasRowMajor, CblasNoTrans, (int)m, (int)n, alpha, X, n,
-                     coef.data(), 1, beta, predictions, 1);
+    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, m, n, alpha, X, n, coef.data(), 1,
+                        beta, predictions, 1);
     if (intercept) {
         for (i = 0; i < m; i++)
             predictions[i] += coef[ncoef - 1];
