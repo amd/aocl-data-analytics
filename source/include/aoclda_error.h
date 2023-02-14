@@ -4,6 +4,7 @@
 typedef enum da_status_ {
     // Common errors 0-99
     da_status_success = 0,
+    da_status_internal_error,
     da_status_memory_error,
     da_status_invalid_pointer,
     da_status_invalid_input,

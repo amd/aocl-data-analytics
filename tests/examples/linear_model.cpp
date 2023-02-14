@@ -11,8 +11,8 @@ int main() {
 
     // problem data
     da_int m = 5, n = 2;
-    double Al[m * n] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
-    double bl[m] = {1, 1, 1, 1, 1};
+    double Al[10] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1};
+    double bl[5] = {1, 1, 1, 1, 1};
     da_int nx = 2;
     double x[2];
 
@@ -28,7 +28,7 @@ int main() {
         std::cout << "regression computed successfully!" << std::endl;
         status = da_linreg_d_get_coef(handle, &nx, x);
         std::cout << "Coefficients: " << x[0] << " " << x[1] << std::endl;
-        std::cout << "(Expected   : " << 0.199255 << " " << 0.130354 << ")" << std::endl;
+        std::cout << "(Expected   : " << 0.199256 << " " << 0.130354 << ")" << std::endl;
     } else {
         std::cout << "Something wrong happened during MSE regression. Terminating"
                   << std::endl;
@@ -37,7 +37,7 @@ int main() {
 
     // Solve the same model with single precision
     // problem data
-    float As[10] = {1, 1, 2, 3, 3, 5, 4, 1, 5, 1};
+    float As[10] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1};
     float bs[5] = {1, 1, 1, 1, 1};
     float xs[2];
 
@@ -55,7 +55,7 @@ int main() {
         std::cout << "regression computed successfully!" << std::endl;
         status = da_linreg_s_get_coef(handle_s, &nx, xs);
         std::cout << "Coefficients: " << xs[0] << " " << xs[1] << std::endl;
-        std::cout << "(Expected   : " << 0.19 << " " << 0.14 << ")" << std::endl;
+        std::cout << "(Expected   : " << 0.20 << " " << 0.13 << ")" << std::endl;
     } else {
         std::cout << "Something wrong happened during MSE regression. Terminating"
                   << std::endl;

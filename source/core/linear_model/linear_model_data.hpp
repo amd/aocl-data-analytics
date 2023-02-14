@@ -4,6 +4,7 @@
 #include "aoclda.h"
 #include "callbacks.hpp"
 #include "da_cblas.hh"
+#include "lapack_templates.hpp"
 #include "optimization.hpp"
 #include <cstdlib>
 #include <iostream>
@@ -14,6 +15,13 @@ template <typename T> struct fit_usrdata {
     da_int m;
     T *A = nullptr;
     T *b = nullptr, *y = nullptr;
+};
+
+// data for QR factorization used in standard linear least squares
+template <typename T> struct qr_data {
+    // A needs to be copied as lapack's dgeqr modifies the matrix
+    std::vector<T> A, b, tau, work;
+    da_int lwork = 0;
 };
 
 enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq };
@@ -41,20 +49,25 @@ template <typename T> class linear_model_data {
 
     /* Training data
      * coef[n/n+1]: vector containing the trained coefficients of the model
+     * l_nrm1/2: regularization factors for norm 1 and 2 respectively. 
+     *           0 => no reg, possible different algorithm 
      */
     da_int ncoef = 0;
     std::vector<T> coef;
+    T l_nrm2 = 0.0, l_nrm1 = 0.0;
 
     /* optimization object to call generic algorithms */
     da_optimization<T> *opt = nullptr;
     fit_usrdata<T> *usrdata = nullptr;
+    qr_data<T> *qr = nullptr;
 
     /* private methods to allocate memory */
-    da_status
-    init_opt_model(fit_opt_type opt_type,
-                   std::function<void(da_int n, T *x, T *f, void *usrdata)> objfun,
-                   std::function<void(da_int n, T *x, T *grad, void *usrdata)> objgrd);
+    da_status init_opt_model(fit_opt_type opt_type, objfun_t<T> objfun,
+                             objgrd_t<T> objgrd);
     void init_usrdata();
+    /* QR fact data */
+    da_status init_qr_data();
+    da_status qr_lsq();
 
   public:
     linear_model_data(){};
@@ -65,6 +78,10 @@ template <typename T> class linear_model_data {
     da_status fit();
     da_status get_coef(da_int &nx, T *x);
     da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
+
+    /* Methods to remove once option setter is added */
+    void set_reg_nrm2(T l_nrm2);
+    void set_reg_nrm1(T l_nrm1);
 };
 
 template <typename T> linear_model_data<T>::~linear_model_data() {
@@ -78,6 +95,9 @@ template <typename T> linear_model_data<T>::~linear_model_data() {
         if (usrdata->y)
             delete[] usrdata->y;
         delete usrdata;
+    }
+    if (qr) {
+        delete qr;
     }
 }
 
@@ -117,33 +137,33 @@ template <typename T> void linear_model_data<T>::init_usrdata() {
     usrdata->y = new T[m];
 }
 
-////////////////////////////////////// Objective Function
-///////////////////////////////////////
+//////////////////////// Objective Functions ////////////////////////
 
 template <typename T> void objfun_mse(da_int n, T *x, T *f, void *usrdata) {
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
-
+    da_int m = data->m;
     T alpha = 1.0, beta = 0.0;
 
-    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, data->m, n, alpha, data->A, n, x, 1,
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n, alpha, data->A, m, x, 1,
                         beta, data->y, 1);
     *f = 0.0;
-    for (da_int i = 0; i < data->m; i++)
+    for (da_int i = 0; i < m; i++)
         *f += pow(data->y[i] - data->b[i], 2.0);
 }
 
 template <typename T> void objgrd_mse(da_int n, T *x, T *grad, void *usrdata) {
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
+    da_int m = data->m;
 
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, data->m, n, alpha, data->A, n, x, 1,
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n, alpha, data->A, m, x, 1,
                         beta, data->y, 1);
     alpha = -1.0;
     da_blas::cblas_axpy(data->m, alpha, data->b, 1, data->y, 1);
     for (da_int i = 0; i < n; i++) {
-        grad[i] = 2.0 * da_blas::cblas_dot(data->m, &data->A[i], n, data->y, 1);
+        grad[i] = 2.0 * da_blas::cblas_dot(data->m, &data->A[i * m], 1, data->y, 1);
     }
 }
 
@@ -159,8 +179,8 @@ template <typename T> void objfun_logistic(da_int n, T *x, T *f, void *usrdata) 
 
     // Comput A*x[0:n-2] = y
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, m, n - 1, alpha, A, n - 1, x, 1,
-                        beta, data->y, 1);
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n - 1, alpha, A, m, x, 1, beta,
+                        data->y, 1);
 
     // sum of log loss of logistic function for all observations
     *f = 0.0;
@@ -177,8 +197,8 @@ template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdat
 
     // Comput A*x[0:n-2] = y
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, m, n - 1, alpha, data->A, n - 1, x,
-                        1, beta, data->y, 1);
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n - 1, alpha, data->A, m, x, 1,
+                        beta, data->y, 1);
 
     for (da_int i = 0; i < n - 1; i++) {
         grad[i] = 0.;
@@ -192,13 +212,11 @@ template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdat
     }
 }
 
-/////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////
 
 template <typename T>
-da_status linear_model_data<T>::init_opt_model(
-    fit_opt_type opt_type,
-    std::function<void(da_int n, T *x, T *f, void *usrdata)> objfun,
-    std::function<void(da_int n, T *x, T *grad, void *usrdata)> objgrd) {
+da_status linear_model_data<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> objfun,
+                                               objgrd_t<T> objgrd) {
     da_int nvar = n;
     switch (opt_type) {
     case fit_opt_nln:
@@ -251,7 +269,7 @@ da_status linear_model_data<T>::evaluate_model(da_int n, da_int m, T *X, T *pred
     // b is assumed to be of size m
     // start by computing X*coef = predictions
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasRowMajor, CblasNoTrans, m, n, alpha, X, n, coef.data(), 1,
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n, alpha, X, n, coef.data(), 1,
                         beta, predictions, 1);
     if (intercept) {
         for (i = 0; i < m; i++)
@@ -284,9 +302,15 @@ template <typename T> da_status linear_model_data<T>::fit() {
     case linreg_model_mse:
         intercept = false;
         ncoef = n;
-        init_opt_model(fit_opt_nln, &objfun_mse<T>, &objgrd_mse<T>);
         coef.resize(ncoef, 0.0);
-        opt->solve(coef, usrdata);
+        if (l_nrm1 == 0.0 && l_nrm2 == 0.0) {
+            // No regularization, standard linear least-squares through QR factorization
+            qr_lsq();
+        } else {
+            // Call LBFGS
+            init_opt_model(fit_opt_nln, &objfun_mse<T>, &objgrd_mse<T>);
+            opt->solve(coef, usrdata);
+        }
         break;
 
     case linreg_model_logistic:
@@ -305,4 +329,61 @@ template <typename T> da_status linear_model_data<T>::fit() {
     return da_status_success;
 }
 
+template <typename T> da_status linear_model_data<T>::init_qr_data() {
+    qr = new qr_data<T>();
+    qr->A.resize(m * n);
+    for (da_int i = 0; i < m * n; i++)
+        qr->A[i] = A[i];
+    qr->b.resize(m);
+    for (da_int i = 0; i < m; i++)
+        qr->b[i] = b[i];
+    qr->tau.resize(std::min(m, n));
+    qr->lwork = n;
+    qr->work.resize(qr->lwork);
+
+    return da_status_success;
+}
+
+/* Compute least squares factorization from QR factorization */
+template <typename T> da_status linear_model_data<T>::qr_lsq() {
+    /* has to be called after init_qr_data, qr_data is always allocated */
+    /* initialize qr struct memory*/
+    da_status status;
+    status = init_qr_data();
+    if (status != da_status_success)
+        return status;
+
+    /* Compute QR factorization */
+    da_int info;
+    da::geqrf(&m, &n, qr->A.data(), &m, qr->tau.data(), qr->work.data(), &qr->lwork,
+              &info);
+    if (info != 0)
+        return da_status_internal_error;
+    /* Compute Q^tb*/
+    char side = 'L', trans = 'T';
+    da_int nrhs = 1;
+    da::ormqr(&side, &trans, &m, &nrhs, &n, qr->A.data(), &m, qr->tau.data(),
+              qr->b.data(), &m, qr->work.data(), &qr->lwork, &info);
+    if (info != 0)
+        return da_status_internal_error;
+    /* triangle solve R^-t*Q^Tb */
+    char uplo = 'U', diag = 'N';
+    trans = 'N';
+    da::trtrs(&uplo, &trans, &diag, &n, &nrhs, qr->A.data(), &m, qr->b.data(), &m, &info);
+    if (info != 0)
+        return da_status_internal_error;
+    for (da_int i = 0; i < n; i++)
+        coef[i] = qr->b[i];
+
+    return da_status_success;
+}
+
+/* To remove once option setter is done */
+template <typename T> inline void linear_model_data<T>::set_reg_nrm2(T l_nrm2) {
+    this->l_nrm2 = l_nrm2;
+}
+
+template <typename T> inline void linear_model_data<T>::set_reg_nrm1(T l_nrm1) {
+    this->l_nrm1 = l_nrm1;
+}
 #endif

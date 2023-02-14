@@ -9,6 +9,6 @@ set(DA_CORE_SRC ${NLN_REG_SRC} ${BASIC_STATISTICS_SRC} ${CSV} ${DA_HANDLE})
 add_library(da_core ${DA_CORE_SRC})
 target_include_directories(da_core PUBLIC include)
 target_include_directories(da_core PRIVATE core/drivers/ core/optimization/ core/utilities core/csv core/linear_model)
-target_link_libraries(da_core lbfgsb lbfgsb_s ${BLIS})
+target_link_libraries(da_core lbfgsb lbfgsb_s ${BLIS} ${FLAME} -lgomp)
 
 include(Suppressions_core)

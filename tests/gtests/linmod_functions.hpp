@@ -36,7 +36,7 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
     T *a = nullptr, *b = nullptr, *coef_exp = nullptr;
 
     da_int n = 0, m = 0;
-    ASSERT_EQ(da_read_csv(csv_handle, A_file.c_str(), &a, &m, &n), da_status_success);
+    ASSERT_EQ(da_read_csv(csv_handle, A_file.c_str(), &a, &n, &m), da_status_success);
     da_int nb, mb;
     ASSERT_EQ(da_read_csv(csv_handle, b_file.c_str(), &b, &mb, &nb), da_status_success);
     ASSERT_EQ(m, nb); // b is stored in one row
