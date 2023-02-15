@@ -5,14 +5,14 @@ namespace {
 typedef struct {
     std::string test_name;
     std::string data_name;
-    linreg_model mod;
+    linmod_model mod;
     // Some tests cannot run to sufficient accuracy in float
     bool skip_float = false;
 } linmodParamType;
 
 const linmodParamType linmodPosValues[] = {
-    {"trivialMSE", "trivial", linreg_model_mse},
-    {"studyLog", "study", linreg_model_logistic, true}};
+    {"trivialMSE", "trivial", linmod_model_mse},
+    {"studyLog", "study", linmod_model_logistic, true}};
 
 // Data Driven (parametrized) Tests
 class linmodTestPos : public testing::TestWithParam<linmodParamType> {};

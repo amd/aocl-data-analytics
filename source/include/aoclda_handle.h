@@ -2,6 +2,7 @@
 #define AOCLDA_HANDLE
 
 #include "aoclda_error.h"
+#include "aoclda_types.h"
 #include <stddef.h>
 #include <stdint.h>
 

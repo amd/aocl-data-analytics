@@ -2,6 +2,7 @@
 #define AOCLDA_BASICSTATS
 
 #include "aoclda_error.h"
+#include "aoclda_types.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

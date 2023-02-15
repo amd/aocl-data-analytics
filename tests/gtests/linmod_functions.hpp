@@ -10,7 +10,7 @@ template <> double expected_precision<double>(double scale) { return scale * 1.0
 
 template <> float expected_precision<float>(float scale) { return scale * 5.0e-02f; }
 
-template <typename T> void test_linmod_positive(std::string csvname, linreg_model mod) {
+template <typename T> void test_linmod_positive(std::string csvname, linmod_model mod) {
 
     // get problem data and expected results
     // DATA_DIR is defined in the build system, it should point to the tests/data/linmod_data
@@ -18,10 +18,10 @@ template <typename T> void test_linmod_positive(std::string csvname, linreg_mode
     std::string b_file = std::string(DATA_DIR) + "/" + csvname + "_b.csv";
     std::string modname, coef_file;
     switch (mod) {
-    case linreg_model_mse:
+    case linmod_model_mse:
         modname = "mse";
         break;
-    case linreg_model_logistic:
+    case linmod_model_logistic:
         modname = "log";
         break;
     default:

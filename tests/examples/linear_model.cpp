@@ -20,13 +20,13 @@ int main() {
     da_handle handle = nullptr;
     da_status status;
     status = da_handle_init_d(&handle, da_handle_linreg);
-    status = da_linreg_d_select_model(handle, linreg_model_mse);
-    status = da_linreg_d_define_features(handle, n, m, Al, bl);
+    status = da_linmod_d_select_model(handle, linmod_model_mse);
+    status = da_linmod_d_define_features(handle, n, m, Al, bl);
     // compute regression
-    status = da_linreg_d_fit(handle);
+    status = da_linmod_d_fit(handle);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
-        status = da_linreg_d_get_coef(handle, &nx, x);
+        status = da_linmod_d_get_coef(handle, &nx, x);
         std::cout << "Coefficients: " << x[0] << " " << x[1] << std::endl;
         std::cout << "(Expected   : " << 0.199256 << " " << 0.130354 << ")" << std::endl;
     } else {
@@ -46,14 +46,14 @@ int main() {
     da_handle handle_s = nullptr;
     status = da_handle_init_s(&handle_s, da_handle_linreg);
     std::cout << "init status " << status << std::endl;
-    status = da_linreg_s_select_model(handle_s, linreg_model_mse);
+    status = da_linmod_s_select_model(handle_s, linmod_model_mse);
     std::cout << "model status " << status << std::endl;
-    status = da_linreg_s_define_features(handle_s, n, m, As, bs);
+    status = da_linmod_s_define_features(handle_s, n, m, As, bs);
     // compute regression
-    status = da_linreg_s_fit(handle_s);
+    status = da_linmod_s_fit(handle_s);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
-        status = da_linreg_s_get_coef(handle_s, &nx, xs);
+        status = da_linmod_s_get_coef(handle_s, &nx, xs);
         std::cout << "Coefficients: " << xs[0] << " " << xs[1] << std::endl;
         std::cout << "(Expected   : " << 0.20 << " " << 0.13 << ")" << std::endl;
     } else {

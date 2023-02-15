@@ -26,10 +26,10 @@ template <typename T> struct qr_data {
 
 enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq };
 
-template <typename T> class linear_model_data {
+template <typename T> class linear_model {
   private:
     /* type of the model, has to de set at initialization phase */
-    linreg_model mod = linreg_model_undefined;
+    linmod_model mod = linmod_model_undefined;
 
     /* true if the model has been successfully trained */
     bool model_trained = false;
@@ -70,11 +70,11 @@ template <typename T> class linear_model_data {
     da_status qr_lsq();
 
   public:
-    linear_model_data(){};
-    ~linear_model_data();
+    linear_model(){};
+    ~linear_model();
 
     da_status define_features(da_int n, da_int m, T *A, T *b);
-    da_status select_model(linreg_model mod);
+    da_status select_model(linmod_model mod);
     da_status fit();
     da_status get_coef(da_int &nx, T *x);
     da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
@@ -84,7 +84,7 @@ template <typename T> class linear_model_data {
     void set_reg_nrm1(T l_nrm1);
 };
 
-template <typename T> linear_model_data<T>::~linear_model_data() {
+template <typename T> linear_model<T>::~linear_model() {
     // A and b are passed from (internal) user, do not deallocate
     A = nullptr;
     b = nullptr;
@@ -102,7 +102,7 @@ template <typename T> linear_model_data<T>::~linear_model_data() {
 }
 
 template <typename T>
-da_status linear_model_data<T>::define_features(da_int n, da_int m, T *A, T *b) {
+da_status linear_model<T>::define_features(da_int n, da_int m, T *A, T *b) {
     if (n <= 0 || m <= 0 || b == nullptr)
         return da_status_invalid_input;
 
@@ -120,7 +120,7 @@ da_status linear_model_data<T>::define_features(da_int n, da_int m, T *A, T *b) 
     return da_status_success;
 }
 
-template <typename T> da_status linear_model_data<T>::select_model(linreg_model mod) {
+template <typename T> da_status linear_model<T>::select_model(linmod_model mod) {
 
     if (mod != this->mod) {
         this->mod = mod;
@@ -129,7 +129,7 @@ template <typename T> da_status linear_model_data<T>::select_model(linreg_model 
     return da_status_success;
 }
 
-template <typename T> void linear_model_data<T>::init_usrdata() {
+template <typename T> void linear_model<T>::init_usrdata() {
     usrdata = new fit_usrdata<T>;
     usrdata->A = A;
     usrdata->b = b;
@@ -215,8 +215,8 @@ template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdat
 /////////////////////////////////////////////////////////////////////
 
 template <typename T>
-da_status linear_model_data<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> objfun,
-                                               objgrd_t<T> objgrd) {
+da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> objfun,
+                                          objgrd_t<T> objgrd) {
     da_int nvar = n;
     switch (opt_type) {
     case fit_opt_nln:
@@ -239,7 +239,7 @@ da_status linear_model_data<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T
     return da_status_success;
 }
 
-template <typename T> da_status linear_model_data<T>::get_coef(da_int &nx, T *x) {
+template <typename T> da_status linear_model<T>::get_coef(da_int &nx, T *x) {
     if (nx != ncoef) {
         nx = ncoef;
         return da_status_invalid_input;
@@ -255,7 +255,7 @@ template <typename T> da_status linear_model_data<T>::get_coef(da_int &nx, T *x)
 }
 
 template <typename T>
-da_status linear_model_data<T>::evaluate_model(da_int n, da_int m, T *X, T *predictions) {
+da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictions) {
     da_int i;
 
     if (n != this->n)
@@ -276,11 +276,11 @@ da_status linear_model_data<T>::evaluate_model(da_int n, da_int m, T *X, T *pred
             predictions[i] += coef[ncoef - 1];
     }
     switch (mod) {
-    case linreg_model_mse:
+    case linmod_model_mse:
         for (i = 0; i < m; i++)
             predictions[i] -= b[i];
         break;
-    case linreg_model_logistic:
+    case linmod_model_logistic:
         for (i = 0; i < m; i++)
             predictions[i] = logistic(predictions[i]);
         break;
@@ -293,13 +293,13 @@ da_status linear_model_data<T>::evaluate_model(da_int n, da_int m, T *X, T *pred
     return da_status_success;
 }
 
-template <typename T> da_status linear_model_data<T>::fit() {
+template <typename T> da_status linear_model<T>::fit() {
 
     if (model_trained)
         return da_status_success;
 
     switch (mod) {
-    case linreg_model_mse:
+    case linmod_model_mse:
         intercept = false;
         ncoef = n;
         coef.resize(ncoef, 0.0);
@@ -313,7 +313,7 @@ template <typename T> da_status linear_model_data<T>::fit() {
         }
         break;
 
-    case linreg_model_logistic:
+    case linmod_model_logistic:
         intercept = true;
         ncoef = n + 1;
         init_opt_model(fit_opt_nln, &objfun_logistic<T>, &objgrd_logistic<T>);
@@ -329,7 +329,7 @@ template <typename T> da_status linear_model_data<T>::fit() {
     return da_status_success;
 }
 
-template <typename T> da_status linear_model_data<T>::init_qr_data() {
+template <typename T> da_status linear_model<T>::init_qr_data() {
     qr = new qr_data<T>();
     qr->A.resize(m * n);
     for (da_int i = 0; i < m * n; i++)
@@ -345,7 +345,7 @@ template <typename T> da_status linear_model_data<T>::init_qr_data() {
 }
 
 /* Compute least squares factorization from QR factorization */
-template <typename T> da_status linear_model_data<T>::qr_lsq() {
+template <typename T> da_status linear_model<T>::qr_lsq() {
     /* has to be called after init_qr_data, qr_data is always allocated */
     /* initialize qr struct memory*/
     da_status status;
@@ -379,11 +379,11 @@ template <typename T> da_status linear_model_data<T>::qr_lsq() {
 }
 
 /* To remove once option setter is done */
-template <typename T> inline void linear_model_data<T>::set_reg_nrm2(T l_nrm2) {
+template <typename T> inline void linear_model<T>::set_reg_nrm2(T l_nrm2) {
     this->l_nrm2 = l_nrm2;
 }
 
-template <typename T> inline void linear_model_data<T>::set_reg_nrm1(T l_nrm1) {
+template <typename T> inline void linear_model<T>::set_reg_nrm1(T l_nrm1) {
     this->l_nrm1 = l_nrm1;
 }
 #endif
