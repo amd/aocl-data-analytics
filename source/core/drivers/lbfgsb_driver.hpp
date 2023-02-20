@@ -129,6 +129,10 @@ int lbfgsb_fc(lbfgsb_data<T> *d, int n, T *x, T *l, T *u, T *f, T *g, objfun_t<T
      */
     bool compute_fg = true;
     int icsave, lsavei[4], isave[44];
+    /* FIXME in this version of lbfgs lsavei needs to be initialized as it is read to
+     * at the first call */
+    for (int i = 0; i < 3; i++)
+        lsavei[i] = 0;
     T dsave[29];
     while (itask == 2 || itask == 1 || compute_fg) {
         setulb(&n, &m, &(*x), &(*l), &(*u), &(d->nbd[0]), &f[0], &g[0], &d->factr,

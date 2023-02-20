@@ -114,7 +114,7 @@ da_status linear_model<T>::define_features(da_int n, da_int m, T *A, T *b) {
     this->b = b;
     this->A = A;
     // allocate enough space for the model coefficients, including a possible
-    // interceptvariable coef[n+1] will contain the intercept var after fit
+    // intercept variable coef[n+1] will contain the intercept var after fit
     coef.reserve(n + 1);
 
     return da_status_success;
@@ -217,13 +217,10 @@ template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdat
 template <typename T>
 da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> objfun,
                                           objgrd_t<T> objgrd) {
-    da_int nvar = n;
     switch (opt_type) {
     case fit_opt_nln:
         opt = new da_optimization<T>();
-        if (intercept)
-            nvar += 1;
-        opt->declare_vars(nvar);
+        opt->declare_vars(ncoef);
         opt->select_solver(solver_lbfgsb);
         if (objfun == nullptr || objgrd == nullptr)
             return da_status_invalid_input;
@@ -297,6 +294,11 @@ template <typename T> da_status linear_model<T>::fit() {
 
     if (model_trained)
         return da_status_success;
+
+    ncoef = n;
+    if (intercept)
+        ncoef += 1;
+    //coef.resize(ncoef, 0.0);
 
     switch (mod) {
     case linmod_model_mse:
