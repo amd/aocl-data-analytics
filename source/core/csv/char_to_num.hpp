@@ -383,7 +383,6 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
 inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                              int64_t *number, int *maybe_int) {
-
     // Get some information from the parser
     int64_t int_min = parser->int_min;
     int64_t int_max = parser->int_max;
@@ -458,7 +457,6 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
         // can be processed without overflowing.
         int64_t pre_max = int_max / 10;
         int dig_pre_max = int_max % 10;
-
         // Process the digits.
         d = *p;
         if (tsep != '\0') {

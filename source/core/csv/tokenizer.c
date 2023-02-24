@@ -210,6 +210,7 @@ int parser_reset(parser_t *self){
     self->state = START_RECORD;
     self->error_msg = NULL;
     self->warn_msg = NULL;
+    self->expected_fields = -1;
 
     return 0;
 
@@ -285,6 +286,7 @@ int parser_init(parser_t *self) {
     self->commentchar = '\0';
 
     self->source = NULL;
+    self->usecols = 1;
 
     return 0;
 }
