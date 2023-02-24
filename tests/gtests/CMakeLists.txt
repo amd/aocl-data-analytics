@@ -15,18 +15,19 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 include_directories(${CMAKE_SOURCE_DIR}/source/include
                     ${CMAKE_SOURCE_DIR}/source/core/csv
-                    ${CMAKE_SOURCE_DIR}/source/core/basic_statistics)
+                    ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
+                    ${CMAKE_SOURCE_DIR}/source/core/utilities)
 
 add_executable(basic_statistics basic_statistics.cpp)
 target_link_libraries(basic_statistics da_core gtest_main)
 
 add_executable(csv csv.cpp)
-target_link_libraries(csv da_core gtest_main)
+target_link_libraries(csv da_core gtest_main gmock_main)
 target_compile_definitions(
   csv PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(linmod linmod_tests.cc)
-target_link_libraries(linmod da_core gtest_main)
+target_link_libraries(linmod da_core gtest_main gmock_main)
 target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 

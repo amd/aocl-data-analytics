@@ -15,6 +15,7 @@ template <typename T> struct fit_usrdata {
     da_int m;
     T *A = nullptr;
     T *b = nullptr, *y = nullptr;
+    bool intercept = false;
 };
 
 // data for QR factorization used in standard linear least squares
@@ -82,6 +83,7 @@ template <typename T> class linear_model {
     /* Methods to remove once option setter is added */
     void set_reg_nrm2(T l_nrm2);
     void set_reg_nrm1(T l_nrm1);
+    void set_intercept(bool inter) { intercept = inter; }
 };
 
 template <typename T> linear_model<T>::~linear_model() {
@@ -135,6 +137,7 @@ template <typename T> void linear_model<T>::init_usrdata() {
     usrdata->b = b;
     usrdata->m = m;
     usrdata->y = new T[m];
+    usrdata->intercept = intercept;
 }
 
 //////////////////////// Objective Functions ////////////////////////
@@ -144,26 +147,43 @@ template <typename T> void objfun_mse(da_int n, T *x, T *f, void *usrdata) {
     data = (fit_usrdata<T> *)usrdata;
     da_int m = data->m;
     T alpha = 1.0, beta = 0.0;
+    T *y = data->y;
 
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n, alpha, data->A, m, x, 1,
-                        beta, data->y, 1);
+    da_int aux = data->intercept ? 1 : 0;
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n - aux, alpha, data->A, m,
+                        x, 1, beta, y, 1);
     *f = 0.0;
-    for (da_int i = 0; i < m; i++)
-        *f += pow(data->y[i] - data->b[i], 2.0);
+    T lin_comb;
+    for (da_int i = 0; i < m; i++) {
+        lin_comb = data->intercept ? x[n - 1] + y[i] : y[i];
+        *f += pow(lin_comb - data->b[i], 2.0);
+    }
 }
 
 template <typename T> void objgrd_mse(da_int n, T *x, T *grad, void *usrdata) {
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
     da_int m = data->m;
+    T *y = data->y;
 
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n, alpha, data->A, m, x, 1,
-                        beta, data->y, 1);
+    da_int aux = data->intercept ? 1 : 0;
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n - aux, alpha, data->A, m,
+                        x, 1, beta, y, 1);
+    if (data->intercept) {
+        for (da_int i = 0; i < m; i++)
+            y[i] += x[n - 1];
+    }
     alpha = -1.0;
     da_blas::cblas_axpy(data->m, alpha, data->b, 1, data->y, 1);
-    for (da_int i = 0; i < n; i++) {
-        grad[i] = 2.0 * da_blas::cblas_dot(data->m, &data->A[i * m], 1, data->y, 1);
+
+    alpha = 2.0;
+    da_blas::cblas_gemv(CblasColMajor, CblasTrans, data->m, n - aux, alpha, data->A, m, y,
+                        1, beta, grad, 1);
+    if (data->intercept) {
+        grad[n - 1] = 0.0;
+        for (da_int i = 0; i < m; i++)
+            grad[n - 1] += 2.0 * y[i];
     }
 }
 
@@ -178,37 +198,49 @@ template <typename T> void objfun_logistic(da_int n, T *x, T *f, void *usrdata) 
     da_int m = data->m;
 
     // Comput A*x[0:n-2] = y
+    da_int aux = data->intercept ? 1 : 0;
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n - 1, alpha, A, m, x, 1, beta,
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n - aux, alpha, A, m, x, 1, beta,
                         data->y, 1);
 
     // sum of log loss of logistic function for all observations
     *f = 0.0;
+    T lin_comb;
     for (da_int i = 0; i < m; i++) {
-        *f += log_loss(b[i], logistic(x[n - 1] + y[i]));
+        lin_comb = data->intercept ? x[n - 1] + y[i] : y[i];
+        *f += log_loss(b[i], logistic(lin_comb));
     }
 }
 
 template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdata) {
+    /* gradient of log loss of the logistic function 
+     * g_j = sum_i{A_ij*(b[i]-logistic(A_i^t x + x[n-1]))}
+     */
+
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
     T *b = data->b, *y = data->y, *A = data->A;
     da_int m = data->m;
 
     // Comput A*x[0:n-2] = y
+    da_int aux = data->intercept ? 1 : 0;
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n - 1, alpha, data->A, m, x, 1,
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n - aux, alpha, data->A, m, x, 1,
                         beta, data->y, 1);
 
-    for (da_int i = 0; i < n - 1; i++) {
-        grad[i] = 0.;
-        for (da_int j = 0; j < m; j++) {
-            grad[i] += (logistic(x[n - 1] + y[j]) - b[j]) * A[(n - 1) * i + j];
-        }
+    std::fill(grad, grad + n, 0);
+    T lin_comb;
+    for (da_int i = 0; i < m; i++) {
+        lin_comb = data->intercept ? x[n - 1] + y[i] : y[i];
+        for (da_int j = 0; j < n - aux; j++)
+            grad[j] += (logistic(lin_comb) - b[i]) * A[m * j + i];
     }
-    grad[n - 1] = 0.0;
-    for (da_int j = 0; j < m; j++) {
-        grad[n - 1] += (logistic(x[n - 1] + y[j]) - b[j]);
+    if (data->intercept) {
+        grad[n - 1] = 0.0;
+        for (da_int i = 0; i < m; i++) {
+            lin_comb = data->intercept ? x[n - 1] + y[i] : y[i];
+            grad[n - 1] += (logistic(lin_comb) - b[i]);
+        }
     }
 }
 
@@ -266,7 +298,7 @@ da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictio
     // b is assumed to be of size m
     // start by computing X*coef = predictions
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n, alpha, X, n, coef.data(), 1,
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n, alpha, X, m, coef.data(), 1,
                         beta, predictions, 1);
     if (intercept) {
         for (i = 0; i < m; i++)
@@ -298,13 +330,10 @@ template <typename T> da_status linear_model<T>::fit() {
     ncoef = n;
     if (intercept)
         ncoef += 1;
-    //coef.resize(ncoef, 0.0);
+    coef.resize(ncoef, 0.0);
 
     switch (mod) {
     case linmod_model_mse:
-        intercept = false;
-        ncoef = n;
-        coef.resize(ncoef, 0.0);
         if (l_nrm1 == 0.0 && l_nrm2 == 0.0) {
             // No regularization, standard linear least-squares through QR factorization
             qr_lsq();
@@ -316,10 +345,8 @@ template <typename T> da_status linear_model<T>::fit() {
         break;
 
     case linmod_model_logistic:
-        intercept = true;
-        ncoef = n + 1;
+        //intercept = true;
         init_opt_model(fit_opt_nln, &objfun_logistic<T>, &objgrd_logistic<T>);
-        coef.resize(ncoef, 0.0); // n+1 for intercept
         opt->solve(coef, usrdata);
         break;
 
@@ -333,14 +360,21 @@ template <typename T> da_status linear_model<T>::fit() {
 
 template <typename T> da_status linear_model<T>::init_qr_data() {
     qr = new qr_data<T>();
-    qr->A.resize(m * n);
-    for (da_int i = 0; i < m * n; i++)
-        qr->A[i] = A[i];
+    qr->A.resize(m * ncoef);
+    for (da_int j = 0; j < n; j++) {
+        for (da_int i = 0; i < m; i++) {
+            qr->A[j * m + i] = A[j * m + i];
+        }
+    }
+    if (intercept) {
+        for (da_int i = 0; i < m; i++)
+            qr->A[n * m + i] = 1.0;
+    }
     qr->b.resize(m);
     for (da_int i = 0; i < m; i++)
         qr->b[i] = b[i];
-    qr->tau.resize(std::min(m, n));
-    qr->lwork = n;
+    qr->tau.resize(std::min(m, ncoef));
+    qr->lwork = ncoef;
     qr->work.resize(qr->lwork);
 
     return da_status_success;
@@ -357,24 +391,25 @@ template <typename T> da_status linear_model<T>::qr_lsq() {
 
     /* Compute QR factorization */
     da_int info;
-    da::geqrf(&m, &n, qr->A.data(), &m, qr->tau.data(), qr->work.data(), &qr->lwork,
+    da::geqrf(&m, &ncoef, qr->A.data(), &m, qr->tau.data(), qr->work.data(), &qr->lwork,
               &info);
     if (info != 0)
         return da_status_internal_error;
     /* Compute Q^tb*/
     char side = 'L', trans = 'T';
     da_int nrhs = 1;
-    da::ormqr(&side, &trans, &m, &nrhs, &n, qr->A.data(), &m, qr->tau.data(),
+    da::ormqr(&side, &trans, &m, &nrhs, &ncoef, qr->A.data(), &m, qr->tau.data(),
               qr->b.data(), &m, qr->work.data(), &qr->lwork, &info);
     if (info != 0)
         return da_status_internal_error;
     /* triangle solve R^-t*Q^Tb */
     char uplo = 'U', diag = 'N';
     trans = 'N';
-    da::trtrs(&uplo, &trans, &diag, &n, &nrhs, qr->A.data(), &m, qr->b.data(), &m, &info);
+    da::trtrs(&uplo, &trans, &diag, &ncoef, &nrhs, qr->A.data(), &m, qr->b.data(), &m,
+              &info);
     if (info != 0)
         return da_status_internal_error;
-    for (da_int i = 0; i < n; i++)
+    for (da_int i = 0; i < ncoef; i++)
         coef[i] = qr->b[i];
 
     return da_status_success;

@@ -1,6 +1,8 @@
 #ifndef UTEST_UTILS_HPP
 #define UTEST_UTILS_HPP
 #include "aoclda.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include <iostream>
 
 #define EXPECT_ARR_NEAR(n, x, y, abs_error)                                              \
@@ -32,7 +34,7 @@ inline da_status da_read_csv(da_handle handle, const char *filename, uint64_t **
 }
 
 inline da_status da_read_csv(da_handle handle, const char *filename, uint8_t **a,
-                                   da_int *nrows, da_int *ncols) {
+                             da_int *nrows, da_int *ncols) {
     return da_read_csv_uint8(handle, filename, a, nrows, ncols);
 }
 
@@ -57,7 +59,7 @@ inline da_status da_read_csv(da_handle handle, const char *filename, uint64_t **
 }
 
 inline da_status da_read_csv(da_handle handle, const char *filename, uint8_t **a,
-                                   da_int *nrows, da_int *ncols, char ***headings) {
+                             da_int *nrows, da_int *ncols, char ***headings) {
     return da_read_csv_uint8_h(handle, filename, a, nrows, ncols, headings);
 }
 
@@ -111,4 +113,14 @@ inline da_status da_linreg_evaluate_model(da_handle handle, da_int n, da_int m, 
     return da_linmod_s_evaluate_model(handle, n, m, X, predictions);
 }
 
+template <class T>
+inline da_status da_linmod_set_intercept(da_handle handle, bool intercept);
+template <>
+inline da_status da_linmod_set_intercept<double>(da_handle handle, bool intercept) {
+    return da_linmod_d_set_intercept(handle, intercept);
+}
+template <>
+inline da_status da_linmod_set_intercept<float>(da_handle handle, bool intercept) {
+    return da_linmod_s_set_intercept(handle, intercept);
+}
 #endif
