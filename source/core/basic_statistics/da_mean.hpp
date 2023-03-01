@@ -3,7 +3,8 @@
 
 #include "aoclda.h"
 
-template <typename T> da_status da_mean(da_int n, T *x, da_int incx, T *mean) {
+template <typename T>
+da_status da_mean(da_int n, T *x, [[maybe_unused]] da_int incx, T *mean) {
     da_status err = da_status_success;
 
     *mean = (T)0.0;
