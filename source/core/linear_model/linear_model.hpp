@@ -5,7 +5,9 @@
 #include "callbacks.hpp"
 #include "da_cblas.hh"
 #include "lapack_templates.hpp"
+#include "linmod_options.hpp"
 #include "optimization.hpp"
+#include "options.hpp"
 #include <cstdlib>
 #include <iostream>
 #include <vector>
@@ -70,8 +72,17 @@ template <typename T> class linear_model {
     da_status init_qr_data();
     da_status qr_lsq();
 
+    /* Dispatcher methods 
+     * choose_method: if "linmod optim method" is set to auto, choose automatically how 
+     *                to compute the model
+     * validate_options: check that the options chosen by the user are compatible
+     */
+    da_status choose_method();
+    da_status validate_options(da_int method);
+
   public:
-    linear_model(){};
+    da_options::OptionRegistry opts;
+    linear_model() { register_linmod_options<T>(opts); }
     ~linear_model();
 
     da_status define_features(da_int n, da_int m, T *A, T *b);
@@ -83,7 +94,6 @@ template <typename T> class linear_model {
     /* Methods to remove once option setter is added */
     void set_reg_nrm2(T l_nrm2);
     void set_reg_nrm1(T l_nrm1);
-    void set_intercept(bool inter) { intercept = inter; }
 };
 
 template <typename T> linear_model<T>::~linear_model() {
@@ -327,6 +337,25 @@ template <typename T> da_status linear_model<T>::fit() {
     if (model_trained)
         return da_status_success;
 
+    da_int id;
+    std::string opt_val;
+    da_status status;
+
+    opts.get("linmod intercept", &intercept);
+    opts.get("linmod norm2 reg", &l_nrm2);
+    opts.get("linmod norm1 reg", &l_nrm1);
+    opts.get("linmod optim method", opt_val, id);
+
+    status = validate_options(id);
+    if (status != da_status_success)
+        return status;
+    if (opt_val == "auto") {
+        status = choose_method();
+        if (status != da_status_success)
+            return status;
+        opts.get("linmod optim method", opt_val, id);
+    }
+
     ncoef = n;
     if (intercept)
         ncoef += 1;
@@ -411,6 +440,42 @@ template <typename T> da_status linear_model<T>::qr_lsq() {
         return da_status_internal_error;
     for (da_int i = 0; i < ncoef; i++)
         coef[i] = qr->b[i];
+
+    return da_status_success;
+}
+
+/* Option methods */
+template <typename T> da_status linear_model<T>::validate_options(da_int method) {
+
+    if (l_nrm1 != 0 || l_nrm2 != 0)
+        return da_status_not_implemented;
+    switch (mod) {
+    case (linmod_model_logistic):
+        if (method == 2)
+            // QR not valid for logistic regression
+            return da_status_incompatible_options;
+        break;
+    default:
+        break;
+    }
+    return da_status_success;
+}
+
+template <typename T> da_status linear_model<T>::choose_method() {
+    switch (mod) {
+    case (linmod_model_mse):
+        if (l_nrm1 == 0.0 && l_nrm2 == 0.0)
+            opts.set("linmod optim method", "qr", da_options::solver);
+        else
+            opts.set("linmod optim method", "lbfgs", da_options::solver);
+        break;
+    case (linmod_model_logistic):
+        opts.set("linmod optim method", "lbfgs", da_options::solver);
+        break;
+    default:
+        // shouldn't happen
+        return da_status_internal_error;
+    }
 
     return da_status_success;
 }

@@ -388,7 +388,7 @@ TEST(csvtest, error_exits) {
     ASSERT_EQ(err, da_status_handle_not_initialized);
 
     // Check for incorrect handle type
-    err = da_handle_init_d(&handle, da_handle_linreg);
+    err = da_handle_init_d(&handle, da_handle_linmod);
     err = da_handle_set_option(handle, csv_option_delim_whitespace, one);
     ASSERT_EQ(err, da_status_invalid_handle_type);
     err = da_read_csv_d(handle, filepath, &a, &nrows, &ncols);

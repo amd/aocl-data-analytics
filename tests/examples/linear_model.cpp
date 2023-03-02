@@ -19,7 +19,7 @@ int main() {
     // Initialize the linear regression
     da_handle handle = nullptr;
     da_status status;
-    status = da_handle_init_d(&handle, da_handle_linreg);
+    status = da_handle_init_d(&handle, da_handle_linmod);
     status = da_linmod_d_select_model(handle, linmod_model_mse);
     status = da_linmod_d_define_features(handle, n, m, Al, bl);
     // compute regression
@@ -44,7 +44,7 @@ int main() {
     std::cout.precision(2);
     // Initialize the linear regression
     da_handle handle_s = nullptr;
-    status = da_handle_init_s(&handle_s, da_handle_linreg);
+    status = da_handle_init_s(&handle_s, da_handle_linmod);
     std::cout << "init status " << status << std::endl;
     status = da_linmod_s_select_model(handle_s, linmod_model_mse);
     std::cout << "model status " << status << std::endl;

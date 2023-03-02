@@ -87,23 +87,3 @@ da_status da_linmod_s_evaluate_model(da_handle handle, da_int n, da_int m, float
 
     return handle->linreg_s->evaluate_model(n, m, X, predictions);
 }
-
-/* To be removed when option setters are done */
-da_status da_linmod_d_set_intercept(da_handle handle, bool inter) {
-    if (handle->precision != da_double)
-        return da_status_wrong_type;
-    if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer;
-
-    handle->linreg_d->set_intercept(inter);
-    return da_status_success;
-}
-da_status da_linmod_s_set_intercept(da_handle handle, bool inter) {
-    if (handle->precision != da_single)
-        return da_status_wrong_type;
-    if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer;
-
-    handle->linreg_s->set_intercept(inter);
-    return da_status_success;
-}

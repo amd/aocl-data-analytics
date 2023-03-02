@@ -33,7 +33,7 @@ typedef enum da_handle_option_ {
 typedef enum da_handle_type_ {
     da_handle_uninitialized,
     da_handle_csv_opts,
-    da_handle_linreg,
+    da_handle_linmod,
 } da_handle_type;
 
 typedef struct _da_handle *da_handle;

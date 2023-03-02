@@ -20,7 +20,7 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
     case da_handle_csv_opts:
         error = da_parser_init(&((*handle)->parser));
         break;
-    case da_handle_linreg:
+    case da_handle_linmod:
         try {
             (*handle)->linreg_d = new linear_model<double>();
         } catch (std::bad_alloc &) {
@@ -57,7 +57,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
     case da_handle_csv_opts:
         error = da_parser_init(&((*handle)->parser));
         break;
-    case da_handle_linreg:
+    case da_handle_linmod:
         try {
             (*handle)->linreg_s = new linear_model<float>();
         } catch (std::bad_alloc &) {
@@ -114,7 +114,7 @@ da_status da_handle_set_option(da_handle handle, da_handle_option option, char *
     case da_handle_csv_opts:
         return da_parser_set_option(handle, option, str);
         break;
-    case da_handle_linreg:
+    case da_handle_linmod:
         error = da_status_invalid_handle_type;
         snprintf(handle->error_message, ERR_MSG_LEN,
                  "There are no options that can be set for this type of routine.");

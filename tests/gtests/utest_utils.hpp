@@ -10,6 +10,29 @@
     EXPECT_NEAR((x[j]), (y[j]), abs_error)                                               \
         << "Vectors " #x " and " #y " different at index j=" << j << "."
 
+
+/* handle overloaded functions */
+template <class T>
+da_status da_handle_init(da_handle *handle, da_handle_type handle_type);
+template <>
+da_status da_handle_init<double>(da_handle *handle, da_handle_type handle_type) {
+    return da_handle_init_d(handle, handle_type);
+}
+template <>
+da_status da_handle_init<float>(da_handle *handle, da_handle_type handle_type) {
+    return da_handle_init_s(handle, handle_type);
+}
+
+/* Options overloaded functons */
+template <class T> inline da_status da_options_set_real(da_handle handle, const char *option, T value);
+template <> inline da_status da_options_set_real<float>(da_handle handle, const char *option, float value){
+    return da_options_set_s_real(handle, option, value);
+}
+template <> inline da_status da_options_set_real<double>(da_handle handle, const char *option, double value){
+    return da_options_set_d_real(handle, option, value);
+}
+
+
 /* FIXME The tests should be able to include directly read_csv.hpp
  * This is a workaround for now
  */
@@ -64,19 +87,11 @@ inline da_status da_read_csv(da_handle handle, const char *filename, uint8_t **a
 }
 
 /* linmod overloaded functions */
-template <class T> da_status da_linreg_init(da_handle *handle);
-template <> da_status da_linreg_init<double>(da_handle *handle) {
-    return da_handle_init_d(handle, da_handle_linreg);
-}
-template <> da_status da_linreg_init<float>(da_handle *handle) {
-    return da_handle_init_s(handle, da_handle_linreg);
-}
-
-template <class T> da_status da_linreg_select_model(da_handle handle, linmod_model mod);
-template <> da_status da_linreg_select_model<double>(da_handle handle, linmod_model mod) {
+template <class T> da_status da_linmod_select_model(da_handle handle, linmod_model mod);
+template <> da_status da_linmod_select_model<double>(da_handle handle, linmod_model mod) {
     return da_linmod_d_select_model(handle, mod);
 }
-template <> da_status da_linreg_select_model<float>(da_handle handle, linmod_model mod) {
+template <> da_status da_linmod_select_model<float>(da_handle handle, linmod_model mod) {
     return da_linmod_s_select_model(handle, mod);
 }
 
@@ -113,14 +128,4 @@ inline da_status da_linreg_evaluate_model(da_handle handle, da_int n, da_int m, 
     return da_linmod_s_evaluate_model(handle, n, m, X, predictions);
 }
 
-template <class T>
-inline da_status da_linmod_set_intercept(da_handle handle, bool intercept);
-template <>
-inline da_status da_linmod_set_intercept<double>(da_handle handle, bool intercept) {
-    return da_linmod_d_set_intercept(handle, intercept);
-}
-template <>
-inline da_status da_linmod_set_intercept<float>(da_handle handle, bool intercept) {
-    return da_linmod_s_set_intercept(handle, intercept);
-}
 #endif

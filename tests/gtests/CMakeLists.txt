@@ -16,6 +16,9 @@ include(GoogleTest)
 include_directories(${CMAKE_SOURCE_DIR}/source/include
                     ${CMAKE_SOURCE_DIR}/source/core/csv
                     ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
+                    ${CMAKE_SOURCE_DIR}/source/core/linear_model
+                    ${CMAKE_SOURCE_DIR}/source/core/optimization
+                    ${CMAKE_SOURCE_DIR}/source/core/drivers
                     ${CMAKE_SOURCE_DIR}/source/core/utilities)
 
 add_executable(basic_statistics basic_statistics.cpp)
@@ -31,6 +34,8 @@ target_link_libraries(linmod da_core gtest_main gmock_main)
 target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 
+add_executable(option_registry option_registry_tests.cpp)
+target_link_libraries(option_registry da_core gtest_main gmock_main)
 
 target_include_directories(
   basic_statistics PRIVATE )
@@ -40,3 +45,4 @@ target_include_directories(csv PRIVATE )
 gtest_discover_tests(basic_statistics)
 gtest_discover_tests(csv)
 gtest_discover_tests(linmod)
+gtest_discover_tests(option_registry)

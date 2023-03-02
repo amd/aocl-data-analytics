@@ -15,6 +15,7 @@ typedef enum da_status_ {
     da_status_invalid_handle_type,
     da_status_handle_not_initialized,
     da_status_invalid_option,
+    da_status_incompatible_options,
 
     // CSV errors 100-199
     da_status_file_not_found = 100,
@@ -32,5 +33,11 @@ typedef enum da_status_ {
 
     // linreg errors 200-299
     // PCA errors 300-399
+    // Options errors 400-499
+    da_status_option_not_found = 400,
+    da_status_option_locked,
+    da_status_option_wrong_type,
+    da_status_option_invalid_bounds,
+    da_status_option_invalid_value,
 } da_status;
 #endif

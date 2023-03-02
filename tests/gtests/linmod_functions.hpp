@@ -7,6 +7,12 @@
 #include <string>
 
 using namespace testing;
+
+template <class T> struct option_t {
+    std::string name = "";
+    T value;
+};
+
 // Helper to define precision to which we expect the results match
 template <typename T> T expected_precision(T scale = (T)1.0);
 template <> double expected_precision<double>(double scale) { return scale * 5.0e-4; }
@@ -92,7 +98,31 @@ void objgrd(linmod_model mod, da_int n, da_int m, T *x, std::vector<T> &grad, co
 }
 
 template <typename T>
-void test_linmod_positive(std::string csvname, linmod_model mod, bool intercept) {
+void test_linmod_positive(std::string csvname, linmod_model mod,
+                          std::vector<option_t<bool>> bopts,
+                          std::vector<option_t<std::string>> sopts,
+                          std::vector<option_t<T>> ropts,
+                          std::vector<option_t<int>> iopts) {
+
+    // Create main handle and set options
+    da_handle linmod_handle = nullptr;
+    ASSERT_EQ(da_handle_init<T>(&linmod_handle, da_handle_linmod), da_status_success);
+    for (auto op : bopts)
+        ASSERT_EQ(da_options_set_bool(linmod_handle, op.name.c_str(), op.value),
+                  da_status_success);
+    for (auto op : sopts)
+        ASSERT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
+                  da_status_success);
+    for (auto op : ropts)
+        ASSERT_EQ(da_options_set_real(linmod_handle, op.name.c_str(), op.value),
+                  da_status_success);
+    for (auto op : iopts)
+        ASSERT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
+                  da_status_success);
+
+    bool intercept;
+    ASSERT_EQ(da_options_get_bool(linmod_handle, "linmod intercept", &intercept),
+              da_status_success);
 
     // get problem data and expected results
     // DATA_DIR is defined in the build system, it should point to the tests/data/linmod_data
@@ -132,22 +162,21 @@ void test_linmod_positive(std::string csvname, linmod_model mod, bool intercept)
     //          da_status_success);
     // ASSERT_EQ(n, nc); // TODO add check once the intersect has been solved
 
-    // Create problem
-    da_handle linreg_handle = nullptr;
-    ASSERT_EQ(da_linreg_init<T>(&linreg_handle), da_status_success);
-    ASSERT_EQ(da_linreg_select_model<T>(linreg_handle, mod), da_status_success);
-    ASSERT_EQ(da_linreg_define_features(linreg_handle, n, m, a, b), da_status_success);
+    ASSERT_EQ(da_linmod_select_model<T>(linmod_handle, mod), da_status_success);
+    ASSERT_EQ(da_linreg_define_features(linmod_handle, n, m, a, b), da_status_success);
 
     // This should be options
-    EXPECT_EQ(da_linmod_set_intercept<T>(linreg_handle, intercept), da_status_success);
+    //EXPECT_EQ(da_linmod_set_intercept<T>(linmod_handle, intercept), da_status_success);
+    ASSERT_EQ(da_options_set_bool(linmod_handle, "linmod intercept", intercept),
+              da_status_success);
 
     // compute regression
-    EXPECT_EQ(da_linreg_fit<T>(linreg_handle), da_status_success);
+    EXPECT_EQ(da_linreg_fit<T>(linmod_handle), da_status_success);
 
     // Extract and compare solution
     T *coef = new T[nc];
     da_int ncc = nc;
-    EXPECT_EQ(da_linreg_get_coef(linreg_handle, &ncc, coef), da_status_success);
+    EXPECT_EQ(da_linreg_get_coef(linmod_handle, &ncc, coef), da_status_success);
     //EXPECT_ARR_NEAR(ncc, coef_exp, coef, expected_precision<T>());
 
     // Check that the gradient is close enough to 0
@@ -166,7 +195,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod, bool intercept)
     if (coef)
         delete[] coef;
     da_handle_destroy(&csv_handle);
-    da_handle_destroy(&linreg_handle);
+    da_handle_destroy(&linmod_handle);
 
     return;
 }

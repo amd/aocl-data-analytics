@@ -39,10 +39,6 @@ da_status da_linmod_s_get_coef(da_handle handle, da_int *nc, float *x);
 da_status da_linmod_s_evaluate_model(da_handle handle, da_int n, da_int m, float *X,
                                      float *predictions);
 
-// Should become options
-da_status da_linmod_d_set_intercept(da_handle handle, bool inter);
-da_status da_linmod_s_set_intercept(da_handle handle, bool inter);
-
 #ifdef __cplusplus
 }
 #endif
