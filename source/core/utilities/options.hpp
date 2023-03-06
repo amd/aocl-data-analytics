@@ -28,6 +28,7 @@
 
 #include <cctype>
 #include <iostream>
+#include <limits>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
@@ -39,7 +40,6 @@
  * Current status TODO
  * ===================
  * [ ] Rename CamelCase to snake_case
- * [ ] Write all public setters and getters 2T, int, string, bool, that is 10 in total 5 setter 5 getters
  * [ ] Full writing of unit-tests (gtest) public and solver-side tests
  * [ ] Update of the comments bellow...
  *
@@ -131,10 +131,14 @@ class OptionBase {
     da_status validate(T lower, lbound_t lbound, T upper, ubound_t ubound, T value,
                        bool checkall = true) {
         if (checkall) {
+            bool has_nan = std::numeric_limits<T>::has_quiet_NaN;
             // Check all inputs
-            if (isnan(upper) || isnan(lower)) {
-                errmsg = "Option '" + name + "': Either lower or upper are not finite.";
-                return da_status_option_invalid_bounds;
+            if (has_nan) {
+                if (std::isnan(upper) || std::isnan(lower)) {
+                    errmsg =
+                        "Option '" + name + "': Either lower or upper are not finite.";
+                    return da_status_option_invalid_bounds;
+                }
             }
 
             if (upper < lower && ubound != p_inf) {
@@ -151,9 +155,11 @@ class OptionBase {
                     return da_status_option_invalid_bounds;
                 }
             }
-            if (isnan(value)) {
-                errmsg = "Option '" + name + "': Invalid value.";
-                return da_status_option_invalid_value;
+            if (has_nan) {
+                if (std::isnan(value)) {
+                    errmsg = "Option '" + name + "': Invalid value.";
+                    return da_status_option_invalid_value;
+                }
             }
         }
 
@@ -210,10 +216,10 @@ template <typename T> class OptionNumeric : public OptionBase {
                       "Constructor only valid for non boolean numeric type");
         da_status status = set_name(name);
         if (status != da_status_success)
-            throw invalid_argument(errmsg);
+            throw std::invalid_argument(errmsg);
         status = validate<T>(lower, lbound, upper, ubound, vdefault);
         if (status != da_status_success)
-            throw invalid_argument(errmsg);
+            throw std::invalid_argument(errmsg);
         OptionNumeric::desc = desc;
         OptionNumeric::vdefault = vdefault;
         OptionNumeric::value = vdefault;
@@ -228,7 +234,7 @@ template <typename T> class OptionNumeric : public OptionBase {
         static_assert(is_same<T, bool>::value, "Constructor only valid for boolean");
         da_status status = set_name(name);
         if (status != da_status_success)
-            throw invalid_argument(errmsg);
+            throw std::invalid_argument(errmsg);
         OptionNumeric::desc = desc;
         OptionNumeric::vdefault = vdefault;
         OptionNumeric::value = vdefault;
@@ -349,20 +355,25 @@ class OptionString : public OptionBase {
         da_status status = set_name(name);
         OptionUtils util;
         if (status != da_status_success)
-            throw invalid_argument(errmsg);
+            throw std::invalid_argument(errmsg);
 
         if (labels.size() == 0) {
             errmsg =
                 "Option '" + name + "': Label's map must contain at least one entry.";
-            throw invalid_argument(errmsg);
+            throw std::invalid_argument(errmsg);
         }
         label_vdefault = vdefault;
         util.prep_str(label_vdefault);
+        if (label_vdefault == "") {
+            errmsg = "Option '" + name +
+                     "': Invalid default value (string reduced to zero-length).";
+            throw std::invalid_argument(errmsg);
+        }
         if (vdefault != label_vdefault) {
             errmsg = "Option '" + name +
-                     "': Default label changed after trimming spaces, replace '" +
-                     vdefault + "' by '" + label_vdefault + "'.";
-            throw invalid_argument(errmsg);
+                     "': Default label changed after processing, replace '" + vdefault +
+                     "' by '" + label_vdefault + "'.";
+            throw std::invalid_argument(errmsg);
         }
         for (const auto &entry : labels) {
             label = entry.first;
@@ -370,12 +381,12 @@ class OptionString : public OptionBase {
             if (label == "") {
                 errmsg = "Option '" + name +
                          "': Invalid option value (string reduced to zero-length).";
-                throw invalid_argument(errmsg);
+                throw std::invalid_argument(errmsg);
             } else if (label != entry.first) {
                 errmsg = "Option '" + name +
-                         "': Label changed after trimming spaces, replace '" +
-                         entry.first + "' by '" + label + "'.";
-                throw invalid_argument(errmsg);
+                         "': Label changed after processing, replace '" + entry.first +
+                         "' by '" + label + "'.";
+                throw std::invalid_argument(errmsg);
             }
             if (label == label_vdefault)
                 defok = true;
@@ -383,7 +394,7 @@ class OptionString : public OptionBase {
         // check that default is valid
         if (!defok) {
             errmsg = "Option '" + name + "': Default label is invalid.";
-            throw invalid_argument(errmsg);
+            throw std::invalid_argument(errmsg);
         }
 
         OptionString::labels = labels;
