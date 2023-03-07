@@ -268,6 +268,7 @@ TEST(OpRegistryWrappers, get_string) {
     // Try to get wrong option
     ASSERT_EQ(da_options_get_string(handle, "nonexistent option", value, 1),
               da_status_option_not_found);
+    da_handle_destroy(&handle);
 };
 
 } // namespace

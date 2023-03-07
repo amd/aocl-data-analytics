@@ -19,8 +19,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(BUILD_EXAMPLES "Build the example programs" ON)
 option(BUILD_GTEST "Build gtest unit tests" ON)
 option(COVERAGE "Builds coverage of all the gtests and example programs" OFF)
-option(CHECK_MEM "Use google's asan tool on all C/C++ code." OFF)
 option(BUILD_ILP64 "ILP64 Support" OFF)
+if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+    set(CHECK_MEM "ON")
+endif()
 
 # modules directory for easy include
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
