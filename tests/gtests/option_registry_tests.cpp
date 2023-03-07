@@ -23,15 +23,15 @@
 
 // Testing for the Options and Registry framework
 // Tests:
-// 1. Internal
-// 1.1 Options class
-//     ALL (int, float, bool, string: setby, name(empty), get_name, get_option_t, get(), set(user/solver/default), print_option to just match string length
-//     Int and Float: test validate(all bound types)
-//     String: options with same entries or empty entry, get(+key)
-// 1.2 Registry class
-//     same name but different type string/numeric
-// 2. Public
-//     Get/Set for all types
+// [x] 1. Internal
+// [x] 1.1 Options class
+//         ALL (int, float, bool, string: setby, name(empty), get_name, get_option_t, get(),
+//         set(user/solver/default), print_option to just match string length
+//         Int and Float: test validate(all bound types)
+//         String: options with same entries or empty entry, get(+key)
+// [ ] 1.2 Registry class
+//         same name but different type string/numeric
+// [ ] 2. Public: Get/Set for all types
 
 #include "aoclda.h"
 #include "da_handle.hpp"
@@ -109,10 +109,14 @@ template <typename T> void OpClsNumeric(void) {
     OptionNumeric<T> opt(" Placeholder    OptiOn    ", descr, 0,
                          da_options::lbound_t::greaterequal, 10,
                          da_options::ubound_t::lessequal, 10);
+    // Call to cover pretty printing
+    [[maybe_unused]] string pretty;
+    pretty = opt.print_details(true);
     bool has_nan = std::numeric_limits<T>::has_quiet_NaN;
     T val = -999;
     opt.get(val);
     ASSERT_EQ(val, (T)10);
+    ASSERT_EQ(opt.set((T)1000), da_status_option_invalid_value);
     // check print_detail() grep match Set-by: default
     std::string s_default("Set-by: (default");
     std::string s_user("Set-by: (user");
@@ -165,6 +169,10 @@ template <typename T> void OpClsNumeric(void) {
                                           std::numeric_limits<T>::quiet_NaN()),
                      std::invalid_argument);
     }
+    // default out of range l == u
+    ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 2, da_options::lbound_t::greaterthan,
+                                      2, da_options::ubound_t::lessequal, -11),
+                 std::invalid_argument);
     // default out of range l <= x <= u < d
     ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
                                       10, da_options::ubound_t::lessequal, 11),
@@ -181,12 +189,34 @@ template <typename T> void OpClsNumeric(void) {
     ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterthan,
                                       10, da_options::ubound_t::lessthan, 0),
                  std::invalid_argument);
+    {
+        OptionNumeric<T> pretty_print("Opt", descr, 0, da_options::lbound_t::greaterthan,
+                                      10, da_options::ubound_t::lessthan, 5);
+        pretty = pretty_print.print_details(true);
+        pretty = pretty_print.print_details(false);
+    }
+    {
+        OptionNumeric<T> pretty_print("Opt", descr, 0, da_options::lbound_t::m_inf, 10,
+                                      da_options::ubound_t::p_inf, 0);
+        pretty = pretty_print.print_details(true);
+        pretty = pretty_print.print_details(false);
+    }
+}
+
+template <> void OpClsNumeric<bool>(void) {
+    // Empty name
+    ASSERT_THROW(OptionNumeric<bool> opt("    ", "", true), std::invalid_argument);
+    [[maybe_unused]] std::string pretty;
+    pretty = opt_bool.print_details(true);
+    pretty = opt_bool.print_details(false);
+    pretty = opt_bool.print_option();
 }
 
 TEST(OpOptionInternal, OpClsNumericAll) {
     OpClsNumeric<float>();
     OpClsNumeric<double>();
     OpClsNumeric<da_int>();
+    OpClsNumeric<bool>();
 };
 
 TEST(OpOptionInternal, OpClsStringAll) {
@@ -220,9 +250,10 @@ TEST(OpOptionInternal, OpClsStringAll) {
     det = ::opt_string.print_details(false);
     std::regex_search(det, m, reg_solver);
     ASSERT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
-
-    std::string prn = opt_string.print_option();
+    [[maybe_unused]] std::string prn;
+    prn = opt_string.print_option();
     ASSERT_EQ(prn.size(), std::string(" string option = no\n").size());
+    prn = opt_string.print_details(true);
 
     ASSERT_NO_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                             {{"yes", 1}, {"yes", 0}, {"yes", 5}}, "yes"));
@@ -249,6 +280,7 @@ TEST(OpOptionInternal, OpClsStringAll) {
                                          {{"yes", 1}, {"no", 0}, {"maybe", 2}},
                                          "invalid"),
                  std::invalid_argument);
+    ASSERT_EQ(::opt_string.set("invalid"), da_status_option_invalid_value);
 }
 
 TEST(OpRegistryWrappers, get_string) {

@@ -331,9 +331,12 @@ template <typename T> class OptionNumeric : public OptionBase {
     void get(T &value) { value = OptionNumeric<T>::value; };
 
     da_status set(T value, setby_t setby = setby_t::user) {
-        da_status status = validate(lower, lbound, upper, ubound, value, false);
-        if (status != da_status_success)
-            return status;
+        da_status status = da_status_success;
+        if (get_option_t() != da_options::option_t::opt_bool) {
+            da_status status = validate(lower, lbound, upper, ubound, value, false);
+            if (status != da_status_success)
+                return status;
+        }
         OptionNumeric::value = value;
         OptionNumeric::setby = setby;
         return status;
