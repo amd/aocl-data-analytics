@@ -40,7 +40,6 @@
  * Current status TODO
  * ===================
  * [ ] Rename CamelCase to snake_case
- * [ ] Full writing of unit-tests (gtest) public and solver-side tests
  * [ ] Update of the comments bellow...
  *
  * Options Registry TODO REWRITE THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -509,8 +508,8 @@ class OptionRegistry {
         registry.insert({o->get_name(), o});
         bool ok = (n != registry.size());
         if (!ok) {
-            errmsg = "Registry could not add option to the list";
-            return da_status_option_invalid_value;
+            errmsg = "Registry could not add option. Duplicate?";
+            return da_status_invalid_input;
         }
         return da_status_success;
     }
@@ -636,9 +635,11 @@ class OptionRegistry {
                 std::cout << std::static_pointer_cast<OptionNumeric<bool>>(o.second)
                                  ->print_option();
                 break;
-            default:
+            default: // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
                 std::cout << "Internal ERROR: unexpected option with option_t::undefined"
                           << std::endl;
+                // LCOV_EXCL_STOP
             }
         }
         std::cout << "End Options" << std::endl;
@@ -683,9 +684,11 @@ class OptionRegistry {
                 std::cout << std::static_pointer_cast<OptionNumeric<bool>>(o.second)
                                  ->print_details(doxygen);
                 break;
-            default:
+            default: // LCOV_EXCL_LINE
+                // LCOV_EXCL_START
                 std::cout << "Internal ERROR: unexpected option with option_t::undefined"
                           << std::endl;
+                // LCOV_EXCL_STOP
             }
             sep = true;
         }

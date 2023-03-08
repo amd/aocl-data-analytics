@@ -29,7 +29,7 @@
 //         set(user/solver/default), print_option to just match string length
 //         Int and Float: test validate(all bound types)
 //         String: options with same entries or empty entry, get(+key)
-// [ ] 1.2 Registry class
+// [x] 1.2 Registry class
 //         same name but different type string/numeric
 // [ ] 2. Public: Get/Set for all types
 
@@ -72,15 +72,25 @@ da_status preload(OptionRegistry &r) {
     if (status != da_status_success)
         return status;
 
-    // status = r.register_opt(opt_int);
-    // if (status != da_status_success)
-    //     return status;
-    // status = r.register_opt(opt_bool);
-    // if (status != da_status_success)
-    //     return status;
-    // status = r.register_opt(opt_int);
-    // if (status != da_status_success)
-    //     return status;
+    oI = std::make_shared<OptionNumeric<da_int>>(opt_int);
+    status = r.register_opt(oI);
+    if (status != da_status_success)
+        return status;
+
+    oF = std::make_shared<OptionNumeric<float>>(opt_float);
+    status = r.register_opt(oF);
+    if (status != da_status_success)
+        return status;
+
+    oD = std::make_shared<OptionNumeric<double>>(opt_double);
+    status = r.register_opt(oD);
+    if (status != da_status_success)
+        return status;
+
+    oB = std::make_shared<OptionNumeric<bool>>(opt_bool);
+    status = r.register_opt(oB);
+    if (status != da_status_success)
+        return status;
 
     return status;
 };
@@ -282,6 +292,45 @@ TEST(OpOptionInternal, OpClsStringAll) {
                  std::invalid_argument);
     ASSERT_EQ(::opt_string.set("invalid"), da_status_option_invalid_value);
 }
+
+TEST(OpRegistryInternal, OpRegALL) {
+    da_options::OptionRegistry reg;
+    ASSERT_EQ(preload(reg), da_status_success);
+    // test the lock
+    reg.lock();
+    ASSERT_EQ(reg.register_opt(oI), da_status_option_locked);
+    reg.unlock();
+    da_status status;
+    // add option twice;
+    status = reg.register_opt(oI);
+    ASSERT_EQ(status, da_status_invalid_input);
+    // add option (same name but different type)
+    OptionNumeric<bool> opt_over("integer option", "Preloaded bool Option", true);
+    std::shared_ptr<OptionNumeric<bool>> over = std::make_shared<OptionNumeric<bool>>(opt_over);
+    status = reg.register_opt(over);
+    ASSERT_EQ(status, da_status_invalid_input);
+
+    // set with locked registry
+    reg.lock();
+    ASSERT_EQ(reg.set("integer opt", 1), da_status_option_locked);
+    reg.unlock();
+    // option not found
+    ASSERT_EQ(reg.set("nonexistent option", 1), da_status_option_not_found);
+    // set with the wrong type
+    ASSERT_EQ(reg.set("integer option", "wrong"), da_status_option_wrong_type);
+    ASSERT_EQ(reg.set("integer option", 3.33f), da_status_option_wrong_type);
+    ASSERT_EQ(reg.set("integer option", true), da_status_option_wrong_type);
+    bool b = false;
+    ASSERT_EQ(reg.get("integer option", &b), da_status_option_wrong_type);
+    string ret;
+    da_int id;
+    ASSERT_EQ(reg.get("wrong string option", ret, id), da_status_option_not_found);
+    ASSERT_EQ(reg.get("integer option", ret, id), da_status_option_wrong_type);
+    reg.print_details(true);
+    reg.print_details(false);
+    reg.print_options();
+}
+
 
 TEST(OpRegistryWrappers, get_string) {
     da_handle handle;
