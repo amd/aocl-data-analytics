@@ -306,7 +306,8 @@ TEST(OpRegistryInternal, OpRegALL) {
     ASSERT_EQ(status, da_status_invalid_input);
     // add option (same name but different type)
     OptionNumeric<bool> opt_over("integer option", "Preloaded bool Option", true);
-    std::shared_ptr<OptionNumeric<bool>> over = std::make_shared<OptionNumeric<bool>>(opt_over);
+    std::shared_ptr<OptionNumeric<bool>> over =
+        std::make_shared<OptionNumeric<bool>>(opt_over);
     status = reg.register_opt(over);
     ASSERT_EQ(status, da_status_invalid_input);
 
@@ -331,14 +332,21 @@ TEST(OpRegistryInternal, OpRegALL) {
     reg.print_options();
 }
 
+// Public API Unit-tests
 
-TEST(OpRegistryWrappers, get_string) {
+TEST(OpRegistryWrappers, getset_string) {
     da_handle handle;
     OptionRegistry *opts;
+    char sv[] = "yes";
+    char str[16];
     ASSERT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
     ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
     ASSERT_EQ(preload(*opts), da_status_success);
-    ASSERT_EQ(da_options_set_string(handle, "string option", "yes"), da_status_success);
+    ASSERT_EQ(da_options_set_string(nullptr, "string option", sv),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_get_string(nullptr, "string option", str, 16),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_set_string(handle, "string option", sv), da_status_success);
     char value[16];
     ASSERT_EQ(da_options_get_string(handle, "string option", value, 16),
               da_status_success);
@@ -349,7 +357,113 @@ TEST(OpRegistryWrappers, get_string) {
     // Try to get wrong option
     ASSERT_EQ(da_options_get_string(handle, "nonexistent option", value, 1),
               da_status_option_not_found);
+    // Try to set option with incorrect value
+    char invalid[] = "non existent";
+    ASSERT_EQ(da_options_set_string(handle, "string option", invalid),
+              da_status_option_invalid_value);
+    // Try to set option with incorrect value
+    ASSERT_EQ(da_options_set_int(handle, "string option", 1),
+              da_status_option_wrong_type);
     da_handle_destroy(&handle);
 };
 
+TEST(OpRegistryWrappers, getset_int) {
+    da_handle handle;
+    OptionRegistry *opts;
+    da_int value = 5;
+    ASSERT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
+    ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
+    ASSERT_EQ(preload(*opts), da_status_success);
+    ASSERT_EQ(da_options_set_int(nullptr, "integer option", value),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_get_int(nullptr, "integer option", &value),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_set_int(handle, "integer option", value), da_status_success);
+    ASSERT_EQ(da_options_get_int(handle, "integer option", &value), da_status_success);
+    ASSERT_EQ(5, value);
+    // Try to get wrong option
+    ASSERT_EQ(da_options_get_int(handle, "nonexistent option", &value),
+              da_status_option_not_found);
+    // Try to set option with incorrect value
+    value = -99;
+    ASSERT_EQ(da_options_set_int(handle, "integer option", value),
+              da_status_option_invalid_value);
+    // Try to set option with incorrect value
+    double dv = 1.0;
+    ASSERT_EQ(da_options_set_d_real(handle, "integer option", dv),
+              da_status_option_wrong_type);
+    da_handle_destroy(&handle);
+};
+
+TEST(OpRegistryWrappers, getset_double) {
+    da_handle handle;
+    OptionRegistry *opts;
+    double value = 5.0;
+    ASSERT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
+    ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
+    ASSERT_EQ(preload(*opts), da_status_success);
+    ASSERT_EQ(da_options_set_d_real(nullptr, "double option", value),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_get_d_real(nullptr, "double option", &value),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_set_d_real(handle, "double option", value), da_status_success);
+    ASSERT_EQ(da_options_get_d_real(handle, "double option", &value), da_status_success);
+    ASSERT_EQ(5.0, value);
+    // Try to get wrong option
+    ASSERT_EQ(da_options_get_d_real(handle, "nonexistent option", &value),
+              da_status_option_not_found);
+    // Try to set option with incorrect value
+    value = -99.0;
+    ASSERT_EQ(da_options_set_d_real(handle, "double option", value),
+              da_status_option_invalid_value);
+    // Try to set option with incorrect value
+    int iv = 1;
+    ASSERT_EQ(da_options_set_int(handle, "double option", iv),
+              da_status_option_wrong_type);
+
+    float fv;
+    ASSERT_EQ(da_options_get_s_real(handle, "double option", &fv), da_status_wrong_type);
+    ASSERT_EQ(da_options_set_s_real(handle, "double option", fv), da_status_wrong_type);
+    da_handle_destroy(&handle);
+};
+
+TEST(OpRegistryWrappers, getset_float) {
+    da_handle handle;
+    OptionRegistry *opts;
+    float value = 5.0f;
+    ASSERT_EQ(da_handle_init_s(&handle, da_handle_linmod), da_status_success);
+    ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
+    ASSERT_EQ(preload(*opts), da_status_success);
+    ASSERT_EQ(da_options_set_s_real(nullptr, "float option", value),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_get_s_real(nullptr, "float option", &value),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_options_set_s_real(handle, "float option", value), da_status_success);
+    ASSERT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
+    ASSERT_EQ(5.0f, value);
+    // Try to get wrong option
+    ASSERT_EQ(da_options_get_s_real(handle, "nonexistent option", &value),
+              da_status_option_not_found);
+    // Try to set option with incorrect value
+    value = 20.0f;
+    ASSERT_EQ(da_options_set_s_real(handle, "float option", value),
+              da_status_option_invalid_value);
+    // Try to set option with incorrect value
+    int iv = 1;
+    ASSERT_EQ(da_options_set_int(handle, "double option", iv),
+              da_status_option_wrong_type);
+    ASSERT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
+    double dv;
+    ASSERT_EQ(da_options_get_d_real(handle, "float option", &dv), da_status_wrong_type);
+    ASSERT_EQ(da_options_set_d_real(handle, "float option", dv), da_status_wrong_type);
+    da_handle_destroy(&handle);
+};
+
+TEST(OpRegistryWrappers, getset_bool) {
+    ASSERT_EQ(da_options_set_bool(nullptr, "bool option", true),
+              da_status_invalid_pointer);
+    bool value;
+    ASSERT_EQ(da_options_get_bool(nullptr, "bool option", &value),
+              da_status_invalid_pointer);
+};
 } // namespace
