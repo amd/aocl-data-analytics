@@ -9,11 +9,23 @@
 
 extern "C" {
 /* C interface to the reverse communication lbfgsb solver */
-void setulb_d_(int *n, int *m, double *x, double *l, double *u, int *nbd, double *f,
+void
+#if defined(_WIN32)
+SETULB_D
+#else
+setulb_d_
+#endif
+		(int *n, int *m, double *x, double *l, double *u, int *nbd, double *f,
                double *g, double *factr, double *pgtol, double *wa, int *iwa, int *itask,
                int *iprint, int *icsave, int *lsavei, int *isave, double *dsave);
 
-void setulb_s_(int *n, int *m, float *x, float *l, float *u, int *nbd, float *f, float *g,
+void
+#if defined(_WIN32)
+SETULB_S
+#else
+setulb_s_
+#endif
+(int *n, int *m, float *x, float *l, float *u, int *nbd, float *f, float *g,
                float *factr, float *pgtol, float *wa, int *iwa, int *itask, int *iprint,
                int *icsave, int *lsavei, int *isave, float *dsave);
 }
@@ -23,14 +35,24 @@ inline void setulb(int *n, int *m, double *x, double *l, double *u, int *nbd, do
                    double *g, double *factr, double *pgtol, double *wa, int *iwa,
                    int *itask, int *iprint, int *icsave, int *lsavei, int *isave,
                    double *dsave) {
-    setulb_d_(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, icsave,
+#if defined(_WIN32)
+SETULB_D
+#else
+setulb_d_
+#endif
+(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, icsave,
               lsavei, isave, dsave);
 }
 
 inline void setulb(int *n, int *m, float *x, float *l, float *u, int *nbd, float *f,
                    float *g, float *factr, float *pgtol, float *wa, int *iwa, int *itask,
                    int *iprint, int *icsave, int *lsavei, int *isave, float *dsave) {
-    setulb_s_(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, icsave,
+#if defined(_WIN32)
+SETULB_S
+#else
+setulb_s_
+#endif
+(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, icsave,
               lsavei, isave, dsave);
 }
 
@@ -40,8 +62,8 @@ template <typename T> void lbfgs_prec(T &factr, T &pgtol) {
      * single => pgtol ~ 6.0e-03
      *        => factr ~ 1.0e03
      */
-    pgtol = pow(std::numeric_limits<T>::epsilon(), 0.32);
-    factr = pow(10., std::numeric_limits<T>::digits10 / 2);
+    pgtol = (T)pow(std::numeric_limits<T>::epsilon(), (T)0.32);
+    factr = (T)pow((T)10., (T)(std::numeric_limits<T>::digits10) / 2);
 }
 
 /* Internal memory for lbfgsb */
@@ -52,8 +74,8 @@ template <typename T> struct lbfgsb_data {
     T *wa = nullptr;
 
     // TODO these should be options
-    T factr = 1.0e07;
-    T pgtol = 1.0e-05;
+    T factr = (T)1.0e07;
+    T pgtol = (T)1.0e-05;
     int iprint = 0;
 };
 

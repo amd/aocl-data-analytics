@@ -36,6 +36,8 @@ Modifications Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserve
 #if defined(_MSC_VER)
 #define strcasecmp( s1, s2 ) _stricmp( s1, s2 )
 #define strncasecmp( s1, s2, i1 ) _strnicmp( s1, s2, i1 )
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
 #endif
 
 #define isdigit_ascii(c) (((unsigned)(c) - '0') < 10u)

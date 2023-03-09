@@ -92,6 +92,9 @@ typedef enum {
 
 typedef enum { QUOTE_MINIMAL, QUOTE_ALL, QUOTE_NONNUMERIC, QUOTE_NONE } QuoteStyle;
 
+#undef ERROR
+#undef WARN
+#undef SKIP
 typedef enum { ERROR, WARN, SKIP } BadLineHandleMethod;
 
 typedef void *(*io_callback)(void *src, size_t nbytes, size_t *bytes_read, int *status,

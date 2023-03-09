@@ -45,7 +45,7 @@ void objgrd_mse(da_int n, da_int m, T *x, std::vector<T> &grad, const T *A, cons
     if (intercept) {
         grad[n - 1] = 0.0;
         for (da_int i = 0; i < m; i++)
-            grad[n - 1] += 2.0 * y[i];
+            grad[n - 1] += (T)2.0 * y[i];
     }
 }
 

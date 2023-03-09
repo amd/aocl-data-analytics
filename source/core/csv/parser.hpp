@@ -124,7 +124,6 @@ inline da_status da_parser_set_option(da_handle handle, da_handle_option option,
 
     char *p_end;
     int64_t i64temp;
-    uint64_t ui64temp;
 
     switch (option) {
     case csv_option_delimiter:
