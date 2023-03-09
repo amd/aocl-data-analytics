@@ -12,6 +12,9 @@
 #include <iostream>
 #include <vector>
 
+#undef min
+#undef max
+
 // used to pass pointers to optimization callbacks
 template <typename T> struct fit_usrdata {
     da_int m;
@@ -164,9 +167,10 @@ template <typename T> void objfun_mse(da_int n, T *x, T *f, void *usrdata) {
                         x, 1, beta, y, 1);
     *f = 0.0;
     T lin_comb;
+
     for (da_int i = 0; i < m; i++) {
         lin_comb = data->intercept ? x[n - 1] + y[i] : y[i];
-        *f += pow(lin_comb - data->b[i], 2.0);
+        *f += pow(lin_comb - data->b[i], (T)2.0);
     }
 }
 
@@ -193,7 +197,7 @@ template <typename T> void objgrd_mse(da_int n, T *x, T *grad, void *usrdata) {
     if (data->intercept) {
         grad[n - 1] = 0.0;
         for (da_int i = 0; i < m; i++)
-            grad[n - 1] += 2.0 * y[i];
+            grad[n - 1] += (T)2.0 * y[i];
     }
 }
 

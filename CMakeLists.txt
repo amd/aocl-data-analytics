@@ -27,21 +27,44 @@ endif()
 # modules directory for easy include
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-if($ENV{USER} MATCHES "bmarteau")
-    set(ENV{AOCL_ROOT} /home/bmarteau/amd/aocl/4.0)
+if(WIN32)
+  set(CMAKE_FIND_LIBRARY_PREFIXES "")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
+  # Set environment variables for users, add your own paths here or directly on
+  # the environment
+  if($ENV{USERNAME} MATCHES "ehopkins")
+    set(ENV{AOCL_INSTALL} "C:/Program Files/AMD/AOCL-Windows")
+    set(ENV{IFORT_LIBS} "C:/Program Files (x86)/Intel/oneAPI/compiler/2023.0.0/windows/compiler/lib/intel64_win")
+  endif()
+  message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
+  if (NOT BUILD_ILP64)
+    find_library(BLIS name AOCL-LibBlis-Win-dll PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/LP64" REQUIRED)
+    find_library(FLAME name AOCL-LibFlame-Win-dll PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/LP64" REQUIRED)
+	include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/LP64")
+	include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/LP64")
+  else()
+    find_library(BLIS name AOCL-LibBlis-Win-dll PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/ILP64" REQUIRED)
+    find_library(FLAME name AOCL-LibFlame-Win-dll PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/ILP64" REQUIRED)
+	include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/ILP64")
+	include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/ILP64")
+  endif()
+else()
+
+  if($ENV{USER} MATCHES "bmarteau")
+      set(ENV{AOCL_ROOT} /home/bmarteau/amd/aocl/4.0)
 endif()
 if($ENV{USER} MATCHES "andrsajo")
     set(ENV{AOCL_ROOT} /home/andrsajo/amd/aocl/4.0)
-endif()
-if($ENV{USER} MATCHES "ehopkins")
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        set(ENV{AOCL_ROOT} /opt/AMD/aocl/aocl-linux-gcc-4.0)
-    elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-        set(ENV{AOCL_ROOT} /opt/AMD/aocl/aocl-linux-aocc-4.0)
-    else()
-        message(FATAL_ERROR "GCC or CLANG compiler must be used")
-    endif()
-endif()
+  endif()
+  if($ENV{USER} MATCHES "ehopkins")
+      if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+          set(ENV{AOCL_ROOT} /opt/AMD/aocl/aocl-linux-gcc-4.0)
+      elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+          set(ENV{AOCL_ROOT} /opt/AMD/aocl/aocl-linux-aocc-4.0)
+      else()
+          message(FATAL_ERROR "GCC or CLANG compiler must be used")
+      endif()
+  endif()
 
 if(NOT DEFINED ENV{AOCL_ROOT})
     message(FATAL_ERROR "Environmental variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again.")
@@ -58,6 +81,8 @@ if(NOT BUILD_ILP64)
     include_directories($ENV{AOCL_ROOT}/include_LP64)
 else()
     include_directories($ENV{AOCL_ROOT}/include_ILP64)
+endif()
+
 endif()
 
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
@@ -86,41 +111,56 @@ if(COMPILER_BASENAME MATCHES "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\
 else()
     set(CLANG_OPTIONS_STYLE "GNU")
 endif()
-
-# GNU style compiler flags
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL "GNU"))
-    # Common flags
-    set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma")
-
-    # Release flags
-    set(COMPILER_FLAGS_RELEASE
-        "-DNDEBUG;-O2;-ffast-math;-ftree-vectorize;-funroll-loops;-ffp-contract=fast"
-    )
-    set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;-Wall;-Wextra")
-
-    if(USE_AVX512)
-        set(COMPILER_FLAGS_COMMON
-            "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
-    endif()
-
-    # TODO add MSVC style flags
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  # MSVC compiler flags
+  set(COMPILER_FLAGS_COMMON "/openmp;/arch:AVX2")
+  set(COMPILER_FLAGS_CXX "/std:c++17;/EHsc")
+  if(USE_AVX512)
+    set(COMPILER_FLAGS_COMMON
+        "${COMPILER_FLAGS_COMMON}; /arch:AVX512")
+  endif()
+  set(COMPILER_FLAGS_RELEASE
+      "/DNDEBUG;/O2;/fp:fast;/Qvec")
+  set(COMPILER_FLAGS_DEBUG
+      "/Od")
+  set(COMPILER_FLAGS_CXX_DEBUG "/W3")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL "GNU"))
+  # GNU style compiler flags
+  # Common flags
+  set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma")
+  # Release flags
+  set(COMPILER_FLAGS_RELEASE
+      "-DNDEBUG;-O2;-ffast-math;-ftree-vectorize;-funroll-loops;-ffp-contract=fast"
+  )
+  set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;-Wall;-Wextra")
+  if(USE_AVX512)
+    set(COMPILER_FLAGS_COMMON
+        "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
+  endif()
 endif()
 
 if(CHECK_MEM)
-    list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
-    link_libraries("-fsanitize=address")
+  if (WIN32)
+    message(FATAL_ERROR "Memory checking builds are not available on Windows")
+  endif()
+  list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
+  link_libraries("-fsanitize=address")
 endif()
 
 if(COVERAGE)
-    # Include coverage flags and targets
-    include(Coverage)
-    set(COV_EXECUTABLES "")
+  if (WIN32)
+    message(FATAL_ERROR "Coverage builds are not available on Windows")
+  endif()
+  # Include coverage flags and targets
+  include(Coverage)
+  set(COV_EXECUTABLES "")
 endif()
 
+add_compile_options("${COMPILER_FLAGS_COMMON};$<$<COMPILE_LANGUAGE:CXX>:${COMPILER_FLAGS_CXX}>")
 add_compile_options(
-    "$<$<CONFIG:Release>:${COMPILER_FLAGS_COMMON};${COMPILER_FLAGS_RELEASE}>")
+  "$<$<CONFIG:Release>:${COMPILER_FLAGS_RELEASE}>")
 add_compile_options(
-    "$<$<CONFIG:Debug>:${COMPILER_FLAGS_COMMON};${COMPILER_FLAGS_DEBUG}>")
+  "$<$<CONFIG:Debug>:${COMPILER_FLAGS_DEBUG};$<$<OR:$<COMPILE_LANGUAGE:CXX>,$<COMPILE_LANGUAGE:C>>:${COMPILER_FLAGS_CXX_DEBUG}>>")
 
 # compile external packages
 add_subdirectory(external/Lbfgsb.3.0)

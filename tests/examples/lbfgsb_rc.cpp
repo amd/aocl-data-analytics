@@ -48,7 +48,12 @@ int main() {
      */
     bool compute_fg = true;
     while (itask == 2 || itask == 1 || compute_fg) {
-        setulb_d_(&n, &m, x, l, u, nbd, &f, g, &factr, &pgtol, wa, iwa, &itask, &iprint,
+		#if defined(_WIN32)
+        SETULB_D
+		#else
+		setulb_d_
+		#endif
+		(&n, &m, x, l, u, nbd, &f, g, &factr, &pgtol, wa, iwa, &itask, &iprint,
                   &icsave, lsavei, isave, dsave);
         compute_fg = itask == 4 ||  // 'FG'
                      itask == 21 || // 'FG_START'

@@ -120,7 +120,7 @@ template <typename T> opt_status da_optimization<T>::select_solver(opt_solvers s
         // derivative based solver, need to allocate gradient memory
         g.resize(n);
         // TODO m and bigbnd need to be options
-        init_lbfgsb_data<T>(soldata_lbfgsb, n, 2, 1.0e20, l, u);
+        init_lbfgsb_data<T>(soldata_lbfgsb, n, 2, (T)1.0e20, l, u);
         break;
 
     default:

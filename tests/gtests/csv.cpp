@@ -1,3 +1,7 @@
+/* disable some MSVC warnings about strcat */
+#define _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_DEPRECATE
+
 #include "aoclda.h"
 #include "utest_utils.hpp"
 #include "gtest/gtest.h"
@@ -33,8 +37,8 @@ template <> void GetBasicData<float>(CSVParamType<float> *params) {
     params->filename = "csv_test_float";
     params->expected_rows = 3;
     params->expected_columns = 5;
-    std::vector<float> data{1.1,     1e3, 4.1e-3, 0.03e6, 2,   -1,  -3.2,  -4.5e4,
-                            -5.6e-7, -10, 0.0,    0.0,    0.0, 0.0, 4.5e+5};
+    std::vector<float> data{1.1f,     1e3f, 4.1e-3f, 0.03e6f, 2.f,   -1.f,  -3.2f,  -4.5e4f,
+                            -5.6e-7f, -10.f, 0.0f,    0.0f,    0.0f, 0.0f, 4.5e+5f};
     params->expected_data = data;
     std::vector<std::string> headings = {"one", "cat two", "three", "FOUR", "Five"};
     params->expected_headings = headings;
@@ -112,8 +116,8 @@ template <> void GetMissingData<float>(CSVParamType<float> *params) {
     params->filename = "csv_test_float_missing_data";
     params->expected_rows = 3;
     params->expected_columns = 5;
-    std::vector<float> data{1.1,     NAN, 4.1e-3, 0.03e6, 2,   -1,  -3.2,  -4.5e4,
-                            -5.6e-7, NAN, NAN,    0.0,    0.0, 0.0, 4.5e+5};
+    std::vector<float> data{1.1f,     NAN, 4.1e-3f, 0.03e6f, 2.f,   -1.f,  -3.2f,  -4.5e4f,
+                            -5.6e-7f, NAN, NAN,    0.0f,    0.0f, 0.0f, 4.5e+5f};
     params->expected_data = data;
 }
 
@@ -292,8 +296,8 @@ TYPED_TEST(CSVTest, warn_for_missing_data) {
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
-            if (std::isnan((TypeParam)params->expected_data[j + ncols * i])) {
-                ASSERT_TRUE(std::isnan((TypeParam)a[j + ncols * i]));
+            if (std::isnan(static_cast<double>(params->expected_data[j + ncols * i]))) {
+                ASSERT_TRUE(std::isnan(static_cast<double>(a[j + ncols * i])));
             } else {
                 ASSERT_EQ(a[j + ncols * i], params->expected_data[j + ncols * i]);
             }

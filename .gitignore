@@ -1,4 +1,5 @@
 # Vscode temporary files
 .vscode
+.vs
 # build artifacts
 build*

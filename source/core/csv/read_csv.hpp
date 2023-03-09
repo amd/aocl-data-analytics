@@ -4,6 +4,7 @@
 #include <new>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include "aoclda.h"
 #include "da_handle.hpp"
@@ -68,9 +69,9 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
     }
 
     //Guard against header-only csv file
-    if (lines == first_line) {
+    if (lines == (uint64_t)first_line) {
         *nrows = 0;
-        *ncols = words_len;
+        *ncols = (da_int)words_len;
         *a = nullptr;
         return da_status_success;
     }
@@ -100,7 +101,7 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
                 free(data);
             snprintf(
                 handle->error_message, ERR_MSG_LEN,
-                "Line %i had an unexpected number of fields (fields %i, expected %i).", i,
+                "Line %" PRIu64 " had an unexpected number of fields (fields %" PRId64 ", expected %" PRId64 ").", i,
                 parser->line_fields[i], fields_per_line_signed);
             return da_status_ragged_csv;
         }
@@ -114,11 +115,11 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
                 if (parser->warn_for_missing_data) {
                     missing_data(&data[j - (int64_t)first_line * fields_per_line_signed]);
                     snprintf(handle->error_message, ERR_MSG_LEN,
-                             "Missing data on line %i, entry %i.", i, j);
+                             "Missing data on line %" PRIu64 ", entry %" PRId64 ".", i, j);
                     error = da_status_warn_missing_data;
                 } else {
                     snprintf(handle->error_message, ERR_MSG_LEN,
-                             "Unable to parse entry on line %i entry %i.", i, j);
+                             "Unable to parse entry on line %" PRIu64 " entry %" PRId64 ".", i, j);
                     *a = nullptr;
                     if (data)
                         free(data);
@@ -129,7 +130,7 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
     }
 
     *nrows = (da_int)lines - first_line;
-    *ncols = fields_per_line;
+    *ncols = (da_int)fields_per_line;
     *a = data;
     return error;
 }
