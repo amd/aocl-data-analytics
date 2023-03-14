@@ -112,18 +112,18 @@ template <> da_status da_linreg_fit<float>(da_handle handle) {
     return da_linmod_s_fit(handle);
 }
 
-inline da_status da_linreg_get_coef(da_handle handle, da_int *nc, double *x) {
+inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, double *x) {
     return da_linmod_d_get_coef(handle, nc, x);
 }
-inline da_status da_linreg_get_coef(da_handle handle, da_int *nc, float *x) {
+inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, float *x) {
     return da_linmod_s_get_coef(handle, nc, x);
 }
 
-inline da_status da_linreg_evaluate_model(da_handle handle, da_int n, da_int m, double *X,
+inline da_status da_linmod_evaluate_model(da_handle handle, da_int n, da_int m, double *X,
                                           double *predictions) {
     return da_linmod_d_evaluate_model(handle, n, m, X, predictions);
 }
-inline da_status da_linreg_evaluate_model(da_handle handle, da_int n, da_int m, float *X,
+inline da_status da_linmod_evaluate_model(da_handle handle, da_int n, da_int m, float *X,
                                           float *predictions) {
     return da_linmod_s_evaluate_model(handle, n, m, X, predictions);
 }

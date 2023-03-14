@@ -118,7 +118,7 @@ template <typename T> linear_model<T>::~linear_model() {
 
 template <typename T>
 da_status linear_model<T>::define_features(da_int n, da_int m, T *A, T *b) {
-    if (n <= 0 || m <= 0 || b == nullptr)
+    if (n <= 0 || m <= 0 || A==nullptr || b == nullptr)
         return da_status_invalid_input;
 
     model_trained = false;
@@ -161,7 +161,6 @@ template <typename T> void objfun_mse(da_int n, T *x, T *f, void *usrdata) {
     da_int m = data->m;
     T alpha = 1.0, beta = 0.0;
     T *y = data->y;
-
     da_int aux = data->intercept ? 1 : 0;
     da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n - aux, alpha, data->A, m,
                         x, 1, beta, y, 1);
@@ -252,7 +251,7 @@ template <typename T> void objgrd_logistic(da_int n, T *x, T *grad, void *usrdat
     if (data->intercept) {
         grad[n - 1] = 0.0;
         for (da_int i = 0; i < m; i++) {
-            lin_comb = data->intercept ? x[n - 1] + y[i] : y[i];
+            lin_comb = x[n - 1] + y[i];
             grad[n - 1] += (logistic(lin_comb) - b[i]);
         }
     }
@@ -268,27 +267,27 @@ da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> obj
         opt = new da_optimization<T>();
         opt->declare_vars(ncoef);
         opt->select_solver(solver_lbfgsb);
-        if (objfun == nullptr || objgrd == nullptr)
-            return da_status_invalid_input;
         opt->user_objective(objfun);
         opt->user_gradient(objgrd);
         init_usrdata();
         break;
 
     default:
-        return da_status_not_implemented;
+        return da_status_internal_error;
     }
 
     return da_status_success;
 }
 
 template <typename T> da_status linear_model<T>::get_coef(da_int &nx, T *x) {
+    if (!model_trained)
+        return da_status_out_of_date;
     if (nx != ncoef) {
         nx = ncoef;
         return da_status_invalid_input;
     }
-    if (!model_trained)
-        return da_status_out_of_date;
+    if (x == nullptr)
+        return da_status_invalid_input;
 
     da_int i;
     for (i = 0; i < ncoef; i++)
@@ -301,7 +300,7 @@ template <typename T>
 da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictions) {
     da_int i;
 
-    if (n != this->n)
+    if (n != this->n || m <= 0)
         return da_status_invalid_input;
     if (X == nullptr || predictions == nullptr)
         return da_status_invalid_pointer;
@@ -367,13 +366,22 @@ template <typename T> da_status linear_model<T>::fit() {
 
     switch (mod) {
     case linmod_model_mse:
-        if (l_nrm1 == 0.0 && l_nrm2 == 0.0) {
-            // No regularization, standard linear least-squares through QR factorization
-            qr_lsq();
-        } else {
+        switch (id) {
+        case 1:
             // Call LBFGS
             init_opt_model(fit_opt_nln, &objfun_mse<T>, &objgrd_mse<T>);
             opt->solve(coef, usrdata);
+            break;
+
+        case 2:
+            // No regularization, standard linear least-squares through QR factorization
+            qr_lsq();
+            break;
+
+        default:
+            // cannot happen
+            return da_status_internal_error;
+            break;
         }
         break;
 

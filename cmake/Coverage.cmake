@@ -7,16 +7,20 @@ link_libraries(gcov)
 
 # create a coverage_reports directory in the main build dir
 set(COV_DIR ${CMAKE_BINARY_DIR}/coverage_reports)
-add_custom_target(create_cov_dir COMMAND ${CMAKE_COMMAND} -E make_directory
+add_custom_target(create-cov-dir COMMAND ${CMAKE_COMMAND} -E make_directory
                                          ${COV_DIR})
+add_custom_target( clean-coverage
+  COMMAND ${CMAKE_COMMAND} -E  rm -rf ${CMAKE_BINARY_DIR}/coverage_reports/*
+)
 
 # create coverage target for ctest make coverage will run ctest and build a
 # report in the build directory
 add_custom_target(
   coverage
-  DEPENDS create_cov_dir
+  COMMAND ${CMAKE_MAKE_PROGRAM} -C ${CMAKE_CURRENT_BINARY_DIR} create-cov-dir
   COMMAND ${CMAKE_MAKE_PROGRAM} -C ${CMAKE_CURRENT_BINARY_DIR} all
-  COMMAND ctest > /dev/null
+  COMMAND ${CMAKE_MAKE_PROGRAM} -C ${CMAKE_CURRENT_BINARY_DIR} clean-coverage
+  COMMAND CLICOLOR=0 ctest --timeout 20 --output-junit Testing/Temporary/LastTest_JUnit.xml || true
   COMMAND ${GCOVR_PATH} --html ${COV_DIR}/index.html --html-details -r
           ${CMAKE_SOURCE_DIR} -e .*_deps*. .*/build/.*)
 
