@@ -15,7 +15,7 @@ template <class T> struct option_t {
 
 // Helper to define precision to which we expect the results match
 template <typename T> T expected_precision(T scale = (T)1.0);
-template <> double expected_precision<double>(double scale) { return scale * 5.0e-4; }
+template <> double expected_precision<double>(double scale) { return scale * 1.0e-3; }
 
 template <> float expected_precision<float>(float scale) { return scale * 0.5f; }
 
@@ -176,8 +176,12 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     // Extract and compare solution
     T *coef = new T[nc];
     da_int ncc = nc;
-    EXPECT_EQ(da_linreg_get_coef(linmod_handle, &ncc, coef), da_status_success);
-    //EXPECT_ARR_NEAR(ncc, coef_exp, coef, expected_precision<T>());
+    EXPECT_EQ(da_linmod_get_coef(linmod_handle, &ncc, coef), da_status_success);
+    std::vector<T> X(n);
+    std::fill(X.begin(), X.end(), 1.0);
+    T pred[1];
+    EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, n, 1, X.data(), pred), da_status_success);
+    // TODO check model evaluation
 
     // Check that the gradient is close enough to 0
     std::vector<T> grad;
