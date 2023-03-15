@@ -73,9 +73,9 @@ endif()
 # find dependencies. all aocl libraries are allowed it is assumed that aocl is
 # installed either on the system's paths or in a folder designated by the
 # environment variable AOCL_ROOT
-find_library(BLIS name blis PATHS $ENV{AOCL_ROOT}/lib REQUIRED)
+find_library(BLIS name blis PATHS $ENV{AOCL_ROOT}/lib REQUIRED NO_DEFAULT_PATH)
 
-find_library(FLAME name flame PATHS $ENV{AOCL_ROOT}/lib REQUIRED)
+find_library(FLAME name flame PATHS $ENV{AOCL_ROOT}/lib REQUIRED NO_DEFAULT_PATH)
 
 if(NOT BUILD_ILP64)
     include_directories($ENV{AOCL_ROOT}/include_LP64)
@@ -132,7 +132,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR (CMAKE_CXX_COMPILER_ID STREQUAL "C
   set(COMPILER_FLAGS_RELEASE
       "-DNDEBUG;-O2;-ffast-math;-ftree-vectorize;-funroll-loops;-ffp-contract=fast"
   )
-  set(COMPILER_FLAGS_DEBUG "-O0;-g3;-Wall;-Wextra")
+  set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;-Wall;-Wextra")
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON
         "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
