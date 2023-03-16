@@ -22,7 +22,7 @@ add_custom_target(
   COMMAND ${CMAKE_MAKE_PROGRAM} -C ${CMAKE_CURRENT_BINARY_DIR} clean-coverage
   COMMAND CLICOLOR=0 ctest --timeout 20 --output-junit Testing/Temporary/LastTest_JUnit.xml || true
   COMMAND ${GCOVR_PATH} --html ${COV_DIR}/index.html --html-details -r
-          ${CMAKE_SOURCE_DIR} -e .*_deps*. .*/build/.*)
+          ${CMAKE_SOURCE_DIR} -e .*_deps*.)
 
 # function to build a coverage report from a set of executable names argument:
 # string containing a list of all executables to run - runs all the executables
