@@ -1,10 +1,10 @@
 #ifndef READ_CSV_HPP
 #define READ_CSV_HPP
 
+#include <inttypes.h>
 #include <new>
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
 
 #include "aoclda.h"
 #include "da_handle.hpp"
@@ -16,7 +16,7 @@
 da_status parse_file(da_handle handle, const char *filename) {
 
     da_status error = da_status_success;
-    parser_t *parser = handle->parser;
+    parser_t *parser = handle->csv_parser->parser;
     int err;
 
     FILE *fp = nullptr;
@@ -48,7 +48,7 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
                               da_int first_line) {
 
     da_status tmp_error = da_status_success, error = da_status_success;
-    parser_t *parser = handle->parser;
+    parser_t *parser = handle->csv_parser->parser;
 
     uint64_t lines = parser->lines;
     uint64_t words_len = parser->words_len;
@@ -99,10 +99,11 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
         if (parser->line_fields[i] != fields_per_line_signed) {
             if (data)
                 free(data);
-            snprintf(
-                handle->error_message, ERR_MSG_LEN,
-                "Line %" PRIu64 " had an unexpected number of fields (fields %" PRId64 ", expected %" PRId64 ").", i,
-                parser->line_fields[i], fields_per_line_signed);
+            snprintf(handle->error_message, ERR_MSG_LEN,
+                     "Line %" PRIu64
+                     " had an unexpected number of fields (fields %" PRId64
+                     ", expected %" PRId64 ").",
+                     i, parser->line_fields[i], fields_per_line_signed);
             return da_status_ragged_csv;
         }
         for (int64_t j = parser->line_start[i];
@@ -115,11 +116,14 @@ da_status populate_data_array(da_handle handle, T **a, da_int *nrows, da_int *nc
                 if (parser->warn_for_missing_data) {
                     missing_data(&data[j - (int64_t)first_line * fields_per_line_signed]);
                     snprintf(handle->error_message, ERR_MSG_LEN,
-                             "Missing data on line %" PRIu64 ", entry %" PRId64 ".", i, j);
+                             "Missing data on line %" PRIu64 ", entry %" PRId64 ".", i,
+                             j);
                     error = da_status_warn_missing_data;
                 } else {
                     snprintf(handle->error_message, ERR_MSG_LEN,
-                             "Unable to parse entry on line %" PRIu64 " entry %" PRId64 ".", i, j);
+                             "Unable to parse entry on line %" PRIu64 " entry %" PRId64
+                             ".",
+                             i, j);
                     *a = nullptr;
                     if (data)
                         free(data);
@@ -146,10 +150,15 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
         return error;
     }
 
+    error = handle->csv_parser->read_options();
+    if (error != da_status_success) {
+        return error;
+    }
+
     error = parse_file(handle, filename);
 
     if (!(error == da_status_success) && !(error == da_status_warn_bad_lines)) {
-        parser_reset(handle->parser);
+        parser_reset(handle->csv_parser->parser);
         return error;
     }
 
@@ -158,7 +167,7 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
         error = tmp_error;
     }
 
-    tmp_error = convert_tokenizer_errors(parser_reset(handle->parser));
+    tmp_error = convert_tokenizer_errors(parser_reset(handle->csv_parser->parser));
     if (!(tmp_error == da_status_success)) {
         error = tmp_error;
     }
@@ -177,10 +186,15 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
         return error;
     }
 
+    error = handle->csv_parser->read_options();
+    if (error != da_status_success) {
+        return error;
+    }
+
     error = parse_file(handle, filename);
 
     if (!(error == da_status_success) && !(error == da_status_warn_bad_lines)) {
-        parser_reset(handle->parser);
+        parser_reset(handle->csv_parser->parser);
         return error;
     }
 
@@ -192,14 +206,14 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
 
     // now deal with headings
     if (*ncols == 0) {
-        parser_reset(handle->parser);
+        parser_reset(handle->csv_parser->parser);
         return tmp_error;
     }
 
-    if (!(*ncols == handle->parser->line_fields[0])) {
+    if (!(*ncols == handle->csv_parser->parser->line_fields[0])) {
         if (*a)
             free(*a);
-        parser_reset(handle->parser);
+        parser_reset(handle->csv_parser->parser);
         return da_status_ragged_csv;
     }
 
@@ -207,15 +221,15 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
     if (*headings == NULL) {
         if (*a)
             free(*a);
-        parser_reset(handle->parser);
+        parser_reset(handle->csv_parser->parser);
         return da_status_memory_error;
     }
 
     char *p = NULL;
     for (da_int i = 0; i < *ncols; i++) {
-        p = handle->parser->words[i];
+        p = handle->csv_parser->parser->words[i];
         // Skip leading whitespace.
-        if (handle->parser->skipinitialspace) {
+        if (handle->csv_parser->parser->skipinitialspace) {
             while (isspace_ascii(*p))
                 p++;
         }
@@ -230,13 +244,13 @@ da_status da_read_csv(da_handle handle, const char *filename, T **a, da_int *nro
             }
             if ((*headings))
                 free((*headings));
-            parser_reset(handle->parser);
+            parser_reset(handle->csv_parser->parser);
             return da_status_memory_error;
         }
         strcpy((*headings)[i], p);
     }
 
-    tmp_error = convert_tokenizer_errors(parser_reset(handle->parser));
+    tmp_error = convert_tokenizer_errors(parser_reset(handle->csv_parser->parser));
     if (!(tmp_error == da_status_success)) {
         error = tmp_error;
     }

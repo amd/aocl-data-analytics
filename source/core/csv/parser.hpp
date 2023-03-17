@@ -77,7 +77,7 @@ inline int cleanup(void *source) {
     return 0;
 }
 
-/* Destroy the da_csv_opts struct */
+/* Destroy the parser_t struct */
 inline void da_parser_destroy(parser_t **parser) {
     if (parser) {
         if (*parser) {
@@ -113,120 +113,6 @@ inline da_status da_parser_init(parser_t **parser) {
     (*parser)->cb_cleanup = cleanup;
 
     return da_status_success;
-}
-
-/* Option setting routine */
-inline da_status da_parser_set_option(da_handle handle, da_handle_option option,
-                                      char *str) {
-
-    da_status error = da_status_success;
-    parser_t *parser = handle->parser;
-
-    char *p_end;
-    int64_t i64temp;
-
-    switch (option) {
-    case csv_option_delimiter:
-        parser->delimiter = str[0];
-        break;
-    case csv_option_thousands:
-        parser->thousands = str[0];
-        break;
-
-    case csv_option_decimal:
-        parser->decimal = str[0];
-        break;
-
-    case csv_option_comment:
-        parser->commentchar = str[0];
-        break;
-
-    case csv_option_doublequote:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->doublequote = (int)i64temp;
-        }
-        break;
-
-    case csv_option_delim_whitespace:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->delim_whitespace = (int)i64temp;
-        }
-        break;
-
-    case csv_option_quotechar:
-        parser->quotechar = str[0];
-        break;
-
-    case csv_option_escapechar:
-        parser->escapechar = str[0];
-        break;
-
-    case csv_option_lineterminator:
-        parser->lineterminator = str[0];
-        break;
-
-    case csv_option_quoting:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->quoting = (int)i64temp;
-        }
-        break;
-
-    case csv_option_sci:
-        parser->sci = str[0];
-        break;
-
-    case csv_option_skip_first_N_rows:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser_set_skipfirstnrows(parser, i64temp);
-        }
-        break;
-
-    case csv_option_skip_empty_lines:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->skip_empty_lines = (int)i64temp;
-        }
-        break;
-
-    case csv_option_skip_initial_space:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->skipinitialspace = (int)i64temp;
-        }
-        break;
-
-    case csv_option_skip_footer:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->skip_footer = (int)i64temp;
-        }
-        break;
-
-    case csv_option_add_skiprow:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser_add_skiprow(parser, i64temp);
-        }
-        break;
-
-    case csv_option_warn_for_missing_data:
-        error = char_to_num(parser, str, &p_end, &i64temp, NULL);
-        if (error == da_status_success) {
-            parser->warn_for_missing_data = (int)i64temp;
-        }
-        break;
-
-    default:
-        snprintf(handle->error_message, ERR_MSG_LEN,
-                 "The specified option is not valid for csv handles.");
-        error = da_status_invalid_option;
-    }
-
-    return error;
 }
 
 #endif

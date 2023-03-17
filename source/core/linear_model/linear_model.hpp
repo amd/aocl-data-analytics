@@ -1,5 +1,5 @@
-#ifndef NLN_REG_DATA_HPP
-#define NLN_REG_DATA_HPP
+#ifndef LINEAR_MODEL_HPP
+#define LINEAR_MODEL_HPP
 
 #include "aoclda.h"
 #include "callbacks.hpp"
@@ -340,14 +340,15 @@ template <typename T> da_status linear_model<T>::fit() {
     if (model_trained)
         return da_status_success;
 
-    da_int id;
+    da_int id, intercept_int;
     std::string opt_val;
     da_status status;
 
-    opts.get("linmod intercept", &intercept);
+    opts.get("linmod intercept", &intercept_int);
     opts.get("linmod norm2 reg", &l_nrm2);
     opts.get("linmod norm1 reg", &l_nrm1);
     opts.get("linmod optim method", opt_val, id);
+    intercept = (bool)intercept_int;
 
     status = validate_options(id);
     if (status != da_status_success)

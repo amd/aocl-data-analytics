@@ -27,14 +27,12 @@
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
-da_status da_options_set_bool(da_handle handle, const char *option, bool value);
-da_status da_options_set_int(da_handle handle, const char *option, int value);
+da_status da_options_set_int(da_handle handle, const char *option, da_int value);
 da_status da_options_set_string(da_handle handle, const char *option, const char *value);
 da_status da_options_set_s_real(da_handle handle, const char *option, float value);
 da_status da_options_set_d_real(da_handle handle, const char *option, double value);
 
-da_status da_options_get_bool(da_handle handle, const char *option, bool *value);
-da_status da_options_get_int(da_handle handle, const char *option, int *value);
+da_status da_options_get_int(da_handle handle, const char *option, da_int *value);
 da_status da_options_get_string(da_handle handle, const char *option, char *value, size_t lvalue);
 da_status da_options_get_s_real(da_handle handle, const char *option, float *value);
 da_status da_options_get_d_real(da_handle handle, const char *option, double *value);

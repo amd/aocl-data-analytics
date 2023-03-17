@@ -102,6 +102,7 @@ typedef void *(*io_callback)(void *src, size_t nbytes, size_t *bytes_read, int *
 typedef int (*io_cleanup)(void *src);
 
 typedef struct parser_t {
+
     void *source;
     io_callback cb_io;
     io_cleanup cb_cleanup;

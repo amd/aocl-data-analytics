@@ -24,22 +24,27 @@
 #ifndef LINMOD_OPTIONS_HPP
 #define LINMOD_OPTIONS_HPP
 
-#include "aoclda.h"
-#include "linear_model.hpp"
 #include "options.hpp"
 #include <limits>
 
-template <class T> da_status register_linmod_options(da_options::OptionRegistry &opts) {
+// Needed for windows build
+#undef min
+#undef max
+
+template <class T>
+inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
     using namespace da_options;
     T safe_eps = (T)2.0 * std::numeric_limits<T>::epsilon();
     T safe_tol = std::sqrt(safe_eps);
     T max_real = std::numeric_limits<T>::max();
 
     try {
-        std::shared_ptr<OptionNumeric<bool>> ob;
-        ob = std::make_shared<OptionNumeric<bool>>(OptionNumeric<bool>(
-            "linmod intercept", "Add intercept variable to the model", false));
-        opts.register_opt(ob);
+
+        std::shared_ptr<OptionNumeric<da_int>> oi;
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "linmod intercept", "Add intercept variable to the model", 0,
+            da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
+        opts.register_opt(oi);
 
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(
@@ -61,7 +66,7 @@ template <class T> da_status register_linmod_options(da_options::OptionRegistry 
 
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
-    } catch (...) { // LCOV_EXCL_LINE
+    } catch (...) {                    // LCOV_EXCL_LINE
         // invalid use of the constructor, shouldn't happen (invalid_argument))
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
