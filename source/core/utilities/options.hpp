@@ -33,6 +33,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <map>
 #include <type_traits>
 #include <unordered_map>
 
@@ -133,7 +134,7 @@ class OptionBase {
             bool has_nan = std::numeric_limits<T>::has_quiet_NaN;
             // Check all inputs
             if (has_nan) {
-                if (std::isnan(upper) || std::isnan(lower)) {
+                if (std::isnan(static_cast<double>(upper)) || std::isnan(static_cast<double>(lower))) {
                     errmsg =
                         "Option '" + name + "': Either lower or upper are not finite.";
                     return da_status_option_invalid_bounds;
@@ -155,7 +156,7 @@ class OptionBase {
                 }
             }
             if (has_nan) {
-                if (std::isnan(value)) {
+                if (std::isnan(static_cast<double>(value))) {
                     errmsg = "Option '" + name + "': Invalid value.";
                     return da_status_option_invalid_value;
                 }
@@ -359,44 +360,45 @@ class OptionString : public OptionBase {
         if (status != da_status_success)
             throw std::invalid_argument(errmsg);
 
-        if (labels.size() == 0) {
-            errmsg =
-                "Option '" + name + "': Label's map must contain at least one entry.";
-            throw std::invalid_argument(errmsg);
-        }
         label_vdefault = vdefault;
         util.prep_str(label_vdefault);
-        if (label_vdefault == "") {
-            errmsg = "Option '" + name +
-                     "': Invalid default value (string reduced to zero-length).";
-            throw std::invalid_argument(errmsg);
-        }
         if (vdefault != label_vdefault) {
             errmsg = "Option '" + name +
-                     "': Default label changed after processing, replace '" + vdefault +
-                     "' by '" + label_vdefault + "'.";
+                     "': Default string option changed after processing, replace '" +
+                     vdefault + "' by '" + label_vdefault + "'.";
             throw std::invalid_argument(errmsg);
         }
-        for (const auto &entry : labels) {
-            label = entry.first;
-            util.prep_str(label);
-            if (label == "") {
+
+        if (labels.size() != 0) {
+            // Deal with categorical data slightly differently from freeform string options
+
+            if (label_vdefault == "") {
                 errmsg = "Option '" + name +
-                         "': Invalid option value (string reduced to zero-length).";
-                throw std::invalid_argument(errmsg);
-            } else if (label != entry.first) {
-                errmsg = "Option '" + name +
-                         "': Label changed after processing, replace '" + entry.first +
-                         "' by '" + label + "'.";
+                         "': Invalid default value (string reduced to zero-length).";
                 throw std::invalid_argument(errmsg);
             }
-            if (label == label_vdefault)
-                defok = true;
-        }
-        // check that default is valid
-        if (!defok) {
-            errmsg = "Option '" + name + "': Default label is invalid.";
-            throw std::invalid_argument(errmsg);
+
+            for (const auto &entry : labels) {
+                label = entry.first;
+                util.prep_str(label);
+                if (label == "") {
+                    errmsg = "Option '" + name +
+                             "': Invalid option value (string reduced to zero-length).";
+                    throw std::invalid_argument(errmsg);
+                } else if (label != entry.first) {
+                    errmsg = "Option '" + name +
+                             "': Label changed after processing, replace '" +
+                             entry.first + "' by '" + label + "'.";
+                    throw std::invalid_argument(errmsg);
+                }
+                if (label == label_vdefault)
+                    defok = true;
+            }
+            // check that default is valid
+            if (!defok) {
+                errmsg = "Option '" + name + "': Default label is invalid.";
+                throw std::invalid_argument(errmsg);
+            }
         }
 
         OptionString::labels = labels;
@@ -420,35 +422,41 @@ class OptionString : public OptionBase {
             rec << " * | **" << name << "** | string | \\f$ s = \\f$ `" << vdefault
                 << "` |" << endl;
             rec << " * | " << desc << "|||" << endl;
-            rec << " * | "
-                << "Valid values: \\f$s =\\f$ ";
-            {
-                da_int n = labels.size();
-                for (auto const &it : labels) {
-                    rec << "`" << it.first << "`";
-                    switch (n) {
-                    case 1:
-                        rec << ".";
-                        break;
-                    case 2:
-                        rec << ", or ";
-                        break;
-                    default:
-                        rec << ", ";
-                        break;
+            if (labels.size() > 0) {
+                // categorical options
+                rec << " * | "
+                    << "Valid values: \\f$s =\\f$ ";
+                {
+                    size_t n = labels.size();
+                    for (auto const &it : labels) {
+                        rec << "`" << it.first << "`";
+                        switch (n) {
+                        case 1:
+                            rec << ".";
+                            break;
+                        case 2:
+                            rec << ", or ";
+                            break;
+                        default:
+                            rec << ", ";
+                            break;
+                        }
+                        n--;
                     }
-                    n--;
+                    rec << " |||" << endl;
                 }
-                rec << " |||" << endl;
             }
         } else {
             rec << "Begin Option [String]" << endl;
             rec << "   Name: '" << name << "'" << endl;
             rec << "   Value: '" << value << "'     [default: '" << vdefault << "']"
                 << endl;
-            rec << "   Valid values: " << endl;
-            for (auto const &it : labels) {
-                rec << "      '" << it.first << "' : " << it.second << endl;
+            if (labels.size() > 0) {
+                //categorical options
+                rec << "   Valid values: " << endl;
+                for (auto const &it : labels) {
+                    rec << "      '" << it.first << "' : " << it.second << endl;
+                }
             }
             rec << "   Desc: " << desc << endl;
             rec << "   Set-by: " << setby_l[setby] << endl;
@@ -467,12 +475,15 @@ class OptionString : public OptionBase {
         OptionUtils util;
         util.prep_str(val);
 
-        // check that value is a valid
-        auto pos = labels.find(val);
-        if (pos == labels.end()) {
-            errmsg = "Unrecognized value '" + val + "' for option '" +
-                     OptionBase::get_name() + "'.";
-            return da_status_option_invalid_value;
+        if (labels.size() != 0) {
+            // Deal with categorical data slightly differently from freeform string options
+            // check that value is a valid
+            auto pos = labels.find(val);
+            if (pos == labels.end()) {
+                errmsg = "Unrecognized value '" + val + "' for option '" +
+                         OptionBase::get_name() + "'.";
+                return da_status_option_invalid_value;
+            }
         }
 
         OptionString::value = val;
@@ -500,6 +511,7 @@ class OptionRegistry {
     string errmsg = "";
 
     da_status register_opt(std::shared_ptr<OptionBase> o) {
+
         if (readonly) {
             errmsg = "Registry is locked";
             return da_status_option_locked;
@@ -589,7 +601,29 @@ class OptionRegistry {
         std::static_pointer_cast<OptionType>(search->second)->get(*value);
         return da_status_success;
     }
-    // Auxiliary function to get value and id from a categorical/string option.
+
+    // Auxiliary function to get value of a string option.
+    da_status get(string name, string &value) {
+        string oname = name;
+        OptionUtils util;
+        util.prep_str(oname);
+        auto search = registry.find(oname);
+        if (search == registry.end()) {
+            errmsg = "Option '" + oname + "' not found in the option registry";
+            return da_status_option_not_found;
+        }
+        option_t otype = search->second->get_option_t();
+        if (otype != option_t::opt_string) {
+            errmsg = "Option getter for'" + oname + "' of type " + option_tl[otype] +
+                     ", was called with the wrong storage type: " +
+                     option_tl[option_t::opt_string];
+            return da_status_option_wrong_type;
+        }
+        std::static_pointer_cast<OptionString>(search->second)->get(value);
+        return da_status_success;
+    }
+
+    // Auxiliary function to get value and id from a categorical/string option
     da_status get(string name, string &value, da_int &id) {
         string oname = name;
         OptionUtils util;
@@ -609,6 +643,7 @@ class OptionRegistry {
         std::static_pointer_cast<OptionString>(search->second)->get(value, id);
         return da_status_success;
     }
+
     // Auxiliary
     void print_options(void) {
         std::cout << "Begin Options" << std::endl;

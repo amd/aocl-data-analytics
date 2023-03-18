@@ -5,6 +5,8 @@
 #include "aoclda.h"
 #include "utest_utils.hpp"
 #include "gtest/gtest.h"
+#include "da_handle.hpp"
+#include "options.hpp"
 #include <cmath>
 #include <iostream>
 #include <list>
@@ -37,8 +39,9 @@ template <> void GetBasicData<float>(CSVParamType<float> *params) {
     params->filename = "csv_test_float";
     params->expected_rows = 3;
     params->expected_columns = 5;
-    std::vector<float> data{1.1f,     1e3f, 4.1e-3f, 0.03e6f, 2.f,   -1.f,  -3.2f,  -4.5e4f,
-                            -5.6e-7f, -10.f, 0.0f,    0.0f,    0.0f, 0.0f, 4.5e+5f};
+    std::vector<float> data{1.1f, 1e3f,  4.1e-3f, 0.03e6f,  2.f,
+                            -1.f, -3.2f, -4.5e4f, -5.6e-7f, -10.f,
+                            0.0f, 0.0f,  0.0f,    0.0f,     4.5e+5f};
     params->expected_data = data;
     std::vector<std::string> headings = {"one", "cat two", "three", "FOUR", "Five"};
     params->expected_headings = headings;
@@ -116,8 +119,8 @@ template <> void GetMissingData<float>(CSVParamType<float> *params) {
     params->filename = "csv_test_float_missing_data";
     params->expected_rows = 3;
     params->expected_columns = 5;
-    std::vector<float> data{1.1f,     NAN, 4.1e-3f, 0.03e6f, 2.f,   -1.f,  -3.2f,  -4.5e4f,
-                            -5.6e-7f, NAN, NAN,    0.0f,    0.0f, 0.0f, 4.5e+5f};
+    std::vector<float> data{1.1f,     NAN, 4.1e-3f, 0.03e6f, 2.f,  -1.f, -3.2f,  -4.5e4f,
+                            -5.6e-7f, NAN, NAN,     0.0f,    0.0f, 0.0f, 4.5e+5f};
     params->expected_data = data;
 }
 
@@ -285,8 +288,8 @@ TYPED_TEST(CSVTest, warn_for_missing_data) {
     TypeParam *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
-    char one[] = "1";
-    err = da_handle_set_option(handle, csv_option_warn_for_missing_data, one);
+
+    da_options_set_int(handle, "CSV warn for missing data", 1);
     err = da_read_csv(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_warn_missing_data);
@@ -323,26 +326,18 @@ TEST(CSVTest, options) {
     double *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
-    char decimal[] = "p";
-    char thousands[] = ",";
-    char comment[] = "}";
-    char delimiter[] = "x";
-    char sci[] = "g";
-    char one[] = "1";
-    char three[] = "3";
-    char five[] = "5";
-    char nine[] = "9";
-    err = da_handle_set_option(handle, csv_option_delimiter, delimiter);
-    err = da_handle_set_option(handle, csv_option_thousands, thousands);
-    err = da_handle_set_option(handle, csv_option_decimal, decimal);
-    err = da_handle_set_option(handle, csv_option_comment, comment);
-    err = da_handle_set_option(handle, csv_option_sci, sci);
-    err = da_handle_set_option(handle, csv_option_skip_initial_space, one);
-    err = da_handle_set_option(handle, csv_option_skip_empty_lines, one);
-    err = da_handle_set_option(handle, csv_option_skip_footer, one);
-    err = da_handle_set_option(handle, csv_option_skip_first_N_rows, three);
-    err = da_handle_set_option(handle, csv_option_add_skiprow, five);
-    err = da_handle_set_option(handle, csv_option_add_skiprow, nine);
+
+    da_options_set_string(handle, "CSV delimiter", "x");
+    da_options_set_string(handle, "CSV thousands", ",");
+    da_options_set_string(handle, "CSV decimal", "p");
+    da_options_set_string(handle, "CSV comment", "}");
+    da_options_set_string(handle, "CSV scientific notation character", "g");
+    da_options_set_int(handle, "CSV skip initial space", 1);
+    da_options_set_int(handle, "CSV skip empty lines", 1);
+    da_options_set_int(handle, "CSV skip footer", 1);
+    da_options_set_int(handle, "CSV skip first rows", 3);
+    da_options_set_string(handle, "CSV skip rows", "5 9");
+
     err = da_read_csv(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_warn_bad_lines);
@@ -374,17 +369,12 @@ TEST(csvtest, error_exits) {
     strcat(filepath, "csv_data/");
     strcat(filepath, filename);
 
-    char zero[] = "0";
-    char one[] = "1";
-    char three[] = "3";
-    char four[] = "4";
-
     da_status err;
 
     // Check for uninitialized handle
     da_handle handle = nullptr;
-    err = da_handle_set_option(handle, csv_option_delim_whitespace, one);
-    ASSERT_EQ(err, da_status_handle_not_initialized);
+    err = da_options_set_int(handle, "CSV whitespace delimiter", 1);
+    ASSERT_EQ(err, da_status_invalid_pointer);
     double *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
@@ -393,8 +383,8 @@ TEST(csvtest, error_exits) {
 
     // Check for incorrect handle type
     err = da_handle_init_d(&handle, da_handle_linmod);
-    err = da_handle_set_option(handle, csv_option_delim_whitespace, one);
-    ASSERT_EQ(err, da_status_invalid_handle_type);
+    err = da_options_set_int(handle, "CSV whitespace delimiter", 1);
+    ASSERT_EQ(err, da_status_option_not_found);
     err = da_read_csv_d(handle, filepath, &a, &nrows, &ncols);
     ASSERT_EQ(err, da_status_invalid_handle_type);
     da_handle_destroy(&handle);
@@ -405,7 +395,7 @@ TEST(csvtest, error_exits) {
     uint64_t *a_uint64 = nullptr;
     uint8_t *a_uint8 = nullptr;
     err = da_handle_init_d(&handle, da_handle_csv_opts);
-    err = da_handle_set_option(handle, csv_option_delim_whitespace, one);
+    da_options_set_int(handle, "CSV whitespace delimiter", 1);
 
     err = da_read_csv_d(handle, filepath, &a_double, &nrows, &ncols);
     ASSERT_EQ(err, da_status_range_error);
@@ -413,7 +403,7 @@ TEST(csvtest, error_exits) {
     err = da_read_csv_int64(handle, filepath, &a_int64, &nrows, &ncols);
     ASSERT_EQ(err, da_status_invalid_chars);
 
-    err = da_handle_set_option(handle, csv_option_add_skiprow, zero);
+    da_options_set_string(handle, "CSV skip rows", "0");
     err = da_read_csv_uint8(handle, filepath, &a_uint8, &nrows, &ncols);
     ASSERT_EQ(err, da_status_invalid_boolean);
 
@@ -423,15 +413,15 @@ TEST(csvtest, error_exits) {
     err = da_read_csv_int64(handle, filepath, &a_int64, &nrows, &ncols);
     ASSERT_EQ(err, da_status_no_digits);
 
-    err = da_handle_set_option(handle, csv_option_add_skiprow, one);
+    da_options_set_string(handle, "CSV skip rows", "0, 1");
     err = da_read_csv_uint64(handle, filepath, &a_uint64, &nrows, &ncols);
     ASSERT_EQ(err, da_status_sign_error);
 
-    err = da_handle_set_option(handle, csv_option_skip_first_N_rows, three);
+    da_options_set_int(handle, "CSV skip first rows", 3);
     err = da_read_csv_int64(handle, filepath, &a_int64, &nrows, &ncols);
     ASSERT_EQ(err, da_status_overflow);
 
-    err = da_handle_set_option(handle, csv_option_skip_first_N_rows, four);
+    da_options_set_int(handle, "CSV skip first rows", 4);
     err = da_read_csv_int64(handle, filepath, &a_int64, &nrows, &ncols);
     ASSERT_EQ(err, da_status_ragged_csv);
 
@@ -448,8 +438,6 @@ TEST(csvtest, no_data) {
     char filepath[256] = DATA_DIR;
     strcat(filepath, "csv_data/");
     strcat(filepath, filename);
-
-    char one[] = "1";
 
     da_status err;
 
@@ -470,7 +458,7 @@ TEST(csvtest, no_data) {
     for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], expected_headings[j]);
     }
-    
+
     if (headings) {
         for (da_int i = 0; i < ncols; i++) {
             if (headings[i])
@@ -480,7 +468,7 @@ TEST(csvtest, no_data) {
     }
 
     // Check we can deal with removing all rows
-    err = da_handle_set_option(handle, csv_option_skip_first_N_rows, one);
+    da_options_set_int(handle, "CSV skip first rows", 1);
     err = da_read_csv_d(handle, filepath, &a, &nrows, &ncols);
     ASSERT_EQ(err, da_status_warn_no_data);
     ASSERT_EQ(nrows, 0);
@@ -502,7 +490,6 @@ TEST(csvtest, no_data) {
 
     if (a)
         free(a);
-
 }
 
 TEST(CSVTest, lineterminator) {
@@ -517,9 +504,7 @@ TEST(CSVTest, lineterminator) {
 
     da_int nrows = 0, ncols = 0;
 
-    char terminator[] = "x";
-
-    err = da_handle_set_option(handle, csv_option_lineterminator, terminator);
+    da_options_set_string(handle, "CSV line terminator", "x");
     err = da_read_csv(handle, filepath, &a, &nrows, &ncols);
 
     ASSERT_EQ(err, da_status_success);
@@ -527,7 +512,7 @@ TEST(CSVTest, lineterminator) {
     da_int expected_rows = 2;
     da_int expected_columns = 3;
 
-    uint64_t expected_data[] = {1,2,3,4,5,6};
+    uint64_t expected_data[] = {1, 2, 3, 4, 5, 6};
 
     ASSERT_EQ(nrows, expected_rows);
     ASSERT_EQ(ncols, expected_columns);

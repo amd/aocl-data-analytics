@@ -7,13 +7,13 @@
 
 #include "aoclda.h"
 #include "linear_model.hpp"
-#include "tokenizer.h"
+#include "csv_reader.hpp"
 
 #define ERR_MSG_LEN 1024
 
 class _da_handle {
   public:
-    parser_t *parser = nullptr;
+    csv_reader *csv_parser = nullptr;
     linear_model<double> *linreg_d = nullptr;
     linear_model<float> *linreg_s = nullptr;
     da_handle_type handle_type = da_handle_uninitialized;

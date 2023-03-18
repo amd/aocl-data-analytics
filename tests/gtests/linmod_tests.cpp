@@ -1,3 +1,6 @@
+#include "aoclda.h"
+#include "da_handle.hpp"
+#include "options.hpp"
 #include "linmod_functions.hpp"
 #include "utest_utils.hpp"
 #include "gmock/gmock.h"
@@ -8,57 +11,51 @@ typedef struct {
     std::string test_name;
     std::string data_name;
     linmod_model mod;
-    std::vector<option_t<bool>> bopts;
+    std::vector<option_t<da_int>> iopts;
     std::vector<option_t<std::string>> sopts;
     std::vector<option_t<float>> fopts;
     std::vector<option_t<double>> dopts;
-    std::vector<option_t<int>> iopts;
 } linmodParamType;
 
 const linmodParamType linmodPosValuesD[] = {
-    {"trivialMSENoint", "trivial", linmod_model_mse, {}, {}, {}, {}, {}},
+    {"trivialMSENoint", "trivial", linmod_model_mse, {}, {}, {}, {}},
     {"trivialMSENointLbfgs",
      "trivial",
      linmod_model_mse,
      {},
      {{"linmod optim method", "lbfgs"}},
      {},
-     {},
      {}},
     {"trivialMSEI",
      "trivial",
      linmod_model_mse,
-     {{"linmod intercept", true}},
-     {},
+     {{"linmod intercept", 1}},
      {},
      {},
      {}},
     {"trivialMSEILbfgs",
      "trivial",
      linmod_model_mse,
-     {{"linmod intercept", true}},
+     {{"linmod intercept", 1}},
      {{"linmod optim method", "lbfgs"}},
-     {},
      {},
      {}},
     {"studyLogI",
      "study",
      linmod_model_logistic,
-     {{"linmod intercept", true}},
-     {},
+     {{"linmod intercept", 1}},
      {},
      {},
      {}},
-    {"studyLogNoint", "study", linmod_model_logistic, {}, {}, {}, {}, {}},
+    {"studyLogNoint", "study", linmod_model_logistic, {}, {}, {}, {}},
     {"lrsetLogI",
      "lrset",
      linmod_model_logistic,
-     {{"linmod intercept", true}},
-     {},
+     {{"linmod intercept", 1}},
      {},
      {},
      {}},
-    {"lrsetLogNoint", "lrset", linmod_model_logistic, {}, {}, {}, {}, {}}};
+    {"lrsetLogNoint", "lrset", linmod_model_logistic, {}, {}, {}, {}}};
 const linmodParamType linmodPosValuesF[] = {linmodPosValuesD[0], linmodPosValuesD[2]};
 
 // Data Driven (parametrized) Tests
@@ -75,16 +72,16 @@ TEST_P(linmodTestPosD, Double) {
     // Inside a test, access the test parameter with the GetParam() method
     // of the TestWithParam<T> class:
     const linmodParamType &param = GetParam();
-    test_linmod_positive<double>(param.data_name, param.mod, param.bopts, param.sopts,
-                                 param.dopts, param.iopts);
+    test_linmod_positive<double>(param.data_name, param.mod, param.iopts, param.sopts,
+                                 param.dopts);
 }
 // Positive (da_status_success) tests with float type
 TEST_P(linmodTestPosF, Float) {
     // Inside a test, access the test parameter with the GetParam() method
     // of the TestWithParam<T> class:
     const linmodParamType &param = GetParam();
-    test_linmod_positive<float>(param.data_name, param.mod, param.bopts, param.sopts,
-                                param.fopts, param.iopts);
+    test_linmod_positive<float>(param.data_name, param.mod, param.iopts, param.sopts,
+                                param.fopts);
 }
 
 INSTANTIATE_TEST_SUITE_P(linmodPosSuiteD, linmodTestPosD,

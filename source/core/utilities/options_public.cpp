@@ -24,10 +24,11 @@
 #include "aoclda.h"
 #include "da_handle.hpp"
 #include "options.hpp"
+#include <string>
 
 // Public (C) handlers
 
-da_status da_options_set_bool(da_handle handle, const char *option, bool value) {
+da_status da_options_set_int(da_handle handle, const char *option, da_int value) {
     da_status status;
 
     if (!handle)
@@ -40,22 +41,7 @@ da_status da_options_set_bool(da_handle handle, const char *option, bool value) 
         return status;
 
     status = opts->set(option, value, da_options::user);
-    return status;
-}
 
-da_status da_options_set_int(da_handle handle, const char *option, int value) {
-    da_status status;
-
-    if (!handle)
-        return da_status_invalid_pointer;
-
-    da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
-    if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
-
-    status = opts->set(option, value, da_options::user);
     return status;
 }
 
@@ -72,6 +58,7 @@ da_status da_options_set_string(da_handle handle, const char *option, const char
         return status;
 
     status = opts->set(option, value, da_options::user);
+
     return status;
 }
 
@@ -111,7 +98,7 @@ da_status da_options_set_d_real(da_handle handle, const char *option, double val
     return status;
 }
 
-da_status da_options_get_bool(da_handle handle, const char *option, bool *value) {
+da_status da_options_get_int(da_handle handle, const char *option, da_int *value) {
     da_status status;
 
     if (!handle)
@@ -126,22 +113,8 @@ da_status da_options_get_bool(da_handle handle, const char *option, bool *value)
     return status;
 }
 
-da_status da_options_get_int(da_handle handle, const char *option, int *value) {
-    da_status status;
-
-    if (!handle)
-        return da_status_invalid_pointer;
-    da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
-    if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
-
-    status = opts->get(option, value);
-    return status;
-}
-
-da_status da_options_get_string(da_handle handle, const char *option, char *value, size_t lvalue) {
+da_status da_options_get_string(da_handle handle, const char *option, char *value,
+                                size_t lvalue) {
     da_status status;
 
     if (!handle)
@@ -155,9 +128,9 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     status = opts->get(option, &svalue);
     // Need to make sure *value is big enough...
     // String options should be guaranteed to be no longer than 256 chars? <--- FIXME
-    if (status==da_status_success){
+    if (status == da_status_success) {
         size_t n = svalue.size();
-        if (n >= lvalue){
+        if (n >= lvalue) {
             // FIXME errmsg should be string handle->error_message = "target storage where to store option string value is too small, make it at least " + std::string(n+1) + "characters long.";
             return da_status_invalid_input;
         }

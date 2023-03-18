@@ -19,8 +19,8 @@ template <> double expected_precision<double>(double scale) { return scale * 1.0
 
 template <> float expected_precision<float>(float scale) { return scale * 0.5f; }
 
-template <typename T> T log_loss(T y, T p) { return -y * log(p) - (1 - y) * log(1 - p); }
-template <typename T> T logistic(T x) { return 1 / (1 + exp(-x)); }
+//template <typename T> T log_loss(T y, T p) { return -y * log(p) - (1 - y) * log(1 - p); }
+//template <typename T> T logistic(T x) { return 1 / (1 + exp(-x)); }
 
 template <typename T>
 void objgrd_mse(da_int n, da_int m, T *x, std::vector<T> &grad, const T *A, const T *b,
@@ -93,23 +93,19 @@ void objgrd(linmod_model mod, da_int n, da_int m, T *x, std::vector<T> &grad, co
         break;
 
     default:
-        FAIL() << "unexpected gardient function";
+        FAIL() << "unexpected gradient function";
     }
 }
 
 template <typename T>
 void test_linmod_positive(std::string csvname, linmod_model mod,
-                          std::vector<option_t<bool>> bopts,
+                          std::vector<option_t<da_int>> iopts,
                           std::vector<option_t<std::string>> sopts,
-                          std::vector<option_t<T>> ropts,
-                          std::vector<option_t<int>> iopts) {
+                          std::vector<option_t<T>> ropts) {
 
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
     ASSERT_EQ(da_handle_init<T>(&linmod_handle, da_handle_linmod), da_status_success);
-    for (auto op : bopts)
-        ASSERT_EQ(da_options_set_bool(linmod_handle, op.name.c_str(), op.value),
-                  da_status_success);
     for (auto op : sopts)
         ASSERT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
                   da_status_success);
@@ -120,9 +116,10 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
         ASSERT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
 
-    bool intercept;
-    ASSERT_EQ(da_options_get_bool(linmod_handle, "linmod intercept", &intercept),
+    da_int intercept_int;
+    ASSERT_EQ(da_options_get_int(linmod_handle, "linmod intercept", &intercept_int),
               da_status_success);
+    bool intercept = (bool)intercept_int;
 
     // get problem data and expected results
     // DATA_DIR is defined in the build system, it should point to the tests/data/linmod_data
@@ -167,7 +164,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
 
     // This should be options
     //EXPECT_EQ(da_linmod_set_intercept<T>(linmod_handle, intercept), da_status_success);
-    ASSERT_EQ(da_options_set_bool(linmod_handle, "linmod intercept", intercept),
+    ASSERT_EQ(da_options_set_int(linmod_handle, "linmod intercept", intercept),
               da_status_success);
 
     // compute regression

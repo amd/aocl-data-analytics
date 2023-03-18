@@ -59,8 +59,8 @@ OptionNumeric<double> opt_double("double option", "Preloaded Double Option", 1.0
                                  da_options::lbound_t::greaterthan, 20.0f,
                                  da_options::ubound_t::lessthan, 16.0f);
 std::shared_ptr<OptionNumeric<double>> oD;
-OptionNumeric<bool> opt_bool("bool option", "Preloaded bool Option", true);
-std::shared_ptr<OptionNumeric<bool>> oB;
+//OptionNumeric<bool> opt_bool("bool option", "Preloaded bool Option", true);
+//std::shared_ptr<OptionNumeric<bool>> oB;
 OptionString opt_string("string option", "Preloaded String Option",
                         {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes");
 std::shared_ptr<OptionString> oS;
@@ -87,10 +87,10 @@ da_status preload(OptionRegistry &r) {
     if (status != da_status_success)
         return status;
 
-    oB = std::make_shared<OptionNumeric<bool>>(opt_bool);
-    status = r.register_opt(oB);
-    if (status != da_status_success)
-        return status;
+    //oB = std::make_shared<OptionNumeric<bool>>(opt_bool);
+    //status = r.register_opt(oB);
+    //if (status != da_status_success)
+    //    return status;
 
     return status;
 };
@@ -213,20 +213,20 @@ template <typename T> void OpClsNumeric(void) {
     }
 }
 
-template <> void OpClsNumeric<bool>(void) {
-    // Empty name
-    ASSERT_THROW(OptionNumeric<bool> opt("    ", "", true), std::invalid_argument);
-    [[maybe_unused]] std::string pretty;
-    pretty = opt_bool.print_details(true);
-    pretty = opt_bool.print_details(false);
-    pretty = opt_bool.print_option();
-}
+//template <> void OpClsNumeric<bool>(void) {
+// Empty name
+//    ASSERT_THROW(OptionNumeric<bool> opt("    ", "", true), std::invalid_argument);
+//    [[maybe_unused]] std::string pretty;
+//    pretty = opt_bool.print_details(true);
+//    pretty = opt_bool.print_details(false);
+//    pretty = opt_bool.print_option();
+//}
 
 TEST(OpOptionInternal, OpClsNumericAll) {
     OpClsNumeric<float>();
     OpClsNumeric<double>();
     OpClsNumeric<da_int>();
-    OpClsNumeric<bool>();
+    //OpClsNumeric<bool>();
 };
 
 TEST(OpOptionInternal, OpClsStringAll) {
@@ -279,9 +279,6 @@ TEST(OpOptionInternal, OpClsStringAll) {
     ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"", 2}}, "yes"),
                  std::invalid_argument);
-    ASSERT_THROW(
-        OptionString opt_string("string option", "Preloaded String Option", {}, "yes"),
-        std::invalid_argument);
     ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"no", 0}, {"maybe", 2}},
                                          "   yes   "),
@@ -305,10 +302,10 @@ TEST(OpRegistryInternal, OpRegALL) {
     status = reg.register_opt(oI);
     ASSERT_EQ(status, da_status_invalid_input);
     // add option (same name but different type)
-    OptionNumeric<bool> opt_over("integer option", "Preloaded bool Option", true);
-    std::shared_ptr<OptionNumeric<bool>> over =
-        std::make_shared<OptionNumeric<bool>>(opt_over);
-    status = reg.register_opt(over);
+    //OptionNumeric<bool> opt_over("integer option", "Preloaded bool Option", true);
+    //std::shared_ptr<OptionNumeric<bool>> over =
+    //    std::make_shared<OptionNumeric<bool>>(opt_over);
+    //status = reg.register_opt(over);
     ASSERT_EQ(status, da_status_invalid_input);
 
     // set with locked registry
@@ -320,9 +317,9 @@ TEST(OpRegistryInternal, OpRegALL) {
     // set with the wrong type
     ASSERT_EQ(reg.set("integer option", "wrong"), da_status_option_wrong_type);
     ASSERT_EQ(reg.set("integer option", 3.33f), da_status_option_wrong_type);
-    ASSERT_EQ(reg.set("integer option", true), da_status_option_wrong_type);
-    bool b = false;
-    ASSERT_EQ(reg.get("integer option", &b), da_status_option_wrong_type);
+    //ASSERT_EQ(reg.set("integer option", true), da_status_option_wrong_type);
+    //bool b = false;
+    //ASSERT_EQ(reg.get("integer option", &b), da_status_option_wrong_type);
     string ret;
     da_int id;
     ASSERT_EQ(reg.get("wrong string option", ret, id), da_status_option_not_found);
@@ -459,11 +456,11 @@ TEST(OpRegistryWrappers, getset_float) {
     da_handle_destroy(&handle);
 };
 
-TEST(OpRegistryWrappers, getset_bool) {
-    ASSERT_EQ(da_options_set_bool(nullptr, "bool option", true),
-              da_status_invalid_pointer);
-    bool value;
-    ASSERT_EQ(da_options_get_bool(nullptr, "bool option", &value),
-              da_status_invalid_pointer);
-};
+//TEST(OpRegistryWrappers, getset_bool) {
+//    ASSERT_EQ(da_options_set_bool(nullptr, "bool option", true),
+//              da_status_invalid_pointer);
+//    bool value;
+//    ASSERT_EQ(da_options_get_bool(nullptr, "bool option", &value),
+//              da_status_invalid_pointer);
+//};
 } // namespace

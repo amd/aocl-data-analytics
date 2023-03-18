@@ -18,7 +18,11 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
             break;
         }
         break;
-
+    case da_handle_csv_opts:
+        if (csv_parser == nullptr)
+            return da_status_invalid_pointer;
+        *opts = &csv_parser->opts;
+        break;
     default:
         return da_status_handle_not_initialized;
     }
