@@ -12,7 +12,7 @@ target_include_directories(da_core PUBLIC include)
 target_include_directories(da_core PRIVATE core/drivers/ core/optimization/ core/utilities core/csv core/linear_model)
 
 if (WIN32)
-target_link_directories(da_core PUBLIC "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/double_cmake/Debug"  "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/single_cmake/Debug")
+target_link_directories(da_core PUBLIC "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/double_cmake/Debug" "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/single_cmake/Debug")
 endif()
 
 target_link_libraries(da_core lbfgsb lbfgsb_s ${BLIS} ${FLAME})
