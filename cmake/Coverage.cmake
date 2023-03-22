@@ -1,7 +1,9 @@
-find_program(GCOV_PATH gcov REQUIRED)
+#find_program(GCOV_PATH gcov REQUIRED)
 find_program(GCOVR_PATH gcovr REQUIRED)
 find_program(LCOV lcov REQUIRED)
 find_program(GENHTML genhtml REQUIRED)
+find_program(GCOV_PATH NAMES $ENV{GCOV_NAME} gcov HINTS "/usr" PATH_SUFFIXES "bin" DOC "GNU gcov binary" REQUIRED)
+message("${GCOV_PATH}")
 
 set(COMPILER_FLAGS_DEBUG
     "${COMPILER_FLAGS_DEBUG};-fprofile-arcs;-ftest-coverage")
@@ -24,8 +26,8 @@ add_custom_target(
   COMMAND ${CMAKE_MAKE_PROGRAM} -C ${CMAKE_CURRENT_BINARY_DIR} clean-coverage
   COMMAND CLICOLOR=0 ctest --timeout 20 --output-junit Testing/Temporary/LastTest_JUnit.xml || true
   # Use LCOV to circumvent Jenkins error
-  COMMAND ${LCOV} --rc lcov_branch_coverage=1 -d . -c -o ${COV_DIR}/coverage.info 
-  COMMAND ${LCOV} --rc lcov_branch_coverage=1 --remove ${COV_DIR}/coverage.info -o ${COV_DIR}/coverage_filtered.info '/usr/*' '/*/_deps/*'
+  COMMAND ${LCOV} --rc lcov_branch_coverage=1 -d . -c -o ${COV_DIR}/coverage.info --gcov-tool ${GCOV_PATH}
+  COMMAND ${LCOV} --rc lcov_branch_coverage=1 --gcov-tool ${GCOV_PATH} --remove ${COV_DIR}/coverage.info -o ${COV_DIR}/coverage_filtered.info '/usr/*' '/*/_deps/*' 
   COMMAND ${GENHTML} --branch-coverage  ${COV_DIR}/coverage_filtered.info --output ${COV_DIR}/html --title "AOCL-DA Code Coverage Report" --legend
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
   # COMMAND ${GCOVR_PATH} -v --html ${COV_DIR}/index.html --html-details -r
