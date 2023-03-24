@@ -115,7 +115,7 @@ class OptionBase {
   public:
     const string setby_l[3] = {"(default)", "(user)", "(solver)"};
 
-    da_status set_name(string str) {
+    da_status set_name(string &str) {
         name = str;
         OptionUtils util;
         util.prep_str(name);
