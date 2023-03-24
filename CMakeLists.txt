@@ -32,7 +32,7 @@ if(WIN32)
   # the environment
   if($ENV{USERNAME} MATCHES "ehopkins")
     set(ENV{AOCL_INSTALL} "C:/Users/ehopkins/AOCL-4.0")
-    set(ENV{IFORT_LIBS} "C:/Program Files (x86)/Intel/oneAPI/compiler/2023.0.0/windows/compiler/lib/intel64_win")
+    set(ENV{IFORT_LIBS} "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win")
   endif()
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
   if (NOT BUILD_ILP64)
