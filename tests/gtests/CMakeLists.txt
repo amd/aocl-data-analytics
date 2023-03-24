@@ -25,19 +25,17 @@ add_executable(basic_statistics basic_statistics.cpp)
 target_link_libraries(basic_statistics da_core gtest_main)
 
 add_executable(csv csv.cpp)
+target_link_libraries(csv da_core gtest_main gmock_main)
 if (WIN32)
-target_link_libraries(csv da_core gtest_main gmock_main "$ENV{IFORT_LIBS}/libifcoremdd.lib")
-else()
- target_link_libraries(csv da_core gtest_main gmock_main)
+target_link_libraries(csv "$ENV{LIBIFCORE}")
 endif()
 target_compile_definitions(
   csv PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(linmod linmod_tests.cpp)
+target_link_libraries(linmod da_core gtest_main gmock_main)
 if (WIN32)
-target_link_libraries(linmod da_core gtest_main gmock_main "$ENV{IFORT_LIBS}/libifcoremdd.lib")
-else()
- target_link_libraries(linmod da_core gtest_main gmock_main)
+target_link_libraries(linmod "$ENV{LIBIFCORE}")
 endif()
 target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")

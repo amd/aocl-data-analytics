@@ -46,6 +46,9 @@ if(WIN32)
 	include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/ILP64")
 	include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/ILP64")
   endif()
+
+  set(ENV{LIBIFCORE} "$<IF:$<CONFIG:Debug>,$ENV{IFORT_LIBS}/libifcoremdd.lib,$ENV{IFORT_LIBS}/libifcoremd.lib>")
+
 else()
 
   if($ENV{USER} MATCHES "bmarteau")
@@ -118,7 +121,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         "${COMPILER_FLAGS_COMMON}; /arch:AVX512")
   endif()
   set(COMPILER_FLAGS_RELEASE
-      "/DNDEBUG;/O2;/fp:fast;/Qvec")
+      "/DNDEBUG;/O2;/fp:fast")
   set(COMPILER_FLAGS_DEBUG
       "/Od")
   set(COMPILER_FLAGS_CXX_DEBUG "/W3")
