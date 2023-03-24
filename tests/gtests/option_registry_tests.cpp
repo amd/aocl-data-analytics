@@ -310,10 +310,11 @@ TEST(OpRegistryInternal, OpRegALL) {
 
     // set with locked registry
     reg.lock();
-    ASSERT_EQ(reg.set("integer opt", 1), da_status_option_locked);
+    da_int one = 1;
+    ASSERT_EQ(reg.set("integer opt", one), da_status_option_locked);
     reg.unlock();
     // option not found
-    ASSERT_EQ(reg.set("nonexistent option", 1), da_status_option_not_found);
+    ASSERT_EQ(reg.set("nonexistent option", one), da_status_option_not_found);
     // set with the wrong type
     ASSERT_EQ(reg.set("integer option", "wrong"), da_status_option_wrong_type);
     ASSERT_EQ(reg.set("integer option", 3.33f), da_status_option_wrong_type);
