@@ -31,7 +31,7 @@ if(WIN32)
   # Set environment variables for users, add your own paths here or directly on
   # the environment
   if($ENV{USERNAME} MATCHES "ehopkins")
-    set(ENV{AOCL_INSTALL} "C:/Program Files/AMD/AOCL-Windows")
+    set(ENV{AOCL_INSTALL} "C:/Users/ehopkins/AOCL-4.0")
     set(ENV{IFORT_LIBS} "C:/Program Files (x86)/Intel/oneAPI/compiler/2023.0.0/windows/compiler/lib/intel64_win")
   endif()
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
