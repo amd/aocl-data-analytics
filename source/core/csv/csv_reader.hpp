@@ -100,7 +100,7 @@ class csv_reader {
                 try {
                     int64_t num = (int64_t)std::stoi(item);
                     parser_add_skiprow(parser, num);
-                } catch (const std::exception) {
+                } catch (std::exception const &) {
                     return da_status_option_invalid_value;
                 }
             }
