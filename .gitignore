@@ -3,3 +3,8 @@
 .vs
 # build artifacts
 build*
+tags
+# Vim files
+.*.swp
+.*.un~
+

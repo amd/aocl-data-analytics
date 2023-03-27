@@ -1,6 +1,22 @@
 #ifndef AOCLDA_LINREG
 #define AOCLDA_LINREG
 
+/**
+ * \file
+ * \anchor chapter_c
+ * \brief Chapter C - Linear Models
+ *
+ * \todo add further description of this chapter
+ *
+ * \section chpc_intro Introduction
+ * \section chc_reg Regression
+ * \subsection chc_linmod Linear models
+ * \subsubsection chc_mse Mean Square Error
+ * \todo Minimize square error
+ * \subsubsection chc_logistic Logistic regression
+ * \todo
+ */
+
 #include "aoclda_error.h"
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
@@ -9,10 +25,13 @@
 extern "C" {
 #endif
 
+/**
+ * Linear models
+ */
 typedef enum linmod_model_ {
-    linmod_model_undefined = 0,
-    linmod_model_mse,
-    linmod_model_logistic,
+    linmod_model_undefined = 0, ///< No linear model set
+    linmod_model_mse, ///< fit based of mimizing mean square error (using norm \f$L_2\f$).
+    linmod_model_logistic, ///< Logistic regression
 } linmod_model;
 
 da_status da_linmod_d_select_model(da_handle handle, linmod_model mod);

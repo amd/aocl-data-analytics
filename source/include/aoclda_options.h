@@ -23,18 +23,110 @@
 
 #ifndef AOCLDA_OPTIONS_H
 #define AOCLDA_OPTIONS_H
+/** \file
+ * \anchor apx_o
+ * \brief Appendix O - Options registry
+ *
+ * Registry for setting and getting option values.
+ *
+ * The registry has four option types: integer, real (float and double), and
+ * string.
+ *
+ * Options are set using the "setters" and options setting can be retrieved
+ * using the "getters".
+ */
 
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
+/** \{
+ * \brief Member of the option setters group
+ *
+ * This function is part of the group of "option setters" and are all quite similar and differ on the last parameter \p value.
+ * \param[in,out] handle The handle where to store the option setting,
+ * \param[in] option Name of the option to set,
+ * \param[in] value Value to set the option to.
+ * \return Returns \ref da_status.
+ *
+ * \section da_optset_nan Handling of missing values
+ * These functions do not handle missing values.
+ *
+ * \section da_optset_return Return
+ * The function returns
+ *
+ * * \ref da_status_success          - option was successfully set,
+ * * \ref da_status_option_not_found - option not found,
+ * * \ref da_status_option_locked    - cannot change option at this point,
+ * * \ref da_status_option_wrong_type - wrong option type passed,
+ * * \ref da_status_option_invalid_bounds - option value is out-of-bounds,
+ * * \ref da_status_option_invalid_value - cannot set option to an invalid value.
+ *
+ * \section da_optset_ex Example
+ * \todo Description and link to source.
+ *
+ */
 da_status da_options_set_int(da_handle handle, const char *option, da_int value);
 da_status da_options_set_string(da_handle handle, const char *option, const char *value);
 da_status da_options_set_s_real(da_handle handle, const char *option, float value);
 da_status da_options_set_d_real(da_handle handle, const char *option, double value);
+/** \} */
 
+/** \{
+ * \brief Member of the option getters group
+ *
+ * This function is part of the group of "option getters" and are all quite similar and differ
+ * on the last parameters \p value and \p lvalue.
+ * \param[in,out] handle The handle where to retrieve the option value,
+ * \param[in] option Name of the option to get,
+ * \param[in] value Value that contains the option setting.
+ * \return Returns \ref da_status.
+ *
+ * \section da_optget_nan Handling of missing values
+ * These functions do not handle missing values.
+ *
+ * \section da_optget_return Return
+ * The function returns
+ *
+ * * \ref da_status_success          - option was successfully set,
+ * * \ref da_status_option_not_found - option not found,
+ * * \ref da_status_option_wrong_type - wrong option type passed.
+ *
+ * \section da_optget_ex Example
+ * \todo Description and link to source.
+ *
+ */
 da_status da_options_get_int(da_handle handle, const char *option, da_int *value);
-da_status da_options_get_string(da_handle handle, const char *option, char *value, size_t lvalue);
 da_status da_options_get_s_real(da_handle handle, const char *option, float *value);
 da_status da_options_get_d_real(da_handle handle, const char *option, double *value);
+/** \} */
+
+/**
+ * \brief Member of the option getters group
+ *
+ * This function is part of the group of "option getters" and are all quite similar and differ
+ * on the last parameters \p value and \p lvalue.
+ * \param[in,out] handle The handle where to retrieve the option value,
+ * \param[in] option Name of the option to get,
+ * \param[in] value Value that contains the option setting.
+ * \param[in] lvalue length of the string \p value.
+ * \return Returns \ref da_status.
+ *
+ * \section da_optgets_nan Handling of missing values
+ * These functions do not handle missing values.
+ *
+ * \section da_optgets_return Return
+ * The function returns
+ *
+ * * \ref da_status_success          - option was successfully set,
+ * * \ref da_status_invalid_input    - length of string \p value, lvalue, is too small to containt the option value. Provide more space.
+ * * \ref da_status_option_not_found - option not found,
+ * * \ref da_status_option_wrong_type - wrong option type passed.
+ *
+ * \section da_optgets_ex Example
+ * \todo Description and link to source.
+ *
+ */
+da_status da_options_get_string(da_handle handle, const char *option, char *value,
+                                size_t lvalue);
 
 #endif //AOCLDA_OPTIONS_H
