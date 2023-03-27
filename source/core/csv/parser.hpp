@@ -63,9 +63,6 @@ inline void *read_bytes(void *source, size_t nbytes, size_t *bytes_read, int *st
             return (void *)buffer;
         }
     }
-
-    free(buffer);
-    return NULL;
 }
 
 inline int cleanup(void *source) {

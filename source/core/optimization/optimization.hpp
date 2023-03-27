@@ -41,7 +41,7 @@ template <typename T> class da_optimization {
     lbfgsb_data<T> *soldata_lbfgsb = nullptr;
 
     // solutions
-    T f;
+    T f = 0.0;
     std::vector<T> g;
 
   public:
@@ -49,10 +49,8 @@ template <typename T> class da_optimization {
     ~da_optimization();
     opt_status declare_vars(int n);
     opt_status add_bound_const(std::vector<T> &l, std::vector<T> &u);
-    opt_status
-    user_objective(std::function<void(int n, T *x, T *f, void *usrdata)> usrfun);
-    opt_status
-    user_gradient(std::function<void(int n, T *x, T *grad, void *usrdata)> usrgrd);
+    opt_status user_objective(objfun_t<T> usrfun);
+    opt_status user_gradient(objgrd_t<T> usrgrd);
     opt_status select_solver(opt_solvers sol);
 
     // solver interfaces (only lbfgsb for now)
@@ -87,9 +85,7 @@ opt_status da_optimization<T>::add_bound_const(std::vector<T> &l, std::vector<T>
     return opt_status_success;
 }
 
-template <typename T>
-opt_status da_optimization<T>::user_objective(
-    std::function<void(int n, T *x, T *f, void *usrdata)> usrfun) {
+template <typename T> opt_status da_optimization<T>::user_objective(objfun_t<T> usrfun) {
     if (objfun != nullptr) {
         std::cout << "Objective function was already defined. Exit" << std::endl;
         return opt_status_invalid_input;
@@ -99,9 +95,7 @@ opt_status da_optimization<T>::user_objective(
     return opt_status_success;
 }
 
-template <typename T>
-opt_status da_optimization<T>::user_gradient(
-    std::function<void(int n, T *x, T *grad, void *usrdata)> usrgrd) {
+template <typename T> opt_status da_optimization<T>::user_gradient(objgrd_t<T> usrgrd) {
     if (objgrd != nullptr) {
         std::cout << "Gradient function was already defined. Exit" << std::endl;
         return opt_status_invalid_input;

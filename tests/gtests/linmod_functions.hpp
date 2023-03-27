@@ -74,7 +74,7 @@ void objgrd_logistic(da_int n, da_int m, T *x, std::vector<T> &grad, const T *A,
     if (intercept) {
         grad[n - 1] = 0.0;
         for (da_int i = 0; i < m; i++) {
-            lin_comb = intercept ? x[n - 1] + y[i] : y[i];
+            lin_comb = x[n - 1] + y[i];
             grad[n - 1] += (logistic(lin_comb) - b[i]);
         }
     }
@@ -106,13 +106,13 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
     ASSERT_EQ(da_handle_init<T>(&linmod_handle, da_handle_linmod), da_status_success);
-    for (auto op : sopts)
+    for (auto &op : sopts)
         ASSERT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
                   da_status_success);
-    for (auto op : ropts)
+    for (auto &op : ropts)
         ASSERT_EQ(da_options_set_real(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
-    for (auto op : iopts)
+    for (auto &op : iopts)
         ASSERT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
 
@@ -145,7 +145,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     // Read features
     da_handle csv_handle = nullptr;
     ASSERT_EQ(da_handle_init_d(&csv_handle, da_handle_csv_opts), da_status_success);
-    T *a = nullptr, *b = nullptr, *coef_exp = nullptr;
+    T *a = nullptr, *b = nullptr;
 
     da_int n = 0, m = 0;
     ASSERT_EQ(da_read_csv(csv_handle, A_file.c_str(), &a, &n, &m), da_status_success);
@@ -177,7 +177,8 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     std::vector<T> X(n);
     std::fill(X.begin(), X.end(), 1.0);
     T pred[1];
-    EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, n, 1, X.data(), pred), da_status_success);
+    EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, n, 1, X.data(), pred),
+              da_status_success);
     // TODO check model evaluation
 
     // Check that the gradient is close enough to 0
@@ -187,14 +188,9 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     EXPECT_THAT(grad,
                 Each(AllOf(Gt(-expected_precision<T>()), Lt(expected_precision<T>()))));
 
-    if (a)
-        free(a);
-    if (b)
-        free(b);
-    if (coef_exp)
-        free(coef_exp);
-    if (coef)
-        delete[] coef;
+    free(a);
+    free(b);
+    delete[] coef;
     da_handle_destroy(&csv_handle);
     da_handle_destroy(&linmod_handle);
 
