@@ -3,7 +3,7 @@ find_program(GCOVR_PATH gcovr REQUIRED)
 find_program(LCOV lcov REQUIRED)
 find_program(GENHTML genhtml REQUIRED)
 find_program(GCOV_PATH NAMES $ENV{GCOV_NAME} gcov HINTS "/usr" PATH_SUFFIXES "bin" DOC "GNU gcov binary" REQUIRED)
-message("${GCOV_PATH}")
+message(STATUS "GNU gcov binary: ${GCOV_PATH}")
 
 set(COMPILER_FLAGS_DEBUG
     "${COMPILER_FLAGS_DEBUG};-fprofile-arcs;-ftest-coverage")
@@ -16,6 +16,7 @@ add_custom_target(create-cov-dir COMMAND ${CMAKE_COMMAND} -E make_directory
 add_custom_target( clean-coverage
   COMMAND ${CMAKE_COMMAND} -E  rm -rf ${CMAKE_BINARY_DIR}/coverage_reports/*
 )
+add_dependencies(cleanall clean-coverage)
 
 # create coverage target for ctest make coverage will run ctest and build a
 # report in the build directory
