@@ -100,7 +100,7 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "CSV skip first rows",
-            "Ignore the specified number of rows from the top of the CSV fle", 0,
+            "Ignore the specified number of rows from the top of the CSV file", 0,
             da_options::lbound_t::greaterequal, DA_INT_MAX,
             da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
