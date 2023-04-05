@@ -69,6 +69,12 @@ if(WIN32)
         "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
     )
   endif()
+  if($ENV{USERNAME} MATCHES "orequest")
+  set(ENV{AOCL_INSTALL} "C:/Program Files/AMD/AOCL-Windows")
+  set(ENV{IFORT_LIBS}
+      "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
+  )
+endif()
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
   if(NOT BUILD_ILP64)
     find_library(BLIS name AOCL-LibBlis-Win-dll
