@@ -70,9 +70,9 @@ Note that not all the options available in Linux are available in Windows
 
 7. Either: 
 
-* Open Visual Studio and load the data_analytics.sln file then build Debug or Release builds using the GUI, or 
+* Open Visual Studio and load the AOCL-DA.sln file then build Debug or Release builds using the GUI, or 
 
-* In your powershell type devenv .\data_analytics.sln /build "Debug" to build the solution (change to Release as appropriate) 
+* In your powershell type devenv .\AOCL-DA.sln /build "Debug" to build the solution (change to Release as appropriate) 
 
 8. The compiled executables only work if the Blis and Flame dlls are in the same directory so you need to copy AOCL-LibBlis-Win-MT-dll.dll and AOCL-LibFlame-Win-MT-dll.dll into, for example, C:\path\to\aocl-da\build\tests\gtests\Debug (if you can figure out a better way which avoids this issue, then let Edvin know!) 
 
