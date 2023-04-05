@@ -6,23 +6,19 @@
  * \anchor mainpg
  * \mainpage AOCL Data Analytics Library
  *
- *  \section Preface
- *    \todo Add content
  *  \section Introduction
  *    \todo Add more content
  *  \section Chapters
  *    \todo Add content - Copied from chapers
  *
- *    * \ref chapter_a "Chapter A - Basis statistical functions"
- *    * \ref chapter_b "Chapter B - Interfacing with CSV files"
- *    * \ref chapter_c "Chapter C - Linear models"
+ *    * \ref chapter_a "Basis statistical functions"
+ *    * \ref chapter_b "Interfacing with CSV files"
+ *    * \ref chapter_c "Linear models"
  *
  *  \section Appendices
  *
- *    * \ref apx_a "Appendix A - Handles"
- *    * \ref apx_d "Appendix D - Data type"
- *    * \ref apx_e "Appendix E - Errors"
- *    * \ref apx_o "Appendix O - Options"
+ *    * \ref apx_a "Appendix Handles"
+ *    * \ref apx_d "Appendix Data type"
  *
  *  \section selex Selected examples
  *  \todo add best examples
