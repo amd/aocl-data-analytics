@@ -63,17 +63,17 @@ if(WIN32)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
   # Set environment variables for users, add your own paths here or directly on
   # the environment
+  set(ENV{AOCL_INSTALL} "C:/Program Files/AMD/AOCL-Windows")
+  set(ENV{IFORT_LIBS}
+      "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
+  )
   if($ENV{USERNAME} MATCHES "ehopkins")
     set(ENV{AOCL_INSTALL} "C:/Users/ehopkins/AOCL-4.0")
     set(ENV{IFORT_LIBS}
         "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
     )
   endif()
-  if($ENV{USERNAME} MATCHES "orequest")
-  set(ENV{AOCL_INSTALL} "C:/Program Files/AMD/AOCL-Windows")
-  set(ENV{IFORT_LIBS}
-      "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
-  )
+
 endif()
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
   if(NOT BUILD_ILP64)
