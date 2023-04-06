@@ -74,7 +74,6 @@ if(WIN32)
     )
   endif()
 
-endif()
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
   if(NOT BUILD_ILP64)
     find_library(BLIS name AOCL-LibBlis-Win-dll
