@@ -64,7 +64,7 @@ if(WIN32)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
   # Set environment variables for users, add your own paths here or directly on
   # the environment
-  set(ENV{AOCL_INSTALL} "C:/Users/aoclwinuser/AOCL-Windows")
+  set(ENV{AOCL_INSTALL} "C:/Users/aoclwinuser/AMD")
   set(ENV{IFORT_LIBS}
       "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
   )
