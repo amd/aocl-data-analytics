@@ -15,7 +15,7 @@ if (WIN32)
 target_link_directories(da_core PUBLIC "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/double_cmake/Debug" "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/single_cmake/Debug")
 endif()
 
-target_link_libraries(da_core lbfgsb lbfgsb_s ${BLIS} ${FLAME})
+target_link_libraries(da_core lbfgsb lbfgsb_s ${FLAME} ${BLIS})
 if (NOT WIN32)
 target_link_libraries(da_core -lgomp)
 endif()
