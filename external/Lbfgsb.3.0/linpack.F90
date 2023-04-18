@@ -3,31 +3,18 @@
 !  or “3-clause license”)
 !  Please read attached file License.txt
 !
-
-#ifdef SINGLE_PREC
-#define PREF s
-#else
-#define PREF d
-#endif
-
-! ## doesn't work for concatenation, redefine it
-#define PASTE(a) a
-#define CONCAT(a,b) PASTE(a)b
-
-! add precision suffix to the function names
-#define PREC(f) CONCAT(PREF,f)
-
+#include "preprocessor.fpp"
     Subroutine PREC(pofa)(a, lda, n, info)
       Use working_precision, Only: wp
       Integer :: lda, n, info
       Real (Kind=wp) :: a(lda, *)
 !
-!     PREC(pofa) factors a double precision symmetric positive definite
+!     dpofa factors a double precision symmetric positive definite
 !     matrix.
 !
-!     PREC(pofa) is usually called by dpoco, but it can be called
+!     dpofa is usually called by dpoco, but it can be called
 !     directly with a saving in time if  rcond  is not needed.
-!     (time for dpoco) = (1 + 18/n)*(time for PREC(pofa)) .
+!     (time for dpoco) = (1 + 18/n)*(time for dpofa) .
 !
 !     on entry
 !
@@ -63,7 +50,7 @@
 !
 !     internal variables
 !
-      Real (Kind=wp) :: ddot, t
+      Real (Kind=wp) :: PREC(dot), t
       Real (Kind=wp) :: s
       Integer :: j, jm1, k
 !     begin block with ...exits to 40
@@ -75,7 +62,7 @@
         jm1 = j - 1
         If (jm1<1) Go To 100
         Do k = 1, jm1
-          t = a(k, j) - ddot(k-1, a(1,k), 1, a(1,j), 1)
+          t = a(k, j) - PREC(dot)(k-1, a(1,k), 1, a(1,j), 1)
           t = t/a(k, k)
           a(k, j) = t
           s = s + t*t
@@ -91,7 +78,7 @@
       Return
     End Subroutine
 
-!====================== The end of PREC(pofa) ===============================
+!====================== The end of dpofa ===============================
 
     Subroutine PREC(trsl)(t, ldt, n, b, job, info)
       Use working_precision, Only: wp
@@ -99,7 +86,7 @@
       Real (Kind=wp) :: t(ldt, *), b(*)
 !
 !
-!     PREC(trsl) solves systems of the form
+!     dtrsl solves systems of the form
 !
 !                   t * x = b
 !     or
@@ -154,7 +141,7 @@
 !
 !     internal variables
 !
-      Real (Kind=wp) :: ddot, temp
+      Real (Kind=wp) :: PREC(dot), temp
       Integer :: case, j, jj
 !
 !     begin block permitting ...exits to 150
@@ -181,7 +168,7 @@
       If (n<2) Go To 110
       Do j = 2, n
         temp = -b(j-1)
-        Call daxpy(n-j+1, temp, t(j,j-1), 1, b(j), 1)
+        Call PREC(axpy)(n-j+1, temp, t(j,j-1), 1, b(j), 1)
         b(j) = b(j)/t(j, j)
       End Do
 110   Continue
@@ -195,7 +182,7 @@
       Do jj = 2, n
         j = n - jj + 1
         temp = -b(j+1)
-        Call daxpy(j, temp, t(1,j+1), 1, b(1), 1)
+        Call PREC(axpy)(j, temp, t(1,j+1), 1, b(1), 1)
         b(j) = b(j)/t(j, j)
       End Do
 130   Continue
@@ -208,7 +195,7 @@
       If (n<2) Go To 150
       Do jj = 2, n
         j = n - jj + 1
-        b(j) = b(j) - ddot(jj-1, t(j+1,j), 1, b(j+1), 1)
+        b(j) = b(j) - PREC(dot)(jj-1, t(j+1,j), 1, b(j+1), 1)
         b(j) = b(j)/t(j, j)
       End Do
 150   Continue
@@ -220,7 +207,7 @@
       b(1) = b(1)/t(1, 1)
       If (n<2) Go To 170
       Do j = 2, n
-        b(j) = b(j) - ddot(j-1, t(1,j), 1, b(1), 1)
+        b(j) = b(j) - PREC(dot)(j-1, t(1,j), 1, b(1), 1)
         b(j) = b(j)/t(j, j)
       End Do
 170   Continue

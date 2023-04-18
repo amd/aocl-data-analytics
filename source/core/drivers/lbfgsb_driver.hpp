@@ -1,175 +1,406 @@
 #ifndef DRIVERS_HPP
 #define DRIVERS_HPP
 
+#include "aoclda_error.h"
 #include "callbacks.hpp"
+#include "da_error.hpp"
+#include "info.hpp"
+#include "lbfgsb.hpp"
+#include "options.hpp"
 #include <cmath>
 #include <iostream>
 #include <limits>
 #include <vector>
 
-extern "C" {
-/* C interface to the reverse communication lbfgsb solver */
-void
-#if defined(_WIN32)
-SETULB_D
-#else
-setulb_d_
-#endif
-		(int *n, int *m, double *x, double *l, double *u, int *nbd, double *f,
-               double *g, double *factr, double *pgtol, double *wa, int *iwa, int *itask,
-               int *iprint, int *icsave, int *lsavei, int *isave, double *dsave);
-
-void
-#if defined(_WIN32)
-SETULB_S
-#else
-setulb_s_
-#endif
-(int *n, int *m, float *x, float *l, float *u, int *nbd, float *f, float *g,
-               float *factr, float *pgtol, float *wa, int *iwa, int *itask, int *iprint,
-               int *icsave, int *lsavei, int *isave, float *dsave);
+// L-BFGS-B Reverse Communication <overloaded>
+inline void lbfgsb_rcomm(da_int *n, da_int *m, double *x, double *l, double *u,
+                         da_int *nbd, double *f, double *g, double *factr, double *pgtol,
+                         double *wa, da_int *iwa, da_int *itask, da_int *iprint,
+                         da_int *lsavei, da_int *isave, double *dsave) {
+    DLBFGSB_SOLVER(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, lsavei,
+                   isave, dsave);
 }
 
-/* Overload the definition of lbfgsb to work with both double and floats */
-inline void setulb(int *n, int *m, double *x, double *l, double *u, int *nbd, double *f,
-                   double *g, double *factr, double *pgtol, double *wa, int *iwa,
-                   int *itask, int *iprint, int *icsave, int *lsavei, int *isave,
-                   double *dsave) {
-#if defined(_WIN32)
-SETULB_D
-#else
-setulb_d_
-#endif
-(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, icsave,
-              lsavei, isave, dsave);
-}
-
-inline void setulb(int *n, int *m, float *x, float *l, float *u, int *nbd, float *f,
-                   float *g, float *factr, float *pgtol, float *wa, int *iwa, int *itask,
-                   int *iprint, int *icsave, int *lsavei, int *isave, float *dsave) {
-#if defined(_WIN32)
-SETULB_S
-#else
-setulb_s_
-#endif
-(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, icsave,
-              lsavei, isave, dsave);
-}
-
-template <typename T> void lbfgs_prec(T &factr, T &pgtol) {
-    /* double => pgtol ~ 1.0e-05
-     *           factr ~ 1.0e07
-     * single => pgtol ~ 6.0e-03
-     *        => factr ~ 1.0e03
-     */
-    pgtol = (T)pow(std::numeric_limits<T>::epsilon(), (T)0.32);
-    factr = (T)pow((T)10., (T)(std::numeric_limits<T>::digits10) / 2);
+inline void lbfgsb_rcomm(da_int *n, da_int *m, float *x, float *l, float *u, da_int *nbd,
+                         float *f, float *g, float *factr, float *pgtol, float *wa,
+                         da_int *iwa, da_int *itask, da_int *iprint, da_int *lsavei,
+                         da_int *isave, float *dsave) {
+    SLBFGSB_SOLVER(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, lsavei,
+                   isave, dsave);
 }
 
 /* Internal memory for lbfgsb */
-template <typename T> struct lbfgsb_data {
-    int m = 0; // number of vectors of memory used
-               // TODO should be an option
-    int *nbd = nullptr, *iwa = nullptr;
+template <typename T> class lbfgsb_work {
+  public:
+    da_int *nbd = nullptr;
+    da_int *iwa = nullptr;
     T *wa = nullptr;
 
-    // TODO these should be options
-    T factr = (T)1.0e07;
-    T pgtol = (T)1.0e-05;
-    int iprint = 0;
+    lbfgsb_work(size_t mem, size_t nvar, da_status &status);
+    ~lbfgsb_work();
+
+    da_status add_bounds(size_t nvar, const std::vector<T> &l, const std::vector<T> &u,
+                         T bigbnd);
 };
 
-template <typename T> void free_lbfgsb_data(lbfgsb_data<T> **d) {
-    if ((*d)->iwa)
-        delete[] (*d)->iwa;
-    if ((*d)->wa)
-        delete[] (*d)->wa;
-    if ((*d)->nbd)
-        delete[] (*d)->nbd;
+template <typename T>
+lbfgsb_work<T>::lbfgsb_work(size_t mem, size_t nvar, da_status &status) {
+    if (mem < 1) {
+        status = da_status_invalid_input;
+        return;
+    }
+    try {
+        this->iwa = new da_int[3 * nvar];
+    } catch (std::bad_alloc &) {
+        status = da_status_memory_error;
+        return;
+    }
+    size_t nwa = 2 * mem * nvar + 5 * nvar + 11 * mem * mem + 8 * mem;
+    try {
+        this->wa = new T[nwa];
+    } catch (std::bad_alloc &) {
+        status = da_status_memory_error;
+        return;
+    }
+    try {
+        this->nbd = new da_int[nvar];
+    } catch (std::bad_alloc &) {
+        status = da_status_memory_error;
+        return;
+    }
 
-    delete *d;
-    *d = nullptr;
+    status = da_status_success;
+    return;
+}
+
+template <typename T> lbfgsb_work<T>::~lbfgsb_work() {
+    if (this->iwa)
+        delete[] this->iwa;
+    if (this->wa)
+        delete[] this->wa;
+    if (this->nbd)
+        delete[] this->nbd;
 }
 
 template <typename T>
-int init_lbfgsb_data(lbfgsb_data<T> *d, int n, int m, T bigbnd, std::vector<T> &l,
-                     std::vector<T> &u) {
+da_status lbfgsb_work<T>::add_bounds(size_t nvar, const std::vector<T> &l,
+                                     const std::vector<T> &u, T bigbnd) {
+    if (nvar < 1 || std::isnan(bigbnd) || bigbnd <= 0) {
+        return da_status_invalid_input;
+    }
+    if ((l.size() != 0 && l.size() != nvar) || (u.size() != 0 && u.size() != nvar)) {
+        return da_status_invalid_input;
+    }
+    if (!(this->nbd))
+        return da_status_memory_error;
 
-    d->m = m;
-    try {
-        d->iwa = new int[3 * n];
-    } catch (std::bad_alloc &) {
-        return 1;
-    }
-    int nwa = 2 * m * n + 5 * n + 11 * m * m + 8 * m;
-    try {
-        d->wa = new T[nwa];
-    } catch (std::bad_alloc &) {
-        return 1;
-    }
-    try {
-        d->nbd = new int[n];
-    } catch (std::bad_alloc &) {
-        return 1;
-    }
-
-    int i;
-    if (l.size() == 0 || u.size() == 0) {
-        for (i = 0; i < n; i++)
-            d->nbd[i] = 0;
-    } else {
-        for (i = 0; i < n; i++) {
-            if (l[i] >= -bigbnd && u[i] <= bigbnd)
-                d->nbd[i] = 2;
-            else if (l[i] >= -bigbnd)
-                d->nbd[i] = 1;
-            else if (u[i] <= bigbnd)
-                d->nbd[i] = 3;
+    size_t i;
+    if (l.size() == 0 && u.size() == 0) {
+        // No bounds defined
+        for (i = 0; i < nvar; i++)
+            this->nbd[i] = 0;
+    } else if (l.size() == 0) {
+        // Only upper bounds, set lower to -infity
+        for (i = 0; i < nvar; i++) {
+            if (u[i] < bigbnd)
+                this->nbd[i] = 3;
             else
-                d->nbd[i] = 0;
+                this->nbd[i] = 0;
+        }
+    } else if (u.size() == 0) {
+        // Only lower bounds, set lower to -infity
+        for (i = 0; i < nvar; i++) {
+            if (l[i] > -bigbnd)
+                this->nbd[i] = 1;
+            else
+                this->nbd[i] = 0;
+        }
+    } else {
+        // Both bounds present
+        for (i = 0; i < nvar; i++) {
+            if (l[i] > -bigbnd && u[i] < bigbnd)
+                this->nbd[i] = 2;
+            else if (l[i] > -bigbnd)
+                this->nbd[i] = 1;
+            else if (u[i] < bigbnd)
+                this->nbd[i] = 3;
+            else
+                this->nbd[i] = 0;
         }
     }
-    lbfgs_prec<T>(d->factr, d->pgtol);
-
-    return 0;
+    return da_status_success;
 }
 
+/* L-BFGS-B Forward Communication <templated>
+ * This is the main entry point for the solver
+ * It expects to have lbfgsb_data already initialized and
+ * all the rest of input to have been validated. ????
+ * 
+ * Requirements: mem: memory size, factr, pgtol, iprint
+ */
 template <typename T>
-int lbfgsb_fc(lbfgsb_data<T> *d, int n, T *x, T *l, T *u, T *f, T *g, objfun_t<T> objfun,
-              objgrd_t<T> objgrd, void *usrdata) {
+da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vector<T> &x,
+                       std::vector<T> &l, std::vector<T> &u, std::vector<T> &info,
+                       std::vector<T> &g, objfun_t<T> objfun, objgrd_t<T> objgrd,
+                       monit_t<T> monit, void *usrdata, da_errors::da_error_t &err) {
 
-    /* if l nd u are nullptr, d->nbd should be filled with 0 and the bound vector
-     * should not be accessed
-     */
+    if (!objfun)
+        return da_error(
+            &err, da_status_invalid_pointer,
+            "NLP solver requires a valid pointer to the objective function call-back");
+    // FIXME-FUTURE: Finite-Differences for the gradient is passed as an option to
+    // the solver. For now it fails with not implemented
+    if (!objgrd)
+        return da_error(&err, da_status_not_implemented,
+                        "NLP solver requires a valid pointer to the objective gradient "
+                        "function call-back");
+    da_int m;
+    if (opts.get("lbfgsb memory limit", m))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: lbfgsb memory limit");
+    T bigbnd;
+    if (opts.get("infinite bound size", bigbnd))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: infinite bound size");
+    T pgtol;
+    if (opts.get("lbfgsb convergence tol", pgtol))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: lbfgsb convergence tol");
+    T factr;
+    if (opts.get("lbfgsb progress factor", factr))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: lbfgsb progress factor");
+    T maxtime;
+    if (opts.get("time limit", maxtime))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: time limit");
+    da_int prnlvl;
+    if (opts.get("print level", prnlvl))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: print level");
+    da_int maxit;
+    if (opts.get("lbfgsb iteration limit", maxit))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: lbfgsb iteration limit");
+    da_int mon = 0;
+    if (monit) // monitor provided
+        if (opts.get("monitoring frequency", mon))
+            return da_error(&err, da_status_internal_error,
+                            "expected option not found: monitoring frequency");
 
-    int itask = 2;
+    da_status status;
+    lbfgsb_work<T> *w = new lbfgsb_work<T>(m, nvar, status);
+    if (status != da_status_success) {
+        delete w;
+        return da_error(&err, da_status_memory_error,
+                        "unable to allocate memory for solving the problem");
+    }
 
-    int m = d->m;
+    if (w->add_bounds(nvar, l, u, bigbnd) != da_status_success) {
+        delete w;
+        return da_error(&err, da_status_internal_error,
+                        "add_bounds() did not return success");
+    }
 
-    /* task = 'START => itask = 2
-     * TASK = 'NEW_X' => itask = 1
-     */
+    da_int n = nvar;
+    da_int iprint;
+    da_int iter = 0;
+    T *f = &info[optim::info_t::info_objective];
+    da_int itask = 2; // 'START'
     bool compute_fg = true;
-    int icsave, lsavei[4], isave[44];
-    /* FIXME in this version of lbfgs lsavei needs to be initialized as it is read to
-     * at the first call */
-    for (int i = 0; i < 3; i++)
-        lsavei[i] = 0;
+    da_int lsavei[4], isave[44];
     T dsave[29];
+
+    switch (prnlvl) {
+    case 0:
+        // No output
+        iprint = -1;
+        break;
+    case 1:
+        // Summary only
+        iprint = 0;
+        break;
+    case 2:
+        // 1-liner every 30 iters
+        iprint = 30;
+        break;
+    case 3:
+        // 1-liner at each iter
+        iprint = 1;
+        break;
+    case 4:
+    case 5:
+        iprint = 100;
+        break;
+    default:
+        return da_error(&err, da_status_internal_error, "print level is out of range");
+    }
+
     while (itask == 2 || itask == 1 || compute_fg) {
-        setulb(&n, &m, &(*x), &(*l), &(*u), &(d->nbd[0]), &f[0], &g[0], &d->factr,
-               &d->pgtol, &d->wa[0], &d->iwa[0], &itask, &d->iprint, &icsave, &lsavei[0],
-               &isave[0], dsave);
+        lbfgsb_rcomm(&n, &m, x.data(), l.data(), u.data(), &(w->nbd[0]), &f[0], &g[0],
+                     &factr, &pgtol, &w->wa[0], &w->iwa[0], &itask, &iprint, &lsavei[0],
+                     &isave[0], &dsave[0]);
+        if (itask == 1) { // NEW_X
+            iter++;
+            info[optim::info_t::info_iter] = static_cast<T>(iter);
+            info[optim::info_t::info_grad_norm] = dsave[12]; // sbgnrm
+
+            if (iter > maxit) {
+                itask = 100;
+            }
+
+            // Copy to info all relevant metrics
+            if (mon != 0) {
+                if (iter % mon == 0) {
+                    // Call monitor
+                    if (monit(n, &x[0], &g[0], &info[0], usrdata) != 0) {
+                        // user request to stop
+                        itask = 3;
+                    }
+                }
+            }
+
+            if (maxtime > 0) {
+                if (dsave[6] + dsave[7] + dsave[8] > maxtime) {
+                    // run out of time
+                    itask = 101;
+                }
+            }
+        }
         compute_fg = itask == 4 ||  // 'FG'
                      itask == 21 || // 'FG_START'
                      itask == 20;   // 'FG_LNSRCH
         if (compute_fg) {
-            objfun(n, x, f, usrdata);
-            objgrd(n, x, g, usrdata);
+            if (objfun(n, &x[0], f, usrdata) != 0) {
+                // This solver does not have recovery, stop
+                // FIXME-FUTURE: restore last valid x (and stats?)
+                itask = 120;
+            }
+            if (objgrd(n, &x[0], &g[0], usrdata, 0)) {
+                // This solver does not have recovery, stop
+                // FIXME-FUTURE: restore last valid x and grad (and stats?)
+                itask = 121;
+            }
         }
     }
 
-    return 0;
+    delete w;
+
+    // Select correct exit status
+    switch (itask) {
+    case 6:
+        // 'CONVERGENCE', 6 out:sucess
+    case 7:
+        // 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL', 7 out:sucess
+    case 8:
+        // 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH', 8 out:sucess
+        return da_status_success;
+        break;
+    case 3:
+        // 'STOP', 3 action: stop => user_request_stop
+        return da_warn(&err, da_status_optimization_usrstop,
+                       "User requested to stop optimization process");
+        break;
+    case 14:
+        return da_error(&err, da_status_optimization_empty_space,
+                        "No variables defined in the problem");
+        break;
+    case 15:
+        return da_error(&err, da_status_optimization_infeasible, "Problem is infeasible");
+        break;
+    case 5:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "ABNORMAL_TERMINATION_IN_LNSRCH");
+        break;
+    case 9:
+        return da_warn(&err, da_status_optimization_num_difficult, "RESTART_FROM_LNSRCH");
+        break;
+    case 16:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "ERROR: STP .GT. STPMAX");
+        break;
+    case 17:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "ERROR: STP .LT. STPMIN");
+        break;
+    case 18:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "ERROR: STPMAX .LT. STPMIN");
+        break;
+    case 19:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "ERROR: STPMIN .LT. ZERO");
+        break;
+    case 23:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "WARNING: ROUNDING ERRORS PREVENT PROGRESS");
+        break;
+    case 24:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "WARNING: STP = STPMAX");
+        break;
+    case 25:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "WARNING: STP = STPMIN");
+        break;
+    case 26:
+        return da_warn(&err, da_status_optimization_num_difficult,
+                       "WARNING: XTOL TEST SATISFIED");
+        break;
+    case 10: // This can't happen due to options range check
+        return da_error(&err, da_status_internal_error, "ERROR: FTOL < ZERO");
+        break;
+    case 11: // This can't happen due to options range check
+        return da_error(&err, da_status_internal_error, "ERROR: GTOL .LT. ZERO");
+        break;
+    case 12:
+        return da_error(&err, da_status_internal_error, "ERROR: INITIAL G .GE. ZERO");
+        break;
+    case 13: // This can't happen due to options range check
+        return da_error(&err, da_status_internal_error, "ERROR: INVALID NBD");
+        break;
+    case 27: // This can't happen due to options range check
+        return da_error(&err, da_status_internal_error, "ERROR: FACTR .LT. 0");
+        break;
+    case 28: // This can't happen due to options range check
+        return da_error(
+            &err, da_status_internal_error,
+            "Limited memory ammount must be zero or more. Recommended limit is 11");
+        break;
+    case 100: // This is external to LBFGSB: max it
+        return da_warn(&err, da_status_optimization_maxit,
+                       "Iteration limit reached without converging to set tolerance");
+        break;
+    case 101: // This is external to LBFGSB: max time limit
+        return da_warn(&err, da_status_optimization_maxtime,
+                       "Time limit reached without converging to set tolerance");
+        break;
+    case 120: // This is external to LBFGSB: Objective function callback return status != 0
+        // no recovery implemented
+        return da_warn(&err, da_status_option_invalid_value,
+                       "User objective function could not be evaluated at a latest trial "
+                       "point and no recovery process is implemented. ");
+        break;
+    case 121: // This is external to LBFGSB: Objective gradient callback return status != 0
+        // no recovery implemented
+        return da_warn(&err, da_status_option_invalid_value,
+                       "User objective gradient could not be evaluated at a latest trial "
+                       "point and no recovery process is implemented. ");
+        break;
+
+    case 1:  // 'NEW_X', 1  action: monitor => possible user request to stop
+    case 2:  // 'START', 2  action: 1st iteration
+    case 4:  // 'FG',    4  action: evaluage f+g
+    case 20: // 'FG_LNSRCH', 20 action: evaluage f+g
+    case 21: // 'FG_START', 21 action: evaluage f+g
+    case 22: // 'ERROR: XTOL .LT. ZERO', 22 internal use only -> NEW_X
+    default:
+        return da_error(&err, da_status_internal_error,
+                        "Unknown optimization task id at exit: " + std::to_string(itask));
+        break;
+    }
+
+    return da_status_success;
 }
 
 #endif

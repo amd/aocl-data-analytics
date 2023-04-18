@@ -1,3 +1,4 @@
+#include "da_error.hpp"
 #include "da_handle.hpp"
 #include "parser.hpp"
 
@@ -7,6 +8,12 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         *handle = new _da_handle;
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
+    }
+
+    try {
+        (*handle)->err = new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
+    } catch (...) {
+        return da_status_internal_error;
     }
 
     (*handle)->handle_type = handle_type;
@@ -26,7 +33,7 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_linmod:
         try {
-            (*handle)->linreg_d = new linear_model<double>();
+            (*handle)->linreg_d = new linear_model<double>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
@@ -57,6 +64,12 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
         return da_status_memory_error;
     }
 
+    try {
+        (*handle)->err = new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
+    } catch (...) {
+        return da_status_internal_error;
+    }
+
     (*handle)->handle_type = handle_type;
     da_status error = da_status_success;
     (*handle)->precision = da_single;
@@ -74,7 +87,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_linmod:
         try {
-            (*handle)->linreg_s = new linear_model<float>();
+            (*handle)->linreg_s = new linear_model<float>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
@@ -118,10 +131,16 @@ da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_
 }
 
 void da_handle_print_error_message(da_handle handle) {
-
-    printf("================ Error message stored in da_handle struct ================");
-    printf("%s", handle->error_message);
-    printf("==========================================================================");
+    // FIXME transition to err.print() and remove error_message
+    if (strlen(handle->error_message) == 0) {
+        handle->err->print();
+    } else {
+        printf(
+            "================ Error message stored in da_handle struct ================");
+        printf("%s", handle->error_message);
+        printf(
+            "==========================================================================");
+    }
 }
 
 /* Destroy the da_handle struct */
@@ -139,6 +158,8 @@ void da_handle_destroy(da_handle *handle) {
                 delete (*handle)->pca_d;
             if ((*handle)->pca_s)
                 delete (*handle)->pca_s;
+            if ((*handle)->err)
+                delete (*handle)->err;
         }
         delete (*handle);
         *handle = nullptr;

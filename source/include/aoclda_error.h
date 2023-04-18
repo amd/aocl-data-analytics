@@ -43,20 +43,21 @@ typedef enum da_status_ {
     da_status_handle_not_initialized, ///< Handle was not initialized properly or is corrupted
     da_status_invalid_option,         ///< Invalid option detected
     da_status_incompatible_options, ///< Incompatible option detected
+    da_status_operation_failed, ///< Signal that an internal operation failed (could not solve a hard linear system as part of a larger process)
 
     // CSV errors 100-199
     da_status_file_not_found = 100, ///< The CSV file could not be found
     da_status_range_error,          ///< A number was beyond the range of the data type
     da_status_no_digits,            ///< No valid digits were found in a field
-    da_status_invalid_chars,        ///< Invalid characters were found when reading an integer
-    da_status_invalid_boolean,      ///< Invalid data was found when reading a boolean value
-    da_status_sign_error,           ///< A negative sign was found when reading in an unsigned integer
-    da_status_file_reading_error,   ///< An error occured when reading the file
-    da_status_parsing_error,        ///< An error occured when parsing the file
-    da_status_ragged_csv,           ///< Not all rows of the CSV have the same number of entries
-    da_status_warn_bad_lines,       ///< The CSV file contained one or more lines that could not be read
-    da_status_warn_missing_data,    ///< The returned array contains missing data
-    da_status_warn_no_data,         ///< No data was found
+    da_status_invalid_chars,   ///< Invalid characters were found when reading an integer
+    da_status_invalid_boolean, ///< Invalid data was found when reading a boolean value
+    da_status_sign_error, ///< A negative sign was found when reading in an unsigned integer
+    da_status_file_reading_error, ///< An error occured when reading the file
+    da_status_parsing_error,      ///< An error occured when parsing the file
+    da_status_ragged_csv, ///< Not all rows of the CSV have the same number of entries
+    da_status_warn_bad_lines, ///< The CSV file contained one or more lines that could not be read
+    da_status_warn_missing_data, ///< The returned array contains missing data
+    da_status_warn_no_data,      ///< No data was found
 
     // linreg errors 200-299
     // PCA errors 300-399
@@ -66,5 +67,14 @@ typedef enum da_status_ {
     da_status_option_wrong_type,      ///< Wrong option type passed
     da_status_option_invalid_bounds,  ///< Option value is out-of-bounds
     da_status_option_invalid_value,   ///< Cannot set option to an invalid value
+
+    // Optimization solvers 500-599
+    da_status_optimization_usrstop = 500, //< User requested to stop optimization process
+    da_status_optimization_num_difficult, // Numerical difficulties encoutered during the optimization process
+    da_status_optimization_infeasible, // The problem is infeasible, the bounds describe an empty domain
+    da_status_optimization_empty_space, // No variables are defined in the problem
+    da_status_optimization_maxit,       // Iteration limit reached without converging
+    da_status_optimization_maxtime      // Time limit reached without converging
+
 } da_status;
 #endif

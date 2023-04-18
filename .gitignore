@@ -7,4 +7,6 @@ tags
 # Vim files
 .*.swp
 .*.un~
+# Fortran modules
+*.mod
 

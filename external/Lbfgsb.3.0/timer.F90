@@ -3,20 +3,7 @@
 !  or “3-clause license”)
 !  Please read attached file License.txt
 !
-
-#ifdef SINGLE_PREC
-#define SUFF _s
-#else
-#define SUFF _d
-#endif
-
-! ## doesn't work for concatenation, redefine it
-#define PASTE(a) a
-#define CONCAT(a,b) PASTE(a)b
-
-! add precision suffix to the function names
-#define PREC(f) CONCAT(f,SUFF)
-
+#include "preprocessor.fpp"
     Subroutine PREC(timer)(ttime)
       Use working_precision, Only: wp
       Real (Kind=wp) :: ttime

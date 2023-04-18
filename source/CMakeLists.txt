@@ -12,9 +12,13 @@ set(DA_CORE_SRC ${LINMOD_SRC} ${BASIC_STATISTICS_SRC} ${CSV} ${DA_HANDLE}
 
 add_library(da_core ${DA_CORE_SRC})
 target_include_directories(da_core PUBLIC include)
-target_include_directories(
-  da_core PRIVATE core/drivers/ core/optimization/ core/utilities core/csv
-                  core/linear_model core/data_management core/factorization)
+target_include_directories(da_core PUBLIC core/drivers/ 
+                                           core/optimization/
+                                           core/utilities 
+                                           core/csv 
+                                           core/linear_model 
+                                           core/data_management core/factorization)
+target_include_directories(da_core PRIVATE ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 
 if(WIN32)
   target_link_directories(
@@ -25,7 +29,7 @@ endif()
 
 target_link_libraries(da_core lbfgsb lbfgsb_s ${FLAME} ${BLIS})
 if (NOT WIN32)
-target_link_libraries(da_core -lgomp)
+    target_link_libraries(da_core -lgomp)
 endif()
 
 if(NOT WIN32)

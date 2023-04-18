@@ -197,13 +197,13 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
   # GNU style compiler flags Common flags
-  set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma")
+  set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma;-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;")
   if(BUILD_SMP)
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${OpenMP_CXX_FLAGS};")
   endif()
   # Release flags
   set(COMPILER_FLAGS_RELEASE "-DNDEBUG;-O2;")
-  set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;-Wall;-Wextra")
+  set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;")
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON
         "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
@@ -282,7 +282,7 @@ message(NOTICE "Building with OpenMP    : ${BUILD_SMP}")
 if(${VALGRIND})
   message(
     NOTICE
-    "         Valgrind flags : ${CTEST_MEMORYCHECK_COMMAND_OPTIONS} Use with `cmake -T MemCheck`"
+    "         Valgrind flags : ${CTEST_MEMORYCHECK_COMMAND_OPTIONS}. Use with `ctest -T MemCheck`"
   )
 endif()
 message(NOTICE "Building with Coverage  : ${COVERAGE}")
@@ -290,4 +290,3 @@ message(NOTICE "Building docs           : ${BUILD_DOC}")
 message(NOTICE "\nTARGETS")
 message(NOTICE "Build the EXAMPLE programs : ${BUILD_EXAMPLES}")
 message(NOTICE "Build GTEST unit-tests     : ${BUILD_GTEST}")
-message(NOTICE "")

@@ -1,13 +1,6 @@
-!  NOTE: This is the slightly modified lbfgsb.f file to be more C friendly from
-!  lbfgsbC, which is under the same BSD license. Mainly replaces the characters
-!  and logical arrays with integers
-!  taken from: https://cran.r-project.org/web/packages/lbfgsb3c/
-!  FIXME check licences and how to credit authors
 !
-!
-!
-!  L-BFGS-B is released under the "New BSD License" (aka "Modified BSD License"
-!  or "3-clause license")
+!  L-BFGS-B is released under the “New BSD License” (aka “Modified BSD License”
+!  or “3-clause license”)
 !  Please read attached file License.txt
 !
 !===========   L-BFGS-B (version 3.0.  April 25, 2011  ===================
@@ -51,42 +44,27 @@
 !                        March  2011
 !
 !=============================================================================
-! JN 20150118 change name PREC(setulb) to lbfgsb3
-! MLF 20180818 changed name back lbfgsb3 in c wrapper
-#ifdef SINGLE_PREC
-#define SUFF _s
-#define PREF s
-#else
-#define SUFF _d
-#define PREF d
-#endif
+#include "preprocessor.fpp"
 
-! ## doesn't work for concatenation, redefine it
-#define PASTE(a) a
-#define CONCAT(a,b) PASTE(a)b
-
-! add precision suffix to the function names
-#define PREC(f) CONCAT(f,SUFF)
-#define LPREC(f) CONCAT(PREF,f)
-
-    Subroutine PREC(setulb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, &
-      iprint, icsave, lsavei, isave, dsave)
+    Subroutine PREC(setulb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
+      iprint, csave, lsave, isave, dsave)
       Use working_precision, Only: wp
-!     Berend noted earlier format beyond column 72
-      Integer :: lsavei(4)
-      Integer :: n, m, iprint, itask, icsave, nbd(n), iwa(3*n), isave(44)
+
+      Character (60) :: task, csave
+      Logical :: lsave(4)
+      Integer :: n, m, iprint, nbd(n), iwa(3*n), isave(44)
 !
 !-jlm-jn
       Real (Kind=wp) :: f, factr, pgtol, x(n), l(n), u(n), g(n), &
         wa(2*m*n+5*n+11*m*m+8*m), dsave(29)
-      Logical :: lsave(4)
+
 !     ************
 !
-!     Subroutine PREC(setulb)
+!     Subroutine setulb
 !
 !     This subroutine partitions the working arrays wa and iwa, and
 !       then uses the limited memory BFGS method to solve the bound
-!       constrained optimization problem by calling PREC(mainlb).
+!       constrained optimization problem by calling mainlb.
 !       (The direct method will be used in the subspace minimization.)
 !
 !     n is an integer variable.
@@ -153,7 +131,7 @@
 !
 !     iwa is an integer working array of length 3nmax.
 !
-!     itask is an integer indicating
+!     task is a working string of characters of length 60 indicating
 !       the current job when entering and quitting this subroutine.
 !
 !     iprint is an integer variable that must be set by the user.
@@ -162,12 +140,12 @@
 !        iprint=0    print only one line at the last iteration;
 !        0<iprint<99 print also f and |proj g| every iprint iterations;
 !        iprint=99   print details of every iteration except n-vectors;
-!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint=100  print also the changes of active set and final x;
 !        iprint>100  print details of every iteration including x and g;
 !       When iprint > 0, the file iterate.dat will be created to
 !                        summarize the iteration.
 !
-!     icsave is a working integer
+!     csave is a working string of characters of length 60.
 !
 !     lsave is a logical working array of dimension 4.
 !       On exit with 'task' = NEW_X, the following information is
@@ -198,11 +176,11 @@
 !         if isave(37) = 1  then the subspace argmin is beyond the box;
 !         isave(38) = the number of free variables in the current
 !                         iteration;
-!         isave(39) = the number of PREC(active) constraints in the current
+!         isave(39) = the number of active constraints in the current
 !                         iteration;
 !         n + 1 - isave(40) = the number of variables leaving the set of
-!                           PREC(active) constraints in the current iteration;
-!         isave(41) = the number of variables entering the set of PREC(active)
+!                           active constraints in the current iteration;
+!         isave(41) = the number of variables entering the set of active
 !                         constraints in the current iteration.
 !
 !     dsave is a double precision working array of dimension 29.
@@ -231,7 +209,7 @@
 !
 !     Subprograms called:
 !
-!       L-BFGS-B Library ... PREC(mainlb).
+!       L-BFGS-B Library ... mainlb.
 !
 !
 !     References:
@@ -261,42 +239,8 @@
 !     ************
 !-jlm-jn
       Integer :: lws, lr, lz, lt, ld, lxp, lwa, lwy, lsy, lss, lwt, lwn, lsnd
-      Integer :: a_d = 9
-      If (lsavei(1)==1) Then
-        lsave(1) = .True.
-      Else
-        lsave(1) = .False.
-      End If
-      If (lsavei(2)==1) Then
-        lsave(2) = .True.
-      Else
-        lsave(2) = .False.
-      End If
 
-      If (lsavei(3)==1) Then
-        lsave(3) = .True.
-      Else
-        lsave(3) = .False.
-      End If
-
-      If (lsavei(4)==1) Then
-        lsave(4) = .True.
-      Else
-        lsave(4) = .False.
-      End If
-
-!j      integer ia(10)
-
-!j       ia(1) = itask
-!j      call intpr('  The incoming task no. is ', -1, itask, 1)
-!w      write(6,*) '  The incoming task no. is ', itask
-      If ((itask<1) .Or. (itask>26)) Then
-!x        call intpr("TASK NOT IN VALID RANGE", -1, 0,0)
-        itask = -999
-        Return
-      End If
-!      if (task .eq. 'START') then
-      If (itask==2) Then
+      If (task=='START') Then
         isave(1) = m*n
         isave(2) = m**2
         isave(3) = 4*m**2
@@ -313,6 +257,7 @@
         isave(14) = isave(13) + n ! wt      n
         isave(15) = isave(14) + n ! wxp     n
         isave(16) = isave(15) + n ! wa      8*m
+        isave(44) = wp ! inform back to user the working precision id
       End If
       lws = isave(4)
       lwy = isave(5)
@@ -330,25 +275,24 @@
 
       Call PREC(mainlb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa(lws), wa(lwy), &
         wa(lsy), wa(lss), wa(lwt), wa(lwn), wa(lsnd), wa(lz), wa(lr), wa(ld), &
-        wa(lt), wa(lxp), wa(lwa), iwa(1), iwa(n+1), iwa(2*n+1), itask, iprint, &
-        icsave, lsave, isave(22), dsave)
-
+        wa(lt), wa(lxp), wa(lwa), iwa(1), iwa(n+1), iwa(2*n+1), task, iprint, &
+        csave, lsave, isave(22), dsave)
 
       Return
 
     End Subroutine
 
-!======================= The end of PREC(setulb) =============================
-! PREC(mainlb) here
+!======================= The end of setulb =============================
 
     Subroutine PREC(mainlb)(n, m, x, l, u, nbd, f, g, factr, pgtol, ws, wy, sy, ss, &
-      wt, wn, snd, z, r, d, t, xp, wa, index, iwhere, indx2, itask, iprint, &
-      icsave, lsave, isave, dsave)
+      wt, wn, snd, z, r, d, t, xp, wa, index, iwhere, indx2, task, iprint, &
+      csave, lsave, isave, dsave)
       Use working_precision, Only: wp
       Implicit None
+      Character (60) :: task, csave
       Logical :: lsave(4)
-      Integer :: n, m, iprint, itask, icsave, nbd(n), index(n), iwhere(n), &
-        indx2(n), isave(23)
+      Integer :: n, m, iprint, nbd(n), index(n), iwhere(n), indx2(n), &
+        isave(23)
 !-jlm-jn
       Real (Kind=wp) :: f, factr, pgtol, x(n), l(n), u(n), g(n), z(n), r(n), &
         d(n), t(n), xp(n), wa(8*m), ws(n, m), wy(n, m), sy(m, m), ss(m, m), &
@@ -356,7 +300,7 @@
 
 !     ************
 !
-!     Subroutine PREC(mainlb)
+!     Subroutine mainlb
 !
 !     This subroutine solves bound constrained optimization problems by
 !       using the compact formula of the limited memory BFGS updates.
@@ -451,7 +395,7 @@
 !     sg(m),sgo(m),yg(m),ygo(m) are double precision working arrays.
 !
 !     index is an integer working array of dimension n.
-!       In subroutine PREC(freev), index is used to store the free and fixed
+!       In subroutine freev, index is used to store the free and fixed
 !          variables at the Generalized Cauchy Point (GCP).
 !
 !     iwhere is an integer working array of dimension n used to record
@@ -463,10 +407,10 @@
 !                -1       if x(i) is always free, i.e., no bounds on it.
 !
 !     indx2 is an integer working array of dimension n.
-!       Within subroutine PREC(cauchy), indx2 corresponds to the array iorder.
-!       In subroutine PREC(freev), a list of variables entering and leaving
+!       Within subroutine cauchy, indx2 corresponds to the array iorder.
+!       In subroutine freev, a list of variables entering and leaving
 !       the free set is stored in indx2, and it is passed on to
-!       subroutine PREC(formk) with this information.
+!       subroutine formk with this information.
 !
 !     task is a working string of characters of length 60 indicating
 !       the current job when entering and leaving this subroutine.
@@ -477,12 +421,12 @@
 !        iprint=0    print only one line at the last iteration;
 !        0<iprint<99 print also f and |proj g| every iprint iterations;
 !        iprint=99   print details of every iteration except n-vectors;
-!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint=100  print also the changes of active set and final x;
 !        iprint>100  print details of every iteration including x and g;
 !       When iprint > 0, the file iterate.dat will be created to
 !                        summarize the iteration.
 !
-!     icsave is a working integer
+!     csave is a working string of characters of length 60.
 !
 !     lsave is a logical working array of dimension 4.
 !
@@ -493,15 +437,15 @@
 !
 !     Subprograms called
 !
-!       L-BFGS-B Library ... PREC(cauchy), PREC(subsm), PREC(lnsrlb), PREC(formk),
+!       L-BFGS-B Library ... cauchy, subsm, lnsrlb, formk,
 !
-!        PREC(errclb), PREC(prn1lb), PREC(prn2lb), PREC(prn3lb), PREC(active), PREC(projgr),
+!        errclb, prn1lb, prn2lb, prn3lb, active, projgr,
 !
-!        PREC(freev), PREC(cmprlb), PREC(matupd), PREC(formt).
+!        freev, cmprlb, matupd, formt.
 !
-!       Minpack2 Library PREC(... timer)
+!       Minpack2 Library ... timer
 !
-!       Linpack Library ... LPREC(copy), LPREC(dot).
+!       Linpack Library ... dcopy, ddot.
 !
 !
 !     References:
@@ -535,22 +479,20 @@
 !     ************
 
       Logical :: prjctd, cnstnd, boxed, updatd, wrk
-      Integer :: i, k, nintol, iback, nskip, head, col, iter, itail, iupdat, &
-        nseg, nfgv, info, ifun, iword, nfree, nact, ileave, nenter
-!j itmp for use in R output
-      Integer :: itmp
-      Real (Kind=wp) :: theta, fold, LPREC(dot), dr, rr, tol, xstep, sbgnrm, ddum, &
-        dnorm, dtd, epsmch, cpu1, cpu2, sbtime, lnscht, time1, time2, gd, &
-        gdold, stp, stpmx, time
+      Character (3) :: word
+      Integer :: i, k, nintol, itfile, iback, nskip, head, col, iter, itail, &
+        iupdat, nseg, nfgv, info, ifun, iword, nfree, nact, ileave, nenter
+      Real (Kind=wp) :: theta, fold, PREC(dot), dr, rr, tol, xstep, sbgnrm, ddum, &
+        dnorm, dtd, epsmch, cpu1, cpu2, cachyt, sbtime, lnscht, time1, time2, &
+        gd, gdold, stp, stpmx, time
       Real (Kind=wp) :: one, zero
       Parameter (one=1.0E0_wp, zero=0.0E0_wp)
 
-      If (itask==2) Then
+      If (task=='START') Then
 
         epsmch = epsilon(one)
 
-!j Arbitrarily zero these.
-        time1 = 0.0_wp
+        Call PREC(timer)(time1)
 
 !        Initialize counters and scalars when task='START'.
 
@@ -588,33 +530,33 @@
         tol = factr*epsmch
 
 !           for measuring running time:
-!y         cachyt = 0
+        cachyt = 0
         sbtime = 0
         lnscht = 0
 
 !           'word' records the status of subspace solutions.
-!$$$         word = '---'
+        word = '---'
 
 !           'info' records the termination information.
         info = 0
 
-!w         itfile = 8
-!w  leave itfile to avoid messing up subroutines
-!w         if (iprint .ge. 1) then
+        itfile = 0
+        If (iprint>=1 .And. itfile/=0) Then
 !                                open a summary file 'iterate.dat'
-!w            open (8, file = 'iterate.dat', status = 'unknown')
-!w         endif
+          Open (8, File='iterate.dat', Status='unknown')
+        End If
 
 !        Check the input arguments for errors.
 
-        Call PREC(errclb)(n, m, factr, l, u, nbd, itask, info, k)
-!  ERROR return
-        If ((itask>=9) .And. (itask<=19)) Then
-          Call PREC(prn3lb)(n, x, f, itask, iprint, info, k)
+        Call PREC(errclb)(n, m, factr, l, u, nbd, task, info, k)
+        If (task(1:5)=='ERROR') Then
+          Call PREC(prn3lb)(n, x, f, task, iprint, info, itfile, iter, nfgv, nintol, &
+            nskip, nact, sbgnrm, zero, nseg, word, iback, stp, xstep, k, &
+            cachyt, sbtime, lnscht)
           Return
         End If
 
-        Call PREC(prn1lb)(n, m, l, u, x, iprint, epsmch)
+        Call PREC(prn1lb)(n, m, l, u, x, iprint, itfile, epsmch)
 
 !        Initialize iwhere & project x onto the feasible set.
 
@@ -631,7 +573,7 @@
         updatd = lsave(4)
 
         nintol = isave(1)
-!y         itfile = isave(3)
+        itfile = isave(3)
         iback = isave(4)
         nskip = isave(5)
         head = isave(6)
@@ -655,7 +597,7 @@
         dnorm = dsave(4)
         epsmch = dsave(5)
         cpu1 = dsave(6)
-!y         cachyt = dsave(7)
+        cachyt = dsave(7)
         sbtime = dsave(8)
         lnscht = dsave(9)
         time1 = dsave(10)
@@ -669,29 +611,23 @@
 !        After returning from the driver go to the point where execution
 !        is to resume.
 
-!         if (task(1:5) .eq. 'FG_LN') goto 666
-        If (itask==20) Go To 150
-!         if (task(1:5) .eq. 'NEW_X') goto 777
-        If (itask==1) Go To 160
-!         if (task(1:5) .eq. 'FG_ST') goto 111
-        If (itask==21) Go To 100
-!         if (task(1:4) .eq. 'STOP') then
-!         if (itask .eq. 3) then
-!            if (task(7:9) .eq. 'CPU') then
-!   NOTE: Cannot happen in R driver.
+        If (task(1:5)=='FG_LN') Go To 150
+        If (task(1:5)=='NEW_X') Go To 160
+        If (task(1:5)=='FG_ST') Go To 100
+        If (task(1:4)=='STOP') Then
+          If (task(7:9)=='CPU') Then
 !                                          restore the previous iterate.
-!               call LPREC(copy)(n,t,1,x,1)
-!               call LPREC(copy)(n,r,1,g,1)
-!               f = fold
-!            endif
-!            goto 999
-!         endif
+            Call PREC(copy)(n, t, 1, x, 1)
+            Call PREC(copy)(n, r, 1, g, 1)
+            f = fold
+          End If
+          Go To 180
+        End If
       End If
 
 !     Compute f0 and g0.
 
-!      task = 'FG_START'
-      itask = 21
+      task = 'FG_START'
 !          return to the driver to calculate f and g; reenter at 111.
       Go To 190
 100   Continue
@@ -701,30 +637,25 @@
 
       Call PREC(projgr)(n, l, u, nbd, x, g, sbgnrm)
 
-!x      if (iprint .ge. 1) then
-!x         call intpr("At iterate", -1, iter, 1)
-!x         call dblepr(" f=",-1, f, 1)
-!x         call dblepr(" |proj g|= ",-1, sbgnrm, 1)
-!x      endif
+      If (iprint>=1) Then
+        Write (6, 210) iter, f, sbgnrm
+        If (itfile/=0) Write (itfile, 220) iter, nfgv, sbgnrm, f
+      End If
       If (sbgnrm<=pgtol) Then
 !                                terminate the algorithm.
-!         task = 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
-        itask = 7
+        task = 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
         Go To 180
       End If
 
 ! ----------------- the beginning of the loop --------------------------
 
 110   Continue
-      If (iprint>=99) Then
-        itmp = iter + 1
-!x         call intpr('ITERATION ', -1, itmp, 1)
-      End If
+      If (iprint>=99) Write (6, 200) iter + 1
       iword = -1
 !
       If (.Not. cnstnd .And. col>0) Then
 !                                            skip the search for GCP.
-        Call LPREC(copy)(n, x, 1, z, 1)
+        Call PREC(copy)(n, x, 1, z, 1)
         wrk = updatd
         nseg = 0
         Go To 120
@@ -736,34 +667,29 @@
 !
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-!j      call PREC(timer)(cpu1)
-      cpu1 = 0.0E0_wp
+      Call PREC(timer)(cpu1)
       Call PREC(cauchy)(n, x, l, u, nbd, g, indx2, iwhere, t, d, z, m, wy, ws, sy, &
         wt, theta, col, head, wa(1), wa(2*m+1), wa(4*m+1), wa(6*m+1), nseg, &
         iprint, sbgnrm, info, epsmch)
       If (info/=0) Then
 !         singular triangular system detected; refresh the lbfgs memory.
-!x         call intpr(' Singular triangular system detected;', -1,0,0)
-!x         call intpr(
-!x     +  '   refresh the lbfgs memory and restart the iteration.',
-!x     +    -1,0,0)
-
+        If (iprint>=1) Write (6, 240)
         info = 0
         col = 0
         head = 1
         theta = one
         iupdat = 0
         updatd = .False.
-        cpu2 = 0.0E0_wp
-!y         cachyt = cachyt + cpu2 - cpu1
+        Call PREC(timer)(cpu2)
+        cachyt = cachyt + cpu2 - cpu1
         Go To 110
       End If
-      cpu2 = 0.0E0_wp
-!y      cachyt = cachyt + cpu2 - cpu1
+      Call PREC(timer)(cpu2)
+      cachyt = cachyt + cpu2 - cpu1
       nintol = nintol + nseg
 
 !     Count the entering and leaving variables for iter > 0;
-!     find the index set of free and PREC(active) variables at the GCP.
+!     find the index set of free and active variables at the GCP.
 
       Call PREC(freev)(n, nfree, index, nenter, ileave, indx2, iwhere, wrk, updatd, &
         cnstnd, iprint, iter)
@@ -782,7 +708,7 @@
 !
 !ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
-      cpu1 = 0.0E0_wp
+      Call PREC(timer)(cpu1)
 
 !     Form  the LEL^T factorization of the indefinite
 !       matrix    K = [-D -Y'ZZ'Y/theta     L_a'-R_z'  ]
@@ -795,31 +721,20 @@
       If (info/=0) Then
 !          nonpositive definiteness in Cholesky factorization;
 !          refresh the lbfgs memory and restart the iteration.
-!w         if(iprint .ge. 1) write (6, 1006)
-        If (iprint>=1) Then
-!x           call intpr(
-!x     + ' Nonpositive definiteness in Cholesky factorization in PREC(formk);',
-!x     + -1, 0, 0)
-!x           call intpr(
-!x     + '   refresh the lbfgs memory and restart the iteration.',
-!x     + -1, 0, 0)
-
-        End If
-
+        If (iprint>=1) Write (6, 250)
         info = 0
         col = 0
         head = 1
         theta = one
         iupdat = 0
         updatd = .False.
-!j       call PREC(timer)(cpu2)
-        cpu2 = 0.0E0_wp
+        Call PREC(timer)(cpu2)
         sbtime = sbtime + cpu2 - cpu1
         Go To 110
       End If
 
 !        compute r=-Z'B(xcp-xk)-Z'g (using wa(2m+1)=W'(xcp-x)
-!                                                   from 'PREC(cauchy)').
+!                                                   from 'cauchy').
       Call PREC(cmprlb)(n, m, x, g, ws, wy, sy, wt, z, r, wa, index, theta, col, &
         head, nfree, cnstnd, info)
       If (info/=0) Go To 130
@@ -832,25 +747,19 @@
       If (info/=0) Then
 !          singular triangular system detected;
 !          refresh the lbfgs memory and restart the iteration.
-!w         if(iprint .ge. 1) write (6, 1005)
-!x         call intpr(' Singular triangular system detected;', -1,0,0)
-!x         call intpr(
-!x     +  '   refresh the lbfgs memory and restart the iteration.',
-!x     +    -1,0,0)
+        If (iprint>=1) Write (6, 240)
         info = 0
         col = 0
         head = 1
         theta = one
         iupdat = 0
         updatd = .False.
-!j       call PREC(timer)(cpu2)
-        cpu2 = 0.0E0_wp
+        Call PREC(timer)(cpu2)
         sbtime = sbtime + cpu2 - cpu1
         Go To 110
       End If
 
-!j       call PREC(timer)(cpu2)
-      cpu2 = 0.0E0_wp
+      Call PREC(timer)(cpu2)
       sbtime = sbtime + cpu2 - cpu1
 140   Continue
 
@@ -865,16 +774,15 @@
       Do i = 1, n
         d(i) = z(i) - x(i)
       End Do
-!j    call PREC(timer)(cpu1)
-      cpu1 = 0.0E0_wp
+      Call PREC(timer)(cpu1)
 150   Continue
       Call PREC(lnsrlb)(n, l, u, nbd, x, f, fold, gd, gdold, g, d, r, t, z, stp, &
-        dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, itask, boxed, &
-        cnstnd, icsave, isave(22), dsave(17))
+        dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, task, boxed, &
+        cnstnd, csave, isave(22), dsave(17))
       If (info/=0 .Or. iback>=20) Then
 !          restore the previous iterate.
-        Call LPREC(copy)(n, t, 1, x, 1)
-        Call LPREC(copy)(n, r, 1, g, 1)
+        Call PREC(copy)(n, t, 1, x, 1)
+        Call PREC(copy)(n, r, 1, g, 1)
         f = fold
         If (col==0) Then
 !             abnormal termination.
@@ -885,22 +793,12 @@
             ifun = ifun - 1
             iback = iback - 1
           End If
-!            task = 'ABNORMAL_TERMINATION_IN_LNSRCH'
-          itask = 5
+          task = 'ABNORMAL_TERMINATION_IN_LNSRCH'
           iter = iter + 1
           Go To 180
         Else
 !             refresh the lbfgs memory and restart the iteration.
-!w            if(iprint .ge. 1) write (6, 1008)
-          If (iprint>=1) Then
-!x              call intpr(
-!x     + ' Bad direction in the line search;',
-!x     + -1, 0, 0)
-!x              call intpr(
-!x     + '   refresh the lbfgs memory and restart the iteration.',
-!x     + -1, 0, 0)
-          End If
-
+          If (iprint>=1) Write (6, 270)
           If (info==0) nfgv = nfgv - 1
           info = 0
           col = 0
@@ -908,21 +806,17 @@
           theta = one
           iupdat = 0
           updatd = .False.
-!            task   = 'RESTART_FROM_LNSRCH'
-          itask = 22
-!j       call PREC(timer)(cpu2)
-          cpu2 = 0.0E0_wp
+          task = 'RESTART_FROM_LNSRCH'
+          Call PREC(timer)(cpu2)
           lnscht = lnscht + cpu2 - cpu1
           Go To 110
         End If
-!      else if (task(1:5) .eq. 'FG_LN') then
-      Else If (itask==20) Then
+      Else If (task(1:5)=='FG_LN') Then
 !          return to the driver for calculating f and g; reenter at 666.
         Go To 190
       Else
 !          calculate and print out the quantities related to the new X.
-!j       call PREC(timer)(cpu2)
-        cpu2 = 0.0E0_wp
+        Call PREC(timer)(cpu2)
         lnscht = lnscht + cpu2 - cpu1
         iter = iter + 1
 
@@ -932,8 +826,8 @@
 
 !        Print iteration information.
 
-        Call PREC(prn2lb)(f, iprint, iter, sbgnrm, iback, xstep)
-
+        Call PREC(prn2lb)(n, x, f, g, iprint, itfile, iter, nfgv, nact, sbgnrm, &
+          nseg, word, iword, iback, stp, xstep)
         Go To 190
       End If
 160   Continue
@@ -942,16 +836,14 @@
 
       If (sbgnrm<=pgtol) Then
 !                                terminate the algorithm.
-!         task = 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
-        itask = 7
+        task = 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
         Go To 180
       End If
 
       ddum = max(abs(fold), abs(f), one)
       If ((fold-f)<=tol*ddum) Then
 !                                        terminate the algorithm.
-!         task = 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH'
-        itask = 8
+        task = 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH'
         If (iback>=10) info = -5
 !           i.e., to issue a warning if iback>10 in the line search.
         Go To 180
@@ -962,13 +854,13 @@
       Do i = 1, n
         r(i) = g(i) - r(i)
       End Do
-      rr = LPREC(dot)(n, r, 1, r, 1)
+      rr = PREC(dot)(n, r, 1, r, 1)
       If (stp==one) Then
         dr = gd - gdold
         ddum = -gdold
       Else
         dr = (gd-gdold)*stp
-        Call dscal(n, stp, d, 1)
+        Call PREC(scal)(n, stp, d, 1)
         ddum = -gdold*stp
       End If
 
@@ -976,12 +868,7 @@
 !                            skip the L-BFGS update.
         nskip = nskip + 1
         updatd = .False.
-!w         if (iprint .ge. 1) write (6,1004) dr, ddum
-!x         if (iprint .ge. 1) then
-!x           call dblepr(' ys =',-1, dr, 1)
-!x           call dblepr(' BFGS update skipped for +gs=',-1, ddum, 1)
-!x         endif
-!w 1004 format ('  ys=',1p,e10.3,'  -gs=',1p,e10.3,' BFGS update SKIPPED')
+        If (iprint>=1) Write (6, 230) dr, ddum
         Go To 170
       End If
 
@@ -1009,17 +896,7 @@
       If (info/=0) Then
 !          nonpositive definiteness in Cholesky factorization;
 !          refresh the lbfgs memory and restart the iteration.
-!w         if(iprint .ge. 1) write (6, 1007)
-        If (iprint>=1) Then
-!x            call intpr(
-!x     +  ' Nonpositive definiteness in Cholesky factorization in PREC(formt);',
-!x     + -1, 0, 0)
-!x            call intpr(
-!x     +  '   refresh the lbfgs memory and restart the iteration.',
-!x     + -1, 0, 0)
-
-        End If
-
+        If (iprint>=1) Write (6, 260)
         info = 0
         col = 0
         head = 1
@@ -1040,10 +917,11 @@
 
       Go To 110
 180   Continue
-!j    call PREC(timer)(time2)
-      time2 = 0.0E0_wp
+      Call PREC(timer)(time2)
       time = time2 - time1
-      Call PREC(prn3lb)(n, x, f, itask, iprint, info, k)
+      Call PREC(prn3lb)(n, x, f, task, iprint, info, itfile, iter, nfgv, nintol, &
+        nskip, nact, sbgnrm, time, nseg, word, iback, stp, xstep, k, cachyt, &
+        sbtime, lnscht)
 190   Continue
 
 !     Save local variables.
@@ -1054,7 +932,7 @@
       lsave(4) = updatd
 
       isave(1) = nintol
-!y      isave(3)  = itfile
+      isave(3) = itfile
       isave(4) = iback
       isave(5) = nskip
       isave(6) = head
@@ -1078,7 +956,7 @@
       dsave(4) = dnorm
       dsave(5) = epsmch
       dsave(6) = cpu1
-!y      dsave(7)  = cachyt
+      dsave(7) = cachyt
       dsave(8) = sbtime
       dsave(9) = lnscht
       dsave(10) = time1
@@ -1089,30 +967,28 @@
       dsave(15) = gdold
       dsave(16) = dtd
 
-!w 1001 format (//,'ITERATION ',i5)
-!w 1002 format
-!w     +  (/,'At iterate',i5,4x,'f= ',1p,d12.5,4x,'|proj g|= ',1p,d12.5)
-!w 1003 format (2(1x,i4),5x,'-',5x,'-',3x,'-',5x,'-',5x,'-',8x,'-',3x,
-!w     +        1p,2(1x,d10.3))
-!w 1004 format ('  ys=',1p,e10.3,'  -gs=',1p,e10.3,' BFGS update SKIPPED')
-!w 1005 format (/,
-!w     +' Singular triangular system detected;',/,
-!w     +'   refresh the lbfgs memory and restart the iteration.')
-!w 1006 format (/,
-!w     +' Nonpositive definiteness in Cholesky factorization in PREC(formk);',/,
-!w     +'   refresh the lbfgs memory and restart the iteration.')
-!w 1007 format (/,
-!w     +' Nonpositive definiteness in Cholesky factorization in PREC(formt);',/,
-!w     +'   refresh the lbfgs memory and restart the iteration.')
-!w 1008 format (/,
-!w     +' Bad direction in the line search;',/,
-!w     +'   refresh the lbfgs memory and restart the iteration.')
+200   Format (/, /, 'ITERATION ', I5)
+210   Format (/, 'At iterate', I5, 4X, 'f= ', 1P, D12.5, 4X, '|proj g|= ', 1P, &
+        D12.5)
+220   Format (2(1X,I4), 5X, '-', 5X, '-', 3X, '-', 5X, '-', 5X, '-', 8X, '-', &
+        3X, 1P, 2(1X,D10.3))
+230   Format ('  ys=', 1P, E10.3, '  -gs=', 1P, E10.3, ' BFGS update SKIPPED')
+240   Format (/, ' Singular triangular system detected;', /, &
+        '   refresh the lbfgs memory and restart the iteration.')
+250   Format (/, &
+        ' Nonpositive definiteness in Cholesky factorization in formk;', /, &
+        '   refresh the lbfgs memory and restart the iteration.')
+260   Format (/, &
+        ' Nonpositive definiteness in Cholesky factorization in formt;', /, &
+        '   refresh the lbfgs memory and restart the iteration.')
+270   Format (/, ' Bad direction in the line search;', /, &
+        '   refresh the lbfgs memory and restart the iteration.')
 
       Return
 
     End Subroutine
 
-!======================= The end of PREC(mainlb) =============================
+!======================= The end of mainlb =============================
 
     Subroutine PREC(active)(n, l, u, nbd, x, iwhere, iprint, prjctd, cnstnd, boxed)
       Use working_precision, Only: wp
@@ -1123,7 +999,7 @@
 
 !     ************
 !
-!     Subroutine PREC(active)
+!     Subroutine active
 !
 !     This subroutine initializes iwhere and projects the initial x to
 !       the feasible set if necessary.
@@ -1133,7 +1009,7 @@
 !       On exit iwhere(i)=-1  if x(i) has no bounds
 !                         3   if l(i)=u(i)
 !                         0   otherwise.
-!       In PREC(cauchy), iwhere is given finer gradations.
+!       In cauchy, iwhere is given finer gradations.
 !
 !
 !                           *  *  *
@@ -1199,28 +1075,21 @@
         End If
       End Do
 
-!x      if (iprint .ge. 0) then
-!x         if (prjctd) then
-!x         call intpr('initial X infeasible. Restart with projection.',
-!x     +  -1, 0, 0)
-!x         endif
-!x         if (.not. cnstnd) then
-!x          call intpr('This problem is unconstrained.', -1, 0,0)
-!x         endif
-!x      endif
+      If (iprint>=0) Then
+        If (prjctd) Write (6, *) &
+          'The initial X is infeasible.  Restart with its projection.'
+        If (.Not. cnstnd) Write (6, *) 'This problem is unconstrained.'
+      End If
 
-!w      if (iprint .gt. 0) write (6,1001) nbdd
-!x      if (iprint .gt. 0) then
-!x         call intpr(' Variables exactly at bounds for X0 ',-1,
-!x     +      nbdd, 1)
-!x      endif
-!w 1001 format (/,'At X0 ',i9,' variables are exactly at the bounds')
+      If (iprint>0) Write (6, 100) nbdd
+
+100   Format (/, 'At X0 ', I9, ' variables are exactly at the bounds')
 
       Return
 
     End Subroutine
 
-!======================= The end of PREC(active) =============================
+!======================= The end of active =============================
 
     Subroutine PREC(bmv)(m, sy, wt, col, v, p, info)
       Use working_precision, Only: wp
@@ -1230,7 +1099,7 @@
 
 !     ************
 !
-!     Subroutine PREC(bmv)
+!     Subroutine bmv
 !
 !     This subroutine computes the product of the 2m x 2m middle matrix
 !       in the compact L-BFGS formula of B and a 2m vector v;
@@ -1267,11 +1136,11 @@
 !       On entry info is unspecified.
 !       On exit info = 0       for normal return,
 !                    = nonzero for abnormal return when the system
-!                                to be solved by LPREC(trsl) is singular.
+!                                to be solved by dtrsl is singular.
 !
 !     Subprograms called:
 !
-!       Linpack ... LPREC(trsl).
+!       Linpack ... dtrsl.
 !
 !
 !                           *  *  *
@@ -1305,7 +1174,7 @@
         p(i2) = v(i2) + sum
       End Do
 !     Solve the triangular system
-      Call LPREC(trsl)(wt, m, col, p(col+1), 11, info)
+      Call PREC(trsl)(wt, m, col, p(col+1), 11, info)
       If (info/=0) Return
 
 !       solve D^(1/2)p1=v1.
@@ -1317,7 +1186,7 @@
 !                    [  0         J'           ] [ p2 ]   [ p2 ].
 
 !       solve J^Tp2=p2.
-      Call LPREC(trsl)(wt, m, col, p(col+1), 01, info)
+      Call PREC(trsl)(wt, m, col, p(col+1), 01, info)
       If (info/=0) Return
 
 !       compute p1=-D^(-1/2)(p1-D^(-1/2)L'p2)
@@ -1337,7 +1206,7 @@
 
     End Subroutine
 
-!======================== The end of PREC(bmv) ===============================
+!======================== The end of bmv ===============================
 
     Subroutine PREC(cauchy)(n, x, l, u, nbd, g, iorder, iwhere, t, d, xcp, m, wy, &
       ws, sy, wt, theta, col, head, p, c, wbp, v, nseg, iprint, sbgnrm, info, &
@@ -1352,7 +1221,7 @@
 
 !     ************
 !
-!     Subroutine PREC(cauchy)
+!     Subroutine cauchy
 !
 !     For given x, l, u, g (with sbgnrm > 0), and a limited memory
 !       BFGS matrix B defined in terms of matrices WY, WS, WT, and
@@ -1479,7 +1348,7 @@
 !        iprint=0    print only one line at the last iteration;
 !        0<iprint<99 print also f and |proj g| every iprint iterations;
 !        iprint=99   print details of every iteration except n-vectors;
-!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint=100  print also the changes of active set and final x;
 !        iprint>100  print details of every iteration including x and g;
 !       When iprint > 0, the file iterate.dat will be created to
 !                        summarize the iteration.
@@ -1492,13 +1361,13 @@
 !       On entry info is 0.
 !       On exit info = 0       for normal return,
 !                    = nonzero for abnormal return when the the system
-!                              used in routine PREC(bmv) is singular.
+!                              used in routine bmv is singular.
 !
 !     Subprograms called:
 !
-!       L-BFGS-B Library ... PREC(hpsolb), PREC(bmv).
+!       L-BFGS-B Library ... hpsolb, bmv.
 !
-!       Linpack ... dscal LPREC(copy), LPREC(axpy).
+!       Linpack ... dscal dcopy, daxpy.
 !
 !
 !     References:
@@ -1529,9 +1398,8 @@
 
       Logical :: xlower, xupper, bnded
       Integer :: i, j, col2, nfree, nbreak, pointr, ibp, nleft, ibkmin, iter
-      Integer :: nprt
       Real (Kind=wp) :: f1, f2, dt, dtm, tsum, dibp, zibp, dibp2, bkmin, tu, &
-        tl, wmc, wmp, wmw, LPREC(dot), tj, tj0, neggi, sbgnrm, f2_org
+        tl, wmc, wmp, wmw, PREC(dot), tj, tj0, neggi, sbgnrm, f2_org
       Real (Kind=wp) :: one, zero
       Parameter (one=1.0E0_wp, zero=0.0E0_wp)
 
@@ -1540,11 +1408,8 @@
 !       the derivative f1 and the vector p = W'd (for theta = 1).
 
       If (sbgnrm<=zero) Then
-!x         if (iprint .ge. 0) then
-!x            call intpr('Subgnorm =0, GCP = X.', -1, 0, 0)
-!x         endif
-!w         if (iprint .ge. 0) write (6,*) 'Subgnorm = 0.  GCP = X.'
-        Call LPREC(copy)(n, x, 1, xcp, 1)
+        If (iprint>=0) Write (6, *) 'Subgnorm = 0.  GCP = X.'
+        Call PREC(copy)(n, x, 1, xcp, 1)
         Return
       End If
       bnded = .True.
@@ -1554,10 +1419,8 @@
       bkmin = zero
       col2 = 2*col
       f1 = zero
-!w      if (iprint .ge. 99) write (6,3010)
-!x      if (iprint .ge. 99) then
-!x        call intpr('--- CAUCHY entered---',-1,0,0)
-!x      endif
+      If (iprint>=99) Write (6, 150)
+
 !     We set p to zero and build it up as we determine d.
 
       Do i = 1, col2
@@ -1636,21 +1499,16 @@
 
       If (theta/=one) Then
 !                   complete the initialization of p for theta not= one.
-        Call dscal(col, theta, p(col+1), 1)
+        Call PREC(scal)(col, theta, p(col+1), 1)
       End If
 
 !     Initialize GCP xcp = x.
 
-      Call LPREC(copy)(n, x, 1, xcp, 1)
+      Call PREC(copy)(n, x, 1, xcp, 1)
 
       If (nbreak==0 .And. nfree==n+1) Then
 !                  is a zero vector, return with the initial xcp as GCP.
-!w         if (iprint .gt. 100) write (6,1010) (xcp(i), i = 1, n)
-!x           if (iprint .gt. 100) then
-!x             nprt = n
-!x             if (nprt .gt. 5) nprt = 5
-!x             call dblepr('Cauchy X[1:5] =  ',-1, xcp, nprt)
-!x           endif
+        If (iprint>100) Write (6, 130)(xcp(i), i=1, n)
         Return
       End If
 
@@ -1667,15 +1525,12 @@
       If (col>0) Then
         Call PREC(bmv)(m, sy, wt, col, p, v, info)
         If (info/=0) Return
-        f2 = f2 - LPREC(dot)(col2, v, 1, p, 1)
+        f2 = f2 - PREC(dot)(col2, v, 1, p, 1)
       End If
       dtm = -f1/f2
       tsum = zero
       nseg = 1
-!x      if (iprint .ge. 99) then
-!w     +   write (6,*) 'There are ',nbreak,'  breakpoints '
-!x         call intpr('no. of breakpoints =',-1, nbreak, 1)
-!x      endif
+      If (iprint>=99) Write (6, *) 'There are ', nbreak, '  breakpoints '
 
 !     If there are no breakpoints, locate the GCP and return.
 
@@ -1719,18 +1574,11 @@
 
       dt = tj - tj0
 
-!x      if (dt .ne. zero .and. iprint .ge. 100) then
-!w         write (6,4011) nseg,f1,f2
-!x         call intpr('Piece ',-1, nseg, 1)
-!x         call dblepr('f1 at start point =',-1, f1, 1)
-!x         call dblepr('f2 at start point =',-1, f1, 1)
-!w         write (6,5010) dt
-!x         call dblepr('Distance to the next break point =  ',
-!x     +  -1, dt, 1)
-!x         call dblepr('Distance to the stationary point =  ',
-!x     +  -1, dtm, 1)
-!w         write (6,6010) dtm
-!x      endif
+      If (dt/=zero .And. iprint>=100) Then
+        Write (6, 170) nseg, f1, f2
+        Write (6, 180) dt
+        Write (6, 190) dtm
+      End If
 
 !     If a minimizer is within this interval, locate the GCP and return.
 
@@ -1753,9 +1601,7 @@
         xcp(ibp) = l(ibp)
         iwhere(ibp) = 1
       End If
-!w      if (iprint .ge. 100) write (6,*) 'Variable  ',ibp,'  is fixed.'
-!x      if (iprint .ge. 100)
-!x     +   call intpr('Variable fixed, index ',-1,ibp, 1)
+      If (iprint>=100) Write (6, *) 'Variable  ', ibp, '  is fixed.'
       If (nleft==0 .And. nbreak==n) Then
 !                                             all n variables are fixed,
 !                                                return with xcp as GCP.
@@ -1776,7 +1622,7 @@
 
       If (col>0) Then
 !                          update c = c + dt*p.
-        Call LPREC(axpy)(col2, dt, p, 1, c, 1)
+        Call PREC(axpy)(col2, dt, p, 1, c, 1)
 
 !           choose wbp,
 !           the row of W corresponding to the breakpoint encountered.
@@ -1790,12 +1636,12 @@
 !           compute (wbp)Mc, (wbp)Mp, and (wbp)M(wbp)'.
         Call PREC(bmv)(m, sy, wt, col, wbp, v, info)
         If (info/=0) Return
-        wmc = LPREC(dot)(col2, c, 1, v, 1)
-        wmp = LPREC(dot)(col2, p, 1, v, 1)
-        wmw = LPREC(dot)(col2, wbp, 1, v, 1)
+        wmc = PREC(dot)(col2, c, 1, v, 1)
+        wmp = PREC(dot)(col2, p, 1, v, 1)
+        wmw = PREC(dot)(col2, wbp, 1, v, 1)
 
 !           update p = p - dibp*wbp.
-        Call LPREC(axpy)(col2, -dibp, wbp, 1, p, 1)
+        Call PREC(axpy)(col2, -dibp, wbp, 1, p, 1)
 
 !           complete updating f1 and f2 while col > 0.
         f1 = f1 + dibp*wmc
@@ -1818,56 +1664,43 @@
 !------------------- the end of the loop -------------------------------
 
 110   Continue
-!x      if (iprint .ge. 99) then
-!w         write (6,*)
-!w         write (6,*) 'GCP found in this segment'
-!w         write (6,4010) nseg,f1,f2
-!x         call intpr('Piece ',-1, nseg, 1)
-!x         call dblepr('f1 at start point =',-1, f1, 1)
-!x         call dblepr('f2 at start point =',-1, f1, 1)
-!w         write (6,6010) dtm
-!x         call dblepr('Distance to the stationary point =  ',
-!x     +  -1, dtm, 1)
-
-!x      endif
+      If (iprint>=99) Then
+        Write (6, *)
+        Write (6, *) 'GCP found in this segment'
+        Write (6, 160) nseg, f1, f2
+        Write (6, 190) dtm
+      End If
       If (dtm<=zero) dtm = zero
       tsum = tsum + dtm
 
 !     Move free variables (i.e., the ones w/o breakpoints) and
 !       the variables whose breakpoints haven't been reached.
 
-      Call LPREC(axpy)(n, tsum, d, 1, xcp, 1)
+      Call PREC(axpy)(n, tsum, d, 1, xcp, 1)
 
 120   Continue
 
 !     Update c = c + dtm*p = W'(x^c - x)
 !       which will be used in computing r = Z'(B(x^c - x) + g).
 
-      If (col>0) Call LPREC(axpy)(col2, dtm, p, 1, c, 1)
-!x      if (iprint .gt. 100) then
-!w         write (6,1010) (xcp(i),i = 1,n)
-!x           nprt = n
-!x           if (nprt .gt. 5) nprt = 5
-!x           call dblepr('Cauchy X[1:5] =  ',-1, xcp, nprt)
-!x      endif
-!x      if (iprint .ge. 99) then
-!w       write (6,2010)
-!x         call intpr('--- exit CAUCHY---',-1, 0,0)
-!x      endif
-!w 1010 format ('Cauchy X =  ',/,(4x,1p,6(1x,d11.4)))
-!x 2010 format (/,'---------------- exit CAUCHY----------------------',/)
-!w 3010 format (/,'---------------- CAUCHY entered-------------------')
-!w 4010 format ('Piece    ',i3,' --f1, f2 at start point ',1p,2(1x,d11.4))
-!w 4011 format (/,'Piece    ',i3,' --f1, f2 at start point ',
-!w     +        1p,2(1x,d11.4))
-!w 5010 format ('Distance to the next break point =  ',1p,d11.4)
-!w 6010 format ('Distance to the stationary point =  ',1p,d11.4)
+      If (col>0) Call PREC(axpy)(col2, dtm, p, 1, c, 1)
+      If (iprint>100) Write (6, 130)(xcp(i), i=1, n)
+      If (iprint>=99) Write (6, 140)
+
+130   Format ('Cauchy X =  ', /, (4X,1P,6(1X,D11.4)))
+140   Format (/, '---------------- exit CAUCHY----------------------', /)
+150   Format (/, '---------------- CAUCHY entered-------------------')
+160   Format ('Piece    ', I3, ' --f1, f2 at start point ', 1P, 2(1X,D11.4))
+170   Format (/, 'Piece    ', I3, ' --f1, f2 at start point ', 1P, &
+        2(1X,D11.4))
+180   Format ('Distance to the next break point =  ', 1P, D11.4)
+190   Format ('Distance to the stationary point =  ', 1P, D11.4)
 
       Return
 
     End Subroutine
 
-!====================== The end of PREC(cauchy) ==============================
+!====================== The end of cauchy ==============================
 
     Subroutine PREC(cmprlb)(n, m, x, g, ws, wy, sy, wt, z, r, wa, index, theta, col, &
       head, nfree, cnstnd, info)
@@ -1880,14 +1713,14 @@
 
 !     ************
 !
-!     Subroutine PREC(cmprlb)
+!     Subroutine cmprlb
 !
 !       This subroutine computes r=-Z'B(xcp-xk)-Z'g by using
-!         wa(2m+1)=W'(xcp-x) from subroutine PREC(cauchy).
+!         wa(2m+1)=W'(xcp-x) from subroutine cauchy.
 !
 !     Subprograms called:
 !
-!       L-BFGS-B Library ... PREC(bmv).
+!       L-BFGS-B Library ... bmv.
 !
 !
 !                           *  *  *
@@ -1935,18 +1768,18 @@
 
     End Subroutine
 
-!======================= The end of PREC(cmprlb) =============================
+!======================= The end of cmprlb =============================
 
-    Subroutine PREC(errclb)(n, m, factr, l, u, nbd, itask, info, k)
+    Subroutine PREC(errclb)(n, m, factr, l, u, nbd, task, info, k)
       Use working_precision, Only: wp
 
-!      character*255     task
-      Integer :: n, m, itask, info, k, nbd(n)
+      Character (60) :: task
+      Integer :: n, m, info, k, nbd(n)
       Real (Kind=wp) :: factr, l(n), u(n)
 
 !     ************
 !
-!     Subroutine PREC(errclb)
+!     Subroutine errclb
 !
 !     This subroutine checks the validity of the input data.
 !
@@ -1964,43 +1797,28 @@
 !     ************
 
       Integer :: i
-      Real (Kind=wp) :: zero
-      Parameter (zero=0.0E0_wp)
+      Real (Kind=wp) :: one, zero
+      Parameter (one=1.0E0_wp, zero=0.0E0_wp)
 
 !     Check the input arguments for errors.
 
-      If (n<=0) Then
-        itask = 13
-!x         call intpr("  ERROR: N .LE. 0", -1, 0, 0)
-        Return
-      End If
-!      if (m .le. 0) task = 'ERROR: M .LE. 0'
-      If (m<=0) Then
-!x           call intpr("  ERROR: M .LE. 0", -1, 0, 0)
-        Return
-      End If
-
-!      if (factr .lt. zero) task = 'ERROR: FACTR .LT. 0'
-      If (factr<=zero) Then
-!x           call intpr('  ERROR: FACTR .LT. 0', -1, 0, 0)
-        Return
-      End If
+      If (n<=0) task = 'ERROR: N .LE. 0'
+      If (m<=0) task = 'ERROR: M .LE. 0'
+      If (factr<zero) task = 'ERROR: FACTR .LT. 0'
 
 !     Check the validity of the arrays nbd(i), u(i), and l(i).
 
       Do i = 1, n
         If (nbd(i)<0 .Or. nbd(i)>3) Then
 !                                                   return
-!            task = 'ERROR: INVALID NBD'
-          itask = 12
+          task = 'ERROR: INVALID NBD'
           info = -6
           k = i
         End If
         If (nbd(i)==2) Then
           If (l(i)>u(i)) Then
 !                                    return
-!               task = 'ERROR: NO FEASIBLE SOLUTION'
-            itask = 14
+            task = 'ERROR: NO FEASIBLE SOLUTION'
             info = -7
             k = i
           End If
@@ -2011,7 +1829,7 @@
 
     End Subroutine
 
-!======================= The end of PREC(errclb) =============================
+!======================= The end of errclb =============================
 
     Subroutine PREC(formk)(n, nsub, ind, nenter, ileave, indx2, iupdat, updatd, wn, &
       wn1, m, ws, wy, sy, theta, col, head, info)
@@ -2025,7 +1843,7 @@
 
 !     ************
 !
-!     Subroutine PREC(formk)
+!     Subroutine formk
 !
 !     This subroutine forms  the LEL^T factorization of the indefinite
 !
@@ -2118,7 +1936,7 @@
 !
 !     Subprograms called:
 !
-!       Linpack ... LPREC(copy), LPREC(pofa), LPREC(trsl).
+!       Linpack ... dcopy, dpofa, dtrsl.
 !
 !
 !     References:
@@ -2148,9 +1966,9 @@
 
       Integer :: m2, ipntr, jpntr, iy, is, jy, js, is1, js1, k1, i, k, col2, &
         pbegin, pend, dbegin, dend, upcl
-      Real (Kind=wp) :: LPREC(dot), temp1, temp2, temp3, temp4
-      Real (Kind=wp) :: zero
-      Parameter (zero=0.0E0_wp)
+      Real (Kind=wp) :: PREC(dot), temp1, temp2, temp3, temp4
+      Real (Kind=wp) :: one, zero
+      Parameter (one=1.0E0_wp, zero=0.0E0_wp)
 
 !     Form the lower triangular part of
 !               WN1 = [Y' ZZ'Y   L_a'+R_z']
@@ -2163,9 +1981,9 @@
 !                                 shift old part of WN1.
           Do jy = 1, m - 1
             js = m + jy
-            Call LPREC(copy)(m-jy, wn1(jy+1,jy+1), 1, wn1(jy,jy), 1)
-            Call LPREC(copy)(m-jy, wn1(js+1,js+1), 1, wn1(js,js), 1)
-            Call LPREC(copy)(m-1, wn1(m+2,jy+1), 1, wn1(m+1,jy), 1)
+            Call PREC(copy)(m-jy, wn1(jy+1,jy+1), 1, wn1(jy,jy), 1)
+            Call PREC(copy)(m-jy, wn1(js+1,js+1), 1, wn1(js,js), 1)
+            Call PREC(copy)(m-1, wn1(m+2,jy+1), 1, wn1(m+1,jy), 1)
           End Do
         End If
 
@@ -2303,7 +2121,7 @@
 
 !        first Cholesky factor (1,1) block of wn to get LL'
 !                          with L' stored in the upper triangle of wn.
-      Call LPREC(pofa)(wn, m2, col, info)
+      Call PREC(pofa)(wn, m2, col, info)
       If (info/=0) Then
         info = -1
         Return
@@ -2311,7 +2129,7 @@
 !        then form L^-1(-L_a'+R_z') in the (1,2) block.
       col2 = 2*col
       Do js = col + 1, col2
-        Call LPREC(trsl)(wn, m2, col, wn(1,js), 11, info)
+        Call PREC(trsl)(wn, m2, col, wn(1,js), 11, info)
       End Do
 
 !     Form S'AA'S*theta + (L^-1(-L_a'+R_z'))'L^-1(-L_a'+R_z') in the
@@ -2320,13 +2138,13 @@
 
       Do is = col + 1, col2
         Do js = is, col2
-          wn(is, js) = wn(is, js) + LPREC(dot)(col, wn(1,is), 1, wn(1,js), 1)
+          wn(is, js) = wn(is, js) + PREC(dot)(col, wn(1,is), 1, wn(1,js), 1)
         End Do
       End Do
 
 !     Cholesky factorization of (2,2) block of wn.
 
-      Call LPREC(pofa)(wn(col+1,col+1), m2, col, info)
+      Call PREC(pofa)(wn(col+1,col+1), m2, col, info)
       If (info/=0) Then
         info = -2
         Return
@@ -2336,7 +2154,7 @@
 
     End Subroutine
 
-!======================= The end of PREC(formk) ==============================
+!======================= The end of formk ==============================
 
     Subroutine PREC(formt)(m, wt, sy, ss, col, theta, info)
       Use working_precision, Only: wp
@@ -2346,7 +2164,7 @@
 
 !     ************
 !
-!     Subroutine PREC(formt)
+!     Subroutine formt
 !
 !       This subroutine forms the upper half of the pos. def. and symm.
 !         T = theta*SS + L*D^(-1)*L', stores T in the upper triangle
@@ -2355,7 +2173,7 @@
 !
 !     Subprograms called:
 !
-!       Linpack ... LPREC(pofa).
+!       Linpack ... dpofa.
 !
 !
 !                           *  *  *
@@ -2396,7 +2214,7 @@
 !     Cholesky factorize T to J*J' with
 !        J' stored in the upper triangle of wt.
 
-      Call LPREC(pofa)(wt, m, col, info)
+      Call PREC(pofa)(wt, m, col, info)
       If (info/=0) Then
         info = -3
       End If
@@ -2405,7 +2223,7 @@
 
     End Subroutine
 
-!======================= The end of PREC(formt) ==============================
+!======================= The end of formt ==============================
 
     Subroutine PREC(freev)(n, nfree, index, nenter, ileave, indx2, iwhere, wrk, &
       updatd, cnstnd, iprint, iter)
@@ -2416,10 +2234,10 @@
 
 !     ************
 !
-!     Subroutine PREC(freev)
+!     Subroutine freev
 !
 !     This subroutine counts the entering and leaving variables when
-!       iter > 0, and finds the index set of free and PREC(active) variables
+!       iter > 0, and finds the index set of free and active variables
 !       at the GCP.
 !
 !     cnstnd is a logical variable indicating whether bounds are present
@@ -2430,7 +2248,7 @@
 !       On entry after the first iteration, index gives
 !         the free variables at the previous iteration.
 !       On exit it gives the free variables based on the determination
-!         in PREC(cauchy) using the array iwhere.
+!         in cauchy using the array iwhere.
 !
 !     indx2 is an integer array of dimension n
 !       On entry indx2 is unspecified.
@@ -2453,7 +2271,6 @@
 !     ************
 
       Integer :: iact, i, k
-      Integer :: itmp
 
       nenter = 0
       ileave = n + 1
@@ -2462,19 +2279,14 @@
         Do i = 1, nfree
           k = index(i)
 
-!jn            write(6,*) ' k  = index(i) ', k
-!jn            write(6,*) ' index = ', i
+!            write(6,*) ' k  = index(i) ', k
+!            write(6,*) ' index = ', i
 
           If (iwhere(k)>0) Then
             ileave = ileave - 1
             indx2(ileave) = k
-            If (iprint>=100) Then
-!x                  call intpr(
-!x     +   'Variable k leaves the set of free variables for k =',
-!x     +   -1, k, 1)
-            End If
-!w               if (iprint .ge. 100) write (6,*)
-!w     +             'Variable ',k,' leaves the set of free variables'
+            If (iprint>=100) Write (6, *) 'Variable ', k, &
+              ' leaves the set of free variables'
           End If
         End Do
         Do i = 1 + nfree, n
@@ -2482,24 +2294,16 @@
           If (iwhere(k)<=0) Then
             nenter = nenter + 1
             indx2(nenter) = k
-!x               if (iprint .ge. 100) then
-!x                 call intpr('Var entering free vars is k=',-1,k,1)
-!w                write (6,*)
-!w     +             'Variable ',k,' enters the set of free variables'
-!x               endif
+            If (iprint>=100) Write (6, *) 'Variable ', k, &
+              ' enters the set of free variables'
           End If
         End Do
-!x         if (iprint .ge. 99) then
-!w            write (6,*)
-!w     +       n+1-ileave,' variables leave; ',nenter,' variables enter'
-!x            itmp = n+1-ileave
-!x            call intpr(' no. variables leaving  =',-1,itmp, 1)
-!x            call intpr(' no. variables entering =',-1,nenter, 1)
-!x         endif
+        If (iprint>=99) Write (6, *) n + 1 - ileave, ' variables leave; ', &
+          nenter, ' variables enter'
       End If
       wrk = (ileave<n+1) .Or. (nenter>0) .Or. updatd
 
-!     Find the index set of free and PREC(active) variables at the GCP.
+!     Find the index set of free and active variables at the GCP.
 
       nfree = 0
       iact = n + 1
@@ -2512,18 +2316,14 @@
           index(iact) = i
         End If
       End Do
-!x      if (iprint .ge. 99) then
-!w        write (6,*)
-!w     +      nfree,' variables are free at GCP ',iter + 1
-!x         call intpr(' no. variables free =',-1, nfree,1)
-!x         itmp = iter + 1
-!x         call intpr(' at GCP ',-1,itmp,1)
-!x      endif
+      If (iprint>=99) Write (6, *) nfree, ' variables are free at GCP ', &
+        iter + 1
+
       Return
 
     End Subroutine
 
-!======================= The end of PREC(freev) ==============================
+!======================= The end of freev ==============================
 
     Subroutine PREC(hpsolb)(n, t, iorder, iheap)
       Use working_precision, Only: wp
@@ -2532,7 +2332,7 @@
 
 !     ************
 !
-!     Subroutine PREC(hpsolb)
+!     Subroutine hpsolb
 !
 !     This subroutine sorts out the least element of t, and puts the
 !       remaining elements of t in a heap.
@@ -2636,31 +2436,31 @@
 
     End Subroutine
 
-!====================== The end of PREC(hpsolb) ==============================
+!====================== The end of hpsolb ==============================
 
     Subroutine PREC(lnsrlb)(n, l, u, nbd, x, f, fold, gd, gdold, g, d, r, t, z, stp, &
-      dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, itask, boxed, &
-      cnstnd, icsave, isave, dsave)
+      dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, task, boxed, &
+      cnstnd, csave, isave, dsave)
       Use working_precision, Only: wp
 
+      Character (60) :: task, csave
       Logical :: boxed, cnstnd
-      Integer :: n, iter, ifun, iback, nfgv, info, itask, icsave, nbd(n), &
-        isave(2)
+      Integer :: n, iter, ifun, iback, nfgv, info, nbd(n), isave(2)
       Real (Kind=wp) :: f, fold, gd, gdold, stp, dnorm, dtd, xstep, stpmx, &
         x(n), l(n), u(n), g(n), d(n), r(n), t(n), z(n), dsave(13)
 !     **********
 !
-!     Subroutine PREC(lnsrlb)
+!     Subroutine lnsrlb
 !
-!     This subroutine calls subroutine PREC(dcsrch) from the Minpack2 library
+!     This subroutine calls subroutine dcsrch from the Minpack2 library
 !       to perform the line search.  Subroutine dscrch is safeguarded so
 !       that all trial points lie within the feasible region.
 !
 !     Subprograms called:
 !
-!       Minpack2 Library ... PREC(dcsrch).
+!       Minpack2 Library ... dcsrch.
 !
-!       Linpack ... LPREC(trsl), LPREC(dot).
+!       Linpack ... dtrsl, ddot.
 !
 !
 !                           *  *  *
@@ -2676,15 +2476,16 @@
 !     **********
 
       Integer :: i
-      Real (Kind=wp) :: LPREC(dot), a1, a2
+      Real (Kind=wp) :: PREC(dot), a1, a2
       Real (Kind=wp) :: one, zero, big
       Parameter (one=1.0E0_wp, zero=0.0E0_wp, big=1.0E+10_wp)
       Real (Kind=wp) :: ftol, gtol, xtol
       Parameter (ftol=1.0E-3_wp, gtol=0.9E0_wp, xtol=0.1E0_wp)
+      csave = '' ! dcsrch makes a jump based on the task saved in csave
+      ! Valgrind: Conditional jump or move depends on uninitialised value(s)
+      If (task(1:5)=='FG_LN') Go To 100
 
-!      if (task(1:5) .eq. 'FG_LN') goto 556
-      If (itask==20) Go To 100
-      dtd = LPREC(dot)(n, d, 1, d, 1)
+      dtd = PREC(dot)(n, d, 1, d, 1)
       dnorm = sqrt(dtd)
 
 !     Determine the maximum step length.
@@ -2723,57 +2524,50 @@
         stp = one
       End If
 
-      Call LPREC(copy)(n, x, 1, t, 1)
-      Call LPREC(copy)(n, g, 1, r, 1)
+      Call PREC(copy)(n, x, 1, t, 1)
+      Call PREC(copy)(n, g, 1, r, 1)
       fold = f
       ifun = 0
       iback = 0
-!      csave = 'START'
-      icsave = 2
+      csave = 'START'
 100   Continue
-      gd = LPREC(dot)(n, g, 1, d, 1)
+      gd = PREC(dot)(n, g, 1, d, 1)
       If (ifun==0) Then
         gdold = gd
         If (gd>=zero) Then
 !                               the directional derivative >=0.
 !                               Line search is impossible.
-!w            write(6,*)' ascent direction in projection gd = ', gd
-!x              call dblepr(' ascent direction in projection gd = ',
-!x     +     -1, gd,1)
+          Write (6, *) ' ascent direction in projection gd = ', gd
           info = -4
           Return
         End If
       End If
 
-      Call PREC(dcsrch)(f, gd, stp, ftol, gtol, xtol, zero, stpmx, icsave, isave, &
+      Call PREC(csrch)(f, gd, stp, ftol, gtol, xtol, zero, stpmx, csave, isave, &
         dsave)
 
       xstep = stp*dnorm
-!      if (csave(1:4) .ne. 'CONV' .and. csave(1:4) .ne. 'WARN') then
-!2345678901234567890123456789012345678901234567890123456789012345678901234567890
-      If ((icsave<6) .Or. ((icsave>8) .And. (icsave<23))) Then
-!         task = 'FG_LNSRCH'
-        itask = 20
+      If (csave(1:4)/='CONV' .And. csave(1:4)/='WARN') Then
+        task = 'FG_LNSRCH'
         ifun = ifun + 1
         nfgv = nfgv + 1
         iback = ifun - 1
         If (stp==one) Then
-          Call LPREC(copy)(n, z, 1, x, 1)
+          Call PREC(copy)(n, z, 1, x, 1)
         Else
           Do i = 1, n
             x(i) = stp*d(i) + t(i)
           End Do
         End If
       Else
-!         task = 'NEW_X'
-        itask = 1
+        task = 'NEW_X'
       End If
 
       Return
 
     End Subroutine
 
-!======================= The end of PREC(lnsrlb) =============================
+!======================= The end of lnsrlb =============================
 
     Subroutine PREC(matupd)(n, m, ws, wy, sy, ss, d, r, itail, iupdat, col, head, &
       theta, rr, dr, stp, dtd)
@@ -2785,14 +2579,14 @@
 
 !     ************
 !
-!     Subroutine PREC(matupd)
+!     Subroutine matupd
 !
 !       This subroutine updates matrices WS and WY, and forms the
 !         middle matrix in B.
 !
 !     Subprograms called:
 !
-!       Linpack ... LPREC(copy), LPREC(dot).
+!       Linpack ... dcopy, ddot.
 !
 !
 !                           *  *  *
@@ -2808,7 +2602,7 @@
 !     ************
 
       Integer :: j, pointr
-      Real (Kind=wp) :: LPREC(dot)
+      Real (Kind=wp) :: PREC(dot)
       Real (Kind=wp) :: one
       Parameter (one=1.0E0_wp)
 
@@ -2824,8 +2618,8 @@
 
 !     Update matrices WS and WY.
 
-      Call LPREC(copy)(n, d, 1, ws(1,itail), 1)
-      Call LPREC(copy)(n, r, 1, wy(1,itail), 1)
+      Call PREC(copy)(n, d, 1, ws(1,itail), 1)
+      Call PREC(copy)(n, r, 1, wy(1,itail), 1)
 
 !     Set theta=yy/ys.
 
@@ -2838,16 +2632,16 @@
       If (iupdat>m) Then
 !                              move old information
         Do j = 1, col - 1
-          Call LPREC(copy)(j, ss(2,j+1), 1, ss(1,j), 1)
-          Call LPREC(copy)(col-j, sy(j+1,j+1), 1, sy(j,j), 1)
+          Call PREC(copy)(j, ss(2,j+1), 1, ss(1,j), 1)
+          Call PREC(copy)(col-j, sy(j+1,j+1), 1, sy(j,j), 1)
         End Do
       End If
 !        add new information: the last row of SY
 !                                             and the last column of SS:
       pointr = head
       Do j = 1, col - 1
-        sy(col, j) = LPREC(dot)(n, d, 1, wy(1,pointr), 1)
-        ss(j, col) = LPREC(dot)(n, ws(1,pointr), 1, d, 1)
+        sy(col, j) = PREC(dot)(n, d, 1, wy(1,pointr), 1)
+        ss(j, col) = PREC(dot)(n, ws(1,pointr), 1, d, 1)
         pointr = mod(pointr, m) + 1
       End Do
       If (stp==one) Then
@@ -2861,17 +2655,17 @@
 
     End Subroutine
 
-!======================= The end of PREC(matupd) =============================
+!======================= The end of matupd =============================
 
-    Subroutine PREC(prn1lb)(n, m, l, u, x, iprint, epsmch)
+    Subroutine PREC(prn1lb)(n, m, l, u, x, iprint, itfile, epsmch)
       Use working_precision, Only: wp
 
-      Integer :: n, m
+      Integer :: n, m, iprint, itfile
       Real (Kind=wp) :: epsmch, x(n), l(n), u(n)
 
 !     ************
 !
-!     Subroutine PREC(prn1lb)
+!     Subroutine prn1lb
 !
 !     This subroutine prints the input data, initial point, upper and
 !       lower bounds of each variable, machine precision, as well as
@@ -2890,71 +2684,57 @@
 !
 !     ************
 
-!$$$      integer i
-      Integer :: nprt
+      Integer :: i
 
-!  limit output to 1st 5 elements
-      nprt = n
-      If (nprt>5) nprt = 5
-!x      if (iprint .ge. 0) then
-!x         if (iprint .ge. 1) then
-!w         write (6,7001) epsmch
-!x         call dblepr('RUNNING THE L-BFGS-B CODE with eps=',
-!x     +     -1, epsmch, 1)
-!w         write (6,*) 'N = ',n,'    M = ',m
-!x         call intpr(' N =',-1, n, 1)
-!x         call intpr(' M =',-1, m, 1)
-!w            write (itfile,2001) epsmch
-!w            write (itfile,*)'N = ',n,'    M = ',m
-!w            write (itfile,9001)
-!x            if (iprint .gt. 100) then
-!w               write (6,1004) 'L =',(l(i),i = 1,n)
-!w               write (6,1004) 'X0 =',(x(i),i = 1,n)
-!w               write (6,1004) 'U =',(u(i),i = 1,n)
-!x               call dblepr('L =',-1, l, nprt)
-!x               call dblepr('X0=',-1, x, nprt)
-!x               call dblepr('U =',-1, u, nprt)
-!x            endif
-!x         endif
-!x      endif
+      If (iprint>=0) Then
+        Write (6, 120) epsmch
+        Write (6, *) 'N = ', n, '    M = ', m
+        If (iprint>=1 .And. itfile/=0) Then
+          Write (itfile, 110) epsmch
+          Write (itfile, *) 'N = ', n, '    M = ', m
+          Write (itfile, 130)
+          If (iprint>100) Then
+            Write (6, 100) 'L =', (l(i), i=1, n)
+            Write (6, 100) 'X0 =', (x(i), i=1, n)
+            Write (6, 100) 'U =', (u(i), i=1, n)
+          End If
+        End If
+      End If
 
-!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
-!w 2001 format ('RUNNING THE L-BFGS-B CODE',/,/,
-!w     + 'it    = iteration number',/,
-!w     + 'nf    = number of function evaluations',/,
-!w     + 'nseg  = number of segments explored during the Cauchy search',/,
-!w     + 'nact  = number of PREC(active) bounds at the generalized Cauchy point'
-!w     + ,/,
-!w     + 'sub   = manner in which the subspace minimization terminated:'
-!w     + ,/,'        con = converged, bnd = a bound was reached',/,
-!w     + 'itls  = number of iterations performed in the line search',/,
-!w     + 'stepl = step length used',/,
-!w     + 'tstep = norm of the displacement (total step)',/,
-!w     + 'projg = norm of the projected gradient',/,
-!w     + 'f     = function value',/,/,
-!w     + '           * * *',/,/,
-!w     + 'Machine precision =',1p,d10.3)
-!w 7001 format ('RUNNING THE L-BFGS-B CODE',/,/,
-!w     + '           * * *',/,/,
-!w     + 'Machine precision =',1p,d10.3)
-!w 9001 format (/,3x,'it',3x,'nf',2x,'nseg',2x,'nact',2x,'sub',2x,'itls',
-!w     +        2x,'stepl',4x,'tstep',5x,'projg',8x,'f')
+100   Format (/, A4, 1P, 6(1X,D11.4), /, (4X,1P,6(1X,D11.4)))
+110   Format ('RUNNING THE L-BFGS-B CODE', /, /, 'it    = iteration number', &
+        /, 'nf    = number of function evaluations', /, &
+        'nseg  = number of segments explored during the Cauchy search', /, &
+        'nact  = number of active bounds at the generalized Cauchy point', /, &
+        'sub   = manner in which the subspace minimization terminated:', /, &
+        '        con = converged, bnd = a bound was reached', /, &
+        'itls  = number of iterations performed in the line search', /, &
+        'stepl = step length used', /, &
+        'tstep = norm of the displacement (total step)', /, &
+        'projg = norm of the projected gradient', /, 'f     = function value', &
+        /, /, '           * * *', /, /, 'Machine precision =', 1P, D10.3)
+120   Format ('RUNNING THE L-BFGS-B CODE', /, /, '           * * *', /, /, &
+        'Machine precision =', 1P, D10.3)
+130   Format (/, 3X, 'it', 3X, 'nf', 2X, 'nseg', 2X, 'nact', 2X, 'sub', 2X, &
+        'itls', 2X, 'stepl', 4X, 'tstep', 5X, 'projg', 8X, 'f')
 
       Return
 
     End Subroutine
 
-!======================= The end of PREC(prn1lb) =============================
+!======================= The end of prn1lb =============================
 
-    Subroutine PREC(prn2lb)(f, iprint, iter, sbgnrm, iback, xstep)
+    Subroutine PREC(prn2lb)(n, x, f, g, iprint, itfile, iter, nfgv, nact, sbgnrm, &
+      nseg, word, iword, iback, stp, xstep)
       Use working_precision, Only: wp
 
-      Integer :: iprint, iter, iback
-      Real (Kind=wp) :: f, sbgnrm, xstep
+      Character (3) :: word
+      Integer :: n, iprint, itfile, iter, nfgv, nact, nseg, iword, iback
+      Real (Kind=wp) :: f, sbgnrm, stp, xstep, x(n), g(n)
 
 !     ************
 !
-!     Subroutine PREC(prn2lb)
+!     Subroutine prn2lb
 !
 !     This subroutine prints out new information after a successful
 !       line search.
@@ -2972,61 +2752,62 @@
 !
 !     ************
 
-      Integer :: imod
+      Integer :: i, imod
 
 !           'word' records the status of subspace solutions.
-!$$$      if (iword .eq. 0) then
-!$$$c                            the subspace minimization converged.
-!$$$         word = 'con'
-!$$$      else if (iword .eq. 1) then
-!$$$c                          the subspace minimization stopped at a bound.
-!$$$         word = 'bnd'
-!$$$      else if (iword .eq. 5) then
-!$$$c                             the truncated Newton step has been used.
-!$$$         word = 'TNT'
-!$$$      else
-!$$$         word = '---'
-!$$$      endif
-!x      if (iprint .ge. 99) then
-!w         write (6,*) 'LINE SEARCH',iback,' times; norm of step = ',xstep
-!x         call intpr('LINE SEARCH iback=',-1, iback, 1)
-!x         call dblepr('norm of step =',-1, xstep, 1)
-!w         write (6,2001) iter,f,sbgnrm
-!x         call intpr('At iterate ',-1, iter, 1)
-!x         call dblepr('f =',-1, f, 1)
-!x         call dblepr('|proj g| =',-1, sbgnrm, 1)
-!x         if (iprint .gt. 100) then
-!w            write (6,1004) 'X =',(x(i), i = 1, n)
-!w            write (6,1004) 'G =',(g(i), i = 1, n)
-!x         endif
-!x      else if (iprint .gt. 0) then
-!x         imod = mod(iter,iprint)
-!w         if (imod .eq. 0) write (6,2001) iter,f,sbgnrm
-!x      endif
-!w      if (iprint .ge. 1) write (itfile,3001)
-!w     +          iter,nfgv,nseg,nact,word,iback,stp,xstep,sbgnrm,f
+      If (iword==0) Then
+!                            the subspace minimization converged.
+        word = 'con'
+      Else If (iword==1) Then
+!                          the subspace minimization stopped at a bound.
+        word = 'bnd'
+      Else If (iword==5) Then
+!                             the truncated Newton step has been used.
+        word = 'TNT'
+      Else
+        word = '---'
+      End If
+      If (iprint>=99) Then
+        Write (6, *) 'LINE SEARCH', iback, ' times; norm of step = ', xstep
+        Write (6, 110) iter, f, sbgnrm
+        If (iprint>100) Then
+          Write (6, 100) 'X =', (x(i), i=1, n)
+          Write (6, 100) 'G =', (g(i), i=1, n)
+        End If
+      Else If (iprint>0) Then
+        imod = mod(iter, iprint)
+        If (imod==0) Write (6, 110) iter, f, sbgnrm
+      End If
+      If (iprint>=1 .And. itfile/=0) Write (itfile, 120) iter, nfgv, nseg,     &
+        nact, word, iback, stp, xstep, sbgnrm, f
 
-!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
-!w 2001 format
-!w     +  (/,'At iterate',i5,4x,'f= ',1p,d12.5,4x,'|proj g|= ',1p,d12.5)
-!w 3001 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),1p,2(1x,d10.3))
+100   Format (/, A4, 1P, 6(1X,D11.4), /, (4X,1P,6(1X,D11.4)))
+110   Format (/, 'At iterate', I5, 4X, 'f= ', 1P, D12.5, 4X, '|proj g|= ', 1P, &
+        D12.5)
+120   Format (2(1X,I4), 2(1X,I5), 2X, A3, 1X, I4, 1P, 2(2X,D7.1), 1P, &
+        2(1X,D10.3))
 
       Return
 
     End Subroutine
 
-!======================= The end of PREC(prn2lb) =============================
+!======================= The end of prn2lb =============================
 
-    Subroutine PREC(prn3lb)(n, x, f, itask, iprint, info, k)
+    Subroutine PREC(prn3lb)(n, x, f, task, iprint, info, itfile, iter, nfgv, nintol, &
+      nskip, nact, sbgnrm, time, nseg, word, iback, stp, xstep, k, cachyt, &
+      sbtime, lnscht)
       Use working_precision, Only: wp
 
-!      character*255     task
-      Integer :: n, iprint, info, k, itask
-      Real (Kind=wp) :: f, x(n)
+      Character (60) :: task
+      Character (3) :: word
+      Integer :: n, iprint, info, itfile, iter, nfgv, nintol, nskip, nact, &
+        nseg, iback, k
+      Real (Kind=wp) :: f, sbgnrm, time, stp, xstep, cachyt, sbtime, lnscht, &
+        x(n)
 
 !     ************
 !
-!     Subroutine PREC(prn3lb)
+!     Subroutine prn3lb
 !
 !     This subroutine prints out information when either a built-in
 !       convergence test is satisfied or when an error message is
@@ -3045,195 +2826,99 @@
 !
 !     ************
 
-!$$$      integer i
-      Integer :: nprt
+      Integer :: i
 
-!      if (task(1:5) .eq. 'ERROR') goto 999
-      If ((itask>=9) .And. (itask<=19)) Go To 100
+      If (task(1:5)=='ERROR') Go To 100
 
-!x      if (iprint .ge. 0) then
-!w       write (6,3003)
-!w 3003 format (/,
-!w     + '           * * *',/,/,
-!w     + 'Tit   = total number of iterations',/,
-!w     + 'Tnf   = total number of function evaluations',/,
-!w     + 'Tnint = total number of segments explored during',
-!w     +           ' Cauchy searches',/,
-!w     + 'Skip  = number of BFGS updates skipped',/,
-!w     + 'Nact  = number of PREC(active) bounds at final generalized',
-!w     +          ' Cauchy point',/,
-!w     + 'Projg = norm of the final projected gradient',/,
-!w     + 'F     = final function value',/,/,
-!w     + '           * * *')
-!w       write (6,3004)
-!w 3004 format (/,3x,'N',4x,'Tit',5x,'Tnf',2x,'Tnint',2x,
-!w     +       'Skip',2x,'Nact',5x,'Projg',8x,'F')
-!w       write(6,3005) n,iter,nfgv,nintol,nskip,nact,sbgnrm,f
-!w 3005 format (i5,2(1x,i6),(1x,i6),(2x,i4),(1x,i5),1p,2(2x,d10.3))
-!x         if (iprint .ge. 100) then
-!x            nprt = n
-!x            if (nprt .gt. 5) nprt = 5
-!x            call dblepr('X=', -1, x, nprt)
-!w            write (6,1004) 'X =',(x(i),i = 1,n)
-!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
-!x         endif
-!w       if (iprint .ge. 1) write (6,*) ' F =',f
-!x         if (iprint .ge. 1) call dblepr(' F =',-1,f, 1)
-!x      endif
+      If (iprint>=0) Then
+        Write (6, 130)
+        Write (6, 140)
+        Write (6, 150) n, iter, nfgv, nintol, nskip, nact, sbgnrm, f
+        If (iprint>=100) Then
+          Write (6, 110) 'X =', (x(i), i=1, n)
+        End If
+        If (iprint>=1) Write (6, *) ' F =', f
+      End If
 100   Continue
-!x      if (iprint .ge. 0) then
-!w         write (6,3009) itask
-!x         if (info .ne. 0) then
-!w            if (info .eq. -1) write (6,9011)
-!x           if (info .eq. -1) then
-!x             call intpr(
-!x     +' Matrix in 1st Cholesky factorization in PREC(formk) is not Pos. Def.',
-!x     +  -1, 0, 0)
-!x           endif
-!w            if (info .eq. -2) write (6,9012)
-!x            if (info .eq. -2) then
-!x              call intpr(
-!x     +' Matrix in 2nd Cholesky factorization in PREC(formk) is not Pos. Def.',
-!x     +  -1, 0, 0)
+      If (iprint>=0) Then
+        Write (6, 180) task
+        If (info/=0) Then
+          If (info==-1) Write (6, 190)
+          If (info==-2) Write (6, 200)
+          If (info==-3) Write (6, 210)
+          If (info==-4) Write (6, 220)
+          If (info==-5) Write (6, 230)
+          If (info==-6) Write (6, *) ' Input nbd(', k, ') is invalid.'
+          If (info==-7) Write (6, *) ' l(', k, ') > u(', k, &
+            ').  No feasible solution.'
+          If (info==-8) Write (6, 240)
+          If (info==-9) Write (6, 250)
+        End If
+        If (iprint>=1) Write (6, 160) cachyt, sbtime, lnscht
+        Write (6, 170) time
+        If (iprint>=1 .And. itfile/=0) Then
+          If (info==-4 .Or. info==-9) Then
+            Write (itfile, 120) iter, nfgv, nseg, nact, word, iback, stp, &
+              xstep
+          End If
+          Write (itfile, 180) task
+          If (info/=0) Then
+            If (info==-1) Write (itfile, 190)
+            If (info==-2) Write (itfile, 200)
+            If (info==-3) Write (itfile, 210)
+            If (info==-4) Write (itfile, 220)
+            If (info==-5) Write (itfile, 230)
+            If (info==-8) Write (itfile, 240)
+            If (info==-9) Write (itfile, 250)
+          End If
+          Write (itfile, 170) time
+        End If
+      End If
 
-!x            endif
-!w            if (info .eq. -3) write (6,9013)
-!x            if (info .eq. -3) then
-!x              call intpr(
-!x     +  ' Matrix in Cholesky factorization in PREC(formt) is not Pos. Def.',
-!x     +  -1, 0, 0)
-!x            endif
-!w            if (info .eq. -4) write (6,9014)
-!x            if (info .eq. -4) then
-!x              call intpr(
-!x     +' Derivative >= 0, backtracking line search impossible.',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +'   Previous x, f and g restored.',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +' Possible causes: 1 error in function or gradient evaluation;',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +'                  2 rounding errors dominate computation.',
-!x     +  -1, 0, 0)
-!x            endif
-!w            if (info .eq. -5) write (6,9015)
-!x            if (info .eq. -5) then
-!x              call intpr(
-!x     +' Warning:  more than 10 function and gradient',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +'   evaluations in the last line search.  Termination',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +'   may possibly be caused by a bad search direction.',
-!x     +  -1, 0, 0)
-!x            endif
-!w            if (info .eq. -6) write (6,*)' Input nbd(',k,') is invalid.'
-!x            if (info .eq. -6) then
-!x              call intpr(
-!x     + ' Input nbd(k) is invalid for k = ',
-!x     +  -1, k, 1)
-!x            endif
-!w            if (info .eq. -7)
-!x            if (info .eq. -7) then
-!x              call intpr(
-!x     +  ' l(k) > u(k).  No feasible solution for k=', -1, k, 1)
-!x            endif
-!w     +      write (6,*)' l(',k,') > u(',k,').  No feasible solution.'
-!w            if (info .eq. -8) write (6,9018)
-!x            if (info .eq. -8) then
-!x              call intpr(' The triangular system is singular.',
-!x     +  -1, 0, 0)
-!x            endif
-!w            if (info .eq. -9) write (6,9019)
-!x            if (info .eq. -9) then
-!x              call intpr(
-!x     +' Line search cannot locate an adequate point after 20 function',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +'  and gradient evaluations.  Previous x, f and g restored.',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +' Possible causes: 1 error in function or gradient evaluation;',
-!x     +  -1, 0, 0)
-!x              call intpr(
-!x     +'                  2 rounding error dominate computation.',
-!x     +  -1, 0, 0)
-!x            endif
-!x         endif
-!w         if (iprint .ge. 1)
-!w        write (6,3007) cachyt,sbtime,lnscht
-!w   suppressing time output
-
-!w         write (6,3008) time
-!w Note -- suppress time computations here -- use R stuff
-!w         if (iprint .ge. 1) then
-!w            if (info .eq. -4 .or. info .eq. -9) then
-!w               write (itfile,3002)
-!w     +             iter,nfgv,nseg,nact,word,iback,stp,xstep
-!w            endif
-!w            write (itfile,3009) itask
-!w            if (info .ne. 0) then
-!w               if (info .eq. -1) write (itfile,9011)
-!w               if (info .eq. -2) write (itfile,9012)
-!w               if (info .eq. -3) write (itfile,9013)
-!w               if (info .eq. -4) write (itfile,9014)
-!w               if (info .eq. -5) write (itfile,9015)
-!w               if (info .eq. -8) write (itfile,9018)
-!w               if (info .eq. -9) write (itfile,9019)
-!w            endif
-!w            write (itfile,3008) time
-!w         endif
-!x      endif
-
-!w 1004 format (/,a4, 1p, 6(1x,d11.4),/,(4x,1p,6(1x,d11.4)))
-!w 3002 format(2(1x,i4),2(1x,i5),2x,a3,1x,i4,1p,2(2x,d7.1),6x,'-',10x,'-')
-!w 3003 format (/,
-!w     + '           * * *',/,/,
-!w     + 'Tit   = total number of iterations',/,
-!w     + 'Tnf   = total number of function evaluations',/,
-!w     + 'Tnint = total number of segments explored during',
-!w     +           ' Cauchy searches',/,
-!w     + 'Skip  = number of BFGS updates skipped',/,
-!w     + 'Nact  = number of PREC(active) bounds at final generalized',
-!w     +          ' Cauchy point',/,
-!w     + 'Projg = norm of the final projected gradient',/,
-!w     + 'F     = final function value',/,/,
-!w     + '           * * *')
-!w 3007 format (/,' Cauchy                time',1p,e10.3,' seconds.',/
-!w     +        ' Subspace minimization time',1p,e10.3,' seconds.',/
-!w     +        ' Line search           time',1p,e10.3,' seconds.')
-!w 3008 format (/,' Total User time',1p,e10.3,' seconds.',/)
-!w 3009 format (/,i4)
-!w 9011 format (/,
-!w     +' Matrix in 1st Cholesky factorization in PREC(formk) is not Pos. Def.')
-!w 9012 format (/,
-!w     +' Matrix in 2st Cholesky factorization in PREC(formk) is not Pos. Def.')
-!w 9013 format (/,
-!w     +' Matrix in the Cholesky factorization in PREC(formt) is not Pos. Def.')
-!w 9014 format (/,
-!w     +' Derivative >= 0, backtracking line search impossible.',/,
-!w     +'   Previous x, f and g restored.',/,
-!w     +' Possible causes: 1 error in function or gradient evaluation;',/,
-!w     +'                  2 rounding errors dominate computation.')
-!w 9015 format (/,
-!w     +' Warning:  more than 10 function and gradient',/,
-!w     +'   evaluations in the last line search.  Termination',/,
-!w     +'   may possibly be caused by a bad search direction.')
-!w 9018 format (/,' The triangular system is singular.')
-!w 9019 format (/,
-!w     +' Line search cannot locate an adequate point after 20 function',/
-!w     +,'  and gradient evaluations.  Previous x, f and g restored.',/,
-!w     +' Possible causes: 1 error in function or gradient evaluation;',/,
-!w     +'                  2 rounding error dominate computation.')
+110   Format (/, A4, 1P, 6(1X,D11.4), /, (4X,1P,6(1X,D11.4)))
+120   Format (2(1X,I4), 2(1X,I5), 2X, A3, 1X, I4, 1P, 2(2X,D7.1), 6X, '-', &
+        10X, '-')
+130   Format (/, '           * * *', /, /, &
+        'Tit   = total number of iterations', /, &
+        'Tnf   = total number of function evaluations', /, &
+        'Tnint = total number of segments explored during', &
+        ' Cauchy searches', /, 'Skip  = number of BFGS updates skipped', /, &
+        'Nact  = number of active bounds at final generalized', &
+        ' Cauchy point', /, 'Projg = norm of the final projected gradient', /, &
+        'F     = final function value', /, /, '           * * *')
+140   Format (/, 3X, 'N', 4X, 'Tit', 5X, 'Tnf', 2X, 'Tnint', 2X, 'Skip', 2X, &
+        'Nact', 5X, 'Projg', 8X, 'F')
+150   Format (I5, 2(1X,I6), (1X,I6), (2X,I4), (1X,I5), 1P, 2(2X,D10.3))
+160   Format (/, ' Cauchy                time', 1P, E10.3, ' seconds.', /, &
+        ' Subspace minimization time', 1P, E10.3, ' seconds.', /, &
+        ' Line search           time', 1P, E10.3, ' seconds.')
+170   Format (/, ' Total User time', 1P, E10.3, ' seconds.', /)
+180   Format (/, A60)
+190   Format (/, &
+        ' Matrix in 1st Cholesky factorization in formk is not Pos. Def.')
+200   Format (/, &
+        ' Matrix in 2st Cholesky factorization in formk is not Pos. Def.')
+210   Format (/, &
+        ' Matrix in the Cholesky factorization in formt is not Pos. Def.')
+220   Format (/, ' Derivative >= 0, backtracking line search impossible.', /, &
+        '   Previous x, f and g restored.', /, &
+        ' Possible causes: 1 error in function or gradient evaluation;', /, &
+        '                  2 rounding errors dominate computation.')
+230   Format (/, ' Warning:  more than 10 function and gradient', /, &
+        '   evaluations in the last line search.  Termination', /, &
+        '   may possibly be caused by a bad search direction.')
+240   Format (/, ' The triangular system is singular.')
+250   Format (/, &
+        ' Line search cannot locate an adequate point after 20 function', /, &
+        '  and gradient evaluations.  Previous x, f and g restored.', /, &
+        ' Possible causes: 1 error in function or gradient evaluation;', /, &
+        '                  2 rounding error dominate computation.')
 
       Return
 
     End Subroutine
 
-!======================= The end of PREC(prn3lb) =============================
+!======================= The end of prn3lb =============================
 
     Subroutine PREC(projgr)(n, l, u, nbd, x, g, sbgnrm)
       Use working_precision, Only: wp
@@ -3243,7 +2928,7 @@
 
 !     ************
 !
-!     Subroutine PREC(projgr)
+!     Subroutine projgr
 !
 !     This subroutine computes the infinity norm of the projected
 !       gradient.
@@ -3263,8 +2948,8 @@
 
       Integer :: i
       Real (Kind=wp) :: gi
-      Real (Kind=wp) :: zero
-      Parameter (zero=0.0E0_wp)
+      Real (Kind=wp) :: one, zero
+      Parameter (one=1.0E0_wp, zero=0.0E0_wp)
 
       sbgnrm = zero
       Do i = 1, n
@@ -3283,7 +2968,7 @@
 
     End Subroutine
 
-!======================= The end of PREC(projgr) =============================
+!======================= The end of projgr =============================
 
     Subroutine PREC(subsm)(n, m, nsub, ind, l, u, nbd, x, d, xp, ws, wy, theta, xx, &
       gg, col, head, iword, wv, wn, iprint, info)
@@ -3315,10 +3000,10 @@
 !      **********************************************************************
 !
 !
-!     Subroutine PREC(subsm)
+!     Subroutine subsm
 !
 !     Given xcp, l, u, r, an index set that specifies
-!       the PREC(active) set at xcp, and an l-BFGS matrix B
+!       the active set at xcp, and an l-BFGS matrix B
 !       (in terms of WY, WS, SY, WT, head, col, and theta),
 !       this subroutine computes an approximate solution
 !       of the subspace problem
@@ -3436,7 +3121,7 @@
 !        iprint=0    print only one line at the last iteration;
 !        0<iprint<99 print also f and |proj g| every iprint iterations;
 !        iprint=99   print details of every iteration except n-vectors;
-!        iprint=100  print also the changes of PREC(active) set and final x;
+!        iprint=100  print also the changes of active set and final x;
 !        iprint>100  print details of every iteration including x and g;
 !       When iprint > 0, the file iterate.dat will be created to
 !                        summarize the iteration.
@@ -3449,7 +3134,7 @@
 !
 !     Subprograms called:
 !
-!       Linpack LPREC(trsl).
+!       Linpack dtrsl.
 !
 !
 !     References:
@@ -3480,11 +3165,8 @@
       Real (Kind=wp) :: dd_p
 
       If (nsub<=0) Return
-!w      if (iprint .ge. 99) write (6,1001)
-!x      if (iprint .ge. 99) then
-!x         call intpr(' ----- SUBSM entered -----', -1, 0, 0)
-!w 1001 format (/,'----------------SUBSM entered-----------------',/)
-!x      endif
+      If (iprint>=99) Write (6, 110)
+
 !     Compute wv = W'Zd.
 
       pointr = head
@@ -3505,12 +3187,12 @@
 
       m2 = 2*m
       col2 = 2*col
-      Call LPREC(trsl)(wn, m2, col2, wv, 11, info)
+      Call PREC(trsl)(wn, m2, col2, wv, 11, info)
       If (info/=0) Return
       Do i = 1, col
         wv(i) = -wv(i)
       End Do
-      Call LPREC(trsl)(wn, m2, col2, wv, 01, info)
+      Call PREC(trsl)(wn, m2, col2, wv, 01, info)
       If (info/=0) Return
 
 !     Compute d = (1/theta)d + (1/theta**2)Z'W wv.
@@ -3525,14 +3207,14 @@
         pointr = mod(pointr, m) + 1
       End Do
 
-      Call dscal(nsub, one/theta, d, 1)
+      Call PREC(scal)(nsub, one/theta, d, 1)
 !
 !-----------------------------------------------------------------
 !     Let us try the projection, d is the Newton direction
 
       iword = 0
 
-      Call LPREC(copy)(n, x, 1, xp, 1)
+      Call PREC(copy)(n, x, 1, xp, 1)
 !
       Do i = 1, nsub
         k = ind(i)
@@ -3548,9 +3230,7 @@
             If (nbd(k)==2) Then ! upper and lower bounds
               xk = max(l(k), xk+dk)
               x(k) = min(u(k), xk)
-              If (x(k)==l(k) .Or. x(k)==u(k)) Then
-                iword = 1
-              End If
+              If (x(k)==l(k) .Or. x(k)==u(k)) iword = 1
             Else
 !
               If (nbd(k)==3) Then ! upper bounds only
@@ -3576,11 +3256,9 @@
         dd_p = dd_p + (x(i)-xx(i))*gg(i)
       End Do
       If (dd_p>zero) Then
-        Call LPREC(copy)(n, xp, 1, x, 1)
-!x         call intpr(' Positive dir derivative in projection ', -1,0,0)
-!w       write(6,*) ' Positive dir derivative in projection '
-!x         call intpr(' Using the backtracking step ', -1,0,0)
-!w       write(6,*) ' Using the backtracking step '
+        Call PREC(copy)(n, xp, 1, x, 1)
+        Write (6, *) ' Positive dir derivative in projection '
+        Write (6, *) ' Using the backtracking step '
       Else
         Go To 100
       End If
@@ -3634,27 +3312,26 @@
 !ccccc
 100   Continue
 
-!w        if (iprint .ge. 99) write (6,1004)
-!x         if (iprint .ge. 99) call intpr(' exit SUBSM ', -1, 0,0)
+      If (iprint>=99) Write (6, 120)
 
-!w 1001 format (/,'----------------SUBSM entered-----------------',/)
-!w 1004 format (/,'----------------exit SUBSM --------------------',/)
+110   Format (/, '----------------SUBSM entered-----------------', /)
+120   Format (/, '----------------exit SUBSM --------------------', /)
 
       Return
 
     End Subroutine
-!====================== The end of PREC(subsm) ===============================
+!====================== The end of subsm ===============================
 
-    Subroutine PREC(dcsrch)(f, g, stp, ftol, gtol, xtol, stpmin, stpmax, itask, &
+    Subroutine PREC(csrch)(f, g, stp, ftol, gtol, xtol, stpmin, stpmax, task, &
       isave, dsave)
       Use working_precision, Only: wp
-!      character*(*) task
-      Integer :: itask, isave(2)
+      Character (*) :: task
+      Integer :: isave(2)
       Real (Kind=wp) :: f, g, stp, ftol, gtol, xtol, stpmin, stpmax
       Real (Kind=wp) :: dsave(13)
 !     **********
 !
-!     Subroutine PREC(dcsrch)
+!     Subroutine dcsrch
 !
 !     This subroutine finds a step that satisfies a sufficient
 !     decrease condition and a curvature condition.
@@ -3685,11 +3362,11 @@
 !     the algorithm stops with a warning. In this case stp only
 !     satisfies the sufficient decrease condition.
 !
-!     A typical invocation of PREC(dcsrch) has the following outline:
+!     A typical invocation of dcsrch has the following outline:
 !
 !     task = 'START'
 !  10 continue
-!        call PREC(dcsrch)( ... )
+!        call dcsrch( ... )
 !        if (task .eq. 'FG') then
 !           Evaluate the function and the gradient at stp
 !           goto 10
@@ -3699,7 +3376,7 @@
 !
 !     The subroutine statement is
 !
-!        subroutine PREC(dcsrch)(f,g,stp,ftol,gtol,xtol,stpmin,stpmax,
+!        subroutine dcsrch(f,g,stp,ftol,gtol,xtol,stpmin,stpmax,
 !                          task,isave,dsave)
 !     where
 !
@@ -3753,7 +3430,7 @@
 !         On exit task indicates the required action:
 !
 !            If task(1:2) = 'FG' then evaluate the function and
-!            derivative at stp and call PREC(dcsrch) again.
+!            derivative at stp and call dcsrch again.
 !
 !            If task(1:4) = 'CONV' then the search is successful.
 !
@@ -3773,7 +3450,7 @@
 !
 !     Subprograms called
 !
-!       MINPACK-2 ... PREC(dcstep)
+!       MINPACK-2 ... dcstep
 !
 !     MINPACK-1 Project. June 1983.
 !     Argonne National Laboratory.
@@ -3796,33 +3473,22 @@
 
 !     Initialization block.
 
-!      if (task(1:5) .eq. 'START') then
-      If (itask==2) Then
+      If (task(1:5)=='START') Then
 
 !        Check the input arguments for errors.
 
-!         if (stp .lt. stpmin) task = 'ERROR: STP .LT. STPMIN'
-!         if (stp .gt. stpmax) task = 'ERROR: STP .GT. STPMAX'
-!         if (g .ge. zero) task = 'ERROR: INITIAL G .GE. ZERO'
-!         if (ftol .lt. zero) task = 'ERROR: FTOL .LT. ZERO'
-!         if (gtol .lt. zero) task = 'ERROR: GTOL .LT. ZERO'
-!         if (xtol .lt. zero) task = 'ERROR: XTOL .LT. ZERO'
-!         if (stpmin .lt. zero) task = 'ERROR: STPMIN .LT. ZERO'
-!         if (stpmax .lt. stpmin) task = 'ERROR: STPMAX .LT. STPMIN'
-
-        If (stp<stpmin) itask = 16
-        If (stp>stpmax) itask = 15
-        If (g>=zero) itask = 11
-        If (ftol<zero) itask = 9
-        If (gtol<zero) itask = 10
-        If (xtol<zero) itask = 19
-        If (stpmin<zero) itask = 18
-        If (stpmax<stpmin) itask = 17
+        If (stp<stpmin) task = 'ERROR: STP .LT. STPMIN'
+        If (stp>stpmax) task = 'ERROR: STP .GT. STPMAX'
+        If (g>=zero) task = 'ERROR: INITIAL G .GE. ZERO'
+        If (ftol<zero) task = 'ERROR: FTOL .LT. ZERO'
+        If (gtol<zero) task = 'ERROR: GTOL .LT. ZERO'
+        If (xtol<zero) task = 'ERROR: XTOL .LT. ZERO'
+        If (stpmin<zero) task = 'ERROR: STPMIN .LT. ZERO'
+        If (stpmax<stpmin) task = 'ERROR: STPMAX .LT. STPMIN'
 
 !        Exit if there are errors on input.
 
-!         if (task(1:5) .eq. 'ERROR') return
-        If ((itask>=9) .And. (itask<=19)) Return
+        If (task(1:5)=='ERROR') Return
 
 !        Initialize local variables.
 
@@ -3849,8 +3515,7 @@
         gy = ginit
         stmin = zero
         stmax = stp + xtrapu*stp
-!         task = 'FG'
-        itask = 4
+        task = 'FG'
 
         Go To 100
 
@@ -3888,24 +3553,22 @@
 
 !     Test for warnings.
 
-!     +   task = 'WARNING: ROUNDING ERRORS PREVENT PROGRESS'
-      If (brackt .And. (stp<=stmin .Or. stp>=stmax)) itask = 23
-!     +   task = 'WARNING: XTOL TEST SATISFIED'
-      If (brackt .And. stmax-stmin<=xtol*stmax) itask = 26
-!     +   task = 'WARNING: STP = STPMAX'
-      If (stp==stpmax .And. f<=ftest .And. g<=gtest) itask = 24
-!     +   task = 'WARNING: STP = STPMIN'
-      If (stp==stpmin .And. (f>ftest .Or. g>=gtest)) itask = 25
+      If (brackt .And. (stp<=stmin .Or. stp>=stmax)) &
+        task = 'WARNING: ROUNDING ERRORS PREVENT PROGRESS'
+      If (brackt .And. stmax-stmin<=xtol*stmax) task = &
+        'WARNING: XTOL TEST SATISFIED'
+      If (stp==stpmax .And. f<=ftest .And. g<=gtest) &
+        task = 'WARNING: STP = STPMAX'
+      If (stp==stpmin .And. (f>ftest .Or. g>=gtest)) &
+        task = 'WARNING: STP = STPMIN'
+
 !     Test for convergence.
 
-!     +   task = 'CONVERGENCE'
-      If (f<=ftest .And. abs(g)<=gtol*(-ginit)) itask = 6
+      If (f<=ftest .And. abs(g)<=gtol*(-ginit)) task = 'CONVERGENCE'
 
 !     Test for termination.
 
-!      if (task(1:4) .eq. 'WARN' .or. task(1:4) .eq. 'CONV') goto 1000
-      If ((itask>=23) .Or. ((itask<=8) .And. (itask>=6))) Go To 100
-
+      If (task(1:4)=='WARN' .Or. task(1:4)=='CONV') Go To 100
 
 !     A modified function is used to predict the step during the
 !     first stage if a lower function value has been obtained but
@@ -3922,9 +3585,9 @@
         gxm = gx - gtest
         gym = gy - gtest
 
-!        Call PREC(dcstep) to update stx, sty, and to compute the new step.
+!        Call dcstep to update stx, sty, and to compute the new step.
 
-        Call PREC(dcstep)(stx, fxm, gxm, sty, fym, gym, stp, fm, gm, brackt, stmin, &
+        Call PREC(cstep)(stx, fxm, gxm, sty, fym, gym, stp, fm, gm, brackt, stmin, &
           stmax)
 
 !        Reset the function and derivative values for f.
@@ -3936,9 +3599,9 @@
 
       Else
 
-!       Call PREC(dcstep) to update stx, sty, and to compute the new step.
+!       Call dcstep to update stx, sty, and to compute the new step.
 
-        Call PREC(dcstep)(stx, fx, gx, sty, fy, gy, stp, f, g, brackt, stmin, stmax)
+        Call PREC(cstep)(stx, fx, gx, sty, fy, gy, stp, f, g, brackt, stmin, stmax)
 
       End If
 
@@ -3973,8 +3636,7 @@
 
 !     Obtain another function and derivative.
 
-!      task = 'FG'
-      itask = 4
+      task = 'FG'
 
 100   Continue
 
@@ -4003,16 +3665,16 @@
       Return
     End Subroutine
 
-!====================== The end of PREC(dcsrch) ==============================
+!====================== The end of dcsrch ==============================
 
-    Subroutine PREC(dcstep)(stx, fx, dx, sty, fy, dy, stp, fp, dp, brackt, stpmin, &
+    Subroutine PREC(cstep)(stx, fx, dx, sty, fy, dy, stp, fp, dp, brackt, stpmin, &
       stpmax)
       Use working_precision, Only: wp
       Logical :: brackt
       Real (Kind=wp) :: stx, fx, dx, sty, fy, dy, stp, fp, dp, stpmin, stpmax
 !     **********
 !
-!     Subroutine PREC(dcstep)
+!     Subroutine dcstep
 !
 !     This subroutine computes a safeguarded step for a search
 !     procedure and updates an interval that contains a step that
@@ -4031,7 +3693,7 @@
 !
 !     The subroutine statement is
 !
-!       subroutine PREC(dcstep)(stx,fx,dx,sty,fy,dy,stp,fp,dp,brackt,
+!       subroutine dcstep(stx,fx,dx,sty,fy,dy,stp,fp,dp,brackt,
 !                         stpmin,stpmax)
 !
 !     where
@@ -4174,7 +3836,7 @@
         p = (gamma-dp) + theta
         q = (gamma+(dx-dp)) + gamma
         r = p/q
-        If (r<zero .And. abs(gamma-zero)>1E-5_wp) Then
+        If (r<zero .And. gamma/=zero) Then
           stpc = stp + r*(stx-stp)
         Else If (stp>stx) Then
           stpc = stpmax

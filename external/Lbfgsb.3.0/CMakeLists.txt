@@ -1,11 +1,26 @@
 enable_language(Fortran)
-if (NOT WIN32)
-  set(CMAKE_Fortran_FLAGS -cpp)
+
+if(NOT WIN32)
+    set(CMAKE_Fortran_FLAGS -cpp -Wno-unused-parameter)
 else()
-  set(CMAKE_Fortran_PREPROCESS ON)
+    set(CMAKE_Fortran_PREPROCESS ON)
 endif()
 
-set(LBFGSB_SRC ../working_precision.f90 ../linpack.f90 ../timer.f90 ../lbfgsb.f90)
+if(BUILD_ILP64)
+    if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+        list(APPEND CMAKE_Fortran_FLAGS -finteger-4-integer-8)
+    elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+        list(APPEND CMAKE_Fortran_FLAGS -fdefault-integer-8)
+    elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+        list(APPEND CMAKE_Fortran_FLAGS -i8)
+    else()
+        message(FATAL_ERROR "Unknown Fortran compiler!")
+    endif()
+endif()
+
+list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
+
+set(LBFGSB_SRC ../working_precision.F90 ../lbfgsb_mod.F90 ../linpack.F90 ../timer.F90 ../lbfgsb.F90)
 
 # Build the double version
 add_subdirectory(double_cmake)
@@ -14,6 +29,16 @@ add_subdirectory(double_cmake)
 add_subdirectory(single_cmake)
 
 # Suppress warnings
-if (NOT WIN32)
-  include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_external.cmake)
+if(NOT WIN32)
+    include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_external.cmake)
 endif()
+
+message(
+    NOTICE
+    "Fortran Compiler ID     : ${CMAKE_Fortran_COMPILER_ID}"
+)
+
+message(
+    NOTICE
+    "Fortran compiler flags  : ${CMAKE_Fortran_FLAGS}"
+)
