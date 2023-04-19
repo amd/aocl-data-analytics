@@ -30,6 +30,7 @@
 
 #include "aoclda_basic_statistics.h"
 #include "aoclda_csv.h"
+#include "aoclda_datastore.h"
 #include "aoclda_error.h"
 #include "aoclda_handle.h"
 #include "aoclda_linmod.h"

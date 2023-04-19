@@ -6,8 +6,9 @@
 #include <string.h>
 
 #include "aoclda.h"
-#include "linear_model.hpp"
 #include "csv_reader.hpp"
+#include "data_store.hpp"
+#include "linear_model.hpp"
 
 #define ERR_MSG_LEN 1024
 

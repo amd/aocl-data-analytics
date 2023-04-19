@@ -22,6 +22,11 @@ typedef enum da_precision_ {
     da_single = 1, ///< Use single precison floating point type
 } da_precision;
 
+typedef enum da_ordering_ {
+    row_major = 0,
+    col_major,
+} da_ordering;
+
 /**
  * \def Build library for 64 bit integers
  */

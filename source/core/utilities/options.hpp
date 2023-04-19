@@ -27,13 +27,14 @@
 #include "aoclda.h"
 
 #include <cctype>
+#include <cmath>
 #include <iostream>
 #include <limits>
+#include <map>
 #include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <map>
 #include <type_traits>
 #include <unordered_map>
 
