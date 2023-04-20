@@ -19,7 +19,8 @@ include_directories(${CMAKE_SOURCE_DIR}/source/include
                     ${CMAKE_SOURCE_DIR}/source/core/linear_model
                     ${CMAKE_SOURCE_DIR}/source/core/optimization
                     ${CMAKE_SOURCE_DIR}/source/core/drivers
-                    ${CMAKE_SOURCE_DIR}/source/core/utilities)
+                    ${CMAKE_SOURCE_DIR}/source/core/utilities
+                    ${CMAKE_SOURCE_DIR}/source/core/data_management)
 
 add_executable(basic_statistics basic_statistics.cpp)
 target_link_libraries(basic_statistics da_core gtest_main)
@@ -48,7 +49,14 @@ target_include_directories(
 target_include_directories(csv PRIVATE )
 
 
+add_executable(data data_tests.cpp)
+target_link_libraries(data da_core gtest_main gmock_main)
+if (WIN32)
+target_link_libraries(data "$ENV{LIBIFCORE}")
+endif()
+
 gtest_discover_tests(basic_statistics)
 gtest_discover_tests(csv)
 gtest_discover_tests(linmod)
 gtest_discover_tests(option_registry)
+gtest_discover_tests(data)

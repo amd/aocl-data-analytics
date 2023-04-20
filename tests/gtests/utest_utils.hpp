@@ -10,6 +10,10 @@
     EXPECT_NEAR((x[j]), (y[j]), abs_error)                                               \
         << "Vectors " #x " and " #y " different at index j=" << j << "."
 
+#define EXPECT_ARR_EQ(n, x, y, incx, incy, startx, starty)                               \
+    for (da_int j = 0; j < (n); j++)                                                     \
+    EXPECT_EQ((x[startx + j * incx]), (y[starty + j * incy]))                            \
+        << "Vectors " #x " and " #y " different at index j=" << j << "."
 
 /* handle overloaded functions */
 template <class T>
@@ -24,14 +28,18 @@ da_status da_handle_init<float>(da_handle *handle, da_handle_type handle_type) {
 }
 
 /* Options overloaded functons */
-template <class T> inline da_status da_options_set_real(da_handle handle, const char *option, T value);
-template <> inline da_status da_options_set_real<float>(da_handle handle, const char *option, float value){
+template <class T>
+inline da_status da_options_set_real(da_handle handle, const char *option, T value);
+template <>
+inline da_status da_options_set_real<float>(da_handle handle, const char *option,
+                                            float value) {
     return da_options_set_s_real(handle, option, value);
 }
-template <> inline da_status da_options_set_real<double>(da_handle handle, const char *option, double value){
+template <>
+inline da_status da_options_set_real<double>(da_handle handle, const char *option,
+                                             double value) {
     return da_options_set_d_real(handle, option, value);
 }
-
 
 /* FIXME The tests should be able to include directly read_csv.hpp
  * This is a workaround for now
