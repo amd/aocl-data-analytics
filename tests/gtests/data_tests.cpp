@@ -161,7 +161,7 @@ TEST(block, getCol) {
 }
 
 TEST(dataStore, invalidConcat) {
-    std::vector<int> bl1, bl2, bl3;
+    std::vector<int> bl1, bl2, bl3, bl4;
     da_ordering order;
 
     data_store ds = data_store();
@@ -203,6 +203,20 @@ TEST(dataStore, invalidConcat) {
 
     // add an invalid str row to check data is correctly deallocated
     EXPECT_EQ(ds.concatenate_rows(m, n, strbl.data(), order), da_status_invalid_input);
+
+    // add a 7 x 2 double column
+    std::vector<double> dbl = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
+    m = 7;
+    n = 2;
+    order = col_major;
+    EXPECT_EQ(ds.concatenate_columns(m, n, dbl.data(), order), da_status_success);
+
+    // try to add a 1 x 4 int row.
+    // correct dims but should fail because the last 2 cols are not of the correct type
+    m = 1;
+    n = 4;
+    bl4 = {1, 2, 3, 4};
+    EXPECT_EQ(ds.concatenate_rows(m, n, bl4.data(), order), da_status_invalid_input);
 }
 
 TEST(dataStore, extractCol) {

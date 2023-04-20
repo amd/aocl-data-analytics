@@ -12,7 +12,7 @@
 
 #define ERR_MSG_LEN 1024
 
-class _da_handle {
+struct _da_handle {
   public:
     csv_reader *csv_parser = nullptr;
     linear_model<double> *linreg_d = nullptr;

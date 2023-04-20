@@ -126,7 +126,17 @@ class data_store {
     da_int idx_start_missing;
 
   public:
-    ~data_store() {}
+    ~data_store() {
+        for (auto it = cmap.begin(); it != cmap.end(); ++it) {
+            std::shared_ptr<block_id> next = it->second, aux;
+            while (next != nullptr) {
+                aux = next->next;
+                next->next = nullptr;
+                next = aux;
+            }
+            it->second = nullptr;
+        }
+    }
 
     bool empty() { return m == 0 && n == 0 && cmap.empty(); }
 
@@ -164,6 +174,7 @@ class data_store {
         bool found;
         da_int lb, ub, idx_start;
         bool cleanup = false;
+        std::shared_ptr<block_id> new_block = nullptr;
 
         if (n <= 0) {
             // First block, columns need to be concatenated instead.
@@ -176,7 +187,6 @@ class data_store {
                 return da_status_invalid_input;
 
             // Create a dense block from the raw data
-            std::shared_ptr<block_id> new_block;
             try {
                 new_block = std::make_shared<block_id>(block_id());
             } catch (std::bad_alloc &) {
@@ -206,12 +216,14 @@ class data_store {
                 if (new_block->left_parent == nullptr)
                     new_block->left_parent = current_block;
             }
-            if (idx_start + nr < n) {
-                missing_block = true;
-                idx_start_missing = idx_start + nr;
-            } else {
-                missing_block = false;
-                idx_start_missing = 0;
+            if (!cleanup) {
+                if (idx_start + nr < n) {
+                    missing_block = true;
+                    idx_start_missing = idx_start + nr;
+                } else {
+                    missing_block = false;
+                    idx_start_missing = 0;
+                }
             }
         }
 
@@ -220,10 +232,18 @@ class data_store {
             ub = idx_start - 1;
             std::shared_ptr<block_id> current_block;
             while (ub < nr - 1) {
-                found = cmap.find(ub + 1, current_block, lb, ub);
-                if (!found)
+                auto it = cmap.find(ub + 1);
+                if (it == cmap.end())
                     break;
-                current_block->next = nullptr;
+                current_block = it->second;
+                while (current_block->next != nullptr) {
+                    if (current_block->next == new_block)
+                        current_block->next = nullptr;
+                    else
+                        current_block = current_block->next;
+                }
+                ub = it->first.second;
+                ++it;
             }
             m -= mr;
         }
@@ -306,7 +326,7 @@ class data_store {
 
 } // namespace da_data
 
-class _da_datastore {
+struct _da_datastore {
   public:
     da_data::data_store *store = nullptr;
 };
