@@ -18,8 +18,8 @@ target_include_directories(
 if(WIN32)
   target_link_directories(
     da_core PUBLIC
-    "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/double_cmake/$ENV{CMAKE_BUILD_TYPE}"
-    "$ENV{CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/single_cmake/$ENV{CMAKE_BUILD_TYPE}")
+    "${CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/double_cmake/${CMAKE_BUILD_TYPE}"
+    "${CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/single_cmake/${CMAKE_BUILD_TYPE}")
 endif()
 
 target_link_libraries(da_core lbfgsb lbfgsb_s ${FLAME} ${BLIS})
