@@ -32,6 +32,20 @@ void da_datastore_destroy(da_datastore *store) {
     }
 }
 
+da_status da_data_hconcat(da_datastore *store1, da_datastore *store2) {
+    if (!store1 || !store2 || !(*store1) || !(*store2))
+        return da_status_invalid_input;
+    if ((*store1)->store == nullptr || (*store2)->store == nullptr)
+        return da_status_invalid_pointer;
+
+    da_status exit_status;
+    exit_status = (*store1)->store->horizontal_concat(*(*store2)->store);
+    if (exit_status == da_status_success) {
+        da_datastore_destroy(store2);
+    }
+    return exit_status;
+}
+
 da_status da_data_load_col_int(da_datastore store, da_int m, da_int n, da_int *int_block,
                                da_ordering order, da_int copy_data) {
     if (!store)
@@ -141,3 +155,48 @@ da_status da_data_load_row_real_s(da_datastore store, da_int m, da_int n,
     bool cpy = copy_data != 0;
     return store->store->concatenate_rows(m, n, real_block, order, cpy);
 }
+
+da_status da_data_extract_column_int(da_datastore store, da_int idx, da_int m,
+                                     da_int *col) {
+    if (!store)
+        return da_status_invalid_input;
+    if (store->store == nullptr)
+        return da_status_invalid_pointer;
+    if (col == nullptr)
+        return da_status_invalid_input;
+
+    return store->store->extract_column(idx, m, col);
+}
+da_status da_data_extract_column_real_s(da_datastore store, da_int idx, da_int m,
+                                        float *col) {
+    if (!store)
+        return da_status_invalid_input;
+    if (store->store == nullptr)
+        return da_status_invalid_pointer;
+    if (col == nullptr)
+        return da_status_invalid_input;
+
+    return store->store->extract_column(idx, m, col);
+}
+da_status da_data_extract_column_real_d(da_datastore store, da_int idx, da_int m,
+                                        double *col) {
+    if (!store)
+        return da_status_invalid_input;
+    if (store->store == nullptr)
+        return da_status_invalid_pointer;
+    if (col == nullptr)
+        return da_status_invalid_input;
+
+    return store->store->extract_column(idx, m, col);
+}
+//da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int m,
+//                                     char **col) {
+//    if (!store)
+//        return da_status_invalid_input;
+//    if (store->store == nullptr)
+//        return da_status_invalid_pointer;
+//    if (col == nullptr)
+//        return da_status_invalid_input;
+//
+//    return store->store->extract_column(idx, m, col);
+//}
