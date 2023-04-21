@@ -134,6 +134,86 @@ void get_heterogeneous_data_store(data_store &ds, da_int &mt, da_int &nt,
     nt = 7;
 }
 
+void get_heterogeneous_data_store_pub(da_datastore store, da_int &mt, da_int &nt,
+                                      std::vector<da_int> &idata,
+                                      std::vector<float> &fdata,
+                                      std::vector<std::string> &sdata) {
+    /* create a data_store in ds with heterogeneous data
+     * Dimensions: 6 x 7
+     *   ------   ------    ------   ------
+     *  | int  | | int  |  |float | | str  |
+     *  | 4x2  | | 4x2  |  | 5x2  | | 5x1  |
+     *   ------   ------   |      | |      |
+     *   ------   ------   |      | |      |
+     *  | 1x2  | | 1x2  |  |      | |      |
+     *   ------   ------    ------   ------
+     *   ---------------    ------   ------
+     *  |     1x4       |  | 1x2  | | 1x1  |
+     *   ---------------    ------   ------
+     */
+    std::vector<int> ib1, ib2, ib3, ib4, ib5;
+    std::vector<float> fb1, fb2;
+    da_int m, n;
+
+    ib1 = {1, 2, 3, 4, 5, 6, 7, 8};
+    m = 4;
+    n = 2;
+    EXPECT_EQ(da_data_load_col_int(store, m, n, ib1.data(), row_major, true),
+              da_status_success);
+    ib2 = {1, 2, 3, 4, 5, 6, 7, 8};
+    m = 4;
+    n = 2;
+    EXPECT_EQ(da_data_load_col_int(store, m, n, ib2.data(), col_major, true),
+              da_status_success);
+    ib3 = {10, 11};
+    m = 1;
+    n = 2;
+    EXPECT_EQ(da_data_load_row_int(store, m, n, ib3.data(), col_major, true),
+              da_status_success);
+    ib4 = {12, 13};
+    m = 1;
+    n = 2;
+    EXPECT_EQ(da_data_load_row_int(store, m, n, ib4.data(), col_major, true),
+              da_status_success);
+    fb1 = {0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5};
+    m = 5;
+    n = 2;
+    EXPECT_EQ(da_data_load_col_real_s(store, m, n, fb1.data(), col_major, true),
+              da_status_success);
+    const char *cb1[5];
+    cb1[0] = "1";
+    cb1[1] = "a2";
+    cb1[2] = "bb3";
+    cb1[3] = "ccc4";
+    cb1[4] = "dddd5";
+    m = 5;
+    n = 1;
+    EXPECT_EQ(da_data_load_col_str(store, m, n, cb1, col_major), da_status_success);
+    ib5 = {21, 22, 23, 24};
+    m = 1;
+    n = 4;
+    EXPECT_EQ(da_data_load_row_int(store, m, n, ib5.data(), row_major, true),
+              da_status_success);
+    fb2 = {10.1, 20.2};
+    m = 1;
+    n = 2;
+    EXPECT_EQ(da_data_load_row_real_s(store, m, n, fb2.data(), row_major, true),
+              da_status_success);
+    const char *cb2[1];
+    cb2[0] = "row6_1";
+    m = 1;
+    n = 1;
+    EXPECT_EQ(da_data_load_row_str(store, m, n, cb2, row_major), da_status_success);
+
+    // expected blocks, column major ordering
+    idata = {1, 3, 5, 7, 10, 21, 2, 4, 6, 8, 11, 22,
+             1, 2, 3, 4, 12, 23, 5, 6, 7, 8, 13, 24};
+    fdata = {0.5, 1.5, 2.5, 3.5, 4.5, 10.1, 5.5, 6.5, 7.5, 8.5, 9.5, 20.2};
+    sdata = {"1", "a2", "bb3", "ccc4", "dddd5", "row6_1"};
+    mt = 6;
+    nt = 7;
+}
+
 TEST(block, getCol) {
     std::vector<da_int> bl, col1_exp, col2_exp;
     da_int m, n;
@@ -420,7 +500,7 @@ TEST(intervalMap, iterator) {
     EXPECT_EQ(i, 4);
 }
 
-TEST(dataStore, positive) {
+TEST(dataStore, load) {
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
 
@@ -554,4 +634,83 @@ TEST(dataStore, hconcat) {
         EXPECT_ARR_EQ(m, cols2, sdata, 1, 1, startx, starty);
         EXPECT_ARR_EQ(m, cols3, sdata, 1, 1, startx, starty);
     }
+}
+
+TEST(dataStore, hconcatPub) {
+    da_datastore store = nullptr, store1 = nullptr, store2 = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store1), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store2), da_status_success);
+
+    // load the heterogeneous data store in 3 different stores
+    da_int m, n;
+    std::vector<da_int> idata, coli, coli2, coli3;
+    std::vector<float> fdata, colf, colf2, colf3;
+    std::vector<std::string> sdata;
+    get_heterogeneous_data_store_pub(store, m, n, idata, fdata, sdata);
+    get_heterogeneous_data_store_pub(store1, m, n, idata, fdata, sdata);
+    get_heterogeneous_data_store_pub(store2, m, n, idata, fdata, sdata);
+
+    // add 2 columns to store1
+    std::vector<double> dblock = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    m = 6;
+    n = 2;
+    EXPECT_EQ(da_data_load_col_real_d(store1, m, n, dblock.data(), col_major, true),
+              da_status_success);
+
+    // concatenate [store, store1, store2] into store
+    EXPECT_EQ(da_data_hconcat(&store1, &store2), da_status_success);
+    EXPECT_EQ(store2, nullptr);
+    EXPECT_EQ(da_data_hconcat(&store, &store1), da_status_success);
+    EXPECT_EQ(store1, nullptr);
+
+    // Check the integer columns
+    da_int startx = 0, starty = 0;
+    coli.resize(m);
+    coli2.resize(m);
+    coli3.resize(m);
+    for (da_int col = 0; col < 4; col++) {
+        starty = col * m;
+        EXPECT_EQ(da_data_extract_column_int(store, col, m, coli.data()),
+                  da_status_success);
+        EXPECT_EQ(da_data_extract_column_int(store, col + 7, m, coli2.data()),
+                  da_status_success);
+        EXPECT_EQ(da_data_extract_column_int(store, col + 16, m, coli3.data()),
+                  da_status_success);
+        EXPECT_ARR_EQ(m, coli, idata, 1, 1, startx, starty);
+        EXPECT_ARR_EQ(m, coli2, idata, 1, 1, startx, starty);
+        EXPECT_ARR_EQ(m, coli3, idata, 1, 1, startx, starty);
+    }
+
+    // Check the integer columns
+    colf.resize(m);
+    colf2.resize(m);
+    colf3.resize(m);
+    for (da_int col = 4; col < 6; col++) {
+        starty = (col - 4) * m;
+        EXPECT_EQ(da_data_extract_column_real_s(store, col, m, colf.data()),
+                  da_status_success);
+        EXPECT_EQ(da_data_extract_column_real_s(store, col + 7, m, colf2.data()),
+                  da_status_success);
+        EXPECT_EQ(da_data_extract_column_real_s(store, col + 16, m, colf3.data()),
+                  da_status_success);
+        EXPECT_ARR_EQ(m, colf, fdata, 1, 1, startx, starty);
+        EXPECT_ARR_EQ(m, colf2, fdata, 1, 1, startx, starty);
+        EXPECT_ARR_EQ(m, colf3, fdata, 1, 1, startx, starty);
+    }
+
+    // check the 2 double columns added to store1
+    std::vector<double> cold, cold1;
+    cold.resize(m);
+    cold1.resize(m);
+    EXPECT_EQ(da_data_extract_column_real_d(store, 14, m, cold.data()),
+              da_status_success);
+    EXPECT_EQ(da_data_extract_column_real_d(store, 15, m, cold1.data()),
+              da_status_success);
+    EXPECT_ARR_EQ(m, cold, dblock, 1, 1, 0, 0);
+    EXPECT_ARR_EQ(m, cold1, dblock, 1, 1, 0, 6);
+
+    da_datastore_destroy(&store);
+    da_datastore_destroy(&store1);
+    da_datastore_destroy(&store2);
 }

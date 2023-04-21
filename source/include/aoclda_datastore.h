@@ -1,7 +1,6 @@
 #ifndef AOCLDA_DATASTORE_H
 #define AOCLDA_DATASTORE_H
 
-#include "aoclda_datastore.h"
 #include "aoclda_error.h"
 #include "aoclda_types.h"
 
@@ -35,6 +34,18 @@ da_status da_data_load_col_real_s(da_datastore store, da_int m, da_int n,
                                   float *real_block, da_ordering order, da_int copy_data);
 da_status da_data_load_row_real_s(da_datastore store, da_int m, da_int n,
                                   float *real_block, da_ordering order, da_int copy_data);
+
+/* Data extractions routines */
+/* TODO Columns extraction needed ???*/
+da_status da_data_extract_column_int(da_datastore store, da_int idx, da_int m,
+                                     da_int *col);
+da_status da_data_extract_column_real_s(da_datastore store, da_int idx, da_int m,
+                                        float *col);
+da_status da_data_extract_column_real_d(da_datastore store, da_int idx, da_int m,
+                                        double *col);
+/*TODO study how to extract string columns into C interface*/
+//da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int m,
+//                                     char **col);
 
 #ifdef __cplusplus
 }
