@@ -77,16 +77,16 @@ if(WIN32)
 
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
   if(NOT BUILD_ILP64)
-    find_library(BLIS name AOCL-LibBlis-Win-dll
+    find_library(BLIS name AOCL-LibBlis-Win-MT-dll
                  PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/LP64" REQUIRED)
-    find_library(FLAME name AOCL-LibFlame-Win-dll
+    find_library(FLAME name AOCL-LibFlame-Win-MT-dll
                  PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/LP64" REQUIRED)
     include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/LP64")
     include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/LP64")
   else()
-    find_library(BLIS name AOCL-LibBlis-Win-dll
+    find_library(BLIS name AOCL-LibBlis-Win-MT-dll
                  PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/ILP64" REQUIRED)
-    find_library(FLAME name AOCL-LibFlame-Win-dll
+    find_library(FLAME name AOCL-LibFlame-Win-MT-dll
                  PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/ILP64" REQUIRED)
     include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/ILP64")
     include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/ILP64")
