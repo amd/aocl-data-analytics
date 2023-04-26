@@ -109,7 +109,7 @@ da_status da_options_get_int(da_handle handle, const char *option, da_int *value
         // invalid pointer or uninitialized handle
         return status;
 
-    status = opts->get(option, value);
+    status = opts->get(option, *value);
     return status;
 }
 
@@ -125,7 +125,7 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
         // invalid pointer or uninitialized handle
         return status;
     std::string svalue;
-    status = opts->get(option, &svalue);
+    status = opts->get(option, svalue);
     // Need to make sure *value is big enough...
     // String options should be guaranteed to be no longer than 256 chars? <--- FIXME
     if (status == da_status_success) {
@@ -154,7 +154,7 @@ da_status da_options_get_d_real(da_handle handle, const char *option, double *va
         // invalid pointer or uninitialized handle
         return status;
 
-    status = opts->get(option, value);
+    status = opts->get(option, *value);
     return status;
 }
 da_status da_options_get_s_real(da_handle handle, const char *option, float *value) {
@@ -171,6 +171,6 @@ da_status da_options_get_s_real(da_handle handle, const char *option, float *val
         // invalid pointer or uninitialized handle
         return status;
 
-    status = opts->get(option, value);
+    status = opts->get(option, *value);
     return status;
 }
