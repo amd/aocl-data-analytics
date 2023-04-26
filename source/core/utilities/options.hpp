@@ -571,7 +571,7 @@ class OptionRegistry {
      * name - option name
      * value - location to store option value
      */
-    template <typename U> da_status get(string name, U *value) {
+    template <typename U> da_status get(string name, U &value) {
         string oname = name;
         OptionUtils util;
         util.prep_str(oname);
@@ -599,7 +599,7 @@ class OptionRegistry {
         // double -> OptionNumeric<double>
         // otherwise -> OptionString
         // bool -> OptionNumeric<bool>
-        std::static_pointer_cast<OptionType>(search->second)->get(*value);
+        std::static_pointer_cast<OptionType>(search->second)->get(value);
         return da_status_success;
     }
 

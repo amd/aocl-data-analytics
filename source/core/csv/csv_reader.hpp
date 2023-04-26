@@ -106,25 +106,25 @@ class csv_reader {
             }
         }
 
-        opts.get("CSV double quote", &iopt);
+        opts.get("CSV double quote", iopt);
         parser->doublequote = (int)iopt;
 
-        opts.get("CSV whitespace delimiter", &iopt);
+        opts.get("CSV whitespace delimiter", iopt);
         parser->delim_whitespace = (int)iopt;
 
-        opts.get("CSV skip first rows", &iopt);
+        opts.get("CSV skip first rows", iopt);
         parser_set_skipfirstnrows(parser, (int64_t)iopt);
 
-        opts.get("CSV skip empty lines", &iopt);
+        opts.get("CSV skip empty lines", iopt);
         parser->skip_empty_lines = (int)iopt;
 
-        opts.get("CSV skip initial space", &iopt);
+        opts.get("CSV skip initial space", iopt);
         parser->skipinitialspace = (int)iopt;
 
-        opts.get("CSV skip footer", &iopt);
+        opts.get("CSV skip footer", iopt);
         parser->skip_footer = (int)iopt;
 
-        opts.get("CSV warn for missing data", &iopt);
+        opts.get("CSV warn for missing data", iopt);
         parser->warn_for_missing_data = (int)iopt;
 
         return da_status_success;

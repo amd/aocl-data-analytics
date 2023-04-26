@@ -344,9 +344,9 @@ template <typename T> da_status linear_model<T>::fit() {
     std::string opt_val;
     da_status status;
 
-    opts.get("linmod intercept", &intercept_int);
-    opts.get("linmod norm2 reg", &l_nrm2);
-    opts.get("linmod norm1 reg", &l_nrm1);
+    opts.get("linmod intercept", intercept_int);
+    opts.get("linmod norm2 reg", l_nrm2);
+    opts.get("linmod norm1 reg", l_nrm1);
     opts.get("linmod optim method", opt_val, id);
     intercept = (bool)intercept_int;
 
