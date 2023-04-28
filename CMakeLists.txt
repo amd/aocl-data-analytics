@@ -18,7 +18,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "" "Debug" "Release")
 endif()
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -31,6 +31,8 @@ option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
 option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
 option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
 option(BUILD_DOC "Build PDF and HTML documentation" OFF)
+
+find_package(OpenMP REQUIRED)
 
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
 # from Windows
@@ -145,16 +147,8 @@ endif()
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
 
 if(BUILD_ILP64)
-  message(STATUS "BUILD_ILP64 = ON")
   add_definitions(-DAOCLDA_ILP64)
 endif(BUILD_ILP64)
-
-# Convenience Banner, print relevent info
-message(
-  STATUS
-    "CXX Compiler ID: ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}"
-)
-message(STATUS "Building AOCL-DA version: ${AOCLDA_VERSION}")
 
 # Check for CL compatibility layer of clang
 if(COMPILER_BASENAME MATCHES
@@ -182,9 +176,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   # GNU style compiler flags Common flags
   set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma")
   # Release flags
-  set(COMPILER_FLAGS_RELEASE
-      "-DNDEBUG;-O2;-ffast-math;-ftree-vectorize;-funroll-loops;-ffp-contract=fast"
-  )
+  set(COMPILER_FLAGS_RELEASE "-DNDEBUG;-O2;")
   set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;-Wall;-Wextra")
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON
@@ -227,3 +219,33 @@ add_subdirectory(source)
 # build example and unit test programs
 include(CTest)
 add_subdirectory(tests)
+
+if (VALGRIND)
+set(CTEST_MEMORYCHECK_TYPE "valgrind")
+set(CTEST_MEMORYCHECK_COMMAND_OPTIONS '--track-origins=yes --leak-check=full -s --show-leak-kinds=all')
+endif()
+
+# Convenience Banner, print relevent info
+message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
+message(NOTICE "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}")
+message(NOTICE "OpenMP                  : ${OpenMP_CXX_FOUND} (${OpenMP_CXX_FLAGS})")
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+message(NOTICE "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_DEBUG}")
+endif()
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+message(NOTICE "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_RELEASE}")
+endif()
+message(NOTICE "\nOPTIONS")
+message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
+message(NOTICE "Building with ASan      : ${ASAN}")
+message(NOTICE "Building with MemSan    : ${MEMSAN}")
+message(NOTICE "Building with Valgrind  : ${VALGRIND}")
+if (${VALGRIND})
+message(NOTICE "         Valgrind flags : ${CTEST_MEMORYCHECK_COMMAND_OPTIONS} Use with `cmake -T MemCheck`")
+endif()
+message(NOTICE "Building with Coverage  : ${COVERAGE}")
+message(NOTICE "Building docs           : ${BUILD_DOC}")
+message(NOTICE "\nTARGETS")
+message(NOTICE "Build the EXAMPLE programs : ${BUILD_EXAMPLES}")
+message(NOTICE "Build GTEST unit-tests     : ${BUILD_GTEST}")
+message(NOTICE "")
