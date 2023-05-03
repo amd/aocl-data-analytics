@@ -61,7 +61,9 @@ endif()
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 if(WIN32)
-  set(CMAKE_Fortran_COMPILER "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/bin/intel64/ifort.exe")
+  set(CMAKE_Fortran_COMPILER
+      "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/bin/intel64/ifort.exe"
+  )
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
   # Set environment variables for users, add your own paths here or directly on
@@ -126,21 +128,23 @@ else()
   # find dependencies. all aocl libraries are allowed it is assumed that aocl is
   # installed either on the system's paths or in a folder designated by the
   # environment variable AOCL_ROOT
+  if(NOT BUILD_ILP64)
+    include_directories($ENV{AOCL_ROOT}/include_LP64)
+    set(AOCL_PATH $ENV{AOCL_ROOT}/lib)
+  else()
+    include_directories($ENV{AOCL_ROOT}/include_ILP64)
+    set(AOCL_PATH $ENV{AOCL_ROOT}/lib_ILP64)
+  endif()
+  message("${AOCL_PATH}")
   find_library(
     BLIS name blis
-    PATHS $ENV{AOCL_ROOT}/lib REQUIRED
+    PATHS ${AOCL_PATH} REQUIRED
     NO_DEFAULT_PATH)
 
   find_library(
     FLAME name flame
-    PATHS $ENV{AOCL_ROOT}/lib REQUIRED
+    PATHS ${AOCL_PATH} REQUIRED
     NO_DEFAULT_PATH)
-
-  if(NOT BUILD_ILP64)
-    include_directories($ENV{AOCL_ROOT}/include_LP64)
-  else()
-    include_directories($ENV{AOCL_ROOT}/include_ILP64)
-  endif()
 
 endif()
 
@@ -168,7 +172,8 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   set(COMPILER_FLAGS_DEBUG "/Od")
   set(COMPILER_FLAGS_CXX_DEBUG "/W3;/DEBUG")
   if($ENV{USERNAME} MATCHES "aoclwinuser")
-    set(CMAKE_VS_MSBUILD_COMMAND "${CMAKE_VS_MSBUILD_COMMAND} /nodereuse:false /maxcpucount:1")
+    set(CMAKE_VS_MSBUILD_COMMAND
+        "${CMAKE_VS_MSBUILD_COMMAND} /nodereuse:false /maxcpucount:1")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
@@ -220,28 +225,41 @@ add_subdirectory(source)
 include(CTest)
 add_subdirectory(tests)
 
-if (VALGRIND)
-set(CTEST_MEMORYCHECK_TYPE "valgrind")
-set(CTEST_MEMORYCHECK_COMMAND_OPTIONS '--track-origins=yes --leak-check=full -s --show-leak-kinds=all')
+if(VALGRIND)
+  set(CTEST_MEMORYCHECK_TYPE "valgrind")
+  set(CTEST_MEMORYCHECK_COMMAND_OPTIONS
+      '--track-origins=yes --leak-check=full -s --show-leak-kinds=all')
 endif()
 
 # Convenience Banner, print relevent info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
-message(NOTICE "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}")
-message(NOTICE "OpenMP                  : ${OpenMP_CXX_FOUND} (${OpenMP_CXX_FLAGS})")
-if (CMAKE_BUILD_TYPE MATCHES "Debug")
-message(NOTICE "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_DEBUG}")
+message(
+  NOTICE
+  "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}"
+)
+message(NOTICE
+        "OpenMP                  : ${OpenMP_CXX_FOUND} (${OpenMP_CXX_FLAGS})")
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+  message(
+    NOTICE
+    "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_DEBUG}")
 endif()
-if (CMAKE_BUILD_TYPE MATCHES "Release")
-message(NOTICE "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_RELEASE}")
+if(CMAKE_BUILD_TYPE MATCHES "Release")
+  message(
+    NOTICE
+    "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_RELEASE}"
+  )
 endif()
 message(NOTICE "\nOPTIONS")
 message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
 message(NOTICE "Building with ASan      : ${ASAN}")
 message(NOTICE "Building with MemSan    : ${MEMSAN}")
 message(NOTICE "Building with Valgrind  : ${VALGRIND}")
-if (${VALGRIND})
-message(NOTICE "         Valgrind flags : ${CTEST_MEMORYCHECK_COMMAND_OPTIONS} Use with `cmake -T MemCheck`")
+if(${VALGRIND})
+  message(
+    NOTICE
+    "         Valgrind flags : ${CTEST_MEMORYCHECK_COMMAND_OPTIONS} Use with `cmake -T MemCheck`"
+  )
 endif()
 message(NOTICE "Building with Coverage  : ${COVERAGE}")
 message(NOTICE "Building docs           : ${BUILD_DOC}")
