@@ -79,7 +79,7 @@ void get_heterogeneous_data_store(data_store &ds, da_int &mt, da_int &nt,
      *  |     1x4       |  | 1x2  | | 1x1  |
      *   ---------------    ------   ------
      */
-    std::vector<int> ib1, ib2, ib3, ib4, ib5;
+    std::vector<da_int> ib1, ib2, ib3, ib4, ib5;
     std::vector<float> fb1, fb2;
     std::vector<std::string> sb1, sb2;
     da_int m, n;
@@ -151,7 +151,7 @@ void get_heterogeneous_data_store_pub(da_datastore store, da_int &mt, da_int &nt
      *  |     1x4       |  | 1x2  | | 1x1  |
      *   ---------------    ------   ------
      */
-    std::vector<int> ib1, ib2, ib3, ib4, ib5;
+    std::vector<da_int> ib1, ib2, ib3, ib4, ib5;
     std::vector<float> fb1, fb2;
     da_int m, n;
 
@@ -241,7 +241,7 @@ TEST(block, getCol) {
 }
 
 TEST(dataStore, invalidConcat) {
-    std::vector<int> bl1, bl2, bl3, bl4;
+    std::vector<da_int> bl1, bl2, bl3, bl4;
     da_ordering order;
 
     data_store ds = data_store();
