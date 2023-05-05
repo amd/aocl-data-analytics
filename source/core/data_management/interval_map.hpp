@@ -76,12 +76,10 @@ template <class T> class interval_map {
     bool empty() { return imap.empty(); }
 
     da_status insert(da_int lb, da_int ub, T val) {
-        T aux;
-        da_int aux1, aux2;
         if (ub < lb)
             return da_status_invalid_input;
 
-        if (find(lb, aux, aux1, aux2) == true || find(ub, aux, aux1, aux2) == true)
+        if (find(lb) != imap.end() || find(ub) != imap.end())
             // lb or ub are already in the intervals => trying to create an overlap
             return da_status_invalid_input;
 
