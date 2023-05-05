@@ -9,8 +9,11 @@
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
+#include <vector>
 
 namespace da_data {
+
+using pair = typename std::pair<da_int, da_int>;
 
 enum block_type {
     block_none,
@@ -42,7 +45,30 @@ class block {
 
 template <class T> class block_base : public block {
   public:
+    /* Get a column of the block 
+     * on output:
+     * - col contains a pointer to the column idx of the block, data is not copied.
+     * - "stride" contains the increment needed to get conscutive elements of the column
+     * exit status:
+     * - invalid input
+     */
     virtual da_status get_col(da_int idx, T **col, da_int &stride) = 0;
+    /* Copy a subset of a block into a dense preallocated memory block in "data"
+     *
+     * The subset is defined by the 2 index intervals:
+     * cols = [lc, uc] and rows = [lr, ur]
+     * 
+     * In output, the data is a dense matrix in column major ordering. 
+     * "data" can be bigger than the requested elements. the position where 
+     * the elements are defined in "data" is controlled by:
+     * - ld_data: the leading dimension of the dense block data
+     * - idx_start: the index where the first element of the slice should be placed in "data"
+     * It is assumed enough memory has been allocated in "data", its dimensions are NOT checked. 
+     *  exit_status:
+     * - invalid_input
+     */
+    virtual da_status copy_slice_dense(pair cols, pair rows, da_int idx_start,
+                                       da_int ld_data, T *data) = 0;
 };
 
 /* Define a block of dense base data (int, float, double, string) 
@@ -95,6 +121,55 @@ template <class T> class block_dense : public block_base<T> {
             break;
         }
 
+        return da_status_success;
+    }
+
+    da_status copy_slice_dense(pair cols, pair rows, da_int idx_start, da_int ld_data,
+                               T *data) {
+
+        if (rows.first > rows.second)
+            return da_status_invalid_input;
+        if (cols.first > cols.second)
+            return da_status_invalid_input;
+        if (rows.first < 0 || rows.second >= this->m)
+            return da_status_invalid_input;
+        if (cols.first < 0 || cols.second >= this->n)
+            return da_status_invalid_input;
+
+        da_int idx, ncols, nrows, idx_d;
+        ncols = cols.second - cols.first + 1;
+        nrows = rows.second - rows.first + 1;
+        idx_d = 0;
+        switch (order) {
+        case col_major:
+            idx = cols.first * this->m;
+            for (da_int j = 0; j < ncols; j++) {
+                idx += rows.first;
+                idx_d += idx_start;
+                for (da_int i = 0; i < nrows; i++) {
+                    data[idx_d] = bl[idx];
+                    idx++;
+                    idx_d++;
+                }
+                idx += this->m - nrows - rows.first;
+                idx_d += ld_data - nrows - idx_start;
+            }
+            break;
+
+        case row_major:
+            idx = 0;
+            for (da_int j = 0; j < ncols; j++) {
+                idx = rows.first * this->n + cols.first + j;
+                idx_d += idx_start;
+                for (da_int i = 0; i < nrows; i++) {
+                    data[idx_d] = bl[idx];
+                    idx += this->n;
+                    idx_d++;
+                }
+                idx_d += ld_data - nrows - idx_start;
+            }
+            break;
+        }
         return da_status_success;
     }
 };
@@ -153,8 +228,8 @@ class data_store {
             new_block = std::make_shared<block_id>(block_id());
             new_block->b = new block_dense<T>(mc, nc, data, order, copy_data);
             new_block->offset = n;
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
+        } catch (std::bad_alloc &) {       // LCOV_EXCL_LINE
+            return da_status_memory_error; // LCOV_EXCL_LINE
         }
 
         // Concatenate columns to the right, indices of new columns are [n, n+nc-1]
@@ -189,8 +264,8 @@ class data_store {
             // Create a dense block from the raw data
             try {
                 new_block = std::make_shared<block_id>(block_id());
-            } catch (std::bad_alloc &) {
-                return da_status_memory_error;
+            } catch (std::bad_alloc &) {       // LCOV_EXCL_LINE
+                return da_status_memory_error; // LCOV_EXCL_LINE
             }
             new_block->b = new block_dense<T>(mr, nr, data, order, copy_data);
 
@@ -231,7 +306,7 @@ class data_store {
             // error occured, clear the 'next' pointers from the existing blocks
             ub = idx_start - 1;
             std::shared_ptr<block_id> current_block;
-            while (ub < nr - 1) {
+            while (ub < idx_start + nr - 1) {
                 auto it = cmap.find(ub + 1);
                 if (it == cmap.end())
                     break;
@@ -248,43 +323,6 @@ class data_store {
             m -= mr;
         }
         return exit_status;
-    }
-
-    /* Extract column idx into vector col
-     * m: expected size of the column by the user; if wrong correct m size is returned
-     * col: user allocated memory of size at least m
-     */
-    template <class T> da_status extract_column(da_int idx, da_int &m, T *col) {
-        da_status status;
-
-        if (m != this->m) {
-            m = this->m;
-            return da_status_invalid_input;
-        }
-        if (idx < 0 || idx >= this->n)
-            return da_status_invalid_input;
-
-        T *c;
-        da_int stride, nrows, lb, ub;
-        da_int idxrow = 0;
-        block_dense<T> *bb;
-        std::shared_ptr<block_id> id;
-        cmap.find(idx, id, lb, ub);
-        if (id->b->btype != get_block_type<T>())
-            return da_status_invalid_input;
-        while (id != nullptr) {
-            bb = static_cast<block_dense<T> *>(id->b);
-            status = bb->get_col(idx - id->offset, &c, stride);
-            if (status != da_status_success)
-                return da_status_internal_error;
-            nrows = bb->m;
-            for (da_int i = 0; i < nrows; i++)
-                col[idxrow + i] = c[i * stride];
-            idxrow += nrows;
-            id = id->next;
-        }
-
-        return da_status_success;
     }
 
     /* concat the current datastore with the store passed on the interface horizontally 
@@ -319,6 +357,96 @@ class data_store {
         }
         store.m = 0;
         store.n = 0;
+
+        return da_status_success;
+    }
+
+    /* Extract column idx into vector col
+     * m: expected size of the column by the user; if wrong correct m size is returned
+     * col: user allocated memory of size at least m
+     */
+    template <class T> da_status extract_column(da_int idx, da_int &m, T *col) {
+        da_status status;
+
+        if (m != this->m) {
+            m = this->m;
+            return da_status_invalid_input;
+        }
+        if (idx < 0 || idx >= this->n)
+            return da_status_invalid_input;
+
+        T *c;
+        da_int stride, nrows, lb, ub;
+        da_int idxrow = 0;
+        block_base<T> *bb;
+        std::shared_ptr<block_id> id;
+        cmap.find(idx, id, lb, ub);
+        if (id->b->btype != get_block_type<T>())
+            return da_status_invalid_input;
+        while (id != nullptr) {
+            bb = static_cast<block_base<T> *>(id->b);
+            status = bb->get_col(idx - id->offset, &c, stride);
+            if (status != da_status_success)
+                return da_status_internal_error; // LCOV_EXCL_LINE
+            nrows = bb->m;
+            for (da_int i = 0; i < nrows; i++)
+                col[idxrow + i] = c[i * stride];
+            idxrow += nrows;
+            id = id->next;
+        }
+
+        return da_status_success;
+    }
+
+    /* Extract a slice in column major ordering from the data store */
+    template <class T> da_status extract_slice(pair row_int, pair col_int, T *slice) {
+
+        if (row_int.first > row_int.second)
+            return da_status_invalid_input;
+        if (col_int.first > col_int.second)
+            return da_status_invalid_input;
+        if (row_int.first < 0 || row_int.second >= this->m)
+            return da_status_invalid_input;
+        if (col_int.first < 0 || col_int.second >= this->n)
+            return da_status_invalid_input;
+
+        da_status status;
+        da_int m = row_int.second - row_int.first + 1;
+
+        da_int lcol = col_int.first;
+        da_int ucol = col_int.second;
+        da_int idx = 0;
+        columns_map::iterator it;
+        pair block_cols, block_rows;
+        while (ucol - lcol >= 0) {
+            it = cmap.find(lcol);
+            std::shared_ptr<block_id> bid = it->second;
+            if (bid->b->btype != get_block_type<T>())
+                return da_status_invalid_input;
+            da_int uc = std::min(ucol, it->first.second);
+            da_int lrow = row_int.first;
+            da_int lr = lrow;
+            da_int urow = row_int.second;
+            da_int idxr = idx;
+            da_int first_row_idx = 0;
+            while (urow - lr >= 0) {
+                da_int ur = std::min(urow, first_row_idx + bid->b->m - 1);
+                block_rows = {lr - first_row_idx, ur - first_row_idx};
+                if (block_rows.second >= block_rows.first) {
+                    block_cols = {lcol - bid->offset, uc - bid->offset};
+                    block_base<T> *bb = static_cast<block_base<T> *>(bid->b);
+                    status = bb->copy_slice_dense(block_cols, block_rows, idxr, m, slice);
+                    if (status != da_status_success)
+                        return da_status_internal_error; // LCOV_EXCL_LINE
+                    idxr += ur - lr + 1;
+                }
+                lr = ur + 1;
+                first_row_idx = ur + 1;
+                bid = bid->next;
+            }
+            idx += m * (uc - lcol + 1);
+            lcol = uc + 1;
+        }
 
         return da_status_success;
     }

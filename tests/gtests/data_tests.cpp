@@ -240,6 +240,86 @@ TEST(block, getCol) {
     EXPECT_ARR_EQ(m, col, col2_exp, stride, 1, startx, starty);
 }
 
+TEST(block, copySlice) {
+    std::vector<da_int> bl_col, bl_row, islice, exp_slice;
+    da_int m, n;
+
+    m = 5;
+    n = 4;
+    bl_col = {1, 2, 3, 4, 5, 1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 6, 7, 8, 9, 10};
+    block_dense<da_int> b1(m, n, bl_col.data(), col_major);
+
+    // load the data from the middle of the block
+    std::pair<da_int, da_int> cols, rows;
+    cols = {1, 2};
+    rows = {1, 3};
+    islice.resize(6);
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()), da_status_success);
+    exp_slice = {3, 5, 7, 4, 6, 8};
+    EXPECT_ARR_EQ(6, islice, exp_slice, 1, 1, 0, 0);
+
+    // try to load he block in the middle of the slice
+    islice.resize(15);
+    std::fill(islice.begin(), islice.end(), 0);
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 1, 5, &islice[5]), da_status_success);
+    exp_slice = {0, 0, 0, 0, 0, 0, 3, 5, 7, 0, 0, 4, 6, 8, 0};
+    EXPECT_ARR_EQ(15, islice, exp_slice, 1, 1, 0, 0);
+
+    // row ordering
+    bl_row = {1, 1, 2, 6, 2, 3, 4, 7, 3, 5, 6, 8, 4, 7, 8, 9, 5, 9, 10, 10};
+    block_dense<da_int> b2(m, n, bl_row.data(), row_major);
+    islice.resize(6);
+    EXPECT_EQ(b2.copy_slice_dense(cols, rows, 0, 3, islice.data()), da_status_success);
+    exp_slice = {3, 5, 7, 4, 6, 8};
+    EXPECT_ARR_EQ(6, islice, exp_slice, 1, 1, 0, 0);
+
+    // try to load he block in the middle of the slice
+    islice.resize(15);
+    std::fill(islice.begin(), islice.end(), 0);
+    EXPECT_EQ(b2.copy_slice_dense(cols, rows, 1, 5, &islice[5]), da_status_success);
+    exp_slice = {0, 0, 0, 0, 0, 0, 3, 5, 7, 0, 0, 4, 6, 8, 0};
+    EXPECT_ARR_EQ(15, islice, exp_slice, 1, 1, 0, 0);
+}
+
+TEST(block, copySliceInvalid) {
+    std::vector<da_int> bl_col, bl_row, islice, exp_slice;
+    da_int m, n;
+
+    m = 5;
+    n = 4;
+    bl_col = {1, 2, 3, 4, 5, 1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 6, 7, 8, 9, 10};
+    block_dense<da_int> b1(m, n, bl_col.data(), col_major);
+
+    std::pair<da_int, da_int> cols, rows;
+    cols = {-1, 2};
+    rows = {1, 3};
+    islice.resize(30);
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+    cols = {2, 1};
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+    cols = {0, 4};
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+    cols = {4, 4};
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+    cols = {1, 2};
+    rows = {-1, 2};
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+    rows = {2, 1};
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+    rows = {0, 5};
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+    rows = {5, 6};
+    EXPECT_EQ(b1.copy_slice_dense(cols, rows, 0, 3, islice.data()),
+              da_status_invalid_input);
+}
+
 TEST(dataStore, invalidConcat) {
     std::vector<da_int> bl1, bl2, bl3, bl4;
     da_ordering order;
@@ -297,6 +377,24 @@ TEST(dataStore, invalidConcat) {
     n = 4;
     bl4 = {1, 2, 3, 4};
     EXPECT_EQ(ds.concatenate_rows(m, n, bl4.data(), order), da_status_invalid_input);
+}
+
+TEST(dataStore, invalidExtract) {
+    da_int m, n;
+    std::vector<da_int> bl1, bl2, bl3;
+    da_ordering order;
+
+    data_store ds = data_store();
+    get_block_data_int(test1_rblock1, m, n, bl1, order);
+    ds.concatenate_columns(m, n, bl1.data(), order);
+    get_block_data_int(test1_cblock1, m, n, bl2, order);
+    ds.concatenate_columns(m, n, bl2.data(), order);
+
+    da_int mw = m + 1;
+    bl3.resize(m);
+    EXPECT_EQ(ds.extract_column(2, mw, bl3.data()), da_status_invalid_input);
+    EXPECT_EQ(ds.extract_column(-1, m, bl3.data()), da_status_invalid_input);
+    EXPECT_EQ(ds.extract_column(4, m, bl3.data()), da_status_invalid_input);
 }
 
 TEST(dataStore, extractCol) {
@@ -358,8 +456,15 @@ TEST(intervalMap, invalidInput) {
     // invalid bounds
     EXPECT_EQ(imap.insert(2, 0, 1.0), da_status_invalid_input);
 
+    // find a key in empty map
+    EXPECT_EQ(imap.find(0, d, lb, ub), false);
+    EXPECT_EQ(imap.find(0), imap.end());
+
     // Insert correct interval [0,2]
     EXPECT_EQ(imap.insert(0, 2, 1.0), da_status_success);
+
+    // erase the end iterator
+    imap.erase(imap.end());
 
     // find values outside of the inserted intervals
     EXPECT_EQ(imap.find(-1, d, lb, ub), false);
@@ -579,6 +684,38 @@ TEST(dataStore, load) {
     da_datastore_destroy(&store);
 }
 
+TEST(dataStore, invalidHconcat) {
+    da_int m, n;
+    data_store hds = data_store(), hds1 = data_store();
+    std::vector<da_int> idata;
+    std::vector<float> fdata;
+    std::vector<std::string> sdata;
+
+    get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
+    EXPECT_EQ(hds.horizontal_concat(hds1), da_status_invalid_input);
+
+    // add a partial row to hds1
+    get_heterogeneous_data_store(hds1, m, n, idata, fdata, sdata);
+    std::vector<da_int> iblock = {1, 2, 3, 4};
+    EXPECT_EQ(hds1.concatenate_rows(1, 4, iblock.data(), row_major, true),
+              da_status_success);
+
+    // Add the same partial row to hds
+    EXPECT_EQ(hds.concatenate_rows(1, 4, iblock.data(), row_major, true),
+              da_status_success);
+    // hds partial row fails concatenation
+    EXPECT_EQ(hds.horizontal_concat(hds1), da_status_invalid_input);
+
+    // finish hds row and try concat again
+    std::vector<float> fblock = {1., 2.};
+    std::vector<std::string> sblock = {"1"};
+    EXPECT_EQ(hds.concatenate_rows(1, 2, fblock.data(), row_major, true),
+              da_status_success);
+    EXPECT_EQ(hds.concatenate_rows(1, 1, sblock.data(), row_major, true),
+              da_status_success);
+    EXPECT_EQ(hds.horizontal_concat(hds1), da_status_invalid_input);
+}
+
 TEST(dataStore, hconcat) {
     // create 2 heterogeneous data_store
     da_int m, n;
@@ -713,4 +850,135 @@ TEST(dataStore, hconcatPub) {
     da_datastore_destroy(&store);
     da_datastore_destroy(&store1);
     da_datastore_destroy(&store2);
+}
+
+TEST(dataStore, extractSlice) {
+    da_int m, n;
+    std::vector<da_int> bl1, bl2, bl3;
+    da_ordering order;
+    data_store ds = data_store();
+    get_block_data_int(test1_rblock1, m, n, bl1, order);
+    EXPECT_EQ(ds.concatenate_columns(m, n, bl1.data(), order), da_status_success);
+    get_block_data_int(test1_cblock1, m, n, bl2, order);
+    EXPECT_EQ(ds.concatenate_columns(m, n, bl2.data(), order), da_status_success);
+
+    // Extract the first  columns into a slice
+    std::pair<da_int, da_int> col_int(0, 1), row_int(0, m - 1);
+    std::vector<da_int> islice(m * 2);
+    ds.extract_slice(row_int, col_int, islice.data());
+    std::vector<da_int> expected_slice = {1, 3, 5, 7, 9, 2, 4, 6, 8, 10};
+    EXPECT_ARR_EQ(10, islice, expected_slice, 1, 1, 0, 0);
+
+    // columns spread on 2 blocks
+    col_int.second = 2;
+    islice.resize(3 * m);
+    ds.extract_slice(row_int, col_int, islice.data());
+    expected_slice = {1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 1, 3, 5, 7, 9};
+    EXPECT_ARR_EQ(15, islice, expected_slice, 1, 1, 0, 0);
+
+    // same datastore, partial rows
+    row_int.second = 2;
+    ds.extract_slice(row_int, col_int, islice.data());
+    expected_slice = {1, 3, 5, 2, 4, 6, 1, 3, 5};
+    EXPECT_ARR_EQ(9, islice, expected_slice, 1, 1, 0, 0);
+
+    // add rows and extract the first 3 columns
+    da_int new_m;
+    get_block_data_int(test1_2rows, new_m, n, bl3, order);
+    EXPECT_EQ(ds.concatenate_rows(new_m, n, bl3.data(), order, true), da_status_success);
+    row_int = {0, 6};
+    col_int = {0, 2};
+    islice.resize(21);
+    std::fill(islice.begin(), islice.end(), 0);
+    ds.extract_slice(row_int, col_int, islice.data());
+    expected_slice = {1, 3, 5, 7, 9, 2, 3, 2, 4, 6, 8, 10, 4, 5, 1, 3, 5, 7, 9, 6, 7};
+    EXPECT_ARR_EQ(21, islice, expected_slice, 1, 1, 0, 0);
+
+    // Test slice extraction on the heterogeneous data store
+    data_store hds = data_store();
+    std::vector<da_int> idata;
+    std::vector<float> fdata;
+    std::vector<std::string> sdata;
+    get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
+
+    islice.resize(21);
+    std::fill(islice.begin(), islice.end(), 0);
+    row_int = {2, 5};
+    col_int = {1, 2};
+    hds.extract_slice(row_int, col_int, islice.data());
+    expected_slice = {6, 8, 11, 22, 3, 4, 12, 23};
+    EXPECT_ARR_EQ(8, islice, expected_slice, 1, 1, 0, 0);
+
+    // extract just a row
+    std::fill(islice.begin(), islice.end(), 0);
+    row_int = {4, 4};
+    col_int = {0, 3};
+    hds.extract_slice(row_int, col_int, islice.data());
+    expected_slice = {10, 11, 12, 13};
+    EXPECT_ARR_EQ(4, islice, expected_slice, 1, 1, 0, 0);
+
+    // Only bottom blocks
+    std::fill(islice.begin(), islice.end(), 0);
+    row_int = {4, 5};
+    col_int = {1, 3};
+    hds.extract_slice(row_int, col_int, islice.data());
+    expected_slice = {11, 22, 12, 23, 13, 24};
+    EXPECT_ARR_EQ(6, islice, expected_slice, 1, 1, 0, 0);
+
+    // extract floats
+    std::vector<float> fslice;
+    fslice.resize(5);
+    row_int = {1, 5};
+    col_int = {5, 5};
+    hds.extract_slice(row_int, col_int, fslice.data());
+    std::vector<float> fexpected_slice = {6.5, 7.5, 8.5, 9.5};
+    EXPECT_ARR_EQ(4, fslice, fexpected_slice, 1, 1, 0, 0);
+}
+
+TEST(dataStore, exSliceInvalid) {
+    da_int m, n;
+    data_store hds = data_store();
+    std::vector<da_int> idata;
+    std::vector<float> fdata;
+    std::vector<std::string> sdata;
+    get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
+
+    // out of range intervals
+    da_data::pair row_int = {2, 1}, col_int = {0, 1};
+    std::vector<da_int> islice(100);
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    row_int = {0, 1};
+    col_int = {10, 5};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    col_int = {-1, 2};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    col_int = {2, 7};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    col_int = {7, 7};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    col_int = {0, 1};
+    row_int = {-1, 2};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    row_int = {1, 6};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    row_int = {7, 10};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+
+    // wrong type expected
+    col_int = {4, 5};
+    row_int = {0, 2};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
+    col_int = {0, 5};
+    row_int = {0, 2};
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+              da_status_invalid_input);
 }
