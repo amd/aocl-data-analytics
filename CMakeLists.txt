@@ -31,8 +31,11 @@ option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
 option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
 option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
 option(BUILD_DOC "Build PDF and HTML documentation" OFF)
+option(BUILD_SMP "Build using OpenMP and link to threaded BLIS" ON)
 
-find_package(OpenMP REQUIRED)
+if (BUILD_SMP)
+  find_package(OpenMP REQUIRED)
+endif()
 
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
 # from Windows
@@ -80,17 +83,24 @@ if(WIN32)
   endif()
 
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
+  if(BUILD_SMP)
+    set(BLIS_NAME "AOCL-LibBlis-Win-MT-dll")
+    set(FLAME_NAME "AOCL-LibFlame-Win-MT-dll")
+  else()
+    set(BLIS_NAME "AOCL-LibBlis-Win-dll")
+    set(FLAME_NAME "AOCL-LibFlame-Win-dll")
+  endif()
   if(NOT BUILD_ILP64)
-    find_library(BLIS name AOCL-LibBlis-Win-MT-dll
+    find_library(BLIS name ${BLIS_NAME}
                  PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/LP64" REQUIRED)
-    find_library(FLAME name AOCL-LibFlame-Win-MT-dll
+    find_library(FLAME name ${FLAME_NAME}
                  PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/LP64" REQUIRED)
     include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/LP64")
     include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/LP64")
   else()
-    find_library(BLIS name AOCL-LibBlis-Win-MT-dll
+    find_library(BLIS name ${BLIS_NAME}
                  PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/ILP64" REQUIRED)
-    find_library(FLAME name AOCL-LibFlame-Win-MT-dll
+    find_library(FLAME name ${FLAME_NAME}
                  PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/ILP64" REQUIRED)
     include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/ILP64")
     include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/ILP64")
@@ -136,8 +146,13 @@ else()
     set(AOCL_PATH $ENV{AOCL_ROOT}/lib_ILP64)
   endif()
   message("${AOCL_PATH}")
+  if(BUILD_SMP)
+    set(BLIS_NAME "blis-mt")
+  else()
+    set(BLIS_NAME "blis")
+  endif()
   find_library(
-    BLIS name blis
+    BLIS name ${BLIS_NAME}
     PATHS ${AOCL_PATH} REQUIRED
     NO_DEFAULT_PATH)
 
@@ -163,7 +178,10 @@ else()
 endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
   # MSVC compiler flags
-  set(COMPILER_FLAGS_COMMON "/openmp;/arch:AVX2")
+  set(COMPILER_FLAGS_COMMON "/arch:AVX2")
+  if(BUILD_SMP)
+    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${OpenMP_CXX_FLAGS};")
+  endif()
   set(COMPILER_FLAGS_CXX "/std:c++17;/EHsc")
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON}; /arch:AVX512")
@@ -180,6 +198,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
                                                       STREQUAL "GNU"))
   # GNU style compiler flags Common flags
   set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma")
+  if(BUILD_SMP)
+    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${OpenMP_CXX_FLAGS};")
+  endif()
   # Release flags
   set(COMPILER_FLAGS_RELEASE "-DNDEBUG;-O2;")
   set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;-Wall;-Wextra")
@@ -237,8 +258,10 @@ message(
   NOTICE
   "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}"
 )
-message(NOTICE
-        "OpenMP                  : ${OpenMP_CXX_FOUND} (${OpenMP_CXX_FLAGS})")
+if(BUILD_SMP)
+  message(NOTICE
+          "OpenMP                  : ${OpenMP_CXX_FOUND} (${OpenMP_CXX_FLAGS})")
+endif()
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
   message(
     NOTICE
@@ -255,6 +278,7 @@ message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
 message(NOTICE "Building with ASan      : ${ASAN}")
 message(NOTICE "Building with MemSan    : ${MEMSAN}")
 message(NOTICE "Building with Valgrind  : ${VALGRIND}")
+message(NOTICE "Building with OpenMP    : ${BUILD_SMP}")
 if(${VALGRIND})
   message(
     NOTICE

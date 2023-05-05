@@ -34,6 +34,8 @@ and add similar lines to point cmake to where your AOCL build is installed
 
 * -DBUILD_DOC=On to build the documentation
 
+* -DBUILD_SMP=On to build using OpenMP and threaded BLIS (on by default)
+
 5. Type make (or make doc, to make the documentation)
 
 6. Run the tests or examples using ctest e.g. ctest -V –R followed by a string to find a particular set of tests 
@@ -64,7 +66,9 @@ and add similar lines to point cmake to where your AOCL build and Fortran compil
 
 * -DBUILD_ILP64=On for 64-bit integer build 
 
-* -DBUILD_EXAMPLES and –DBUILD_GTEST both of which are on by default 
+* -DBUILD_EXAMPLES and –DBUILD_GTEST both of which are on by default
+
+* -DBUILD_SMP=On to build using OpenMP and threaded BLIS (on by default)
 
 Note that not all the options available in Linux are available in Windows 
 
