@@ -9,7 +9,14 @@ void sgesvd_(char *jobu, char *jobv, da_int *m, da_int *n, float *a, da_int *lda
 void dgesvd_(char *jobu, char *jobv, da_int *m, da_int *n, double *a, da_int *lda,
              double *s, double *u, da_int *ldu, double *vt, da_int *ldvt, double *work,
              da_int *lwork, da_int *info);
-
+void sgesvdx_(char *jobu, char *jobv, char *range, da_int *m, da_int *n, float *a, 
+              da_int *lda, float *vl, float *vu, da_int *il, da_int *iu, da_int *ns,
+              float *s, float *u, da_int *ldu, float *vt, da_int *ldvt, float *work,
+              da_int *lwork, da_int* iwork, da_int *info);
+void dgesvdx_(char *jobu, char *jobv, char *range, da_int *m, da_int *n, double *a, 
+              da_int *lda, double *vl, double *vu, da_int *il, da_int *iu, da_int *ns,
+              double *s, double *u, da_int *ldu, double *vt, da_int *ldvt, double *work,
+              da_int *lwork, da_int* iwork, da_int *info);
 void dgeqrf_(da_int *m, da_int *n, double *a, da_int *lda, double *tau, double *work,
              da_int *lwork, da_int *info);
 void sgeqrf_(da_int *m, da_int *n, float *a, da_int *lda, float *tau, float *work,
@@ -37,6 +44,22 @@ inline void gesvd(char *jobu, char *jobv, da_int *m, da_int *n, double *a, da_in
                   double *s, double *u, da_int *ldu, double *vt, da_int *ldvt,
                   double *work, da_int *lwork, da_int *info) {
     dgesvd_(jobu, jobv, m, n, a, lda, s, u, ldu, vt, ldvt, work, lwork, info);
+};
+
+inline void gesvdx(char *jobu, char *jobv, char *range, da_int *m, da_int *n, float *a, 
+                   da_int *lda, float *vl, float *vu, da_int *il, da_int *iu, da_int *ns,
+                   float *s, float *u, da_int *ldu, float *vt, da_int *ldvt, float *work,
+                   da_int *lwork, da_int* iwork, da_int *info) {
+    sgesvdx_(jobu, jobv, range, m, n, a, lda, vl, vu, il, iu, ns, s, u, ldu, vt, 
+            ldvt, work, lwork, iwork, info);
+};
+
+inline void gesvdx(char *jobu, char *jobv, char *range, da_int *m, da_int *n, double *a, 
+                   da_int *lda, double *vl, double *vu, da_int *il, da_int *iu, da_int *ns,
+                   double *s, double *u, da_int *ldu, double *vt, da_int *ldvt, double *work,
+                   da_int *lwork, da_int* iwork, da_int *info) {
+    dgesvdx_(jobu, jobv, range, m, n, a, lda, vl, vu, il, iu, ns, s, u, ldu, vt, 
+            ldvt, work, lwork, iwork, info);
 };
 
 // --- QR factorization (classic) ---

@@ -17,6 +17,7 @@ include_directories(${CMAKE_SOURCE_DIR}/source/include
                     ${CMAKE_SOURCE_DIR}/source/core/csv
                     ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
                     ${CMAKE_SOURCE_DIR}/source/core/linear_model
+                    ${CMAKE_SOURCE_DIR}/source/core/factorization
                     ${CMAKE_SOURCE_DIR}/source/core/optimization
                     ${CMAKE_SOURCE_DIR}/source/core/drivers
                     ${CMAKE_SOURCE_DIR}/source/core/utilities
