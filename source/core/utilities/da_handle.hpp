@@ -9,6 +9,7 @@
 #include "csv_reader.hpp"
 #include "data_store.hpp"
 #include "linear_model.hpp"
+#include "pca.hpp"
 
 #define ERR_MSG_LEN 1024
 
@@ -20,6 +21,8 @@ struct _da_handle {
     da_handle_type handle_type = da_handle_uninitialized;
     char error_message[ERR_MSG_LEN] = "";
     da_precision precision = da_double;
+    da_pca<double> *pca_d = nullptr;
+    da_pca<float> *pca_s = nullptr;
 
     da_status get_current_opts(da_options::OptionRegistry **opts);
 };

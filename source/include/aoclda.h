@@ -36,5 +36,6 @@
 #include "aoclda_linmod.h"
 #include "aoclda_options.h"
 #include "aoclda_types.h"
+#include "aoclda_pca.h"
 
 #endif // AOCLDA

@@ -31,6 +31,13 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             return da_status_memory_error;
         }
         break;
+    case da_handle_pca:
+        try {
+            (*handle)->pca_d = new da_pca<double>();
+        } catch (std::bad_alloc &) {
+            return da_status_memory_error;
+        }
+        break;
     default:
         error = da_status_success;
         break;
@@ -68,6 +75,13 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
     case da_handle_linmod:
         try {
             (*handle)->linreg_s = new linear_model<float>();
+        } catch (std::bad_alloc &) {
+            return da_status_memory_error;
+        }
+        break;
+    case da_handle_pca:
+        try {
+            (*handle)->pca_s = new da_pca<float>();
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
@@ -121,6 +135,10 @@ void da_handle_destroy(da_handle *handle) {
                 delete (*handle)->linreg_s;
             if ((*handle)->csv_parser)
                 delete (*handle)->csv_parser;
+            if ((*handle)->pca_d)
+                delete (*handle)->pca_d;
+            if ((*handle)->pca_s)
+                delete (*handle)->pca_s;
         }
         delete (*handle);
         *handle = nullptr;
