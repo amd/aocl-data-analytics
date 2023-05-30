@@ -91,13 +91,17 @@ enum setby_t { def = 0, user = 1, solver = 2 };
 const string option_tl[6] = {"?", "integer", "real", "real", "string", "boolean"};
 // clang-format off
 enum option_t { opt_undefined = 0, opt_int = 1, opt_float = 2, opt_double = 3, opt_string = 4, opt_bool = 5 };
-template <typename T> struct get_type { };
+template <typename T> struct get_type    { };
 template <> struct get_type<da_int>      { constexpr operator option_t() const noexcept { return option_t::opt_int;    } };
+template <> struct get_type<da_int*>     { constexpr operator option_t() const noexcept { return option_t::opt_int;    } };
 template <> struct get_type<float>       { constexpr operator option_t() const noexcept { return option_t::opt_float;  } };
+template <> struct get_type<float*>      { constexpr operator option_t() const noexcept { return option_t::opt_float;  } };
 template <> struct get_type<double>      { constexpr operator option_t() const noexcept { return option_t::opt_double; } };
+template <> struct get_type<double*>     { constexpr operator option_t() const noexcept { return option_t::opt_double; } };
 template <> struct get_type<string>      { constexpr operator option_t() const noexcept { return option_t::opt_string; } };
 template <> struct get_type<const char*> { constexpr operator option_t() const noexcept { return option_t::opt_string; } };
 template <> struct get_type<bool>        { constexpr operator option_t() const noexcept { return option_t::opt_bool;   } };
+template <> struct get_type<bool*>       { constexpr operator option_t() const noexcept { return option_t::opt_bool;   } };
 // clang-format on
 
 struct OptionUtils {
@@ -126,8 +130,8 @@ class OptionBase {
         }
         return da_status_success;
     }
-    string get_name(void) { return name; };
-    option_t get_option_t() { return otype; }
+    string get_name(void) const { return name; }
+    option_t get_option_t(void) const { return otype; }
     template <typename T>
     da_status validate(T lower, lbound_t lbound, T upper, ubound_t ubound, T value,
                        bool checkall = true) {
@@ -329,7 +333,7 @@ template <typename T> class OptionNumeric : public OptionBase {
         return rec.str();
     }
 
-    void get(T &value) { value = OptionNumeric<T>::value; };
+    void get(T &value) const { value = OptionNumeric<T>::value; };
 
     da_status set(T value, setby_t setby = setby_t::user) {
         da_status status = da_status_success;
@@ -588,17 +592,18 @@ class OptionRegistry {
             return da_status_option_wrong_type;
         }
 
-        typedef
-            typename std::conditional<is_same<U, da_int>::value ||
-                                          is_floating_point<U>::value ||
-                                          is_same<U, bool>::value,
-                                      OptionNumeric<U>, OptionString>::type OptionType;
+        typedef typename std::conditional<
+            is_same<U, da_int>::value || is_same<U, da_int *>::value ||
+                is_same<U, float>::value || is_same<U, float *>::value ||
+                is_same<U, double>::value || is_same<U, double *>::value ||
+                is_same<U, bool>::value || is_same<U, bool *>::value,
+            OptionNumeric<U>, OptionString>::type OptionType;
         // Defines
-        // da_int -> OptionNumeric<da_int>
-        // float -> OptionNumeric<float>
-        // double -> OptionNumeric<double>
+        // da_int[*] -> OptionNumeric<da_int>
+        // float[*] -> OptionNumeric<float>
+        // double[*] -> OptionNumeric<double>
+        // bool[*] -> OptionNumeric<bool>
         // otherwise -> OptionString
-        // bool -> OptionNumeric<bool>
         std::static_pointer_cast<OptionType>(search->second)->get(value);
         return da_status_success;
     }

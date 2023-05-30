@@ -415,7 +415,7 @@ TEST(OpRegistryWrappers, getset_double) {
     ASSERT_EQ(da_options_set_d_real(handle, "double option", value),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
-    int iv = 1;
+    da_int iv = 1;
     ASSERT_EQ(da_options_set_int(handle, "double option", iv),
               da_status_option_wrong_type);
 
@@ -447,7 +447,7 @@ TEST(OpRegistryWrappers, getset_float) {
     ASSERT_EQ(da_options_set_s_real(handle, "float option", value),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
-    int iv = 1;
+    da_int iv = 1;
     ASSERT_EQ(da_options_set_int(handle, "double option", iv),
               da_status_option_wrong_type);
     ASSERT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);

@@ -21,7 +21,8 @@ include_directories(${CMAKE_SOURCE_DIR}/source/include
                     ${CMAKE_SOURCE_DIR}/source/core/optimization
                     ${CMAKE_SOURCE_DIR}/source/core/drivers
                     ${CMAKE_SOURCE_DIR}/source/core/utilities
-                    ${CMAKE_SOURCE_DIR}/source/core/data_management)
+                    ${CMAKE_SOURCE_DIR}/source/core/data_management
+                    ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 
 add_executable(basic_statistics basic_statistics.cpp)
 target_link_libraries(basic_statistics da_core gtest_main)

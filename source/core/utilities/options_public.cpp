@@ -127,7 +127,6 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     std::string svalue;
     status = opts->get(option, svalue);
     // Need to make sure *value is big enough...
-    // String options should be guaranteed to be no longer than 256 chars? <--- FIXME
     if (status == da_status_success) {
         size_t n = svalue.size();
         if (n >= lvalue) {

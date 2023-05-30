@@ -41,6 +41,12 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
     try {
 
         std::shared_ptr<OptionNumeric<da_int>> oi;
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "print level", "set level of verbosity for the solver", 0,
+            da_options::lbound_t::greaterequal, 5, da_options::ubound_t::lessequal, 0));
+        opts.register_opt(oi);
+
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "linmod intercept", "Add intercept variable to the model", 0,
             da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
@@ -62,6 +68,10 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         os = std::make_shared<OptionString>(
             OptionString("linmod optim method", "Select optimization method to use",
                          {{"auto", 0}, {"lbfgs", 1}, {"qr", 2}}, "auto"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(
+            OptionString("print options", "Print option list and set values.",
+                         {{"no", 0}, {"yes", 2}}, "no"));
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {
