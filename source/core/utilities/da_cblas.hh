@@ -28,6 +28,7 @@
 #define DA_CBLAS_HH
 
 extern "C" {
+#define BLIS_ENABLE_CBLAS
 #include "cblas.h"
 }
 
