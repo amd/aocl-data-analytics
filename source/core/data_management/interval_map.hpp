@@ -37,10 +37,16 @@ template <class T> class interval_map {
     map_it it;
 
   public:
-    class iterator : public std::iterator<std::forward_iterator_tag, map_it> {
+    class iterator {
         map_it it;
 
       public:
+        using iterator_category = std::forward_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using value_type = map_it;
+        using pointer = map_it *;
+        using reference = map_it &;
+
         iterator() {}
         iterator(map_it new_it) : it(new_it) {}
         std::pair<const pair, T> &operator*() const { return *it; }
