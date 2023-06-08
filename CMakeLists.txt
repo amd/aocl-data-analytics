@@ -33,7 +33,7 @@ option(BUILD_ILP64 "ILP64 Support" OFF)
 option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
 option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
 option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
-option(BUILD_DOC "Build PDF and HTML documentation" OFF)
+option(BUILD_DOC "Build HTML documentation" OFF)
 option(BUILD_SMP "Build using OpenMP and link to threaded BLIS and Flame" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
@@ -139,7 +139,7 @@ if(WIN32)
 	file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
 	set(CMAKE_Fortran_COMPILER gfortran)
   endif()
-  
+
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
 
