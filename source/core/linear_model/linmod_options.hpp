@@ -54,14 +54,18 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
 
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("linmod norm2 reg", "norm2 regularization term", 0.0,
-                             da_options::lbound_t::greaterequal, max_real,
-                             da_options::ubound_t::lessthan, 0.0));
+            OptionNumeric<T>("linmod alpha",
+                             "coefficient of alpha in the regularization terms: lambda( "
+                             "(1-alpha) L2 + alpha L1 )",
+                             0.0, da_options::lbound_t::greaterequal, 1.0,
+                             da_options::ubound_t::lessequal, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("linmod norm1 reg", "norm1 regularization term", 0.0,
-                             da_options::lbound_t::greaterequal, max_real,
-                             da_options::ubound_t::lessthan, 0.0));
+            OptionNumeric<T>("linmod lambda",
+                             "penalty coefficient for the regularization terms: lambda( "
+                             "(1-alpha) L2 + alpha L1 )",
+                             0.0, da_options::lbound_t::greaterequal, max_real,
+                             da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(oT);
 
         std::shared_ptr<OptionString> os;

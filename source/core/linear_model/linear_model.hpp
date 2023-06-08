@@ -112,7 +112,7 @@ template <typename T> class linear_model {
     std::vector<T> coef;
 
     //Regularization L1: LASSO, L2: Ridge, combination => Elastic net
-    T l2reg = 0.0, l1reg = 0.0;
+    T alpha, lambda;
     // Transform operator
     enum transform_t trn = trn_identity;
     // Loss function
@@ -209,8 +209,8 @@ template <typename T> void linear_model<T>::init_usrdata() {
     usrdata->m = m;
     usrdata->y = new T[m];
     usrdata->intercept = intercept;
-    usrdata->l1reg = l1reg;
-    usrdata->l2reg = l2reg;
+    usrdata->l1reg = lambda * alpha;
+    usrdata->l2reg = lambda * (1.0 - alpha) / 2.0;
     usrdata->loss = loss;
     usrdata->trn = trn;
 }
@@ -529,8 +529,8 @@ template <typename T> da_status linear_model<T>::fit() {
         opts.print_options();
 
     opts.get("linmod intercept", intercept_int);
-    opts.get("linmod norm2 reg", l2reg);
-    opts.get("linmod norm1 reg", l1reg);
+    opts.get("linmod alpha", alpha);
+    opts.get("linmod lambda", lambda);
     opts.get("linmod optim method", opt_val, id);
     intercept = (bool)intercept_int;
 
@@ -681,7 +681,7 @@ template <typename T> da_status linear_model<T>::qr_lsq() {
 /* Option methods */
 template <typename T> da_status linear_model<T>::validate_options(da_int method) {
 
-    if (l1reg != 0)
+    if (alpha != 0.0)
         return da_error(this->err, da_status_not_implemented,
                         "an optimization solver to solve requested linear model is not "
                         "available, reformulate linear model problem.");
@@ -704,10 +704,10 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
 template <typename T> da_status linear_model<T>::choose_method() {
     switch (mod) {
     case (linmod_model_mse):
-        if (l1reg == 0.0 && l2reg == 0.0)
+        if (lambda == 0.0)
             // QR direct method
             opts.set("linmod optim method", "qr", da_options::solver);
-        else if (l1reg == 0.0)
+        else if (alpha == 0.0)
             // L-BFGS-B handles L2 regularization
             opts.set("linmod optim method", "lbfgs", da_options::solver);
         else
