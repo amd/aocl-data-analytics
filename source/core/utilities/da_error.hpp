@@ -6,6 +6,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 /** Generating and storing error messages
  *
@@ -94,32 +95,36 @@ enum action_t {
 class da_error_t {
 
     // Main error message
-    string mesg{""};
+    vector<string> mesg;
     // Some friendy message and possible fix suggestions
-    string details{""};
+    vector<string> details;
     // Telemetry
-    string telem{""};
+    vector<string> telem;
     // This should indicate if the output of the functionality is
     // usable or not. DA_WARNING -> useable, and DA_ERROR -> not usable.
-    severity_type severity{severity_type::DA_NOTSET};
+    vector<severity_type> severity; // {severity_type::DA_NOTSET};
     // Registered status, by default no error
-    da_status status{da_status_success};
+    vector<da_status> status; // {da_status_success};
     // Action to take when rec() method is called
     action_t action{action_t::DA_RECORD};
 
   public:
-    severity_type get_severity(void) { return severity; };
-    da_status get_status(void) { return status; };
-    string get_mesg(void) { return mesg; };
-    string get_details(void) { return details; };
-    string get_telem(void) { return telem; };
+    severity_type get_severity(void) {
+        return severity.empty() ? severity_type::DA_NOTSET : severity.front();
+    };
+    da_status get_status(void) {
+        return status.empty() ? da_status_success : status.front();
+    };
+    string get_mesg(void) { return mesg.empty() ? "" : mesg.front(); };
+    string get_details(void) { return details.empty() ? "" : details.front(); };
+    string get_telem(void) { return telem.empty() ? "" : telem.front(); };
 
     da_status clear(void) {
-        mesg = "";
-        details = "";
-        telem = "";
-        status = da_status_success;
-        severity = severity_type::DA_NOTSET;
+        mesg.clear();
+        details.clear();
+        telem.clear();
+        status.clear();
+        severity.clear();
         return da_status_success;
     }
 
@@ -128,12 +133,24 @@ class da_error_t {
     ~da_error_t(){};
     // Build banner
     void print(stringstream &ss) {
-        if (status != da_status_success) {
-            ss << sev_labels[severity] << ":" << telem << ": " << mesg << std::endl;
-            ss << "status: " << status << std::endl;
-            if (details != "") {
-                ss << "details:" << std::endl;
-                ss << details << std::endl;
+        string tab = "";
+        if (!status.empty()) {
+            for (size_t trace = 0; trace < mesg.size(); trace++) {
+                if (mesg.size() > 1) {
+                    // There is a stack trace, add level indicator
+                    if (trace == 0) {
+                        tab = "   ";
+                        ss << "Error stack trace:" << std::endl;
+                    }
+                    ss << trace << ": ";
+                }
+                ss << sev_labels[severity[trace]] << ":" << telem[trace] << ": "
+                   << mesg[trace] << std::endl;
+                ss << tab << "status: " << status[trace] << std::endl;
+                if (details[trace] != "") {
+                    ss << tab << "details:" << std::endl;
+                    ss << details[trace] << std::endl;
+                }
             }
         } else {
             ss << "Last operation was successful." << std::endl;
@@ -153,29 +170,44 @@ class da_error_t {
     }
     da_status rec(da_status status, string msg, string det = "",
                   string tel = "<no telemetry provided>", size_t ln = 0,
-                  severity_type sev = DA_ERROR) {
-        this->status = status;
-        this->mesg = msg;
-        this->details = det;
-        this->telem = tel + to_string(ln);
-        this->severity = sev;
+                  severity_type sev = DA_ERROR, bool stack = false) {
+        if (!stack) {
+            this->status.resize(0);
+            this->mesg.resize(0);
+            this->details.resize(0);
+            this->telem.resize(0);
+            this->severity.resize(0);
+        }
+        this->status.push_back(status);
+        this->mesg.push_back(msg);
+        this->details.push_back(det);
+        this->telem.push_back(tel + to_string(ln));
+        this->severity.push_back(sev);
+
 #ifndef NDEBUG
         this->print();
 #endif
         if (this->action == action_t::DA_ABORT)
             std::abort();
         else if (this->action == action_t::DA_THROW)
-            std::runtime_error(this->mesg);
+            std::runtime_error(this->get_mesg());
         return status;
     };
 };
 
 #define da_error(e, status, msg)                                                         \
     (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
-             da_errors::severity_type::DA_ERROR)
+             da_errors::severity_type::DA_ERROR, false)
 #define da_warn(e, status, msg)                                                          \
     (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
-             da_errors::severity_type::DA_WARNING)
+             da_errors::severity_type::DA_WARNING, false)
+
+#define da_error_trace(e, status, msg)                                                   \
+    (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
+             da_errors::severity_type::DA_ERROR, true)
+#define da_warn_trace(e, status, msg)                                                    \
+    (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
+             da_errors::severity_type::DA_WARNING, true)
 
 } // namespace da_errors
 #endif
