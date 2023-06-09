@@ -22,6 +22,7 @@
  * ************************************************************************ */
 
 #include "aoclda.h"
+#include "da_datastore.hpp"
 #include "da_handle.hpp"
 #include "options.hpp"
 #include <string>
@@ -114,7 +115,7 @@ da_status da_options_get_int(da_handle handle, const char *option, da_int *value
 }
 
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
-                                size_t lvalue) {
+                                size_t *lvalue) {
     da_status status;
 
     if (!handle)
@@ -129,9 +130,13 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     // Need to make sure *value is big enough...
     if (status == da_status_success) {
         size_t n = svalue.size();
-        if (n >= lvalue) {
-            // FIXME errmsg should be string handle->error_message = "target storage where to store option string value is too small, make it at least " + std::string(n+1) + "characters long.";
-            return da_status_invalid_input;
+        if (n >= *lvalue) {
+            *lvalue = n + 1; // inform the user of the correct size
+            std::string buf = "target storage where to store option string value is too "
+                              "small, make it at least " +
+                              std::to_string(n + 1);
+            buf += " characters long";
+            return da_error(handle->err, da_status_invalid_input, buf);
         }
         svalue.copy(value, n);
         value[n] = '\0';
@@ -171,5 +176,110 @@ da_status da_options_get_s_real(da_handle handle, const char *option, float *val
         return status;
 
     status = opts->get(option, *value);
+    return status;
+}
+
+da_status da_datastore_options_set_int(da_datastore store, const char *option,
+                                       da_int value) {
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    status = store->opts->set(option, value, da_options::user);
+
+    return status;
+}
+
+da_status da_datastore_options_set_string(da_datastore store, const char *option,
+                                          const char *value) {
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    status = store->opts->set(option, value, da_options::user);
+
+    return status;
+}
+
+da_status da_datastore_options_set_s_real(da_datastore store, const char *option,
+                                          float value) {
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    status = store->opts->set(option, value, da_options::user);
+    return status;
+}
+
+da_status da_datastore_options_set_d_real(da_datastore store, const char *option,
+                                          double value) {
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    status = store->opts->set(option, value, da_options::user);
+    return status;
+}
+
+da_status da_datastore_options_get_int(da_datastore store, const char *option,
+                                       da_int *value) {
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    status = store->opts->get(option, *value);
+    return status;
+}
+
+da_status da_datastore_options_get_string(da_datastore store, const char *option,
+                                          char *value, size_t *lvalue) {
+
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    std::string svalue;
+    status = store->opts->get(option, svalue);
+    // Need to make sure *value is big enough...
+    if (status == da_status_success) {
+        size_t n = svalue.size();
+        if (n >= *lvalue) {
+            *lvalue = n + 1; // inform the user of the correct size
+            std::string buf = "target storage where to store option string value is too "
+                              "small, make it at least " +
+                              std::to_string(n + 1);
+            buf += " characters long";
+            return da_error(store->err, da_status_invalid_input, buf);
+        }
+        svalue.copy(value, n);
+        value[n] = '\0';
+    }
+    return status;
+}
+
+da_status da_datastore_options_get_d_real(da_datastore store, const char *option,
+                                          double *value) {
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    status = store->opts->get(option, *value);
+    return status;
+}
+da_status da_datastore_options_get_s_real(da_datastore store, const char *option,
+                                          float *value) {
+    da_status status;
+
+    if (!store)
+        return da_status_invalid_pointer;
+
+    status = store->opts->get(option, *value);
     return status;
 }

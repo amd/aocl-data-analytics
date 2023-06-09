@@ -1,4 +1,5 @@
 #include "aoclda.h"
+#include "da_error.hpp"
 #include "data_store.hpp"
 #include "interval_map.hpp"
 #include "utest_utils.hpp"
@@ -12,11 +13,12 @@ using namespace da_data;
 
 TEST(block, invalidArgs) {
     da_int data[2] = {1, 2};
+    da_errors::da_error_t err(da_errors::DA_RECORD);
 
-    EXPECT_THROW(block_dense<da_int> b(-1, 2, data), std::invalid_argument);
-    EXPECT_THROW(block_dense<da_int> b(1, 0, data), std::invalid_argument);
-    EXPECT_THROW(block_dense<da_int> b(1, 2, nullptr), std::invalid_argument);
-    block_dense<da_int> b(1, 2, data);
+    EXPECT_THROW(block_dense<da_int> b(-1, 2, data, err), std::invalid_argument);
+    EXPECT_THROW(block_dense<da_int> b(1, 0, data, err), std::invalid_argument);
+    EXPECT_THROW(block_dense<da_int> b(1, 2, nullptr, err), std::invalid_argument);
+    block_dense<da_int> b(1, 2, data, err);
 
     da_int *col;
     da_int stride;
@@ -220,34 +222,39 @@ TEST(block, getCol) {
     da_ordering order;
     da_int stride, startx = 0, starty = 0;
     da_int *col;
+    da_errors::da_error_t err(da_errors::DA_RECORD);
 
     col1_exp = {1, 3, 5, 7, 9};
     col2_exp = {2, 4, 6, 8, 10};
 
     // Check column extraction in for the row ordering
     get_block_data_int(test1_rblock1, m, n, bl, order);
-    block_dense<da_int> b1(m, n, bl.data(), order);
+    block_dense<da_int> b1(m, n, bl.data(), err, order);
     b1.get_col(0, &col, stride);
     EXPECT_ARR_EQ(m, col, col1_exp, stride, 1, startx, starty);
     b1.get_col(1, &col, stride);
     EXPECT_ARR_EQ(m, col, col2_exp, stride, 1, startx, starty);
     // Check column extraction in for the col ordering
     get_block_data_int(test1_cblock1, m, n, bl, order);
-    block_dense<da_int> b2(m, n, bl.data(), order);
+    block_dense<da_int> b2(m, n, bl.data(), err, order);
     b2.get_col(0, &col, stride);
     EXPECT_ARR_EQ(m, col, col1_exp, stride, 1, startx, starty);
     b2.get_col(1, &col, stride);
     EXPECT_ARR_EQ(m, col, col2_exp, stride, 1, startx, starty);
+    // out of bound column index
+    EXPECT_EQ(b2.get_col(2, &col, stride), da_status_invalid_input);
+    EXPECT_EQ(b2.get_col(-1, &col, stride), da_status_invalid_input);
 }
 
 TEST(block, copySlice) {
     std::vector<da_int> bl_col, bl_row, islice, exp_slice;
     da_int m, n;
+    da_errors::da_error_t err(da_errors::DA_RECORD);
 
     m = 5;
     n = 4;
     bl_col = {1, 2, 3, 4, 5, 1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 6, 7, 8, 9, 10};
-    block_dense<da_int> b1(m, n, bl_col.data(), col_major);
+    block_dense<da_int> b1(m, n, bl_col.data(), err, col_major);
 
     // load the data from the middle of the block
     std::pair<da_int, da_int> cols, rows;
@@ -267,7 +274,7 @@ TEST(block, copySlice) {
 
     // row ordering
     bl_row = {1, 1, 2, 6, 2, 3, 4, 7, 3, 5, 6, 8, 4, 7, 8, 9, 5, 9, 10, 10};
-    block_dense<da_int> b2(m, n, bl_row.data(), row_major);
+    block_dense<da_int> b2(m, n, bl_row.data(), err, row_major);
     islice.resize(6);
     EXPECT_EQ(b2.copy_slice_dense(cols, rows, 0, 3, islice.data()), da_status_success);
     exp_slice = {3, 5, 7, 4, 6, 8};
@@ -284,11 +291,12 @@ TEST(block, copySlice) {
 TEST(block, copySliceInvalid) {
     std::vector<da_int> bl_col, bl_row, islice, exp_slice;
     da_int m, n;
+    da_errors::da_error_t err(da_errors::DA_RECORD);
 
     m = 5;
     n = 4;
     bl_col = {1, 2, 3, 4, 5, 1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 6, 7, 8, 9, 10};
-    block_dense<da_int> b1(m, n, bl_col.data(), col_major);
+    block_dense<da_int> b1(m, n, bl_col.data(), err, col_major);
 
     std::pair<da_int, da_int> cols, rows;
     cols = {-1, 2};
@@ -323,8 +331,9 @@ TEST(block, copySliceInvalid) {
 TEST(dataStore, invalidConcat) {
     std::vector<da_int> bl1, bl2, bl3, bl4;
     da_ordering order;
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
 
-    data_store ds = data_store();
+    data_store ds = data_store(err);
     da_int m, n;
     order = row_major;
     // negative or zero sizes
@@ -383,8 +392,9 @@ TEST(dataStore, invalidExtract) {
     da_int m, n;
     std::vector<da_int> bl1, bl2, bl3;
     da_ordering order;
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
 
-    data_store ds = data_store();
+    data_store ds = data_store(err);
     get_block_data_int(test1_rblock1, m, n, bl1, order);
     ds.concatenate_columns(m, n, bl1.data(), order);
     get_block_data_int(test1_cblock1, m, n, bl2, order);
@@ -397,13 +407,59 @@ TEST(dataStore, invalidExtract) {
     EXPECT_EQ(ds.extract_column(4, m, bl3.data()), da_status_invalid_input);
 }
 
+TEST(datastore, getSetElement) {
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
+    data_store hds = data_store(err);
+    da_int m, n;
+    std::vector<da_int> idata;
+    std::vector<float> fdata;
+    std::vector<std::string> sdata;
+    get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
+
+    da_int ielem = -10;
+    float felem = -1.0;
+    // invalid requests
+    EXPECT_EQ(hds.get_element(-1, 0, ielem), da_status_invalid_input);
+    EXPECT_EQ(hds.get_element(0, -1, ielem), da_status_invalid_input);
+    EXPECT_EQ(hds.get_element(6, 0, ielem), da_status_invalid_input);
+    EXPECT_EQ(hds.get_element(0, 7, ielem), da_status_invalid_input);
+    EXPECT_EQ(hds.get_element(5, 5, ielem), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(-1, 0, 1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(0, -1, 1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(6, 0, 1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(0, 7, 1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(5, 5, (da_int)2), da_status_invalid_input);
+
+    // get valid elements
+    EXPECT_EQ(hds.get_element(0, 0, ielem), da_status_success);
+    EXPECT_EQ(ielem, 1);
+    EXPECT_EQ(hds.get_element(4, 2, ielem), da_status_success);
+    EXPECT_EQ(ielem, 12);
+    EXPECT_EQ(hds.get_element(5, 2, ielem), da_status_success);
+    EXPECT_EQ(ielem, 23);
+    EXPECT_EQ(hds.get_element(5, 5, felem), da_status_success);
+    EXPECT_NEAR(felem, 20.2, std::numeric_limits<float>::epsilon() * 100);
+
+    // set the same elements
+    EXPECT_EQ(hds.set_element(0, 0, (da_int)100), da_status_success);
+    EXPECT_EQ(hds.get_element(0, 0, ielem), da_status_success);
+    EXPECT_EQ(ielem, 100);
+    EXPECT_EQ(hds.set_element(4, 2, (da_int)101), da_status_success);
+    EXPECT_EQ(hds.get_element(4, 2, ielem), da_status_success);
+    EXPECT_EQ(ielem, 101);
+    EXPECT_EQ(hds.set_element(5, 5, (float)100.1), da_status_success);
+    EXPECT_EQ(hds.get_element(5, 5, felem), da_status_success);
+    EXPECT_NEAR(felem, 100.1, std::numeric_limits<float>::epsilon() * 100);
+}
+
 TEST(dataStore, extractCol) {
     da_int m, n;
     std::vector<da_int> bl1, bl2, bl3;
     da_ordering order;
     da_int startx = 0, starty = 0;
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
 
-    data_store ds = data_store();
+    data_store ds = data_store(err);
     get_block_data_int(test1_rblock1, m, n, bl1, order);
     ds.concatenate_columns(m, n, bl1.data(), order);
     get_block_data_int(test1_cblock1, m, n, bl2, order);
@@ -436,7 +492,8 @@ TEST(dataStore, extractCol) {
     EXPECT_ARR_EQ(m, col, col2_exp, 1, 1, startx, starty);
 
     // test the hterogeneous data-store columns
-    data_store hds = data_store();
+    da_errors::da_error_t err2(da_errors::action_t::DA_RECORD);
+    data_store hds = data_store(err2);
     std::vector<da_int> idata, coli;
     std::vector<float> fdata;
     std::vector<std::string> sdata;
@@ -454,14 +511,16 @@ TEST(intervalMap, invalidInput) {
     double d;
 
     // invalid bounds
-    EXPECT_EQ(imap.insert(2, 0, 1.0), da_status_invalid_input);
+    interval bounds = {2, 0};
+    EXPECT_EQ(imap.insert(bounds, 1.0), da_status_invalid_input);
 
     // find a key in empty map
     EXPECT_EQ(imap.find(0, d, lb, ub), false);
     EXPECT_EQ(imap.find(0), imap.end());
 
     // Insert correct interval [0,2]
-    EXPECT_EQ(imap.insert(0, 2, 1.0), da_status_success);
+    bounds = {0, 2};
+    EXPECT_EQ(imap.insert(bounds, 1.0), da_status_success);
 
     // erase the end iterator
     imap.erase(imap.end());
@@ -481,14 +540,14 @@ TEST(intervalMap, invalidInput) {
     EXPECT_EQ(it->first.second, 2);
 
     // overlapping intervals
-    EXPECT_EQ(imap.insert(1, 3, 1.0), da_status_invalid_input);
-    EXPECT_EQ(imap.insert(2, 3, 1.0), da_status_invalid_input);
-    EXPECT_EQ(imap.insert(-1, 0, 1.0), da_status_invalid_input);
-    EXPECT_EQ(imap.insert(0, 0, 1.0), da_status_invalid_input);
-    EXPECT_EQ(imap.insert(2, 2, 1.0), da_status_invalid_input);
+    EXPECT_EQ(imap.insert(interval{1, 3}, 1.0), da_status_invalid_input);
+    EXPECT_EQ(imap.insert(interval{2, 3}, 1.0), da_status_invalid_input);
+    EXPECT_EQ(imap.insert(interval{-1, 0}, 1.0), da_status_invalid_input);
+    EXPECT_EQ(imap.insert(interval{0, 0}, 1.0), da_status_invalid_input);
+    EXPECT_EQ(imap.insert(interval{2, 2}, 1.0), da_status_invalid_input);
 
     // add disjointed interval and try to find a value between them
-    EXPECT_EQ(imap.insert(5, 10, 2.0), da_status_success);
+    EXPECT_EQ(imap.insert(interval{5, 10}, 2.0), da_status_success);
     EXPECT_EQ(imap.find(4, d, lb, ub), false);
 }
 
@@ -499,8 +558,8 @@ TEST(intervalMap, positive) {
     char c;
     da_int lb, ub;
 
-    EXPECT_EQ(imap.insert(0, 2, 'a'), da_status_success);
-    EXPECT_EQ(imap.insert(4, 9, 'b'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{0, 2}, 'a'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{4, 9}, 'b'), da_status_success);
     EXPECT_EQ(imap.find(0, c, lb, ub), true);
     EXPECT_EQ(c, 'a');
     EXPECT_EQ(lb, 0);
@@ -524,7 +583,7 @@ TEST(intervalMap, positive) {
     it = imap.find(9);
     EXPECT_EQ(it->second, 'b');
 
-    EXPECT_EQ(imap.insert(15, 20, 'c'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{15, 20}, 'c'), da_status_success);
     EXPECT_EQ(imap.find(17, c, lb, ub), true);
     EXPECT_EQ(c, 'c');
     EXPECT_EQ(lb, 15);
@@ -539,13 +598,13 @@ TEST(intervalMap, erase) {
 
     // insert intervals
     // [0,2] [4,9] [10,11] [12, 22] [24, 28] [30, 35] [55, 60]
-    EXPECT_EQ(imap.insert(0, 2, 'a'), da_status_success);
-    EXPECT_EQ(imap.insert(4, 9, 'b'), da_status_success);
-    EXPECT_EQ(imap.insert(10, 11, 'c'), da_status_success);
-    EXPECT_EQ(imap.insert(12, 22, 'd'), da_status_success);
-    EXPECT_EQ(imap.insert(55, 60, 'g'), da_status_success);
-    EXPECT_EQ(imap.insert(30, 35, 'f'), da_status_success);
-    EXPECT_EQ(imap.insert(24, 28, 'e'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{0, 2}, 'a'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{4, 9}, 'b'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{10, 11}, 'c'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{12, 22}, 'd'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{55, 60}, 'g'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{30, 35}, 'f'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{24, 28}, 'e'), da_status_success);
 
     // erase a few intervals
     // leaves: [0,2] [24, 28] [30, 35] [55, 60]
@@ -585,10 +644,10 @@ TEST(intervalMap, iterator) {
     using namespace da_interval_map;
     interval_map<char> imap;
 
-    EXPECT_EQ(imap.insert(0, 2, 'a'), da_status_success);
-    EXPECT_EQ(imap.insert(4, 9, 'b'), da_status_success);
-    EXPECT_EQ(imap.insert(10, 10, 'c'), da_status_success);
-    EXPECT_EQ(imap.insert(12, 20, 'd'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{0, 2}, 'a'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{4, 9}, 'b'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{10, 10}, 'c'), da_status_success);
+    EXPECT_EQ(imap.insert(interval{12, 20}, 'd'), da_status_success);
 
     char vals[4] = {'a', 'b', 'c', 'd'};
     da_int i = 0;
@@ -686,7 +745,9 @@ TEST(dataStore, load) {
 
 TEST(dataStore, invalidHconcat) {
     da_int m, n;
-    data_store hds = data_store(), hds1 = data_store();
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD),
+        err1(da_errors::action_t::DA_RECORD);
+    data_store hds = data_store(err), hds1 = data_store(err1);
     std::vector<da_int> idata;
     std::vector<float> fdata;
     std::vector<std::string> sdata;
@@ -719,14 +780,16 @@ TEST(dataStore, invalidHconcat) {
 TEST(dataStore, hconcat) {
     // create 2 heterogeneous data_store
     da_int m, n;
-    data_store hds = data_store();
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD),
+        err2(da_errors::action_t::DA_RECORD), err3(da_errors::action_t::DA_RECORD);
+    data_store hds = data_store(err);
     std::vector<da_int> idata, coli, coli2, coli3;
     std::vector<float> fdata, colf, colf2, colf3;
     std::vector<std::string> sdata, cols, cols2, cols3;
     get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
-    data_store hds2 = data_store();
+    data_store hds2 = data_store(err2);
     get_heterogeneous_data_store(hds2, m, n, idata, fdata, sdata);
-    data_store hds3 = data_store();
+    data_store hds3 = data_store(err3);
     get_heterogeneous_data_store(hds3, m, n, idata, fdata, sdata);
 
     // concatenate them horizontally
@@ -853,32 +916,46 @@ TEST(dataStore, hconcatPub) {
 }
 
 TEST(dataStore, extractSlice) {
-    da_int m, n;
+    da_int m, n, ld;
     std::vector<da_int> bl1, bl2, bl3;
     da_ordering order;
-    data_store ds = data_store();
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
+    data_store ds = data_store(err);
     get_block_data_int(test1_rblock1, m, n, bl1, order);
     EXPECT_EQ(ds.concatenate_columns(m, n, bl1.data(), order), da_status_success);
     get_block_data_int(test1_cblock1, m, n, bl2, order);
     EXPECT_EQ(ds.concatenate_columns(m, n, bl2.data(), order), da_status_success);
 
-    // Extract the first  columns into a slice
+    // Extract the first columns into a slice
     std::pair<da_int, da_int> col_int(0, 1), row_int(0, m - 1);
+    ld = row_int.second - row_int.first + 1;
     std::vector<da_int> islice(m * 2);
-    ds.extract_slice(row_int, col_int, islice.data());
+    ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     std::vector<da_int> expected_slice = {1, 3, 5, 7, 9, 2, 4, 6, 8, 10};
     EXPECT_ARR_EQ(10, islice, expected_slice, 1, 1, 0, 0);
 
+    // Extract the same columns into a bigger memory block
+    ld += 3;
+    islice.resize(ld * 4);
+    da_int first_idx = ld + 3;
+    ds.extract_slice(row_int, col_int, ld, first_idx, islice.data());
+    expected_slice = {1, 3, 5, 7, 9};
+    EXPECT_ARR_EQ(5, islice, expected_slice, 1, 1, first_idx, 0);
+    expected_slice = {2, 4, 6, 8, 10};
+    EXPECT_ARR_EQ(5, islice, expected_slice, 1, 1, first_idx + ld, 0);
+
     // columns spread on 2 blocks
     col_int.second = 2;
+    ld = row_int.second - row_int.first + 1;
     islice.resize(3 * m);
-    ds.extract_slice(row_int, col_int, islice.data());
+    ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 1, 3, 5, 7, 9};
     EXPECT_ARR_EQ(15, islice, expected_slice, 1, 1, 0, 0);
 
     // same datastore, partial rows
     row_int.second = 2;
-    ds.extract_slice(row_int, col_int, islice.data());
+    ld = row_int.second - row_int.first + 1;
+    ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {1, 3, 5, 2, 4, 6, 1, 3, 5};
     EXPECT_ARR_EQ(9, islice, expected_slice, 1, 1, 0, 0);
 
@@ -890,30 +967,43 @@ TEST(dataStore, extractSlice) {
     col_int = {0, 2};
     islice.resize(21);
     std::fill(islice.begin(), islice.end(), 0);
-    ds.extract_slice(row_int, col_int, islice.data());
+    ld = row_int.second - row_int.first + 1;
+    ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {1, 3, 5, 7, 9, 2, 3, 2, 4, 6, 8, 10, 4, 5, 1, 3, 5, 7, 9, 6, 7};
     EXPECT_ARR_EQ(21, islice, expected_slice, 1, 1, 0, 0);
 
     // Test slice extraction on the heterogeneous data store
-    data_store hds = data_store();
+    da_errors::da_error_t err2(da_errors::action_t::DA_RECORD);
+    data_store hds = data_store(err2);
     std::vector<da_int> idata;
     std::vector<float> fdata;
     std::vector<std::string> sdata;
     get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
 
-    islice.resize(21);
+    islice.resize(100);
     std::fill(islice.begin(), islice.end(), 0);
     row_int = {2, 5};
     col_int = {1, 2};
-    hds.extract_slice(row_int, col_int, islice.data());
+    ld = row_int.second - row_int.first + 1;
+    hds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {6, 8, 11, 22, 3, 4, 12, 23};
     EXPECT_ARR_EQ(8, islice, expected_slice, 1, 1, 0, 0);
+
+    // same block, bigger data block
+    ld += 5;
+    first_idx = ld * 2 + 2;
+    hds.extract_slice(row_int, col_int, ld, first_idx, islice.data());
+    expected_slice = {6, 8, 11, 22};
+    EXPECT_ARR_EQ(4, islice, expected_slice, 1, 1, first_idx, 0);
+    expected_slice = {3, 4, 12, 23};
+    EXPECT_ARR_EQ(4, islice, expected_slice, 1, 1, first_idx + ld, 0);
 
     // extract just a row
     std::fill(islice.begin(), islice.end(), 0);
     row_int = {4, 4};
     col_int = {0, 3};
-    hds.extract_slice(row_int, col_int, islice.data());
+    ld = row_int.second - row_int.first + 1;
+    hds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {10, 11, 12, 13};
     EXPECT_ARR_EQ(4, islice, expected_slice, 1, 1, 0, 0);
 
@@ -921,7 +1011,8 @@ TEST(dataStore, extractSlice) {
     std::fill(islice.begin(), islice.end(), 0);
     row_int = {4, 5};
     col_int = {1, 3};
-    hds.extract_slice(row_int, col_int, islice.data());
+    ld = row_int.second - row_int.first + 1;
+    hds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {11, 22, 12, 23, 13, 24};
     EXPECT_ARR_EQ(6, islice, expected_slice, 1, 1, 0, 0);
 
@@ -930,55 +1021,257 @@ TEST(dataStore, extractSlice) {
     fslice.resize(5);
     row_int = {1, 5};
     col_int = {5, 5};
-    hds.extract_slice(row_int, col_int, fslice.data());
+    ld = row_int.second - row_int.first + 1;
+    hds.extract_slice(row_int, col_int, ld, 0, fslice.data());
     std::vector<float> fexpected_slice = {6.5, 7.5, 8.5, 9.5};
     EXPECT_ARR_EQ(4, fslice, fexpected_slice, 1, 1, 0, 0);
 }
 
 TEST(dataStore, exSliceInvalid) {
-    da_int m, n;
-    data_store hds = data_store();
+    da_int m, n, ld;
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
+    data_store hds = data_store(err);
     std::vector<da_int> idata;
     std::vector<float> fdata;
     std::vector<std::string> sdata;
     get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
 
     // out of range intervals
-    da_data::pair row_int = {2, 1}, col_int = {0, 1};
+    da_data::interval row_int = {2, 1}, col_int = {0, 1};
+    ld = 2;
     std::vector<da_int> islice(100);
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     row_int = {0, 1};
     col_int = {10, 5};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    ld = row_int.second - row_int.first + 1;
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     col_int = {-1, 2};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     col_int = {2, 7};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     col_int = {7, 7};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     col_int = {0, 1};
     row_int = {-1, 2};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    ld = row_int.second - row_int.first + 1;
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     row_int = {1, 6};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    ld = row_int.second - row_int.first + 1;
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     row_int = {7, 10};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    ld = row_int.second - row_int.first + 1;
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
 
     // wrong type expected
     col_int = {4, 5};
     row_int = {0, 2};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    ld = row_int.second - row_int.first + 1;
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     col_int = {0, 5};
     row_int = {0, 2};
-    EXPECT_EQ(hds.extract_slice(row_int, col_int, islice.data()),
+    ld = row_int.second - row_int.first + 1;
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
+
+    // wrong leading dimension
+    row_int = {1, 3};
+    col_int = {2, 3};
+    ld = 2;
+    EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
+              da_status_invalid_input);
+}
+
+TEST(dataStore, extractSelection) {
+    using namespace da_data;
+    da_int m, n, ld;
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
+    data_store hds = data_store(err);
+    std::vector<da_int> idata;
+    std::vector<float> fdata;
+    std::vector<std::string> sdata;
+    get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
+    interval rows, cols;
+    std::vector<da_int> expected_slice;
+    expected_slice.reserve(100);
+
+    // 1 set of columns and rows
+    EXPECT_EQ(hds.select_slice("A", {1, 3}, {1, 3}), da_status_success);
+    std::vector<da_int> islice(100);
+    ld = 3;
+    EXPECT_EQ(hds.extract_selection("A", ld, islice.data()), da_status_success);
+    expected_slice = {4, 6, 8, 2, 3, 4, 6, 7, 8};
+    EXPECT_ARR_EQ(9, islice, expected_slice, 1, 1, 0, 0);
+
+    // 2 sets of columns and rows
+    hds.remove_selection("A");
+    std::fill(islice.begin(), islice.end(), 0);
+    EXPECT_EQ(hds.select_columns("A", {1, 1}), da_status_success);
+    EXPECT_EQ(hds.select_columns("A", {2, 3}), da_status_success);
+    EXPECT_EQ(hds.select_rows("A", {3, 3}), da_status_success);
+    EXPECT_EQ(hds.select_rows("A", {1, 1}), da_status_success);
+    EXPECT_EQ(hds.select_rows("A", {2, 2}), da_status_success);
+    EXPECT_EQ(hds.extract_selection("A", ld, islice.data()), da_status_success);
+    expected_slice = {4, 6, 8, 2, 3, 4, 6, 7, 8};
+    EXPECT_ARR_EQ(9, islice, expected_slice, 1, 1, 0, 0);
+
+    // add the rest of the integer data from hds
+    EXPECT_EQ(hds.select_columns("A", {0, 0}), da_status_success);
+    EXPECT_EQ(hds.select_rows("A", {0, 0}), da_status_success);
+    EXPECT_EQ(hds.select_rows("A", {4, 5}), da_status_success);
+    ld = 6;
+    EXPECT_EQ(hds.extract_selection("A", ld, islice.data()), da_status_success);
+    EXPECT_ARR_EQ(24, islice, idata, 1, 1, 0, 0);
+
+    // start another selection of cols only
+    std::fill(islice.begin(), islice.end(), 0);
+    EXPECT_EQ(hds.select_columns("colsel", {0, 1}), da_status_success);
+    EXPECT_EQ(hds.select_columns("colsel", {3, 3}), da_status_success);
+    ld = 6;
+    EXPECT_EQ(hds.extract_selection("colsel", ld, islice.data()), da_status_success);
+    expected_slice = {1, 3, 5, 7, 10, 21, 2, 4, 6, 8, 11, 22, 5, 6, 7, 8, 13, 24};
+    EXPECT_ARR_EQ(18, islice, expected_slice, 1, 1, 0, 0);
+
+    // create a new homogeneous data store and extract without selection
+    da_errors::da_error_t err2(da_errors::action_t::DA_RECORD);
+    data_store ds = data_store(err2);
+    da_ordering order;
+    std::vector<da_int> bl1, bl2, bl3;
+    get_block_data_int(test1_rblock1, m, n, bl1, order);
+    ds.concatenate_columns(m, n, bl1.data(), order);
+    get_block_data_int(test1_cblock1, m, n, bl2, order);
+    ds.concatenate_columns(m, n, bl2.data(), order);
+    da_int new_m;
+    get_block_data_int(test1_2rows, new_m, n, bl3, order);
+    ds.concatenate_rows(new_m, n, bl3.data(), order);
+    ld = 7;
+    EXPECT_EQ(ds.extract_selection("", ld, islice.data()), da_status_success);
+    expected_slice = {1, 3, 5, 7, 9, 2, 3, 2, 4, 6, 8, 10, 4, 5,
+                      1, 3, 5, 7, 9, 6, 7, 2, 4, 6, 8, 10, 8, 9};
+    EXPECT_ARR_EQ(28, islice, expected_slice, 1, 1, 0, 0);
+
+    // start another selection of rows only
+    std::fill(islice.begin(), islice.end(), 0);
+    EXPECT_EQ(ds.select_rows("rowsel", {0, 1}), da_status_success);
+    EXPECT_EQ(ds.select_rows("rowsel", {3, 5}), da_status_success);
+    ld = 5;
+    EXPECT_EQ(ds.extract_selection("rowsel", ld, islice.data()), da_status_success);
+    expected_slice = {1, 3, 7, 9, 2, 2, 4, 8, 10, 4, 1, 3, 7, 9, 6, 2, 4, 8, 10, 8};
+    EXPECT_ARR_EQ(20, islice, expected_slice, 1, 1, 0, 0);
+}
+
+TEST(dataStore, nullStore) {
+    da_datastore store = nullptr, store1 = nullptr;
+    da_int int_block = 1;
+    uint8_t uint_block = 1;
+    const char *str_block = "A";
+    double d_block = 1.0;
+    float s_block = 1.0;
+    EXPECT_EQ(da_data_hconcat(&store, &store1), da_status_invalid_input);
+
+    // load cols/rows
+    EXPECT_EQ(da_data_load_col_int(store, 1, 1, &int_block, row_major, false),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_str(store, 1, 1, &str_block, row_major),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_real_d(store, 1, 1, &d_block, row_major, false),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_real_s(store, 1, 1, &s_block, row_major, false),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_int(store, 1, 1, &int_block, row_major, false),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_str(store, 1, 1, &str_block, row_major),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_real_d(store, 1, 1, &d_block, row_major, false),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_real_s(store, 1, 1, &s_block, row_major, false),
+              da_status_invalid_input);
+
+    // selection
+    EXPECT_EQ(da_data_select_columns(store, "A", 1, 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_rows(store, "A", 1, 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "A", 1, 1, 1, 1), da_status_invalid_input);
+
+    // extract columns
+    EXPECT_EQ(da_data_extract_selection_int(store, "A", 1, &int_block),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_extract_selection_real_d(store, "A", 1, &d_block),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_extract_selection_real_s(store, "A", 1, &s_block),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_extract_selection_uint8(store, "A", 1, &uint_block),
+              da_status_invalid_input);
+
+    // headings
+    char **cstr_block = new char *[2];
+    EXPECT_EQ(da_data_extract_headings(store, 1, cstr_block), da_status_invalid_input);
+
+    // setters/getters
+    da_int ielem;
+    double delem;
+    float selem;
+    uint8_t uielem;
+    EXPECT_EQ(da_data_get_num_rows(store, &ielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_num_cols(store, &ielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_element_int(store, 1, 1, &ielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_element_real_d(store, 1, 1, &delem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_element_real_s(store, 1, 1, &selem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_element_uint8(store, 1, 1, &uielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_set_element_int(store, 1, 1, ielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_set_element_real_d(store, 1, 1, delem), da_status_invalid_input);
+    EXPECT_EQ(da_data_set_element_real_s(store, 1, 1, selem), da_status_invalid_input);
+    EXPECT_EQ(da_data_set_element_uint8(store, 1, 1, uielem), da_status_invalid_input);
+
+    delete[] cstr_block;
+}
+
+TEST(dataStore, extractSelPub) {
+    da_datastore store = nullptr;
+
+    // nullptr store in all routines
+
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
+    // load 2x2 int block
+    std::vector<da_int> iblock = {1, 2, 3, 4};
+    EXPECT_EQ(da_data_load_col_int(store, 2, 2, iblock.data(), col_major, true),
+              da_status_success);
+    EXPECT_EQ(da_data_select_slice(store, "int", 0, 1, 0, 0), da_status_success);
+    std::vector<da_int> iexp = {1, 2};
+    EXPECT_ARR_EQ(2, iblock, iexp, 1, 1, 0, 0);
+
+    // load 2x2 uint_8
+    std::vector<uint8_t> uiblock = {1, 2, 3, 4};
+    EXPECT_EQ(da_data_load_col_uint8(store, 2, 2, uiblock.data(), col_major, true),
+              da_status_success);
+    EXPECT_EQ(da_data_select_slice(store, "uint", 0, 1, 2, 3), da_status_success);
+    std::vector<uint8_t> uiexp = {1, 2, 3, 4};
+    EXPECT_ARR_EQ(2, uiblock, uiexp, 1, 1, 0, 0);
+
+    // load 2x2 float
+    std::vector<float> sblock = {1, 2, 3, 4};
+    EXPECT_EQ(da_data_load_col_real_s(store, 2, 2, sblock.data(), col_major, true),
+              da_status_success);
+    EXPECT_EQ(da_data_select_slice(store, "float", 0, 1, 4, 4), da_status_success);
+    std::vector<float> sexp = {1, 2, 3, 4};
+    EXPECT_ARR_EQ(4, uiblock, sexp, 1, 1, 0, 0);
+
+    // load 2x2 double
+    std::vector<double> dblock = {1, 2, 3, 4};
+    EXPECT_EQ(da_data_load_col_real_d(store, 2, 2, dblock.data(), col_major, true),
+              da_status_success);
+    EXPECT_EQ(da_data_select_rows(store, "double", 0, 1), da_status_success);
+    EXPECT_EQ(da_data_select_columns(store, "double", 4, 4), da_status_success);
+    std::vector<double> dexp = {1, 2};
+    EXPECT_ARR_EQ(2, dblock, sexp, 1, 1, 0, 0);
+
+    da_datastore_destroy(&store);
 }

@@ -24,13 +24,6 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
     case da_handle_uninitialized:
         error = da_status_success;
         break;
-    case da_handle_csv_opts:
-        try {
-            (*handle)->csv_parser = new csv_reader();
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-        break;
     case da_handle_linmod:
         try {
             (*handle)->linreg_d = new linear_model<double>(*(*handle)->err);
@@ -78,13 +71,6 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
     case da_handle_uninitialized:
         error = da_status_success;
         break;
-    case da_handle_csv_opts:
-        try {
-            (*handle)->csv_parser = new csv_reader();
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-        break;
     case da_handle_linmod:
         try {
             (*handle)->linreg_s = new linear_model<float>(*(*handle)->err);
@@ -117,31 +103,18 @@ da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_
         return da_status_handle_not_initialized;
 
     if (handle->handle_type == da_handle_uninitialized) {
-        snprintf(handle->error_message, ERR_MSG_LEN,
-                 "The handle must be initialized before calling this routine.");
-        return da_status_handle_not_initialized;
+        return da_error(handle->err, da_status_handle_not_initialized,
+                        "The handle must be initialized before calling this routine.");
     } else if (handle->handle_type != expected_handle_type) {
-        snprintf(handle->error_message, ERR_MSG_LEN,
-                 "The handle has been initialized to the incorrect type.");
         //TODO: would be nice to have enum->string conversion at some point so more error info can be printed
-        return da_status_invalid_handle_type;
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "The handle has been initialized to the incorrect type.");
     }
 
     return da_status_success;
 }
 
-void da_handle_print_error_message(da_handle handle) {
-    // FIXME transition to err.print() and remove error_message
-    if (strlen(handle->error_message) == 0) {
-        handle->err->print();
-    } else {
-        printf(
-            "================ Error message stored in da_handle struct ================");
-        printf("%s", handle->error_message);
-        printf(
-            "==========================================================================");
-    }
-}
+void da_handle_print_error_message(da_handle handle) { handle->err->print(); }
 
 /* Destroy the da_handle struct */
 void da_handle_destroy(da_handle *handle) {

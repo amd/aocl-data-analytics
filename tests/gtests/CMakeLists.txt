@@ -27,7 +27,7 @@ include_directories(
 add_executable(basic_statistics basic_statistics.cpp)
 target_link_libraries(basic_statistics da_core gtest_main)
 
-add_executable(csv csv.cpp)
+add_executable(csv csv_tests.cpp)
 target_link_libraries(csv da_core gtest_main gmock_main)
 if(WIN32)
   target_link_libraries(csv "$ENV{LIBIFCORE}")

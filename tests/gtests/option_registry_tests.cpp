@@ -61,13 +61,22 @@ OptionNumeric<double> opt_double("double option", "Preloaded Double Option", 1.0
 std::shared_ptr<OptionNumeric<double>> oD;
 //OptionNumeric<bool> opt_bool("bool option", "Preloaded bool Option", true);
 //std::shared_ptr<OptionNumeric<bool>> oB;
-OptionString opt_string("string option", "Preloaded String Option",
+// String option with categorical values
+OptionString opt_string("string option", "Preloaded Categorical String Option",
                         {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes");
+// String option with free-form value
+OptionString opt_ff_string("free-form string option", "Preloaded Free-Form String Option",
+                           {}, "any");
 std::shared_ptr<OptionString> oS;
 
 da_status preload(OptionRegistry &r) {
     oS = std::make_shared<OptionString>(opt_string);
     da_status status;
+    status = r.register_opt(oS);
+    if (status != da_status_success)
+        return status;
+
+    oS = std::make_shared<OptionString>(opt_ff_string);
     status = r.register_opt(oS);
     if (status != da_status_success)
         return status;
@@ -233,10 +242,19 @@ TEST(OpOptionInternal, OpClsStringAll) {
 
     std::string val;
     da_int id;
+    // Categorical String Option
     ::opt_string.get(val);
     ASSERT_EQ(val, "yes");
     ::opt_string.get(val, id);
     ASSERT_EQ(id, 1);
+    // Free-form String Option
+    ::opt_ff_string.get(val);
+    ASSERT_EQ(val, "any");
+    ASSERT_THROW(::opt_ff_string.get(val, id), std::runtime_error);
+    ASSERT_EQ(::opt_ff_string.set("New Free-Form Value", da_options::setby_t::solver),
+              da_status_success);
+    ::opt_ff_string.get(val);
+    ASSERT_EQ(val, "new free-form value");
     // check print_detail() grep match Set-by: default
     std::string s_default("Set-by: (default");
     std::string s_user("Set-by: (user");
@@ -325,6 +343,12 @@ TEST(OpRegistryInternal, OpRegALL) {
     da_int id;
     ASSERT_EQ(reg.get("wrong string option", ret, id), da_status_option_not_found);
     ASSERT_EQ(reg.get("integer option", ret, id), da_status_option_wrong_type);
+    // test string ff and categorical
+    ASSERT_EQ(reg.set("string option", "yes"), da_status_success);
+    ASSERT_EQ(reg.set("free-form string option", " new   value "), da_status_success);
+    ASSERT_EQ(reg.get("free-form string option", ret), da_status_success);
+    ASSERT_EQ(ret, "new value");
+
     reg.print_details(true);
     reg.print_details(false);
     reg.print_options();
@@ -335,25 +359,39 @@ TEST(OpRegistryInternal, OpRegALL) {
 TEST(OpRegistryWrappers, getset_string) {
     da_handle handle;
     OptionRegistry *opts;
+    size_t n = 16;
     char sv[] = "yes";
-    char str[16];
+    char str[25];
+    char cv[25] = "quite long option value;";
     ASSERT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
     ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
     ASSERT_EQ(preload(*opts), da_status_success);
+    // String categorical
     ASSERT_EQ(da_options_set_string(nullptr, "string option", sv),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_get_string(nullptr, "string option", str, 16),
+    ASSERT_EQ(da_options_get_string(nullptr, "string option", str, &n),
               da_status_invalid_pointer);
     ASSERT_EQ(da_options_set_string(handle, "string option", sv), da_status_success);
-    char value[16];
-    ASSERT_EQ(da_options_get_string(handle, "string option", value, 16),
+    char value[36];
+    ASSERT_EQ(da_options_get_string(handle, "string option", value, &n),
               da_status_success);
     ASSERT_EQ("yes", string(value));
+    // String free-form
+    ASSERT_EQ(da_options_set_string(handle, "free-form string option", cv),
+              da_status_success);
+    ASSERT_EQ(da_options_get_string(handle, "free-form string option", value, &n),
+              da_status_invalid_input);
+    ASSERT_EQ(n, 25);
+    ASSERT_EQ(da_options_get_string(handle, "free-form string option", value, &n),
+              da_status_success);
+    ASSERT_EQ(string(cv), string(value));
+
     // target char * is too small
-    ASSERT_EQ(da_options_get_string(handle, "string option", value, 1),
+    n = 1;
+    ASSERT_EQ(da_options_get_string(handle, "string option", value, &n),
               da_status_invalid_input);
     // Try to get wrong option
-    ASSERT_EQ(da_options_get_string(handle, "nonexistent option", value, 1),
+    ASSERT_EQ(da_options_get_string(handle, "nonexistent option", value, &n),
               da_status_option_not_found);
     // Try to set option with incorrect value
     char invalid[] = "non existent";

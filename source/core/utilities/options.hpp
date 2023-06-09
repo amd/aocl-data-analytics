@@ -139,7 +139,8 @@ class OptionBase {
             bool has_nan = std::numeric_limits<T>::has_quiet_NaN;
             // Check all inputs
             if (has_nan) {
-                if (std::isnan(static_cast<double>(upper)) || std::isnan(static_cast<double>(lower))) {
+                if (std::isnan(static_cast<double>(upper)) ||
+                    std::isnan(static_cast<double>(lower))) {
                     errmsg =
                         "Option '" + name + "': Either lower or upper are not finite.";
                     return da_status_option_invalid_bounds;
@@ -338,7 +339,7 @@ template <typename T> class OptionNumeric : public OptionBase {
     da_status set(T value, setby_t setby = setby_t::user) {
         da_status status = da_status_success;
         if (get_option_t() != da_options::option_t::opt_bool) {
-            da_status status = validate(lower, lbound, upper, ubound, value, false);
+            status = validate(lower, lbound, upper, ubound, value, false);
             if (status != da_status_success)
                 return status;
         }
@@ -473,7 +474,12 @@ class OptionString : public OptionBase {
     void get(string &value) { value = OptionString::value; };
     void get(string &value, da_int &id) {
         value = OptionString::value;
-        id = labels.at(OptionString::value);
+        if (labels.size() != 0) {
+            id = labels.at(OptionString::value);
+        } else {
+            throw std::runtime_error("free-form option does not have label id and cannot "
+                                     "be queried with this method");
+        }
     }
     da_status set(string value, setby_t setby = setby_t::user) {
         string val(value);

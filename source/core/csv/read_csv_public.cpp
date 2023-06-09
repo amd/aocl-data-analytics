@@ -3,56 +3,49 @@
 #define _CRT_SECURE_NO_DEPRECATE
 
 #include "char_to_num.hpp"
+#include "da_datastore.hpp"
 #include "read_csv.hpp"
 
-/* Public facing routines for reading in a csv and storing an array of data, with or without a headings
- * row*/
-da_status da_read_csv_d(da_handle handle, const char *filename, double **a, da_int *nrows,
-                        da_int *ncols) {
-    return da_read_csv(handle, filename, a, nrows, ncols);
-}
+/* Public facing routines for reading in a csv and storing an array of data */
 
-da_status da_read_csv_s(da_handle handle, const char *filename, float **a, da_int *nrows,
-                        da_int *ncols) {
-    return da_read_csv(handle, filename, a, nrows, ncols);
-}
-
-da_status da_read_csv_int64(da_handle handle, const char *filename, int64_t **a,
-                            da_int *nrows, da_int *ncols) {
-    return da_read_csv(handle, filename, a, nrows, ncols);
-}
-
-da_status da_read_csv_uint64(da_handle handle, const char *filename, uint64_t **a,
-                             da_int *nrows, da_int *ncols) {
-    return da_read_csv(handle, filename, a, nrows, ncols);
-}
-
-da_status da_read_csv_uint8(da_handle handle, const char *filename, uint8_t **a,
-                            da_int *nrows, da_int *ncols) {
-    return da_read_csv(handle, filename, a, nrows, ncols);
-}
-
-da_status da_read_csv_d_h(da_handle handle, const char *filename, double **a,
+da_status da_read_csv_d(da_datastore store, const char *filename, double **a,
                           da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv(handle, filename, a, nrows, ncols, headings);
+    if (store == nullptr)
+        return da_status_store_not_initialized;
+    return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
 }
 
-da_status da_read_csv_s_h(da_handle handle, const char *filename, float **a,
+da_status da_read_csv_s(da_datastore store, const char *filename, float **a,
                           da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv(handle, filename, a, nrows, ncols, headings);
+    if (store == nullptr)
+        return da_status_store_not_initialized;
+    return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
 }
 
-da_status da_read_csv_int64_h(da_handle handle, const char *filename, int64_t **a,
+da_status da_read_csv_int64(da_datastore store, const char *filename, int64_t **a,
                               da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv(handle, filename, a, nrows, ncols, headings);
+    if (store == nullptr)
+        return da_status_store_not_initialized;
+    return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
 }
 
-da_status da_read_csv_uint64_h(da_handle handle, const char *filename, uint64_t **a,
+da_status da_read_csv_uint64(da_datastore store, const char *filename, uint64_t **a,
                                da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv(handle, filename, a, nrows, ncols, headings);
+    if (store == nullptr)
+        return da_status_store_not_initialized;
+    return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
 }
 
-da_status da_read_csv_uint8_h(da_handle handle, const char *filename, uint8_t **a,
+da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **a,
                               da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv(handle, filename, a, nrows, ncols, headings);
+    if (store == nullptr)
+        return da_status_store_not_initialized;
+    return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
+}
+
+da_status da_read_csv_char(da_datastore store, const char *filename, char ***a,
+                             da_int *nrows, da_int *ncols, char ***headings) {
+    if (store == nullptr)
+        return da_status_store_not_initialized;
+    return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
 }

@@ -1,0 +1,5 @@
+a, b, c,    d,  e,     f,     g
+1, 5, 4  , -3,  true,  1,     hello
+2, 6, 3.5, -3,  true,  -4,    goodbye
+3, 7, 4  , 3,   false, 4.1,   test
+4, 8, 6.7, 0.1, true,  false, success

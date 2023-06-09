@@ -26,24 +26,48 @@
 
 #include "aoclda.h"
 #include "csv_options.hpp"
+#include "da_error.hpp"
 #include "options.hpp"
 #include "tokenizer.h"
 #include <sstream>
 
+namespace da_csv {
+
 da_status da_parser_init(parser_t **parser);
 void da_parser_destroy(parser_t **parser);
 
+enum csv_datatype {
+    csv_auto = 0,
+    csv_float,
+    csv_double,
+    csv_integer,
+    csv_char,
+    csv_boolean
+};
+
 class csv_reader {
   public:
+    /* parser points to the struct used by the original open source C tokenizer code */
     parser_t *parser;
-    da_options::OptionRegistry opts;
+    da_options::OptionRegistry *opts;
 
-    csv_reader() {
+    /* But to deal with datastore objects and autodetection we need some additional machinery;
+    for example, these attributes are used when reading a CSV file straight into a datastore object */
+    da_int precision;
+    da_int integers_as_fp;
+    da_int first_row_header;
+    csv_datatype datatype;
+
+    da_errors::da_error_t *err = nullptr;
+
+    csv_reader(da_options::OptionRegistry &opts, da_errors::da_error_t &err) {
         da_status error = da_parser_init(&parser);
         if (error != da_status_success) {
             std::bad_alloc exception;
             throw exception;
         }
+        this->opts = &opts;
+        this->err = &err;
         register_csv_options(opts);
     }
     ~csv_reader() { da_parser_destroy(&parser); }
@@ -52,31 +76,31 @@ class csv_reader {
         da_int iopt;
         std::string sopt;
 
-        opts.get("CSV delimiter", sopt);
+        opts->get("CSV delimiter", sopt);
         parser->delimiter = sopt[0];
 
-        opts.get("CSV thousands", sopt);
+        opts->get("CSV thousands", sopt);
         parser->thousands = sopt[0];
 
-        opts.get("CSV decimal", sopt);
+        opts->get("CSV decimal", sopt);
         parser->decimal = sopt[0];
 
-        opts.get("CSV comment", sopt);
+        opts->get("CSV comment", sopt);
         parser->commentchar = sopt[0];
 
-        opts.get("CSV quote character", sopt);
+        opts->get("CSV quote character", sopt);
         parser->quotechar = sopt[0];
 
-        opts.get("CSV escape character", sopt);
+        opts->get("CSV escape character", sopt);
         parser->escapechar = sopt[0];
 
-        opts.get("CSV line terminator", sopt);
+        opts->get("CSV line terminator", sopt);
         parser->lineterminator = sopt[0];
 
-        opts.get("CSV scientific notation character", sopt);
+        opts->get("CSV scientific notation character", sopt);
         parser->sci = sopt[0];
 
-        opts.get("CSV skip rows", sopt);
+        opts->get("CSV skip rows", sopt);
         if (parser->skipset != NULL) {
             kh_destroy_int64((kh_int64_t *)parser->skipset);
             parser->skipset = NULL;
@@ -106,29 +130,45 @@ class csv_reader {
             }
         }
 
-        opts.get("CSV double quote", iopt);
+        opts->get("CSV double quote", iopt);
         parser->doublequote = (int)iopt;
 
-        opts.get("CSV whitespace delimiter", iopt);
+        opts->get("CSV whitespace delimiter", iopt);
         parser->delim_whitespace = (int)iopt;
 
-        opts.get("CSV skip first rows", iopt);
+        opts->get("CSV row start", iopt);
         parser_set_skipfirstnrows(parser, (int64_t)iopt);
 
-        opts.get("CSV skip empty lines", iopt);
+        opts->get("CSV skip empty lines", iopt);
         parser->skip_empty_lines = (int)iopt;
 
-        opts.get("CSV skip initial space", iopt);
+        opts->get("CSV skip initial space", iopt);
         parser->skipinitialspace = (int)iopt;
 
-        opts.get("CSV skip footer", iopt);
+        opts->get("CSV skip footer", iopt);
         parser->skip_footer = (int)iopt;
 
-        opts.get("CSV warn for missing data", iopt);
+        opts->get("CSV warn for missing data", iopt);
         parser->warn_for_missing_data = (int)iopt;
+
+        /* Additional options only used for reading CSV files into datastore */
+
+        opts->get("CSV datatype", sopt, iopt);
+        datatype = static_cast<csv_datatype>(iopt);
+
+        opts->get("CSV datastore precision", sopt, iopt);
+        precision = iopt;
+
+        opts->get("CSV integers as floats", iopt);
+        integers_as_fp = iopt;
+
+        opts->get("CSV use header row", iopt);
+        first_row_header = iopt;
 
         return da_status_success;
     }
 };
+
+} //namespace da_csv
 
 #endif //CSV_READER_HPP

@@ -41,7 +41,8 @@ typedef enum da_status_ {
     da_status_overflow,            ///< Numerical Overflow detected
     da_status_invalid_handle_type, ///< Invalid handle type provided
     da_status_handle_not_initialized, ///< Handle was not initialized properly or is corrupted
-    da_status_invalid_option,         ///< Invalid option detected
+    da_status_store_not_initialized, ///< Store was not initialized properly or is corrupted
+    da_status_invalid_option,        ///< Invalid option detected
     da_status_incompatible_options, ///< Incompatible option detected
     da_status_operation_failed, ///< Signal that an internal operation failed (could not solve a hard linear system as part of a larger process)
 
@@ -55,9 +56,9 @@ typedef enum da_status_ {
     da_status_file_reading_error, ///< An error occured when reading the file
     da_status_parsing_error,      ///< An error occured when parsing the file
     da_status_ragged_csv, ///< Not all rows of the CSV have the same number of entries
-    da_status_warn_bad_lines, ///< The CSV file contained one or more lines that could not be read
-    da_status_warn_missing_data, ///< The returned array contains missing data
-    da_status_warn_no_data,      ///< No data was found
+    da_status_bad_lines, ///< The CSV file contained one or more lines that could not be read
+    da_status_missing_data, ///< The returned array contains missing data
+    da_status_no_data,      ///< No data was found in the CSV file
 
     // linreg errors 200-299
     // PCA errors 300-399

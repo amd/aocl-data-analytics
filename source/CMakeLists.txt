@@ -4,7 +4,7 @@ set(DA_FACTORIZATION core/factorization/pca_public.cpp)
 set(CSV core/csv/tokenizer.c core/csv/read_csv_public.cpp)
 set(DA_HANDLE core/utilities/da_handle.cpp core/utilities/da_handle_public.cpp)
 set(DA_OPTIONS core/utilities/options_public.cpp)
-set(DA_DATA core/data_management/data_store_public.cpp)
+set(DA_DATA  core/data_management/data_store_public.cpp core/data_management/data_store.cpp)
 
 set(DA_CORE_SRC
     ${LINMOD_SRC}

@@ -143,19 +143,19 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     coef_file.append("_coeffs.csv");
 
     // Read features
-    da_handle csv_handle = nullptr;
-    ASSERT_EQ(da_handle_init_d(&csv_handle, da_handle_csv_opts), da_status_success);
+    da_datastore csv_store = nullptr;
+    ASSERT_EQ(da_datastore_init(&csv_store), da_status_success);
     T *a = nullptr, *b = nullptr;
 
     da_int n = 0, m = 0;
-    ASSERT_EQ(da_read_csv(csv_handle, A_file.c_str(), &a, &n, &m), da_status_success);
+    ASSERT_EQ(da_read_csv(csv_store, A_file.c_str(), &a, &n, &m, nullptr), da_status_success);
     da_int nb, mb;
-    ASSERT_EQ(da_read_csv(csv_handle, b_file.c_str(), &b, &mb, &nb), da_status_success);
+    ASSERT_EQ(da_read_csv(csv_store, b_file.c_str(), &b, &mb, &nb, nullptr), da_status_success);
     ASSERT_EQ(m, nb); // b is stored in one row
     da_int nc = intercept ? n + 1 : n;
     /* expected results not tested ? check gradient of solution instead */
     //da_int nc, mc;
-    //ASSERT_EQ(da_read_csv(csv_handle, coef_file.c_str(), &coef_exp, &mc, &nc),
+    //ASSERT_EQ(da_read_csv(csv_store, coef_file.c_str(), &coef_exp, &mc, &nc),
     //          da_status_success);
     // ASSERT_EQ(n, nc); // TODO add check once the intersect has been solved
 
@@ -191,7 +191,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     free(a);
     free(b);
     delete[] coef;
-    da_handle_destroy(&csv_handle);
+    da_datastore_destroy(&csv_store);
     da_handle_destroy(&linmod_handle);
 
     return;

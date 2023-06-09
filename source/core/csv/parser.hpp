@@ -13,31 +13,35 @@
 
 /* We don't want to edit tokenize.c much in case it needs updating, so convert the error exits
  * here */
+
+namespace da_csv {
+
 inline da_status convert_tokenizer_errors(int ierror) {
-    da_status error;
+    da_status status;
 
     switch (ierror) {
     case 0:
-        error = da_status_success;
+        status = da_status_success;
         break;
     case CALLING_READ_FAILED:
-        error = da_status_file_reading_error;
+        status = da_status_file_reading_error;
         break;
     case PARSER_OUT_OF_MEMORY:
-        error = da_status_memory_error;
+        status = da_status_memory_error;
         break;
     case -1:
-        error = da_status_parsing_error;
+        status = da_status_parsing_error;
         break;
     }
 
-    return error;
+    return status;
 }
 
 /* This callback is as required by the code in tokenizer.c - it reads data from the csv
  * file */
 inline void *read_bytes(void *source, size_t nbytes, size_t *bytes_read, int *status,
-                        const char *encoding_errors) {
+                        [[maybe_unused]] const char *encoding_errors) {
+
     FILE *fp = (FILE *)source;
     char *buffer = (char *)malloc(nbytes);
     if (buffer == NULL && nbytes > 0) {
@@ -96,11 +100,11 @@ inline da_status da_parser_init(parser_t **parser) {
 
     int err = parser_init(*parser);
 
-    da_status error = convert_tokenizer_errors(err);
+    da_status status = convert_tokenizer_errors(err);
 
-    if (!(error == da_status_success)) {
+    if (!(status == da_status_success)) {
         da_parser_destroy(parser);
-        return error;
+        return status;
     }
 
     parser_set_default_options(*parser);
@@ -111,5 +115,7 @@ inline da_status da_parser_init(parser_t **parser) {
 
     return da_status_success;
 }
+
+} //namespace da_csv
 
 #endif

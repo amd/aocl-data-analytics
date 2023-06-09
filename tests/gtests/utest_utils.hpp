@@ -44,54 +44,35 @@ inline da_status da_options_set_real<double>(da_handle handle, const char *optio
 /* FIXME The tests should be able to include directly read_csv.hpp
  * This is a workaround for now
  */
-inline da_status da_read_csv(da_handle handle, const char *filename, double **a,
-                             da_int *nrows, da_int *ncols) {
-    return da_read_csv_d(handle, filename, a, nrows, ncols);
-}
 
-inline da_status da_read_csv(da_handle handle, const char *filename, float **a,
-                             da_int *nrows, da_int *ncols) {
-    return da_read_csv_s(handle, filename, a, nrows, ncols);
-}
-
-inline da_status da_read_csv(da_handle handle, const char *filename, int64_t **a,
-                             da_int *nrows, da_int *ncols) {
-    return da_read_csv_int64(handle, filename, a, nrows, ncols);
-}
-
-inline da_status da_read_csv(da_handle handle, const char *filename, uint64_t **a,
-                             da_int *nrows, da_int *ncols) {
-    return da_read_csv_uint64(handle, filename, a, nrows, ncols);
-}
-
-inline da_status da_read_csv(da_handle handle, const char *filename, uint8_t **a,
-                             da_int *nrows, da_int *ncols) {
-    return da_read_csv_uint8(handle, filename, a, nrows, ncols);
-}
-
-inline da_status da_read_csv(da_handle handle, const char *filename, double **a,
+inline da_status da_read_csv(da_datastore store, const char *filename, double **a,
                              da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv_d_h(handle, filename, a, nrows, ncols, headings);
+    return da_read_csv_d(store, filename, a, nrows, ncols, headings);
 }
 
-inline da_status da_read_csv(da_handle handle, const char *filename, float **a,
+inline da_status da_read_csv(da_datastore store, const char *filename, float **a,
                              da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv_s_h(handle, filename, a, nrows, ncols, headings);
+    return da_read_csv_s(store, filename, a, nrows, ncols, headings);
 }
 
-inline da_status da_read_csv(da_handle handle, const char *filename, int64_t **a,
+inline da_status da_read_csv(da_datastore store, const char *filename, int64_t **a,
                              da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv_int64_h(handle, filename, a, nrows, ncols, headings);
+    return da_read_csv_int64(store, filename, a, nrows, ncols, headings);
 }
 
-inline da_status da_read_csv(da_handle handle, const char *filename, uint64_t **a,
+inline da_status da_read_csv(da_datastore store, const char *filename, uint64_t **a,
                              da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv_uint64_h(handle, filename, a, nrows, ncols, headings);
+    return da_read_csv_uint64(store, filename, a, nrows, ncols, headings);
 }
 
-inline da_status da_read_csv(da_handle handle, const char *filename, uint8_t **a,
+inline da_status da_read_csv(da_datastore store, const char *filename, uint8_t **a,
                              da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv_uint8_h(handle, filename, a, nrows, ncols, headings);
+    return da_read_csv_uint8(store, filename, a, nrows, ncols, headings);
+}
+
+inline da_status da_read_csv(da_datastore store, const char *filename, char ***a,
+                             da_int *nrows, da_int *ncols, char ***headings) {
+    return da_read_csv_char(store, filename, a, nrows, ncols, headings);
 }
 
 /* linmod overloaded functions */
@@ -134,6 +115,28 @@ inline da_status da_linmod_evaluate_model(da_handle handle, da_int n, da_int m, 
 inline da_status da_linmod_evaluate_model(da_handle handle, da_int n, da_int m, float *X,
                                           float *predictions) {
     return da_linmod_s_evaluate_model(handle, n, m, X, predictions);
+}
+
+/* Datastore overloaded functions */
+inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m,
+                                        da_int *col) {
+    return da_data_extract_column_int(store, idx, m, col);
+}
+inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m,
+                                        float *col) {
+    return da_data_extract_column_real_s(store, idx, m, col);
+}
+inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m,
+                                        double *col) {
+    return da_data_extract_column_real_d(store, idx, m, col);
+}
+inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m,
+                                        uint8_t *col) {
+    return da_data_extract_column_uint8(store, idx, m, col);
+}
+inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m,
+                                        char **col) {
+    return da_data_extract_column_str(store, idx, m, col);
 }
 
 #endif
