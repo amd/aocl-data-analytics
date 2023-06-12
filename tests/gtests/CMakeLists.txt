@@ -46,6 +46,9 @@ target_compile_definitions(
 add_executable(option_registry option_registry_tests.cpp)
 target_link_libraries(option_registry da_core gtest_main gmock_main)
 
+add_executable(errors_tests errors_tests.cpp)
+target_link_libraries(errors_tests da_core gtest_main gmock_main)
+
 target_include_directories(
   basic_statistics PRIVATE )
 target_include_directories(csv PRIVATE )
