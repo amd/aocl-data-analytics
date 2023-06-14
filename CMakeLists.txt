@@ -60,6 +60,12 @@ if(COVERAGE
   set(COVERAGE OFF)
 endif()
 
+if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+    # Be verbose about da_error trace on Debug builds
+    add_compile_definitions(VERBOSE_ERROR)
+endif()
+
+
 # modules directory for easy include
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 

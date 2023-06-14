@@ -2,6 +2,7 @@
 #define DA_ERROR_HPP
 
 #include "aoclda_error.h"
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
@@ -13,43 +14,78 @@
  * Generating errors
  * -----------------
  * To generate an error for a function that returns da_status, use MACRO da_error():
- * 
+ *
  *     return da_error(e, status, msg);
- * 
+ *
  * where
  *    e       is the da_error_t stored in a handle
  *    status  is a da_status error code
  *    msg     free string to be composed. The suggested format is:
- *            "Error message, reason, possible fix." This should be as explicit as 
+ *            "Error message, reason, possible fix." This should be as explicit as
  *            possible and suggest any resolutions
- * 
+ *
  * If a warning is to be returned then use
- * 
+ *
  *     return da_warn(e, status, msg);
- * 
- * with the same meaning as for error. There is actually NO difference between error 
- * and warning except when composing the message.
- * 
+ *
+ * with the same meaning as for error. There is actually NO difference between error
+ * and warning except when composing the message. These two macros reset the error stack
+ * before adding the new error entry. If you need to keep the existing error stack and
+ * just add the new error, the next parragraph shows how to do this.
+ *
+ * In most cases, a function needs to handle the return status of a called function which
+ * has already setup the error trace using the previously described da_error() and da_warn().
+ * Under these circunstances it is desirable to stack the next error or warning on top of the
+ * existing one in such a way to construct an "error trace". This can be done by calling
+ *
+ *     return da_error_trace(e, status, msg);
+ *  or
+ *     return da_warn_trace(e, status, msg);
+ *
+ * with the same meaning as above. The manin difference will be that these macros will
+ * stack the errors and the printing method will pretty-print the error-stack and show
+ * the error trace.
+ *
+ * Recommended usage
+ * -----------------
+ *
+ *  => Any function that generates and error or warning should use da_error()/da_warn().
+ *     This guarantees that the stack is reset before adding this error.
+ *
+ *  => Any function that needs to handle errors returned by a called function should
+ *     use da_error_trace()/da_warn_trace(). This will stack the new error on to the
+ *     stack without resetting it.
+ *
  * Methods for printing the error message
  * --------------------------------------
- * 
+ *
  * 1.- print() composes the message and prints to std::cout
  * 2.- print(str) composes the message and returns it in std::string str
  * 3.- print(ss) composes the message and pipes it to std::stringstream ss
- *  
- * If not error or warning was registered then a friendly banner is produced:
+ *
+ * If no error or warning was registered then a friendly banner is produced:
  * "Last operation was successful."
- * 
+ *
+ * The public API to print the error is always
+ *     da_handle_print_error_message(handle) which simply called e->print();
+ *
+ * Note: this API prints to std out and not std err.
+ *
  * More details
  * ------------
- * 
- * For debug builds where NDEBUG and VERBOSE are set, the error is
- * printed immediatly. This as many benefits during development of 
- * new functionalities where not all the calling stack as access to 
- * the error trace.
- * 
+ *
+ * For Debug builds VERBOSE_ERROR is set (by default in CMakeLists.txt) and the 
+ * error is printed immediatly as it is registered in the error structure.
+ * This as many benefits during development of new functionalities, mainly that
+ * the trace build-up can be observed in the console.
+ *
+ * The trace stack size is limited to a hard-coded constant of 10 levels 0 to 9. It
+ * is assumed that a stack stace deeper than 4-5 is an indication of a poor
+ * design or miss-use of this error trace utility. As such, the stack will
+ * replace the last error with a message indicating the trace is "full."
+ *
  * It is possible to "record" the error/warning directly, without using the
- * MACRO functions da_error() or da_warn(). By the "rec()" method.
+ * MACRO functions da_error() or da_warn(). By calling the "rec()" method.
  * This method provides full control on the telemetry and texts used to compose 
  * the banner.
  * In stead of using da_error(e, status, msg), it is possible to call
@@ -65,7 +101,7 @@
  * the returned data is potentially usable, think of returning a suboptimal solution
  * to an optimization problem with poor conditioning. DA_ERROR indicates that the
  * output variables should not be relied on.
- * 
+ *
  * Actions to be taken when recording
  * It is possible to specify in the constructor what action to take
  * DA_RECORD - will compare/print the error
@@ -77,6 +113,13 @@
 
 namespace da_errors {
 using namespace std;
+
+/** Depth of the stack trace
+ * General usage depth should be no more than 4 or 5. Set a generous depth by default.
+ */
+#define DA_ERROR_STACK_SIZE 10
+#define QUOTE_(X) #X
+#define QUOTE(X) QUOTE_(X)
 
 /** Labels to use when printing the error/warning messages */
 string const sev_labels[3] = {"???", "WARNING", "ERROR"};
@@ -144,9 +187,12 @@ class da_error_t {
                     }
                     ss << trace << ": ";
                 }
-                ss << sev_labels[severity[trace]] << ":" << telem[trace] << ": "
-                   << mesg[trace] << std::endl;
-                ss << tab << "status: " << status[trace] << std::endl;
+                ss << std::setw(7) << std::left << sev_labels[severity[trace]]
+                   << " (Status: " << std::setw(5) << std::right << status[trace] << ") ";
+                ss.unsetf(std::ios_base::adjustfield);
+                if (telem[trace] != "")
+                    ss << telem[trace] << ": ";
+                ss << mesg[trace] << std::endl;
                 if (details[trace] != "") {
                     ss << tab << "details:" << std::endl;
                     ss << details[trace] << std::endl;
@@ -178,13 +224,26 @@ class da_error_t {
             this->telem.resize(0);
             this->severity.resize(0);
         }
-        this->status.push_back(status);
-        this->mesg.push_back(msg);
-        this->details.push_back(det);
-        this->telem.push_back(tel + to_string(ln));
-        this->severity.push_back(sev);
+        size_t size = this->status.size();
+        if (size < DA_ERROR_STACK_SIZE - 1) {
+            this->status.push_back(status);
+            this->mesg.push_back(msg);
+            this->details.push_back(det);
+            this->telem.push_back(tel + to_string(ln));
+            this->severity.push_back(sev);
+        } else if (size == DA_ERROR_STACK_SIZE - 1) {
+            // Stack almost full, add a generic message
+            this->status.push_back(da_status_internal_error);
+            this->mesg.push_back(
+                "Too many errors where registered, storing the first " QUOTE(
+                    DA_ERROR_STACK_SIZE));
+            this->details.push_back("");
+            this->telem.push_back("");
+            this->severity.push_back(DA_ERROR);
 
-#ifndef NDEBUG
+        } // else stack "full ignore request to store
+
+#ifdef VERBOSE_ERROR
         this->print();
 #endif
         if (this->action == action_t::DA_ABORT)
@@ -195,19 +254,31 @@ class da_error_t {
     };
 };
 
+// This strips the path from the string PATH at compile time, that is
+// it provides a new starting point for the PATH string where the filename
+// starts. Does the same as "basename file"
+constexpr int32_t strip_path(const char *const path, const int32_t pos = 0,
+                             const int32_t pos_separator = -1) {
+    return path[pos]
+               ? (path[pos] == '/'
+                      ? strip_path(path, pos + static_cast<int32_t>(1), pos)
+                      : strip_path(path, pos + static_cast<int32_t>(1), pos_separator))
+               : (pos_separator + static_cast<int32_t>(1));
+}
+
 #define da_error(e, status, msg)                                                         \
-    (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
-             da_errors::severity_type::DA_ERROR, false)
+    (e)->rec(status, (msg), "", __FILE__ ":" + da_errors::strip_path(__FILE__),          \
+             __LINE__, da_errors::severity_type::DA_ERROR, false)
 #define da_warn(e, status, msg)                                                          \
-    (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
-             da_errors::severity_type::DA_WARNING, false)
+    (e)->rec(status, (msg), "", __FILE__ ":" + da_errors::strip_path(__FILE__),          \
+             __LINE__, da_errors::severity_type::DA_WARNING, false)
 
 #define da_error_trace(e, status, msg)                                                   \
-    (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
-             da_errors::severity_type::DA_ERROR, true)
+    (e)->rec(status, (msg), "", __FILE__ ":" + da_errors::strip_path(__FILE__),          \
+             __LINE__, da_errors::severity_type::DA_ERROR, true)
 #define da_warn_trace(e, status, msg)                                                    \
-    (e)->rec(status, (msg), "", __FILE__ ":", __LINE__,                                  \
-             da_errors::severity_type::DA_WARNING, true)
+    (e)->rec(status, (msg), "", __FILE__ ":" + da_errors::strip_path(__FILE__),          \
+             __LINE__, da_errors::severity_type::DA_WARNING, true)
 
 } // namespace da_errors
 #endif
