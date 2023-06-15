@@ -98,4 +98,27 @@ TEST(ErrorStack, TraceMulti2) {
     delete err;
 };
 
+TEST(ErrorStack, TraceStackMax) {
+    da_error_t *err = new da_error_t(action_t::DA_RECORD);
+    da_warn_trace(err, da_status_file_not_found, "Stack [0] - file not found!");
+    da_error_trace(err, da_status_file_not_found, "Stack [1] - file not found!");
+    da_warn_trace(err, da_status_file_not_found, "Stack [2] - file not found!");
+    da_error_trace(err, da_status_file_not_found, "Stack [3] - file not found!");
+    da_warn_trace(err, da_status_file_not_found, "Stack [4] - file not found!");
+    da_error_trace(err, da_status_file_not_found, "Stack [5] - file not found!");
+    da_warn_trace(err, da_status_file_not_found, "Stack [6] - file not found!");
+    da_error_trace(err, da_status_file_not_found, "Stack [7] - file not found!");
+    da_warn_trace(err, da_status_file_not_found, "Stack [8] - file not found!");
+    da_status status = da_error_trace(err, da_status_no_digits, "Stack [9] - no digits!");
+    ASSERT_EQ(status, da_status_no_digits);
+    status =
+        da_error_trace(err, da_status_invalid_boolean, "Stack [10] - invalid boolean!");
+    ASSERT_EQ(status, da_status_invalid_boolean);
+    status =
+        da_error_trace(err, da_status_invalid_pointer, "Stack [11] - invalid pointer!");
+    ASSERT_EQ(status, da_status_invalid_pointer);
+    err->print();
+    delete err;
+};
+
 } // namespace
