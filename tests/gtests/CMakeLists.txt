@@ -58,9 +58,25 @@ if(WIN32)
   target_link_libraries(data "$ENV{LIBIFCORE}")
 endif()
 
+add_executable(printf_debug printf_debug.cpp)
+target_link_libraries(printf_debug da_core)
+
 gtest_discover_tests(basic_statistics)
 gtest_discover_tests(csv)
 gtest_discover_tests(linmod)
 gtest_discover_tests(option_registry)
 gtest_discover_tests(data)
 gtest_discover_tests(errors_tests)
+
+
+# add unit test programs that are not gtest programs to CTEST
+string(CONCAT TNAME printf_debug "_ex")
+add_test(${TNAME} printf_debug)
+
+# Add all executables to the coverage test
+if(COVERAGE)
+  list(APPEND COV_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/printf_debug")
+  set(COV_EXECUTABLES
+      ${COV_EXECUTABLES}
+      PARENT_SCOPE)
+endif()
