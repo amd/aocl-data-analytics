@@ -1,5 +1,3 @@
-#find_program(GCOV_PATH gcov REQUIRED)
-#find_program(GCOVR_PATH gcovr REQUIRED)
 find_program(LCOV lcov REQUIRED)
 find_program(GENHTML genhtml REQUIRED)
 find_program(GCOV_PATH NAMES $ENV{GCOV_NAME} gcov HINTS "/usr" PATH_SUFFIXES "bin" DOC "GNU gcov binary" REQUIRED)
@@ -31,27 +29,4 @@ add_custom_target(
   COMMAND ${LCOV} --rc lcov_branch_coverage=1 --gcov-tool ${GCOV_PATH} --remove ${COV_DIR}/coverage.info -o ${COV_DIR}/coverage_filtered.info '/usr/*' '/*/_deps/*'
   COMMAND ${GENHTML} --branch-coverage  ${COV_DIR}/coverage_filtered.info --output ${COV_DIR}/html --title "AOCL-DA Code Coverage Report" --legend
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
-  # COMMAND ${GCOVR_PATH} -v --html ${COV_DIR}/index.html --html-details -r
-  #         ${CMAKE_SOURCE_DIR} -e .*_deps*.)
 )
-
-# function to build a coverage report from a set of executable names argument:
-# string containing a list of all executables to run - runs all the executables
-# in ARGN - generate an htm gcovr report in ${COV_DIR
-#function(exec_cov_target)
-#  set(REPORT_DEP "")
-#  foreach(EXEC ${ARGN})
-#    cmake_path(GET EXEC FILENAME EXE_NAME)
-#    list(APPEND REPORT_DEP ${EXE_NAME})
-#    set(EXEC_TARGET_name "run_exe_${EXE_NAME}")
-#    add_custom_target(
-#      ${EXEC_TARGET_name} ALL
-#      DEPENDS ${EXE_NAME}
-#      COMMAND "${EXEC}" > /dev/null)
-#  endforeach()
-#  add_custom_target(
-#    cov_report ALL
-#    DEPENDS "${REPORT_DEP}"
-#    COMMAND ${GCOVR_PATH} --html ${COV_DIR}/index.html --html-details -r
-#            ${CMAKE_SOURCE_DIR} -e .*_deps*. .*/build/.*)
-#endfunction()

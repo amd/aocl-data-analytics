@@ -1,10 +1,9 @@
-# gtest instructions, harvested from
-# https://github.com/google/googletest/blob/main/googletest/README.md
+# get gtest from repo
 include(FetchContent)
 FetchContent_Declare(
   googletest
-  # Specify the commit you depend on and update it regularly.
-  URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
+  GIT_REPOSITORY https://github.com/google/googletest.git
+  GIT_TAG v1.13.x
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt
@@ -13,32 +12,33 @@ set(gtest_force_shared_crt
 FetchContent_MakeAvailable(googletest)
 
 include(GoogleTest)
-include_directories(${CMAKE_SOURCE_DIR}/source/include
-                    ${CMAKE_SOURCE_DIR}/source/core/csv
-                    ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
-                    ${CMAKE_SOURCE_DIR}/source/core/linear_model
-                    ${CMAKE_SOURCE_DIR}/source/core/factorization
-                    ${CMAKE_SOURCE_DIR}/source/core/optimization
-                    ${CMAKE_SOURCE_DIR}/source/core/drivers
-                    ${CMAKE_SOURCE_DIR}/source/core/utilities
-                    ${CMAKE_SOURCE_DIR}/source/core/data_management
-                    ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
+include_directories(
+  ${CMAKE_SOURCE_DIR}/source/include
+  ${CMAKE_SOURCE_DIR}/source/core/csv
+  ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
+  ${CMAKE_SOURCE_DIR}/source/core/linear_model
+  ${CMAKE_SOURCE_DIR}/source/core/factorization
+  ${CMAKE_SOURCE_DIR}/source/core/optimization
+  ${CMAKE_SOURCE_DIR}/source/core/drivers
+  ${CMAKE_SOURCE_DIR}/source/core/utilities
+  ${CMAKE_SOURCE_DIR}/source/core/data_management
+  ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 
 add_executable(basic_statistics basic_statistics.cpp)
 target_link_libraries(basic_statistics da_core gtest_main)
 
 add_executable(csv csv.cpp)
 target_link_libraries(csv da_core gtest_main gmock_main)
-if (WIN32)
-target_link_libraries(csv "$ENV{LIBIFCORE}")
+if(WIN32)
+  target_link_libraries(csv "$ENV{LIBIFCORE}")
 endif()
 target_compile_definitions(
   csv PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(linmod linmod_tests.cpp)
 target_link_libraries(linmod da_core gtest_main gmock_main)
-if (WIN32)
-target_link_libraries(linmod "$ENV{LIBIFCORE}")
+if(WIN32)
+  target_link_libraries(linmod "$ENV{LIBIFCORE}")
 endif()
 target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
@@ -49,15 +49,13 @@ target_link_libraries(option_registry da_core gtest_main gmock_main)
 add_executable(errors_tests errors_tests.cpp)
 target_link_libraries(errors_tests da_core gtest_main gmock_main)
 
-target_include_directories(
-  basic_statistics PRIVATE )
-target_include_directories(csv PRIVATE )
-
+target_include_directories(basic_statistics PRIVATE)
+target_include_directories(csv PRIVATE)
 
 add_executable(data data_tests.cpp)
 target_link_libraries(data da_core gtest_main gmock_main)
-if (WIN32)
-target_link_libraries(data "$ENV{LIBIFCORE}")
+if(WIN32)
+  target_link_libraries(data "$ENV{LIBIFCORE}")
 endif()
 
 gtest_discover_tests(basic_statistics)

@@ -7,8 +7,3 @@ endif()
 if(BUILD_GTEST)
   add_subdirectory(gtests)
 endif()
-
-# transfer definition of the coverage executables to the main cmake file
-set(COV_EXECUTABLES
-    ${COV_EXECUTABLES}
-    PARENT_SCOPE)
