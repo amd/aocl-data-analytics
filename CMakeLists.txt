@@ -65,6 +65,10 @@ if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
   add_compile_definitions(VERBOSE_ERROR)
 endif()
 
+if (DA_LOGGING)
+  add_compile_definitions(DA_LOGGING)
+endif()
+
 # modules directory for easy include
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
@@ -260,5 +264,5 @@ endif()
 message(NOTICE "Building with Coverage  : ${COVERAGE}")
 message(NOTICE "Building docs           : ${BUILD_DOC}")
 message(NOTICE "\nTARGETS")
-message(NOTICE "Build the EXAMPLE programs : ${BUILD_EXAMPLES}")
-message(NOTICE "Build GTEST unit-tests     : ${BUILD_GTEST}")
+message(NOTICE "Build the EXAMPLE programs   : ${BUILD_EXAMPLES}")
+message(NOTICE "Build GTEST unit-tests       : ${BUILD_GTEST}")

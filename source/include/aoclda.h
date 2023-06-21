@@ -37,5 +37,6 @@
 #include "aoclda_options.h"
 #include "aoclda_types.h"
 #include "aoclda_pca.h"
+#include "aoclda_print_debug.h"
 
 #endif // AOCLDA
