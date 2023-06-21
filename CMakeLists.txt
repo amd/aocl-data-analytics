@@ -33,7 +33,7 @@ option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
 option(BUILD_DOC "Build PDF and HTML documentation" OFF)
 option(BUILD_SMP "Build using OpenMP and link to threaded BLIS" ON)
 
-if (BUILD_SMP)
+if(BUILD_SMP)
   find_package(OpenMP REQUIRED)
 endif()
 
@@ -60,35 +60,40 @@ if(COVERAGE
   set(COVERAGE OFF)
 endif()
 
-if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
-    # Be verbose about da_error trace on Debug builds
-    add_compile_definitions(VERBOSE_ERROR)
+if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
+  # Be verbose about da_error trace on Debug builds
+  add_compile_definitions(VERBOSE_ERROR)
 endif()
-
 
 # modules directory for easy include
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+if(NOT BUILD_ILP64)
+  set(INT_LIB "LP64")
+else()
+  set(INT_LIB "ILP64")
+  add_definitions(-DAOCLDA_ILP64)
+endif()
+
 if(WIN32)
-  set(CMAKE_Fortran_COMPILER
-      "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/bin/intel64/ifort.exe"
-  )
-  set(CMAKE_FIND_LIBRARY_PREFIXES "")
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
-  # Set environment variables for users, add your own paths here or directly on
-  # the environment
-  set(ENV{AOCL_INSTALL} "C:/Users/aoclwinuser/AMD")
-  set(ENV{IFORT_LIBS}
-      "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
-  )
-  if($ENV{USERNAME} MATCHES "ehopkins")
-    set(ENV{AOCL_INSTALL} "C:/Users/ehopkins/AOCL-4.0")
-    set(ENV{IFORT_LIBS}
-        "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win"
+  if(NOT DEFINED ENV{INTEL_FCOMPILER})
+    message(
+      FATAL_ERROR
+        "Environmental variable \$INTEL_FCOMPILER not found."
     )
   endif()
-
+  if(NOT DEFINED ENV{AOCL_INSTALL})
+  message(
+    FATAL_ERROR
+      "Environmental variable \$AOCL_INSTALL not found."
+  )
+  endif()
+  set(CMAKE_Fortran_COMPILER "$ENV{INTEL_FCOMPILER}/bin/intel64/ifort.exe")
+  set(CMAKE_FIND_LIBRARY_PREFIXES "")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
+  set(ENV{IFORT_LIBS} "$ENV{INTEL_FCOMPILER}/compiler/lib/intel64_win")
   message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
+
   if(BUILD_SMP)
     set(BLIS_NAME "AOCL-LibBlis-Win-MT-dll")
     set(FLAME_NAME "AOCL-LibFlame-Win-MT-dll")
@@ -96,44 +101,16 @@ if(WIN32)
     set(BLIS_NAME "AOCL-LibBlis-Win-dll")
     set(FLAME_NAME "AOCL-LibFlame-Win-dll")
   endif()
-  if(NOT BUILD_ILP64)
-    find_library(BLIS name ${BLIS_NAME}
-                 PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/LP64" REQUIRED)
-    find_library(FLAME name ${FLAME_NAME}
-                 PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/LP64" REQUIRED)
-    include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/LP64")
-    include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/LP64")
-  else()
-    find_library(BLIS name ${BLIS_NAME}
-                 PATHS "$ENV{AOCL_INSTALL}/amd-blis/lib/ILP64" REQUIRED)
-    find_library(FLAME name ${FLAME_NAME}
-                 PATHS "$ENV{AOCL_INSTALL}/amd-libflame/lib/ILP64" REQUIRED)
-    include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/ILP64")
-    include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/ILP64")
-  endif()
+  set(BLIS_PATH "$ENV{AOCL_INSTALL}/amd-blis/lib/${INT_LIB}")
+  set(FLAME_PATH "$ENV{AOCL_INSTALL}/amd-libflame/lib/${INT_LIB}")
 
+  include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/${INT_LIB}")
+  include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/${INT_LIB}")
   set(ENV{LIBIFCORE}
       "$<IF:$<CONFIG:Debug>,$ENV{IFORT_LIBS}/libifcoremdd.lib,$ENV{IFORT_LIBS}/libifcoremd.lib>"
   )
 
 else()
-
-  if($ENV{USER} MATCHES "bmarteau")
-    set(ENV{AOCL_ROOT} /home/bmarteau/amd/aocl/4.0)
-  endif()
-  if($ENV{USER} MATCHES "andrsajo")
-    set(ENV{AOCL_ROOT} /home/andrsajo/amd/aocl/4.0)
-  endif()
-  if($ENV{USER} MATCHES "ehopkins")
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-      set(ENV{AOCL_ROOT} /opt/AMD/aocl/aocl-linux-gcc-4.0)
-    elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-      set(ENV{AOCL_ROOT} /opt/AMD/aocl/aocl-linux-aocc-4.0)
-    else()
-      message(FATAL_ERROR "GCC or CLANG compiler must be used")
-    endif()
-  endif()
-
   if(NOT DEFINED ENV{AOCL_ROOT})
     message(
       FATAL_ERROR
@@ -141,39 +118,21 @@ else()
     )
   endif()
 
-  # find dependencies. all aocl libraries are allowed it is assumed that aocl is
-  # installed either on the system's paths or in a folder designated by the
-  # environment variable AOCL_ROOT
-  if(NOT BUILD_ILP64)
-    include_directories($ENV{AOCL_ROOT}/include_LP64)
-    set(AOCL_PATH $ENV{AOCL_ROOT}/lib)
-  else()
-    include_directories($ENV{AOCL_ROOT}/include_ILP64)
-    set(AOCL_PATH $ENV{AOCL_ROOT}/lib_ILP64)
-  endif()
-  message("${AOCL_PATH}")
+  include_directories($ENV{AOCL_ROOT}/include_${INT_LIB})
+  set(BLIS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
+  set(FLAME_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
+
   if(BUILD_SMP)
     set(BLIS_NAME "blis-mt")
   else()
     set(BLIS_NAME "blis")
   endif()
-  find_library(
-    BLIS name ${BLIS_NAME}
-    PATHS ${AOCL_PATH} REQUIRED
-    NO_DEFAULT_PATH)
-
-  find_library(
-    FLAME name flame
-    PATHS ${AOCL_PATH} REQUIRED
-    NO_DEFAULT_PATH)
-
+  set(FLAME_NAME "flame")
 endif()
 
+find_library(BLIS name ${BLIS_NAME} PATHS ${BLIS_PATH} REQUIRED NO_DEFAULT_PATH)
+find_library(FLAME name ${FLAME_NAME} PATHS ${FLAME_PATH} REQUIRED NO_DEFAULT_PATH)
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
-
-if(BUILD_ILP64)
-  add_definitions(-DAOCLDA_ILP64)
-endif(BUILD_ILP64)
 
 # Check for CL compatibility layer of clang
 if(COMPILER_BASENAME MATCHES
@@ -203,7 +162,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
   # GNU style compiler flags Common flags
-  set(COMPILER_FLAGS_COMMON "-mtune=native;-mavx2;-mfma;-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;")
+  set(COMPILER_FLAGS_COMMON
+      "-mtune=native;-mavx2;-mfma;-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
+  )
   if(BUILD_SMP)
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${OpenMP_CXX_FLAGS};")
   endif()
@@ -279,6 +240,11 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
     "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_RELEASE}"
   )
 endif()
+
+message(NOTICE "\nDEPENDENT LIBRARIES")
+message(NOTICE "blis: ${BLIS}")
+message(NOTICE "flame: ${FLAME}")
+
 message(NOTICE "\nOPTIONS")
 message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
 message(NOTICE "Building with ASan      : ${ASAN}")
