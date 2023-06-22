@@ -22,7 +22,11 @@ and add similar lines to point cmake to where your AOCL build is installed
 
 4. Type cmake .. along with any (or none) of the following options depending on the build that is desired: 
 
-* -DCHECK_MEM=On for address sanitization 
+* -DMEMSAN=On for memory sanitization
+
+* -DASAN=On for address sanitization
+
+* -DVALGRIND=On for valgrind use
 
 * -DBUILD_ILP64=On for 64-bit integer build 
 

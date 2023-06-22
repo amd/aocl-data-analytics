@@ -15,10 +15,10 @@
  */
 
 namespace da_interval_map {
-using pair = std::pair<da_int, da_int>;
+using interval = std::pair<da_int, da_int>;
 
 struct comp_ipair {
-    constexpr bool operator()(const pair &p1, const pair &p2) const {
+    constexpr bool operator()(const interval &p1, const interval &p2) const {
         bool res = p1.first < p2.first;
         // Unintuitive: interval included in another is considered bigger
         // A bit hacky, TODO review
@@ -30,7 +30,7 @@ struct comp_ipair {
 
 template <class T> class interval_map {
 
-    template <class U> using inter_map = typename std::map<pair, U, comp_ipair>;
+    template <class U> using inter_map = typename std::map<interval, U, comp_ipair>;
     using map_it = typename inter_map<T>::iterator;
 
     inter_map<T> imap;
@@ -49,8 +49,8 @@ template <class T> class interval_map {
 
         iterator() {}
         iterator(map_it new_it) : it(new_it) {}
-        std::pair<const pair, T> &operator*() const { return *it; }
-        std::pair<const pair, T> *operator->() { return &(*it); }
+        std::pair<const interval, T> &operator*() const { return *it; }
+        std::pair<const interval, T> *operator->() { return &(*it); }
         iterator &operator++() {
             ++it;
             return *this;
@@ -81,7 +81,8 @@ template <class T> class interval_map {
 
     bool empty() { return imap.empty(); }
 
-    da_status insert(da_int lb, da_int ub, T val) {
+    da_status insert(interval bounds, T val) {
+        da_int lb = bounds.first, ub = bounds.second;
         if (ub < lb)
             return da_status_invalid_input;
 
@@ -89,7 +90,7 @@ template <class T> class interval_map {
             // lb or ub are already in the intervals => trying to create an overlap
             return da_status_invalid_input;
 
-        imap.insert(std::make_pair(pair(lb, ub), val));
+        imap.insert(std::make_pair(bounds, val));
         return da_status_success;
     }
 
@@ -101,7 +102,7 @@ template <class T> class interval_map {
         if (imap.empty())
             return false;
         bool found = false;
-        pair key_pair(key, key);
+        interval key_pair(key, key);
         auto it_lb = imap.lower_bound(key_pair);
         if (it_lb == imap.end() || key_pair != it_lb->first)
             --it_lb;
@@ -119,7 +120,7 @@ template <class T> class interval_map {
         if (imap.empty()) {
             return imap.end();
         }
-        pair key_pair(key, key);
+        interval key_pair(key, key);
         auto it_lb = imap.lower_bound(key_pair);
         if (it_lb == imap.end() || key_pair != it_lb->first)
             --it_lb;

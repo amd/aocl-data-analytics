@@ -35,22 +35,22 @@
  *
  * In most cases, a function needs to handle the return status of a called function which
  * has already setup the error trace using the previously described da_error() and da_warn().
- * Under these circunstances it is desirable to stack the next error or warning on top of the
+ * Under these circunstances, it is desirable to stack the next error or warning on top of the
  * existing one in such a way to construct an "error trace". This can be done by calling
  *
  *     return da_error_trace(e, status, msg);
  *  or
  *     return da_warn_trace(e, status, msg);
  *
- * with the same meaning as above. The manin difference will be that these macros will
+ * with the same meaning as above. The main difference will be that these two macros 
  * stack the errors and the printing method will pretty-print the error-stack and show
  * the error trace.
  *
  * Recommended usage
  * -----------------
  *
- *  => Any function that generates and error or warning should use da_error()/da_warn().
- *     This guarantees that the stack is reset before adding this error.
+ *  => Any function that generates an error or warning should use da_error()/da_warn().
+ *     This guarantees that the stack is reset before adding a new error.
  *
  *  => Any function that needs to handle errors returned by a called function should
  *     use da_error_trace()/da_warn_trace(). This will stack the new error on to the
@@ -67,7 +67,7 @@
  * "Last operation was successful."
  *
  * The public API to print the error is always
- *     da_handle_print_error_message(handle) which simply called e->print();
+ *     da_handle_print_error_message(handle) which simply calles e->print();
  *
  * Note: this API prints to std out and not std err.
  *
@@ -80,23 +80,24 @@
  * the trace build-up can be observed in the console.
  *
  * The trace stack size is limited to a hard-coded constant of 10 levels 0 to 9. It
- * is assumed that a stack stace deeper than 4-5 is an indication of a poor
+ * is assumed that a stack trace deeper than 4-5 levels is an indication of a poor
  * design or miss-use of this error trace utility. As such, the stack will
- * replace the last error with a message indicating the trace is "full."
+ * replace the last error level with a message indicating the trace is "full."
  *
  * It is possible to "record" the error/warning directly, without using the
  * MACRO functions da_error() or da_warn(). By calling the "rec()" method.
  * This method provides full control on the telemetry and texts used to compose 
  * the banner.
- * In stead of using da_error(e, status, msg), it is possible to call
+ * Instead of using da_error(e, status, msg), it is possible to call
  * return e.rec(da_status status, string msg, string det = "",
  *              string tel = "<no telemetry provided>", size_t ln = 0,
  *              severity_type sev = DA_ERROR);
  * Here msg is the same as for MACROS da_error() and da_warn(), while det is a string
  * that contains further details about the error and possible fixes, it is a free
- * form string that if not empty is printed under a "details:" section on its own.
- * tel is a string to contain the telemetry data, this generally is the __FILE__,
- * but need not be. ln contains the line number and is generally __LINE__.
+ * form string that if it is not empty then it is printed under a "details:" section 
+ * on its own.  tel is a string to contain the telemetry data, this generally is an
+ * abbreviated form of __FILE__, but need not be. ln contains the line number and is 
+ * generally __LINE__.
  * sev is the level of severity use as follow, DA_WARNING is a "error" but for which
  * the returned data is potentially usable, think of returning a suboptimal solution
  * to an optimization problem with poor conditioning. DA_ERROR indicates that the

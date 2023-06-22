@@ -127,6 +127,23 @@ da_status da_options_get_d_real(da_handle handle, const char *option, double *va
  *
  */
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
-                                size_t lvalue);
+                                size_t *lvalue);
+
+da_status da_datastore_options_set_int(da_datastore store, const char *option,
+                                       da_int value);
+da_status da_datastore_options_set_string(da_datastore store, const char *option,
+                                          const char *value);
+da_status da_datastore_options_set_s_real(da_datastore store, const char *option,
+                                          float value);
+da_status da_datastore_options_set_d_real(da_datastore store, const char *option,
+                                          double value);
+da_status da_datastore_options_get_int(da_datastore store, const char *option,
+                                       da_int *value);
+da_status da_datastore_options_get_s_real(da_datastore store, const char *option,
+                                          float *value);
+da_status da_datastore_options_get_d_real(da_datastore store, const char *option,
+                                          double *value);
+da_status da_datastore_options_get_string(da_datastore store, const char *option,
+                                          char *value, size_t lvalue);
 
 #endif //AOCLDA_OPTIONS_H
