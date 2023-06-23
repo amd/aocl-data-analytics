@@ -97,36 +97,12 @@ template <> void GetBasicData<int64_t>(CSVParamType<int64_t> *params) {
     params->datatype = "integer";
 }
 
-template <> void GetBasicData<uint64_t>(CSVParamType<uint64_t> *params) {
+template <> void GetBasicData<int32_t>(CSVParamType<int32_t> *params) {
 
-    params->filename = "csv_test_uint64";
+    params->filename = "csv_test_int32";
     params->expected_rows = 3;
     params->expected_columns = 4;
-    std::vector<uint64_t> data{1,
-                               5,
-                               3,
-                               0,
-                               0,
-                               43,
-                               +9223372036854775807,
-                               +9223372036854775806,
-                               +345,
-                               18446744073709551615UL,
-                               18446744073709551614UL,
-                               67};
-    params->expected_data = data;
-    std::vector<std::string> headings = {"one", "two", "three", "four"};
-    params->expected_headings = headings;
-    params->expected_status = da_status_success;
-    params->datatype = "integer";
-}
-
-template <> void GetBasicData<da_int>(CSVParamType<da_int> *params) {
-
-    params->filename = "csv_test_da_int";
-    params->expected_rows = 3;
-    params->expected_columns = 4;
-    std::vector<da_int> data{1, 5, 3, 0, 0, 43, +92, +926, +345, 184, 184, 67};
+    std::vector<int32_t> data{1, 5, 3, 0, 0, 43, +92, 2147483647, +2147483646, 184, -2147483647, 67};
     params->expected_data = data;
     std::vector<std::string> headings = {"one", "two", "three", "four"};
     params->expected_headings = headings;
@@ -209,35 +185,13 @@ template <> void GetMissingData<int64_t>(CSVParamType<int64_t> *params) {
     params->datatype = "integer";
 }
 
-template <> void GetMissingData<da_int>(CSVParamType<da_int> *params) {
+template <> void GetMissingData<int32_t>(CSVParamType<int32_t> *params) {
 
-    params->filename = "csv_test_da_int_missing_data";
+    params->filename = "csv_test_int32_missing_data";
     params->expected_rows = 3;
     params->expected_columns = 4;
-    std::vector<da_int> data{1,   5,   3,          DA_INT_MAX, -0,   -43,
-                             922, 922, DA_INT_MAX, -922,       -922, 67};
-    params->expected_data = data;
-    params->expected_status = da_status_missing_data;
-    params->datatype = "integer";
-}
-
-template <> void GetMissingData<uint64_t>(CSVParamType<uint64_t> *params) {
-
-    params->filename = "csv_test_uint64_missing_data";
-    params->expected_rows = 3;
-    params->expected_columns = 4;
-    std::vector<uint64_t> data{1,
-                               5,
-                               UINT64_MAX,
-                               0,
-                               0,
-                               43,
-                               +9223372036854775807,
-                               +9223372036854775806,
-                               UINT64_MAX,
-                               18446744073709551615UL,
-                               18446744073709551614UL,
-                               67};
+    std::vector<int32_t> data{1,   5,   3,          INT32_MAX, -0,   -43,
+                             922, 922, INT32_MAX, -922,       -922, 67};
     params->expected_data = data;
     params->expected_status = da_status_missing_data;
     params->datatype = "integer";
@@ -281,7 +235,7 @@ template <typename T> class DataStoreTest : public testing::Test {
     T value_;
 };
 
-using CSVTypes = ::testing::Types<float, double, int64_t, uint64_t, uint8_t, char *>;
+using CSVTypes = ::testing::Types<float, double, da_int, uint8_t, char *>;
 using DataStoreTypes = ::testing::Types<float, double, da_int, uint8_t, char *>;
 
 TYPED_TEST_SUITE(CSVTest, CSVTypes);
@@ -665,8 +619,7 @@ TEST(csvtest, error_exits) {
 
     // Check for various error exits
     double *a_double = nullptr;
-    int64_t *a_int64 = nullptr;
-    uint64_t *a_uint64 = nullptr;
+    da_int *a_int = nullptr;
     uint8_t *a_uint8 = nullptr;
     ASSERT_EQ(da_datastore_init(&store), da_status_success);
     ASSERT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
@@ -678,7 +631,7 @@ TEST(csvtest, error_exits) {
               da_status_success);
     ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_range_error);
 
-    ASSERT_EQ(da_read_csv_int64(store, filepath, &a_int64, &nrows, &ncols, nullptr),
+    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_invalid_chars);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
@@ -698,7 +651,7 @@ TEST(csvtest, error_exits) {
               da_status_success);
     ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_range_error);
 
-    ASSERT_EQ(da_read_csv_int64(store, filepath, &a_int64, &nrows, &ncols, nullptr),
+    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_no_digits);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
@@ -706,12 +659,10 @@ TEST(csvtest, error_exits) {
 
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "0, 1"),
               da_status_success);
-    ASSERT_EQ(da_read_csv_uint64(store, filepath, &a_uint64, &nrows, &ncols, nullptr),
-              da_status_sign_error);
 
     ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 3),
               da_status_success);
-    ASSERT_EQ(da_read_csv_int64(store, filepath, &a_int64, &nrows, &ncols, nullptr),
+    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_overflow);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
@@ -719,7 +670,7 @@ TEST(csvtest, error_exits) {
 
     ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 4),
               da_status_success);
-    ASSERT_EQ(da_read_csv_int64(store, filepath, &a_int64, &nrows, &ncols, nullptr),
+    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_ragged_csv);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
               da_status_success);
@@ -821,7 +772,7 @@ TEST(CSVTest, lineterminator) {
 
     da_datastore store = nullptr;
     ASSERT_EQ(da_datastore_init(&store), da_status_success);
-    uint64_t *a = nullptr;
+    da_int *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
 
@@ -832,7 +783,7 @@ TEST(CSVTest, lineterminator) {
     da_int expected_rows = 2;
     da_int expected_columns = 3;
 
-    uint64_t expected_data[] = {1, 2, 3, 4, 5, 6};
+    da_int expected_data[] = {1, 2, 3, 4, 5, 6};
 
     ASSERT_EQ(nrows, expected_rows);
     ASSERT_EQ(ncols, expected_columns);

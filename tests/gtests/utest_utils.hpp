@@ -55,14 +55,9 @@ inline da_status da_read_csv(da_datastore store, const char *filename, float **a
     return da_read_csv_s(store, filename, a, nrows, ncols, headings);
 }
 
-inline da_status da_read_csv(da_datastore store, const char *filename, int64_t **a,
+inline da_status da_read_csv(da_datastore store, const char *filename, da_int **a,
                              da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv_int64(store, filename, a, nrows, ncols, headings);
-}
-
-inline da_status da_read_csv(da_datastore store, const char *filename, uint64_t **a,
-                             da_int *nrows, da_int *ncols, char ***headings) {
-    return da_read_csv_uint64(store, filename, a, nrows, ncols, headings);
+    return da_read_csv_int(store, filename, a, nrows, ncols, headings);
 }
 
 inline da_status da_read_csv(da_datastore store, const char *filename, uint8_t **a,

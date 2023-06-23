@@ -49,8 +49,6 @@ inline void missing_data(int64_t *data) { *data = INT64_MAX; }
 
 inline void missing_data(int32_t *data) { *data = INT32_MAX; }
 
-inline void missing_data(uint64_t *data) { *data = UINT64_MAX; }
-
 inline void missing_data(uint8_t *data) { *data = UINT8_MAX; }
 
 inline void missing_data(double *data) {
@@ -629,97 +627,6 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     status = da_status_overflow;
                     return status;
                 }
-            }
-        }
-    }
-
-    // Skip trailing spaces.
-    while (isspace_ascii(*p)) {
-        ++p;
-    }
-
-    // Did we use up all the characters?
-    if (*p) {
-        status = da_status_invalid_chars;
-        return status;
-    }
-
-    if (maybe_int != NULL)
-        *maybe_int = 1;
-    if (endptr)
-        *endptr = p;
-    return status;
-}
-
-inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
-                             uint64_t *number, int *maybe_int) {
-
-    // Get some data from the parser
-    char tsep = parser->thousands;
-    uint64_t uint_max = parser->uint_max;
-
-    da_status status = da_status_success;
-
-    *number = 0;
-
-    char *p = (char *)str;
-    uint64_t pre_max = uint_max / 10;
-    int dig_pre_max = uint_max % 10;
-    int d;
-
-    // Skip leading spaces.
-    while (isspace_ascii(*p)) {
-        ++p;
-    }
-
-    // Handle sign.
-    if (*p == '-') {
-        status = da_status_sign_error;
-        return status;
-    } else if (*p == '+') {
-        p++;
-    }
-
-    // Check that there is a first digit.
-    if (!isdigit_ascii(*p)) {
-        // Error...
-        status = da_status_no_digits;
-        return status;
-    }
-
-    // If number is less than pre_max, at least one more digit
-    // can be processed without overflowing.
-    //
-    // Process the digits.
-    d = *p;
-    if (tsep != '\0') {
-        while (1) {
-            if (d == tsep) {
-                d = *++p;
-                continue;
-            } else if (!isdigit_ascii(d)) {
-                break;
-            }
-            if ((*number < pre_max) ||
-                ((*number == pre_max) && (d - '0' <= dig_pre_max))) {
-                *number = *number * 10 + (d - '0');
-                d = *++p;
-
-            } else {
-                status = da_status_overflow;
-                return status;
-            }
-        }
-    } else {
-        while (isdigit_ascii(d)) {
-            if ((*number < pre_max) ||
-                ((*number == pre_max) && (d - '0' <= dig_pre_max))) {
-                *number = *number * 10 + (d - '0');
-                d = *++p;
-
-            } else {
-                status = da_status_overflow;
-                return status;
             }
         }
     }
