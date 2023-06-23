@@ -107,17 +107,17 @@ template <class T> class block_dense : public block_base<T> {
     /* bl: dense data stored in a m*n vector 
      * order: storage scheme used for the matrix in bl, row major or column major
      * own_data: mark if the memory is owned by the block
+     * C_data: if true, bl needs to be deallocated with free instead of new.
      */
     T *bl = nullptr;
     da_ordering order;
     bool own_data = false;
+    bool C_data = false;
 
   public:
     ~block_dense() {
         if (own_data) {
-            (get_block_type<T>() == block_char)
-                ? da_csv::free_data(&bl, this->m * this->n)
-                : delete[] bl;
+            C_data ? da_csv::free_data(&bl, this->m * this->n) : delete[] bl;
         }
     };
 
@@ -125,7 +125,8 @@ template <class T> class block_dense : public block_base<T> {
      * it should be caught every time it is called
      */
     block_dense(da_int m, da_int n, T *data, da_errors::da_error_t &err,
-                da_ordering order = row_major, bool copy_data = false) {
+                da_ordering order = row_major, bool copy_data = false,
+                bool C_data = false) {
         if (m <= 0 || n <= 0 || data == nullptr)
             throw std::invalid_argument("");
         this->m = m;
@@ -133,6 +134,7 @@ template <class T> class block_dense : public block_base<T> {
         this->order = order;
         this->own_data = copy_data;
         this->err = &err;
+        this->C_data = C_data;
         if (!copy_data)
             bl = data;
         else {
@@ -324,7 +326,8 @@ class data_store {
      */
     template <class T>
     da_status concatenate_columns(da_int mc, da_int nc, T *data, da_ordering order,
-                                  bool copy_data = false, bool own_data = false) {
+                                  bool copy_data = false, bool own_data = false,
+                                  bool C_data = false) {
 
         // mc must match m except if the initial data.frame is empty (new block is created)
         // mc*nc input data must not be empty
@@ -336,7 +339,8 @@ class data_store {
         std::shared_ptr<block_id> new_block;
         try {
             new_block = std::make_shared<block_id>(block_id());
-            new_block->b = new block_dense<T>(mc, nc, data, *this->err, order, copy_data);
+            new_block->b =
+                new block_dense<T>(mc, nc, data, *this->err, order, copy_data, C_data);
             new_block->offset = n;
             block_dense<T> *bd = static_cast<block_dense<T> *>(new_block->b);
             bd->set_own_data(own_data || copy_data);
@@ -358,7 +362,7 @@ class data_store {
 
     template <class T>
     da_status concatenate_rows(da_int mr, da_int nr, T *data, da_ordering order,
-                               bool copy_data = false) {
+                               bool copy_data = false, bool C_data = false) {
         da_status status = da_status_success;
         bool found;
         da_int lb, ub, idx_start;
@@ -367,7 +371,8 @@ class data_store {
 
         if (n <= 0) {
             // First block, columns need to be concatenated instead.
-            status = this->concatenate_columns(mr, nr, data, order, copy_data);
+            status =
+                this->concatenate_columns(mr, nr, data, order, copy_data, false, C_data);
         } else {
             idx_start = 0;
             if (missing_block)
@@ -379,7 +384,8 @@ class data_store {
             // Create a dense block from the raw data
             try {
                 new_block = std::make_shared<block_id>(block_id());
-                new_block->b = new block_dense<T>(mr, nr, data, *err, order, copy_data);
+                new_block->b =
+                    new block_dense<T>(mr, nr, data, *err, order, copy_data, C_data);
             } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
                 return da_error(err, da_status_memory_error,
                                 "Memory allocation error"); // LCOV_EXCL_LINE
@@ -867,14 +873,15 @@ class data_store {
         da_status status;
 
         T *bl = nullptr;
-        status =
-            raw_ptr_from_csv_columns(csv, columns, start_column, end_column, nrows, &bl);
+        bool C_data;
+        status = raw_ptr_from_csv_columns(csv, columns, start_column, end_column, nrows,
+                                          &bl, C_data);
         if (status != da_status_success)
             // FIXME: change to da_error_trace
             return (da_error(err, status, "unexpected"));
 
         da_int ncols = end_column - start_column + 1;
-        status = concatenate_cols_csv(nrows, ncols, bl, col_major, false);
+        status = concatenate_cols_csv(nrows, ncols, bl, col_major, false, C_data);
         if (status != da_status_success)
             // FIXME: change to da_error_trace
             return (da_error(err, status, "unexpected"));
@@ -884,15 +891,15 @@ class data_store {
 
     template <class T>
     da_status concatenate_cols_csv(da_int mc, da_int nc, T *data, da_ordering order,
-                                   bool copy_data) {
-        return concatenate_columns(mc, nc, data, order, copy_data, true);
+                                   bool copy_data, bool C_data) {
+        return concatenate_columns(mc, nc, data, order, copy_data, true, C_data);
     }
 
     template <class T>
     da_status raw_ptr_from_csv_columns([[maybe_unused]] da_csv::csv_reader *csv,
                                        da_auto_detect::CSVColumnsType &columns,
                                        da_int start_column, da_int end_column,
-                                       da_int nrows, T **bl) {
+                                       da_int nrows, T **bl, bool &C_data) {
         da_int ncols = end_column - start_column + 1;
         try {
             *bl = new T[ncols * nrows];
@@ -912,6 +919,7 @@ class data_store {
                                 "wrong type detected unexpectedly");
             }
         }
+        C_data = false;
 
         return da_status_success;
     }
@@ -975,6 +983,7 @@ class data_store {
         da_int *data_int = nullptr;
         char **data_char = nullptr;
         uint8_t *data_bool = nullptr;
+        bool copy_data = false, own_data = true, C_data = true;
 
         // User may have specified a single datatype or auto detection of multiple datatypes
         switch (csv->datatype) {
@@ -993,7 +1002,8 @@ class data_store {
                 da_csv::free_data(&data_f, 0);
                 return da_error(err, tmp_error, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_f, row_major, false);
+            error = concatenate_columns(nrows, ncols, data_f, row_major, copy_data,
+                                        own_data, C_data);
             // We need to find the block and set copy_data to true so it knows it owns the memory
             block_dense<float> *tmp_bd =
                 dynamic_cast<block_dense<float> *>((*cmap.begin()).second->b);
@@ -1016,7 +1026,8 @@ class data_store {
                 da_csv::free_data(&data_d, 0);
                 return da_error(err, tmp_error, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_d, row_major, false);
+            error = concatenate_columns(nrows, ncols, data_d, row_major, copy_data,
+                                        own_data, C_data);
             block_dense<double> *tmp_bd =
                 dynamic_cast<block_dense<double> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1038,7 +1049,8 @@ class data_store {
                 da_csv::free_data(&data_int, 0);
                 return da_error(err, tmp_error, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_int, row_major, false);
+            error = concatenate_columns(nrows, ncols, data_int, row_major, copy_data,
+                                        own_data, C_data);
             block_dense<da_int> *tmp_bd =
                 dynamic_cast<block_dense<da_int> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1060,7 +1072,8 @@ class data_store {
                 da_csv::free_data(&data_char, nrows * ncols);
                 return da_error(err, tmp_error, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_char, row_major, false);
+            error = concatenate_columns(nrows, ncols, data_char, row_major, copy_data,
+                                        own_data, C_data);
             block_dense<char *> *tmp_bd =
                 dynamic_cast<block_dense<char *> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1082,7 +1095,8 @@ class data_store {
                 da_csv::free_data(&data_bool, 0);
                 return da_error(err, tmp_error, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_bool, row_major, false);
+            error = concatenate_columns(nrows, ncols, data_bool, row_major, copy_data,
+                                        own_data, C_data);
             block_dense<uint8_t> *tmp_bd =
                 dynamic_cast<block_dense<uint8_t> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
