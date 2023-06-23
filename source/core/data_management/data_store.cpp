@@ -12,9 +12,8 @@ bool da_data::validate_interval(interval p, da_int max_val) {
 
 template <>
 da_status data_store::raw_ptr_from_csv_columns<char **>(
-    [[maybe_unused]] da_csv::csv_reader *csv,
-    da_auto_detect::CSVColumnsType &columns, da_int start_column, da_int end_column,
-    da_int nrows, char * * **bl) {
+    [[maybe_unused]] da_csv::csv_reader *csv, da_auto_detect::CSVColumnsType &columns,
+    da_int start_column, da_int end_column, da_int nrows, char ****bl, bool &C_data) {
 
     parser_t *parser = csv->parser;
     int *maybe_int = nullptr;
@@ -39,14 +38,16 @@ da_status data_store::raw_ptr_from_csv_columns<char **>(
         }
     }
     *bl = &b;
+    C_data = true;
     return da_status_success;
 }
 
 template <>
-da_status data_store::concatenate_cols_csv<char **>(da_int mc, da_int nc, char** *data,
-                                                  da_ordering order,
-                                                  bool copy_data) {
-    char **deref_data = *data;                                                    
-    da_status status = concatenate_columns(mc, nc, deref_data, order, copy_data, true);
+da_status data_store::concatenate_cols_csv<char **>(da_int mc, da_int nc, char ***data,
+                                                    da_ordering order, bool copy_data,
+                                                    bool C_data) {
+    char **deref_data = *data;
+    da_status status =
+        concatenate_columns(mc, nc, deref_data, order, copy_data, true, C_data);
     return status;
 }
