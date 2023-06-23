@@ -76,11 +76,9 @@ da_status da_read_csv_d(da_datastore store, const char *filename, double **a,
 da_status da_read_csv_s(da_datastore store, const char *filename, float **a,
                           da_int *nrows, da_int *ncols, char ***headings);
 
-da_status da_read_csv_int64(da_datastore store, const char *filename, int64_t **a,
+da_status da_read_csv_int(da_datastore store, const char *filename, da_int **a,
                               da_int *nrows, da_int *ncols, char ***headings);
 
-da_status da_read_csv_uint64(da_datastore store, const char *filename, uint64_t **a,
-                               da_int *nrows, da_int *ncols, char ***headings);
 /** \} */
 
 /** \{

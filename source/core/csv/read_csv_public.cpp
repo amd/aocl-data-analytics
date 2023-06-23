@@ -22,15 +22,8 @@ da_status da_read_csv_s(da_datastore store, const char *filename, float **a,
     return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
 }
 
-da_status da_read_csv_int64(da_datastore store, const char *filename, int64_t **a,
+da_status da_read_csv_int(da_datastore store, const char *filename, da_int **a,
                               da_int *nrows, da_int *ncols, char ***headings) {
-    if (store == nullptr)
-        return da_status_store_not_initialized;
-    return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);
-}
-
-da_status da_read_csv_uint64(da_datastore store, const char *filename, uint64_t **a,
-                               da_int *nrows, da_int *ncols, char ***headings) {
     if (store == nullptr)
         return da_status_store_not_initialized;
     return da_csv::read_csv(store->csv_parser, filename, a, nrows, ncols, headings);

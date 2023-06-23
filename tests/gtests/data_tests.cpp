@@ -424,10 +424,10 @@ TEST(datastore, getSetElement) {
     EXPECT_EQ(hds.get_element(6, 0, ielem), da_status_invalid_input);
     EXPECT_EQ(hds.get_element(0, 7, ielem), da_status_invalid_input);
     EXPECT_EQ(hds.get_element(5, 5, ielem), da_status_invalid_input);
-    EXPECT_EQ(hds.set_element(-1, 0, 1), da_status_invalid_input);
-    EXPECT_EQ(hds.set_element(0, -1, 1), da_status_invalid_input);
-    EXPECT_EQ(hds.set_element(6, 0, 1), da_status_invalid_input);
-    EXPECT_EQ(hds.set_element(0, 7, 1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(-1, 0, (da_int)1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(0, -1, (da_int)1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(6, 0, (da_int)1), da_status_invalid_input);
+    EXPECT_EQ(hds.set_element(0, 7, (da_int)1), da_status_invalid_input);
     EXPECT_EQ(hds.set_element(5, 5, (da_int)2), da_status_invalid_input);
 
     // get valid elements
