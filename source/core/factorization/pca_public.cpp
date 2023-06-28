@@ -22,10 +22,10 @@
  * ************************************************************************ */
 
 #include "aoclda.h"
-#include "pca.hpp"
 #include "da_handle.hpp"
+#include "pca.hpp"
 
-da_status da_pca_d_init(da_handle handle, da_int vectors, da_int features,  double* dataX) {
+da_status da_pca_d_init(da_handle handle, da_int n, da_int p, double *dataX) {
     if (!handle)
         return da_status_memory_error;
     if (handle->precision != da_double)
@@ -33,69 +33,52 @@ da_status da_pca_d_init(da_handle handle, da_int vectors, da_int features,  doub
     if (handle->pca_d == nullptr)
         return da_status_invalid_pointer;
 
-	/*Initialize*/
-    handle->pca_d->init(vectors, features, dataX);
+    /*Initialize*/
+    handle->pca_d->init(n, p, dataX);
     return da_status_success;
 }
 
-da_status da_pca_s_init(da_handle handle, da_int vectors, da_int features, float* dataX) {
+da_status da_pca_s_init(da_handle handle, da_int n, da_int p, float *dataX) {
     if (!handle)
         return da_status_memory_error;
-    if (handle->precision != da_double)
+    if (handle->precision != da_single)
         return da_status_wrong_type;
     if (handle->pca_s == nullptr)
         return da_status_invalid_pointer;
 
-	/*Initialize*/
-    handle->pca_s->init(vectors, features, dataX);
+    /*Initialize*/
+    handle->pca_s->init(n, p, dataX);
     return da_status_success;
-}
-
-void da_pca_destroy(da_handle handle) {
-
-    if (handle != nullptr) {
-        if (handle->pca_d){
-            handle->pca_d->free();
-        }
-
-        if (handle->pca_s){
-            handle->pca_s->free();
-        }
-    }
 }
 
 da_status da_pca_set_method(da_handle handle, pca_comp_method_ method) {
     if (handle != nullptr) {
-        if(handle->precision != da_single) {
+        if (handle->precision != da_single) {
             if (handle->pca_d != nullptr)
                 handle->pca_d->set_pca_compute_method(method);
-        }
-		else
-		{
-			if (handle->pca_s != nullptr)
+        } else {
+            if (handle->pca_s != nullptr)
                 handle->pca_s->set_pca_compute_method(method);
         }
-		return da_status_success;
-    }else{
-		return da_status_memory_error;
-	}
+        return da_status_success;
+    } else {
+        return da_status_memory_error;
+    }
 }
 
 da_status da_pca_set_num_components(da_handle handle, da_int num_components) {
     if (handle != nullptr) {
-        if(handle->precision != da_single) {
+        if (handle->precision != da_single) {
             if (handle->pca_d != nullptr)
                 handle->pca_d->set_pca_components(num_components);
-        }
-		else
-		{
-			if (handle->pca_s != nullptr)
+        } else {
+            if (handle->pca_s != nullptr)
                 handle->pca_s->set_pca_components(num_components);
         }
-		return da_status_success;
-    }else{
-		return da_status_memory_error;
-	}
+        return da_status_success;
+    } else {
+        return da_status_memory_error;
+    }
 }
 
 da_status da_pca_d_compute(da_handle handle) {
@@ -120,7 +103,8 @@ da_status da_pca_s_compute(da_handle handle) {
     return handle->pca_s->compute();
 }
 
-da_status da_pca_d_get_results(da_handle handle) {
+da_status da_pca_d_get_results(da_handle handle, double *output,
+                               pca_results_flags flags) {
     if (!handle)
         return da_status_memory_error;
     if (handle->precision != da_double)
@@ -128,10 +112,10 @@ da_status da_pca_d_get_results(da_handle handle) {
     if (handle->pca_d == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->pca_d->get_results();
+    return handle->pca_d->get_results(output, flags);
 }
 
-da_status da_pca_s_get_results(da_handle handle) {
+da_status da_pca_s_get_results(da_handle handle, float *output, pca_results_flags flags) {
     if (!handle)
         return da_status_memory_error;
     if (handle->precision != da_single)
@@ -139,6 +123,5 @@ da_status da_pca_s_get_results(da_handle handle) {
     if (handle->pca_s == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->pca_s->get_results();
+    return handle->pca_s->get_results(output, flags);
 }
- 

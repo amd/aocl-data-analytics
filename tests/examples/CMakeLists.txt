@@ -34,8 +34,8 @@ target_compile_definitions(
 
 set(EXAMPLE_EXES reglinear_model linear_model basic_statistics_test lbfgsb_rc lbfgsb_fcomm datastore)
 
-add_executable(basic_pca_test basic_pca_test.cpp)
-target_link_libraries(basic_pca_test da_core)
+add_executable(basic_pca basic_pca.cpp)
+target_link_libraries(basic_pca da_core)
 
 # add all example programs to CTEST
 foreach(EX_NAME ${EXAMPLE_EXES})

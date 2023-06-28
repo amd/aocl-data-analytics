@@ -24,6 +24,20 @@
 #ifndef AOCLDA_PCA
 #define AOCLDA_PCA
 
+/**
+ * \file
+ * \anchor chapter_f
+ * \brief Chapter F - Factorizatoin
+ *
+ * This section descripes about all factorization API in AOCL-DA
+ *
+ * \section chpc_intro Introduction
+ * \section chc_fac Facrorization
+ * \subsection chc_pca Principal Component Analysis
+ * \subsection chc_qr QR Factorization
+ * \subsection chc_chol Cholesky Factorization *
+ */
+
 #include "aoclda_error.h"
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
@@ -32,24 +46,85 @@
 extern "C" {
 #endif
 
-/*TODO: Do we need the */
-#define DA_BUFF_ALIGN_SIZE  64
+/** \{
+ * \brief enum to specify PCA compute method
+ *  pca_method_svd=0 
+ *  pca_method_corr=1
+ */
+typedef enum pca_comp_method_ { pca_method_svd = 0, pca_method_corr = 1 } pca_comp_method;
 
-typedef enum pca_comp_method_{
-    pca_method_svd  = 0,
-    pca_method_corr = 1
-}pca_comp_method;
+/** \{
+ * \brief enum to get specific PCA results 
+ */
+typedef enum pca_results_flags_ {
+    pca_components = 1,
+    pca_scores = 2,
+    pca_variance = 4,
+    pca_total_variance = 8
+} pca_results_flags;
 
-da_status da_pca_d_init(da_handle handle, da_int vectors, da_int features, double *dataX);
-da_status da_pca_s_init(da_handle handle, da_int vectors, da_int features, float  *dataX);
-void da_pca_destroy(da_handle handle);
+/** \{
+ * \brief Create and init PCA data structures
+ *
+ * Creates pca_d handle and allocates the memory/buffers required 
+ * based on given inputs n and p to perform PCA on given data.
+ * 
+ * Initializze the algo parameters with default values
+ * 
+ * Copies the input data into temporary local buffer
+ * 
+ * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init 
+ * with type \ref da_handle_pca.
+ * \param[in] n the number of inputs
+ * \param[in] p the number of features per input
+ * \param[in] A the pointer to the input data
+  * \return \ref da_status_. The function returns:
+ * - \ref da_status_success - the operation was successfully completed
+ * - \ref da_status_memory_error = 2 - When the handle is not created
+ * - \ref da_status_wrong_type = 7 = when the input type is not matching with api
+ * - \ref da_status_invalid_pointer = 3 - When the pca handle is not created
+ */
+da_status da_pca_d_init(da_handle handle, da_int n, da_int p, double *A);
+da_status da_pca_s_init(da_handle handle, da_int n, da_int p, float *A);
+
 da_status da_pca_set_method(da_handle, pca_comp_method_ method);
 da_status da_pca_set_num_components(da_handle, da_int num_components);
+
+/** \{
+ * \brief Create and init PCA data structures
+ *
+ * Computes PCA on given input A and options set by user through init function through the handler
+ * 
+ * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init 
+ *  with type \ref da_handle_pca.
+  * \return \ref da_status_. The function returns:
+ * - \ref da_status_success - the operation was successfully completed
+ * - \ref da_status_invalid_input - When input parameters are not valid
+ * - \ref da_status_memory_error = 2 - When the handle is not created
+ * - \ref da_status_wrong_type = 7 = when the input type is not matching with api
+ * - \ref da_status_invalid_pointer = 3 - When the pca handle is not initialized
+ * - \ref da_status_internal_error =  1 - When lapack/internal routines error out
+ * - \ref da_status_not_implemented = 5 - When requested features/method is not implemented/supported
+ */
 da_status da_pca_d_compute(da_handle);
 da_status da_pca_s_compute(da_handle);
-da_status da_pca_d_get_results(da_handle);
-da_status da_pca_s_get_results(da_handle);
 
+/** \{
+ * \brief Copy the requested results into user given buffer
+ *
+ * Copy the PCA results into the user given output buffer based on choice
+ * 
+ * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init 
+ *  with type \ref da_handle_pca.
+ * \param [out] components a \ref 
+  * \return \ref da_status_. The function returns:
+ * - \ref da_status_success - The operation was successfully completed
+ * - \ref da_status_invalid_input - When input parameters are not valid
+ * - \ref da_status_internal_error - When results are "not" ready/computed,when called before compute
+ * - \ref da_status_invalid_pointer = 3 - When the pca handle or output buffer is not initialized
+ */
+da_status da_pca_d_get_results(da_handle, double *output, pca_results_flags flags);
+da_status da_pca_s_get_results(da_handle, float *output, pca_results_flags flags);
 
 #ifdef __cplusplus
 }

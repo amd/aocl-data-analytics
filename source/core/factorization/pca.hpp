@@ -24,544 +24,400 @@
 #ifndef PCA_HPP
 #define PCA_HPP
 
-#include "aoclda.h"
 #include "../basic_statistics/da_mean.hpp"
+#include "aoclda.h"
 #include "lapack_templates.hpp"
 #include <iostream>
+#include <string.h>
 
-//#define DEBUG_PRINT
-
-/* data struct required to compute pca using svd method */
+/*
+    data struct required to compute pca using 
+    svd method 
+*/
 template <typename T> struct pca_usr_data_svd {
-  T *Colmean = nullptr; //Store Column Mean of X
-  T *U = nullptr;
-  T *Sigma = nullptr;
-  T *VT = nullptr;
-  T *work = nullptr;
-  da_int *iwork = nullptr;
+    T *colmean = nullptr; //Store Column Mean of X
+    T *u = nullptr;
+    T *sigma = nullptr;
+    T *vt = nullptr;
+    T *work = nullptr;
+    // A needs to be copied as lapack's dgesvd modifies the matrix
+    T *A = nullptr;
+    da_int *iwork = nullptr;
 };
 
-/* TODO: yet to define internal data struct required to compute
-   compute pca using correlation method */
-template <typename T> struct pca_usr_data_corr {
-
-};
+/* 
+    TODO: Yet to define internal data struct required to
+    compute pca using correlation method
+*/
+template <typename T> struct pca_usr_data_corr {};
 
 /* PCA Results data struct  */
 template <typename T> struct pca_results {
-  T *eigenvalues = nullptr;
-  T *eigenvectors = nullptr;
-  T *mean = nullptr;
-  T *variance = nullptr;
+    T *scores = nullptr;     /*U*Sigma*/
+    T *components = nullptr; /*Vt*/
+    T *variance = nullptr;   /*S**2*/
+    T total_variance = 0;    /*Sum((MeanCentered X [][])**2)*/
 };
 
 /* PCA Internal Class */
-template <typename T> class  da_pca {
+template <typename T> class da_pca {
   private:
+    /*n_samples x n_features = (nxp) */
+    da_int n = 0;
+    da_int p = 0;
 
-  /*n_samples x n_features = (nxp) */
-  da_int n = 0;
-  da_int p = 0;
+    /*Set true when init done*/
+    bool initdone = false;
 
-  /*Initialize with default value of 5 but
-    Principal components should be r <= min(n,p)
-  */
-  da_int r = 5;
+    /*Set true when compute done successfully*/
+    bool iscomputed = false;
 
-  /*Set true when init done*/
-  bool initdone = false;
+    /*Define default pca compute method to svd*/
+    pca_comp_method method = pca_method_svd;
 
-  /*Set true when compute done successfully*/
-  bool computedone = false;
+    /*Defult number of output Components */
+    //TODO: Redundent with "r".
+    //                              Need to remove one of them.
+    da_int ncomponents = 5;
 
-  /*Define default pca compute method to svd*/
-  pca_comp_method method = pca_method_svd;
+    /*Data required to compute pca using svd method*/
+    pca_usr_data_svd<T> *svd_data = nullptr;
 
-  /*Defult number of output Components */
-  //TODO: Redundent with "r".
-  //      Need to remove one of them.
-  da_int pca_components = 5;
+    /*Data required to compute pca using corr method*/
+    pca_usr_data_corr<T> *corr_data = nullptr;
 
-  /*Data required to compute pca using svd method*/
-  pca_usr_data_svd<T> *svd_data = nullptr;
+    /*pca results*/
+    pca_results<T> *results = nullptr;
 
-  /*Data required to compute pca using svd method*/
-  pca_usr_data_corr<T> *corr_data = nullptr;
-
-  /*pca results*/
-  pca_results<T> *results = nullptr;
-
-  /*Copy of the user input pointers*/
-  T* InData;
+    /* pointer to error trace */
+    da_errors::da_error_t *err = nullptr;
 
   public:
-  da_pca() {
+    da_pca() {
         svd_data = new pca_usr_data_svd<T>;
         corr_data = new pca_usr_data_corr<T>;
         results = new pca_results<T>;
-  };
+    };
 
-  ~da_pca();
+    ~da_pca();
 
-  da_status init(da_int vectors, da_int features,  T* dataX);
+    da_status init(da_int n, da_int p, T *dataX);
 
-  void set_pca_compute_method(pca_comp_method method) {
-      method = method;
-  };
+    void set_pca_compute_method(pca_comp_method method) { method = method; };
 
-  void set_pca_components(da_int components) {
-     pca_components = r = std::min(components,std::min(n,p));
-  };
+    void set_pca_components(da_int ncomponents) {
+        ncomponents = std::min(ncomponents, std::min(n, p));
+    };
 
-  da_status free();
-  da_status compute();
-  da_status init_results();
-  da_status free_results();
-  da_status get_results();
-
+    da_status compute();
+    da_status init_results();
+    da_status get_results(T *output, pca_results_flags flags);
 };
 
-
 /*Deallocate major strucures*/
-template <typename T> da_pca<T>::~da_pca()
-{
-    if (svd_data){
-        da_pca<T>::free();
+template <typename T> da_pca<T>::~da_pca() {
+    if (svd_data) {
+        if (svd_data->colmean != nullptr)
+            delete svd_data->colmean;
+        if (svd_data->u)
+            delete svd_data->u;
+        if (svd_data->sigma)
+            delete svd_data->sigma;
+        if (svd_data->vt)
+            delete svd_data->vt;
+        if (svd_data->A)
+            delete svd_data->A;
+        if (svd_data->iwork)
+            delete svd_data->iwork;
         delete svd_data;
     }
 
-    if (corr_data) {
-        da_pca<T>::free();
+    if (corr_data)
         delete corr_data;
-    }
 
-    if (results){
-        da_pca<T>::free_results();
+    if (results) {
+        if (results->scores)
+            delete results->scores;
+        if (results->components)
+            delete results->components;
+        if (results->variance)
+            delete results->variance;
         delete results;
     }
 }
+
 /*
     Initialize all the memory required to compute PCA based on inputs
 */
-template <typename T> da_status da_pca<T>::init(da_int vectors,
-                                                     da_int features,
-                                                     T* dataX)
-{
+template <typename T> da_status da_pca<T>::init(da_int n, da_int p, T *dataX) {
     /*Init with success */
-    da_status err_status = da_status_success;
+    da_status status = da_status_success;
     da_int ldu, ldvt;
 
-    /*Assuming the data is in row major where */
-    n = vectors;
-    p = features;
-    r = std::min(pca_components,std::min(n,p));
+    /*Save the A dims, assuming the data is in ColMajor order*/
+    this->n = n;
+    this->p = p;
+    this->ncomponents = std::min(this->ncomponents, std::min(n, p));
 
-    /*Initialize with input values*/
-    ldu = std::max(n,p);
-    ldvt = std::max(r,p);
+    /*Initialize with A values*/
+    ldu = this->n;
+    ldvt = this->ncomponents;
 
-    /*Save input buffer address*/
-    InData = dataX;
+    switch (method) {
+    case pca_method_svd:
+        svd_data->colmean = new T[std::max(n, p)];
+        svd_data->u = new T[ldu * std::max(n, p)];
+        svd_data->sigma = new T[std::max(n, p)];
+        svd_data->vt = new T[ldvt * std::max(n, p)];
+        svd_data->iwork = new da_int[12 * std::min(n, p)];
+        svd_data->A = new T[std::max(n, p) * std::max(n, p)];
 
-    switch(method) {
-        case pca_method_svd:
-            /*TODO::Use new rather than std::malloc/aligned_alloc
-               u[LDU*M], sigma[N], vt[LDVT*N], a[LDA*N]
-            */
-            svd_data->Colmean = (T*)std::malloc(n*sizeof(T));
-            svd_data->U = (T*)std::malloc(ldu * n * sizeof(T));
-            svd_data->Sigma = (T*)std::malloc(std::max(n,p) * sizeof(T));
-            svd_data->VT = (T*)std::malloc(ldvt * p * sizeof(T));
-            svd_data->iwork = (da_int*)std::malloc(std::min(n,p) * sizeof(da_int));
+        /*Copy A buffer address*/
+        memcpy(svd_data->A, dataX, sizeof(T) * n * p);
 
-            if((svd_data->U==NULL) ||
-               (svd_data->Sigma==NULL) ||
-               (svd_data->VT==NULL) ||
-               (svd_data->iwork==NULL) ||
-               (svd_data->Colmean==NULL)
-               )
-            {
-                err_status = da_status_memory_error;
-                printf(" Unable to create pca_method_svd \n");
-                return err_status;
-            }
-            break;
-        case pca_method_corr:
-            //corr_data = new pca_usr_data_corr<T>;
-            /*TODO: Yet to implement this method*/
-             err_status = da_status_not_implemented;
-            break;
-        default:
-            err_status =  da_status_memory_error;
-            break;
+        break;
+    case pca_method_corr:
+        //corr_data = new pca_usr_data_corr<T>;
+        /*TODO: Yet to implement this method*/
+        status = da_status_not_implemented;
+        break;
+    default:
+        status = da_status_invalid_input;
+        break;
     }
 
-    err_status = da_pca<T>::init_results();
+    status = da_pca<T>::init_results();
 
     /*Reset init done*/
     initdone = true;
 
-    return err_status;
+    return status;
 }
 
 /*
     Initialize memory for results
 */
-template <typename T> da_status da_pca<T>::init_results()
-{
-    //TODO: Update the sizes with proper values and may 
-    //use new rather than alloc
-    results->eigenvalues = (T*)std::malloc(sizeof(T) * pca_components );
-    results->eigenvectors = (T*)std::malloc(sizeof(T)* pca_components * pca_components );
-    results->mean = (T*)std::malloc(sizeof(T) );
-    results->variance = (T*)std::malloc(sizeof(T));
-
-    if((results->eigenvalues == nullptr) ||
-       (results->eigenvectors == nullptr) ||
-       (results->mean == nullptr) ||
-       (results->variance == nullptr))
-    {
-        return da_status_memory_error;
-    }
-
+template <typename T> da_status da_pca<T>::init_results() {
+    results->components = new T[ncomponents * ncomponents];
+    results->scores = new T[ncomponents * ncomponents];
+    results->variance = new T[ncomponents];
     return da_status_success;
 }
 
 /*
-    Free all the memory allocated
-*/
-template <typename T> da_status da_pca<T>::free()
-{
-    /*Initilize error with success */
-    da_status err_status = da_status_success;
-
-    switch(method) {
-        case pca_method_svd:
-            if(nullptr!=svd_data->Colmean){
-                 std::free(svd_data->Colmean);
-                 svd_data->Colmean = nullptr;
-            }
-
-            if(nullptr!=svd_data->U){
-                 std::free(svd_data->U);
-                 svd_data->U = nullptr;
-            }
-
-            if(nullptr!=svd_data->Sigma) {
-                std::free(svd_data->Sigma);
-                svd_data->Sigma = nullptr;
-            }
-
-            if(nullptr!=svd_data->VT){
-                std::free(svd_data->VT);
-                svd_data->VT = nullptr;
-            }
-
-            if(nullptr!=svd_data->iwork) {
-                std::free(svd_data->iwork);
-                svd_data->iwork = nullptr;
-            }
-
-        break;
-
-        case pca_method_corr:
-        break;
-
-        default:
-        break;
-    }
-
-    /*Reset the initdone flag*/
-    initdone = false;
-
-    return err_status;
-}
-
-/*
-    Free memory for results
-*/
-template <typename T> da_status da_pca<T>::free_results()
-{
-    if(nullptr!=results->mean) std::free(results->mean);
-    if(nullptr!=results->variance) std::free(results->variance);
-    if(nullptr!=results->eigenvalues) std::free(results->eigenvalues);
-    if(nullptr!=results->eigenvectors) std::free(results->eigenvectors);
-
-    return da_status_success;
-}
-
-/*
-    Compute PAC of matrix X (n x p) using user choosen method,
+    Compute PCA of matrix X (n x p) using user choosen method,
     defult is svd_method and save results 
 */
-template <typename T> da_status da_pca<T>::compute()
-{
+template <typename T> da_status da_pca<T>::compute() {
     char JOBU, JOBVT, RANGE;
-    da_int lwork, ldu, ldvt, INFO, lm , ln, lda;
-    da_int il, iu, ns=1;
-    T vu,vl;
+    da_int lwork, ldu, ldvt, INFO, lm, ln, lda;
+    da_int il, iu, ns = 1;
+    T vu, vl;
     T estworkspace;
+    T tv = 0;
 
     /*Initilize error with success */
-    da_status err_status = da_status_success;
+    da_status status = da_status_success;
 
-    if(initdone == false) return da_status_invalid_pointer;
+    if (initdone == false)
+        return da_error(this->err, da_status_invalid_pointer, "pca is not initialized!");
 
-    switch(method)
-    {
-        case pca_method_svd:
-            //Input data matrix X (m x n) is input matrix
+    switch (method) {
+    case pca_method_svd:
+        //Input data matrix X (n x p) is A matrix
 
-            //step 1:  Find column Mean of X
-            da_colmean(n, p, InData, p, svd_data->Colmean);
+        //step 1:  Find column Mean of X
+        da_colmean(n, p, svd_data->A, p, svd_data->colmean);
 
-#ifdef DEBUG_PRINT
-            printf("\nColMean: \n");
-            for(da_int i=0;i<p;i++){
-                printf("%.4f, ",svd_data->Colmean[i]);
+        //step 2:  Substract column mean from A matrix
+        // A[][] = A[][] - colmean[]
+        //TODO: Write an utility function
+        for (da_int i = 0; i < n; i++) {
+            for (da_int j = 0; j < p; j++) {
+                T mean_minus_a = (*(svd_data->A + i * p + j) - *(svd_data->colmean + j));
+                *(svd_data->A + i * p + j) = mean_minus_a;
+                tv += (mean_minus_a * mean_minus_a);
             }
-            printf("\n\n");
-#endif
-            //step 2:  Substract column mean from X
-            // X = X - X.mean(axis=0)
-            //ToDo: Yet to optimize this substration
-            for(da_int i=0;i<n;i++) {
-                for(da_int j=0;j<p;j++) {
-                    *(InData + i*p + j) -= svd_data->Colmean[j];
-                }
+        }
+        /*Save the total variance of mean centered input A*/
+        results->total_variance = tv;
+
+        //step 3:  Find Singular values using SVD
+        //Construct SVD args based on inputs
+        JOBU = 'V';
+        JOBVT = 'V';
+        RANGE = 'I';
+        ldu = std::max(n, p);
+        lda = std::max(n, p);
+        INFO = 0;
+        lm = p;
+        ln = n;
+        vl = 0.0;
+        vu = 0.0;
+        iu = std::min(n, p);
+        il = iu - ncomponents + 1;
+        if (RANGE == 'A') {
+            ns = std::min(n, p);
+        } else if (RANGE == 'I') {
+            ns = iu - il + 1;
+        }
+        ldvt = ns;
+
+        //Query gesvdx for optimal work space required
+        lwork = -1;
+
+        da::gesvdx(&JOBU, &JOBVT, &RANGE, &lm, &ln, svd_data->A, &lda, &vl, &vu, &il, &iu,
+                   &ns, svd_data->sigma, svd_data->u, &ldu, svd_data->vt, &ldvt,
+                   &estworkspace, &lwork, svd_data->iwork, &INFO);
+
+        //Handle SVD Error
+        if (INFO != 0) {
+            if (INFO < 0)
+                return da_error(this->err, da_status_invalid_input,
+                                std::to_string(INFO) +
+                                    "th argument had an illegal value. Please verify "
+                                    "the input arguments");
+            if (INFO > 0)
+                return da_error(this->err, da_status_invalid_input,
+                                "ith eigen value is not converged or something went "
+                                "wrong in svd computation!");
+        }
+
+        /*Read the space required*/
+        lwork = (da_int)estworkspace;
+
+        /*Allocate optimal memory required to compute SVD*/
+        svd_data->work = new T[lwork];
+
+        /*Initialize the INFO with failure */
+        INFO = -1;
+
+        /*Call gesvdx*/
+        da::gesvdx(&JOBU, &JOBVT, &RANGE, &lm, &ln, svd_data->A, &lda, &vl, &vu, &il, &iu,
+                   &ns, svd_data->sigma, svd_data->u, &ldu, svd_data->vt, &ldvt,
+                   svd_data->work, &lwork, svd_data->iwork, &INFO);
+
+        //Handle SVD Error
+        if (INFO != 0) {
+            if (INFO < 0)
+                return da_error(this->err, da_status_invalid_input,
+                                std::to_string(INFO) +
+                                    "th argument had an illegal value. Please verify "
+                                    "the input arguments");
+
+            if (INFO > 0) {
+                if (INFO == (2 * this->n + 1))
+                    return da_error(this->err, da_status_internal_error,
+                                    "An internal error occured in gesvdx!");
+                else
+                    return da_error(
+                        this->err, da_status_invalid_input,
+                        std::to_string(INFO) +
+                            "th eigen value is not converged or something went "
+                            "wrong in svd computation!");
             }
+        }
 
-            //step 3:  Find Singular values using SVD
-            //Construct SVD args based on inputs
-            JOBU = 'V';
-            JOBVT = 'V';
-            RANGE = 'I';
-            ldu = std::max(n,p);
-            lda = std::max(n,p);
-            INFO = 0;
-            lm = n;
-            ln = p;
-            vl = 0.0;
-            vu = 0.0;
-            iu = std::min(n,p);
-            il = iu - pca_components + 1;
-            if(RANGE == 'A') ns = std::min(n,p);
-            else if(RANGE == 'I') ns = iu-il+1;
-            ldvt = ns;
-
-            //Query gesvdx for optimal work space required
-            lwork = -1;
-
-#ifdef DEBUG_PRINT
-            printf("Estimate gesvdx : \nJOBU: %c JOBVT: %c RANGE:%c lm:%d ln:%d \n\
-                    lda:%d vl:%.1f vu:%.1f il:%d iu:%d ns:%d ldu:%d ldvt:%d lwork:%d INFO:%d\n",
-                    JOBU,JOBVT,RANGE,lm,ln,lda,vl,vu,il,iu,ns,ldu,ldvt,lwork,INFO);
-#endif
-
-            da::gesvdx(&JOBU,
-                      &JOBVT,
-                      &RANGE,
-                      &lm,
-                      &ln,
-                      InData,
-                      &lda,
-                      &vl,
-                      &vu,
-                      &il,
-                      &iu,
-                      &ns,
-                      svd_data->Sigma,
-                      svd_data->U,
-                      &ldu,
-                      svd_data->VT,
-                      &ldvt,
-                      &estworkspace,
-                      &lwork,
-                      svd_data->iwork,
-                      &INFO );
-
-            //Handle SVD Error
-            if(INFO != 0) {
-                printf("SVD workspace estimation Failed with error %x \n",INFO);
-                if(INFO < 0) err_status = da_status_invalid_input;
-                if(INFO > 0) err_status = da_status_internal_error;
+        //Step 4: Save the results
+        //TODO: May needs to do the sign flip
+        //Scores (n x n) = U (nxn) * Sigma (n x n)
+        for (da_int i = 0; i < ncomponents; i++) {
+            for (da_int j = 0; j < ncomponents; j++) {
+                *(results->scores + i * ncomponents + j) =
+                    (*(svd_data->sigma + i) * (*(svd_data->vt + i * ncomponents + j)));
             }
+        }
 
-            /*Read the space required*/
-            lwork = (da_int)estworkspace;
-
-            /*Allocate optimal memory required to compute SVD*/
-            svd_data->work = (T*)std::malloc(lwork*sizeof(T));
-
-#ifdef DEBUG_PRINT
-            //print the input
-            printf("InputData \n");
-            for(da_int i=0;i<n;i++) {
-                for(da_int j=0;j<p;j++) {
-                    printf("%.2f ",*(InData+(i*p+j)));
-                }
-                printf("\n");
+        //Save ncomponents
+        for (da_int i = 0; i < ncomponents; i++) {
+            for (da_int j = 0; j < ncomponents; j++) {
+                *(results->components + i * ncomponents + j) =
+                    *(svd_data->u + i * ncomponents + j);
             }
-#endif
-            /*Call gesvdx*/
-            da::gesvdx(&JOBU,
-                      &JOBVT,
-                      &RANGE,
-                      &lm,
-                      &ln,
-                      InData,
-                      &lda,
-                      &vl,
-                      &vu,
-                      &il,
-                      &iu,
-                      &ns,
-                      svd_data->Sigma,
-                      svd_data->U,
-                      &ldu,
-                      svd_data->VT,
-                      &ldvt,
-                      svd_data->work,
-                      &lwork,
-                      svd_data->iwork,
-                      &INFO );
+        }
 
-            //Handle SVD Error
-            if(INFO != 0) {
-                printf("SVD Failed \n");
-                if(INFO < 0) err_status = da_status_invalid_input;
-                if(INFO > 0) err_status = da_status_internal_error;
-            }
+        //compute variance
+        //variance = (S**2) / (nsamples-1)
+        for (da_int j = 0; j < ncomponents; j++) {
+            T sigma = *(svd_data->sigma + j);
+            *(results->variance + j) = (sigma * sigma) / (this->n - 1);
+        }
 
-#ifdef DEBUG_PRINT
-            printf("\n X (n:%d x p:%d) \n",n,p);
-            for(da_int i=0;i<n;i++) {
-                for(da_int j=0;j<p;j++) {
-                    printf("%.4f ",*( InData + (i*p+j)));
-                }
-                printf("\n");
-            }
+        //update flag to true!
+        iscomputed = true;
 
-            printf("\n Printing U \n");
-            for(da_int i=0;i<n;i++) {
-                for(da_int j=0;j<n;j++) {
-                    printf("%.4f ",*( svd_data->U + (i*n+j)));
-                }
-                printf("\n");
-            }
+        //Free the temporary memory created for gesvdx workspace
+        if (svd_data->work)
+            delete svd_data->work;
 
-            printf("\n Printing sigma: ");
-            for(da_int i=0;i<p;i++) {
-                if(i%8==0) printf("\n");
-                printf("%.4f ",svd_data->Sigma[i]);
-            }
+        break;
 
-            printf("\n\n Printing VT: \n");
-            for(da_int i=0;i<p;i++) {
-                for(da_int j=0;j<p;j++) {
-                    printf("%.4f ",*( svd_data->VT + (i*p+j)));
-                }
-                printf("\n");
-            }
+    case pca_method_corr:
+        /*TODO: Yet to implement*/
+        return da_error(this->err, da_status_not_implemented,
+                        "PCA using corr method is not yet implemented!");
+        break;
 
-            /*Sigma is a diagonal matrix stored in an array*/
-            /*U = m x r */
-            /*T = U * Sigma , scale U with Sigma */
-            /*We can use U with Sigma*/
-            printf("\n pca components \n");
-            for(da_int i=0;i<n;i++) {
-                for(da_int j=0;j<r;j++) {
-                    printf("%.4f  ",*(svd_data->U + i*r + j));
-                }
-                printf("\n");
-            }
-            printf("\n singular values \n");
-            for(da_int j=0;j<r;j++) {
-                printf("%.4f  ",*(svd_data->Sigma +j));
-            }
-            printf("\n");
+    default:
+        return da_error(this->err, da_status_invalid_input, "Invalid pca method !");
 
-#endif //DEBUG_PRINT
-
-            //ToDO: May be we can write results directly into 
-            //user given output buffers if compute() function
-            // can have output buffers from user
-
-            //Step 4: Save the results
-            //Save eigen vectors aka components
-            for(da_int i=0;i<n;i++) {
-                for(da_int j=0;j<p;j++) {
-                    *(results->eigenvectors+j+i*p) = *(svd_data->U+i*p+j);
-                }
-            }
-
-            //Save eigen values aka singular values
-            for(da_int j=0;j<p;j++) {
-                *(results->eigenvalues + j)= *(svd_data->Sigma + j);
-            }
-
-            //compute mean of eigen vectors and save
-            //results->mean
-
-            //compute variance and save
-            //results->variance
-
-
-            //Set to true
-            computedone = true;
-
-            //Free the memory created for gesvdx workspace
-            if(svd_data->work!=NULL){
-                std::free(svd_data->work);
-                svd_data->work = nullptr;
-            }
-
-            //Make the pointer null before closing
-            InData = NULL;
-
-            break;
-
-        case pca_method_corr:
-            /*TODO: Yet to implement*/
-            err_status = da_status_not_implemented;
-            break;
-
-        default:
-            err_status = da_status_invalid_input;
-            break;
+        break;
     }
 
-    return err_status;
+    return status;
 }
 
 /*
-    Copy the results to output buffer based on user requirements
+    Copy the requested results to user buffer if compute is already done
+    else return with error
 */
-template <typename T> da_status da_pca<T>::get_results()
-{
+template <typename T>
+da_status da_pca<T>::get_results(T *output, pca_results_flags flags) {
     /*Initilize error with success */
-    da_status err_status = da_status_success;
+    da_status status = da_status_success;
 
-    if(initdone==false)
-        return da_status_invalid_pointer;
+    if (initdone == false)
+        return da_error(this->err, da_status_invalid_pointer, "PCA is not initialized!");
 
-    switch(method)
-    {
-        case pca_method_svd:
-            if(computedone==false){
-                return da_status_internal_error;
-            }
+    switch (method) {
+    case pca_method_svd:
+        if (iscomputed == false) {
+            return da_error(this->err, da_status_out_of_date, "PCA is not computed!");
+        }
+        if (output == nullptr) {
+            return da_error(this->err, da_status_invalid_pointer,
+                            "Given output pointer is invalid");
+        }
 
-            break;
-        case pca_method_corr:
-            err_status = da_status_not_implemented;
-            break;
-        default:
-            err_status = da_status_invalid_input;
-            break;
+        /*Default provide ncomponents if flags are not properly*/
+        if (flags < pca_components || flags > 0xf)
+            flags = pca_components;
+
+        /*Copy the requested output*/
+        if (flags & pca_components)
+            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
+                *output++ = *(results->components + i);
+        if (flags & pca_scores)
+            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
+                *output++ = *(results->scores + i);
+        if (flags & pca_variance)
+            for (da_int i = 0; i < ncomponents; i++)
+                *output++ = *(results->variance + i);
+        if (flags & pca_total_variance)
+            *output++ = results->total_variance;
+        break;
+
+    case pca_method_corr:
+        return da_error(this->err, da_status_not_implemented,
+                        "PCA using corr method is not yet implemented!");
+        break;
+
+    default:
+        return da_error(this->err, da_status_invalid_input, "Invalid pca method !");
+        break;
     }
 
-    return err_status;
+    return status;
 }
 
 #endif //PCA_HPP
