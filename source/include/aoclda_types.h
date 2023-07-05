@@ -3,6 +3,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 /**
  * \file
@@ -37,6 +38,7 @@ typedef enum da_ordering_ {
 typedef int64_t da_int;
 #define DA_INT_MAX INT64_MAX
 #define DA_INT_MIN INT64_MIN
+#define DA_INT_FMT PRId64
 #else
 /**
  * Use 32 bits integer type (default), to use 64 bits integer type set the CMake option <tt>BUILD_ILP64=ON</tt>.
@@ -44,6 +46,7 @@ typedef int64_t da_int;
 typedef int32_t da_int;
 #define DA_INT_MAX INT32_MAX
 #define DA_INT_MIN INT32_MIN
+#define DA_INT_FMT PRId32
 #endif
 
 #endif // AOCLDA_TYPES
