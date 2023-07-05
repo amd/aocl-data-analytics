@@ -24,8 +24,11 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/source/core/data_management
   ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 
-add_executable(basic_statistics basic_statistics.cpp)
-target_link_libraries(basic_statistics da_core gtest_main)
+add_executable(basic_stats basic_statistics_tests.cpp)
+target_link_libraries(basic_stats da_core gtest_main gmock_main)
+if(WIN32)
+  target_link_libraries(basic_stats "$ENV{LIBIFCORE}")
+endif()
 
 add_executable(csv csv_tests.cpp)
 target_link_libraries(csv da_core gtest_main gmock_main)
@@ -49,9 +52,6 @@ target_link_libraries(option_registry da_core gtest_main gmock_main)
 add_executable(errors_tests errors_tests.cpp)
 target_link_libraries(errors_tests da_core gtest_main gmock_main)
 
-target_include_directories(basic_statistics PRIVATE)
-target_include_directories(csv PRIVATE)
-
 add_executable(data data_tests.cpp)
 target_link_libraries(data da_core gtest_main gmock_main)
 if(WIN32)
@@ -61,7 +61,7 @@ endif()
 add_executable(printf_debug printf_debug.cpp)
 target_link_libraries(printf_debug da_core)
 
-gtest_discover_tests(basic_statistics)
+gtest_discover_tests(basic_stats)
 gtest_discover_tests(csv)
 gtest_discover_tests(linmod)
 gtest_discover_tests(option_registry)

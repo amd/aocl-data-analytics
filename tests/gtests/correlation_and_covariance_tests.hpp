@@ -1,0 +1,317 @@
+#include "aoclda.h"
+#include "utest_utils.hpp"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <cmath>
+#include <iostream>
+#include <limits>
+#include <list>
+
+template <typename T> class CorrelationCovarianceTest : public testing::Test {
+  public:
+    using List = std::list<T>;
+    static T shared_;
+    T value_;
+};
+
+template <typename T> struct CovCorrParamType {
+    da_int n;
+    da_int p;
+    da_int ldx;
+    da_int ldcov;
+    da_int ldcorr;
+    std::vector<T> x;
+    std::vector<T> expected_cov;
+    std::vector<T> expected_corr;
+
+    da_status expected_status;
+    T epsilon;
+};
+
+template <typename T> void GetSubarrayData(std::vector<CovCorrParamType<T>> &params) {
+    // Test with data stored in a subarray
+    CovCorrParamType<T> param;
+    param.n = 5;
+    param.p = 6;
+    param.ldx = param.n + 1;
+    param.ldcov = param.p + 1;
+    param.ldcorr = param.p + 1;
+
+    std::vector<T> x{3, 7, 4, 2, 7, 0, 0,  0,  4,  7,  2,  0, -1, -4, 5, -3, 0, 0,
+                     6, 8, 5, 4, 4, 0, -5, -5, -5, -5, -7, 0, 1,  2,  3, 4,  5, 0};
+    param.x = x;
+
+    std::vector<T> expected_cov{
+        5.3,  -3.95, -0.8, 1.45, -1.2, 0.75, 0, -3.95, 8.8,   1.7,  -3.55, 0.3, 2.75, 0,
+        -0.8, 1.7,   12.3, -2.2, -0.3, 0.75, 0, 1.45,  -3.55, -2.2, 2.8,   0.7, -2.,  0,
+        -1.2, 0.3,   -0.3, 0.7,  0.8,  -1.,  0, 0.75,  2.75,  0.75, -2.,   -1., 2.5,  0};
+    param.expected_cov = expected_cov;
+    std::vector<T> expected_corr{1.,
+                                 -0.578386069999205,
+                                 -0.0990830796106615,
+                                 0.3764012454470947,
+                                 -0.5827715174143585,
+                                 0.2060408459230335,
+                                 0,
+                                 -0.578386069999205,
+                                 1.,
+                                 0.1634011202231184,
+                                 -0.715167880572525,
+                                 0.1130667542166614,
+                                 0.5863019699779287,
+                                 0,
+                                 -0.0990830796106615,
+                                 0.1634011202231184,
+                                 1.,
+                                 -0.3748789971250484,
+                                 -0.0956365069595008,
+                                 0.1352504452001148,
+                                 0,
+                                 0.3764012454470947,
+                                 -0.715167880572525,
+                                 -0.3748789971250484,
+                                 1.,
+                                 0.4677071733467426,
+                                 -0.7559289460184544,
+                                 0,
+                                 -0.5827715174143586,
+                                 0.1130667542166614,
+                                 -0.0956365069595008,
+                                 0.4677071733467427,
+                                 1.,
+                                 -0.7071067811865475,
+                                 0,
+                                 0.2060408459230335,
+                                 0.5863019699779286,
+                                 0.1352504452001148,
+                                 -0.7559289460184545,
+                                 -0.7071067811865476,
+                                 1.,
+                                 0};
+    param.expected_corr = expected_corr;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetStandardData(std::vector<CovCorrParamType<T>> &params) {
+    // Test with standard data
+    CovCorrParamType<T> param;
+    param.n = 5;
+    param.p = 6;
+    param.ldx = param.n;
+    param.ldcov = param.p;
+    param.ldcorr = param.p;
+
+    std::vector<T> x{3, 7, 4, 2, 7, 0,  0,  4,  7,  2,  -1, -4, 5, -3, 0,
+                     6, 8, 5, 4, 4, -5, -5, -5, -5, -7, 1,  2,  3, 4,  5};
+    param.x = x;
+
+    std::vector<T> expected_cov{5.3,   -3.95, -0.8, 1.45, -1.2, 0.75, -3.95, 8.8,  1.7,
+                                -3.55, 0.3,   2.75, -0.8, 1.7,  12.3, -2.2,  -0.3, 0.75,
+                                1.45,  -3.55, -2.2, 2.8,  0.7,  -2.,  -1.2,  0.3,  -0.3,
+                                0.7,   0.8,   -1.,  0.75, 2.75, 0.75, -2.,   -1.,  2.5};
+    param.expected_cov = expected_cov;
+    std::vector<T> expected_corr{1.,
+                                 -0.578386069999205,
+                                 -0.0990830796106615,
+                                 0.3764012454470947,
+                                 -0.5827715174143585,
+                                 0.2060408459230335,
+                                 -0.578386069999205,
+                                 1.,
+                                 0.1634011202231184,
+                                 -0.715167880572525,
+                                 0.1130667542166614,
+                                 0.5863019699779287,
+                                 -0.0990830796106615,
+                                 0.1634011202231184,
+                                 1.,
+                                 -0.3748789971250484,
+                                 -0.0956365069595008,
+                                 0.1352504452001148,
+                                 0.3764012454470947,
+                                 -0.715167880572525,
+                                 -0.3748789971250484,
+                                 1.,
+                                 0.4677071733467426,
+                                 -0.7559289460184544,
+                                 -0.5827715174143586,
+                                 0.1130667542166614,
+                                 -0.0956365069595008,
+                                 0.4677071733467427,
+                                 1.,
+                                 -0.7071067811865475,
+                                 0.2060408459230335,
+                                 0.5863019699779286,
+                                 0.1352504452001148,
+                                 -0.7559289460184545,
+                                 -0.7071067811865476,
+                                 1.};
+    param.expected_corr = expected_corr;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetZeroData(std::vector<CovCorrParamType<T>> &params) {
+    // Test with zero data
+    CovCorrParamType<T> param;
+    param.n = 5;
+    param.p = 3;
+    param.ldx = param.n;
+    param.ldcov = param.p;
+    param.ldcorr = param.p;
+
+    std::vector<T> x{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    param.x = x;
+
+    std::vector<T> expected_cov{0, 0, 0, 0, 0, 0, 0, 0, 0};
+    param.expected_cov = expected_cov;
+    std::vector<T> expected_corr{1, 0, 0, 0, 1, 0, 0, 0, 1};
+    param.expected_corr = expected_corr;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetSingleColumnData(std::vector<CovCorrParamType<T>> &params) {
+    // Test with a single column
+    CovCorrParamType<T> param;
+    param.n = 5;
+    param.p = 1;
+    param.ldx = param.n;
+    param.ldcov = param.p;
+    param.ldcorr = param.p;
+
+    std::vector<T> x{2.1, 4.3, 5.6, 0.3, -1.3};
+    param.x = x;
+
+    std::vector<T> expected_cov{7.96};
+    param.expected_cov = expected_cov;
+    std::vector<T> expected_corr{1};
+    param.expected_corr = expected_corr;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetSmallData(std::vector<CovCorrParamType<T>> &params) {
+    // Test with a small problem
+    CovCorrParamType<T> param;
+    param.n = 3;
+    param.p = 2;
+    param.ldx = param.n;
+    param.ldcov = param.p;
+    param.ldcorr = param.p;
+
+    std::vector<T> x{0, 1, 2, 2, 1, 0};
+    param.x = x;
+
+    std::vector<T> expected_cov{1, -1, -1, 1};
+    param.expected_cov = expected_cov;
+    std::vector<T> expected_corr{1, -1, -1, 1};
+    param.expected_corr = expected_corr;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetCovCorrData(std::vector<CovCorrParamType<T>> &params) {
+
+    GetStandardData(params);
+    GetZeroData(params);
+    GetSubarrayData(params);
+    GetSingleColumnData(params);
+    GetSmallData(params);
+}
+
+using FloatTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(CorrelationCovarianceTest, FloatTypes);
+
+TYPED_TEST(CorrelationCovarianceTest, CorrelationCovarianceFunctionality) {
+
+    std::vector<CovCorrParamType<TypeParam>> params;
+    GetCovCorrData(params);
+
+    for (auto &param : params) {
+        std::vector<TypeParam> cov(param.ldcov * param.p);
+        std::vector<TypeParam> corr(param.ldcorr * param.p);
+        std::vector<TypeParam> xcov(param.x);
+        std::vector<TypeParam> xcorr(param.x);
+
+        ASSERT_EQ(da_covariance_matrix(param.n, param.p, xcov.data(), param.ldx,
+                                       cov.data(), param.ldcov),
+                  param.expected_status);
+        EXPECT_ARR_NEAR(param.ldx * param.p, param.x.data(), xcov.data(), param.epsilon);
+        EXPECT_ARR_NEAR(param.ldcov * param.p, param.expected_cov.data(), cov.data(),
+                        param.epsilon);
+        ASSERT_EQ(da_correlation_matrix(param.n, param.p, xcorr.data(), param.ldx,
+                                        corr.data(), param.ldcorr),
+                  param.expected_status);
+        EXPECT_ARR_NEAR(param.ldx * param.p, param.x.data(), xcorr.data(), param.epsilon);
+        EXPECT_ARR_NEAR(param.ldcorr * param.p, param.expected_corr.data(), corr.data(),
+                        param.epsilon);
+    }
+}
+
+TYPED_TEST(CorrelationCovarianceTest, IllegalArgsCorrelationCovariance) {
+
+    std::vector<TypeParam> x{4.7, 1.2, -0.3, 4.5};
+    da_int n = 2, p = 2, ldx = 2, ldmat = 2;
+    std::vector<TypeParam> mat(4, 0);
+
+    // Test with illegal value of ldx
+    da_int ldx_illegal = 1;
+    ASSERT_EQ(da_covariance_matrix(n, p, x.data(), ldx_illegal, mat.data(), ldmat),
+              da_status_invalid_leading_dimension);
+    ASSERT_EQ(da_correlation_matrix(n, p, x.data(), ldx_illegal, mat.data(), ldmat),
+              da_status_invalid_leading_dimension);
+
+    // Test with illegal p
+    da_int p_illegal = 0;
+    ASSERT_EQ(da_covariance_matrix(n, p_illegal, x.data(), ldx, mat.data(), ldmat),
+              da_status_invalid_array_dimension);
+    ASSERT_EQ(da_correlation_matrix(n, p_illegal, x.data(), ldx, mat.data(), ldmat),
+              da_status_invalid_array_dimension);
+
+    // Test with illegal n
+    da_int n_illegal = 1;
+    ASSERT_EQ(da_covariance_matrix(n_illegal, p, x.data(), ldx, mat.data(), ldmat),
+              da_status_invalid_array_dimension);
+    ASSERT_EQ(da_correlation_matrix(n_illegal, p, x.data(), ldx, mat.data(), ldmat),
+              da_status_invalid_array_dimension);
+
+    // Test with illegal ldmat
+    da_int ldmat_illegal = 1;
+    ASSERT_EQ(da_covariance_matrix(n, p, x.data(), ldx, mat.data(), ldmat_illegal),
+              da_status_invalid_leading_dimension);
+    ASSERT_EQ(da_correlation_matrix(n, p, x.data(), ldx, mat.data(), ldmat_illegal),
+              da_status_invalid_leading_dimension);
+
+    // Test illegal pointers
+    TypeParam *matrixnull = nullptr;
+    ASSERT_EQ(da_covariance_matrix(n, p, matrixnull, ldx, mat.data(), ldmat),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_correlation_matrix(n, p, matrixnull, ldx, mat.data(), ldmat),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_covariance_matrix(n, p, x.data(), ldx, matrixnull, ldmat),
+              da_status_invalid_pointer);
+    ASSERT_EQ(da_correlation_matrix(n, p, x.data(), ldx, matrixnull, ldmat),
+              da_status_invalid_pointer);
+}

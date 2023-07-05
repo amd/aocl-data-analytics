@@ -24,8 +24,8 @@
 #ifndef PCA_HPP
 #define PCA_HPP
 
-#include "../basic_statistics/da_mean.hpp"
 #include "aoclda.h"
+#include "../basic_statistics/moment_statistics.hpp"
 #include "lapack_templates.hpp"
 #include <iostream>
 #include <string.h>

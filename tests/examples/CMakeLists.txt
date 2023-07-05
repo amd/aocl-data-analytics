@@ -18,8 +18,8 @@ target_include_directories(
           ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 target_link_libraries(lbfgsb_fcomm da_core)
 
-add_executable(basic_statistics_test basic_statistics_test.cpp)
-target_link_libraries(basic_statistics_test da_core)
+add_executable(basic_statistics basic_statistics.cpp)
+target_link_libraries(basic_statistics da_core)
 
 add_executable(linear_model linear_model.cpp)
 target_link_libraries(linear_model da_core)
@@ -32,7 +32,7 @@ target_link_libraries(datastore da_core)
 target_compile_definitions(
   datastore PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 
-set(EXAMPLE_EXES reglinear_model linear_model basic_statistics_test lbfgsb_rc lbfgsb_fcomm datastore)
+set(EXAMPLE_EXES reglinear_model linear_model basic_statistics lbfgsb_rc lbfgsb_fcomm datastore)
 
 add_executable(basic_pca basic_pca.cpp)
 target_link_libraries(basic_pca da_core)
