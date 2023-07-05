@@ -50,7 +50,7 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
 
     istatus = tokenize_all_rows(parser, encoding_errors);
     status = convert_tokenizer_errors(istatus);
-    if (parser->file_lines != parser->lines) {
+    if (status != da_status_success || parser->file_lines != parser->lines) {
         return da_warn(csv->err, da_status_bad_lines,
                        "Some lines were ignored - this may be because they were empty.");
     }
@@ -58,7 +58,7 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
     fclose(fp);
     parser->source = nullptr;
 
-    return da_error(csv->err, status, "");
+    return status;
 }
 
 template <typename T>
@@ -238,7 +238,7 @@ inline da_status parse_and_process(csv_reader *csv, const char *filename, T **a,
 template <typename T>
 inline da_status read_csv(csv_reader *csv, const char *filename, T **a, da_int *nrows,
                           da_int *ncols, char ***headings) {
-    
+
     da_status error;
     error = csv->read_options();
     if (error != da_status_success) {
