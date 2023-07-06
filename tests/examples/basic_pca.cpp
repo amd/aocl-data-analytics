@@ -16,7 +16,7 @@ int main() {
     double A[3][3] = {{3, 2, 3}, {2, 3, 1}, {2, -2, 2}};
     //float refdoutput[16];
     da_int num_compnents = std::min(3, std::min(n, p));
-    double doutput[2 * (num_compnents * num_compnents) + 2 * num_compnents];
+    double doutput[24];
 
     da_handle_init_d(&handle, da_handle_pca);
     status = da_pca_d_init(handle, n, p, &A[0][0]);
@@ -59,7 +59,7 @@ int main() {
     da_int ns = 3, ps = 3;
     float As[3][3] = {{3, 2, 3}, {2, 3, 1}, {2, -2, 2}};
     //float refsoutput[16];
-    float soutput[2 * (num_compnents * num_compnents) + 2 * num_compnents];
+    float soutput[24];
 
     da_handle_init_s(&handle, da_handle_pca);
     status = da_pca_s_init(handle, ns, ps, &As[0][0]);

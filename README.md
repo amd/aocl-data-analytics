@@ -8,15 +8,7 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 1. You will need to have AOCL Blis and LibFlame installed somewhere 
 
-2. In the CMakeLists.txt file find the following lines: 
-
-  if($ENV{USER} MATCHES "bmarteau") 
-
-      set(ENV{AOCL_ROOT} /home/bmarteau/amd/aocl/4.0) 
-
-  endif() 
-
-and add similar lines to point cmake to where your AOCL build is installed 
+2. Make sure you have set the environment variable AOCL_ROOT to where AOCL libraries are installed eg. /home/username/amd/aocl/4.0) 
 
 3. In your checkout create a directory called build and navigate to it 
 
@@ -48,17 +40,7 @@ and add similar lines to point cmake to where your AOCL build is installed
 
 1. Install Visual Studio 2022 (the free version), the Intel Fortran compiler for Windows and cmake 
 
-2. In the CMakeLists.txt file find the following lines: 
-
-  if($ENV{USERNAME} MATCHES "ehopkins") 
-
-    set(ENV{AOCL_INSTALL} "C:/Users/ehopkins/AOCL-4.0") 
-
-    set(ENV{IFORT_LIBS} "C:/Program Files (x86)/Intel/oneAPI/compiler/latest/windows/compiler/lib/intel64_win") 
-
-  endif() 
-
-and add similar lines to point cmake to where your AOCL build and Fortran compiler are installed 
+2. Make sure you have set the AOCL_ROOT environment variable to your AOCL installation directory (e.g. C:\Users\username\AOCL-4.0) and INTEL_FCOMPILER to the location of the Intel fortran compiler (e.g. C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows)
 
 3. In your checkout create a directory called build 
 
