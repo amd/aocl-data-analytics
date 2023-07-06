@@ -28,6 +28,11 @@ struct comp_ipair {
     }
 };
 
+/* On output, returns the intersection of i1 and i2.
+ * interval with the lower bound greater than the upper bound indicate empty interval
+ */
+interval intersection(interval i1, interval i2);
+
 template <class T> class interval_map {
 
     template <class U> using inter_map = typename std::map<interval, U, comp_ipair>;
@@ -127,6 +132,21 @@ template <class T> class interval_map {
         iterator it(it_lb);
         if (it == this->end() || key < it->first.first || key > it->first.second)
             it = this->end();
+        return it;
+    }
+
+    /* returns an iterator to the biggest interval smaller than the key. 
+     * If no such element exists the iterator points to the closest bigger interval
+     */
+    iterator closest_interval(da_int key) {
+        if (imap.empty()) {
+            return imap.end();
+        }
+        interval key_pair(key, key);
+        auto it_lb = imap.lower_bound(key_pair);
+        if (it_lb == imap.end() || key_pair != it_lb->first)
+            --it_lb;
+        iterator it(it_lb);
         return it;
     }
 

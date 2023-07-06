@@ -10,6 +10,12 @@ bool da_data::validate_interval(interval p, da_int max_val) {
     return true;
 }
 
+bool da_data::check_internal_string(std::string &key) {
+    if (key.find(DA_STRINTERNAL, 0, DA_STRSZ) != std::string::npos)
+        return false;
+    return true;
+}
+
 template <>
 da_status da_data::data_store::concatenate_cols_csv<char **>(
     da_int mc, da_int nc, char ***data, da_ordering order, bool copy_data, bool C_data) {

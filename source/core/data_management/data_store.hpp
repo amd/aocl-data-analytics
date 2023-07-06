@@ -15,11 +15,15 @@
 #include <unordered_map>
 #include <vector>
 
+#define DA_STRSZ 12
+#define DA_STRINTERNAL "dainternal_"
+
 namespace da_data {
 
 using da_interval_map::interval;
 
 bool validate_interval(interval p, da_int max_val);
+bool check_internal_string(std::string &key);
 
 enum block_type {
     block_none,
@@ -31,7 +35,9 @@ enum block_type {
     block_bool //primarily intended for uint8_t data obtained from true/false values in a CSV file
 };
 
-template <typename T> struct get_block_type {};
+template <typename T> struct get_block_type {
+    constexpr operator block_type() const { return block_none; }
+};
 template <> struct get_block_type<da_int> {
     constexpr operator block_type() const { return block_int; }
 };
@@ -66,12 +72,45 @@ template <> struct get_block_type<uint8_t *> {
     constexpr operator block_type() const { return block_bool; }
 };
 
+/* Missing values for each type:
+ * - real numbers: missing if value = NaN
+ * - intgral types: missing if value >= max int
+ * - all other types fall into non_missing_types which cannot always return not missing
+ * 
+ * If missing values for other types are added, non_missing_types needs to be updated to not include 
+ * the new type.
+ */
+template <class T> struct non_missing_types {
+    static constexpr bool value = !std::is_floating_point_v<T> && !std::is_integral_v<T>;
+};
+template <class T>
+std::enable_if_t<std::is_floating_point_v<T>, bool> is_missing_value(T &val) {
+    return std::isnan(val);
+}
+template <class T>
+std::enable_if_t<std::is_integral_v<T>, bool> is_missing_value(T &val) {
+    return val == std::numeric_limits<T>::max();
+}
+template <class T>
+std::enable_if_t<non_missing_types<T>::value, bool>
+is_missing_value([[maybe_unused]] T &val) {
+    return false;
+}
+
 class block {
   public:
     da_int m, n;
     block_type btype = block_none;
     da_errors::da_error_t *err = nullptr;
     virtual ~block(){};
+    /* mark in a boolean vector which rows contain missing 
+     * the vector is expected to be initialized, rows marked as containing missing values will be skipped
+     * Input:
+     * - idx_valid: index in the bool vector of the first row of the block.
+     * - rows, cols: intervals of rows and columns in the block to be considered in the missing rows detection
+     */
+    virtual da_status missing_rows(std::vector<bool> &valid_row, da_int idx_valid,
+                                   interval rows, interval cols) = 0;
 };
 
 template <class T> class block_base : public block {
@@ -212,6 +251,58 @@ template <class T> class block_dense : public block_base<T> {
         }
         return da_status_success;
     }
+
+    da_status missing_rows(std::vector<bool> &valid_row, da_int idx_valid, interval rows,
+                           interval cols) {
+
+        if (!validate_interval(cols, this->n) || !validate_interval(rows, this->m))
+            return da_error(this->err, da_status_invalid_input,
+                            "The input intervals are not valid");
+        da_int ncols, nrows, idx;
+        ncols = cols.second - cols.first + 1;
+        nrows = rows.second - rows.first + 1;
+        if (idx_valid + nrows > (da_int)valid_row.size() || idx_valid < 0)
+            return da_error(this->err, da_status_invalid_input,
+                            "mismatch between the size of the block and the size of the "
+                            "boolean vector");
+
+        if (non_missing_types<T>::value) {
+            return da_status_success;
+        }
+
+        switch (order) {
+        case row_major:
+            for (da_int i = 0; i < nrows; i++) {
+                idx = (rows.first + i) * this->n + cols.first;
+                if (valid_row[idx_valid + i]) {
+                    for (da_int j = 0; j < ncols; j++) {
+                        if (is_missing_value<T>(bl[idx])) {
+                            valid_row[idx_valid + i] = false;
+                            break;
+                        }
+                        idx++;
+                    }
+                }
+            }
+            break;
+
+        case col_major:
+            idx = cols.first * this->m + rows.first;
+            for (da_int j = 0; j < ncols; j++) {
+                for (da_int i = 0; i < nrows; i++) {
+                    if (valid_row[idx_valid + i]) {
+                        if (is_missing_value<T>(bl[idx]))
+                            valid_row[idx_valid + i] = false;
+                    }
+                    idx++;
+                }
+                idx += this->m - nrows;
+            }
+            break;
+        }
+
+        return da_status_success;
+    }
 };
 
 /* wrapper structure containing a pointer to a block and meta-data around the block */
@@ -256,9 +347,6 @@ class data_store {
     da_int m = 0, n = 0;
     columns_map cmap;
 
-    /* To store column headings */
-    char **col_headings = nullptr;
-
     /* Data to handle partially added rows 
      * missing_block: if true, blocks the other functionality until the partial row block is finished
      * idx_start_missing: column index of the start of the missing block
@@ -291,14 +379,6 @@ class data_store {
                 next = aux;
             }
             it->second = nullptr;
-        }
-
-        if (col_headings) {
-            for (da_int i = 0; i < n; i++) {
-                if (col_headings[i])
-                    free(col_headings[i]);
-            }
-            free(col_headings);
         }
     }
 
@@ -344,6 +424,7 @@ class data_store {
             new_block->offset = n;
             block_dense<T> *bd = static_cast<block_dense<T> *>(new_block->b);
             bd->set_own_data(own_data || copy_data);
+            index_to_name.resize(n + nc, nullptr);
         } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
             return da_error(err, da_status_memory_error,
                             "Memory allocation error"); // LCOV_EXCL_LINE
@@ -486,22 +567,6 @@ class data_store {
         return da_status_success;
     }
 
-    da_status extract_headings(da_int n, char **headings) {
-        if (n != this->n) {
-            //m = this->m; TODO these would need to be pointers in the C interface
-            return da_error(err, da_status_invalid_input,
-                            "Invalid dimensions in the provided data");
-        }
-
-        if (this->col_headings != nullptr) {
-            for (da_int i = 0; i < n; i++) {
-                headings[i] = this->col_headings[i];
-            }
-        }
-
-        return da_status_success;
-    }
-
     /* Extract column idx into vector col
      * m: expected size of the column by the user; if wrong correct m size is returned
      * col: user allocated memory of size at least m
@@ -590,7 +655,7 @@ class data_store {
                             "Unexpected error in copy_slice_dense"); // LCOV_EXCL_LINE
                     idxr += ur - lr + 1;
                 }
-                lr = ur + 1;
+                lr = std::max(ur + 1, lrow);
                 first_row_idx = ur + 1;
                 bid = bid->next;
             }
@@ -613,6 +678,11 @@ class data_store {
     da_status select_slice(std::string key, interval rows, interval cols) {
         da_status exit_status = da_status_success;
 
+        if (!check_internal_string(key)) {
+            std::string errmsg = "key cannot contain the prefix: ";
+            errmsg += DA_STRINTERNAL;
+            return da_error(err, da_status_invalid_input, errmsg);
+        }
         if (!validate_interval(cols, this->n) || !validate_interval(rows, this->m))
             return da_error(err, da_status_invalid_input,
                             "Invalid dimensions in the provided data");
@@ -643,6 +713,12 @@ class data_store {
     da_status select_columns(std::string key, interval cols) {
         da_status exit_status = da_status_success;
 
+        if (!check_internal_string(key)) {
+            std::string errmsg = "key cannot contain the prefix: ";
+            errmsg += DA_STRINTERNAL;
+            return da_error(err, da_status_invalid_input, errmsg);
+        }
+
         if (!validate_interval(cols, this->n))
             return da_error(err, da_status_invalid_input, "Invalid intervals");
 
@@ -663,6 +739,12 @@ class data_store {
     }
     da_status select_rows(std::string key, interval rows) {
         da_status exit_status = da_status_success;
+
+        if (!check_internal_string(key)) {
+            std::string errmsg = "key cannot contain the prefix: ";
+            errmsg += DA_STRINTERNAL;
+            return da_error(err, da_status_invalid_input, errmsg);
+        }
 
         if (!validate_interval(rows, this->m))
             return da_error(err, da_status_invalid_input, "Invalid interval");
@@ -691,10 +773,13 @@ class data_store {
         bool clear_selections = false, clear_cols = false, clear_rows = false;
         da_int idx = 0;
         da_int ncols = 0;
+        std::string internal_key;
         if (selections.empty()) {
             // no selection defined create a temporary selection all
-            select_slice("All", {0, m - 1}, {0, n - 1});
-            it = selections.find("All");
+            internal_key = DA_STRINTERNAL;
+            internal_key += "All";
+            select_slice(internal_key, {0, m - 1}, {0, n - 1});
+            it = selections.find(internal_key);
             clear_selections = true;
         } else if (it == selections.end()) {
             exit_status = da_status_invalid_input;
@@ -710,6 +795,7 @@ class data_store {
             }
             clear_rows = true;
         }
+
         if (it->second.second->empty()) {
             // no cols in the current selection, create a temporary one containing all
             status = select_columns(key, {0, n - 1});
@@ -736,13 +822,171 @@ class data_store {
 
     exit:
         if (clear_selections)
-            selections.erase("All");
+            selections.erase(internal_key);
         if (clear_rows)
             it->second.first->erase(0);
         if (clear_cols)
             it->second.second->erase(0);
 
         return exit_status;
+    }
+
+    /* From a given selection remove all rows that have missing data in it.
+     * Input: 
+     * - key: name of the selection. If the key is not already present in the map, all rows will be considered
+     * - full_rows: If true, the full columns in all the rows of the selection are checked.
+     *              Otherwise, only the columns selected are.
+     */
+    da_status select_non_missing(std::string key, bool full_rows) {
+
+        da_status status = da_status_success;
+        da_int i;
+
+        if (!check_internal_string(key)) {
+            std::string errmsg = "key cannot contain the prefix: ";
+            errmsg += DA_STRINTERNAL;
+            return da_error(err, da_status_invalid_input, errmsg);
+        }
+
+        // check if selection 'key' exists. if not create one containing all rows and columns
+        // ensure that the selection iterator it always points to a valid selection
+        auto it = selections.find(key);
+        bool clear_cols = false, clear_all_cols = false;
+        if (it == selections.end()) {
+            select_slice(key, {0, m - 1}, {0, n - 1});
+            it = selections.find(key);
+            clear_cols = true;
+        }
+
+        std::unique_ptr<idx_slice> &col_slice = it->second.second;
+        std::unique_ptr<idx_slice> &row_slice = it->second.first;
+        if (row_slice->empty()) {
+            select_rows(key, {0, m - 1});
+        }
+
+        // Check ALL the rows
+        std::vector<bool> valid_rows;
+        valid_rows.resize(m, true);
+
+        // depending on the parameter full_rows, either all the columns are checked
+        // for missing data or only the columns in the selection 'key'
+        // it_col and it_col_end are set as pointing to the start and the end of valid column
+        // selections
+        idx_slice::iterator it_col, it_col_end;
+        std::string internal_key;
+        if (full_rows) {
+            internal_key = DA_STRINTERNAL;
+            internal_key += "all cols";
+            status = select_columns(internal_key, {0, n - 1});
+            if (status != da_status_success) {
+                status = da_error(
+                    err, da_status_internal_error,
+                    "Could not create new tag with all columns"); // LCOV_EXCL_LINE
+                goto exit;                                        // LCOV_EXCL_LINE
+            }
+            auto it_allcol = selections.find(internal_key);
+            it_col = it_allcol->second.second->begin();
+            it_col_end = it_allcol->second.second->end();
+            clear_all_cols = true;
+        } else {
+            if (col_slice->begin() == col_slice->end()) {
+                select_columns(key, {0, n - 1});
+                clear_cols = true;
+            }
+            it_col = col_slice->begin();
+            it_col_end = col_slice->end();
+        }
+
+        // loop over the columns and rows of the selection to mark the rows with missing
+        // data in valid_rows
+        for (; it_col != it_col_end; ++it_col) {
+            for (auto it_row = row_slice->begin(); it_row != row_slice->end(); ++it_row) {
+                status = mark_missing_slice(it_row->first, it_col->first, valid_rows);
+                if (status != da_status_success) {
+                    status = da_error_trace(err, da_status_internal_error,
+                                            "Unexpected error."); // LCOV_EXCL_LINE
+                    goto exit;                                    // LCOV_EXCL_LINE
+                }
+            }
+        }
+
+        // Remove the rows with missing data from the selection 'key'
+        i = 0;
+        while (i < m) {
+            if (!valid_rows[i]) {
+                da_int j = i + 1;
+                while (j < m && !valid_rows[j]) {
+                    j++;
+                }
+                // iterator to the biggest interval smaller than the key
+                // (or closest bigger interval if it does not exist)
+                auto it_row = row_slice->closest_interval(i);
+                interval nbounds = intersection(it_row->first, {i, j - 1});
+                if (nbounds.first <= nbounds.second) {
+                    interval old_inter = it_row->first;
+                    row_slice->erase(it_row);
+                    if (old_inter.first < nbounds.first) {
+                        da_int nelements = nbounds.first - old_inter.first;
+                        row_slice->insert({old_inter.first, nbounds.first - 1},
+                                          nelements);
+                    }
+                    if (old_inter.second > nbounds.second) {
+                        da_int nelements = old_inter.second - nbounds.second;
+                        row_slice->insert({nbounds.second + 1, old_inter.second},
+                                          nelements);
+                    }
+                }
+                i = j - 1;
+            }
+            i++;
+        }
+
+    exit:
+        if (clear_cols)
+            it->second.second->erase(0);
+        if (clear_all_cols)
+            remove_selection(internal_key);
+        return status;
+    }
+
+    da_status mark_missing_slice(interval rows, interval cols,
+                                 std::vector<bool> &valid_rows) {
+        if (!validate_interval(rows, this->m) || !validate_interval(cols, this->n))
+            return da_error(err, da_status_invalid_input, "Invalid intervals");
+        if ((da_int)valid_rows.size() != this->m)
+            return da_error(err, da_status_internal_error,
+                            "Wrong valid rows vector size"); // LCOV_EXCL_LINE
+
+        da_status status;
+        da_int lcol = cols.first;
+        da_int ucol = cols.second;
+        da_int lrow = rows.first;
+        da_int urow = rows.second;
+        interval block_cols, block_rows;
+        while (ucol - lcol >= 0) {
+            auto it = cmap.find(lcol);
+            std::shared_ptr<block_id> bid = it->second;
+            da_int uc = std::min(ucol, it->first.second);
+            da_int lr = lrow;
+            da_int first_row_idx = 0;
+            while (urow - lr >= 0) {
+                da_int ur = std::min(urow, first_row_idx + bid->b->m - 1);
+                block_rows = {lr - first_row_idx, ur - first_row_idx};
+                if (block_rows.second >= block_rows.first) {
+                    block_cols = {lcol - bid->offset, uc - bid->offset};
+                    status = bid->b->missing_rows(valid_rows, lr, block_rows, block_cols);
+                    if (status != da_status_success)
+                        return da_error(
+                            err, da_status_internal_error,
+                            "Unexpected error in copy_slice_dense"); // LCOV_EXCL_LINE
+                }
+                lr = ur + 1;
+                first_row_idx = lr;
+                bid = bid->next;
+            }
+            lcol = uc + 1;
+        }
+        return da_status_success;
     }
 
     /* get|set_element access and modify a single element in the data store 
@@ -814,7 +1058,7 @@ class data_store {
     }
 
     /* column tags methods */
-    da_status tag_column(std::string name, da_int idx) {
+    da_status label_column(std::string label, da_int idx) {
         if (idx < 0 || idx >= n)
             return da_error(err, da_status_invalid_input,
                             "requested idx not in the range");
@@ -822,14 +1066,14 @@ class data_store {
             return da_error(err, da_status_internal_error,
                             "maps and store size are out of sync");
 
-        auto it = name_to_index.insert(std::make_pair(name, idx)).first;
+        auto it = name_to_index.insert(std::make_pair(label, idx)).first;
         std::string const *pstr = &it->first;
         index_to_name[idx] = pstr;
         return da_status_success;
     }
 
-    da_status get_idx_from_tag(std::string key, da_int &idx) {
-        auto it = name_to_index.find(key);
+    da_status get_idx_from_label(std::string label, da_int &idx) {
+        auto it = name_to_index.find(label);
         if (it == name_to_index.end()) {
             return da_error(err, da_status_invalid_input, "key is not in the map");
         }
@@ -837,30 +1081,45 @@ class data_store {
         return da_status_success;
     }
 
-    da_status get_col_name(da_int idx, std::string &name) {
+    da_status get_col_label(da_int idx, std::string &name) {
         if (idx < 0 || idx >= n)
             return da_error(err, da_status_invalid_input,
                             "requested idx not in the range");
 
-        name = *index_to_name[idx];
+        if (index_to_name[idx] != nullptr)
+            name = *index_to_name[idx];
+        else
+            name = "";
         return da_status_success;
     }
 
-    /* FIXME
-     * Ben review notes:
-     * - if I understood correctly, the workflow for autodetection is as follows:
+    /* Label all columns from an array of C strings 
+     * headings is NOT checked:
+     * if set to nullptr, no columns will be tagged but no error will be returned
+     * 
+     */
+    da_status label_all_columns(char **headings) {
+        da_status status = da_status_success;
+
+        if (headings != nullptr) {
+            std::string buf;
+            for (da_int j = 0; j < n; j++) {
+                buf = std::string(headings[j]);
+                status = label_column(buf, j);
+                if (status != da_status_success) {
+                    std::string err_msg = "Could not label column number: ";
+                    err_msg += std::to_string(j);
+                    return da_error_trace(err, status, err_msg);
+                }
+            }
+        }
+        return status;
+    }
+
+    /* The data is copied 3 times, which might be problematic for big CSVs:
      *     + read entire CSV in char** form
      *     + convert it into CSVColumnsType
      *     + create individual blocks and insert them into the datastore
-     *   the data is copied 3 times, which might be problematic for big CSVs. 
-     *   Random ideas:
-     *     + create an interface that reads directly into blocks assuming knowledge of the data types (auto or provided by users)
-     *     + auto-detection works the same way but on a very small subset of rows to figure out the data types
-     *     + that would probably mean that we would need a failsafe in the case that data is not correctly detected but we could get away with just returning not_implemented for now.
-     * 
-     * - same as in read_csv.hpp: handle should not be an argument at this level in the functionality. 
-     * 
-     * - in load_fro_csv, maybe part of the code could be factorized with templating? not sure of the best approach though
      */
 
     /* Creates a new block based on a selection of columns from the CSVColumnsType which are of the same type */
@@ -877,14 +1136,14 @@ class data_store {
         status = raw_ptr_from_csv_columns(csv, columns, start_column, end_column, nrows,
                                           &bl, C_data);
         if (status != da_status_success)
-            // FIXME: change to da_error_trace
-            return (da_error(err, status, "unexpected"));
+            return (
+                da_error_trace(err, status, "Unexpected error in creating raw pointers"));
 
         da_int ncols = end_column - start_column + 1;
         status = concatenate_cols_csv(nrows, ncols, bl, col_major, false, C_data);
         if (status != da_status_success)
-            // FIXME: change to da_error_trace
-            return (da_error(err, status, "unexpected"));
+            return (
+                da_error_trace(err, status, "Unexpected error in concatenating columns"));
 
         return da_status_success;
     }
@@ -948,6 +1207,9 @@ class data_store {
                             csv, elem, columns, start_column, i - 1, nrows);
                     },
                     columns[i - 1]);
+                if (status != da_status_success)
+                    return da_error_trace(err, da_status_internal_error,
+                                          "Unexpected error"); // LCOV_EXCL_LINE
 
                 // Update the active index and start_column variables
                 start_column = i;
@@ -962,15 +1224,15 @@ class data_store {
 
     /* Get data from a CSV file and create blocks appropriately */
     da_status load_from_csv(da_csv::csv_reader *csv, const char *filename) {
-        da_status error = da_status_success, tmp_error = da_status_success;
+        da_status status = da_status_success, tmp_status = da_status_success;
 
         if (!empty()) {
             return da_error(csv->err, da_status_parsing_error,
                             "CSV files can only be read into empty datastore objects.");
         }
 
-        error = csv->read_options();
-        if (error != da_status_success) {
+        status = csv->read_options();
+        if (status != da_status_success) {
             return da_error(err, da_status_internal_error, "Error reading CSV options");
         }
 
@@ -987,22 +1249,22 @@ class data_store {
         // User may have specified a single datatype or auto detection of multiple datatypes
         switch (csv->datatype) {
         case da_csv::csv_float: {
-            tmp_error = da_csv::parse_and_process(csv, filename, &data_f, &nrows, &ncols,
-                                                  get_headings, &headings);
+            tmp_status = da_csv::parse_and_process(csv, filename, &data_f, &nrows, &ncols,
+                                                   get_headings, &headings);
             // We need to take care checking for allowed error exits and warnings here to avoid memory leaks
-            if (tmp_error == da_status_no_data) {
+            if (tmp_status == da_status_no_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_f, 0);
                 return da_error(err, da_status_no_data, "No data");
-            } else if (tmp_error != da_status_success &&
-                       tmp_error != da_status_missing_data &&
-                       tmp_error != da_status_bad_lines) {
+            } else if (tmp_status != da_status_success &&
+                       tmp_status != da_status_missing_data &&
+                       tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_f, 0);
-                return da_error(err, tmp_error, "Error parsing CSV");
+                return da_error(err, tmp_status, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_f, row_major, copy_data,
-                                        own_data, C_data);
+            status = concatenate_columns(nrows, ncols, data_f, row_major, copy_data,
+                                         own_data, C_data);
             // We need to find the block and set copy_data to true so it knows it owns the memory
             block_dense<float> *tmp_bd =
                 dynamic_cast<block_dense<float> *>((*cmap.begin()).second->b);
@@ -1012,21 +1274,25 @@ class data_store {
             break;
         }
         case da_csv::csv_double: {
-            tmp_error = da_csv::parse_and_process(csv, filename, &data_d, &nrows, &ncols,
-                                                  get_headings, &headings);
-            if (tmp_error == da_status_no_data) {
+            tmp_status = da_csv::parse_and_process(csv, filename, &data_d, &nrows, &ncols,
+                                                   get_headings, &headings);
+            if (tmp_status == da_status_no_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_d, 0);
                 return da_error(err, da_status_no_data, "No data");
-            } else if (tmp_error != da_status_success &&
-                       tmp_error != da_status_missing_data &&
-                       tmp_error != da_status_bad_lines) {
+            } else if (tmp_status != da_status_success &&
+                       tmp_status != da_status_missing_data &&
+                       tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_d, 0);
-                return da_error(err, tmp_error, "Error parsing CSV");
+                return da_error(err, tmp_status, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_d, row_major, copy_data,
-                                        own_data, C_data);
+            status = concatenate_columns(nrows, ncols, data_d, row_major, copy_data,
+                                         own_data, C_data);
+            if (status != da_status_success)
+                return da_error_trace(err, status,
+                                      "Could not concatenate the columns to the data "
+                                      "store"); // LCOV_EXCL_LINE
             block_dense<double> *tmp_bd =
                 dynamic_cast<block_dense<double> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1035,21 +1301,25 @@ class data_store {
             break;
         }
         case da_csv::csv_integer: {
-            tmp_error = da_csv::parse_and_process(csv, filename, &data_int, &nrows,
-                                                  &ncols, get_headings, &headings);
-            if (tmp_error == da_status_no_data) {
+            tmp_status = da_csv::parse_and_process(csv, filename, &data_int, &nrows,
+                                                   &ncols, get_headings, &headings);
+            if (tmp_status == da_status_no_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_int, 0);
                 return da_error(err, da_status_no_data, "No data");
-            } else if (tmp_error != da_status_success &&
-                       tmp_error != da_status_missing_data &&
-                       tmp_error != da_status_bad_lines) {
+            } else if (tmp_status != da_status_success &&
+                       tmp_status != da_status_missing_data &&
+                       tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_int, 0);
-                return da_error(err, tmp_error, "Error parsing CSV");
+                return da_error(err, tmp_status, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_int, row_major, copy_data,
-                                        own_data, C_data);
+            status = concatenate_columns(nrows, ncols, data_int, row_major, copy_data,
+                                         own_data, C_data);
+            if (status != da_status_success)
+                return da_error_trace(err, status,
+                                      "Could not concatenate the columns to the data "
+                                      "store"); // LCOV_EXCL_LINE
             block_dense<da_int> *tmp_bd =
                 dynamic_cast<block_dense<da_int> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1058,21 +1328,25 @@ class data_store {
             break;
         }
         case da_csv::csv_char: {
-            tmp_error = da_csv::parse_and_process(csv, filename, &data_char, &nrows,
-                                                  &ncols, get_headings, &headings);
-            if (tmp_error == da_status_no_data) {
+            tmp_status = da_csv::parse_and_process(csv, filename, &data_char, &nrows,
+                                                   &ncols, get_headings, &headings);
+            if (tmp_status == da_status_no_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
                 return da_error(err, da_status_no_data, "No data");
-            } else if (tmp_error != da_status_success &&
-                       tmp_error != da_status_missing_data &&
-                       tmp_error != da_status_bad_lines) {
+            } else if (tmp_status != da_status_success &&
+                       tmp_status != da_status_missing_data &&
+                       tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
-                return da_error(err, tmp_error, "Error parsing CSV");
+                return da_error(err, tmp_status, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_char, row_major, copy_data,
-                                        own_data, C_data);
+            status = concatenate_columns(nrows, ncols, data_char, row_major, copy_data,
+                                         own_data, C_data);
+            if (status != da_status_success)
+                return da_error_trace(err, status,
+                                      "Could not concatenate the columns to the data "
+                                      "store"); // LCOV_EXCL_LINE
             block_dense<char *> *tmp_bd =
                 dynamic_cast<block_dense<char *> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1081,21 +1355,25 @@ class data_store {
             break;
         }
         case da_csv::csv_boolean: {
-            tmp_error = da_csv::parse_and_process(csv, filename, &data_bool, &nrows,
-                                                  &ncols, get_headings, &headings);
-            if (tmp_error == da_status_no_data) {
+            tmp_status = da_csv::parse_and_process(csv, filename, &data_bool, &nrows,
+                                                   &ncols, get_headings, &headings);
+            if (tmp_status == da_status_no_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_bool, 0);
                 return da_error(err, da_status_no_data, "No data");
-            } else if (tmp_error != da_status_success &&
-                       tmp_error != da_status_missing_data &&
-                       tmp_error != da_status_bad_lines) {
+            } else if (tmp_status != da_status_success &&
+                       tmp_status != da_status_missing_data &&
+                       tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_bool, 0);
-                return da_error(err, tmp_error, "Error parsing CSV");
+                return da_error(err, tmp_status, "Error parsing CSV");
             }
-            error = concatenate_columns(nrows, ncols, data_bool, row_major, copy_data,
-                                        own_data, C_data);
+            status = concatenate_columns(nrows, ncols, data_bool, row_major, copy_data,
+                                         own_data, C_data);
+            if (status != da_status_success)
+                return da_error_trace(err, status,
+                                      "Could not concatenate the columns to the data "
+                                      "store"); // LCOV_EXCL_LINE
             block_dense<uint8_t> *tmp_bd =
                 dynamic_cast<block_dense<uint8_t> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1106,40 +1384,50 @@ class data_store {
         case da_csv::csv_auto:
         default: {
             // Auto detection of datatype for each column
-            tmp_error = da_csv::parse_and_process(csv, filename, &data_char, &nrows,
-                                                  &ncols, get_headings, &headings);
-            if (tmp_error == da_status_no_data) {
+            tmp_status = da_csv::parse_and_process(csv, filename, &data_char, &nrows,
+                                                   &ncols, get_headings, &headings);
+            if (tmp_status == da_status_no_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
                 return da_error(err, da_status_no_data, "No data");
-            } else if (tmp_error != da_status_success &&
-                       tmp_error != da_status_missing_data &&
-                       tmp_error != da_status_bad_lines) {
+            } else if (tmp_status != da_status_success &&
+                       tmp_status != da_status_missing_data &&
+                       tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
-                return da_error(err, tmp_error, "Error parsing CSV");
+                return da_error(err, tmp_status, "Error parsing CSV");
             }
 
             da_auto_detect::CSVColumnsType columns;
             // Call routine to detect the datatype of each column
             da_auto_detect::detect_columns(csv, columns, data_char, nrows, ncols);
             // Convert columns into blocks for the datastore
-            error = convert_csv_columns_to_blocks(csv, columns, nrows, ncols);
+            status = convert_csv_columns_to_blocks(csv, columns, nrows, ncols);
+            if (status != da_status_success)
+                return da_error_trace(err, status,
+                                      "Could not concatenate the columns to the data "
+                                      "store"); // LCOV_EXCL_LINE
 
             da_csv::free_data(&data_char, nrows * ncols);
             break;
         }
         }
 
-        col_headings = headings;
-        //std::string buf;
-        //for (da_int j = 0; j < ncols; j++) {
-        //    buf = std::string(headings[j]);
-        //    tmp_error = tag_column(buf, j);
-        //}
-        if (error == da_status_success)
-            error = tmp_error;
-        return error;
+        status = label_all_columns(headings);
+        if (headings != nullptr) {
+            for (da_int j = 0; j < ncols; j++) {
+                if (headings[j])
+                    free(headings[j]);
+            }
+            free(headings);
+        }
+        if (status != da_status_success)
+            return da_error_trace(
+                err, da_status_internal_error,
+                "Unexpected error in column labeling"); // LCOV_EXCL_LINE
+        status = tmp_status;
+
+        return status;
     }
 }; // end of data_store
 

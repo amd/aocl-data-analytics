@@ -56,6 +56,8 @@ da_status da_data_select_rows(da_datastore store, const char *key, da_int lbound
                               da_int ubound);
 da_status da_data_select_slice(da_datastore store, const char *key, da_int row_lbound,
                                da_int row_ubound, da_int col_lbound, da_int col_ubound);
+da_status da_data_select_non_missing(da_datastore store, const char *key,
+                                     uint8_t full_rows);
 
 /* ********************************** extract columns ******************************** */
 /* *********************************************************************************** */
@@ -85,6 +87,9 @@ da_status da_data_extract_selection_uint8(da_datastore store, const char *key, d
 /* ************************************* headings ************************************ */
 /* *********************************************************************************** */
 da_status da_data_extract_headings(da_datastore store, da_int n, char **headings);
+da_status da_data_label_column(da_datastore store, const char *label, da_int col_idx);
+da_status da_data_get_col_idx(da_datastore store, const char *label, da_int *col_idx);
+da_status da_data_get_col_label(da_datastore store, da_int col_idx, da_int *label_sz, char *label);
 
 /* ********************************** setters/getters ******************************** */
 /* *********************************************************************************** */

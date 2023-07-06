@@ -57,6 +57,14 @@ target_link_libraries(data da_core gtest_main gmock_main)
 if(WIN32)
   target_link_libraries(data "$ENV{LIBIFCORE}")
 endif()
+target_compile_definitions(
+  data PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+
+add_executable(interval_map interval_map_tests.cpp)
+target_link_libraries(interval_map da_core gtest_main gmock_main)
+if(WIN32)
+  target_link_libraries(interval_map "$ENV{LIBIFCORE}")
+endif()
 
 add_executable(printf_debug printf_debug.cpp)
 target_link_libraries(printf_debug da_core)
@@ -66,6 +74,7 @@ gtest_discover_tests(csv)
 gtest_discover_tests(linmod)
 gtest_discover_tests(option_registry)
 gtest_discover_tests(data)
+gtest_discover_tests(interval_map)
 gtest_discover_tests(errors_tests)
 
 
