@@ -258,6 +258,16 @@ da_status da_data_select_slice(da_datastore store, const char *key, da_int row_l
     return store->store->select_slice(key_str, {row_lbound, row_ubound},
                                       {col_lbound, col_ubound});
 }
+da_status da_data_select_non_missing(da_datastore store, const char *key,
+                                     uint8_t full_rows) {
+    if (!store)
+        return da_status_invalid_input;
+    if (!key)
+        return da_error(store->err, da_status_invalid_input, "Key has to be defined");
+    std::string key_str(key);
+    bool fr = full_rows > 0;
+    return store->store->select_non_missing(key_str, fr);
+}
 
 /* ********************************** extract columns ******************************** */
 /* *********************************************************************************** */
@@ -375,17 +385,43 @@ da_status da_data_extract_selection_uint8(da_datastore store, const char *key, d
 
 /* ************************************* headings ************************************ */
 /* *********************************************************************************** */
-da_status da_data_extract_headings(da_datastore store, da_int n, char **headings) {
-    if (!store)
+da_status da_data_label_column(da_datastore store, const char *label, da_int col_idx) {
+    if (!store || !label)
         return da_status_invalid_input;
     if (store->store == nullptr)
         return da_status_invalid_pointer;
-    if (headings == nullptr)
-        return da_status_invalid_input;
 
-    return store->store->extract_headings(n, headings);
+    std::string label_str(label);
+    return store->store->label_column(label_str, col_idx);
 }
+da_status da_data_get_col_idx(da_datastore store, const char *label, da_int *col_idx) {
+    if (!store || !label || !col_idx)
+        return da_status_invalid_input;
+    if (store->store == nullptr)
+        return da_status_invalid_pointer;
 
+    std::string label_str(label);
+    return store->store->get_idx_from_label(label_str, *col_idx);
+}
+da_status da_data_get_col_label(da_datastore store, da_int col_idx, da_int *label_sz, char *label) {
+    if (!store || !label || !label_sz)
+        return da_status_invalid_input;
+    if (store->store == nullptr)
+        return da_status_invalid_pointer;
+
+    std::string label_str;
+    da_status status;
+    status = store->store->get_col_label(col_idx, label_str);
+    if (*label_sz < label_str.size() + 1 ){
+        *label_sz = label_str.size() + 1;
+        return da_status_invalid_input;
+    }
+    for (da_int i=0; i < label_str.size(); i++)
+        label[i] = label_str[i];
+    label[label_str.size()] = '\0';
+
+    return status;
+}
 /* **************************************** csv ************************************** */
 /* *********************************************************************************** */
 da_status da_data_load_from_csv(da_datastore store, const char *filename) {
