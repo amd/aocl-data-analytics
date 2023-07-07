@@ -24,7 +24,7 @@ template <typename T> T power(T a, da_int exponent) {
 
 /* Arithmetic mean along specified axis */
 template <typename T>
-da_status mean(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean) {
+da_status mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean) {
 
     if (ldx < n)
         return da_status_invalid_leading_dimension;
@@ -78,7 +78,8 @@ da_status mean(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean) {
 
 /* Geometric mean computed using log and exp to avoid overflow. Care needed to deal with negative or zero entries */
 template <typename T>
-da_status geometric_mean(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *gmean) {
+da_status geometric_mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx,
+                         T *gmean) {
     if (ldx < n)
         return da_status_invalid_leading_dimension;
     if (n < 1 || p < 1)
@@ -144,7 +145,8 @@ da_status geometric_mean(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *
 
 /* Harmonic mean along a specified axis */
 template <typename T>
-da_status harmonic_mean(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *hmean) {
+da_status harmonic_mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx,
+                        T *hmean) {
     if (ldx < n)
         return da_status_invalid_leading_dimension;
     if (n < 1 || p < 1)
@@ -199,7 +201,8 @@ da_status harmonic_mean(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *h
 
 /* Mean and variance along specified axis */
 template <typename T>
-da_status variance(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean, T *var) {
+da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean,
+                   T *var) {
     if (ldx < n)
         return da_status_invalid_leading_dimension;
     if (n < 1 || p < 1)
@@ -258,8 +261,8 @@ da_status variance(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean,
 
 /* Mean, variance and skewness along specified axis */
 template <typename T>
-da_status skewness(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean, T *var,
-                   T *skew) {
+da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean,
+                   T *var, T *skew) {
     if (ldx < n)
         return da_status_invalid_leading_dimension;
     if (n < 1 || p < 1)
@@ -335,8 +338,8 @@ da_status skewness(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean,
 
 /* Mean, variance and kurtosis along specified axis */
 template <typename T>
-da_status kurtosis(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean, T *var,
-                   T *kurt) {
+da_status kurtosis(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean,
+                   T *var, T *kurt) {
     if (ldx < n)
         return da_status_invalid_leading_dimension;
     if (n < 1 || p < 1)
@@ -413,7 +416,7 @@ da_status kurtosis(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *amean,
 
 /* kth moment along specified axis. Optionally use precomputed mean. */
 template <typename T>
-da_status moment(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int k,
+da_status moment(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, da_int k,
                  da_int use_precomputed_mean, T *amean, T *mom) {
     if (ldx < n)
         return da_status_invalid_leading_dimension;

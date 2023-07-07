@@ -71,9 +71,10 @@ typedef enum da_quantile_type_ {
  * - \ref da_status_invalid_pointer - one of the arrays x or mean is null.
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  */
-da_status da_mean_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
+da_status da_mean_d(da_axis axis, da_int n, da_int p, const double *x, da_int ldx,
                     double *mean);
-da_status da_mean_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx, float *mean);
+da_status da_mean_s(da_axis axis, da_int n, da_int p, const float *x, da_int ldx,
+                    float *mean);
 /** \} */
 
 /** \{
@@ -92,10 +93,10 @@ da_status da_mean_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx, floa
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  * - \ref da_status_negative_data - x contains negative data. The geometric mean is not defined.
  */
-da_status da_geometric_mean_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
-                              double *geometric_mean);
-da_status da_geometric_mean_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
-                              float *geometric_mean);
+da_status da_geometric_mean_d(da_axis axis, da_int n, da_int p, const double *x,
+                              da_int ldx, double *geometric_mean);
+da_status da_geometric_mean_s(da_axis axis, da_int n, da_int p, const float *x,
+                              da_int ldx, float *geometric_mean);
 /** \} */
 
 /** \{
@@ -113,9 +114,9 @@ da_status da_geometric_mean_s(da_axis axis, da_int n, da_int p, float *x, da_int
  * - \ref da_status_invalid_pointer - one of the arrays x or harmonic_mean is null.
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  */
-da_status da_harmonic_mean_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
-                             double *harmonic_mean);
-da_status da_harmonic_mean_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
+da_status da_harmonic_mean_d(da_axis axis, da_int n, da_int p, const double *x,
+                             da_int ldx, double *harmonic_mean);
+da_status da_harmonic_mean_s(da_axis axis, da_int n, da_int p, const float *x, da_int ldx,
                              float *harmonic_mean);
 /** \} */
 
@@ -136,9 +137,9 @@ da_status da_harmonic_mean_s(da_axis axis, da_int n, da_int p, float *x, da_int 
  * - \ref da_status_invalid_pointer - one of the arrays x, mean or variance is null.
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  */
-da_status da_variance_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
+da_status da_variance_d(da_axis axis, da_int n, da_int p, const double *x, da_int ldx,
                         double *mean, double *variance);
-da_status da_variance_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
+da_status da_variance_s(da_axis axis, da_int n, da_int p, const float *x, da_int ldx,
                         float *mean, float *variance);
 /** \} */
 
@@ -161,9 +162,9 @@ da_status da_variance_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
  * - \ref da_status_invalid_pointer - one of the arrays x, mean, variance or kurtosis is null.
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  */
-da_status da_skewness_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
+da_status da_skewness_d(da_axis axis, da_int n, da_int p, const double *x, da_int ldx,
                         double *mean, double *variance, double *skewness);
-da_status da_skewness_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
+da_status da_skewness_s(da_axis axis, da_int n, da_int p, const float *x, da_int ldx,
                         float *mean, float *variance, float *skewness);
 /** \} */
 
@@ -186,9 +187,9 @@ da_status da_skewness_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
  * - \ref da_status_invalid_pointer - one of the arrays x, mean or variance is null.
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  */
-da_status da_kurtosis_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
+da_status da_kurtosis_d(da_axis axis, da_int n, da_int p, const double *x, da_int ldx,
                         double *mean, double *variance, double *kurtosis);
-da_status da_kurtosis_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
+da_status da_kurtosis_s(da_axis axis, da_int n, da_int p, const float *x, da_int ldx,
                         float *mean, float *variance, float *kurtosis);
 /** \} */
 
@@ -214,10 +215,11 @@ da_status da_kurtosis_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  * - \ref da_status_invalid_input - k < 0.
  */
-da_status da_moment_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx, da_int k,
-                      da_int use_precomputed_mean, double *mean, double *moment);
-da_status da_moment_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx, da_int k,
-                      da_int use_precomputed_mean, float *mean, float *moment);
+da_status da_moment_d(da_axis axis, da_int n, da_int p, const double *x, da_int ldx,
+                      da_int k, da_int use_precomputed_mean, double *mean,
+                      double *moment);
+da_status da_moment_s(da_axis axis, da_int n, da_int p, const float *x, da_int ldx,
+                      da_int k, da_int use_precomputed_mean, float *mean, float *moment);
 /** \} */
 
 /** \{
@@ -241,10 +243,10 @@ da_status da_moment_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx, da
  * - \ref da_status_invalid_input - q is not in the interval [0,1].
  * - \ref da_status_memory_error - a memory allocation error occured.
  */
-da_status da_quantile_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx, double q,
-                        double *quantile, da_quantile_type quantile_type);
-da_status da_quantile_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx, float q,
-                        float *quantile, da_quantile_type quantile_type);
+da_status da_quantile_d(da_axis axis, da_int n, da_int p, const double *x, da_int ldx,
+                        double q, double *quantile, da_quantile_type quantile_type);
+da_status da_quantile_s(da_axis axis, da_int n, da_int p, const float *x, da_int ldx,
+                        float q, float *quantile, da_quantile_type quantile_type);
 /** \} */
 
 /** \{
@@ -268,12 +270,12 @@ da_status da_quantile_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx, 
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  * - \ref da_status_memory_error - a memory allocation error occured.
  */
-da_status da_five_point_summary_d(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
-                                  double *minimum, double *lower_hinge, double *median,
-                                  double *upper_hinge, double *maximum);
-da_status da_five_point_summary_s(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
-                                  float *minimum, float *lower_hinge, float *median,
-                                  float *upper_hinge, float *maximum);
+da_status da_five_point_summary_d(da_axis axis, da_int n, da_int p, const double *x,
+                                  da_int ldx, double *minimum, double *lower_hinge,
+                                  double *median, double *upper_hinge, double *maximum);
+da_status da_five_point_summary_s(da_axis axis, da_int n, da_int p, const float *x,
+                                  da_int ldx, float *minimum, float *lower_hinge,
+                                  float *median, float *upper_hinge, float *maximum);
 /** \} */
 
 /** \{
@@ -320,10 +322,10 @@ da_status da_standardize_s(da_axis axis, da_int n, da_int p, float *x, da_int ld
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  * - \ref da_status_memory_error - a memory allocation error occured.
  */
-da_status da_covariance_matrix_d(da_int n, da_int p, double *x, da_int ldx, double *cov,
-                                 da_int ldcov);
-da_status da_covariance_matrix_s(da_int n, da_int p, float *x, da_int ldx, float *cov,
-                                 da_int ldcov);
+da_status da_covariance_matrix_d(da_int n, da_int p, const double *x, da_int ldx,
+                                 double *cov, da_int ldcov);
+da_status da_covariance_matrix_s(da_int n, da_int p, const float *x, da_int ldx,
+                                 float *cov, da_int ldcov);
 /** \} */
 
 /** \{
@@ -343,10 +345,10 @@ da_status da_covariance_matrix_s(da_int n, da_int p, float *x, da_int ldx, float
  * - \ref da_status_invalid_array_dimension - either n < 1 or p < 1.
  * - \ref da_status_memory_error - a memory allocation error occured.
  */
-da_status da_correlation_matrix_d(da_int n, da_int p, double *x, da_int ldx, double *corr,
-                                  da_int ldcorr);
-da_status da_correlation_matrix_s(da_int n, da_int p, float *x, da_int ldx, float *corr,
-                                  da_int ldcorr);
+da_status da_correlation_matrix_d(da_int n, da_int p, const double *x, da_int ldx,
+                                  double *corr, da_int ldcorr);
+da_status da_correlation_matrix_s(da_int n, da_int p, const float *x, da_int ldx,
+                                  float *corr, da_int ldcorr);
 /** \} */
 
 /**

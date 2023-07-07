@@ -3,6 +3,8 @@
 
 #include "aoclda.h"
 #include "da_cblas.hh"
+#include "moment_statistics.hpp"
+#include "statistical_utilities.hpp"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -11,8 +13,8 @@ namespace da_basic_statistics {
 
 /* Correlation or covariance matrix of x */
 template <typename T>
-da_status cov_corr_matrix(da_int n, da_int p, T *x, da_int ldx, T *mat, da_int ldmat,
-                          bool compute_corr) {
+da_status cov_corr_matrix(da_int n, da_int p, const T *x, da_int ldx, T *mat,
+                          da_int ldmat, bool compute_corr) {
 
     da_status status = da_status_success;
 
@@ -82,12 +84,13 @@ exit:
 }
 
 template <typename T>
-da_status covariance_matrix(da_int n, da_int p, T *x, da_int ldx, T *cov, da_int ldcov) {
+da_status covariance_matrix(da_int n, da_int p, const T *x, da_int ldx, T *cov,
+                            da_int ldcov) {
     return cov_corr_matrix(n, p, x, ldx, cov, ldcov, false);
 }
 
 template <typename T>
-da_status correlation_matrix(da_int n, da_int p, T *x, da_int ldx, T *corr,
+da_status correlation_matrix(da_int n, da_int p, const T *x, da_int ldx, T *corr,
                              da_int ldcorr) {
     return cov_corr_matrix(n, p, x, ldx, corr, ldcorr, true);
 }
