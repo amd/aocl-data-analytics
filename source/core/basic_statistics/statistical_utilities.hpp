@@ -2,6 +2,7 @@
 #define STATISTICAL_UTILITIES_HPP
 
 #include "aoclda.h"
+#include "moment_statistics.hpp"
 #include <algorithm>
 #include <cmath>
 #include <vector>

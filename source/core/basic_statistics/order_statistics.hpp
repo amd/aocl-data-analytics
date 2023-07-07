@@ -1,6 +1,8 @@
 #ifndef ORDER_STATISTICS_HPP
 #define ORDER_STATISTICS_HPP
 
+#define NOMINMAX
+
 #include "aoclda.h"
 #include <algorithm>
 #include <cmath>
@@ -11,13 +13,13 @@ namespace da_basic_statistics {
 /* This routine uses the partial sort routine std::nth_element to correctly place the kth element of x.
    It uses the index array to do the sorting, so x is not itself reordered. */
 template <typename T>
-da_status indexed_partial_sort(T *x, da_int length, da_int stride, da_int *xindex,
+da_status indexed_partial_sort(const T *x, da_int length, da_int stride, da_int *xindex,
                                da_int k, da_int dim1, bool two_d, T &stat) {
     try {
         if (two_d) {
             // Deal with special case of 2d array, in which case stride corresponds to ldx
             std::nth_element(xindex, xindex + k, xindex + length,
-                             [&x, &stride, &dim1](da_int i, da_int j) {
+                             [x, stride, dim1](da_int i, da_int j) {
                                  return x[stride * (i / dim1) + i % dim1] <
                                         x[stride * (j / dim1) + j % dim1];
                              });
@@ -25,7 +27,7 @@ da_status indexed_partial_sort(T *x, da_int length, da_int stride, da_int *xinde
 
         } else {
             std::nth_element(xindex, xindex + k, xindex + length,
-                             [&x, &stride](da_int i, da_int j) {
+                             [x, stride](da_int i, da_int j) {
                                  return x[i * stride] < x[j * stride];
                              });
             stat = x[xindex[k] * stride];
@@ -38,8 +40,8 @@ da_status indexed_partial_sort(T *x, da_int length, da_int stride, da_int *xinde
 
 /* Compute the qth quantile of x along the specified axis */
 template <typename T>
-da_status quantile(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T q, T *quant,
-                   da_quantile_type quantile_type) {
+da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q,
+                   T *quant, da_quantile_type quantile_type) {
 
     da_status status;
 
@@ -213,7 +215,7 @@ da_status quantile(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T q, T *q
 
 /* Compute min/max, hinges and median along specified axis */
 template <typename T>
-da_status five_point_summary(da_axis axis, da_int n, da_int p, T *x, da_int ldx,
+da_status five_point_summary(da_axis axis, da_int n, da_int p, const T *x, da_int ldx,
                              T *minimum, T *lower_hinge, T *median, T *upper_hinge,
                              T *maximum) {
 
@@ -316,7 +318,7 @@ da_status five_point_summary(da_axis axis, da_int n, da_int p, T *x, da_int ldx,
             // h_median_ceil = h_median_floor+1 so just find the minimum value of the upper part of the array now
             status = indexed_partial_sort(
                 &x[i * spacing], length - h_median_floor - 1, stride,
-                &xindex[std::min(h_median_floor + 1, length - 1)], 0, dim1, two_d, tmp2);
+                &xindex[(std::min)(h_median_floor + 1, length - 1)], 0, dim1, two_d, tmp2);
             median[i] = tmp1 + (h_median - h_median_floor) * (tmp2 - tmp1);
         }
 
@@ -338,23 +340,23 @@ da_status five_point_summary(da_axis axis, da_int n, da_int p, T *x, da_int ldx,
         if (h_upper_floor == h_upper_ceil) {
             status =
                 indexed_partial_sort(&x[i * spacing], length - h_median_ceil - 1, stride,
-                                     &xindex[std::min(h_median_ceil + 1, length - 1)],
-                                     std::max(h_upper_floor - h_median_ceil - 1, 0), dim1,
+                                     &xindex[(std::min)(h_median_ceil + 1, length - 1)],
+                                     (std::max)(h_upper_floor - h_median_ceil - 1, 0), dim1,
                                      two_d, upper_hinge[i]);
         } else {
             status = indexed_partial_sort(
                 &x[i * spacing], length - h_median_ceil - 1, stride,
-                &xindex[std::min(h_median_ceil + 1, length - 1)],
-                std::max(h_upper_floor - h_median_ceil - 1, 0), dim1, two_d, tmp1);
+                &xindex[(std::min)(h_median_ceil + 1, length - 1)],
+                (std::max)(h_upper_floor - h_median_ceil - 1, 0), dim1, two_d, tmp1);
             // h_upper_ceil = h_upper_floor+1 so just find the minimum value of the upper part of the array now
             status = indexed_partial_sort(
                 &x[i * spacing], length - h_upper_floor - 1, stride,
-                &xindex[std::min(h_upper_floor + 1, length - 1)], 0, dim1, two_d, tmp2);
+                &xindex[(std::min)(h_upper_floor + 1, length - 1)], 0, dim1, two_d, tmp2);
             upper_hinge[i] = tmp1 + (h_upper - h_upper_floor) * (tmp2 - tmp1);
         }
         status = indexed_partial_sort(&x[i * spacing], length - h_upper_ceil - 1, stride,
-                                      &xindex[std::min(h_upper_ceil + 1, length - 1)],
-                                      std::max(h_maximum - h_upper_ceil - 1, 0), dim1,
+                                      &xindex[(std::min)(h_upper_ceil + 1, length - 1)],
+                                      (std::max)(h_maximum - h_upper_ceil - 1, 0), dim1,
                                       two_d, maximum[i]);
 
         if (status != da_status_success) {
