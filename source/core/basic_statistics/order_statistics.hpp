@@ -105,16 +105,16 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
         h = length * q;
         break;
     case da_quantile_type_2:
-        h = length * q + 0.5;
+        h = length * q + (T)0.5;
         break;
     case da_quantile_type_3:
-        h = length * q - 0.5;
+        h = length * q - (T)0.5;
         break;
     case da_quantile_type_4:
         h = length * q;
         break;
     case da_quantile_type_5:
-        h = length * q + 0.5;
+        h = length * q + (T)0.5;
         break;
     case da_quantile_type_6:
         h = (length + 1) * q;
@@ -123,12 +123,12 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
         h = (length - 1) * q + 1;
         break;
     case da_quantile_type_8: {
-        T third = 1.0 / 3.0;
+        T third = (T)1.0 / (T)3.0;
         h = (length + third) * q + third;
         break;
     }
     case da_quantile_type_9:
-        h = (length + 0.25) * q + 3.0 / 8.0;
+        h = (length + (T)0.25) * q + (T)3.0 / (T)8.0;
         break;
 
     default:
@@ -137,7 +137,7 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
     }
 
     // Account for 0 array indexing in C++
-    h -= 1.0;
+    h -= (T)1.0;
 
     // Declaring this vector allows us to sort in place, moving elements of xindex, instead of x
     da_int *xindex;
@@ -147,6 +147,8 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
         return da_status_memory_error;
     }
 
+    da_int izero = 0;
+
     for (da_int i = 0; i < num_stats; i++) {
 
         for (da_int j = 0; j < length; j++)
@@ -155,14 +157,14 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
         // There are 4 possibilities for the precise logic of forming the statistic here; we need to use std::clamp to guard against illegal array indexing
         switch (quantile_type) {
         case da_quantile_type_1: {
-            da_int hceil = std::clamp((da_int)std::ceil(h), 0, length - 1);
+            da_int hceil = std::clamp((da_int)std::ceil(h), izero, length - 1);
             status = indexed_partial_sort(&x[i * spacing], length, stride, xindex, hceil,
                                           dim1, two_d, quant[i]);
             break;
         }
         case da_quantile_type_2: {
-            da_int h1 = std::clamp((da_int)std::ceil(h - 0.5), 0, length - 1);
-            da_int h2 = std::clamp((da_int)std::floor(h + 0.5), 0, length - 1);
+            da_int h1 = std::clamp((da_int)std::ceil(h - (T)0.5), izero, length - 1);
+            da_int h2 = std::clamp((da_int)std::floor(h + (T)0.5), izero, length - 1);
             if (h1 == h2) {
                 status = indexed_partial_sort(&x[i * spacing], length, stride, xindex, h1,
                                               dim1, two_d, quant[i]);
@@ -172,20 +174,20 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
                                               dim1, two_d, tmp1);
                 // h2 = h1+1 so just find the minimum value of the upper part of the array now
                 status = indexed_partial_sort(&x[i * spacing], length - h1 - 1, stride,
-                                              &xindex[h1 + 1], 0, dim1, two_d, tmp2);
-                quant[i] = 0.5 * (tmp1 + tmp2);
+                                              &xindex[h1 + 1], izero, dim1, two_d, tmp2);
+                quant[i] = (T)0.5 * (tmp1 + tmp2);
             }
             break;
         }
         case da_quantile_type_3: {
-            da_int hint = std::clamp((da_int)std::nearbyint(h), 0, length - 1);
+            da_int hint = std::clamp((da_int)std::nearbyint(h), izero, length - 1);
             status = indexed_partial_sort(&x[i * spacing], length, stride, xindex, hint,
                                           dim1, two_d, quant[i]);
             break;
         }
         default: {
-            da_int hceil = std::clamp((da_int)std::ceil(h), 0, length - 1);
-            da_int hfloor = std::clamp((da_int)std::floor(h), 0, length - 1);
+            da_int hceil = std::clamp((da_int)std::ceil(h), izero, length - 1);
+            da_int hfloor = std::clamp((da_int)std::floor(h), izero, length - 1);
             if (hceil == hfloor) {
                 status = indexed_partial_sort(&x[i * spacing], length, stride, xindex,
                                               hfloor, dim1, two_d, quant[i]);
@@ -196,7 +198,7 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
                 // hceil = hfloor+1 so just find the minimum value of the upper part of the array now
                 status =
                     indexed_partial_sort(&x[i * spacing], length - hfloor - 1, stride,
-                                         &xindex[hfloor + 1], 0, dim1, two_d, tmp2);
+                                         &xindex[hfloor + 1], izero, dim1, two_d, tmp2);
                 quant[i] = tmp1 + (h - hfloor) * (tmp2 - tmp1);
             }
             break;
@@ -281,16 +283,18 @@ da_status five_point_summary(da_axis axis, da_int n, da_int p, const T *x, da_in
         return da_status_success;
     }
 
-    T h_median = (length + 1) * 0.5 - 1.0;
-    T h_upper = (length + 1) * 0.75 - 1.0;
-    T h_lower = (length + 1) * 0.25 - 1.0;
+    T h_median = (length + 1) * (T)0.5 - (T)1.0;
+    T h_upper = (length + 1) * (T)0.75 - (T)1.0;
+    T h_lower = (length + 1) * (T)0.25 - (T)1.0;
 
-    da_int h_median_floor = std::clamp((da_int)std::floor(h_median), 0, length - 1);
-    da_int h_median_ceil = std::clamp((da_int)std::ceil(h_median), 0, length - 1);
-    da_int h_upper_floor = std::clamp((da_int)std::floor(h_upper), 0, length - 1);
-    da_int h_upper_ceil = std::clamp((da_int)std::ceil(h_upper), 0, length - 1);
-    da_int h_lower_floor = std::clamp((da_int)std::floor(h_lower), 0, length - 1);
-    da_int h_lower_ceil = std::clamp((da_int)std::ceil(h_lower), 0, length - 1);
+    da_int izero = 0;
+
+    da_int h_median_floor = std::clamp((da_int)std::floor(h_median), izero, length - 1);
+    da_int h_median_ceil = std::clamp((da_int)std::ceil(h_median), izero, length - 1);
+    da_int h_upper_floor = std::clamp((da_int)std::floor(h_upper), izero, length - 1);
+    da_int h_upper_ceil = std::clamp((da_int)std::ceil(h_upper), izero, length - 1);
+    da_int h_lower_floor = std::clamp((da_int)std::floor(h_lower), izero, length - 1);
+    da_int h_lower_ceil = std::clamp((da_int)std::ceil(h_lower), izero, length - 1);
     da_int h_maximum = length - 1;
     da_int h_minimum = 0;
 
@@ -316,9 +320,10 @@ da_status five_point_summary(da_axis axis, da_int n, da_int p, const T *x, da_in
             status = indexed_partial_sort(&x[i * spacing], length, stride, xindex,
                                           h_median_floor, dim1, two_d, tmp1);
             // h_median_ceil = h_median_floor+1 so just find the minimum value of the upper part of the array now
-            status = indexed_partial_sort(
-                &x[i * spacing], length - h_median_floor - 1, stride,
-                &xindex[(std::min)(h_median_floor + 1, length - 1)], 0, dim1, two_d, tmp2);
+            status =
+                indexed_partial_sort(&x[i * spacing], length - h_median_floor - 1, stride,
+                                     &xindex[(std::min)(h_median_floor + 1, length - 1)],
+                                     izero, dim1, two_d, tmp2);
             median[i] = tmp1 + (h_median - h_median_floor) * (tmp2 - tmp1);
         }
 
@@ -341,23 +346,24 @@ da_status five_point_summary(da_axis axis, da_int n, da_int p, const T *x, da_in
             status =
                 indexed_partial_sort(&x[i * spacing], length - h_median_ceil - 1, stride,
                                      &xindex[(std::min)(h_median_ceil + 1, length - 1)],
-                                     (std::max)(h_upper_floor - h_median_ceil - 1, 0), dim1,
-                                     two_d, upper_hinge[i]);
+                                     (std::max)(h_upper_floor - h_median_ceil - 1, izero),
+                                     dim1, two_d, upper_hinge[i]);
         } else {
             status = indexed_partial_sort(
                 &x[i * spacing], length - h_median_ceil - 1, stride,
                 &xindex[(std::min)(h_median_ceil + 1, length - 1)],
-                (std::max)(h_upper_floor - h_median_ceil - 1, 0), dim1, two_d, tmp1);
+                (std::max)(h_upper_floor - h_median_ceil - 1, izero), dim1, two_d, tmp1);
             // h_upper_ceil = h_upper_floor+1 so just find the minimum value of the upper part of the array now
-            status = indexed_partial_sort(
-                &x[i * spacing], length - h_upper_floor - 1, stride,
-                &xindex[(std::min)(h_upper_floor + 1, length - 1)], 0, dim1, two_d, tmp2);
+            status =
+                indexed_partial_sort(&x[i * spacing], length - h_upper_floor - 1, stride,
+                                     &xindex[(std::min)(h_upper_floor + 1, length - 1)],
+                                     izero, dim1, two_d, tmp2);
             upper_hinge[i] = tmp1 + (h_upper - h_upper_floor) * (tmp2 - tmp1);
         }
         status = indexed_partial_sort(&x[i * spacing], length - h_upper_ceil - 1, stride,
                                       &xindex[(std::min)(h_upper_ceil + 1, length - 1)],
-                                      (std::max)(h_maximum - h_upper_ceil - 1, 0), dim1,
-                                      two_d, maximum[i]);
+                                      (std::max)(h_maximum - h_upper_ceil - 1, izero),
+                                      dim1, two_d, maximum[i]);
 
         if (status != da_status_success) {
             delete[] xindex;

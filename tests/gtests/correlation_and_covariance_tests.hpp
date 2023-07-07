@@ -37,58 +37,58 @@ template <typename T> void GetSubarrayData(std::vector<CovCorrParamType<T>> &par
     param.ldcov = param.p + 1;
     param.ldcorr = param.p + 1;
 
-    std::vector<T> x{3, 7, 4, 2, 7, 0, 0,  0,  4,  7,  2,  0, -1, -4, 5, -3, 0, 0,
-                     6, 8, 5, 4, 4, 0, -5, -5, -5, -5, -7, 0, 1,  2,  3, 4,  5, 0};
-    param.x = x;
+    std::vector<double> x{3, 7, 4, 2, 7, 0, 0,  0,  4,  7,  2,  0, -1, -4, 5, -3, 0, 0,
+                          6, 8, 5, 4, 4, 0, -5, -5, -5, -5, -7, 0, 1,  2,  3, 4,  5, 0};
+    param.x = convert_vector<double, T>(x);
 
-    std::vector<T> expected_cov{
+    std::vector<double> expected_cov{
         5.3,  -3.95, -0.8, 1.45, -1.2, 0.75, 0, -3.95, 8.8,   1.7,  -3.55, 0.3, 2.75, 0,
         -0.8, 1.7,   12.3, -2.2, -0.3, 0.75, 0, 1.45,  -3.55, -2.2, 2.8,   0.7, -2.,  0,
         -1.2, 0.3,   -0.3, 0.7,  0.8,  -1.,  0, 0.75,  2.75,  0.75, -2.,   -1., 2.5,  0};
-    param.expected_cov = expected_cov;
-    std::vector<T> expected_corr{1.,
-                                 -0.578386069999205,
-                                 -0.0990830796106615,
-                                 0.3764012454470947,
-                                 -0.5827715174143585,
-                                 0.2060408459230335,
-                                 0,
-                                 -0.578386069999205,
-                                 1.,
-                                 0.1634011202231184,
-                                 -0.715167880572525,
-                                 0.1130667542166614,
-                                 0.5863019699779287,
-                                 0,
-                                 -0.0990830796106615,
-                                 0.1634011202231184,
-                                 1.,
-                                 -0.3748789971250484,
-                                 -0.0956365069595008,
-                                 0.1352504452001148,
-                                 0,
-                                 0.3764012454470947,
-                                 -0.715167880572525,
-                                 -0.3748789971250484,
-                                 1.,
-                                 0.4677071733467426,
-                                 -0.7559289460184544,
-                                 0,
-                                 -0.5827715174143586,
-                                 0.1130667542166614,
-                                 -0.0956365069595008,
-                                 0.4677071733467427,
-                                 1.,
-                                 -0.7071067811865475,
-                                 0,
-                                 0.2060408459230335,
-                                 0.5863019699779286,
-                                 0.1352504452001148,
-                                 -0.7559289460184545,
-                                 -0.7071067811865476,
-                                 1.,
-                                 0};
-    param.expected_corr = expected_corr;
+    param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_corr{1.,
+                                      -0.578386069999205,
+                                      -0.0990830796106615,
+                                      0.3764012454470947,
+                                      -0.5827715174143585,
+                                      0.2060408459230335,
+                                      0,
+                                      -0.578386069999205,
+                                      1.,
+                                      0.1634011202231184,
+                                      -0.715167880572525,
+                                      0.1130667542166614,
+                                      0.5863019699779287,
+                                      0,
+                                      -0.0990830796106615,
+                                      0.1634011202231184,
+                                      1.,
+                                      -0.3748789971250484,
+                                      -0.0956365069595008,
+                                      0.1352504452001148,
+                                      0,
+                                      0.3764012454470947,
+                                      -0.715167880572525,
+                                      -0.3748789971250484,
+                                      1.,
+                                      0.4677071733467426,
+                                      -0.7559289460184544,
+                                      0,
+                                      -0.5827715174143586,
+                                      0.1130667542166614,
+                                      -0.0956365069595008,
+                                      0.4677071733467427,
+                                      1.,
+                                      -0.7071067811865475,
+                                      0,
+                                      0.2060408459230335,
+                                      0.5863019699779286,
+                                      0.1352504452001148,
+                                      -0.7559289460184545,
+                                      -0.7071067811865476,
+                                      1.,
+                                      0};
+    param.expected_corr = convert_vector<double, T>(expected_corr);
 
     param.epsilon = 10 * std::numeric_limits<T>::epsilon();
 
@@ -106,52 +106,52 @@ template <typename T> void GetStandardData(std::vector<CovCorrParamType<T>> &par
     param.ldcov = param.p;
     param.ldcorr = param.p;
 
-    std::vector<T> x{3, 7, 4, 2, 7, 0,  0,  4,  7,  2,  -1, -4, 5, -3, 0,
-                     6, 8, 5, 4, 4, -5, -5, -5, -5, -7, 1,  2,  3, 4,  5};
-    param.x = x;
+    std::vector<double> x{3, 7, 4, 2, 7, 0,  0,  4,  7,  2,  -1, -4, 5, -3, 0,
+                          6, 8, 5, 4, 4, -5, -5, -5, -5, -7, 1,  2,  3, 4,  5};
+    param.x = convert_vector<double, T>(x);
 
-    std::vector<T> expected_cov{5.3,   -3.95, -0.8, 1.45, -1.2, 0.75, -3.95, 8.8,  1.7,
-                                -3.55, 0.3,   2.75, -0.8, 1.7,  12.3, -2.2,  -0.3, 0.75,
-                                1.45,  -3.55, -2.2, 2.8,  0.7,  -2.,  -1.2,  0.3,  -0.3,
-                                0.7,   0.8,   -1.,  0.75, 2.75, 0.75, -2.,   -1.,  2.5};
-    param.expected_cov = expected_cov;
-    std::vector<T> expected_corr{1.,
-                                 -0.578386069999205,
-                                 -0.0990830796106615,
-                                 0.3764012454470947,
-                                 -0.5827715174143585,
-                                 0.2060408459230335,
-                                 -0.578386069999205,
-                                 1.,
-                                 0.1634011202231184,
-                                 -0.715167880572525,
-                                 0.1130667542166614,
-                                 0.5863019699779287,
-                                 -0.0990830796106615,
-                                 0.1634011202231184,
-                                 1.,
-                                 -0.3748789971250484,
-                                 -0.0956365069595008,
-                                 0.1352504452001148,
-                                 0.3764012454470947,
-                                 -0.715167880572525,
-                                 -0.3748789971250484,
-                                 1.,
-                                 0.4677071733467426,
-                                 -0.7559289460184544,
-                                 -0.5827715174143586,
-                                 0.1130667542166614,
-                                 -0.0956365069595008,
-                                 0.4677071733467427,
-                                 1.,
-                                 -0.7071067811865475,
-                                 0.2060408459230335,
-                                 0.5863019699779286,
-                                 0.1352504452001148,
-                                 -0.7559289460184545,
-                                 -0.7071067811865476,
-                                 1.};
-    param.expected_corr = expected_corr;
+    std::vector<double> expected_cov{
+        5.3,  -3.95, -0.8, 1.45, -1.2, 0.75, -3.95, 8.8,   1.7,  -3.55, 0.3, 2.75,
+        -0.8, 1.7,   12.3, -2.2, -0.3, 0.75, 1.45,  -3.55, -2.2, 2.8,   0.7, -2.,
+        -1.2, 0.3,   -0.3, 0.7,  0.8,  -1.,  0.75,  2.75,  0.75, -2.,   -1., 2.5};
+    param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_corr{1.,
+                                      -0.578386069999205,
+                                      -0.0990830796106615,
+                                      0.3764012454470947,
+                                      -0.5827715174143585,
+                                      0.2060408459230335,
+                                      -0.578386069999205,
+                                      1.,
+                                      0.1634011202231184,
+                                      -0.715167880572525,
+                                      0.1130667542166614,
+                                      0.5863019699779287,
+                                      -0.0990830796106615,
+                                      0.1634011202231184,
+                                      1.,
+                                      -0.3748789971250484,
+                                      -0.0956365069595008,
+                                      0.1352504452001148,
+                                      0.3764012454470947,
+                                      -0.715167880572525,
+                                      -0.3748789971250484,
+                                      1.,
+                                      0.4677071733467426,
+                                      -0.7559289460184544,
+                                      -0.5827715174143586,
+                                      0.1130667542166614,
+                                      -0.0956365069595008,
+                                      0.4677071733467427,
+                                      1.,
+                                      -0.7071067811865475,
+                                      0.2060408459230335,
+                                      0.5863019699779286,
+                                      0.1352504452001148,
+                                      -0.7559289460184545,
+                                      -0.7071067811865476,
+                                      1.};
+    param.expected_corr = convert_vector<double, T>(expected_corr);
 
     param.epsilon = 10 * std::numeric_limits<T>::epsilon();
 
@@ -169,13 +169,13 @@ template <typename T> void GetZeroData(std::vector<CovCorrParamType<T>> &params)
     param.ldcov = param.p;
     param.ldcorr = param.p;
 
-    std::vector<T> x{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    param.x = x;
+    std::vector<double> x{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    param.x = convert_vector<double, T>(x);
 
-    std::vector<T> expected_cov{0, 0, 0, 0, 0, 0, 0, 0, 0};
-    param.expected_cov = expected_cov;
-    std::vector<T> expected_corr{1, 0, 0, 0, 1, 0, 0, 0, 1};
-    param.expected_corr = expected_corr;
+    std::vector<double> expected_cov{0, 0, 0, 0, 0, 0, 0, 0, 0};
+    param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_corr{1, 0, 0, 0, 1, 0, 0, 0, 1};
+    param.expected_corr = convert_vector<double, T>(expected_corr);
 
     param.epsilon = 10 * std::numeric_limits<T>::epsilon();
 
@@ -193,13 +193,13 @@ template <typename T> void GetSingleColumnData(std::vector<CovCorrParamType<T>> 
     param.ldcov = param.p;
     param.ldcorr = param.p;
 
-    std::vector<T> x{2.1, 4.3, 5.6, 0.3, -1.3};
-    param.x = x;
+    std::vector<double> x{2.1, 4.3, 5.6, 0.3, -1.3};
+    param.x = convert_vector<double, T>(x);
 
-    std::vector<T> expected_cov{7.96};
-    param.expected_cov = expected_cov;
-    std::vector<T> expected_corr{1};
-    param.expected_corr = expected_corr;
+    std::vector<double> expected_cov{7.96};
+    param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_corr{1};
+    param.expected_corr = convert_vector<double, T>(expected_corr);
 
     param.epsilon = 10 * std::numeric_limits<T>::epsilon();
 
@@ -217,13 +217,13 @@ template <typename T> void GetSmallData(std::vector<CovCorrParamType<T>> &params
     param.ldcov = param.p;
     param.ldcorr = param.p;
 
-    std::vector<T> x{0, 1, 2, 2, 1, 0};
-    param.x = x;
+    std::vector<double> x{0, 1, 2, 2, 1, 0};
+    param.x = convert_vector<double, T>(x);
 
-    std::vector<T> expected_cov{1, -1, -1, 1};
-    param.expected_cov = expected_cov;
-    std::vector<T> expected_corr{1, -1, -1, 1};
-    param.expected_corr = expected_corr;
+    std::vector<double> expected_cov{1, -1, -1, 1};
+    param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_corr{1, -1, -1, 1};
+    param.expected_corr = convert_vector<double, T>(expected_corr);
 
     param.epsilon = 10 * std::numeric_limits<T>::epsilon();
 
@@ -272,7 +272,8 @@ TYPED_TEST(CorrelationCovarianceTest, CorrelationCovarianceFunctionality) {
 
 TYPED_TEST(CorrelationCovarianceTest, IllegalArgsCorrelationCovariance) {
 
-    std::vector<TypeParam> x{4.7, 1.2, -0.3, 4.5};
+    std::vector<double> x_d{4.7, 1.2, -0.3, 4.5};
+    std::vector<TypeParam> x = convert_vector<double, TypeParam>(x_d);
     da_int n = 2, p = 2, ldx = 2, ldmat = 2;
     std::vector<TypeParam> mat(4, 0);
 

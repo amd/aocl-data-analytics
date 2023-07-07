@@ -290,7 +290,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
         }
 
         for (da_int j = 0; j < n; j++) {
-            skew[j] = (var[j] == zero) ? zero : skew[j] * sqrt(p) / pow(var[j], 1.5);
+            skew[j] = (var[j] == zero) ? zero : skew[j] * sqrt(p) / pow(var[j], (T)1.5);
             if (p > 1)
                 var[j] /= (p - 1);
         }
@@ -307,7 +307,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
                 var[i] += tmp2;
                 skew[i] += tmp2 * tmp;
             }
-            skew[i] = (var[i] == zero) ? zero : skew[i] * sqrt(n) / pow(var[i], 1.5);
+            skew[i] = (var[i] == zero) ? zero : skew[i] * sqrt(n) / pow(var[i], (T)1.5);
             if (n > 1)
                 var[i] /= (n - 1);
         }
@@ -325,7 +325,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
                 skew[0] += tmp2 * tmp;
             }
         }
-        skew[0] = (var[0] == zero) ? zero : skew[0] * sqrt(n * p) / pow(var[0], 1.5);
+        skew[0] = (var[0] == zero) ? zero : skew[0] * sqrt(n * p) / pow(var[0], (T)1.5);
         if (n * p > 1)
             var[0] /= (n * p - 1);
         break;
