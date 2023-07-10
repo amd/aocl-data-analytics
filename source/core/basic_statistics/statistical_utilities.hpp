@@ -92,7 +92,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
     switch (axis) {
     case da_axis_col:
         for (da_int i = 0; i < p; i++) {
-            tmp_scale = (*internal_scale)[i] != 0 ? (*internal_scale)[i] : 1.0;
+            tmp_scale = (*internal_scale)[i] != 0 ? (*internal_scale)[i] : (T)1.0;
             for (da_int j = 0; j < n; j++) {
                 x[i * ldx + j] = (x[i * ldx + j] - (*internal_shift)[i]) / tmp_scale;
             }
@@ -101,13 +101,13 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
     case da_axis_row:
         for (da_int i = 0; i < p; i++) {
             for (da_int j = 0; j < n; j++) {
-                tmp_scale = (*internal_scale)[j] != 0 ? (*internal_scale)[j] : 1.0;
+                tmp_scale = (*internal_scale)[j] != 0 ? (*internal_scale)[j] : (T)1.0;
                 x[i * ldx + j] = (x[i * ldx + j] - (*internal_shift)[j]) / tmp_scale;
             }
         }
         break;
     case da_axis_all:
-        tmp_scale = (*internal_scale)[0] != 0 ? (*internal_scale)[0] : 1.0;
+        tmp_scale = (*internal_scale)[0] != 0 ? (*internal_scale)[0] : (T)1.0;
         for (da_int i = 0; i < p; i++) {
             for (da_int j = 0; j < n; j++) {
                 x[i * ldx + j] = (x[i * ldx + j] - (*internal_shift)[0]) / tmp_scale;
