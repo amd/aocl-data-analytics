@@ -1144,7 +1144,7 @@ TEST(dataStore, extractSelPub) {
     EXPECT_EQ(da_data_load_col_int(store, 2, 2, iblock.data(), col_major, true),
               da_status_success);
     EXPECT_EQ(da_data_select_slice(store, "int", 0, 1, 0, 0), da_status_success);
-    std::vector<int> isel(2);
+    std::vector<da_int> isel(2);
     EXPECT_EQ(da_data_extract_selection_int(store, "int", 2, isel.data()),
               da_status_success);
     std::vector<da_int> iexp = {1, 2};
