@@ -42,7 +42,7 @@ int main() {
         std::cout << "regression computed successfully!" << std::endl;
         da_int nx = 2;
         std::vector<double> x(2);
-        da_linmod_d_get_coef(handle, &nx, x.data());
+        da_handle_get_result_d(handle, da_result::da_linmod_coeff, &nx, x.data());
         std::cout << "Coefficients: " << x[0] << " " << x[1] << std::endl;
         std::cout << "(Expected   : " << 0.199256 << " " << 0.130354 << ")" << std::endl;
     } else

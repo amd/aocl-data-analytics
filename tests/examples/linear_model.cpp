@@ -1,5 +1,6 @@
 #include "aoclda.h"
 #include <iostream>
+#include <assert.h>
 
 int main() {
 
@@ -26,7 +27,10 @@ int main() {
     status = da_linmod_d_fit(handle);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
-        da_linmod_d_get_coef(handle, &nx, x);
+        nx = 0; // Query the correct size
+        da_handle_get_result_d(handle, da_linmod_coeff, &nx, x);
+        assert(nx==2);
+        da_handle_get_result_d(handle, da_linmod_coeff, &nx, x);
         std::cout << "Coefficients: " << x[0] << " " << x[1] << std::endl;
         std::cout << "(Expected   : " << 0.199256 << " " << 0.130354 << ")" << std::endl;
     } else {
@@ -51,7 +55,11 @@ int main() {
     status = da_linmod_s_fit(handle_s);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
-        status = da_linmod_s_get_coef(handle_s, &nx, xs);
+        // status = da_linmod_s_get_coef(handle_s, &nx, xs);
+        nx = 0; // Query the correct size
+        da_handle_get_result_s(handle_s, da_linmod_coeff, &nx, xs);
+        assert(nx==2);
+        da_handle_get_result_s(handle_s, da_linmod_coeff, &nx, xs);
         std::cout << "Coefficients: " << xs[0] << " " << xs[1] << std::endl;
         std::cout << "(Expected   : " << 0.20 << " " << 0.13 << ")" << std::endl;
     } else {

@@ -41,8 +41,6 @@ da_status da_linmod_d_define_features(da_handle handle, da_int n, da_int m, doub
 
 da_status da_linmod_d_fit(da_handle handle);
 
-da_status da_linmod_d_get_coef(da_handle handle, da_int *nc, double *x);
-
 da_status da_linmod_d_evaluate_model(da_handle handle, da_int n, da_int m, double *X,
                                      double *predictions);
 
@@ -52,8 +50,6 @@ da_status da_linmod_s_define_features(da_handle handle, da_int n, da_int m, floa
                                       float *b);
 
 da_status da_linmod_s_fit(da_handle handle);
-
-da_status da_linmod_s_get_coef(da_handle handle, da_int *nc, float *x);
 
 da_status da_linmod_s_evaluate_model(da_handle handle, da_int n, da_int m, float *X,
                                      float *predictions);

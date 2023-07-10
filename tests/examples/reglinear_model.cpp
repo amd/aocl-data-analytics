@@ -50,7 +50,8 @@ int main(void) {
     status = da_linmod_d_fit(handle);
     if (status == da_status_success) {
         std::cout << "Regression computed successfully" << std::endl;
-        if (da_linmod_d_get_coef(handle, &nx, x) != da_status_success) {
+        if (da_handle_get_result_d(handle, da_linmod_coeff, &nx, x) !=
+            da_status_success) {
             da_handle_print_error_message(handle);
             da_handle_destroy(&handle);
             return 1;
