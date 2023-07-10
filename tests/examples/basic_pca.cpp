@@ -15,7 +15,7 @@ int main() {
     da_int n = 3, p = 3;
     double A[3][3] = {{3, 2, 3}, {2, 3, 1}, {2, -2, 2}};
     //float refdoutput[16];
-    da_int num_compnents = std::min(3, std::min(n, p));
+    da_int num_compnents = std::min((da_int) 3, std::min(n, p));
     double doutput[24];
 
     da_handle_init_d(&handle, da_handle_pca);
