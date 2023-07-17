@@ -51,6 +51,8 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
 }
 
 da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
+    //TODO FIXME: rename error -> status
+    // add da_error(...) to all non-successful sets. Same for _d
     try {
         *handle = new _da_handle;
     } catch (std::bad_alloc &) {
@@ -137,4 +139,81 @@ void da_handle_destroy(da_handle *handle) {
         delete (*handle);
         *handle = nullptr;
     }
+}
+
+/* Get results out of the handle
+ * Defines are in aoclda_result.h
+ */
+
+da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
+                                 double *result) {
+    if (!handle)
+        return da_status_invalid_pointer;
+    if (handle->precision != da_double)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
+
+    // Currently there can only be a SINGLE valid internal handle pointer,
+    // so we cycle through them and query to see if the result is
+    // provided by it.
+    if (handle->linreg_d != nullptr)
+        return handle->linreg_d->get_result(query, dim, result);
+    else if (handle->pca_d != nullptr)
+        // -> enable return handle->pca_d->get_result(query, dim, result);
+        return da_status_not_implemented;
+
+    // handle was not initialized with
+    return da_error(handle->err, da_status_handle_not_initialized,
+                    "The handle does not have any results to export. Have you "
+                    "initialized the handle and performed any calculation?");
+}
+
+da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
+                                 float *result) {
+    if (!handle)
+        return da_status_invalid_pointer;
+    if (handle->precision != da_single)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than float.");
+
+    // Currently there can only be a SINGLE valid internal handle pointer,
+    // so we cycle through them and query to see if the result is
+    // provided by it.
+    if (handle->linreg_s != nullptr)
+        return handle->linreg_s->get_result(query, dim, result);
+    else if (handle->pca_s != nullptr)
+        // -> enable return handle->pca_d->get_result(query, dim, result);
+        return da_status_not_implemented;
+
+    // handle was not initialized
+    return da_error(handle->err, da_status_handle_not_initialized,
+                    "The handle does not have any results to export. Have you "
+                    "initialized the handle and performed any calculation?");
+}
+
+da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *dim,
+                                   da_int *result) {
+    if (!handle)
+        return da_status_invalid_pointer;
+
+    // Currently there can only be a SINGLE valid internal handle pointer,
+    // so we cycle through them and query to see if the result is
+    // provided by it.
+    if (handle->linreg_d != nullptr)
+        return handle->linreg_d->get_result(query, dim, result);
+    else if (handle->linreg_s != nullptr)
+        return handle->linreg_s->get_result(query, dim, result);
+    else if (handle->pca_d != nullptr)
+        // -> enable return handle->pca_d->get_result(query, dim, result);
+        return da_status_not_implemented;
+    else if (handle->pca_s != nullptr)
+        // -> enable return handle->pca_s->get_result(query, dim, result);
+        return da_status_not_implemented;
+
+    // handle was not initialized
+    return da_error(handle->err, da_status_handle_not_initialized,
+                    "The handle does not have any results to export. Have you "
+                    "initialized the handle and performed any calculation?");
 }

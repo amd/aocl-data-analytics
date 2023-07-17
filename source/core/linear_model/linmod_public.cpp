@@ -70,28 +70,6 @@ da_status da_linmod_s_fit(da_handle handle) {
     return handle->linreg_s->fit();
 }
 
-da_status da_linmod_d_get_coef(da_handle handle, da_int *nc, double *x) {
-    if (!handle)
-        return da_status_memory_error;
-    if (handle->precision != da_double)
-        return da_status_wrong_type;
-    if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer;
-
-    return handle->linreg_d->get_coef(*nc, x);
-}
-
-da_status da_linmod_s_get_coef(da_handle handle, da_int *nc, float *x) {
-    if (!handle)
-        return da_status_memory_error;
-    if (handle->precision != da_single)
-        return da_status_wrong_type;
-    if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer;
-
-    return handle->linreg_s->get_coef(*nc, x);
-}
-
 da_status da_linmod_d_evaluate_model(da_handle handle, da_int n, da_int m, double *X,
                                      double *predictions) {
     if (!handle)

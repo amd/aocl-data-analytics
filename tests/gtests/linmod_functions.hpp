@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 #include <iostream>
 #include <string>
+#include <type_traits>
 
 using namespace testing;
 
@@ -121,6 +122,12 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
               da_status_success);
     bool intercept = (bool)intercept_int;
 
+    T alpha = 0, lambda = 0;
+    ASSERT_EQ(da_options_set_real(linmod_handle, "linmod alpha", alpha),
+              da_status_success);
+    ASSERT_EQ(da_options_set_real(linmod_handle, "linmod lambda", lambda),
+              da_status_success);
+
     // get problem data and expected results
     // DATA_DIR is defined in the build system, it should point to the tests/data/linmod_data
     std::string A_file = std::string(DATA_DIR) + "/" + csvname + "_A.csv";
@@ -148,9 +155,11 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     T *a = nullptr, *b = nullptr;
 
     da_int n = 0, m = 0;
-    ASSERT_EQ(da_read_csv(csv_store, A_file.c_str(), &a, &n, &m, nullptr), da_status_success);
+    ASSERT_EQ(da_read_csv(csv_store, A_file.c_str(), &a, &n, &m, nullptr),
+              da_status_success);
     da_int nb, mb;
-    ASSERT_EQ(da_read_csv(csv_store, b_file.c_str(), &b, &mb, &nb, nullptr), da_status_success);
+    ASSERT_EQ(da_read_csv(csv_store, b_file.c_str(), &b, &mb, &nb, nullptr),
+              da_status_success);
     ASSERT_EQ(m, nb); // b is stored in one row
     da_int nc = intercept ? n + 1 : n;
     /* expected results not tested ? check gradient of solution instead */
@@ -170,10 +179,41 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     // compute regression
     EXPECT_EQ(da_linreg_fit<T>(linmod_handle), da_status_success);
 
+    // Check that RINFO containt data
+    T rinfo[100], rexp[100]{0};
+    da_int dim = 100;
+    rexp[0] = n;
+    rexp[1] = m;
+    rexp[2] = nc;
+    rexp[3] = intercept_int;
+    rexp[4] = alpha;
+    rexp[5] = lambda;
     // Extract and compare solution
     T *coef = new T[nc];
-    da_int ncc = nc;
-    EXPECT_EQ(da_linmod_get_coef(linmod_handle, &ncc, coef), da_status_success);
+    da_int ncc = 0; // query the correct size
+    if constexpr (std::is_same_v<T, double>) {
+        EXPECT_EQ(
+            da_handle_get_result_d(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_status_invalid_array_dimension);
+        EXPECT_EQ(
+            da_handle_get_result_d(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_status_success);
+        EXPECT_EQ(da_handle_get_result_d(linmod_handle, da_result::da_rinfo, &dim, rinfo),
+                  da_status_success);
+    } else {
+        EXPECT_EQ(
+            da_handle_get_result_s(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_status_invalid_array_dimension);
+        EXPECT_EQ(
+            da_handle_get_result_s(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_status_success);
+        EXPECT_EQ(da_handle_get_result_s(linmod_handle, da_result::da_rinfo, &dim, rinfo),
+                  da_status_success);
+    }
+    // Don't check for entries 6 and 7 of rinfo
+    rinfo[6] = rinfo[7] = 0;
+    EXPECT_ARR_EQ(100, rexp, rinfo, 1, 1, 0, 0);
+
     std::vector<T> X(n);
     std::fill(X.begin(), X.end(), 1.0);
     T pred[1];

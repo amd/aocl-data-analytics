@@ -48,6 +48,7 @@ typedef enum da_status_ {
     da_status_invalid_leading_dimension, ///< Invalid leading dimension for a 2D array
     da_status_negative_data, ///< The function expected positive data but a negative entry was found
     da_status_invalid_array_dimension, ///< The size of an array was too small
+    da_status_unknown_query, ///< The result queried cannot be found in the handle
 
     // CSV errors 100-199
     da_status_file_not_found = 100, ///< The CSV file could not be found

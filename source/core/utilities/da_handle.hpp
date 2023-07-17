@@ -11,8 +11,6 @@
 #include "linear_model.hpp"
 #include "pca.hpp"
 
-#define ERR_MSG_LEN 1024
-
 struct _da_handle {
   public:
     da_csv::csv_reader *csv_parser = nullptr;

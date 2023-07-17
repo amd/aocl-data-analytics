@@ -2,6 +2,7 @@
 #define LINEAR_MODEL_HPP
 
 #include "aoclda.h"
+#include "basic_handle.hpp"
 #include "callbacks.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
@@ -79,7 +80,7 @@ template <typename T> struct qr_data {
 
 enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq };
 
-template <typename T> class linear_model {
+template <typename T> class linear_model : public basic_handle<T> {
   private:
     /* type of the model, has to de set at initialization phase */
     linmod_model mod = linmod_model_undefined;
@@ -153,6 +154,54 @@ template <typename T> class linear_model {
     da_status fit();
     da_status get_coef(da_int &nx, T *x);
     da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
+
+    /* get_result (required to be defined by basic_handle) */
+    da_status get_result(enum da_result query, da_int *dim, T *result) {
+        da_status status;
+        // Don't return anything if model not trained!
+        if (!model_trained)
+            return da_warn(this->err, da_status_unknown_query,
+                           "Handle does not contain data relevant to this query. Was the "
+                           "last call to the solver successful?");
+        switch (query) {
+        case da_result::da_rinfo:
+            if (*dim < 100) {
+                *dim = 100;
+                return da_warn(this->err, da_status_invalid_array_dimension,
+                               "Size of the array is too small, provide an array of at "
+                               "least size: " +
+                                   std::to_string(*dim) + ".");
+            }
+            //TODO FIXME ADD DOCUMENTATION of these "rinfo"
+            result[0] = this->n;
+            result[1] = this->m;
+            result[2] = this->ncoef;
+            result[3] = this->intercept ? 1 : 0;
+            result[4] = alpha;
+            result[5] = lambda;
+            result[6] = this->trn;
+            result[7] = this->loss;
+            // Reserved for future use
+            for (auto i = 8; i < 100; i++)
+                result[i] = static_cast<T>(0);
+            return da_status_success;
+            break;
+
+        case da_result::da_linmod_coeff:
+            return this->get_coef(*dim, result);
+            break;
+
+        default:
+            return da_warn(this->err, da_status_unknown_query,
+                           "The requested result could not be queried by this handle.");
+        }
+    };
+
+    da_status get_result(enum da_result query, da_int *dim, da_int *result) {
+        return da_warn(this->err, da_status_unknown_query,
+                       "Handle does not contain data relevant to this query. Was the "
+                       "last call to the solver successful?");
+    };
 };
 
 template <typename T> linear_model<T>::~linear_model() {
@@ -171,7 +220,7 @@ template <typename T> linear_model<T>::~linear_model() {
     if (qr) {
         delete qr;
     }
-}
+};
 
 template <typename T>
 da_status linear_model<T>::define_features(da_int n, da_int m, T *A, T *b) {
@@ -415,17 +464,17 @@ da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> obj
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided for the optimization "
                             "problem an invalid number of coefficients ncoef=" +
-                                std::to_string(ncoef) + "expecting ncoef > 0.");
+                                std::to_string(ncoef) + ", expecting ncoef > 0.");
         }
         if (opt->add_objfun(objfun) != da_status_success) {
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided an invalid objective "
-                            "function pointer");
+                            "function pointer.");
         }
         if (opt->add_objgrd(objgrd) != da_status_success) {
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided an invalid objective "
-                            "gradient funtion pointer");
+                            "gradient funtion pointer.");
         }
         // Set options here
         // Pass print level from linmod option to optimization
@@ -433,19 +482,19 @@ da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> obj
             return da_error(
                 opt->err, da_status_internal_error,
                 "Unexpectedly print level option not found in the linear model "
-                "option registry");
+                "option registry.");
         }
         if (opt->opts.set("print level", prnlvl) != da_status_success) {
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided an invalid value to the "
-                            "print level option");
+                            "print level option.");
         }
         init_usrdata();
         break;
 
     default:
         return da_error(opt->err, da_status_internal_error,
-                        "Unexpected optimization problem class requested");
+                        "Unexpected optimization problem class requested.");
     }
 
     return da_status_success;
@@ -454,17 +503,17 @@ da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> obj
 template <typename T> da_status linear_model<T>::get_coef(da_int &nx, T *x) {
     if (!model_trained)
         return da_error(this->err, da_status_out_of_date,
-                        "The data associated to the model is out of date");
+                        "The data associated to the model is out of date.");
     if (nx != ncoef) {
         nx = ncoef;
-        return da_error(this->err, da_status_invalid_input,
-                        "The number of coefficients is wrong, set nx to " +
-                            std::to_string(ncoef));
+        return da_warn(this->err, da_status_invalid_array_dimension,
+                       "The number of coefficients is wrong, correct size is " +
+                           std::to_string(ncoef) + ".");
     }
     if (x == nullptr)
         return da_error(this->err, da_status_invalid_input,
-                        "x needs to provide a valid pointer of at least size " +
-                            std::to_string(ncoef));
+                        "Argument x needs to provide a valid pointer of at least size " +
+                            std::to_string(ncoef) + ".");
 
     da_int i;
     for (i = 0; i < ncoef; i++)
@@ -506,8 +555,8 @@ da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictio
 
     default:
         return da_error(this->err, da_status_not_implemented,
-                        "an optimization solver to solve requested linear model is not "
-                        "available, reformulate linear model problem");
+                        "No optimization solver for the requested linear model is "
+                        "available, reformulate linear model problem.");
         break;
     }
 
@@ -565,7 +614,7 @@ template <typename T> da_status linear_model<T>::fit() {
             if (status != da_status_success)
                 return da_error(
                     this->err, da_status_internal_error,
-                    "Unexpectedly could not initialize an optimization model");
+                    "Unexpectedly could not initialize an optimization model.");
             status = opt->solve(coef, usrdata);
             if (status == da_status_success ||
                 this->err->get_severity() != da_errors::severity_type::DA_ERROR)
@@ -574,7 +623,7 @@ template <typename T> da_status linear_model<T>::fit() {
             else
                 status = da_error(this->err, da_status_operation_failed,
                                   "Optimization step failed, rescale problem or request "
-                                  "different solver");
+                                  "different solver.");
             break;
 
         case 2:
@@ -585,7 +634,7 @@ template <typename T> da_status linear_model<T>::fit() {
         default:
             // cannot happen
             return da_error(this->err, da_status_internal_error,
-                            "Unexpectedly an invalid optimization solver was requested");
+                            "Unexpectedly an invalid optimization solver was requested.");
             break;
         }
         break;
@@ -614,7 +663,7 @@ template <typename T> da_status linear_model<T>::fit() {
 
     default:
         return da_error(this->err, da_status_not_implemented,
-                        "Unexpectedly an invalid linear model was requested");
+                        "Unexpectedly an invalid linear model was requested.");
     }
 
     model_trained = true;
@@ -683,7 +732,7 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
 
     if (alpha != 0.0)
         return da_error(this->err, da_status_not_implemented,
-                        "an optimization solver to solve requested linear model is not "
+                        "An optimization solver to solve requested linear model is not "
                         "available, reformulate linear model problem.");
 
     switch (mod) {
@@ -692,7 +741,7 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
             // QR not valid for logistic regression
             return da_error(
                 this->err, da_status_incompatible_options,
-                "The chosen solver is incompatible with the defined model. Either, "
+                "The chosen solver is incompatible with the defined model. Either "
                 "reformulate linear model problem or choose different solver.");
         break;
     default:
@@ -713,7 +762,7 @@ template <typename T> da_status linear_model<T>::choose_method() {
         else
             // Coordinate Descent for L1 [and L2 combined: Elastic Net]
             return da_error(this->err, da_status_not_implemented,
-                            "There is no solver able to solve the model");
+                            "There is no solver able to solve the model.");
         break;
     case (linmod_model_logistic):
         // Here we choose L-BFGS-B over Coordinate Descent
@@ -721,7 +770,7 @@ template <typename T> da_status linear_model<T>::choose_method() {
         break;
     default:
         // Shouldn't happen (would be nice to trap these with C++23 std::unreachable())
-        return da_error(this->err, da_status_internal_error, "new linmod model?");
+        return da_error(this->err, da_status_internal_error, "New linmod model?");
     }
 
     return da_status_success;
