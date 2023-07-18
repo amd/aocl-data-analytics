@@ -38,7 +38,7 @@ endif()
 
 target_link_libraries(da_core lbfgsb lbfgsb_s ${FLAME} ${BLIS})
 if(NOT WIN32)
-  target_link_libraries(da_core -lgomp)
+  target_link_libraries(da_core ${OpenMP_CXX_FLAGS})
 endif()
 
 if(NOT WIN32)
