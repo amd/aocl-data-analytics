@@ -20,6 +20,7 @@ template <>
 da_status da_data::data_store::concatenate_cols_csv<char **>(
     da_int mc, da_int nc, char ***data, da_ordering order, bool copy_data, bool C_data) {
     char **deref_data = *data;
+    free(data);
     da_status status =
         concatenate_columns(mc, nc, deref_data, order, copy_data, true, C_data);
     return status;
@@ -36,14 +37,15 @@ da_status da_data::data_store::raw_ptr_from_csv_columns<char **>(
 
     da_int ncols = end_column - start_column + 1;
     // Because char_to_num below uses calloc, we need to use calloc here too rather than new so deallocing is well-defined
-    char **b = nullptr;
-    b = (char **)calloc(nrows * ncols, sizeof(char *));
+    *bl = (char ***)calloc(1, sizeof(char **));
+    **bl = (char **)calloc(nrows * ncols, sizeof(char *));
     for (da_int i = 0; i < ncols; i++) {
         if (std::vector<char **> *char_col =
                 std::get_if<std::vector<char **>>(&(columns[start_column + i]))) {
             for (da_int j = 0; j < nrows; j++) {
-                da_status tmp_error = da_csv::char_to_num(parser, *(*char_col)[j], &p_end,
-                                                          &b[i * nrows + j], maybe_int);
+                da_status tmp_error =
+                    da_csv::char_to_num(parser, *(*char_col)[j], &p_end,
+                                        (char **)&(**bl)[i * nrows + j], maybe_int);
                 if (tmp_error != da_status_success)
                     return da_error(err, tmp_error, "error in char_to_num");
             }
@@ -52,7 +54,6 @@ da_status da_data::data_store::raw_ptr_from_csv_columns<char **>(
                             "wrong type detected unexpectedly");
         }
     }
-    *bl = &b;
     C_data = true;
     return da_status_success;
 }
