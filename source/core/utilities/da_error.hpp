@@ -267,7 +267,7 @@ constexpr int32_t strip_path(const char *const path, const int32_t pos = 0,
 // This strips the path from the string PATH at compile time, that is
 // it provides a new starting point for the PATH string where the filename
 // starts. Does the same as "basename file"
-constexpr const char *const basename(const char *const path) {
+constexpr const char * basename(const char *const path) {
     return &path[strip_path(path)];
 }
 
