@@ -49,8 +49,7 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
     char *encoding_errors = NULL;
 
     istatus = tokenize_all_rows(parser, encoding_errors);
-    status = convert_tokenizer_errors(istatus);
-    if (status != da_status_success || parser->file_lines != parser->lines) {
+    if (istatus != 0 || parser->file_lines != parser->lines) {
         return da_warn(csv->err, da_status_bad_lines,
                        "Some lines were ignored - this may be because they were empty.");
     }
@@ -227,9 +226,10 @@ inline da_status parse_and_process(csv_reader *csv, const char *filename, T **a,
         }
     }
 
-    tmp_error = convert_tokenizer_errors(parser_reset(csv->parser));
-    if (!(tmp_error == da_status_success)) {
-        error = tmp_error;
+    int istatus = parser_reset(csv->parser);
+    if (istatus != 0) {
+        return da_error(csv->err, da_status_parsing_error,
+                        "An error occurred while resetting the parser.");
     }
 
     return error;

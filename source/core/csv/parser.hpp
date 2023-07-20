@@ -11,31 +11,7 @@
 
 /* Contains routines for creating and destroying the parser_t struct, separate from those in tokenize.h */
 
-/* We don't want to edit tokenize.c much in case it needs updating, so convert the error exits
- * here */
-
 namespace da_csv {
-
-inline da_status convert_tokenizer_errors(int ierror) {
-    da_status status;
-
-    switch (ierror) {
-    case 0:
-        status = da_status_success;
-        break;
-    case CALLING_READ_FAILED:
-        status = da_status_file_reading_error;
-        break;
-    case PARSER_OUT_OF_MEMORY:
-        status = da_status_memory_error;
-        break;
-    case -1:
-        status = da_status_parsing_error;
-        break;
-    }
-
-    return status;
-}
 
 /* This callback is as required by the code in tokenizer.c - it reads data from the csv
  * file */
@@ -98,13 +74,11 @@ inline da_status da_parser_init(parser_t **parser) {
         return da_status_memory_error;
     }
 
-    int err = parser_init(*parser);
+    int istatus = parser_init(*parser);
 
-    da_status status = convert_tokenizer_errors(err);
-
-    if (!(status == da_status_success)) {
+    if (istatus != 0) {
         da_parser_destroy(parser);
-        return status;
+        return da_status_parsing_error;
     }
 
     parser_set_default_options(*parser);
