@@ -255,9 +255,6 @@ class da_error_t {
     };
 };
 
-// This strips the path from the string PATH at compile time, that is
-// it provides a new starting point for the PATH string where the filename
-// starts. Does the same as "basename file"
 constexpr int32_t strip_path(const char *const path, const int32_t pos = 0,
                              const int32_t pos_separator = -1) {
     return path[pos]
@@ -267,24 +264,29 @@ constexpr int32_t strip_path(const char *const path, const int32_t pos = 0,
                : (pos_separator + static_cast<int32_t>(1));
 }
 
+// This strips the path from the string PATH at compile time, that is
+// it provides a new starting point for the PATH string where the filename
+// starts. Does the same as "basename file"
+constexpr const char *const basename(const char *const path) {
+    return &path[strip_path(path)];
+}
+
 #define da_error(e, status, msg)                                                         \
-    (e)->rec(status, (msg), "",                                                          \
-             std::string(__FILE__ + da_errors::strip_path(__FILE__)) + std::string(":"), \
+    (e)->rec(status, (msg), "", std::string(da_errors::basename(__FILE__)) + ":",        \
              __LINE__, da_errors::severity_type::DA_ERROR, false)
 #define da_warn(e, status, msg)                                                          \
     (e)->rec(status, (msg), "",                                                          \
-             std::string(__FILE__ + da_errors::strip_path(__FILE__)) + std::string(":"), \
-             __LINE__, da_errors::severity_type::DA_WARNING, false)
+             std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
+             da_errors::severity_type::DA_WARNING, false)
 
 #define da_error_trace(e, status, msg)                                                   \
     (e)->rec(status, (msg), "",                                                          \
-             std::string(__FILE__ + da_errors::strip_path(__FILE__)) + std::string(":"), \
-             __LINE__, da_errors::severity_type::DA_ERROR, true)
+             std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
+             da_errors::severity_type::DA_ERROR, true)
 #define da_warn_trace(e, status, msg)                                                    \
     (e)->rec(status, (msg), "",                                                          \
-             std::string(__FILE__ ":" + da_errors::strip_path(__FILE__)) +               \
-                 std::string(":"),                                                       \
-             __LINE__, da_errors::severity_type::DA_WARNING, true)
+             std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
+             da_errors::severity_type::DA_WARNING, true)
 
 } // namespace da_errors
 #endif
