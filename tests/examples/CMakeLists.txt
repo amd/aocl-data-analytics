@@ -37,9 +37,6 @@ set(EXAMPLE_EXES reglinear_model linear_model basic_statistics lbfgsb_rc lbfgsb_
 add_executable(basic_pca basic_pca.cpp)
 target_link_libraries(basic_pca da_core)
 
-add_executable(decision_tree decision_tree.cpp)
-target_link_libraries(decision_tree da_core)
-
 # add all example programs to CTEST
 foreach(EX_NAME ${EXAMPLE_EXES})
   string(CONCAT TNAME ${EX_NAME} "_ex")
