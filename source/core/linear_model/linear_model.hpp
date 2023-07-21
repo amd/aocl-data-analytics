@@ -26,14 +26,14 @@
  *  * \Xi() is the loss function
  *      * MSE (mean square error) or SEL (squared-error loss) or L2 loss
  *        \Xi(ri) = ri^2 [should not be used with logistic transform]
- *      * Logistic (uses log loss) 
+ *      * Logistic (uses log loss)
  *        \Xi(ri) = log_loss(bi, ri) [only to be used with logistic transform]
- * 
+ *
  *  * \psi() estimates the transform of the residual,
  *         and \phi is the linear model e.g. \phi(x) = Ax
- * 
+ *
  *  * \eta is the regularization term
- * 
+ *
  */
 
 /* Type of transforms for the residuals
@@ -49,12 +49,12 @@ enum transform_t { trn_identity = 0, trn_residual = 0, trn_logistic = 1 };
 /* Loss functions
  *      * MSE (mean square error) or SEL (squared-error loss) or L2 loss
  *        \Xi(ri) = ri^2 [should not be used with logistic transform]
- *      * Logistic (uses log loss) 
+ *      * Logistic (uses log loss)
  *        \Xi(ri) = log_loss(bi, ri) [only to be used with logistic transform]
  */
 enum loss_t { loss_mse, loss_logistic };
 
-/* User and solver data 
+/* User and solver data
  * struct to pass pointers to optimization callbacks
  */
 template <typename T> struct fit_usrdata {
@@ -106,8 +106,8 @@ template <typename T> class linear_model : public basic_handle<T> {
 
     /* Training data
      * coef[n/n+1]: vector containing the trained coefficients of the model
-     * l1reg/2: regularization factors for norm 1 and 2 respectively. 
-     *           0 => no reg, possible different algorithm 
+     * l1reg/2: regularization factors for norm 1 and 2 respectively.
+     *           0 => no reg, possible different algorithm
      */
     da_int ncoef = 0;
     std::vector<T> coef;
@@ -132,8 +132,8 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status init_qr_data();
     da_status qr_lsq();
 
-    /* Dispatcher methods 
-     * choose_method: if "linmod optim method" is set to auto, choose automatically how 
+    /* Dispatcher methods
+     * choose_method: if "linmod optim method" is set to auto, choose automatically how
      *                to compute the model
      * validate_options: check that the options chosen by the user are compatible
      */
@@ -347,7 +347,7 @@ void lossgrd(da_int n, T *grad, void *usrdata, loss_t loss = loss_mse) {
         }
         break;
     case loss_logistic:
-        /* gradient of log loss of the logistic function 
+        /* gradient of log loss of the logistic function
          * g_j = sum_i{A_ij*(b[i]-logistic(A_i^t x + x[n-1]))}
          */
         std::fill(grad, grad + n, 0);

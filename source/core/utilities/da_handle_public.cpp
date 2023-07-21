@@ -38,6 +38,12 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             return da_status_memory_error;
         }
         break;
+    case da_handle_decision_tree:
+        try {
+            (*handle)->df_d = new decision_tree<double>();
+        } catch (std::bad_alloc &) {
+            return da_status_memory_error;
+        }
     default:
         error = da_status_success;
         break;
@@ -87,6 +93,12 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             return da_status_memory_error;
         }
         break;
+    case da_handle_decision_tree:
+        try {
+            (*handle)->df_s = new decision_tree<float>();
+        } catch (std::bad_alloc &) {
+            return da_status_memory_error;
+        }
     default:
         error = da_status_success;
         break;
