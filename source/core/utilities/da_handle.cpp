@@ -18,20 +18,6 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
             break;
         }
         break;
-    case da_handle_decision_tree:
-        switch (precision) {
-        case da_double:
-            if (df_d == nullptr)
-                return da_status_invalid_pointer;
-            *opts = &df_d->opts;
-            break;
-        case da_single:
-            if (df_s == nullptr)
-                return da_status_invalid_pointer;
-            *opts = &df_s->opts;
-            break;
-        }
-        break;
     default:
         return da_status_handle_not_initialized;
     }
