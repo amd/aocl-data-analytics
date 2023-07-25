@@ -27,7 +27,8 @@ extern "C" {
 typedef enum da_handle_type_ {
     da_handle_uninitialized, ///< handle is not initialized,
     da_handle_linmod, ///< handle is to be used with functions from the Linear Models chapter TODO ADD LINK.
-    da_handle_pca ///< handle is to be used with functions from the PCA chapter TODO ADD LINK.
+    da_handle_pca, ///< handle is to be used with functions from the Linear Models chapter TODO ADD LINK.
+    da_handle_decision_tree ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
 } da_handle_type;
 
 /**
