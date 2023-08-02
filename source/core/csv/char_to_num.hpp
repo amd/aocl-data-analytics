@@ -711,7 +711,7 @@ inline da_status char_to_num([[maybe_unused]] parser_t *parser, const char *str,
     da_status status = da_status_success;
 
     char *p = (char *)str;
-    da_int len = strlen(p);
+    size_t len = strlen(p);
     (*endptr) = p + len - 1;
 
     if (parser->skipinitialspace) {
@@ -731,7 +731,12 @@ inline da_status char_to_num([[maybe_unused]] parser_t *parser, const char *str,
         return da_status_memory_error;
     }
 
+/* Most of the time MSVC compiler can automatically replace CRT functions with _s versions, but not this one */
+#if defined(_MSC_VER)
+    strncpy_s(*store, 1 + len, p, len);
+#else
     strncpy(*store, p, len);
+#endif
 
     return status;
 }

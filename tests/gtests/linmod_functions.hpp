@@ -182,10 +182,10 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     // Check that RINFO containt data
     T rinfo[100], rexp[100]{0};
     da_int dim = 100;
-    rexp[0] = n;
-    rexp[1] = m;
-    rexp[2] = nc;
-    rexp[3] = intercept_int;
+    rexp[0] = (T)n;
+    rexp[1] = (T)m;
+    rexp[2] = (T)nc;
+    rexp[3] = (T)intercept_int;
     rexp[4] = alpha;
     rexp[5] = lambda;
     // Extract and compare solution

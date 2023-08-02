@@ -157,7 +157,6 @@ template <typename T> class linear_model : public basic_handle<T> {
 
     /* get_result (required to be defined by basic_handle) */
     da_status get_result(enum da_result query, da_int *dim, T *result) {
-        da_status status;
         // Don't return anything if model not trained!
         if (!model_trained)
             return da_warn(this->err, da_status_unknown_query,
@@ -173,14 +172,14 @@ template <typename T> class linear_model : public basic_handle<T> {
                                    std::to_string(*dim) + ".");
             }
             //TODO FIXME ADD DOCUMENTATION of these "rinfo"
-            result[0] = this->n;
-            result[1] = this->m;
-            result[2] = this->ncoef;
-            result[3] = this->intercept ? 1 : 0;
+            result[0] = (T)this->n;
+            result[1] = (T)this->m;
+            result[2] = (T)this->ncoef;
+            result[3] = (T)(this->intercept ? 1.0 : 0.0);
             result[4] = alpha;
             result[5] = lambda;
-            result[6] = this->trn;
-            result[7] = this->loss;
+            result[6] = (T)this->trn;
+            result[7] = (T)this->loss;
             // Reserved for future use
             for (auto i = 8; i < 100; i++)
                 result[i] = static_cast<T>(0);
@@ -259,7 +258,7 @@ template <typename T> void linear_model<T>::init_usrdata() {
     usrdata->y = new T[m];
     usrdata->intercept = intercept;
     usrdata->l1reg = lambda * alpha;
-    usrdata->l2reg = lambda * (1.0 - alpha) / 2.0;
+    usrdata->l2reg = lambda * ((T)1.0 - alpha) / (T)2.0;
     usrdata->loss = loss;
     usrdata->trn = trn;
 }

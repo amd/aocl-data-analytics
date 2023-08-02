@@ -39,9 +39,14 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
     int istatus;
 
     FILE *fp = nullptr;
-    fp = fopen(filename, "r");
 
+/* Most of the time MSVC compiler can automatically replace CRT functions with _s versions, but not this one */
+#if defined(_MSC_VER)
+    if (fopen_s(&fp, filename, "r") != 0) {
+#else
+    fp = fopen(filename, "r");
     if (fp == nullptr) {
+#endif
         return da_error(csv->err, da_status_file_not_found, "File not found");
     }
 
@@ -75,8 +80,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
         *nrows = 0;
         *ncols = 0;
         *a = nullptr;
-        return da_warn(csv->err, da_status_no_data,
-                       "No data was found in the csv file.");
+        return da_warn(csv->err, da_status_no_data, "No data was found in the csv file.");
     }
 
     if (parser->skip_footer) {
@@ -89,8 +93,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
         *nrows = 0;
         *ncols = (da_int)words_len;
         *a = nullptr;
-        return da_warn(csv->err, da_status_no_data,
-                       "No data was found in the CSV file");
+        return da_warn(csv->err, da_status_no_data, "No data was found in the CSV file");
     }
 
     //The parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
@@ -185,7 +188,7 @@ inline da_status parse_headings(csv_reader *csv, da_int ncols, char ***headings)
 
         status = char_to_num(parser, p, &p_end, &(*headings)[i], nullptr);
         if (status != da_status_success) {
-            std::string buff = "Unable to parse header " + std::to_string(i) +  ".";
+            std::string buff = "Unable to parse header " + std::to_string(i) + ".";
             free_data(headings, ncols);
             return da_error(csv->err, status, buff);
         }

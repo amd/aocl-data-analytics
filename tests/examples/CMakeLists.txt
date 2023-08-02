@@ -37,6 +37,9 @@ target_link_libraries(decision_tree da_core)
 target_compile_definitions(
   decision_tree PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
+add_executable(basic_pca basic_pca.cpp)
+target_link_libraries(basic_pca da_core)
+
 set(EXAMPLE_EXES
     reglinear_model
     linear_model
@@ -45,9 +48,6 @@ set(EXAMPLE_EXES
     lbfgsb_fcomm
     datastore
     decision_tree)
-
-add_executable(basic_pca basic_pca.cpp)
-target_link_libraries(basic_pca da_core)
 
 # add all example programs to CTEST
 foreach(EX_NAME ${EXAMPLE_EXES})

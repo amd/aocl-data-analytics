@@ -9,6 +9,9 @@ set(AOCLDA_VERSION
 # Export Release Information automatically
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Required for Windows shared library build
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
 # Set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Debug' as none was specified")
@@ -31,8 +34,9 @@ option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
 option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
 option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
 option(BUILD_DOC "Build PDF and HTML documentation" OFF)
-option(BUILD_SMP "Build using OpenMP and link to threaded BLIS" ON)
+option(BUILD_SMP "Build using OpenMP and link to threaded BLIS and Flame" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
+option(DA_LOGGING "Compile with debug printing" OFF)
 
 if(BUILD_SMP)
   find_package(OpenMP REQUIRED)
@@ -81,23 +85,53 @@ else()
 endif()
 
 if(WIN32)
-  if(NOT DEFINED ENV{INTEL_FCOMPILER})
-    message(
-      FATAL_ERROR
-        "Environmental variable \$INTEL_FCOMPILER not found."
-    )
+
+  #MSVC has warnings about deprecated CRT functions; these definitions overload them automatically with _s versions
+  add_compile_definitions(_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1 _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1)
+
+  #Clang on Windows: ensure we are linking against the correct MSVC runtime libraries
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    if(BUILD_SHARED_LIBS)
+      set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    else()
+      set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
   endif()
+
   if(NOT DEFINED ENV{AOCL_INSTALL})
   message(
     FATAL_ERROR
       "Environmental variable \$AOCL_INSTALL not found."
   )
   endif()
-  set(CMAKE_Fortran_COMPILER "$ENV{INTEL_FCOMPILER}/bin/intel64/ifort.exe")
+
+  #Clang or MSVC require ifort for the fortran compilation
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    if(NOT DEFINED ENV{INTEL_FCOMPILER})
+      message(
+        FATAL_ERROR
+          "Environment variable \$INTEL_FCOMPILER not found."
+      )
+    endif()
+
+    file(TO_CMAKE_PATH $ENV{INTEL_FCOMPILER} IFORT_PATH)
+    set(CMAKE_Fortran_COMPILER "${IFORT_PATH}/bin/intel64/ifort.exe")
+    set(ENV{IFORT_LIBS} "${IFORT_PATH}/compiler/lib/intel64_win")
+	set(ENV{LIBIFCORE}
+      "$<IF:$<CONFIG:Debug>,$ENV{IFORT_LIBS}/libifcoremdd.lib,$ENV{IFORT_LIBS}/libifcoremd.lib>"
+    )
+  else()
+    if(NOT DEFINED ENV{MINGW_BIN})
+      message(
+        FATAL_ERROR
+          "Environment variable \$MINGW_BIN not found."
+      )
+    endif()
+	file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
+  endif()
+  
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
-  set(ENV{IFORT_LIBS} "$ENV{INTEL_FCOMPILER}/compiler/lib/intel64_win")
-  message(AOCL_INSTALL=$ENV{AOCL_INSTALL})
 
   if(BUILD_SMP)
     set(BLIS_NAME "AOCL-LibBlis-Win-MT-dll")
@@ -111,15 +145,12 @@ if(WIN32)
 
   include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/${INT_LIB}")
   include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/${INT_LIB}")
-  set(ENV{LIBIFCORE}
-      "$<IF:$<CONFIG:Debug>,$ENV{IFORT_LIBS}/libifcoremdd.lib,$ENV{IFORT_LIBS}/libifcoremd.lib>"
-  )
 
 else()
   if(NOT DEFINED ENV{AOCL_ROOT})
     message(
       FATAL_ERROR
-        "Environmental variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again."
+        "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again."
     )
   endif()
 
@@ -146,12 +177,11 @@ if(COMPILER_BASENAME MATCHES
 else()
   set(CLANG_OPTIONS_STYLE "GNU")
 endif()
-if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-  # MSVC compiler flags
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
+   OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
+                                                      STREQUAL "MSVC"))
+  # MSVC and clang-cl compiler flags
   set(COMPILER_FLAGS_COMMON "/arch:AVX2")
-  if(BUILD_SMP)
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${OpenMP_CXX_FLAGS};")
-  endif()
   set(COMPILER_FLAGS_CXX "/std:c++17;/EHsc")
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON}; /arch:AVX512")
@@ -169,13 +199,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
-  # GNU style compiler flags Common flags
+  # GNU style compiler flags
   set(COMPILER_FLAGS_COMMON
       "-mtune=native;-mavx2;-mfma;-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
   )
-  if(BUILD_SMP)
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${OpenMP_CXX_FLAGS};")
-  endif()
   # Release flags
   set(COMPILER_FLAGS_RELEASE "-DNDEBUG;-O2;")
   set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;")
@@ -185,7 +212,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   endif()
     if(VECTORIZATION_REPORTS)
       if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize")
+        set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize")
       elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-fopt-info-vec-all=vectorization.txt")
       endif()
@@ -240,10 +267,7 @@ message(
   NOTICE
   "CXX Compiler ID         : ${CMAKE_CXX_COMPILER_ID} (${COMPILER_BASENAME}) platform id: ${CMAKE_CXX_PLATFORM_ID}"
 )
-if(BUILD_SMP)
-  message(NOTICE
-          "OpenMP                  : ${OpenMP_CXX_FOUND} (${OpenMP_CXX_FLAGS})")
-endif()
+
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
   message(
     NOTICE
@@ -257,8 +281,9 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
 endif()
 
 message(NOTICE "\nDEPENDENT LIBRARIES")
-message(NOTICE "blis: ${BLIS}")
-message(NOTICE "flame: ${FLAME}")
+message(NOTICE "blis                    : ${BLIS}")
+message(NOTICE "flame                   : ${FLAME}")
+message(NOTICE "AOCL installation       :$ENV{AOCL_INSTALL}")
 
 message(NOTICE "\nOPTIONS")
 message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
@@ -267,6 +292,7 @@ message(NOTICE "Building with MemSan    : ${MEMSAN}")
 message(NOTICE "Building with Valgrind  : ${VALGRIND}")
 message(NOTICE "Building with OpenMP    : ${BUILD_SMP}")
 message(NOTICE "Vectorization reports   : ${VECTORIZATION_REPORTS}")
+message(NOTICE "Debug printing          : ${DA_LOGGING}")
 if(${VALGRIND})
   message(
     NOTICE

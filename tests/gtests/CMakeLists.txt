@@ -77,7 +77,6 @@ gtest_discover_tests(data)
 gtest_discover_tests(interval_map)
 gtest_discover_tests(errors_tests)
 
-
 # add unit test programs that are not gtest programs to CTEST
 string(CONCAT TNAME printf_debug "_ex")
 add_test(${TNAME} printf_debug)

@@ -275,7 +275,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
     T zero = (T)0.0;
 
     switch (axis) {
-    case da_axis_row:
+    case da_axis_row: {
         std::fill(var, var + n, 0.0);
         std::fill(skew, skew + n, 0.0);
 
@@ -289,14 +289,18 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
             }
         }
 
+        T sqrtp = std::sqrt(p);
+
         for (da_int j = 0; j < n; j++) {
-            skew[j] = (var[j] == zero) ? zero : skew[j] * sqrt(p) / pow(var[j], (T)1.5);
+            skew[j] = (var[j] == zero) ? zero : skew[j] * sqrtp / pow(var[j], (T)1.5);
             if (p > 1)
                 var[j] /= (p - 1);
         }
         break;
+    }
+    case da_axis_col: {
+        T sqrtn = std::sqrt(n);
 
-    case da_axis_col:
         for (da_int i = 0; i < p; i++) {
             var[i] = zero;
             skew[i] = zero;
@@ -307,12 +311,12 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
                 var[i] += tmp2;
                 skew[i] += tmp2 * tmp;
             }
-            skew[i] = (var[i] == zero) ? zero : skew[i] * sqrt(n) / pow(var[i], (T)1.5);
+            skew[i] = (var[i] == zero) ? zero : skew[i] * sqrtn / pow(var[i], (T)1.5);
             if (n > 1)
                 var[i] /= (n - 1);
         }
         break;
-
+    }
     case da_axis_all:
         var[0] = zero;
         skew[0] = zero;
@@ -325,7 +329,8 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
                 skew[0] += tmp2 * tmp;
             }
         }
-        skew[0] = (var[0] == zero) ? zero : skew[0] * sqrt(n * p) / pow(var[0], (T)1.5);
+        skew[0] =
+            (var[0] == zero) ? zero : skew[0] * (T)(sqrt(n * p)) / pow(var[0], (T)1.5);
         if (n * p > 1)
             var[0] /= (n * p - 1);
         break;

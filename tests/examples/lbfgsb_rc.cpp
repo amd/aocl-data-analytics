@@ -54,8 +54,8 @@ template <typename T> int solve(void) {
                      itask == 21 || // 'FG_START'
                      itask == 20;   // 'FG_LNSRCH
         if (compute_fg) {
-            f = pow(1 - x[0], 2);
-            f += 100 * pow(x[1] - x[0] * x[0], 2);
+            f = pow((T)1.0 - x[0], (T)2.0);
+            f += 100 * pow(x[1] - x[0] * x[0], (T)2.0);
 
             // compute gradient
             g[0] = 2 * (x[0] - 1) - 400 * (x[1] - x[0] * x[0]) * x[0];
