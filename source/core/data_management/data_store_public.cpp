@@ -413,7 +413,7 @@ da_status da_data_get_col_label(da_datastore store, da_int col_idx, da_int *labe
     da_status status;
     status = store->store->get_col_label(col_idx, label_str);
     if (*label_sz < label_str.size() + 1 ){
-        *label_sz = label_str.size() + 1;
+        *label_sz = (da_int)label_str.size() + 1;
         return da_status_invalid_input;
     }
     for (da_int i=0; i < label_str.size(); i++)

@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 /** Generating and storing error messages
  *

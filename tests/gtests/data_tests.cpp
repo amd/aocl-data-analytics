@@ -118,7 +118,7 @@ void get_heterogeneous_data_store(data_store &ds, da_int &mt, da_int &nt,
     m = 1;
     n = 4;
     EXPECT_EQ(ds.concatenate_rows(m, n, ib5.data(), row_major, true), da_status_success);
-    fb2 = {10.1, 20.2};
+    fb2 = {10.1f, 20.2f};
     m = 1;
     n = 2;
     EXPECT_EQ(ds.concatenate_rows(m, n, fb2.data(), row_major, true), da_status_success);
@@ -130,7 +130,7 @@ void get_heterogeneous_data_store(data_store &ds, da_int &mt, da_int &nt,
     // expected blocks, column major ordering
     idata = {1, 3, 5, 7, 10, 21, 2, 4, 6, 8, 11, 22,
              1, 2, 3, 4, 12, 23, 5, 6, 7, 8, 13, 24};
-    fdata = {0.5, 1.5, 2.5, 3.5, 4.5, 10.1, 5.5, 6.5, 7.5, 8.5, 9.5, 20.2};
+    fdata = {0.5f, 1.5f, 2.5f, 3.5f, 4.5f, 10.1f, 5.5f, 6.5f, 7.5f, 8.5f, 9.5f, 20.2f};
     sdata = {"1", "a2", "bb3", "ccc4", "dddd5", "row6_1"};
     mt = 6;
     nt = 7;
@@ -196,7 +196,7 @@ void get_heterogeneous_data_store_pub(da_datastore store, da_int &mt, da_int &nt
     n = 4;
     EXPECT_EQ(da_data_load_row_int(store, m, n, ib5.data(), row_major, true),
               da_status_success);
-    fb2 = {10.1, 20.2};
+    fb2 = {10.1f, 20.2f};
     m = 1;
     n = 2;
     EXPECT_EQ(da_data_load_row_real_s(store, m, n, fb2.data(), row_major, true),
@@ -210,7 +210,7 @@ void get_heterogeneous_data_store_pub(da_datastore store, da_int &mt, da_int &nt
     // expected blocks, column major ordering
     idata = {1, 3, 5, 7, 10, 21, 2, 4, 6, 8, 11, 22,
              1, 2, 3, 4, 12, 23, 5, 6, 7, 8, 13, 24};
-    fdata = {0.5, 1.5, 2.5, 3.5, 4.5, 10.1, 5.5, 6.5, 7.5, 8.5, 9.5, 20.2};
+    fdata = {0.5f, 1.5f, 2.5f, 3.5f, 4.5f, 10.1f, 5.5f, 6.5f, 7.5f, 8.5f, 9.5f, 20.2f};
     sdata = {"1", "a2", "bb3", "ccc4", "dddd5", "row6_1"};
     mt = 6;
     nt = 7;
@@ -1199,7 +1199,7 @@ TEST(datastore, missingData) {
     get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
 
     // set some missing values for integers and floating  points
-    float missing_float = std::nan("");
+    float missing_float = std::nanf("");
     da_int int_max = std::numeric_limits<da_int>::max();
     EXPECT_EQ(hds.set_element(0, 2, int_max), da_status_success);
     EXPECT_EQ(hds.set_element(2, 0, int_max), da_status_success);
@@ -1248,7 +1248,7 @@ TEST(datastore, missingData) {
     EXPECT_EQ(hds.select_non_missing(tag, full_rows), da_status_success);
     std::vector<float> float_sel(5);
     EXPECT_EQ(hds.extract_selection(tag, 5, float_sel.data()), da_status_success);
-    std::vector<float> fexp = {0.5, 1.5, 2.5, 3.5, 10.1};
+    std::vector<float> fexp = {0.5f, 1.5f, 2.5f, 3.5f, 10.1f};
     EXPECT_ARR_EQ(4, float_sel, fexp, 1, 1, 0, 0);
 
     // select all rows one by one
@@ -1283,7 +1283,7 @@ TEST(dataStore, missingDataPub) {
     get_heterogeneous_data_store_pub(store, m, n, idata, fdata, sdata);
 
     // set some missing values for integers and floating  points
-    float missing_float = std::nan("");
+    float missing_float = std::nanf("");
     da_int int_max = std::numeric_limits<da_int>::max();
     EXPECT_EQ(da_data_set_element_int(store, 0, 2, int_max), da_status_success);
     EXPECT_EQ(da_data_set_element_int(store, 2, 0, int_max), da_status_success);

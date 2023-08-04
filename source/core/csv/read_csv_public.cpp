@@ -1,7 +1,3 @@
-/* disable some MSVC warnings about fopen and strcpy */
-#define _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_DEPRECATE
-
 #include "char_to_num.hpp"
 #include "da_datastore.hpp"
 #include "read_csv.hpp"

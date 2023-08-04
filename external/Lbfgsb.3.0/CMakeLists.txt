@@ -18,8 +18,20 @@ if(BUILD_ILP64)
     endif()
 endif()
 
+if(BUILD_SMP)
+   if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+     list(APPEND CMAKE_Fortran_FLAGS -qopenmp)
+   elseif(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
+     list(APPEND CMAKE_Fortran_FLAGS -fopenmp)
+   endif()
+endif()
+
 if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     link_libraries("-lflang")
+endif()
+
+if(WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+    find_library(LIBGFORTRAN NAMES libgfortran libgfortran-5 HINTS ${MINGW_PATH} DOC "gfortran library")
 endif()
 
 list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)

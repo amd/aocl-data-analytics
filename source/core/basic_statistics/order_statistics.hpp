@@ -1,7 +1,10 @@
 #ifndef ORDER_STATISTICS_HPP
 #define ORDER_STATISTICS_HPP
 
+// Deal with some Windows compilation issues regarding max/min macros
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 
 #include "aoclda.h"
 #include <algorithm>

@@ -1196,7 +1196,8 @@ class data_store {
         for (da_int i = 1; i <= ncols; i++) {
 
             // Get current column index with a trick to make sure the last column is dealt with correctly
-            da_int column_index = (i < ncols) ? columns[i].index() : active_index + 1;
+            da_int column_index =
+                (da_int)((i < ncols) ? columns[i].index() : active_index + 1);
 
             if (column_index != active_index) {
 
