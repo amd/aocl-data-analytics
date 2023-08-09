@@ -84,13 +84,21 @@ else()
   add_definitions(-DAOCLDA_ILP64)
 endif()
 
+# Check for CL compatibility layer of clang
+if(COMPILER_BASENAME MATCHES
+   "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
+  set(CLANG_OPTIONS_STYLE "MSVC")
+else()
+  set(CLANG_OPTIONS_STYLE "GNU")
+endif()
+
 if(WIN32)
 
   #MSVC has warnings about deprecated CRT functions; these definitions overload them automatically with _s versions
   add_compile_definitions(_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1 _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1)
 
-  #Clang on Windows: ensure we are linking against the correct MSVC runtime libraries
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  #Clang-cl on Windows: ensure we are linking against the correct MSVC runtime libraries
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL "MSVC")
     if(BUILD_SHARED_LIBS)
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     else()
@@ -105,8 +113,8 @@ if(WIN32)
   )
   endif()
 
-  #Clang or MSVC require ifort for the fortran compilation
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  #Clang-cl or MSVC require ifort for the fortran compilation
+  if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     if(NOT DEFINED ENV{INTEL_FCOMPILER})
       message(
         FATAL_ERROR
@@ -120,6 +128,7 @@ if(WIN32)
 	set(ENV{LIBIFCORE}
       "$<IF:$<CONFIG:Debug>,$ENV{IFORT_LIBS}/libifcoremdd.lib,$ENV{IFORT_LIBS}/libifcoremd.lib>"
     )
+	add_compile_definitions(WIN_IFORT_NAME_MANGLING)
   else()
     if(NOT DEFINED ENV{MINGW_BIN})
       message(
@@ -128,6 +137,7 @@ if(WIN32)
       )
     endif()
 	file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
+	set(CMAKE_Fortran_COMPILER gfortran)
   endif()
   
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
@@ -170,13 +180,6 @@ find_library(BLIS name ${BLIS_NAME} PATHS ${BLIS_PATH} REQUIRED NO_DEFAULT_PATH)
 find_library(FLAME name ${FLAME_NAME} PATHS ${FLAME_PATH} REQUIRED NO_DEFAULT_PATH)
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
 
-# Check for CL compatibility layer of clang
-if(COMPILER_BASENAME MATCHES
-   "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
-  set(CLANG_OPTIONS_STYLE "MSVC")
-else()
-  set(CLANG_OPTIONS_STYLE "GNU")
-endif()
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
    OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "MSVC"))
@@ -205,7 +208,11 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   )
   # Release flags
   set(COMPILER_FLAGS_RELEASE "-DNDEBUG;-O2;")
-  set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;")
+  if (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(COMPILER_FLAGS_DEBUG "-O0")
+  else()
+    set(COMPILER_FLAGS_DEBUG "-O0;-gdwarf-5;-g3;")
+  endif()
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON
         "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")

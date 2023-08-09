@@ -72,7 +72,7 @@ Note that not all the options available in Linux are available in Windows
 
 9. Use ctest in your powershell/command prompt window to run the tests
 
-10. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang, use the following command:
+10. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following command:
 cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
 (optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja
 
@@ -80,13 +80,20 @@ cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
 
 ## Building on Windows using the GCC toolchain
 
-1. Install GCC and gfortran compilers. The only way this has been tested so far is using MinGW, via MSYS.
+1. Install GCC and gfortran compilers. The only way this has been tested so far is using MinGW, via MSYS. The following commands may be needed, to install the relevant compilers (within the MSYS command window):
 
-2. Make sure you have set the AOCL_ROOT environment variable to your AOCL installation directory (e.g. C:\Users\username\AOCL-4.0), gcc, g++ and gfortran on your Windows PATH and MINGW_BIN to the location of the library libgfortran (e.g. C:\msys64\mingw64\bin)
+* pacman -S mingw-w64-x86_64-gcc-fortran
+* pacman -S --needed base-devel mingw-w64-x86_64-toolchain
+* pacman -S mingw-w64-x86_64-cmake
+* pacman -S mingw-w64-x86_64-ninja
+* pacman -S mingw-w64-clang-x86_64-openmp
+* pacman -S mingw-w64-x86_64-openmp
+
+2. Make sure you have set the AOCL_ROOT environment variable to your AOCL installation directory (e.g. C:\Users\username\AOCL-4.0), gcc, g++ and gfortran (and clang too ,if you wish to use it) on your Windows PATH and MINGW_BIN to the location of the library libgfortran (e.g. C:\msys64\mingw64\bin)
 
 3. In your checkout create a directory called build
 
-4. Open a command prompt, navigate to build and type cmake -G Ninja -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++ -DCMAKE_Fortran_COMPILER=gfortran .. along with any (or none) of the following options depending on the build that is desired: 
+4. Open a standard Windows command prompt, navigate to build and type cmake -G Ninja -DCMAKE_C_COMPILER=gcc (or clang) -DCMAKE_CXX_COMPILER=g++ (or clang++) .. along with any (or none) of the following options depending on the build that is desired: 
 
 * -DBUILD_ILP64=On for 64-bit integer build 
 

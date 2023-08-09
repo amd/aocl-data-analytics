@@ -289,7 +289,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
             }
         }
 
-        T sqrtp = std::sqrt(p);
+        T sqrtp = std::sqrt((T)p);
 
         for (da_int j = 0; j < n; j++) {
             skew[j] = (var[j] == zero) ? zero : skew[j] * sqrtp / pow(var[j], (T)1.5);
@@ -299,7 +299,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
         break;
     }
     case da_axis_col: {
-        T sqrtn = std::sqrt(n);
+        T sqrtn = std::sqrt((T)n);
 
         for (da_int i = 0; i < p; i++) {
             var[i] = zero;
