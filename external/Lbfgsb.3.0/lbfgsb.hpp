@@ -5,14 +5,9 @@
 
 // Courtesy export symbol for main entry point
 // Add other cases here
-#if defined(_WIN32)
-  #if defined(__GNUC__) && !defined(__clang)
-    #define DLBFGSB_SOLVER dlbfgsb_solver_
-    #define SLBFGSB_SOLVER slbfgsb_solver_
-  #else
-    #define DLBFGSB_SOLVER DLBFGSB_SOLVER
-    #define SLBFGSB_SOLVER SLBFGSB_SOLVER
-  #endif
+#if defined(WIN_IFORT_NAME_MANGLING)
+  #define DLBFGSB_SOLVER DLBFGSB_SOLVER
+  #define SLBFGSB_SOLVER SLBFGSB_SOLVER
 #else
   #define DLBFGSB_SOLVER dlbfgsb_solver_
   #define SLBFGSB_SOLVER slbfgsb_solver_
