@@ -22,7 +22,7 @@ set(DA_CORE_SRC
     ${DA_FACTORIZATION}
     ${DA_DECISION_FOREST})
 
-add_library(da_core ${DA_CORE_SRC})
+add_library(da_core OBJECT ${DA_CORE_SRC})
 target_include_directories(da_core PUBLIC include)
 target_include_directories(
   da_core
@@ -52,3 +52,19 @@ endif()
 if(NOT WIN32)
   include(Suppressions_core)
 endif()
+
+# Create combined library from da_core and Fortran libraries
+add_library(aocl-da $<TARGET_OBJECTS:da_core>  $<TARGET_OBJECTS:lbfgsb>  $<TARGET_OBJECTS:lbfgsb_s>)
+target_link_libraries(aocl-da PRIVATE da_core lbfgsb lbfgsb_s)
+
+# Installation commands
+install(TARGETS aocl-da
+    ARCHIVE DESTINATION lib/${INT_LIB}
+    LIBRARY DESTINATION lib/${INT_LIB}
+    RUNTIME DESTINATION bin/${INT_LIB}
+)
+
+install(DIRECTORY include/
+    DESTINATION include/${INT_LIB}
+    FILES_MATCHING PATTERN "*.h"
+)

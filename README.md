@@ -8,7 +8,7 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 1. You will need to have AOCL Blis and LibFlame installed somewhere 
 
-2. Make sure you have set the environment variable AOCL_ROOT to where AOCL libraries are installed eg. /home/username/amd/aocl/4.0) 
+2. Make sure you have set the environment variable AOCL_ROOT to where AOCL libraries are installed eg. /home/username/amd/aocl/4.0
 
 3. In your checkout create a directory called build and navigate to it 
 
@@ -36,6 +36,10 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 * -DDA_LOGGING=On to enable debug printing
 
+* -DCMAKE_AOCL_ROOT=<path to AOCL> if you wish to specify a location for AOCL libraries without using environment variables
+
+* -DCMAKE_INSTALL_PREFIX=<install path>. If you wish to install the library (using the command make install in step 5) you can specify an install path here.
+
 5. Type make (or make doc, to make the documentation)
 
 6. Run the tests or examples using ctest e.g. ctest -V –R followed by a string to find a particular set of tests 
@@ -60,6 +64,8 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 * -DBUILD_SMP=On to build using OpenMP and threaded BLIS (on by default)
 
+* -DCMAKE_AOCL_ROOT= <path to AOCL> if you wish to specify a location for AOCL libraries without using environment variables
+
 Note that not all the options available in Linux are available in Windows
 
 7. Either: 
@@ -74,7 +80,7 @@ Note that not all the options available in Linux are available in Windows
 
 10. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following command:
 cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
-(optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja
+(optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja. You can also specify an install directory, using -DCMAKE_INSTALL_PREFIX, and build with ninja install.
 
 11. Note also that it is possible to build with shared libraries on Windows by adding -DBUILD_SHARED_LIBS=ON to the cmake command. However, you must ensure that your Windows PATH environemnt variable contains all the folders where cmake will put dlls (gtest, da_core, lbfgsb, etc.). Furthermore, gtest is unable to discover tests and add them to the ctests due to an issue with gtest and shared library dependencies on Windows.
 
@@ -100,6 +106,10 @@ cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
 * -DBUILD_EXAMPLES and –DBUILD_GTEST both of which are on by default
 
 * -DBUILD_SMP=On to build using OpenMP and threaded BLIS (on by default)
+
+* -DCMAKE_AOCL_ROOT= <path to AOCL> if you wish to specify a location for AOCL libraries without using environment variables
+
+* -DCMAKE_INSTALL_PREFIX=<install path>. If you wish to install the library (using the command ninja install in step 5) you can sepcify an install path here.
 
 Note that not all the options available in Linux are available in Windows
 

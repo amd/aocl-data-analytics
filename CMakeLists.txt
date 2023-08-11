@@ -92,6 +92,18 @@ else()
   set(CLANG_OPTIONS_STYLE "GNU")
 endif()
 
+# Check we can find AOCL installation
+if(NOT DEFINED ENV{AOCL_ROOT})
+  if((DEFINED CMAKE_AOCL_ROOT))
+    set(ENV{AOCL_ROOT} ${CMAKE_AOCL_ROOT}) 
+  else()
+    message(
+      FATAL_ERROR
+      "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT."
+    )
+  endif()
+endif()
+
 if(WIN32)
 
   #MSVC has warnings about deprecated CRT functions; these definitions overload them automatically with _s versions
@@ -104,13 +116,6 @@ if(WIN32)
     else()
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     endif()
-  endif()
-
-  if(NOT DEFINED ENV{AOCL_INSTALL})
-  message(
-    FATAL_ERROR
-      "Environmental variable \$AOCL_INSTALL not found."
-  )
   endif()
 
   #Clang-cl or MSVC require ifort for the fortran compilation
@@ -150,19 +155,13 @@ if(WIN32)
     set(BLIS_NAME "AOCL-LibBlis-Win-dll")
     set(FLAME_NAME "AOCL-LibFlame-Win-dll")
   endif()
-  set(BLIS_PATH "$ENV{AOCL_INSTALL}/amd-blis/lib/${INT_LIB}")
-  set(FLAME_PATH "$ENV{AOCL_INSTALL}/amd-libflame/lib/${INT_LIB}")
+  set(BLIS_PATH "$ENV{AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
+  set(FLAME_PATH "$ENV{AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
 
-  include_directories("$ENV{AOCL_INSTALL}/amd-blis/include/${INT_LIB}")
-  include_directories("$ENV{AOCL_INSTALL}/amd-libflame/include/${INT_LIB}")
+  include_directories("$ENV{AOCL_ROOT}/amd-blis/include/${INT_LIB}")
+  include_directories("$ENV{AOCL_ROOT}/amd-libflame/include/${INT_LIB}")
 
 else()
-  if(NOT DEFINED ENV{AOCL_ROOT})
-    message(
-      FATAL_ERROR
-        "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again."
-    )
-  endif()
 
   include_directories($ENV{AOCL_ROOT}/include_${INT_LIB})
   set(BLIS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
@@ -262,6 +261,22 @@ add_subdirectory(source)
 include(CTest)
 add_subdirectory(tests)
 
+# Install examples and README files
+install(FILES README-Release.txt
+    DESTINATION ${CMAKE_INSTALL_PREFIX}
+    RENAME README.txt
+)
+install(FILES License
+    DESTINATION ${CMAKE_INSTALL_PREFIX}
+)
+install(DIRECTORY tests/examples/
+    DESTINATION examples
+    FILES_MATCHING PATTERN "*.cpp"
+)
+install(FILES tests/examples/README.txt
+    DESTINATION examples
+)
+
 if(VALGRIND)
   set(CTEST_MEMORYCHECK_TYPE "valgrind")
   set(CTEST_MEMORYCHECK_COMMAND_OPTIONS
@@ -290,7 +305,6 @@ endif()
 message(NOTICE "\nDEPENDENT LIBRARIES")
 message(NOTICE "blis                    : ${BLIS}")
 message(NOTICE "flame                   : ${FLAME}")
-message(NOTICE "AOCL installation       :$ENV{AOCL_INSTALL}")
 
 message(NOTICE "\nOPTIONS")
 message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
