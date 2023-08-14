@@ -109,23 +109,6 @@ da_status da_pca_set_num_components(da_handle, da_int num_components);
 da_status da_pca_d_compute(da_handle);
 da_status da_pca_s_compute(da_handle);
 
-/** \{
- * \brief Copy the requested results into user given buffer
- *
- * Copy the PCA results into the user given output buffer based on choice
- * 
- * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init 
- *  with type \ref da_handle_pca.
- * \param [out] components a \ref 
-  * \return \ref da_status_. The function returns:
- * - \ref da_status_success - The operation was successfully completed
- * - \ref da_status_invalid_input - When input parameters are not valid
- * - \ref da_status_internal_error - When results are "not" ready/computed,when called before compute
- * - \ref da_status_invalid_pointer = 3 - When the pca handle or output buffer is not initialized
- */
-da_status da_pca_d_get_results(da_handle, double *output, pca_results_flags flags);
-da_status da_pca_s_get_results(da_handle, float *output, pca_results_flags flags);
-
 #ifdef __cplusplus
 }
 #endif

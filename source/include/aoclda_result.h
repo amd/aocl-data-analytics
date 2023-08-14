@@ -30,13 +30,17 @@ extern "C" {
  */
 enum da_result {
     // General purpose data 1..100
-    da_rinfo =
-        1, ///< General information array, containing a varierty of metrics, see each solver's details for further information. Each solver stores different information into this array.
+    da_rinfo = 1, ///< General information array, containing a varierty of metrics,
+    //see each solver's details for further information.
+    //Each solver stores different information into this array.
     // Linear models 101..200
     da_linmod_coeff =
         101, ///< Optimal fitted coefficients produced by the last call to a linear regression solver.
     // PCA 201..300
-    da_pca_scores = 201, ///< PCA scores
+    da_pca_scores = 201,
+    da_pca_variance = 202,
+    da_pca_components = 203,
+    da_pca_total_variance = 204,
     // Nonlinear Optimization 301..400
     // Random Forrests 401..500
     // ...

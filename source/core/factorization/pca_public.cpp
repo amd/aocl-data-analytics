@@ -102,26 +102,3 @@ da_status da_pca_s_compute(da_handle handle) {
 
     return handle->pca_s->compute();
 }
-
-da_status da_pca_d_get_results(da_handle handle, double *output,
-                               pca_results_flags flags) {
-    if (!handle)
-        return da_status_memory_error;
-    if (handle->precision != da_double)
-        return da_status_wrong_type;
-    if (handle->pca_d == nullptr)
-        return da_status_invalid_pointer;
-
-    return handle->pca_d->get_results(output, flags);
-}
-
-da_status da_pca_s_get_results(da_handle handle, float *output, pca_results_flags flags) {
-    if (!handle)
-        return da_status_memory_error;
-    if (handle->precision != da_single)
-        return da_status_wrong_type;
-    if (handle->pca_s == nullptr)
-        return da_status_invalid_pointer;
-
-    return handle->pca_s->get_results(output, flags);
-}
