@@ -24,9 +24,16 @@
 #ifndef PCA_HPP
 #define PCA_HPP
 
-#include "aoclda.h"
 #include "../basic_statistics/moment_statistics.hpp"
+#include "../basic_statistics/statistical_utilities.hpp"
+#include "aoclda.h"
+#include "aoclda_pca.h"
+#include "basic_handle.hpp"
+#include "callbacks.hpp"
+#include "da_error.hpp"
 #include "lapack_templates.hpp"
+#include "options.hpp"
+#include "pca_options.hpp"
 #include <iostream>
 #include <string.h>
 
@@ -60,7 +67,7 @@ template <typename T> struct pca_results {
 };
 
 /* PCA Internal Class */
-template <typename T> class da_pca {
+template <typename T> class da_pca : public basic_handle<T> {
   private:
     /*n_samples x n_features = (nxp) */
     da_int n = 0;
@@ -75,9 +82,10 @@ template <typename T> class da_pca {
     /*Define default pca compute method to svd*/
     pca_comp_method method = pca_method_svd;
 
+    /*Define default pca compute method to svd*/
+    bool svd_flip_u_based = true;
+
     /*Defult number of output Components */
-    //TODO: Redundent with "r".
-    //                              Need to remove one of them.
     da_int ncomponents = 5;
 
     /*Data required to compute pca using svd method*/
@@ -93,25 +101,98 @@ template <typename T> class da_pca {
     da_errors::da_error_t *err = nullptr;
 
   public:
-    da_pca() {
+    da_options::OptionRegistry opts;
+    da_pca(da_errors::da_error_t &err) {
+        this->err = &err;
         svd_data = new pca_usr_data_svd<T>;
         corr_data = new pca_usr_data_corr<T>;
         results = new pca_results<T>;
+        register_pca_options<T>(opts);
     };
-
     ~da_pca();
 
     da_status init(da_int n, da_int p, T *dataX);
 
-    void set_pca_compute_method(pca_comp_method method) { method = method; };
+    void set_pca_compute_method(pca_comp_method method) {
+        if (method != this->method) {
+            this->method = method;
+            iscomputed = false;
+        }
+    };
 
     void set_pca_components(da_int ncomponents) {
-        ncomponents = std::min(ncomponents, std::min(n, p));
+        ncomponents = std::min(ncomponents, std::min(this->n, this->p));
+        if (ncomponents != this->ncomponents) {
+            this->ncomponents = ncomponents;
+            iscomputed = false;
+        }
     };
 
     da_status compute();
+
     da_status init_results();
-    da_status get_results(T *output, pca_results_flags flags);
+
+    /* get_result (required to be defined by basic_handle) */
+    da_status get_result(enum da_result query, da_int *dim, T *result) {
+        da_status status = da_status_success;
+        // Don't return anything if PCA compute is not done!
+        if (!iscomputed) {
+            return da_warn(this->err, da_status_no_data,
+                           "pca_compute is not done!. "
+                           "Call compute before calling get_results");
+        }
+        if (this->method == pca_method_corr) {
+            return da_error(this->err, da_status::da_status_not_implemented,
+                            "PCA using corr method is not yet implemented!");
+        }
+
+        //FIXME: Currently assuming da_rinfo query can take all results computed
+        da_int rinfo_size =
+            (2 * (this->ncomponents * this->ncomponents) + this->ncomponents + 2);
+        if (result == nullptr || *dim <= 0 ||
+            ((query == da_result::da_pca_scores ||
+              query == da_result::da_pca_components) &&
+             *dim < (ncomponents * ncomponents)) ||
+            (query == da_result::da_pca_variance && *dim < ncomponents) ||
+            (query == da_result::da_rinfo && *dim < rinfo_size)) {
+            return da_warn(this->err, da_status::da_status_invalid_array_dimension,
+                           "Size of the array is too small, provide an array of at "
+                           "least size: " +
+                               std::to_string(*dim) + ".");
+        }
+
+        switch (query) {
+        case da_result::da_rinfo:
+            //FIXME: Currently giving all results info if the buffer has space
+            for (da_int i = 0; i < rinfo_size; i++)
+                result[i] = *(results->scores + i);
+            break;
+        case da_result::da_pca_scores:
+            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
+                result[i] = *(results->scores + i);
+            break;
+        case da_result::da_pca_components:
+            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
+                result[i] = *(results->components + i);
+            break;
+        case da_result::da_pca_variance:
+            for (da_int i = 0; i < ncomponents; i++)
+                result[i] = *(results->variance + i);
+            break;
+        case da_result::da_pca_total_variance:
+            result[0] = results->total_variance;
+            break;
+        default:
+            return da_warn(this->err, da_status_unknown_query,
+                           "The requested result could not be queried by this handle.");
+        }
+        return status;
+    };
+
+    da_status get_result(enum da_result query, da_int *dim, da_int *result) {
+        return da_warn(this->err, da_status_unknown_query,
+                       "There is no pca implementation done for integer datatye!");
+    };
 };
 
 /*Deallocate major strucures*/
@@ -163,7 +244,7 @@ template <typename T> da_status da_pca<T>::init(da_int n, da_int p, T *dataX) {
     ldu = this->n;
     ldvt = this->ncomponents;
 
-    switch (method) {
+    switch (this->method) {
     case pca_method_svd:
         svd_data->colmean = new T[std::max(n, p)];
         svd_data->u = new T[ldu * std::max(n, p)];
@@ -213,11 +294,8 @@ template <typename T> da_status da_pca<T>::compute() {
     da_int lwork, ldu, ldvt, INFO, lm, ln, lda;
     da_int il, iu, ns = 1;
     T vu, vl;
-    T estworkspace;
+    T estworkspace[1];
     T tv = 0;
-
-    /*Initilize error with success */
-    da_status status = da_status_success;
 
     if (initdone == false)
         return da_error(this->err, da_status_invalid_pointer, "pca is not initialized!");
@@ -225,20 +303,13 @@ template <typename T> da_status da_pca<T>::compute() {
     switch (method) {
     case pca_method_svd:
         //Input data matrix X (n x p) is A matrix
-
         //step 1:  Find column Mean of X
-        da_colmean(n, p, svd_data->A, p, svd_data->colmean);
+        da_basic_statistics::mean(da_axis_col, n, p, svd_data->A, n, svd_data->colmean);
 
         //step 2:  Substract column mean from A matrix
-        // A[][] = A[][] - colmean[]
-        //TODO: Write an utility function
-        for (da_int i = 0; i < n; i++) {
-            for (da_int j = 0; j < p; j++) {
-                T mean_minus_a = (*(svd_data->A + i * p + j) - *(svd_data->colmean + j));
-                *(svd_data->A + i * p + j) = mean_minus_a;
-                tv += (mean_minus_a * mean_minus_a);
-            }
-        }
+        da_basic_statistics::standardize(da_axis_col, n, p, svd_data->A, n,
+                                         svd_data->colmean, (T *)nullptr);
+
         /*Save the total variance of mean centered input A*/
         results->total_variance = tv;
 
@@ -250,8 +321,8 @@ template <typename T> da_status da_pca<T>::compute() {
         ldu = std::max(n, p);
         lda = std::max(n, p);
         INFO = 0;
-        lm = p;
-        ln = n;
+        lm = n;
+        ln = p;
         vl = 0.0;
         vu = 0.0;
         iu = std::min(n, p);
@@ -268,7 +339,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
         da::gesvdx(&JOBU, &JOBVT, &RANGE, &lm, &ln, svd_data->A, &lda, &vl, &vu, &il, &iu,
                    &ns, svd_data->sigma, svd_data->u, &ldu, svd_data->vt, &ldvt,
-                   &estworkspace, &lwork, svd_data->iwork, &INFO);
+                   estworkspace, &lwork, svd_data->iwork, &INFO);
 
         //Handle SVD Error
         if (INFO != 0) {
@@ -284,7 +355,7 @@ template <typename T> da_status da_pca<T>::compute() {
         }
 
         /*Read the space required*/
-        lwork = (da_int)estworkspace;
+        lwork = (da_int)estworkspace[0];
 
         /*Allocate optimal memory required to compute SVD*/
         svd_data->work = new T[lwork];
@@ -318,13 +389,38 @@ template <typename T> da_status da_pca<T>::compute() {
             }
         }
 
-        //Step 4: Save the results
-        //TODO: May needs to do the sign flip
-        //Scores (n x n) = U (nxn) * Sigma (n x n)
+        //Step 4: Compute and save the results
+        //Find the sign of column/row max in U/VT, flip the signs of U & Vt if negative
+        //TODO: Simplify for various shapes of A
+        for (da_int j = 0; j < n; j++) {
+            T *uptr = &svd_data->u[j * n];
+            T *vtptr = &svd_data->vt[j * p];
+            T *ptr = svd_flip_u_based ? uptr : vtptr; //load the first column value
+            da_int uv_size = svd_flip_u_based ? n : p;
+            T colmax = std::abs(*ptr);
+            for (da_int i = 1; i < uv_size; i++) {
+                T u_t = std::abs(ptr[i]);
+                if (u_t > colmax)
+                    colmax = u_t;
+            }
+
+            //If the max value is negative flip the sign of all values
+            if (colmax < 0) {
+
+                for (da_int i = 0; i < n; i++) {
+                    uptr[i] = -uptr[i];
+                }
+                for (da_int i = 0; i < p; i++) {
+                    vtptr[i] = -vtptr[i];
+                }
+            }
+        }
+
+        //Compute Scores (n x n) = U (nxn) * Sigma (n x n) and save
         for (da_int i = 0; i < ncomponents; i++) {
             for (da_int j = 0; j < ncomponents; j++) {
                 *(results->scores + i * ncomponents + j) =
-                    (*(svd_data->sigma + i) * (*(svd_data->vt + i * ncomponents + j)));
+                    (*(svd_data->sigma + i) * (*(svd_data->u + i * ncomponents + j)));
             }
         }
 
@@ -332,7 +428,7 @@ template <typename T> da_status da_pca<T>::compute() {
         for (da_int i = 0; i < ncomponents; i++) {
             for (da_int j = 0; j < ncomponents; j++) {
                 *(results->components + i * ncomponents + j) =
-                    *(svd_data->u + i * ncomponents + j);
+                    *(svd_data->vt + i * ncomponents + j);
             }
         }
 
@@ -353,71 +449,15 @@ template <typename T> da_status da_pca<T>::compute() {
         break;
 
     case pca_method_corr:
-        /*TODO: Yet to implement*/
+        //TODO: Yet to implement
         return da_error(this->err, da_status_not_implemented,
                         "PCA using corr method is not yet implemented!");
         break;
-
     default:
         return da_error(this->err, da_status_invalid_input, "Invalid pca method !");
-
-        break;
     }
 
-    return status;
-}
-
-/*
-    Copy the requested results to user buffer if compute is already done
-    else return with error
-*/
-template <typename T>
-da_status da_pca<T>::get_results(T *output, pca_results_flags flags) {
-    /*Initilize error with success */
-    da_status status = da_status_success;
-
-    if (initdone == false)
-        return da_error(this->err, da_status_invalid_pointer, "PCA is not initialized!");
-
-    switch (method) {
-    case pca_method_svd:
-        if (iscomputed == false) {
-            return da_error(this->err, da_status_out_of_date, "PCA is not computed!");
-        }
-        if (output == nullptr) {
-            return da_error(this->err, da_status_invalid_pointer,
-                            "Given output pointer is invalid");
-        }
-
-        /*Default provide ncomponents if flags are not properly*/
-        if (flags < pca_components || flags > 0xf)
-            flags = pca_components;
-
-        /*Copy the requested output*/
-        if (flags & pca_components)
-            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
-                *output++ = *(results->components + i);
-        if (flags & pca_scores)
-            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
-                *output++ = *(results->scores + i);
-        if (flags & pca_variance)
-            for (da_int i = 0; i < ncomponents; i++)
-                *output++ = *(results->variance + i);
-        if (flags & pca_total_variance)
-            *output++ = results->total_variance;
-        break;
-
-    case pca_method_corr:
-        return da_error(this->err, da_status_not_implemented,
-                        "PCA using corr method is not yet implemented!");
-        break;
-
-    default:
-        return da_error(this->err, da_status_invalid_input, "Invalid pca method !");
-        break;
-    }
-
-    return status;
+    return da_status_success;
 }
 
 #endif //PCA_HPP

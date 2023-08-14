@@ -480,23 +480,4 @@ da_status moment(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, da_in
 
 } // namespace da_basic_statistics
 
-// deprecated - will be removed
-template <typename T>
-da_status da_colmean(da_int n, da_int p, T *x, da_int incx, T *colmean) {
-    da_status err = da_status_success;
-
-    for (da_int i = 0; i < p; i++) {
-        T mean = (T)0.0;
-
-        for (da_int j = 0; j < n; j++) {
-            mean += x[j * incx + i];
-        }
-        mean /= n;
-
-        colmean[i] = mean;
-    }
-
-    return err;
-}
-
 #endif

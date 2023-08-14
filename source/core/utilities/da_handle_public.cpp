@@ -33,7 +33,7 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_pca:
         try {
-            (*handle)->pca_d = new da_pca<double>();
+            (*handle)->pca_d = new da_pca<double>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
@@ -88,7 +88,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_pca:
         try {
-            (*handle)->pca_s = new da_pca<float>();
+            (*handle)->pca_s = new da_pca<float>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
@@ -176,8 +176,7 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
     if (handle->linreg_d != nullptr)
         return handle->linreg_d->get_result(query, dim, result);
     else if (handle->pca_d != nullptr)
-        // -> enable return handle->pca_d->get_result(query, dim, result);
-        return da_status_not_implemented;
+        return handle->pca_d->get_result(query, dim, result);
 
     // handle was not initialized with
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -200,8 +199,7 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
     if (handle->linreg_s != nullptr)
         return handle->linreg_s->get_result(query, dim, result);
     else if (handle->pca_s != nullptr)
-        // -> enable return handle->pca_d->get_result(query, dim, result);
-        return da_status_not_implemented;
+        return handle->pca_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -222,12 +220,9 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
     else if (handle->linreg_s != nullptr)
         return handle->linreg_s->get_result(query, dim, result);
     else if (handle->pca_d != nullptr)
-        // -> enable return handle->pca_d->get_result(query, dim, result);
-        return da_status_not_implemented;
+        return handle->pca_d->get_result(query, dim, result);
     else if (handle->pca_s != nullptr)
-        // -> enable return handle->pca_s->get_result(query, dim, result);
-        return da_status_not_implemented;
-
+        return handle->pca_s->get_result(query, dim, result);
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
                     "The handle does not have any results to export. Have you "

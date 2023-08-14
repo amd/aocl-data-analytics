@@ -130,11 +130,3 @@ da_status da_correlation_matrix_s(da_int n, da_int p, const float *x, da_int ldx
                                   float *corr, da_int ldcorr) {
     return da_basic_statistics::correlation_matrix(n, p, x, ldx, corr, ldcorr);
 }
-
-da_status da_colmean_s(da_int n, da_int p, float *x, da_int incx, float *mean) {
-    return da_colmean(n, p, x, incx, mean);
-}
-
-da_status da_colmean_d(da_int n, da_int p, double *x, da_int incx, double *mean) {
-    return da_colmean(n, p, x, incx, mean);
-}
