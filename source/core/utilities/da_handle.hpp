@@ -13,6 +13,10 @@
 #include "pca.hpp"
 #include "decision_forest.hpp"
 
+/**
+ * @brief Handle structure containing input / output data required for functions such as fit and predict
+ *
+ */
 struct _da_handle {
   public:
     da_csv::csv_reader *csv_parser = nullptr;

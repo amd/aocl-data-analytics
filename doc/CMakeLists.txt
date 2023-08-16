@@ -66,7 +66,7 @@ add_custom_target(
     cd ${PROJECT_BINARY_DIR}/latex/ && make && cp -v refman.pdf
     ${CMAKE_CURRENT_BINARY_DIR}/AOCL-DA_Documentation_${AOCLDA_VERSION}.pdf
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  COMMENT "Building documentation (PDF) from source"
+  COMMENT "Building documentation (Doxygen XML, no PDF) from source"
   VERBATIM
   SOURCES Doxyfile
   DEPENDS latexdeps.pdf)
@@ -96,3 +96,36 @@ write_file(
   APPEND)
 write_file(${PROJECT_BINARY_DIR}/ReleaseNotes.md
            "Flags: <see ${CMAKE_BINARY_DIR}/compile_commands.json>\n" APPEND)
+
+# Code copied from Sphinx in CMake section of MSFT blog post
+# https://devblogs.microsoft.com/cppblog/clear-functional-c-documentation-with-sphinx-breathe-doxygen-cmake/
+
+set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+# Add Sphinx doc target
+find_package(Sphinx REQUIRED)
+
+set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
+set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
+set(SPHINX_INDEX_FILE ${SPHINX_BUILD}/index.html)
+
+# Only regenerate Sphinx when:
+# - Doxygen has rerun
+# - Our doc files have been updated
+# - The Sphinx config has been updated
+add_custom_command(OUTPUT ${SPHINX_INDEX_FILE}
+                   COMMAND
+                     ${SPHINX_EXECUTABLE} -b html
+                     # Tell Breathe where to find the Doxygen output
+                     -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml
+                   ${SPHINX_SOURCE} ${SPHINX_BUILD}
+                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+                   DEPENDS
+                   # Other docs files you want to track should go here (or in some variable)
+                   ${CMAKE_CURRENT_SOURCE_DIR}/index.rst
+                   doc
+                   MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
+                   COMMENT "Generating (Sphinx HTML) documentation from source")
+
+# Nice named target so we can run the job easily
+add_custom_target(sphinx ALL DEPENDS ${SPHINX_INDEX_FILE})

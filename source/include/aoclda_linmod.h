@@ -39,6 +39,12 @@ da_status da_linmod_d_select_model(da_handle handle, linmod_model mod);
 da_status da_linmod_d_define_features(da_handle handle, da_int n, da_int m, double *A,
                                       double *b);
 
+/**
+ * @brief Fit linear model
+ *
+ * @param handle
+ * @return da_status
+ */
 da_status da_linmod_d_fit(da_handle handle);
 
 da_status da_linmod_d_evaluate_model(da_handle handle, da_int n, da_int m, double *X,
