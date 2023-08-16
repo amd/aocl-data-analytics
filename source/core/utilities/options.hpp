@@ -21,8 +21,8 @@
  *
  * ************************************************************************ */
 
-#ifndef AOCLSPARSE_ITSOL_OPTIONS_HPP_
-#define AOCLSPARSE_ITSOL_OPTIONS_HPP_
+#ifndef AOCLDA_OPTIONS_HPP_
+#define AOCLDA_OPTIONS_HPP_
 
 #include "aoclda.h"
 
@@ -47,7 +47,7 @@
  * Options Registry TODO REWRITE THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  * ========================================================================
  *
- * aoclsparse_options namespace provides a Registry class that "registers"
+ * da_options namespace provides a Registry class that "registers"
  * options and an Option class that defines an "option" element.
  * Options can be of any four classes: Integer, Real (float or double,
  * templated), Boolean or String. The registry class
@@ -61,10 +61,6 @@
  * Furthermore, the "name" string is sanitized before using, that is, it is
  * trimmed and blanks squeezed. Do not register the same option twice.
  * No checks on option registry are done.
- *
- * Usage:
- * See aoclsparse_list_options.hpp for details on adding new options and
- * aoclsparse_itsol_functions.hpp on how to query.
  *
  * Quering options have a certain cost and should be done only once at the
  * beggining of the solver or when initializing the internal data.
