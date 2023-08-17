@@ -1,3 +1,7 @@
+# Exclude gtest and gmock from installation
+set(INSTALL_GTEST OFF)
+set(INSTALL_GMOCK OFF)
+
 # get gtest from repo
 include(FetchContent)
 FetchContent_Declare(
@@ -22,16 +26,17 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/source/core/drivers
   ${CMAKE_SOURCE_DIR}/source/core/utilities
   ${CMAKE_SOURCE_DIR}/source/core/data_management
+  ${CMAKE_SOURCE_DIR}/source/core/decision_forest
   ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 
 add_executable(basic_stats basic_statistics_tests.cpp)
-target_link_libraries(basic_stats da_core gtest_main gmock_main)
+target_link_libraries(basic_stats aocl-da gtest_main gmock_main)
 if(WIN32)
   target_link_libraries(basic_stats "$ENV{LIBIFCORE}")
 endif()
 
 add_executable(csv csv_tests.cpp)
-target_link_libraries(csv da_core gtest_main gmock_main)
+target_link_libraries(csv aocl-da gtest_main gmock_main)
 if(WIN32)
   target_link_libraries(csv "$ENV{LIBIFCORE}")
 endif()
@@ -39,7 +44,7 @@ target_compile_definitions(
   csv PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(linmod linmod_tests.cpp)
-target_link_libraries(linmod da_core gtest_main gmock_main)
+target_link_libraries(linmod aocl-da gtest_main gmock_main)
 if(WIN32)
   target_link_libraries(linmod "$ENV{LIBIFCORE}")
 endif()
@@ -47,13 +52,13 @@ target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 
 add_executable(option_registry option_registry_tests.cpp)
-target_link_libraries(option_registry da_core gtest_main gmock_main)
+target_link_libraries(option_registry aocl-da gtest_main gmock_main)
 
 add_executable(errors_tests errors_tests.cpp)
-target_link_libraries(errors_tests da_core gtest_main gmock_main)
+target_link_libraries(errors_tests aocl-da gtest_main gmock_main)
 
 add_executable(data data_tests.cpp)
-target_link_libraries(data da_core gtest_main gmock_main)
+target_link_libraries(data aocl-da gtest_main gmock_main)
 if(WIN32)
   target_link_libraries(data "$ENV{LIBIFCORE}")
 endif()
@@ -61,13 +66,13 @@ target_compile_definitions(
   data PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(interval_map interval_map_tests.cpp)
-target_link_libraries(interval_map da_core gtest_main gmock_main)
+target_link_libraries(interval_map aocl-da gtest_main gmock_main)
 if(WIN32)
   target_link_libraries(interval_map "$ENV{LIBIFCORE}")
 endif()
 
 add_executable(printf_debug printf_debug.cpp)
-target_link_libraries(printf_debug da_core)
+target_link_libraries(printf_debug aocl-da)
 
 gtest_discover_tests(basic_stats)
 gtest_discover_tests(csv)

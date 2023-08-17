@@ -1,9 +1,9 @@
-# build example programs
+# Build example programs
 if(BUILD_EXAMPLES)
   add_subdirectory(examples)
 endif()
 
-# build gtests programs
+# Build gtests programs
 if(BUILD_GTEST)
   add_subdirectory(gtests)
 endif()
