@@ -11,8 +11,14 @@ extern "C" {
 
 typedef struct _da_datastore *da_datastore;
 
+/** \{
+ * \brief Initialize and destroy datastore struct
+ *
+ * TODO
+ */
 da_status da_datastore_init(da_datastore *store);
 void da_datastore_destroy(da_datastore *store);
+/** \} */
 
 da_status da_data_print_options(da_datastore store);
 
@@ -46,7 +52,31 @@ da_status da_data_load_row_uint8(da_datastore store, da_int m, da_int n,
                                  uint8_t *uint_block, da_ordering order,
                                  da_int copy_data);
 
+/**
+ * \brief Read data from a CSV file into a \ref _da_datastore object. The data type of each column will be automatically detected.
+ * 
+ * Prior to calling this function, the standard CSV options can be set using calls to \ref da_options_set_int or \ref da_options_set_string.
+ * 
+ * The following additional options can be set using \ref da_options_set_string.
+ * 
+ * - <em>CSV datatype</em> - if the CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker. The allowed values are: \a float, \a double, \a integer, \a string and \a boolean, with a default of \a auto to use autodetection.
+ * - <em>CSV datastore precision</em> - select the precision when reading floating point numbers. The allowed values are \a double (default) or \a single.
+ *
+ * The following additional option can be set using \ref da_options_set_int.
+ * 
+ * - <em>CSV integers as floats</em> - whether or not to interpret integers as floating point numbers when using autodetection. This option can take the values 0 or 1.
+ * 
+ * \param[in,out] store a \ref _da_datastore object, initialized using \ref da_datastore_init.
+ * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
+ * \return \ref da_status_. The function returns:
+ * - \ref da_status_success
+ * - \ref da_status_file_reading_error
+ * - \ref da_status_parsing_error
+ * - \ref da_status_bad_lines
+ * - \ref da_status_missing_data
+ */
 da_status da_data_load_from_csv(da_datastore store, const char *filename);
+
 
 /* ************************************* selection *********************************** */
 /* *********************************************************************************** */

@@ -56,5 +56,5 @@ message(
 
 message(
     NOTICE
-    "Fortran compiler flags  : ${CMAKE_Fortran_FLAGS}"
+    "Fortran Compiler flags  : ${CMAKE_Fortran_FLAGS}"
 )

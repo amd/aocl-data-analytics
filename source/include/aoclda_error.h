@@ -4,7 +4,7 @@
 /**
  * \file
  * \anchor apx_e
- * \brief Appendix E - Error codes
+ * \brief Error codes
  * 
  * The following error codes can be returned by any of the routines in this library:
  * - \ref da_status_success = 0 - operation was successful
@@ -51,21 +51,15 @@ typedef enum da_status_ {
     da_status_unknown_query, ///< The result queried cannot be found in the handle
 
     // CSV errors 100-199
-    da_status_file_not_found = 100, ///< The CSV file could not be found
-    da_status_range_error,          ///< A number was beyond the range of the data type
-    da_status_no_digits,            ///< No valid digits were found in a field
-    da_status_invalid_chars,   ///< Invalid characters were found when reading an integer
-    da_status_invalid_boolean, ///< Invalid data was found when reading a boolean value
-    da_status_sign_error, ///< A negative sign was found when reading in an unsigned integer
-    da_status_file_reading_error, ///< An error occured when reading the file
-    da_status_parsing_error,      ///< An error occured when parsing the file
-    da_status_ragged_csv, ///< Not all rows of the CSV have the same number of entries
+    da_status_file_reading_error = 100, ///< An error occured when reading a CSV file
+    da_status_parsing_error,      ///< An error occured when parsing a CSV file into numeric data
     da_status_bad_lines, ///< The CSV file contained one or more lines that could not be read
-    da_status_missing_data, ///< The returned array contains missing data
-    da_status_no_data,      ///< No data was found in the CSV file
+    da_status_missing_data, ///< The array returned from reading a CSV file contains missing data
 
     // linreg errors 200-299
     // PCA errors 300-399
+    da_status_no_data = 300,
+
     // Options errors 400-499
     da_status_option_not_found = 400, ///< Option not found
     da_status_option_locked,          ///< Cannot change option value at this point

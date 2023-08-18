@@ -130,7 +130,7 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
     os = std::make_shared<OptionString>(OptionString(
         "CSV datatype",
         "If a CSV file is known to be of a single datatype, this can be specified to "
-        "avoid autodetection and make reading the file quicker",
+        "disable autodetection and make reading the file quicker",
         {{"auto", 0},
          {"float", 1},
          {"double", 2},

@@ -78,7 +78,7 @@ inline da_status da_parser_init(parser_t **parser) {
 
     if (istatus != 0) {
         da_parser_destroy(parser);
-        return da_status_parsing_error;
+        return da_status_memory_error;
     }
 
     parser_set_default_options(*parser);

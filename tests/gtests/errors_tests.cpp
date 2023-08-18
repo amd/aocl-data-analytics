@@ -34,7 +34,7 @@ namespace {
 
 using namespace da_errors;
 
-da_status auxiliary(da_error_t *e, da_status status = da_status_file_not_found,
+da_status auxiliary(da_error_t *e, da_status status = da_status_file_reading_error,
                     bool trace = false, bool warn = false) {
     if (warn) {
         if (trace) {
@@ -53,7 +53,7 @@ da_status auxiliary(da_error_t *e, da_status status = da_status_file_not_found,
 
 TEST(ErrorStack, SingleCall) {
     da_error_t *err = new da_error_t(action_t::DA_RECORD);
-    da_error(err, da_status_file_not_found, "file not found!");
+    da_error(err, da_status_file_reading_error, "file not found!");
     err->print();
     delete err;
 };
@@ -61,7 +61,7 @@ TEST(ErrorStack, SingleCall) {
 TEST(ErrorStack, TraceCall) {
     da_error_t *err = new da_error_t(action_t::DA_RECORD);
     auxiliary(err);
-    da_error_trace(err, da_status_file_not_found, "file not found!");
+    da_error_trace(err, da_status_file_reading_error, "file not found!");
     err->print();
     delete err;
 };
@@ -71,7 +71,7 @@ TEST(ErrorStack, TraceCall3) {
     auxiliary(err, da_status_invalid_input);
     auxiliary(err, da_status_file_reading_error);
     auxiliary(err, da_status_option_invalid_value);
-    da_error_trace(err, da_status_file_not_found, "file not found!");
+    da_error_trace(err, da_status_file_reading_error, "file not found!");
     err->print();
     delete err;
 };
@@ -79,11 +79,11 @@ TEST(ErrorStack, TraceCall3) {
 TEST(ErrorStack, TraceMulti) {
     da_error_t *err = new da_error_t(action_t::DA_RECORD);
     auxiliary(err, da_status_invalid_input, true, true);
-    da_error_trace(err, da_status_file_not_found, "file not found!");
+    da_error_trace(err, da_status_file_reading_error, "file not found!");
     // this gets recorded [2]
     auxiliary(err, da_status_file_reading_error, true);
     // this gets recorded [3]
-    da_error_trace(err, da_status_file_not_found, "file not found!");
+    da_error_trace(err, da_status_file_reading_error, "file not found!");
     err->print();
     delete err;
 };
@@ -91,29 +91,29 @@ TEST(ErrorStack, TraceMulti) {
 TEST(ErrorStack, TraceMulti2) {
     da_error_t *err = new da_error_t(action_t::DA_RECORD);
     // this gets recorded [0]
-    da_warn_trace(err, da_status_file_not_found, "file not found!");
+    da_warn_trace(err, da_status_file_reading_error, "file not found!");
     // this gets recorded [1]
-    da_error_trace(err, da_status_file_not_found, "file not found!");
+    da_error_trace(err, da_status_file_reading_error, "file not found!");
     err->print();
     delete err;
 };
 
 TEST(ErrorStack, TraceStackMax) {
     da_error_t *err = new da_error_t(action_t::DA_RECORD);
-    da_warn_trace(err, da_status_file_not_found, "Stack [0] - file not found!");
-    da_error_trace(err, da_status_file_not_found, "Stack [1] - file not found!");
-    da_warn_trace(err, da_status_file_not_found, "Stack [2] - file not found!");
-    da_error_trace(err, da_status_file_not_found, "Stack [3] - file not found!");
-    da_warn_trace(err, da_status_file_not_found, "Stack [4] - file not found!");
-    da_error_trace(err, da_status_file_not_found, "Stack [5] - file not found!");
-    da_warn_trace(err, da_status_file_not_found, "Stack [6] - file not found!");
-    da_error_trace(err, da_status_file_not_found, "Stack [7] - file not found!");
-    da_warn_trace(err, da_status_file_not_found, "Stack [8] - file not found!");
-    da_status status = da_error_trace(err, da_status_no_digits, "Stack [9] - no digits!");
-    ASSERT_EQ(status, da_status_no_digits);
+    da_warn_trace(err, da_status_file_reading_error, "Stack [0] - file not found!");
+    da_error_trace(err, da_status_file_reading_error, "Stack [1] - file not found!");
+    da_warn_trace(err, da_status_file_reading_error, "Stack [2] - file not found!");
+    da_error_trace(err, da_status_file_reading_error, "Stack [3] - file not found!");
+    da_warn_trace(err, da_status_file_reading_error, "Stack [4] - file not found!");
+    da_error_trace(err, da_status_file_reading_error, "Stack [5] - file not found!");
+    da_warn_trace(err, da_status_file_reading_error, "Stack [6] - file not found!");
+    da_error_trace(err, da_status_file_reading_error, "Stack [7] - file not found!");
+    da_warn_trace(err, da_status_file_reading_error, "Stack [8] - file not found!");
+    da_status status = da_error_trace(err, da_status_parsing_error, "Stack [9] - no digits!");
+    ASSERT_EQ(status, da_status_parsing_error);
     status =
-        da_error_trace(err, da_status_invalid_boolean, "Stack [10] - invalid boolean!");
-    ASSERT_EQ(status, da_status_invalid_boolean);
+        da_error_trace(err, da_status_parsing_error, "Stack [10] - invalid boolean!");
+    ASSERT_EQ(status, da_status_parsing_error);
     status =
         da_error_trace(err, da_status_invalid_pointer, "Stack [11] - invalid pointer!");
     ASSERT_EQ(status, da_status_invalid_pointer);

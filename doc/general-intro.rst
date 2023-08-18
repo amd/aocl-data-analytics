@@ -1,6 +1,8 @@
 
 .. _chapter_gen_intro:
 
+.. _chapter_gen_intro:
+
 General introduction
 ********************
  
@@ -24,14 +26,14 @@ TODO describe main handle structure
 
 Handle API Reference
 --------------------
-
-.. doxygentypedef:: da_handle
-.. doxygenenum:: da_handle_type
-.. doxygenfunction:: da_handle_init_d
-.. doxygenfunction:: da_handle_init_s
-.. doxygenfunction:: da_handle_destroy
-.. doxygenfunction:: da_handle_print_error_message
-.. doxygenfunction:: da_check_handle_type
+.. 
+    .. doxygentypedef:: da_handle
+    .. doxygenenum:: da_handle_type
+    .. doxygenfunction:: da_handle_init_d
+    .. doxygenfunction:: da_handle_init_s
+    .. doxygenfunction:: da_handle_destroy
+    .. doxygenfunction:: da_handle_print_error_message
+    .. doxygenfunction:: da_check_handle_type
 
 .. _da_errors:
 
@@ -43,6 +45,8 @@ TODO describe errors
 
 Error specific API
 ------------------
+.. 
+    .. doxygenenum:: da_status_
 
 .. _da_options:
 
@@ -52,7 +56,11 @@ TODO describe options
 
 .. _da_options_api:
 
-Error specific API
-------------------
 
-.. doxygenenum:: da_status_
+.. _da_int:
+
+da_int
+------
+
+TODO: document da_int; this text is here as a placeholder so we can insert references to da_int throughout the code
+Say something about ldx and column major ordering

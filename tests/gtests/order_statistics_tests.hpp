@@ -759,9 +759,66 @@ template <typename T> void GetZeroData(std::vector<OrderParamType<T>> &params) {
     params.push_back(param);
 }
 
+template <typename T> void GetIdenticalData(std::vector<OrderParamType<T>> &params) {
+    // Test with data matrix full of ones
+    OrderParamType<T> param;
+    param.n = 12;
+    param.p = 10;
+    param.ldx = param.n;
+    param.q = (T)0.6;
+    param.quantile_type = da_quantile_type_4;
+    std::vector<double> x(param.n * param.p, 1.0);
+    param.x = convert_vector<double, T>(x);
+    std::vector<double> expected_row_quantiles(param.n, 1.0);
+    param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
+    std::vector<double> expected_row_medians(param.n, 1.0);
+    param.expected_row_medians = convert_vector<double, T>(expected_row_medians);
+    std::vector<double> expected_row_maxima(param.n, 1.0);
+    param.expected_row_maxima = convert_vector<double, T>(expected_row_maxima);
+    std::vector<double> expected_row_minima(param.n, 1.0);
+    param.expected_row_minima = convert_vector<double, T>(expected_row_minima);
+    std::vector<double> expected_row_upper_hinges(param.n, 1.0);
+    param.expected_row_upper_hinges =
+        convert_vector<double, T>(expected_row_upper_hinges);
+    std::vector<double> expected_row_lower_hinges(param.n, 1.0);
+    param.expected_row_lower_hinges =
+        convert_vector<double, T>(expected_row_lower_hinges);
+
+    std::vector<double> expected_column_quantiles(param.p, 1.0);
+    param.expected_column_quantiles =
+        convert_vector<double, T>(expected_column_quantiles);
+    std::vector<double> expected_column_medians(param.p, 1.0);
+    param.expected_column_medians = convert_vector<double, T>(expected_column_medians);
+    std::vector<double> expected_column_maxima(param.p, 1.0);
+    param.expected_column_maxima = convert_vector<double, T>(expected_column_maxima);
+    std::vector<double> expected_column_minima(param.p, 1.0);
+    param.expected_column_minima = convert_vector<double, T>(expected_column_minima);
+    std::vector<double> expected_column_upper_hinges(param.p, 1.0);
+    param.expected_column_upper_hinges =
+        convert_vector<double, T>(expected_column_upper_hinges);
+    std::vector<double> expected_column_lower_hinges(param.p, 1.0);
+    param.expected_column_lower_hinges =
+        convert_vector<double, T>(expected_column_lower_hinges);
+
+    param.expected_overall_quantile = (T)1.0;
+    param.expected_overall_maximum = (T)1.0;
+    param.expected_overall_minimum = (T)1.0;
+    param.expected_overall_median = (T)1.0;
+    param.expected_overall_upper_hinge = (T)1.0;
+    param.expected_overall_lower_hinge = (T)1.0;
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = std::numeric_limits<T>::epsilon();
+    ;
+
+    params.push_back(param);
+}
+
 template <typename T> void GetOrderData(std::vector<OrderParamType<T>> &params) {
 
     GetZeroData(params);
+    GetIdenticalData(params);
     GetTallThinData1(params);
     GetTallThinData2(params);
     GetTallThinData3(params);

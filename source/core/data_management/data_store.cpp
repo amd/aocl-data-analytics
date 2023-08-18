@@ -46,12 +46,16 @@ da_status da_data::data_store::raw_ptr_from_csv_columns<char **>(
                 da_status tmp_error =
                     da_csv::char_to_num(parser, *(*char_col)[j], &p_end,
                                         (char **)&(**bl)[i * nrows + j], maybe_int);
-                if (tmp_error != da_status_success)
-                    return da_error(err, tmp_error, "error in char_to_num");
+                if (tmp_error != da_status_success) {
+                    std::string buff;
+                    buff = "Unable to parse data on line " + std::to_string(i) +
+                           " entry " + std::to_string(j) + ".";
+                    return da_error(err, tmp_error, buff);
+                }
             }
         } else {
             return da_error(err, da_status_internal_error,
-                            "wrong type detected unexpectedly");
+                            "Wrong data type detected unexpectedly");
         }
     }
     C_data = true;
