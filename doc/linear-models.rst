@@ -1,3 +1,4 @@
+.. _chapter_linmod:
 
 Linear Models
 =============
