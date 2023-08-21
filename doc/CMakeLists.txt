@@ -73,7 +73,7 @@ add_custom_target(
 
 add_custom_target(
   clean-doc
-  COMMAND cd ${PROJECT_BINARY_DIR} && rm -vrf html/ latex/ rtf/
+  COMMAND cd ${PROJECT_BINARY_DIR} && rm -vrf html/ latex/ rtf/ xml/ sphinx/
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   COMMENT "Cleaning temporary documentation files"
   VERBATIM)
