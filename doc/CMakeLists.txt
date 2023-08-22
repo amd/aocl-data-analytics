@@ -30,6 +30,30 @@ find_program(SED NAMES sed REQUIRED)
 find_program(GREP NAMES grep REQUIRED)
 find_program(SORT NAMES sort REQUIRED)
 
+# Check for python and the documentation packages: - breathe -
+# sphinxcontrib.bibtex
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c "import breathe"
+  RESULT_VARIABLE EXIT_CODE
+  OUTPUT_QUIET)
+if(NOT ${EXIT_CODE} EQUAL 0)
+  message(
+    FATAL_ERROR
+      "Python3 package breathe is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install breathe"
+  )
+endif()
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c "import sphinxcontrib.bibtex"
+  RESULT_VARIABLE EXIT_CODE
+  OUTPUT_QUIET)
+if(NOT ${EXIT_CODE} EQUAL 0)
+  message(
+    FATAL_ERROR
+      "Python3 package sphinxcontrib.bibtex is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install sphinxcontrib.bibtex"
+  )
+endif()
+
 message(STATUS "Building AOCL-DA documentation version ${AOCLDA_VERSION}")
 
 string(TIMESTAMP BUILD_DATE "%d %b %Y")
@@ -55,7 +79,6 @@ add_custom_target(
 # PORJECT_NAME = .* for the string "version ${AOCLDA_VERSION} (date)" OR (git
 # commit hash?) 2. Run doxygen on the sources 3. Run pdflatex 4. Move and rename
 # the pdf file
-
 add_custom_target(
   doc
   COMMAND
@@ -80,6 +103,77 @@ add_custom_target(
 
 add_dependencies(cleanall clean-doc)
 
+# Build sphinx Documentation DOC_TYPE controls what document to produce and can
+# be set to either pdf or html, default is html
+#
+# Inspired from Sphinx in CMake section of MSFT blog post
+# https://devblogs.microsoft.com/cppblog/clear-functional-c-documentation-with-sphinx-breathe-doxygen-cmake/
+set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+# Add Sphinx doc target
+find_package(Sphinx REQUIRED)
+
+set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
+set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
+set(SPHINX_INDEX_FILE ${SPHINX_BUILD}/index.html)
+set(PDF_DOC_NAME AOCL-DA_Documentation_${AOCLDA_VERSION})
+set(SPHINX_PDF ${SPHINX_BUILD}/${PDF_DOC_NAME})
+
+if(NOT DOC_TYPE)
+  message(STATUS "Setting the default documentation to html")
+  set(DOC_TYPE
+      "html"
+      CACHE STRING "Choose the documentation format" FORCE)
+endif()
+
+if(${DOC_TYPE} MATCHES "pdf")
+  set(SPHINX_FORMAT "latex")
+  set(SPHINX_DEP "${SPHINX_PDF}")
+else()
+  set(SPHINX_FORMAT "html")
+  set(SPHINX_DEP "${SPHINX_INDEX_FILE}")
+endif()
+
+# Target building the doxygen XML Also modifies the output directory and the
+# version number in the Doxyfile
+add_custom_target(
+  doxygen_xml
+  COMMAND
+    ${SED} -i -e
+    "s/^\\(PROJECT_NUMBER[[:space:]]*=\\).*$/\\1 \"version ${AOCLDA_VERSION} (${BUILD_DATE})\"/"
+    -e "s+^\\(OUTPUT_DIRECTORY[[:space:]]*=\\).*$+\\1 ${PROJECT_BINARY_DIR}+"
+    Doxyfile
+  COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  VERBATIM
+  SOURCES Doxyfile
+  DEPENDS latexdeps.pdf
+  COMMENT "Building doxygen xml files")
+
+# Build the sphinx documentation html or latex depending on which one is
+# required
+add_custom_command(
+  OUTPUT ${SPHINX_INDEX_FILE}
+  COMMAND
+    ${SPHINX_EXECUTABLE} -b ${SPHINX_FORMAT}
+    # Tell Breathe where to find the Doxygen output
+    -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
+    ${SPHINX_BUILD}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/index.rst doxygen_xml
+  MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
+  COMMENT "Generating (Sphinx HTML) documentation from source")
+
+# run pdflatex on the tex file produced by sphinx if DOC_TYPE was set to pdf
+add_custom_command(
+  OUTPUT ${SPHINX_PDF}
+  COMMAND pdflatex -jobname=${PDF_DOC_NAME} ${SPHINX_BUILD}/aocl-da.tex
+  WORKING_DIRECTORY ${SPHINX_BUILD}
+  DEPENDS ${SPHINX_INDEX_FILE})
+
+# Nice named target so we can run the job easily
+add_custom_target(sphinx DEPENDS ${SPHINX_DEP})
+
 # Courtesy "Release Notes" section in the doc
 write_file(${PROJECT_BINARY_DIR}/ReleaseNotes.md "# Release Notes\n\n")
 write_file(${PROJECT_BINARY_DIR}/ReleaseNotes.md
@@ -96,36 +190,3 @@ write_file(
   APPEND)
 write_file(${PROJECT_BINARY_DIR}/ReleaseNotes.md
            "Flags: <see ${CMAKE_BINARY_DIR}/compile_commands.json>\n" APPEND)
-
-# Code copied from Sphinx in CMake section of MSFT blog post
-# https://devblogs.microsoft.com/cppblog/clear-functional-c-documentation-with-sphinx-breathe-doxygen-cmake/
-
-set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
-
-# Add Sphinx doc target
-find_package(Sphinx REQUIRED)
-
-set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
-set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
-set(SPHINX_INDEX_FILE ${SPHINX_BUILD}/index.html)
-
-# Only regenerate Sphinx when:
-# - Doxygen has rerun
-# - Our doc files have been updated
-# - The Sphinx config has been updated
-add_custom_command(OUTPUT ${SPHINX_INDEX_FILE}
-                   COMMAND
-                     ${SPHINX_EXECUTABLE} -b html
-                     # Tell Breathe where to find the Doxygen output
-                     -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml
-                   ${SPHINX_SOURCE} ${SPHINX_BUILD}
-                   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-                   DEPENDS
-                   # Other docs files you want to track should go here (or in some variable)
-                   ${CMAKE_CURRENT_SOURCE_DIR}/index.rst
-                   doc
-                   MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-                   COMMENT "Generating (Sphinx HTML) documentation from source")
-
-# Nice named target so we can run the job easily
-add_custom_target(sphinx ALL DEPENDS ${SPHINX_INDEX_FILE})
