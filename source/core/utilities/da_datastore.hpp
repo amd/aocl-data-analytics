@@ -6,6 +6,10 @@
 #include "data_store.hpp"
 #include "options.hpp"
 
+/**
+ * @brief Datastore structure used to store and manipulate data
+ *
+ */
 struct _da_datastore {
   public:
     da_data::data_store *store = nullptr;

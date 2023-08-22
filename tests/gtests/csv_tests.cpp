@@ -629,53 +629,53 @@ TEST(csvtest, error_exits) {
               da_status_success);
 
     ASSERT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
-              da_status_range_error);
+              da_status_parsing_error);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_range_error);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
-              da_status_invalid_chars);
+              da_status_parsing_error);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_invalid_chars);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "0"),
               da_status_success);
     ASSERT_EQ(da_read_csv_uint8(store, filepath, &a_uint8, &nrows, &ncols, nullptr),
-              da_status_invalid_boolean);
+              da_status_parsing_error);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "boolean"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_invalid_boolean);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     ASSERT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
-              da_status_range_error);
+              da_status_parsing_error);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_range_error);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
-              da_status_no_digits);
+              da_status_parsing_error);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_no_digits);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "0, 1"),
               da_status_success);
 
     ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
     ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
-              da_status_overflow);
+              da_status_parsing_error);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_overflow);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 4), da_status_success);
     ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
-              da_status_ragged_csv);
+              da_status_parsing_error);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_ragged_csv);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     da_datastore_destroy(&store);
     da_datastore_destroy(&store);
@@ -704,7 +704,7 @@ TEST(csvtest, no_data) {
     // Check we can handle headings but no other data
     da_datastore_options_set_int(store, "CSV use header row", 1);
     ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
-              da_status_no_data);
+              da_status_parsing_error);
     ASSERT_EQ(nrows, 0);
     ASSERT_EQ(ncols, 5);
     for (da_int j = 0; j < ncols; j++) {
@@ -717,7 +717,7 @@ TEST(csvtest, no_data) {
               da_status_success);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_no_data);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
     da_datastore_destroy(&store);
 
     // Check we can deal with removing all rows
@@ -726,13 +726,13 @@ TEST(csvtest, no_data) {
               da_status_success);
     ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 1), da_status_success);
     ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
-              da_status_no_data);
+              da_status_parsing_error);
     ASSERT_EQ(nrows, 0);
     ASSERT_EQ(ncols, 0);
 
     da_datastore_options_set_int(store, "CSV use header row", 1);
     ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
-              da_status_no_data);
+              da_status_parsing_error);
     ASSERT_EQ(nrows, 0);
     ASSERT_EQ(ncols, 0);
 
@@ -743,7 +743,7 @@ TEST(csvtest, no_data) {
     ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 1), da_status_success);
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_no_data);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     da_datastore_destroy(&store);
 
@@ -752,11 +752,11 @@ TEST(csvtest, no_data) {
     strcat(filepath, "does_not_exist");
     ASSERT_EQ(da_datastore_init(&store), da_status_success);
     ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
-              da_status_file_not_found);
+              da_status_file_reading_error);
 
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_file_not_found);
+    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_file_reading_error);
 
     da_datastore_destroy(&store);
 

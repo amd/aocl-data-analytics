@@ -48,10 +48,8 @@
  * \param[in] value Value to set the option to.
  * \return Returns \ref da_status.
  *
- * \section da_optset_nan Handling of missing values
  * These functions do not handle missing values.
  *
- * \section da_optset_return Return
  * The function returns
  *
  * * \ref da_status_success          - option was successfully set,
@@ -60,9 +58,6 @@
  * * \ref da_status_option_wrong_type - wrong option type passed,
  * * \ref da_status_option_invalid_bounds - option value is out-of-bounds,
  * * \ref da_status_option_invalid_value - cannot set option to an invalid value.
- *
- * \section da_optset_ex Example
- * \todo Description and link to source.
  *
  */
 da_status da_options_set_int(da_handle handle, const char *option, da_int value);
@@ -80,19 +75,13 @@ da_status da_options_set_d_real(da_handle handle, const char *option, double val
  * \param[in] option Name of the option to get,
  * \param[in] value Value that contains the option setting.
  * \return Returns \ref da_status.
- *
- * \section da_optget_nan Handling of missing values
+ * 
  * These functions do not handle missing values.
- *
- * \section da_optget_return Return
  * The function returns
  *
  * * \ref da_status_success          - option was successfully set,
  * * \ref da_status_option_not_found - option not found,
  * * \ref da_status_option_wrong_type - wrong option type passed.
- *
- * \section da_optget_ex Example
- * \todo Description and link to source.
  *
  */
 da_status da_options_get_int(da_handle handle, const char *option, da_int *value);
@@ -100,7 +89,7 @@ da_status da_options_get_s_real(da_handle handle, const char *option, float *val
 da_status da_options_get_d_real(da_handle handle, const char *option, double *value);
 /** \} */
 
-/**
+/** \{
  * \brief Member of the option getters group
  *
  * This function is part of the group of "option getters" and are all quite similar and differ
@@ -110,20 +99,15 @@ da_status da_options_get_d_real(da_handle handle, const char *option, double *va
  * \param[in] value Value that contains the option setting.
  * \param[in] lvalue length of the string \p value.
  * \return Returns \ref da_status.
- *
- * \section da_optgets_nan Handling of missing values
+ * 
  * These functions do not handle missing values.
- *
- * \section da_optgets_return Return
+ * 
  * The function returns
  *
  * * \ref da_status_success          - option was successfully set,
  * * \ref da_status_invalid_input    - length of string \p value, lvalue, is too small to containt the option value. Provide more space.
  * * \ref da_status_option_not_found - option not found,
  * * \ref da_status_option_wrong_type - wrong option type passed.
- *
- * \section da_optgets_ex Example
- * \todo Description and link to source.
  *
  */
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
@@ -145,5 +129,6 @@ da_status da_datastore_options_get_d_real(da_datastore store, const char *option
                                           double *value);
 da_status da_datastore_options_get_string(da_datastore store, const char *option,
                                           char *value, size_t lvalue);
+/** \} */
 
 #endif //AOCLDA_OPTIONS_H

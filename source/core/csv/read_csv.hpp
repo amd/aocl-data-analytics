@@ -47,7 +47,7 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
     fp = fopen(filename, "r");
     if (fp == nullptr) {
 #endif
-        return da_error(csv->err, da_status_file_not_found, "File not found");
+        return da_error(csv->err, da_status_file_reading_error, "File not found");
     }
 
     parser->source = (void *)fp;
@@ -80,7 +80,8 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
         *nrows = 0;
         *ncols = 0;
         *a = nullptr;
-        return da_warn(csv->err, da_status_no_data, "No data was found in the csv file.");
+        return da_warn(csv->err, da_status_parsing_error,
+                       "No data was found in the CSV file.");
     }
 
     if (parser->skip_footer) {
@@ -93,7 +94,8 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
         *nrows = 0;
         *ncols = (da_int)words_len;
         *a = nullptr;
-        return da_warn(csv->err, da_status_no_data, "No data was found in the CSV file");
+        return da_warn(csv->err, da_status_parsing_error,
+                       "No data was found in the CSV file");
     }
 
     //The parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
@@ -126,7 +128,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
                     std::to_string(parser->line_fields[i]);
             buff += ", expected " + std::to_string(fields_per_line_signed) + ").";
             free_data(&data, (da_int)n);
-            return da_error(csv->err, da_status_ragged_csv, buff);
+            return da_error(csv->err, da_status_parsing_error, buff);
         }
 
         for (int64_t j = parser->line_start[i];
@@ -144,7 +146,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
                     da_warn(csv->err, da_status_missing_data, buff);
                     status = da_status_missing_data;
                 } else {
-                    buff = "Unable to parse entry on line " + std::to_string(i) +
+                    buff = "Unable to parse data on line " + std::to_string(i) +
                            " entry " + std::to_string(j) + ".";
                     *a = nullptr;
                     free_data(&data, (da_int)n);
@@ -171,7 +173,11 @@ inline da_status parse_headings(csv_reader *csv, da_int ncols, char ***headings)
     }
 
     if (!(ncols == parser->line_fields[0])) {
-        return da_error(csv->err, da_status_ragged_csv, "Ragged CSV");
+        std::string buff;
+        buff = "An unexpected number of headings was found (found " +
+               std::to_string(parser->line_fields[0]);
+        buff += ", expected " + std::to_string(ncols) + ").";
+        return da_error(csv->err, da_status_parsing_error, buff);
     }
 
     // Calloc rather than new as can be called from C code amd want char pointers set to null
@@ -231,8 +237,8 @@ inline da_status parse_and_process(csv_reader *csv, const char *filename, T **a,
 
     int istatus = parser_reset(csv->parser);
     if (istatus != 0) {
-        return da_error(csv->err, da_status_parsing_error,
-                        "An error occurred while resetting the parser.");
+        return da_error(csv->err, da_status_memory_error,
+                        "A memory allocation error occurred while resetting the parser.");
     }
 
     return error;

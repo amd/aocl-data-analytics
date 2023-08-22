@@ -164,7 +164,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
     if (num_digits == 0) {
         *number = 0.0;
-        status = da_status_range_error;
+        status = da_status_parsing_error;
         return status;
     }
 
@@ -207,7 +207,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
     if (exponent > 308) {
         *number = HUGE_VAL;
-        status = da_status_range_error;
+        status = da_status_parsing_error;
         return status;
     } else if (exponent > 0) {
         *number *= e[exponent];
@@ -224,7 +224,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
     }
 
     if (*number == HUGE_VAL || *number == -HUGE_VAL)
-        status = da_status_range_error;
+        status = da_status_parsing_error;
 
     if (skip_trailing) {
         // Skip trailing whitespace.
@@ -317,7 +317,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
     if (num_digits == 0) {
         *number = 0.0;
-        status = da_status_range_error;
+        status = da_status_parsing_error;
         return status;
     }
 
@@ -360,7 +360,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
     if (exponent > 38) {
         *number = HUGE_VALF;
-        status = da_status_range_error;
+        status = da_status_parsing_error;
         return status;
     } else if (exponent > 0) {
         *number *= e[exponent];
@@ -377,7 +377,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
     }
 
     if (*number == HUGE_VALF || *number == -HUGE_VALF)
-        status = da_status_range_error;
+        status = da_status_parsing_error;
 
     if (skip_trailing) {
         // Skip trailing whitespace.
@@ -420,7 +420,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
     // Check that there is a first digit.
     if (!isdigit_ascii(*p)) {
         // Error...
-        status = da_status_no_digits;
+        status = da_status_parsing_error;
         return status;
     }
 
@@ -445,7 +445,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     *number = *number * 10 - (d - '0');
                     d = *++p;
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -456,7 +456,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     *number = *number * 10 - (d - '0');
                     d = *++p;
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -482,7 +482,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     d = *++p;
 
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -494,7 +494,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     d = *++p;
 
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -508,7 +508,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
     // Did we use up all the characters?
     if (*p) {
-        status = da_status_invalid_chars;
+        status = da_status_parsing_error;
         return status;
     }
 
@@ -550,7 +550,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
     // Check that there is a first digit.
     if (!isdigit_ascii(*p)) {
         // Error...
-        status = da_status_no_digits;
+        status = da_status_parsing_error;
         return status;
     }
 
@@ -575,7 +575,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     *number = *number * 10 - (d - '0');
                     d = *++p;
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -586,7 +586,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     *number = *number * 10 - (d - '0');
                     d = *++p;
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -612,7 +612,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     d = *++p;
 
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -624,7 +624,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                     d = *++p;
 
                 } else {
-                    status = da_status_overflow;
+                    status = da_status_parsing_error;
                     return status;
                 }
             }
@@ -638,7 +638,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
     // Did we use up all the characters?
     if (*p) {
-        status = da_status_invalid_chars;
+        status = da_status_parsing_error;
         return status;
     }
 
@@ -668,7 +668,7 @@ inline da_status char_to_num([[maybe_unused]] parser_t *parser, const char *str,
                              [[maybe_unused]] char **endptr, uint8_t *number,
                              [[maybe_unused]] int *maybe_int) {
 
-    da_status status = da_status_invalid_boolean;
+    da_status status = da_status_parsing_error;
     *number = 0;
     char *p = (char *)str;
 

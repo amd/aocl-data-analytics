@@ -1253,16 +1253,18 @@ class data_store {
             tmp_status = da_csv::parse_and_process(csv, filename, &data_f, &nrows, &ncols,
                                                    get_headings, &headings);
             // We need to take care checking for allowed error exits and warnings here to avoid memory leaks
-            if (tmp_status == da_status_no_data) {
+            if (tmp_status == da_status_parsing_error) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_f, 0);
-                return da_error(err, da_status_no_data, "No data");
+                return da_error(err, da_status_parsing_error,
+                                "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
                        tmp_status != da_status_missing_data &&
                        tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_f, 0);
-                return da_error(err, tmp_status, "Error parsing CSV");
+                return da_error(err, tmp_status,
+                                "Consult error trace for further details");
             }
             status = concatenate_columns(nrows, ncols, data_f, row_major, copy_data,
                                          own_data, C_data);
@@ -1277,16 +1279,18 @@ class data_store {
         case da_csv::csv_double: {
             tmp_status = da_csv::parse_and_process(csv, filename, &data_d, &nrows, &ncols,
                                                    get_headings, &headings);
-            if (tmp_status == da_status_no_data) {
+            if (tmp_status == da_status_parsing_error) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_d, 0);
-                return da_error(err, da_status_no_data, "No data");
+                return da_error(err, da_status_parsing_error,
+                                "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
                        tmp_status != da_status_missing_data &&
                        tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_d, 0);
-                return da_error(err, tmp_status, "Error parsing CSV");
+                return da_error(err, tmp_status,
+                                "Consult error trace for further details");
             }
             status = concatenate_columns(nrows, ncols, data_d, row_major, copy_data,
                                          own_data, C_data);
@@ -1304,16 +1308,18 @@ class data_store {
         case da_csv::csv_integer: {
             tmp_status = da_csv::parse_and_process(csv, filename, &data_int, &nrows,
                                                    &ncols, get_headings, &headings);
-            if (tmp_status == da_status_no_data) {
+            if (tmp_status == da_status_parsing_error) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_int, 0);
-                return da_error(err, da_status_no_data, "No data");
+                return da_error(err, da_status_parsing_error,
+                                "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
                        tmp_status != da_status_missing_data &&
                        tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_int, 0);
-                return da_error(err, tmp_status, "Error parsing CSV");
+                return da_error(err, tmp_status,
+                                "Consult error trace for further details");
             }
             status = concatenate_columns(nrows, ncols, data_int, row_major, copy_data,
                                          own_data, C_data);
@@ -1331,16 +1337,18 @@ class data_store {
         case da_csv::csv_char: {
             tmp_status = da_csv::parse_and_process(csv, filename, &data_char, &nrows,
                                                    &ncols, get_headings, &headings);
-            if (tmp_status == da_status_no_data) {
+            if (tmp_status == da_status_parsing_error) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
-                return da_error(err, da_status_no_data, "No data");
+                return da_error(err, da_status_parsing_error,
+                                "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
                        tmp_status != da_status_missing_data &&
                        tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
-                return da_error(err, tmp_status, "Error parsing CSV");
+                return da_error(err, tmp_status,
+                                "Consult error trace for further details");
             }
             status = concatenate_columns(nrows, ncols, data_char, row_major, copy_data,
                                          own_data, C_data);
@@ -1358,16 +1366,18 @@ class data_store {
         case da_csv::csv_boolean: {
             tmp_status = da_csv::parse_and_process(csv, filename, &data_bool, &nrows,
                                                    &ncols, get_headings, &headings);
-            if (tmp_status == da_status_no_data) {
+            if (tmp_status == da_status_parsing_error) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_bool, 0);
-                return da_error(err, da_status_no_data, "No data");
+                return da_error(err, da_status_parsing_error,
+                                "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
                        tmp_status != da_status_missing_data &&
                        tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_bool, 0);
-                return da_error(err, tmp_status, "Error parsing CSV");
+                return da_error(err, tmp_status,
+                                "Consult error trace for further details");
             }
             status = concatenate_columns(nrows, ncols, data_bool, row_major, copy_data,
                                          own_data, C_data);
@@ -1387,16 +1397,18 @@ class data_store {
             // Auto detection of datatype for each column
             tmp_status = da_csv::parse_and_process(csv, filename, &data_char, &nrows,
                                                    &ncols, get_headings, &headings);
-            if (tmp_status == da_status_no_data) {
+            if (tmp_status == da_status_parsing_error) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
-                return da_error(err, da_status_no_data, "No data");
+                return da_error(err, da_status_parsing_error,
+                                "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
                        tmp_status != da_status_missing_data &&
                        tmp_status != da_status_bad_lines) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
-                return da_error(err, tmp_status, "Error parsing CSV");
+                return da_error(err, tmp_status,
+                                "Consult error trace for further details");
             }
 
             da_auto_detect::CSVColumnsType columns;
