@@ -5,7 +5,7 @@
 !
 #include "preprocessor.fpp"
     Subroutine PREC(timer)(ttime)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Real (Kind=wp) :: ttime
 !
       Real (Kind=wp) :: temp

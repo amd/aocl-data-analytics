@@ -48,7 +48,7 @@
 
     Subroutine PREC(setulb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
       iprint, csave, lsave, isave, dsave)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Character (60) :: task, csave
       Logical :: lsave(4)
@@ -287,7 +287,7 @@
     Subroutine PREC(mainlb)(n, m, x, l, u, nbd, f, g, factr, pgtol, ws, wy, sy, ss, &
       wt, wn, snd, z, r, d, t, xp, wa, index, iwhere, indx2, task, iprint, &
       csave, lsave, isave, dsave)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Implicit None
       Character (60) :: task, csave
       Logical :: lsave(4)
@@ -991,7 +991,7 @@
 !======================= The end of mainlb =============================
 
     Subroutine PREC(active)(n, l, u, nbd, x, iwhere, iprint, prjctd, cnstnd, boxed)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Logical :: prjctd, cnstnd, boxed
       Integer :: n, iprint, nbd(n), iwhere(n)
@@ -1092,7 +1092,7 @@
 !======================= The end of active =============================
 
     Subroutine PREC(bmv)(m, sy, wt, col, v, p, info)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Integer :: m, col, info
       Real (Kind=wp) :: sy(m, m), wt(m, m), v(2*col), p(2*col)
@@ -1211,7 +1211,7 @@
     Subroutine PREC(cauchy)(n, x, l, u, nbd, g, iorder, iwhere, t, d, xcp, m, wy, &
       ws, sy, wt, theta, col, head, p, c, wbp, v, nseg, iprint, sbgnrm, info, &
       epsmch)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Implicit None
       Integer :: n, m, head, col, nseg, iprint, info, nbd(n), iorder(n), &
         iwhere(n)
@@ -1704,7 +1704,7 @@
 
     Subroutine PREC(cmprlb)(n, m, x, g, ws, wy, sy, wt, z, r, wa, index, theta, col, &
       head, nfree, cnstnd, info)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Logical :: cnstnd
       Integer :: n, m, col, head, nfree, info, index(n)
@@ -1771,7 +1771,7 @@
 !======================= The end of cmprlb =============================
 
     Subroutine PREC(errclb)(n, m, factr, l, u, nbd, task, info, k)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Character (60) :: task
       Integer :: n, m, info, k, nbd(n)
@@ -1833,7 +1833,7 @@
 
     Subroutine PREC(formk)(n, nsub, ind, nenter, ileave, indx2, iupdat, updatd, wn, &
       wn1, m, ws, wy, sy, theta, col, head, info)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Integer :: n, nsub, m, col, head, nenter, ileave, iupdat, info, ind(n), &
         indx2(n)
@@ -2157,7 +2157,7 @@
 !======================= The end of formk ==============================
 
     Subroutine PREC(formt)(m, wt, sy, ss, col, theta, info)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Integer :: m, col, info
       Real (Kind=wp) :: theta, wt(m, m), sy(m, m), ss(m, m)
@@ -2326,7 +2326,7 @@
 !======================= The end of freev ==============================
 
     Subroutine PREC(hpsolb)(n, t, iorder, iheap)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Integer :: iheap, n, iorder(n)
       Real (Kind=wp) :: t(n)
 
@@ -2441,7 +2441,7 @@
     Subroutine PREC(lnsrlb)(n, l, u, nbd, x, f, fold, gd, gdold, g, d, r, t, z, stp, &
       dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, task, boxed, &
       cnstnd, csave, isave, dsave)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Character (60) :: task, csave
       Logical :: boxed, cnstnd
@@ -2571,7 +2571,7 @@
 
     Subroutine PREC(matupd)(n, m, ws, wy, sy, ss, d, r, itail, iupdat, col, head, &
       theta, rr, dr, stp, dtd)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Integer :: n, m, itail, iupdat, col, head
       Real (Kind=wp) :: theta, rr, dr, stp, dtd, d(n), r(n), ws(n, m), &
@@ -2658,7 +2658,7 @@
 !======================= The end of matupd =============================
 
     Subroutine PREC(prn1lb)(n, m, l, u, x, iprint, itfile, epsmch)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Integer :: n, m, iprint, itfile
       Real (Kind=wp) :: epsmch, x(n), l(n), u(n)
@@ -2726,7 +2726,7 @@
 
     Subroutine PREC(prn2lb)(n, x, f, g, iprint, itfile, iter, nfgv, nact, sbgnrm, &
       nseg, word, iword, iback, stp, xstep)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Character (3) :: word
       Integer :: n, iprint, itfile, iter, nfgv, nact, nseg, iword, iback
@@ -2796,7 +2796,7 @@
     Subroutine PREC(prn3lb)(n, x, f, task, iprint, info, itfile, iter, nfgv, nintol, &
       nskip, nact, sbgnrm, time, nseg, word, iback, stp, xstep, k, cachyt, &
       sbtime, lnscht)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Character (60) :: task
       Character (3) :: word
@@ -2921,7 +2921,7 @@
 !======================= The end of prn3lb =============================
 
     Subroutine PREC(projgr)(n, l, u, nbd, x, g, sbgnrm)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
 
       Integer :: n, nbd(n)
       Real (Kind=wp) :: sbgnrm, x(n), l(n), u(n), g(n)
@@ -2972,7 +2972,7 @@
 
     Subroutine PREC(subsm)(n, m, nsub, ind, l, u, nbd, x, d, xp, ws, wy, theta, xx, &
       gg, col, head, iword, wv, wn, iprint, info)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Implicit None
       Integer :: n, m, nsub, col, head, iword, iprint, info, ind(nsub), nbd(n)
       Real (Kind=wp) :: theta, l(n), u(n), x(n), d(n), xp(n), xx(n), gg(n), &
@@ -3324,7 +3324,7 @@
 
     Subroutine PREC(csrch)(f, g, stp, ftol, gtol, xtol, stpmin, stpmax, task, &
       isave, dsave)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Character (*) :: task
       Integer :: isave(2)
       Real (Kind=wp) :: f, g, stp, ftol, gtol, xtol, stpmin, stpmax
@@ -3669,7 +3669,7 @@
 
     Subroutine PREC(cstep)(stx, fx, dx, sty, fy, dy, stp, fp, dp, brackt, stpmin, &
       stpmax)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Logical :: brackt
       Real (Kind=wp) :: stx, fx, dx, sty, fy, dy, stp, fp, dp, stpmin, stpmax
 !     **********
