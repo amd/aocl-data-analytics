@@ -5,7 +5,7 @@
 !
 #include "preprocessor.fpp"
     Subroutine PREC(pofa)(a, lda, n, info)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Integer :: lda, n, info
       Real (Kind=wp) :: a(lda, *)
 !
@@ -81,7 +81,7 @@
 !====================== The end of dpofa ===============================
 
     Subroutine PREC(trsl)(t, ldt, n, b, job, info)
-      Use working_precision, Only: wp
+      Use PREC(working_precision), Only: wp
       Integer :: ldt, n, job, info
       Real (Kind=wp) :: t(ldt, *), b(*)
 !

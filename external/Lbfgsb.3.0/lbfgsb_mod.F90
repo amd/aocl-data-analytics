@@ -1,7 +1,7 @@
 #include "preprocessor.fpp"
 Subroutine PREC(lbfgsb_solver)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, &
    iprint, lsavei, isave, dsave)
-   Use working_precision, Only: wp
+   Use PREC(working_precision), Only: wp
    Implicit None
 !  Arguments
    Integer :: lsavei(4)

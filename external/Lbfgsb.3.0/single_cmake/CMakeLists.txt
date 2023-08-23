@@ -1,6 +1,6 @@
 # Build the single precision version
 add_compile_definitions(SINGLE_PREC)
-add_library(lbfgsb_s OBJECT ${LBFGSB_SRC})
+add_library(lbfgsb_s OBJECT ../sworking_precision.F90 ${LBFGSB_SRC})
 if (WIN32)
   if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
     target_link_directories(lbfgsb_s PUBLIC "$ENV{IFORT_LIBS}")
