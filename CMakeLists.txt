@@ -216,6 +216,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
     set(COMPILER_FLAGS_COMMON
         "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
   endif()
+  if (BUILD_SHARED_LIBS)
+    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-fPIC")
+  endif()
     if(VECTORIZATION_REPORTS)
       if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize")
