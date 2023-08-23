@@ -55,7 +55,7 @@ The following :ref:`da_int` options can be set:
 Examples
 --------
 
-Various files in the examples folder of your installation demonstrate the use of these functions (e.g. :math:`\texttt{basic_pca.cpp}` and :math:`\linear_model.cpp``).
+Various files in the examples folder of your installation demonstrate the use of these functions (e.g. ``basic_pca.cpp`` and ``linear_model.cpp``).
 
 API Reference
 -------------

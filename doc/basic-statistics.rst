@@ -24,7 +24,7 @@ For example, if the routine :cpp:func:`da_mean_s` is called with the :cpp:enum:`
 Examples
 --------
 
-See :math:`\texttt{basic_statistics.cpp}` in the examples folder of your installation for examples of how to use these functions.
+See ``basic_statistics.cpp`` in the examples folder of your installation for examples of how to use these functions.
 
 API Reference
 -------------
