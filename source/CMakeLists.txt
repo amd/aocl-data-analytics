@@ -55,7 +55,7 @@ endif()
 
 # Create combined library from da_core and Fortran libraries
 add_library(aocl-da $<TARGET_OBJECTS:da_core>  $<TARGET_OBJECTS:lbfgsb>  $<TARGET_OBJECTS:lbfgsb_s>)
-target_link_libraries(aocl-da PRIVATE da_core lbfgsb lbfgsb_s)
+target_link_libraries(aocl-da PUBLIC da_core lbfgsb lbfgsb_s ${FLAME} ${BLIS})
 
 # Installation commands
 install(TARGETS aocl-da
