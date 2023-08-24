@@ -1,6 +1,7 @@
 # Build the double version
 remove_definitions(-DSINGLE_PREC)
-add_library(lbfgsb OBJECT ../dworking_precision.F90 ${LBFGSB_SRC})
+add_library(lbfgsb OBJECT  ${LBFGSB_SRC})
+
 if (WIN32)
   if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
     target_link_directories(lbfgsb PUBLIC "$ENV{IFORT_LIBS}")
