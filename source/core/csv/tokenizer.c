@@ -131,6 +131,8 @@ void parser_set_default_options(parser_t *self) {
     self->header_end = -1;
     self->header_start = -1;
 
+    self->skipped_lines = NULL;
+
 }
 
 parser_t *parser_new() { return (parser_t *)calloc(1, sizeof(parser_t)); }
@@ -153,6 +155,11 @@ int parser_cleanup(parser_t *self) {
     if (self->skipset != NULL) {
         kh_destroy_int64((kh_int64_t *)self->skipset);
         self->skipset = NULL;
+    }
+
+    if (self->skipped_lines != NULL) {
+        kh_destroy_int64((kh_int64_t *)self->skipped_lines);
+        self->skipped_lines = NULL;
     }
 
     if (parser_clear_data_buffers(self) < 0) {
@@ -603,6 +610,21 @@ int parser_add_skiprow(parser_t *self, int64_t row) {
     return 0;
 }
 
+void parser_store_skipped_row(parser_t *self, int64_t row) {
+    khiter_t k;
+    kh_int64_t *set;
+    int ret = 0;
+    if (self->skipped_lines == NULL) {
+        self->skipped_lines = (void *)kh_init_int64();
+    }
+
+    set = (kh_int64_t *)self->skipped_lines;
+
+    k = kh_put_int64(set, row, &ret);
+    set->keys[k] = row;
+
+}
+
 int parser_set_skipfirstnrows(parser_t *self, int64_t nrows) {
     // self->file_lines is zero based so subtract 1 from nrows
     if (nrows > 0) {
@@ -906,6 +928,7 @@ int tokenize_bytes(parser_t *self, size_t line_limit, uint64_t start_lines) {
             } else if (IS_TERMINATOR(c)) {
                 // \n\r possible?
                 if (self->skip_empty_lines) {
+                    parser_store_skipped_row(self, self->file_lines + 1);
                     self->file_lines++;
                 } else {
                     END_LINE();
@@ -913,6 +936,7 @@ int tokenize_bytes(parser_t *self, size_t line_limit, uint64_t start_lines) {
                 break;
             } else if (IS_CARRIAGE(c)) {
                 if (self->skip_empty_lines) {
+                    parser_store_skipped_row(self, self->file_lines + 1);
                     self->file_lines++;
                     self->state = EAT_CRNL_NOP;
                 } else {

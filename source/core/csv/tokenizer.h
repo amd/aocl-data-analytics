@@ -181,6 +181,9 @@ typedef struct parser_t {
     char *error_msg;
 
     int skip_empty_lines;
+
+    // AMD addition: store the lines which were skipped
+    void *skipped_lines;
 } parser_t;
 
 typedef struct coliter_t {
