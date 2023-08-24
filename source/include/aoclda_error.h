@@ -53,7 +53,6 @@ typedef enum da_status_ {
     // CSV errors 100-199
     da_status_file_reading_error = 100, ///< An error occured when reading a CSV file
     da_status_parsing_error,      ///< An error occured when parsing a CSV file into numeric data
-    da_status_bad_lines, ///< The CSV file contained one or more lines that could not be read
     da_status_missing_data, ///< The array returned from reading a CSV file contains missing data
 
     // linreg errors 200-299

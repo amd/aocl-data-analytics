@@ -1259,8 +1259,7 @@ class data_store {
                 return da_error(err, da_status_parsing_error,
                                 "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
-                       tmp_status != da_status_missing_data &&
-                       tmp_status != da_status_bad_lines) {
+                       tmp_status != da_status_missing_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_f, 0);
                 return da_error(err, tmp_status,
@@ -1285,8 +1284,7 @@ class data_store {
                 return da_error(err, da_status_parsing_error,
                                 "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
-                       tmp_status != da_status_missing_data &&
-                       tmp_status != da_status_bad_lines) {
+                       tmp_status != da_status_missing_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_d, 0);
                 return da_error(err, tmp_status,
@@ -1314,8 +1312,7 @@ class data_store {
                 return da_error(err, da_status_parsing_error,
                                 "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
-                       tmp_status != da_status_missing_data &&
-                       tmp_status != da_status_bad_lines) {
+                       tmp_status != da_status_missing_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_int, 0);
                 return da_error(err, tmp_status,
@@ -1343,8 +1340,7 @@ class data_store {
                 return da_error(err, da_status_parsing_error,
                                 "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
-                       tmp_status != da_status_missing_data &&
-                       tmp_status != da_status_bad_lines) {
+                       tmp_status != da_status_missing_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
                 return da_error(err, tmp_status,
@@ -1372,8 +1368,7 @@ class data_store {
                 return da_error(err, da_status_parsing_error,
                                 "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
-                       tmp_status != da_status_missing_data &&
-                       tmp_status != da_status_bad_lines) {
+                       tmp_status != da_status_missing_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_bool, 0);
                 return da_error(err, tmp_status,
@@ -1403,8 +1398,7 @@ class data_store {
                 return da_error(err, da_status_parsing_error,
                                 "Consult error trace for further details");
             } else if (tmp_status != da_status_success &&
-                       tmp_status != da_status_missing_data &&
-                       tmp_status != da_status_bad_lines) {
+                       tmp_status != da_status_missing_data) {
                 da_csv::free_data(&headings, ncols);
                 da_csv::free_data(&data_char, nrows * ncols);
                 return da_error(err, tmp_status,

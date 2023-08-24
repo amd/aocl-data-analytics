@@ -523,6 +523,87 @@ TYPED_TEST(DataStoreTest, warn_for_missing_data) {
     delete params;
 }
 
+TEST(CSVTest, skip_lines_test1) {
+
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, "csv_test_skip_lines.csv");
+
+    da_datastore store = nullptr;
+    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    double *a = nullptr;
+
+    da_int nrows = 0, ncols = 0;
+
+    da_int expected_rows = 3;
+    da_int expected_columns = 5;
+
+    double expected_data[] = {1.0, 2.0,  3.0,  4.0,  5.0,  6.0,  7.0, 8.0,
+                              9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0};
+
+    // Set options
+    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
+              da_status_success);
+    ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
+
+    ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+              da_status_success);
+
+    ASSERT_EQ(nrows, expected_rows);
+    ASSERT_EQ(ncols, expected_columns);
+
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
+            ASSERT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
+        }
+    }
+
+    if (a)
+        free(a);
+
+    da_datastore_destroy(&store);
+}
+
+TEST(CSVTest, skip_lines_test2) {
+
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, "csv_test_skip_lines.csv");
+
+    da_datastore store = nullptr;
+    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    double *a = nullptr;
+
+    da_int nrows = 0, ncols = 0;
+
+    da_int expected_rows = 3;
+    da_int expected_columns = 5;
+
+    double expected_data[] = {1.0, 2.0,  3.0,  4.0,  5.0,  6.0,  7.0, 8.0,
+                              9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0};
+
+    // Set options
+    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
+              da_status_success);
+
+    ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+              da_status_success);
+
+    ASSERT_EQ(nrows, expected_rows);
+    ASSERT_EQ(ncols, expected_columns);
+
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
+            ASSERT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
+        }
+    }
+
+    if (a)
+        free(a);
+
+    da_datastore_destroy(&store);
+}
+
 TEST(CSVTest, options) {
 
     char filepath[256] = DATA_DIR;
@@ -563,7 +644,7 @@ TEST(CSVTest, options) {
               da_status_success);
 
     ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
-              da_status_bad_lines);
+              da_status_success);
 
     ASSERT_EQ(nrows, expected_rows);
     ASSERT_EQ(ncols, expected_columns);
@@ -581,7 +662,7 @@ TEST(CSVTest, options) {
 
     ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_bad_lines);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);

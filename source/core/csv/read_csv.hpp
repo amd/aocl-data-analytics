@@ -70,7 +70,7 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
         for (const khint64_t &key : keys) {
             buff += std::to_string(key) + " ";
         }
-        return da_warn(csv->err, da_status_bad_lines, buff);
+        return da_warn(csv->err, da_status_success, buff);
     }
 
     fclose(fp);
@@ -227,7 +227,7 @@ inline da_status parse_and_process(csv_reader *csv, const char *filename, T **a,
 
     error = parse_file(csv, filename);
 
-    if (!((error == da_status_success) || (error == da_status_bad_lines))) {
+    if (error != da_status_success) {
         parser_reset(csv->parser);
         return da_error_trace(csv->err, error, "Error parsing the file");
     }
