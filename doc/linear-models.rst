@@ -1,7 +1,7 @@
 .. _chapter_linmod:
 
 Linear Models
-=============
+*************
 
 The topic of Linear Models encompasses a range of commonly used statistical models and fitting algorithms, including
 Multiple Linear Regression, Logistic Regression, and Polynomial Regression.
@@ -23,8 +23,8 @@ in Chapters 3-5 of :cite:t:`hastie`.
 [Generalize to add hyperparameters / regularization.]
 
 API Reference
--------------
+=============
 
+.. doxygentypedef:: linmod_model
 .. doxygenenum:: linmod_model_
-
 .. doxygenfunction:: da_linmod_d_fit

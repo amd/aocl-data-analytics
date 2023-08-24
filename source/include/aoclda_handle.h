@@ -11,9 +11,9 @@ extern "C" {
 #endif
 
 /**
- * @brief Enumaration defining the types of handles available
+ * @brief Enumeration defining the types of handles available
  */
-typedef enum da_handle_type {
+typedef enum da_handle_type_ {
     da_handle_uninitialized, ///< handle is not initialized,
     da_handle_linmod, ///< @rst
                       ///< handle is to be used with functions from the :ref:`Linear Models chapter <chapter_linmod>`
@@ -43,8 +43,9 @@ typedef struct _da_handle *da_handle;
  *
  * @param[in,out] handle The main data structure.
  * @param[in] handle_type type of handle to intialize use @ref da_handle_type.
- * @retval da_status_success @ref da_status_success "operation" was successfully completed.
- * @retval TODO write other error codes
+ * @returns @ref da_status
+ * - @ref da_status_success operation was successfully completed.
+ * - TODO write other error codes
  */
 da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type);
 da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type);
@@ -69,8 +70,9 @@ void da_handle_print_error_message(da_handle handle);
  * @param[in,out] handle The main data structure.
  * @param[in] expected_handle_type type of handle to check for.
  *
- * @retval da_status_success  @ref da_status_success "Handle type matches" with expected type.
- * @retval TODO add others.
+ * @returns @ref da_status
+ * - @ref da_status_success Handle type matches with expected type.
+ * - @retval TODO add others.
  */
 da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_type);
 
