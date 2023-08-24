@@ -1,8 +1,6 @@
 
 .. _chapter_gen_intro:
 
-.. _chapter_gen_intro:
-
 General introduction
 ********************
  
