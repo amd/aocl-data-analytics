@@ -54,9 +54,23 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
     char *encoding_errors = NULL;
 
     istatus = tokenize_all_rows(parser, encoding_errors);
-    if (istatus != 0 || parser->file_lines != parser->lines) {
-        return da_warn(csv->err, da_status_bad_lines,
-                       "Some lines were ignored - this may be because they were empty.");
+    if (istatus != 0) {
+        return da_error(csv->err, da_status_memory_error, "Memory allocation failure");
+    } else if (parser->skipped_lines != nullptr) {
+        std::string buff;
+        buff = "The following lines of the CSV file were ignored:\n";
+        // Get the list of ignored lines from the parser's hash table and sort them
+        std::vector<khint64_t> keys;
+        for (khint64_t it = kh_begin((kh_int64_t *)parser->skipped_lines);
+             it != kh_end((kh_int64_t *)parser->skipped_lines); ++it) {
+            if (kh_exist((kh_int64_t *)parser->skipped_lines, it))
+                keys.push_back((khint64_t)kh_key(((kh_int64_t *)parser->skipped_lines), it));
+        };
+        std::sort(keys.begin(), keys.end());
+        for (const khint64_t &key : keys) {
+            buff += std::to_string(key) + " ";
+        }
+        return da_warn(csv->err, da_status_bad_lines, buff);
     }
 
     fclose(fp);
@@ -123,7 +137,8 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
         // check for ragged matrix
         if (parser->line_fields[i] != fields_per_line_signed) {
             std::string buff;
-            buff = "Line " + std::to_string(i);
+            buff = "In the lines read from the CSV file,";
+            buff += " line " + std::to_string(i + 1);
             buff += " had an unexpected number of fields (fields " +
                     std::to_string(parser->line_fields[i]);
             buff += ", expected " + std::to_string(fields_per_line_signed) + ").";
