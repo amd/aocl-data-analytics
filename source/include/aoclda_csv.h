@@ -24,7 +24,6 @@ extern "C" {
  * - \ref da_status_success
  * - \ref da_status_file_reading_error
  * - \ref da_status_parsing_error
- * - \ref da_status_bad_lines
  * - \ref da_status_missing_data
  * */
 da_status da_read_csv_d(da_datastore store, const char *filename, double **a,
@@ -53,7 +52,6 @@ da_status da_read_csv_int(da_datastore store, const char *filename, da_int **a,
  * - \ref da_status_success
  * - \ref da_status_file_reading_error
  * - \ref da_status_parsing_error
- * - \ref da_status_bad_lines
  * - \ref da_status_missing_data
  */
 da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **a,
@@ -75,7 +73,6 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
  * - \ref da_status_success
  * - \ref da_status_file_reading_error
  * - \ref da_status_parsing_error
- * - \ref da_status_bad_lines
  * - \ref da_status_missing_data
  */
 da_status da_read_csv_char(da_datastore store, const char *filename, char ***a,
