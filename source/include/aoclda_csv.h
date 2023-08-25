@@ -20,7 +20,7 @@ extern "C" {
  * \param[out] nrows the number of rows loaded.
  * \param[out] ncols the number of columns loaded.
  * \param[out] headings a pointer to the size ncols array of strings containing the column headings. If the option <em>CSV use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \a headings internally. It is your responsibility to deallocate this memory.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success
  * - \ref da_status_file_reading_error
  * - \ref da_status_parsing_error
@@ -49,7 +49,7 @@ da_status da_read_csv_int(da_datastore store, const char *filename, da_int **a,
  * \param[out] nrows the number of rows loaded.
  * \param[out] ncols the number of columns loaded.
  * \param[out] headings a pointer to the size ncols array of strings containing the column headings. If the option <em>CSV use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \a headings internally. It is your responsibility to deallocate this memory.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success
  * - \ref da_status_file_reading_error
  * - \ref da_status_parsing_error
@@ -71,7 +71,7 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
  * \param[out] nrows the number of rows loaded.
  * \param[out] ncols the number of columns loaded.
  * \param[out] headings a pointer to the size ncols array of strings containing the column headings. If the option <em>CSV use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \a headings internally. It is your responsibility to deallocate this memory.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success
  * - \ref da_status_file_reading_error
  * - \ref da_status_parsing_error
