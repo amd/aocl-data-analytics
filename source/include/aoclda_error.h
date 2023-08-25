@@ -67,12 +67,14 @@ typedef enum da_status_ {
     da_status_option_invalid_value,   ///< Cannot set option to an invalid value
 
     // Optimization solvers 500-599
-    da_status_optimization_usrstop = 500, //< User requested to stop optimization process
-    da_status_optimization_num_difficult, // Numerical difficulties encoutered during the optimization process
-    da_status_optimization_infeasible, // The problem is infeasible, the bounds describe an empty domain
-    da_status_optimization_empty_space, // No variables are defined in the problem
-    da_status_optimization_maxit,       // Iteration limit reached without converging
-    da_status_optimization_maxtime      // Time limit reached without converging
+    da_status_optimization_usrstop = 500, ///< User requested to stop optimization process
+    da_status_optimization_num_difficult, ///< Numerical difficulties encoutered during the optimization process
+    da_status_optimization_infeasible, ///< The problem is infeasible, the bounds describe an empty domain
+    da_status_optimization_empty_space, ///< No variables are defined in the problem
+    da_status_optimization_maxit,       ///< Iteration limit reached without converging
+    da_status_optimization_maxtime,     ///< Time limit reached without converging
 
+    // datastores 600-699
+    da_status_missing_block = 600, ///< The store is missing a block, the requested operation cannot be performed
 } da_status;
 #endif

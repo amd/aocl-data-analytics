@@ -65,6 +65,32 @@ void get_block_data_int(int_block_id bid, da_int &m, da_int &n, std::vector<da_i
     }
 }
 
+void get_transition_datastore(da_datastore &store) {
+    /* Create a datastore with partially added rows
+     *  ------   -------
+     * |  int | |  dbl  |
+     * |  2x4 | |  2x4  |
+     *  ------   -------
+     *  ------
+     * |  1x4 |   [empty]
+     *  ------
+     */
+    std::vector<da_int> ib1, ib2;
+    std::vector<double> db1;
+
+    ib1 = {1, 2, 3, 4, 5, 6, 7, 8};
+    ib2 = {1, 2, 3, 4};
+    db1 = {1., 2., 3., 4., 5., 6., 7., 8., 9.};
+    da_int m = 2, n = 4;
+    EXPECT_EQ(da_data_load_col_int(store, m, n, ib1.data(), row_major, true),
+              da_status_success);
+    EXPECT_EQ(da_data_load_col_real_d(store, m, n, db1.data(), row_major, true),
+              da_status_success);
+    m = 1;
+    EXPECT_EQ(da_data_load_row_int(store, m, n, ib2.data(), row_major, true),
+              da_status_success);
+}
+
 void get_heterogeneous_data_store(data_store &ds, da_int &mt, da_int &nt,
                                   std::vector<da_int> &idata, std::vector<float> &fdata,
                                   std::vector<std::string> &sdata) {
@@ -1347,7 +1373,7 @@ TEST(dataStore, heading) {
     EXPECT_STREQ(col_name, "");
 
     // tag an anonymous column
-    idx = 4; 
+    idx = 4;
     EXPECT_EQ(da_data_label_column(store, new_tag, idx), da_status_success);
     EXPECT_EQ(da_data_get_col_label(store, idx, &name_sz, col_name), da_status_success);
     EXPECT_STREQ(col_name, new_tag);
@@ -1355,5 +1381,58 @@ TEST(dataStore, heading) {
     EXPECT_EQ(col_idx, idx);
     da_datastore_destroy(&store);
 
+    da_datastore_destroy(&store);
+}
+
+TEST(datastore, incompleteStore) {
+    // get a datastore in an intermediate state (partially added row)
+    da_datastore store;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    get_transition_datastore(store);
+
+    // call all the functions to check they correctly return an error
+    // load columns
+    da_int idummy;
+    float fdummy;
+    uint8_t uidummy;
+    double ddummy;
+    const char *cdummy[] = {"a"};
+    EXPECT_EQ(da_data_load_col_int(store, 1, 1, &idummy, row_major, true),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_load_col_real_d(store, 1, 1, &ddummy, row_major, true),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_load_col_real_s(store, 1, 1, &fdummy, row_major, true),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_load_col_uint8(store, 1, 1, &uidummy, row_major, true),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_load_col_str(store, 1, 1, cdummy, row_major),
+              da_status_missing_block);
+
+    // selection
+    EXPECT_EQ(da_data_select_columns(store, "key", 0, 1), da_status_missing_block);
+    EXPECT_EQ(da_data_select_rows(store, "key", 0, 1), da_status_missing_block);
+    EXPECT_EQ(da_data_select_slice(store, "key", 0, 1, 0, 1), da_status_missing_block);
+    EXPECT_EQ(da_data_select_non_missing(store, "key", 0), da_status_missing_block);
+
+    // extract column
+    EXPECT_EQ(da_data_extract_column_int(store, 1, 1, &idummy), da_status_missing_block);
+    EXPECT_EQ(da_data_extract_column_real_s(store, 1, 1, &fdummy),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_extract_column_real_d(store, 1, 1, &ddummy),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_extract_column_uint8(store, 1, 1, &uidummy),
+              da_status_missing_block);
+    char *Tc[1];
+    EXPECT_EQ(da_data_extract_column_str(store, 1, 1, Tc), da_status_missing_block);
+
+    // extract selection
+    EXPECT_EQ(da_data_extract_selection_int(store, "key", 1, &idummy),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_extract_selection_real_s(store, "key", 1, &fdummy),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_extract_selection_real_d(store, "key", 1, &ddummy),
+              da_status_missing_block);
+    EXPECT_EQ(da_data_extract_selection_uint8(store, "key", 1, &uidummy),
+              da_status_missing_block);
     da_datastore_destroy(&store);
 }

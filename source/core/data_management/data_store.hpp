@@ -409,6 +409,12 @@ class data_store {
                                   bool copy_data = false, bool own_data = false,
                                   bool C_data = false) {
 
+        // cannot concatenate columns if the store is in the process of adding rows
+        if (missing_block)
+            return da_error(
+                err, da_status_missing_block,
+                "Row blocks are not complete, cannot concatenate columns at this point");
+
         // mc must match m except if the initial data.frame is empty (new block is created)
         // mc*nc input data must not be empty
         if (mc <= 0 || nc <= 0 || (m > 0 && m != mc))
@@ -574,6 +580,11 @@ class data_store {
     template <class T> da_status extract_column(da_int idx, da_int &m, T *col) {
         da_status status;
 
+        if (missing_block)
+            return da_error(
+                err, da_status_missing_block,
+                "Row blocks are not complete, cannot extract columns at this point");
+
         if (m != this->m) {
             m = this->m;
             return da_error(err, da_status_invalid_input,
@@ -678,6 +689,11 @@ class data_store {
     da_status select_slice(std::string key, interval rows, interval cols) {
         da_status exit_status = da_status_success;
 
+        if (missing_block)
+            return da_error(
+                err, da_status_missing_block,
+                "Row blocks are not complete, cannot select elements at this time");
+
         if (!check_internal_string(key)) {
             std::string errmsg = "key cannot contain the prefix: ";
             errmsg += DA_STRINTERNAL;
@@ -713,6 +729,11 @@ class data_store {
     da_status select_columns(std::string key, interval cols) {
         da_status exit_status = da_status_success;
 
+        if (missing_block)
+            return da_error(
+                err, da_status_missing_block,
+                "Row blocks are not complete, cannot select elements at this time");
+
         if (!check_internal_string(key)) {
             std::string errmsg = "key cannot contain the prefix: ";
             errmsg += DA_STRINTERNAL;
@@ -739,6 +760,11 @@ class data_store {
     }
     da_status select_rows(std::string key, interval rows) {
         da_status exit_status = da_status_success;
+
+        if (missing_block)
+            return da_error(
+                err, da_status_missing_block,
+                "Row blocks are not complete, cannot select elements at this time");
 
         if (!check_internal_string(key)) {
             std::string errmsg = "key cannot contain the prefix: ";
@@ -768,6 +794,11 @@ class data_store {
 
     template <class T> da_status extract_selection(std::string key, da_int ld, T *data) {
         da_status exit_status = da_status_success, status;
+
+        if (missing_block)
+            return da_error(
+                err, da_status_missing_block,
+                "Row blocks are not complete, cannot extract data at this point");
 
         auto it = selections.find(key);
         bool clear_selections = false, clear_cols = false, clear_rows = false;
@@ -841,6 +872,11 @@ class data_store {
 
         da_status status = da_status_success;
         da_int i;
+
+        if (missing_block)
+            return da_error(
+                err, da_status_missing_block,
+                "Row blocks are not complete, cannot select elements at this time");
 
         if (!check_internal_string(key)) {
             std::string errmsg = "key cannot contain the prefix: ";
@@ -1223,7 +1259,11 @@ class data_store {
         return da_status_success;
     }
 
-    /* Get data from a CSV file and create blocks appropriately */
+    /* Get data from a CSV file and create blocks appropriately 
+     * Exit status:
+     * - da_status_parsing_error
+     * - da_status_ragged_csv
+     */
     da_status load_from_csv(da_csv::csv_reader *csv, const char *filename) {
         da_status status = da_status_success, tmp_status = da_status_success;
 

@@ -13,12 +13,12 @@ da_status da_datastore_init(da_datastore *store) {
     try {
         (*store)->err = new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
     } catch (std::bad_alloc &) {
-        return da_status_internal_error;
+        return da_status_memory_error;
     }
     try {
         (*store)->store = new da_data::data_store(*(*store)->err);
     } catch (std::bad_alloc &) {
-        return da_status_internal_error;
+        return da_status_memory_error;
     }
     try {
         (*store)->opts = new da_options::OptionRegistry();
