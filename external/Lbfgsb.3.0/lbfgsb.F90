@@ -49,9 +49,9 @@
     Subroutine PREC(setulb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
       iprint, csave, lsave, isave, dsave)
 #ifdef SINGLE_PREC
-      Use working_precision, Only: wp => sp
+      Use sworking_precision, Only: wp
 #else
-      Use working_precision, Only: wp => dp
+      Use dworking_precision, Only: wp
 #endif
 
       Character (60) :: task, csave
@@ -292,9 +292,9 @@
       wt, wn, snd, z, r, d, t, xp, wa, index, iwhere, indx2, task, iprint, &
       csave, lsave, isave, dsave)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Implicit None
       Character (60) :: task, csave
@@ -1000,9 +1000,9 @@
 
     Subroutine PREC(active)(n, l, u, nbd, x, iwhere, iprint, prjctd, cnstnd, boxed)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Logical :: prjctd, cnstnd, boxed
@@ -1105,9 +1105,9 @@
 
     Subroutine PREC(bmv)(m, sy, wt, col, v, p, info)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Integer :: m, col, info
@@ -1228,9 +1228,9 @@
       ws, sy, wt, theta, col, head, p, c, wbp, v, nseg, iprint, sbgnrm, info, &
       epsmch)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Implicit None
       Integer :: n, m, head, col, nseg, iprint, info, nbd(n), iorder(n), &
@@ -1725,9 +1725,9 @@
     Subroutine PREC(cmprlb)(n, m, x, g, ws, wy, sy, wt, z, r, wa, index, theta, col, &
       head, nfree, cnstnd, info)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Logical :: cnstnd
@@ -1796,9 +1796,9 @@
 
     Subroutine PREC(errclb)(n, m, factr, l, u, nbd, task, info, k)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Character (60) :: task
@@ -1862,9 +1862,9 @@
     Subroutine PREC(formk)(n, nsub, ind, nenter, ileave, indx2, iupdat, updatd, wn, &
       wn1, m, ws, wy, sy, theta, col, head, info)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Integer :: n, nsub, m, col, head, nenter, ileave, iupdat, info, ind(n), &
@@ -2190,9 +2190,9 @@
 
     Subroutine PREC(formt)(m, wt, sy, ss, col, theta, info)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Integer :: m, col, info
@@ -2363,9 +2363,9 @@
 
     Subroutine PREC(hpsolb)(n, t, iorder, iheap)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Integer :: iheap, n, iorder(n)
       Real (Kind=wp) :: t(n)
@@ -2482,9 +2482,9 @@
       dnorm, dtd, xstep, stpmx, iter, ifun, iback, nfgv, info, task, boxed, &
       cnstnd, csave, isave, dsave)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Character (60) :: task, csave
@@ -2616,9 +2616,9 @@
     Subroutine PREC(matupd)(n, m, ws, wy, sy, ss, d, r, itail, iupdat, col, head, &
       theta, rr, dr, stp, dtd)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Integer :: n, m, itail, iupdat, col, head
@@ -2707,9 +2707,9 @@
 
     Subroutine PREC(prn1lb)(n, m, l, u, x, iprint, itfile, epsmch)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Integer :: n, m, iprint, itfile
@@ -2779,9 +2779,9 @@
     Subroutine PREC(prn2lb)(n, x, f, g, iprint, itfile, iter, nfgv, nact, sbgnrm, &
       nseg, word, iword, iback, stp, xstep)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Character (3) :: word
@@ -2853,9 +2853,9 @@
       nskip, nact, sbgnrm, time, nseg, word, iback, stp, xstep, k, cachyt, &
       sbtime, lnscht)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Character (60) :: task
@@ -2982,9 +2982,9 @@
 
     Subroutine PREC(projgr)(n, l, u, nbd, x, g, sbgnrm)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
 
       Integer :: n, nbd(n)
@@ -3037,9 +3037,9 @@
     Subroutine PREC(subsm)(n, m, nsub, ind, l, u, nbd, x, d, xp, ws, wy, theta, xx, &
       gg, col, head, iword, wv, wn, iprint, info)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Implicit None
       Integer :: n, m, nsub, col, head, iword, iprint, info, ind(nsub), nbd(n)
@@ -3393,9 +3393,9 @@
     Subroutine PREC(csrch)(f, g, stp, ftol, gtol, xtol, stpmin, stpmax, task, &
       isave, dsave)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Character (*) :: task
       Integer :: isave(2)
@@ -3742,9 +3742,9 @@
     Subroutine PREC(cstep)(stx, fx, dx, sty, fy, dy, stp, fp, dp, brackt, stpmin, &
       stpmax)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Logical :: brackt
       Real (Kind=wp) :: stx, fx, dx, sty, fy, dy, stp, fp, dp, stpmin, stpmax
