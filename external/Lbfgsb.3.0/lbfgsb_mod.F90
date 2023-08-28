@@ -2,9 +2,9 @@
 Subroutine PREC(lbfgsb_solver)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, &
    iprint, lsavei, isave, dsave)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
    Implicit None
 !  Arguments

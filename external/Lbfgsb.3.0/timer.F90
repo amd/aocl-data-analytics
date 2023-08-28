@@ -6,9 +6,9 @@
 #include "preprocessor.fpp"
     Subroutine PREC(timer)(ttime)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Real (Kind=wp) :: ttime
 !

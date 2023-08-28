@@ -1,6 +1,6 @@
 # Build the double version
 remove_definitions(-DSINGLE_PREC)
-add_library(lbfgsb OBJECT  ${LBFGSB_SRC})
+add_library(lbfgsb OBJECT  ${LBFGSB_SRC} ../dworking_precision.F90)
 
 if (WIN32)
   if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")

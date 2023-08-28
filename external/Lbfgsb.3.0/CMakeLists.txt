@@ -36,7 +36,7 @@ endif()
 
 list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
 
-set(LBFGSB_SRC  ../working_precision.F90 ../lbfgsb_mod.F90 ../linpack.F90 ../timer.F90 ../lbfgsb.F90)
+set(LBFGSB_SRC  ../lbfgsb_mod.F90 ../linpack.F90 ../timer.F90 ../lbfgsb.F90)
 
 # Build the double version
 add_subdirectory(double_cmake)

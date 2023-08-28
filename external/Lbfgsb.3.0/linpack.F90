@@ -6,9 +6,9 @@
 #include "preprocessor.fpp"
     Subroutine PREC(pofa)(a, lda, n, info)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Integer :: lda, n, info
       Real (Kind=wp) :: a(lda, *)
@@ -86,9 +86,9 @@
 
     Subroutine PREC(trsl)(t, ldt, n, b, job, info)
 #ifdef SINGLE_PREC
-   Use working_precision, Only: wp => sp
+   Use sworking_precision, Only: wp
 #else
-   Use working_precision, Only: wp => dp
+   Use dworking_precision, Only: wp
 #endif
       Integer :: ldt, n, job, info
       Real (Kind=wp) :: t(ldt, *), b(*)
