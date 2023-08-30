@@ -28,7 +28,7 @@ int main() {
     da_data_extract_selection_real_d(store, "features", 5, features.data());
     da_data_extract_selection_real_d(store, "rhs", 5, rhs.data());
 
-    // define the regression problem to sole
+    // define the regression problem to solve
     da_handle handle;
     da_handle_init_d(&handle, da_handle_linmod);
     da_linmod_d_select_model(handle, linmod_model_mse);
