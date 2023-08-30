@@ -25,29 +25,29 @@
 #include "da_handle.hpp"
 #include "pca.hpp"
 
-da_status da_pca_d_init(da_handle handle, da_int n, da_int p, double *dataX) {
+da_status da_pca_init_d(da_handle handle, da_int n, da_int p, double *dataX, da_int lda) {
     if (!handle)
-        return da_status_memory_error;
+        return da_status_invalid_pointer;
     if (handle->precision != da_double)
         return da_status_wrong_type;
     if (handle->pca_d == nullptr)
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    handle->pca_d->init(n, p, dataX);
+    handle->pca_d->init(n, p, dataX, lda);
     return da_status_success;
 }
 
-da_status da_pca_s_init(da_handle handle, da_int n, da_int p, float *dataX) {
+da_status da_pca_init_s(da_handle handle, da_int n, da_int p, float *dataX, da_int lda) {
     if (!handle)
-        return da_status_memory_error;
+        return da_status_invalid_pointer;
     if (handle->precision != da_single)
         return da_status_wrong_type;
     if (handle->pca_s == nullptr)
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    handle->pca_s->init(n, p, dataX);
+    handle->pca_s->init(n, p, dataX, lda);
     return da_status_success;
 }
 
@@ -62,7 +62,7 @@ da_status da_pca_set_method(da_handle handle, pca_comp_method method) {
         }
         return da_status_success;
     } else {
-        return da_status_memory_error;
+        return da_status_invalid_pointer;
     }
 }
 
@@ -77,13 +77,13 @@ da_status da_pca_set_num_components(da_handle handle, da_int num_components) {
         }
         return da_status_success;
     } else {
-        return da_status_memory_error;
+        return da_status_invalid_pointer;
     }
 }
 
-da_status da_pca_d_compute(da_handle handle) {
+da_status da_pca_compute_d(da_handle handle) {
     if (!handle)
-        return da_status_memory_error;
+        return da_status_invalid_pointer;
     if (handle->precision != da_double)
         return da_status_wrong_type;
     if (handle->pca_d == nullptr)
@@ -92,9 +92,9 @@ da_status da_pca_d_compute(da_handle handle) {
     return handle->pca_d->compute();
 }
 
-da_status da_pca_s_compute(da_handle handle) {
+da_status da_pca_compute_s(da_handle handle) {
     if (!handle)
-        return da_status_memory_error;
+        return da_status_invalid_pointer;
     if (handle->precision != da_single)
         return da_status_wrong_type;
     if (handle->pca_s == nullptr)

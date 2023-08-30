@@ -72,6 +72,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     /*n_samples x n_features = (nxp) */
     da_int n = 0;
     da_int p = 0;
+    da_int lda = 0;
 
     /*Set true when init done*/
     bool initdone = false;
@@ -86,7 +87,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     bool svd_flip_u_based = true;
 
     /*Defult number of output Components */
-    da_int ncomponents = 5;
+    da_int npc = 5;
 
     /*Data required to compute pca using svd method*/
     pca_usr_data_svd<T> *svd_data = nullptr;
@@ -111,7 +112,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     };
     ~da_pca();
 
-    da_status init(da_int n, da_int p, T *dataX);
+    da_status init(da_int n, da_int p, T *dataX, da_int lda);
 
     void set_pca_compute_method(pca_comp_method method) {
         if (method != this->method) {
@@ -120,10 +121,9 @@ template <typename T> class da_pca : public basic_handle<T> {
         }
     };
 
-    void set_pca_components(da_int ncomponents) {
-        ncomponents = std::min(ncomponents, std::min(this->n, this->p));
-        if (ncomponents != this->ncomponents) {
-            this->ncomponents = ncomponents;
+    void set_pca_components(da_int npc) {
+        if (npc != this->npc) {
+            this->npc = npc;
             iscomputed = false;
         }
     };
@@ -147,13 +147,12 @@ template <typename T> class da_pca : public basic_handle<T> {
         }
 
         //FIXME: Currently assuming da_rinfo query can take all results computed
-        da_int rinfo_size =
-            (2 * (this->ncomponents * this->ncomponents) + this->ncomponents + 2);
+        da_int rinfo_size = (2 * (this->npc * this->npc) + this->npc + 2);
         if (result == nullptr || *dim <= 0 ||
             ((query == da_result::da_pca_scores ||
               query == da_result::da_pca_components) &&
-             *dim < (ncomponents * ncomponents)) ||
-            (query == da_result::da_pca_variance && *dim < ncomponents) ||
+             *dim < (npc * npc)) ||
+            (query == da_result::da_pca_variance && *dim < npc) ||
             (query == da_result::da_rinfo && *dim < rinfo_size)) {
             return da_warn(this->err, da_status::da_status_invalid_array_dimension,
                            "Size of the array is too small, provide an array of at "
@@ -168,15 +167,15 @@ template <typename T> class da_pca : public basic_handle<T> {
                 result[i] = *(results->scores + i);
             break;
         case da_result::da_pca_scores:
-            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
+            for (da_int i = 0; i < (npc * npc); i++)
                 result[i] = *(results->scores + i);
             break;
         case da_result::da_pca_components:
-            for (da_int i = 0; i < (ncomponents * ncomponents); i++)
+            for (da_int i = 0; i < (npc * npc); i++)
                 result[i] = *(results->components + i);
             break;
         case da_result::da_pca_variance:
-            for (da_int i = 0; i < ncomponents; i++)
+            for (da_int i = 0; i < npc; i++)
                 result[i] = *(results->variance + i);
             break;
         case da_result::da_pca_total_variance:
@@ -199,17 +198,17 @@ template <typename T> class da_pca : public basic_handle<T> {
 template <typename T> da_pca<T>::~da_pca() {
     if (svd_data) {
         if (svd_data->colmean != nullptr)
-            delete svd_data->colmean;
+            delete[] svd_data->colmean;
         if (svd_data->u)
-            delete svd_data->u;
+            delete[] svd_data->u;
         if (svd_data->sigma)
-            delete svd_data->sigma;
+            delete[] svd_data->sigma;
         if (svd_data->vt)
-            delete svd_data->vt;
+            delete[] svd_data->vt;
         if (svd_data->A)
-            delete svd_data->A;
+            delete[] svd_data->A;
         if (svd_data->iwork)
-            delete svd_data->iwork;
+            delete[] svd_data->iwork;
         delete svd_data;
     }
 
@@ -218,11 +217,11 @@ template <typename T> da_pca<T>::~da_pca() {
 
     if (results) {
         if (results->scores)
-            delete results->scores;
+            delete[] results->scores;
         if (results->components)
-            delete results->components;
+            delete[] results->components;
         if (results->variance)
-            delete results->variance;
+            delete[] results->variance;
         delete results;
     }
 }
@@ -230,19 +229,50 @@ template <typename T> da_pca<T>::~da_pca() {
 /*
     Initialize all the memory required to compute PCA based on inputs
 */
-template <typename T> da_status da_pca<T>::init(da_int n, da_int p, T *dataX) {
+template <typename T>
+da_status da_pca<T>::init(da_int n, da_int p, T *dataX, da_int lda) {
     /*Init with success */
     da_status status = da_status_success;
-    da_int ldu, ldvt;
+    da_int ldu, ldvt, npc;
+    std::string method;
+
+    /*Return error any dimension is less than 2*/
+    if (n <= 1 || p <= 1)
+        return da_status_invalid_input;
+
+    if (this->opts.get("npc", npc) != da_status_success) {
+        return da_error(this->err, da_status_internal_error,
+                        "Unexpectedly <number of principal components> option not "
+                        "found in the pca option registry.");
+    }
 
     /*Save the A dims, assuming the data is in ColMajor order*/
     this->n = n;
     this->p = p;
-    this->ncomponents = std::min(this->ncomponents, std::min(n, p));
+    this->lda = lda;
+    npc = std::min(npc, std::min(n, p));
+    this->npc = npc;
+
+    if (this->opts.set("npc", npc) != da_status_success) {
+        return da_error(this->err, da_status_internal_error,
+                        "Unexpectedly pca provided an invalid value to the number of "
+                        "principal components option");
+    }
+
+    if (this->opts.get("pca method", method) != da_status_success) {
+        return da_error(
+            this->err, da_status_internal_error,
+            "Unexpectedly pca provided an invalid value to the pca method option");
+    }
+
+    if (method == "svd")
+        this->method = pca_method_svd;
+    else
+        this->method = pca_method_corr;
 
     /*Initialize with A values*/
     ldu = this->n;
-    ldvt = this->ncomponents;
+    ldvt = this->npc;
 
     switch (this->method) {
     case pca_method_svd:
@@ -253,9 +283,12 @@ template <typename T> da_status da_pca<T>::init(da_int n, da_int p, T *dataX) {
         svd_data->iwork = new da_int[12 * std::min(n, p)];
         svd_data->A = new T[std::max(n, p) * std::max(n, p)];
 
-        /*Copy A buffer address*/
-        memcpy(svd_data->A, dataX, sizeof(T) * n * p);
-
+        /*Copy the given input dataX matrix into internal A matrix buffer */
+        if (this->lda > n)
+            memcpy(svd_data->A, dataX, sizeof(T) * n * p);
+        else
+            for (da_int i = 0; i < p; i++)
+                memcpy(svd_data->A + i * n, dataX + i * lda, sizeof(T) * n);
         break;
     case pca_method_corr:
         //corr_data = new pca_usr_data_corr<T>;
@@ -279,9 +312,9 @@ template <typename T> da_status da_pca<T>::init(da_int n, da_int p, T *dataX) {
     Initialize memory for results
 */
 template <typename T> da_status da_pca<T>::init_results() {
-    results->components = new T[ncomponents * ncomponents];
-    results->scores = new T[ncomponents * ncomponents];
-    results->variance = new T[ncomponents];
+    results->components = new T[npc * npc];
+    results->scores = new T[npc * npc];
+    results->variance = new T[npc];
     return da_status_success;
 }
 
@@ -326,7 +359,7 @@ template <typename T> da_status da_pca<T>::compute() {
         vl = 0.0;
         vu = 0.0;
         iu = std::min(n, p);
-        il = iu - ncomponents + 1;
+        il = iu - npc + 1;
         if (RANGE == 'A') {
             ns = std::min(n, p);
         } else if (RANGE == 'I') {
@@ -394,47 +427,48 @@ template <typename T> da_status da_pca<T>::compute() {
         //TODO: Simplify for various shapes of A
         for (da_int j = 0; j < n; j++) {
             T *uptr = &svd_data->u[j * n];
-            T *vtptr = &svd_data->vt[j * p];
+            T *vtptr = &svd_data->vt[j];
             T *ptr = svd_flip_u_based ? uptr : vtptr; //load the first column value
             da_int uv_size = svd_flip_u_based ? n : p;
-            T colmax = std::abs(*ptr);
+            T colmax = std::abs(ptr[0]);
+            da_int maxidx = 0;
             for (da_int i = 1; i < uv_size; i++) {
                 T u_t = std::abs(ptr[i]);
-                if (u_t > colmax)
+                if (u_t > colmax) {
                     colmax = u_t;
+                    maxidx = i;
+                }
             }
-
             //If the max value is negative flip the sign of all values
-            if (colmax < 0) {
-
+            bool iscolmax_neg = std::signbit(ptr[maxidx]);
+            if (iscolmax_neg) {
                 for (da_int i = 0; i < n; i++) {
                     uptr[i] = -uptr[i];
                 }
                 for (da_int i = 0; i < p; i++) {
-                    vtptr[i] = -vtptr[i];
+                    vtptr[i * p] = -vtptr[i * p];
                 }
             }
         }
 
         //Compute Scores (n x n) = U (nxn) * Sigma (n x n) and save
-        for (da_int i = 0; i < ncomponents; i++) {
-            for (da_int j = 0; j < ncomponents; j++) {
-                *(results->scores + i * ncomponents + j) =
-                    (*(svd_data->sigma + i) * (*(svd_data->u + i * ncomponents + j)));
+        for (da_int i = 0; i < npc; i++) {
+            for (da_int j = 0; j < npc; j++) {
+                *(results->scores + i * npc + j) =
+                    (*(svd_data->sigma + i) * (*(svd_data->u + i * npc + j)));
             }
         }
 
-        //Save ncomponents
-        for (da_int i = 0; i < ncomponents; i++) {
-            for (da_int j = 0; j < ncomponents; j++) {
-                *(results->components + i * ncomponents + j) =
-                    *(svd_data->vt + i * ncomponents + j);
+        //Save npc
+        for (da_int i = 0; i < npc; i++) {
+            for (da_int j = 0; j < npc; j++) {
+                *(results->components + i * npc + j) = *(svd_data->vt + i * npc + j);
             }
         }
 
         //compute variance
         //variance = (S**2) / (nsamples-1)
-        for (da_int j = 0; j < ncomponents; j++) {
+        for (da_int j = 0; j < npc; j++) {
             T sigma = *(svd_data->sigma + j);
             *(results->variance + j) = (sigma * sigma) / (this->n - 1);
         }
@@ -443,8 +477,7 @@ template <typename T> da_status da_pca<T>::compute() {
         iscomputed = true;
 
         //Free the temporary memory created for gesvdx workspace
-        if (svd_data->work)
-            delete svd_data->work;
+        delete[] svd_data->work;
 
         break;
 

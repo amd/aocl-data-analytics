@@ -34,21 +34,18 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
 
     try {
         std::shared_ptr<OptionNumeric<da_int>> oi;
-
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "print level", "set level of verbosity for the solver", 0,
             da_options::lbound_t::greaterequal, 5, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
-
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "number of principal components", "Add intercept variable to the model", 3,
-            da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 5));
+            "npc", "Number of principle components required to compute", 2,
+            da_options::lbound_t::greaterequal, 500, da_options::ubound_t::lessequal, 5));
         opts.register_opt(oi);
-
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(
-            OptionString("pca method", "Select SVD method to compute PCA",
-                         {{"svd", 0}, {"corr", 1}}, "svd"));
+            OptionString("pca method", "Select SVD method default to compute PCA",
+                         {{"svd", pca_method_svd}, {"corr", pca_method_corr}}, "svd"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(
             OptionString("print options", "Print option list and set values.",

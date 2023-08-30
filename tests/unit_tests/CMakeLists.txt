@@ -60,6 +60,14 @@ target_link_libraries(option_registry aocl-da gtest_main gmock_main)
 add_executable(errors_tests errors_tests.cpp)
 target_link_libraries(errors_tests aocl-da gtest_main gmock_main)
 
+add_executable(pca pca_tests.cpp)
+target_link_libraries(pca aocl-da gtest_main gmock_main)
+if(WIN32)
+  target_link_libraries(pca "$ENV{LIBIFCORE}")
+endif()
+target_compile_definitions(
+  pca PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/factorization_data/")
+
 add_executable(data data_tests.cpp)
 target_link_libraries(data aocl-da gtest_main gmock_main)
 if(WIN32)
@@ -85,6 +93,7 @@ gtest_discover_tests(option_registry)
 gtest_discover_tests(data)
 gtest_discover_tests(interval_map)
 gtest_discover_tests(errors_tests)
+gtest_discover_tests(pca)
 
 # Add unit test programs that are not gtest programs to CTEST
 string(CONCAT TNAME printf_debug "_ex")

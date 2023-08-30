@@ -84,8 +84,8 @@ typedef enum pca_results_flags_ {
  * - \ref da_status_wrong_type = 7 = when the input type is not matching with api
  * - \ref da_status_invalid_pointer = 3 - When the pca handle is not created
  */
-da_status da_pca_d_init(da_handle handle, da_int n, da_int p, double *A);
-da_status da_pca_s_init(da_handle handle, da_int n, da_int p, float *A);
+da_status da_pca_init_d(da_handle handle, da_int n, da_int p, double *A, da_int lda);
+da_status da_pca_init_s(da_handle handle, da_int n, da_int p, float *A, da_int lda);
 
 da_status da_pca_set_method(da_handle, pca_comp_method method);
 da_status da_pca_set_num_components(da_handle, da_int num_components);
@@ -106,8 +106,8 @@ da_status da_pca_set_num_components(da_handle, da_int num_components);
  * - \ref da_status_internal_error =  1 - When lapack/internal routines error out
  * - \ref da_status_not_implemented = 5 - When requested features/method is not implemented/supported
  */
-da_status da_pca_d_compute(da_handle);
-da_status da_pca_s_compute(da_handle);
+da_status da_pca_compute_d(da_handle);
+da_status da_pca_compute_s(da_handle);
 
 #ifdef __cplusplus
 }

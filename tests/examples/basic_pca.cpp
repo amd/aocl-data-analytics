@@ -31,7 +31,7 @@
 int main() {
 
     // Initialize the pca object
-    da_handle handle;
+    da_handle handle = nullptr;
     da_status status;
 
     std::cout << "-----------------------------------------------" << std::endl;
@@ -39,28 +39,14 @@ int main() {
     std::cout << std::fixed << std::endl;
 
     // A: num_samples x num_features (n x p)
-    da_int n = 3, p = 2;
-    //double A[9] = {3, 2, 2, 2, 3, -2, 3, 1, 2};
-    double A[6] = {3, 2, 2, 2, 3, -2};
+    da_int n = 3, p = 3;
+    double A[9] = {3, 2, 2, 2, 3, -2, 3, 1, 2};
     da_int num_compnents = std::min((da_int)3, std::min(n, p));
-    double doutput[18];
+    double doutput[24];
 
     da_handle_init_d(&handle, da_handle_pca);
-    status = da_pca_d_init(handle, n, p, A);
-    if (status == da_status_success) {
-        std::cout << " PCA successfully initialized " << std::endl;
-    } else {
-        std::cout << " PCA Initialization Failed with status" << status << std::endl;
-        da_handle_destroy(&handle);
-        return 0;
-    }
-
-    //by default pca compute method is svd
-    status = da_pca_set_method(handle, pca_method_svd);
-    status = da_pca_set_num_components(handle, num_compnents);
-
-    // compute pca
-    status = da_pca_d_compute(handle);
+    status = da_pca_init_d(handle, n, p, A, n);
+    status = da_pca_compute_d(handle);
     if (status == da_status_success) {
         std::cout << " PCA computed successfully " << std::endl;
         da_int dim = num_compnents * num_compnents;
@@ -74,7 +60,6 @@ int main() {
         std::cout << " PCA computation Failed with status" << status << std::endl;
     }
 
-    da_handle_destroy(&handle);
     std::cout << " PCA computed successfully for double precision" << std::endl;
     std::cout << "------------------------------------------------" << std::endl;
 
@@ -86,28 +71,15 @@ int main() {
     da_int ns = 3, ps = 3;
     float As[9] = {3, 2, 2, 2, 3, -2, 3, 1, 2};
     float soutput[24];
+    da_handle handle_s = nullptr;
 
-    da_handle_init_s(&handle, da_handle_pca);
-    status = da_pca_s_init(handle, ns, ps, As);
-    if (status == da_status_success) {
-        std::cout << " PCA successfully initialized " << std::endl;
-    } else {
-        std::cout << " PCA Initialization Failed with status" << status << std::endl;
-        da_handle_destroy(&handle);
-        return 0;
-    }
-
-    //by default pca compute method is svd
-    status = da_pca_set_method(handle, pca_method_svd);
-    num_compnents = 3;
-    status = da_pca_set_num_components(handle, num_compnents);
-
-    // compute pca
-    status = da_pca_s_compute(handle);
+    da_handle_init_s(&handle_s, da_handle_pca);
+    status = da_pca_init_s(handle_s, ns, ps, As, ns);
+    status = da_pca_compute_s(handle_s);
     if (status == da_status_success) {
         std::cout << " PCA computed successfully " << std::endl;
         da_int dim = num_compnents * num_compnents;
-        status = da_handle_get_result_s(handle, da_pca_components, &dim, soutput);
+        status = da_handle_get_result_s(handle_s, da_pca_components, &dim, soutput);
         if (status == da_status_success) {
             std::cout << " Successfully read the PCA results" << std::endl;
         } else {
@@ -118,6 +90,7 @@ int main() {
     }
 
     da_handle_destroy(&handle);
+    da_handle_destroy(&handle_s);
     std::cout << " PCA computed successfully for single precision " << std::endl;
     std::cout << "-------------------------------------------------" << std::endl;
 

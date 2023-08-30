@@ -43,6 +43,11 @@
     EXPECT_EQ((x[startx + j * incx]), (y[starty + j * incy]))                            \
         << "Vectors " #x " and " #y " different at index j=" << j << "."
 
+#define EXPECT_ARR_ABS_NEAR(n, x, y, abs_error)                                          \
+    for (da_int j = 0; j < (n); j++)                                                     \
+    EXPECT_NEAR((std::abs(x[j])), (std::abs(y[j])), abs_error)                           \
+        << "Vectors " #x " and " #y " different at index j=" << j << "."
+
 /* Convert std::vector from one type to another, to avoid warnings in templated tests*/
 template <class T_in, class T_out>
 std::vector<T_out> convert_vector(const std::vector<T_in> &input) {
