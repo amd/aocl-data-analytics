@@ -45,6 +45,22 @@ void da_datastore_destroy(da_datastore *store);
  */
 da_status da_data_print_options(da_datastore store);
 
+/**
+ * @brief Concatenate horizontally two datastores.
+ * 
+ * The two data stores must have a matching number of rows to succesfully perform this operation.
+ * 
+ * If successfull, on output, @p store1 will contain the concatenation of the 2 stores and store 2 will be empty. 
+ * No copy of the data is performed when this function is called.
+ * 
+ * @param store1 first store that will contain the concatenation on output.
+ * @param store2 second store to concatenate. Will be empty on output.
+ * @return da_status.
+ * - \ref da_status_success The operation was successful.
+ * - \ref da_status_invalid_input Some of the input data was not correct. 
+ *        Use da_handle_print_error_message to get more details. 
+ * - \ref da_status_invalid_pointer The store was not correctly initialized
+ */
 da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
 
 /* ********************************** Load routines ********************************** */
