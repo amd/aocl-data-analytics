@@ -1,3 +1,30 @@
+/*
+ * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * 
+ */
+
 #ifndef DATA_STORE_HPP
 #define DATA_STORE_HPP
 
@@ -431,9 +458,9 @@ class data_store {
             block_dense<T> *bd = static_cast<block_dense<T> *>(new_block->b);
             bd->set_own_data(own_data || copy_data);
             index_to_name.resize(n + nc, nullptr);
-        } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
-            return da_error(err, da_status_memory_error,
-                            "Memory allocation error"); // LCOV_EXCL_LINE
+        } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
         }
 
         // Concatenate columns to the right, indices of new columns are [n, n+nc-1]
@@ -473,9 +500,9 @@ class data_store {
                 new_block = std::make_shared<block_id>(block_id());
                 new_block->b =
                     new block_dense<T>(mr, nr, data, *err, order, copy_data, C_data);
-            } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
-                return da_error(err, da_status_memory_error,
-                                "Memory allocation error"); // LCOV_EXCL_LINE
+            } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
+                return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                                "Memory allocation error");
             }
 
             new_block->offset = idx_start;
@@ -607,7 +634,7 @@ class data_store {
             bb = static_cast<block_base<T> *>(id->b);
             status = bb->get_col(idx - id->offset, &c, stride);
             if (status != da_status_success)
-                return da_error(err, da_status_internal_error,
+                return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
                                 "get_col failed unexpectedly:" + err->get_mesg());
             nrows = bb->m;
             for (da_int i = 0; i < nrows; i++)
@@ -661,9 +688,9 @@ class data_store {
                     status = bb->copy_slice_dense(block_cols, block_rows, idxr, ld_slice,
                                                   slice);
                     if (status != da_status_success)
-                        return da_error(
+                        return da_error( // LCOV_EXCL_LINE
                             err, da_status_internal_error,
-                            "Unexpected error in copy_slice_dense"); // LCOV_EXCL_LINE
+                            "Unexpected error in copy_slice_dense");
                     idxr += ur - lr + 1;
                 }
                 lr = std::max(ur + 1, lrow);
@@ -694,11 +721,6 @@ class data_store {
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
 
-        if (!check_internal_string(key)) {
-            std::string errmsg = "key cannot contain the prefix: ";
-            errmsg += DA_STRINTERNAL;
-            return da_error(err, da_status_invalid_input, errmsg);
-        }
         if (!validate_interval(cols, this->n) || !validate_interval(rows, this->m))
             return da_error(err, da_status_invalid_input,
                             "Invalid dimensions in the provided data");
@@ -710,8 +732,8 @@ class data_store {
                 std::make_pair(key, std::make_pair(std::make_unique<idx_slice>(),
                                                    std::make_unique<idx_slice>())));
             if (!inserted) {
-                exit_status = da_status_internal_error;
-                goto exit;
+                exit_status = da_status_internal_error; // LCOV_EXCL_LINE
+                goto exit;                              // LCOV_EXCL_LINE
             }
         }
         exit_status = it->second.first->insert(rows, rows.second - rows.first + 1);
@@ -733,12 +755,6 @@ class data_store {
             return da_error(
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
-
-        if (!check_internal_string(key)) {
-            std::string errmsg = "key cannot contain the prefix: ";
-            errmsg += DA_STRINTERNAL;
-            return da_error(err, da_status_invalid_input, errmsg);
-        }
 
         if (!validate_interval(cols, this->n))
             return da_error(err, da_status_invalid_input, "Invalid intervals");
@@ -766,12 +782,6 @@ class data_store {
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
 
-        if (!check_internal_string(key)) {
-            std::string errmsg = "key cannot contain the prefix: ";
-            errmsg += DA_STRINTERNAL;
-            return da_error(err, da_status_invalid_input, errmsg);
-        }
-
         if (!validate_interval(rows, this->m))
             return da_error(err, da_status_invalid_input, "Invalid interval");
 
@@ -782,7 +792,7 @@ class data_store {
                 std::make_pair(key, std::make_pair(std::make_unique<idx_slice>(),
                                                    std::make_unique<idx_slice>())));
             if (!inserted) {
-                return da_error(err, da_status_internal_error,
+                return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
                                 "Unexpected error in the interval insertion");
             }
         }
@@ -809,7 +819,10 @@ class data_store {
             // no selection defined create a temporary selection all
             internal_key = DA_STRINTERNAL;
             internal_key += "All";
-            select_slice(internal_key, {0, m - 1}, {0, n - 1});
+            status = select_slice(internal_key, {0, m - 1}, {0, n - 1});
+            if (status != da_status_success)
+                return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+                                "Internal error selecting a valid slice");
             it = selections.find(internal_key);
             clear_selections = true;
         } else if (it == selections.end()) {
@@ -821,8 +834,8 @@ class data_store {
             // no rows in the current selection, create a temporary one containing all
             status = select_rows(key, {0, m - 1});
             if (status != da_status_success) {
-                exit_status = da_status_internal_error;
-                goto exit;
+                exit_status = da_status_internal_error; // LCOV_EXCL_LINE
+                goto exit; // LCOV_EXCL_LINE
             }
             clear_rows = true;
         }
@@ -831,8 +844,8 @@ class data_store {
             // no cols in the current selection, create a temporary one containing all
             status = select_columns(key, {0, n - 1});
             if (status != da_status_success) {
-                exit_status = da_status_internal_error;
-                goto exit;
+                exit_status = da_status_internal_error; // LCOV_EXCL_LINE
+                goto exit;                              // LCOV_EXCL_LINE
             }
             clear_cols = true;
         }
@@ -878,12 +891,6 @@ class data_store {
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
 
-        if (!check_internal_string(key)) {
-            std::string errmsg = "key cannot contain the prefix: ";
-            errmsg += DA_STRINTERNAL;
-            return da_error(err, da_status_invalid_input, errmsg);
-        }
-
         // check if selection 'key' exists. if not create one containing all rows and columns
         // ensure that the selection iterator it always points to a valid selection
         auto it = selections.find(key);
@@ -915,10 +922,10 @@ class data_store {
             internal_key += "all cols";
             status = select_columns(internal_key, {0, n - 1});
             if (status != da_status_success) {
-                status = da_error(
+                status = da_error( // LCOV_EXCL_LINE
                     err, da_status_internal_error,
-                    "Could not create new tag with all columns"); // LCOV_EXCL_LINE
-                goto exit;                                        // LCOV_EXCL_LINE
+                    "Could not create new tag with all columns");
+                goto exit; // LCOV_EXCL_LINE
             }
             auto it_allcol = selections.find(internal_key);
             it_col = it_allcol->second.second->begin();
@@ -939,9 +946,10 @@ class data_store {
             for (auto it_row = row_slice->begin(); it_row != row_slice->end(); ++it_row) {
                 status = mark_missing_slice(it_row->first, it_col->first, valid_rows);
                 if (status != da_status_success) {
-                    status = da_error_trace(err, da_status_internal_error,
-                                            "Unexpected error."); // LCOV_EXCL_LINE
-                    goto exit;                                    // LCOV_EXCL_LINE
+                    status =
+                        da_error_trace(err, da_status_internal_error, // LCOV_EXCL_LINE
+                                       "Unexpected error.");
+                    goto exit; // LCOV_EXCL_LINE
                 }
             }
         }
@@ -990,8 +998,8 @@ class data_store {
         if (!validate_interval(rows, this->m) || !validate_interval(cols, this->n))
             return da_error(err, da_status_invalid_input, "Invalid intervals");
         if ((da_int)valid_rows.size() != this->m)
-            return da_error(err, da_status_internal_error,
-                            "Wrong valid rows vector size"); // LCOV_EXCL_LINE
+            return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Wrong valid rows vector size");
 
         da_status status;
         da_int lcol = cols.first;
@@ -1012,9 +1020,9 @@ class data_store {
                     block_cols = {lcol - bid->offset, uc - bid->offset};
                     status = bid->b->missing_rows(valid_rows, lr, block_rows, block_cols);
                     if (status != da_status_success)
-                        return da_error(
+                        return da_error( // LCOV_EXCL_LINE
                             err, da_status_internal_error,
-                            "Unexpected error in copy_slice_dense"); // LCOV_EXCL_LINE
+                            "Unexpected error in copy_slice_dense");
                 }
                 lr = ur + 1;
                 first_row_idx = lr;
@@ -1039,7 +1047,7 @@ class data_store {
         auto it = cmap.find(j);
         if (it == cmap.end())
             // cannot happen, checks on i and j would have returned invalid input already
-            return da_error(err, da_status_internal_error, "Couldn't find the element");
+            return da_error(err, da_status_internal_error, "Couldn't find the element"); // LCOV_EXCL_LINE
 
         std::shared_ptr<block_id> bid = it->second;
         if (bid->b->btype != get_block_type<T>())
@@ -1070,7 +1078,7 @@ class data_store {
         auto it = cmap.find(j);
         if (it == cmap.end())
             // cannot happen, checks on i and j would have returned invalid input already
-            return da_error(err, da_status_internal_error, "Couldn't find the element");
+            return da_error(err, da_status_internal_error, "Couldn't find the element"); // LCOV_EXCL_LINE
 
         std::shared_ptr<block_id> bid = it->second;
         if (bid->b->btype != get_block_type<T>())
@@ -1099,7 +1107,7 @@ class data_store {
             return da_error(err, da_status_invalid_input,
                             "requested idx not in the range");
         if (index_to_name.size() != (sz_t)n)
-            return da_error(err, da_status_internal_error,
+            return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
                             "maps and store size are out of sync");
 
         auto it = name_to_index.insert(std::make_pair(label, idx)).first;
@@ -1143,10 +1151,10 @@ class data_store {
                 buf = std::string(headings[j]);
                 status = label_column(buf, j);
                 if (status != da_status_success) {
-                    std::string err_msg = "Could not label column number: ";
-                    err_msg += std::to_string(j);
-                    return da_error_trace(err, status, err_msg);
-                }
+                    std::string err_msg = "Could not label column number: "; // LCOV_EXCL_LINE
+                    err_msg += std::to_string(j); // LCOV_EXCL_LINE
+                    return da_error_trace(err, da_status_internal_error, err_msg); // LCOV_EXCL_LINE
+                } // LCOV_EXCL_LINE
             }
         }
         return status;
@@ -1173,13 +1181,13 @@ class data_store {
                                           &bl, C_data);
         if (status != da_status_success)
             return (
-                da_error_trace(err, status, "Unexpected error in creating raw pointers"));
+                da_error_trace(err, da_status_internal_error, "Unexpected error in creating raw pointers")); // LCOV_EXCL_LINE
 
         da_int ncols = end_column - start_column + 1;
         status = concatenate_cols_csv(nrows, ncols, bl, col_major, false, C_data);
         if (status != da_status_success)
             return (
-                da_error_trace(err, status, "Unexpected error in concatenating columns"));
+                da_error_trace(err, da_status_internal_error, "Unexpected error in concatenating columns")); // LCOV_EXCL_LINE
 
         return da_status_success;
     }
@@ -1197,8 +1205,8 @@ class data_store {
         da_int ncols = end_column - start_column + 1;
         try {
             *bl = new T[ncols * nrows];
-        } catch (std::bad_alloc &) {
-            return da_error(err, da_status_memory_error, "Allocation error");
+        } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
+            return da_error(err, da_status_memory_error, "Allocation error"); // LCOV_EXCL_LINE
         }
 
         for (da_int i = 0; i < ncols; i++) {
@@ -1209,8 +1217,8 @@ class data_store {
                 }
             } else {
                 // This shouldn't be possible
-                return da_error(err, da_status_internal_error,
-                                "wrong type detected unexpectedly");
+                return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+                                "wrong type detected unexpectedly"); // LCOV_EXCL_LINE
             }
         }
         C_data = false;
@@ -1245,8 +1253,8 @@ class data_store {
                     },
                     columns[i - 1]);
                 if (status != da_status_success)
-                    return da_error_trace(err, da_status_internal_error,
-                                          "Unexpected error"); // LCOV_EXCL_LINE
+                    return da_error_trace(err, da_status_internal_error, // LCOV_EXCL_LINE
+                                          "Unexpected error"); 
 
                 // Update the active index and start_column variables
                 start_column = i;
@@ -1274,7 +1282,7 @@ class data_store {
 
         status = csv->read_options();
         if (status != da_status_success) {
-            return da_error(err, da_status_internal_error, "Error reading CSV options");
+            return da_error(err, da_status_internal_error, "Error reading CSV options"); // LCOV_EXCL_LINE
         }
 
         da_int get_headings = csv->first_row_header;
@@ -1333,9 +1341,9 @@ class data_store {
             status = concatenate_columns(nrows, ncols, data_d, row_major, copy_data,
                                          own_data, C_data);
             if (status != da_status_success)
-                return da_error_trace(err, status,
+                return da_error_trace(err, status, // LCOV_EXCL_LINE
                                       "Could not concatenate the columns to the data "
-                                      "store"); // LCOV_EXCL_LINE
+                                      "store"); 
             block_dense<double> *tmp_bd =
                 dynamic_cast<block_dense<double> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1469,9 +1477,9 @@ class data_store {
             free(headings);
         }
         if (status != da_status_success)
-            return da_error_trace(
+            return da_error_trace( // LCOV_EXCL_LINE
                 err, da_status_internal_error,
-                "Unexpected error in column labeling"); // LCOV_EXCL_LINE
+                "Unexpected error in column labeling");
         status = tmp_status;
 
         return status;

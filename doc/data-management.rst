@@ -26,7 +26,7 @@ CSV files
 
 These routines read data of a single type from a CSV (comma separated values) file into an array. In addition, a character array of column headings can optionally be read.
 
-The routines take a :cpp:type:`da_datastore` struct as their first argument, which must be initialized prior to the routine call
+The routines take a :cpp:type:`da_datastore` structure as their first argument, which must be initialized prior to the routine call
 using :cpp:func:`da_datastore_init`. This is used to store options (see below) but is not used to store the actual CSV data, which is instead returned in an array. If you wish to load data driectly from the CSV file to the :cpp:type:`da_datastore` struct, then use :cpp:func:`da_data_load_from_csv`.
 
 For more details on each of the available functions, see the :ref:`API documentation. <csv_api>`
@@ -42,7 +42,7 @@ Data manipulation : Data stores
 - :ref:`Load <api_load_data>` data into the data stores, from pre-allocated memory, CSV files or other data stores.
 - :ref:`Edit the data <api_data_editon>`.
 - :ref:`Select <api_data_selection>` subsection of the store.
-- :ref:`Extract data <api_data_extraction>`, either columns or sepcific selections.
+- :ref:`Extract data <api_data_extraction>`, either columns or specific selections.
 - :ref:`Cleanly destroy <api_init>` the structure.
 
 For more details on each of the available functions, see the :ref:`API documentation. <datastore_api>`
@@ -68,7 +68,7 @@ Selecting and extracting data
 
 **Selections**
 
-In data stores, *selections* are defined by a label and a set of column and row indices. If any of the functions in :ref:`this subection <api_data_selection>` are called with a label that does not exist, a new selection is added to the store. Any number of selections can be defined at the same time in a given store.
+In data stores, *selections* are defined by a label and a set of column and row indices. If any of the functions in :ref:`this subsection <api_data_selection>` are called with a label that does not exist, a new selection is added to the store. Any number of selections can be defined at the same time in a given store.
 
 :cpp:func:`da_data_select_columns`, :cpp:func:`da_data_select_rows` and :cpp:func:`da_data_select_slice` can be used to add respectively a set of column and row indices to a given selection label while :cpp:func:`da_data_select_non_missing` will remove all row indices containing missing data from the selection.
 
@@ -233,7 +233,7 @@ Column headers
 .. doxygenfunction:: da_data_get_col_label
 
 
-.. _api_data_editon:
+.. _api_data_edition:
 
 Data edition
 ^^^^^^^^^^^^
