@@ -40,7 +40,7 @@ Data manipulation : Data stores
 
 - :ref:`Initialize <api_init>` the data store structures.
 - :ref:`Load <api_load_data>` data into the data stores, from pre-allocated memory, CSV files or other data stores.
-- :ref:`Edit the data <api_data_editon>`.
+- :ref:`Edit the data <api_data_edition>`.
 - :ref:`Select <api_data_selection>` subsection of the store.
 - :ref:`Extract data <api_data_extraction>`, either columns or specific selections.
 - :ref:`Cleanly destroy <api_init>` the structure.
@@ -143,8 +143,8 @@ Various files in the examples folder of your installation demonstrate the use of
 
 **Datastore**
 
-- ``datastore.cpp``, ``linear_model.cpp``: loading, selecting and using data
-- (TODO add more involved example program)
+``datastore.cpp`` and ``linear_model.cpp`` showcase loading, selecting and using data with a data store.
+
 
 
 API documentation
