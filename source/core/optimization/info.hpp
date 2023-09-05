@@ -9,6 +9,10 @@ enum info_t {
     info_objective = 0,
     info_grad_norm = 1,
     info_iter = 2,
+    info_time = 3,
+    info_nevalf = 4,
+    info_inorm = 5,
+
     info_number // leave last
 };              // TODO fill in
 } // namespace optim

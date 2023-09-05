@@ -2,6 +2,7 @@
 #define OPTIMIZATION_HPP
 
 #include "callbacks.hpp"
+#include "coord.hpp"
 #include "da_error.hpp"
 #include "info.hpp"
 #include "lbfgsb_driver.hpp"
@@ -25,8 +26,6 @@ using namespace optim;
  */
 enum cons_type { cons_bounds = 0, cons_linear = 1 };
 
-enum solvers { solver_undefined = 0, solver_lbfgsb };
-
 template <typename T> class da_optimization {
   private:
     // Lock for solver
@@ -44,6 +43,7 @@ template <typename T> class da_optimization {
     // Pointers to callbacks
     objfun_t<T> objfun = nullptr;
     objgrd_t<T> objgrd = nullptr;
+    stepfun_t<T> stepfun = nullptr;
     monit_t<T> monit = nullptr;
 
     // Last iterate information
@@ -68,6 +68,7 @@ template <typename T> class da_optimization {
     da_status add_bound_cons(std::vector<T> &l, std::vector<T> &u);
     da_status add_objfun(objfun_t<T> usrfun);
     da_status add_objgrd(objgrd_t<T> usrgrd);
+    da_status add_stepfun(stepfun_t<T> usrstep);
     da_status add_monit(monit_t<T> monit);
 
     // Solver interfaces (only lbfgsb for now)
@@ -182,6 +183,14 @@ template <typename T> da_status da_optimization<T>::add_objgrd(objgrd_t<T> usrgr
     return da_status_success;
 }
 
+template <typename T> da_status da_optimization<T>::add_stepfun(stepfun_t<T> usrstep) {
+    if (!usrstep) {
+        return da_status_invalid_pointer;
+    }
+    stepfun = usrstep;
+    return da_status_success;
+}
+
 template <typename T> da_status da_optimization<T>::add_monit(monit_t<T> monit) {
     if (!monit) {
         return da_status_invalid_pointer;
@@ -228,14 +237,17 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
                         "expected option not found: print options");
 
     // Print options
-    std::string s;
-    if (opts.get("print options", s) != da_status_success)
+    std::string prn;
+    if (opts.get("print options", prn) != da_status_success)
         return da_error(this->err, da_status_internal_error,
                         "expected option not found: print options");
 
     // Select_solver based on problem and options
-    // Decision tree
-    optim::solvers solver = solver_lbfgsb;
+    da_int solver;
+    std::string solvname;
+    if (opts.get("optim method", solvname, solver) != da_status_success)
+        return da_error(this->err, da_status_internal_error,
+                        "expected option not found: optim method");
 
     switch (solver) {
     case solver_lbfgsb:
@@ -244,7 +256,7 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
                       << "    AOCL-DA L-BFGS-B Nonlinear Programming Solver\n"
                       << "-----------------------------------------------------\n";
         }
-        if (s == "yes")
+        if (prn == "yes")
             opts.print_options();
         // derivative based solver, allocate gradient memory
         try {
@@ -257,6 +269,17 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
             lbfgsb_fcomm(this->opts, this->nvar, x, this->l, this->u, this->info, this->g,
                          this->objfun, this->objgrd, this->monit, usrdata, *this->err);
 
+        break;
+    case solver_coord:
+        if (prnlvl > 0) {
+            std::cout << "-----------------------------------------------------------\n"
+                      << " AOCL-DA COORD Generalized Linear Model Elastic Net Solver\n"
+                      << "-----------------------------------------------------------\n";
+        }
+        if (prn == "yes")
+            opts.print_options();
+        status = coord::coord(this->opts, this->nvar, x, this->l, this->u, this->info,
+                              this->stepfun, this->monit, usrdata, *this->err);
         break;
     case solver_undefined:
         status = da_error(

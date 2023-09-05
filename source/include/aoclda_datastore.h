@@ -21,6 +21,7 @@ typedef struct _da_datastore *da_datastore;
  * @param store The \ref da_datastore to initialize
  */
 da_status da_datastore_init(da_datastore *store);
+void da_datastore_print_error_message(da_datastore store);
 void da_datastore_destroy(da_datastore *store);
 
 

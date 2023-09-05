@@ -20,6 +20,7 @@ template <typename T> struct meta_objcb {
                   "Objective function arguments must be floating point");
     using type = std::function<da_int(da_int n, T *x, T *val, void *usrdata)>;
 };
+template <typename T> using objfun_t = typename meta_objcb<T>::type;
 
 /** Objective gradient (function) declaration meta_grdcb
  *  ----------------------------------------------------
@@ -38,8 +39,6 @@ template <typename T> struct meta_objcb {
  * Not yet implemented: is *usrdata->fd == true then estimate the gradient using
  * a finite-difference method (forwards, bacbwards, center, cheap, etc).
  */
-template <typename T> using objfun_t = typename meta_objcb<T>::type;
-
 template <typename T> struct meta_grdcb {
     static_assert(std::is_floating_point<T>::value,
                   "Objective gradient function arguments must be floating point");
@@ -47,6 +46,23 @@ template <typename T> struct meta_grdcb {
         std::function<da_int(da_int n, T *x, T *val, void *usrdata, da_int xnew)>;
 };
 template <typename T> using objgrd_t = typename meta_grdcb<T>::type;
+
+/** function declaration meta_stepcb
+ *  --------------------------------
+ * Input: n>0, x[n] iterate vector, n>k>=0 k-th coord,
+ *        usrdata: pointer to user data, and
+ *        action: action to take (implementation dependent).
+ * Output: *s step to take along the k-th coord, *f objective value at x      
+ * Must return 0 on successfull eval and nonzero to indicate that function could 
+ * not be evaluated, some solvers don't have recovery capability.
+ */
+template <typename T> struct meta_stepcb {
+    static_assert(std::is_floating_point<T>::value,
+                  "Step function arguments must be floating point");
+    using type =
+        std::function<da_int(da_int n, T *x, T *s, da_int k, T *f, void *usrdata, da_int action)>;
+};
+template <typename T> using stepfun_t = typename meta_stepcb<T>::type;
 
 /** User monitoring call-back declaration meta_moncb
  *  ------------------------------------------------

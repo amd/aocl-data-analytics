@@ -33,6 +33,8 @@
  *         and \phi is the linear model e.g. \phi(x) = Ax
  *
  *  * \eta is the regularization term
+ * 
+ *  FIXME ADD BOX BOUNDS
  *
  */
 
@@ -58,9 +60,15 @@ enum loss_t { loss_mse, loss_logistic };
  * struct to pass pointers to optimization callbacks
  */
 template <typename T> struct fit_usrdata {
+    // Number of parameters
     da_int m;
+    // Feature matrix of size (m x n)
     T *A = nullptr;
-    T *b = nullptr, *y = nullptr;
+    // Responce vector
+    T *b = nullptr;
+    // y=A*coef, but can also contain residuals. FIXME add a separate vector for res
+    T *y = nullptr;
+    // Intercept
     bool intercept = false;
     // Additional paremeters that enhance the model
     // Transform on the residuals, loss function and regularization
@@ -78,7 +86,7 @@ template <typename T> struct qr_data {
     da_int lwork = 0;
 };
 
-enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq };
+enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq, fit_opt_coord };
 
 template <typename T> class linear_model : public basic_handle<T> {
   private:
@@ -95,9 +103,8 @@ template <typename T> class linear_model : public basic_handle<T> {
      * n: number of features
      * m: number of data points
      * intercept: controls if the linear regression intercept is to be set
-     * A[m*n]: feature matrix, pointer to user data directly - will not be modified by any
-     * function b[m]: model response, pointer to user data - will not be modified by any
-     * function
+     * A[m*n]: feature matrix, pointer to user data directly - will not be modified by any function 
+     * b[m]: model response, pointer to user data - will not be modified by any function
      */
     da_int n = 0, m = 0;
     bool intercept = false;
@@ -112,7 +119,9 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_int ncoef = 0;
     std::vector<T> coef;
 
-    //Regularization L1: LASSO, L2: Ridge, combination => Elastic net
+    // Elastic net penalty parameters (Regularization L1: LASSO, L2: Ridge, combination => Elastic net)
+    // Penalty parameters are: lambda ( (1-alpha)L2 + alpha*L1 )
+    // lambda >= 0 and 0<=alpha<=1.
     T alpha, lambda;
     // Transform operator
     enum transform_t trn = trn_identity;
@@ -125,8 +134,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     qr_data<T> *qr = nullptr;
 
     /* private methods to allocate memory */
-    da_status init_opt_model(fit_opt_type opt_type, objfun_t<T> objfun,
-                             objgrd_t<T> objgrd);
+    da_status init_opt_method(std::string &method, da_int mid);
     void init_usrdata();
     /* QR fact data */
     da_status init_qr_data();
@@ -151,7 +159,7 @@ template <typename T> class linear_model : public basic_handle<T> {
 
     da_status define_features(da_int n, da_int m, T *A, T *b);
     da_status select_model(linmod_model mod);
-    da_status fit();
+    da_status fit(da_int ncoefs, const T *coefs);
     da_status get_coef(da_int &nx, T *x);
     da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
 
@@ -269,9 +277,9 @@ template <typename T> void linear_model<T>::init_usrdata() {
 template <typename T> void eval_feature_matrix(da_int n, T *x, void *usrdata) {
     fit_usrdata<T> *data;
     data = (fit_usrdata<T> *)usrdata;
-    da_int m = data->m;
-    T alpha = 1.0, beta = 0.0;
-    T *y = data->y;
+    da_int m{data->m};
+    T alpha{1}, beta{0};
+    T *y{data->y};
     da_int aux = data->intercept ? 1 : 0;
     da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n - aux, alpha, data->A, m,
                         x, 1, beta, y, 1);
@@ -332,15 +340,15 @@ void lossgrd(da_int n, T *grad, void *usrdata, loss_t loss = loss_mse) {
     T *b = data->b;
     T *A = data->A;
     da_int aux = data->intercept ? 1 : 0;
-    T alpha = 0, beta = 0;
+    T alpha{0}, beta{0};
 
     switch (loss) {
     case loss_mse:
-        alpha = 2.0;
+        alpha = 2;
         da_blas::cblas_gemv(CblasColMajor, CblasTrans, m, n - aux, alpha, data->A, m, y,
                             1, beta, grad, 1);
         if (data->intercept) {
-            grad[n - 1] = 0.0;
+            grad[n - 1] = 0;
             for (da_int i = 0; i < m; i++)
                 grad[n - 1] += alpha * y[i];
         }
@@ -371,7 +379,7 @@ template <typename T> T regfun(void *usrdata, da_int n, T const *x) {
     T l2{data->l2reg};
     T f1{0}, f2{0};
 
-    if (l1 > 0.0) {
+    if (l1 > 0) {
         // Add LASSO term
         for (da_int i = 0; i < n; i++) {
             f1 += fabs(x[i]);
@@ -379,7 +387,7 @@ template <typename T> T regfun(void *usrdata, da_int n, T const *x) {
         f1 *= l1;
     }
 
-    if (l2 > 0.0) {
+    if (l2 > 0) {
         // Add Ridge term
         for (da_int i = 0; i < n; i++) {
             f2 += x[i] * x[i];
@@ -395,7 +403,7 @@ template <typename T> void reggrd(void *usrdata, da_int n, T const *x, T *grad) 
     T l1{data->l1reg};
     T l2{data->l2reg};
 
-    if (l1 > 0.0) {
+    if (l1 > 0) {
         // Add LASSO term
         for (da_int i = 0; i < n; i++) {
             // at xi = 0 there is no derivative => set to 0
@@ -404,17 +412,16 @@ template <typename T> void reggrd(void *usrdata, da_int n, T const *x, T *grad) 
         }
     }
 
-    if (l2 > 0.0) {
+    if (l2 > 0) {
         // Add Ridge term
         for (da_int i = 0; i < n; i++) {
-            // grad[i] += l2 * x[i];
             grad[i] += 2 * l2 * x[i];
         }
     }
 }
 
 //////////////////////// Objective Functions ////////////////////////
-/* Helper call back to deal with model, transform, loss, regularization */
+/* Helper callback to deal with model, transform, loss, regularization */
 template <typename T> da_int objfun(da_int n, T *x, T *f, void *usrdata) {
     fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
     // Compute A*x = *y (takes care of intercept)
@@ -423,12 +430,13 @@ template <typename T> da_int objfun(da_int n, T *x, T *f, void *usrdata) {
     eval_residuals<T>(usrdata, data->trn);
     // loss_function
     *f = lossfun<T>(usrdata, data->loss);
-    // Add regularization
-    *f += regfun(usrdata, n, x);
+    // Add regularization (exclude intercept)
+    da_int nmod = data->intercept ? n - 1 : n;
+    *f += regfun(usrdata, nmod, x);
     return 0;
 }
 
-/* Helper call back to deal with model, transform, loss, regularization */
+/* Helper callback to deal with model, transform, loss, regularization */
 template <typename T> da_int objgrd(da_int n, T *x, T *grad, void *usrdata, da_int xnew) {
     fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
     if (xnew) {
@@ -439,20 +447,112 @@ template <typename T> da_int objgrd(da_int n, T *x, T *grad, void *usrdata, da_i
     }
     // loss_function
     lossgrd(n, grad, usrdata, data->loss);
-    // Add regularization
-    reggrd(usrdata, n, x, grad);
+    // Add regularization (exclude intercept)
+    da_int nmod = data->intercept ? n - 1 : n;
+    reggrd(usrdata, nmod, x, grad);
     return 0;
 }
+
+/* Helper callback to get step for coordinate descent method */
+template <typename T>
+da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int action) {
+    if (k >= n || k < 0) { // FIXME: Assume and remove this if
+        return 1;
+    }
+    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
+    // FIXME: we need a "sparse" eval_feature_matrix since not much changed
+    // from the last call? This can be handled by the caller with active set.
+    // POSSIBLE ACTIONS regarting feature matrix evaluation
+    // action < 0 means that feature matrix was previously called and that only a low rank
+    //            update is requested and -action contains the previous k that changed 
+    //            kold = -action;
+    // action = 0 means not to evaluate the feature matrix
+    // action > 0 evaluate the matrix.
+    // FIXME, for now action < 0 is an alias to action > 0.
+    // FIXME, action for now MUST always be 1 since data->y is later reused to
+    // store the residuals, destroying the y = Matrix-Vector product.
+    // Add new entry to fit_usrdata to duplicate the vector?
+    if (action) {
+        // Compute A*x = *y (takes care of intercept)
+        eval_feature_matrix(n, x, usrdata);
+        // FIXME copy vector data->y
+    }
+    // FIXME: this all should be encapsulated into a "presidual<T>(usrdata, data->loss)"
+    // For now it only deals with MSE Loss
+    T betak{0};
+    da_int nmod = data->intercept ? n - 1 : n;
+    auto sign = [](T num) {
+        const T absnum = std::abs(num);
+        return (absnum == (T)0 ? (T)0 : num / absnum);
+    };
+    auto soft = [sign](T b, T Gamma) {
+        return (sign(b) * std::max(std::abs(b) - Gamma, (T)0));
+    };
+    T ak;
+    T presidual;
+    da_int m = data->m;
+    if (k < nmod) {
+        // handle model coefficients beta1..betaN
+        if (x[k] != (T)0) {
+            for (da_int i = 0; i < m; i++) {
+                ak = data->A[k * m + i];
+                presidual = data->b[i] - (data->y[i] - ak * x[k]);
+                betak += presidual * ak;
+            }
+        } else {
+            for (da_int i = 0; i < m; i++) {
+                ak = data->A[k * m + i];
+                presidual = data->b[i] - data->y[i];
+                betak += presidual * ak;
+            }
+        }
+    } else {
+        // handle intercept beta0 (last element of x)
+        if (x[k] != (T)0) {
+            for (da_int i = 0; i < m; i++) {
+                presidual = data->b[i] - (data->y[i] - x[k]);
+                betak += presidual;
+            }
+        } else {
+            for (da_int i = 0; i < m; i++) {
+                presidual = data->b[i] - data->y[i];
+                betak += presidual;
+            }
+        }
+    }
+
+    // Evaluate residuals and apply transform, store in: *y
+    eval_residuals<T>(usrdata, data->trn);
+    // loss_function
+    *f = lossfun<T>(usrdata, data->loss);
+    // Add regularization (exclude intercept)
+    *f += regfun(usrdata, nmod, x);
+
+    *step = soft(betak, data->l1reg) / ((T)1 + data->l2reg);
+
+    return 0;
+}
+
 /////////////////////////////////////////////////////////////////////
 
+/*
+ * Common setting for all optimization solvers for linear models
+ */
 template <typename T>
-da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> objfun,
-                                          objgrd_t<T> objgrd) {
+da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
     da_status status;
-    da_int prnlvl;
+    da_int maxit, prnlvl;
+    std::string slv, prnopt, optstr;
+    T tol, factr;
 
-    switch (opt_type) {
-    case fit_opt_nln:
+    switch (mid) {
+    case optim::solvers::solver_lbfgsb:
+        slv = "lbfgsb";
+        [[fallthrough]];
+
+    case optim::solvers::solver_coord:
+        if (slv == "")
+            slv = "coord";
         opt = new optim::da_optimization<T>(status, *(this->err));
         if (status != da_status_success) {
             opt = nullptr;
@@ -462,32 +562,81 @@ da_status linear_model<T>::init_opt_model(fit_opt_type opt_type, objfun_t<T> obj
         if (opt->add_vars(ncoef) != da_status_success) {
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided for the optimization "
-                            "problem an invalid number of coefficients ncoef=" +
+                            "problem has an invalid number of coefficients ncoef=" +
                                 std::to_string(ncoef) + ", expecting ncoef > 0.");
         }
-        if (opt->add_objfun(objfun) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
-                            "Unexpectedly linear model provided an invalid objective "
-                            "function pointer.");
-        }
-        if (opt->add_objgrd(objgrd) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
-                            "Unexpectedly linear model provided an invalid objective "
-                            "gradient funtion pointer.");
-        }
         // Set options here
-        // Pass print level from linmod option to optimization
+        // Pass print level option from linmod to optimization
         if (this->opts.get("print level", prnlvl) != da_status_success) {
             return da_error(
                 opt->err, da_status_internal_error,
-                "Unexpectedly print level option not found in the linear model "
+                "Unexpectedly <print level> option not found in the linear model "
                 "option registry.");
         }
-        if (opt->opts.set("print level", prnlvl) != da_status_success) {
+        // Decrease print level for optimization stage
+        if (opt->opts.set("print level", std::max((da_int)0, prnlvl - 1)) !=
+            da_status_success) {
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided an invalid value to the "
-                            "print level option.");
+                            "<print level> option.");
         }
+        // Pass print options
+        if (this->opts.get("print options", prnopt) != da_status_success) {
+            return da_error(
+                opt->err, da_status_internal_error,
+                "Unexpectedly <print options> option not found in the linear model "
+                "option registry.");
+        }
+        if (opt->opts.set("print options", prnopt) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly linear model provided an invalid value to the "
+                            "<print options> option.");
+        }
+        // Setup optimization method
+        if (opt->opts.set("optim method", method) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly linear model provided an invalid value to the "
+                            "<optim method> option.");
+        }
+        // Pass convergence parameters
+        if (this->opts.get("linmod optim iteration limit", maxit) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly <linmod optim iteration limit> option not "
+                            "found in the linear model "
+                            "option registry.");
+        }
+        optstr = slv + " iteration limit";
+        if (opt->opts.set(optstr, maxit) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly linear model provided an invalid value to the "
+                            "<" +
+                                optstr + "> option.");
+        }
+        if (this->opts.get("linmod optim convergence tol", tol) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly <linmod optim convergence tol> option not "
+                            "found in the linear model option registry.");
+        }
+        optstr = slv + " convergence tol";
+        if (opt->opts.set(optstr, tol) != da_status_success) {
+            return da_error(
+                opt->err, da_status_internal_error,
+                "Unexpectedly linear model provided an invalid value to the <" + optstr +
+                    "> option.");
+        }
+        if (this->opts.get("linmod optim progress factor", factr) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly <linmod optim progress factor> option not "
+                            "found in the linear model option registry.");
+        }
+        optstr = slv + " progress factor";
+        if (opt->opts.set(optstr, factr) != da_status_success) {
+            return da_error(
+                opt->err, da_status_internal_error,
+                "Unexpectedly linear model provided an invalid value to the <" + optstr +
+                    "> option.");
+        }
+
         init_usrdata();
         break;
 
@@ -562,58 +711,82 @@ da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictio
     return da_status_success;
 }
 
-template <typename T> da_status linear_model<T>::fit() {
+template <typename T> da_status linear_model<T>::fit(da_int ncoefs, const T *coefs) {
 
     if (model_trained)
         return da_status_success;
 
-    da_int id, intercept_int;
-    std::string opt_val;
+    da_int mid, prn, intercept_int;
+    std::string val, method;
     da_status status;
 
     // For all opts.get() it is assumed they don't fail
-    opts.get("print options", opt_val, id);
-    if (id != 0)
+    opts.get("print options", val, prn);
+    if (prn != 0)
         opts.print_options();
 
     opts.get("linmod intercept", intercept_int);
-    opts.get("linmod alpha", alpha);
-    opts.get("linmod lambda", lambda);
-    opts.get("linmod optim method", opt_val, id);
-    intercept = (bool)intercept_int;
+    opts.get("linmod alpha", this->alpha);
+    opts.get("linmod lambda", this->lambda);
+    opts.get("linmod optim method", method, mid);
+    this->intercept = (bool)intercept_int;
 
-    status = validate_options(id);
+    status = validate_options(mid);
     if (status != da_status_success) {
         // this->err already populated
         return status;
     }
-    if (opt_val == "auto") {
+    if (method == "auto") {
         status = choose_method();
         if (status != da_status_success) {
             // this->err already populated
             return status;
         }
-        opts.get("linmod optim method", opt_val, id);
     }
+    opts.get("linmod optim method", method, mid);
 
     ncoef = n;
     if (intercept)
         ncoef += 1;
-    coef.resize(ncoef, 0.0);
+
+    bool copycoefs = (coefs != nullptr) && (ncoefs >= n);
+
+    if (copycoefs) {
+        coef.resize(ncoef);
+        // user provided starting coefficients, check, copy and use.
+        // copy first n elements, then check the intercept
+        for (da_int j = 0; j < n; j++)
+            coef[j] = coefs[j];
+        if (intercept) {
+            coef[ncoef - 1] = ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
+        }
+    } else {
+        coef.resize(ncoef, (T)0);
+    }
 
     switch (mod) {
     case linmod_model_mse:
         this->trn = trn_residual;
         this->loss = loss_mse;
-        switch (id) {
-        case 1:
+        switch (mid) {
+        case optim::solvers::solver_lbfgsb:
             // Call LBFGS
-            // status = init_opt_model(fit_opt_nln, &objfun_mse<T>, &objgrd_mse<T>);
-            status = init_opt_model(fit_opt_nln, &objfun<T>, &objgrd<T>);
+            status = init_opt_method(method, mid);
             if (status != da_status_success)
                 return da_error(
                     this->err, da_status_internal_error,
                     "Unexpectedly could not initialize an optimization model.");
+            // Add callbacks
+            if (opt->add_objfun(objfun<T>) != da_status_success) {
+                return da_error(opt->err, da_status_internal_error,
+                                "Unexpectedly linear model provided an invalid objective "
+                                "function pointer.");
+            }
+            if (opt->add_objgrd(objgrd<T>) != da_status_success) {
+                return da_error(opt->err, da_status_internal_error,
+                                "Unexpectedly linear model provided an invalid objective "
+                                "gradient function pointer.");
+            }
             status = opt->solve(coef, usrdata);
             if (status == da_status_success ||
                 this->err->get_severity() != da_errors::severity_type::DA_ERROR)
@@ -625,13 +798,37 @@ template <typename T> da_status linear_model<T>::fit() {
                                   "different solver.");
             break;
 
-        case 2:
+        case optim::solvers::solver_qr:
             // No regularization, standard linear least-squares through QR factorization
             qr_lsq();
             break;
 
+        case optim::solvers::solver_coord:
+            // Call Coordinate Descent Method (Elastic Nets)
+            status = init_opt_method(method, mid);
+            if (status != da_status_success)
+                return da_error(
+                    this->err, da_status_internal_error,
+                    "Unexpectedly could not initialize an optimization model.");
+            // Add callback
+            if (opt->add_stepfun(stepfun<T>) != da_status_success) {
+                return da_error(opt->err, da_status_internal_error,
+                                "Unexpectedly linear model provided an invalid step "
+                                "function pointer.");
+            }
+            status = opt->solve(coef, usrdata);
+            if (status == da_status_success ||
+                this->err->get_severity() != da_errors::severity_type::DA_ERROR)
+                // either success or warning with usable solution, continue
+                status = this->err->clear();
+            else
+                status = da_error(this->err, da_status_operation_failed,
+                                  "Optimization step failed, rescale problem or request "
+                                  "different solver.");
+            break;
+
         default:
-            // cannot happen
+            // should not happen
             return da_error(this->err, da_status_internal_error,
                             "Unexpectedly an invalid optimization solver was requested.");
             break;
@@ -642,10 +839,20 @@ template <typename T> da_status linear_model<T>::fit() {
         this->trn = trn_logistic;
         this->loss = loss_logistic;
         //intercept = true;
-        status = init_opt_model(fit_opt_nln, &objfun<T>, &objgrd<T>);
+        status = init_opt_method(method, mid);
         if (status != da_status_success) {
             // this->err already populated
             return status;
+        }
+        if (opt->add_objfun(objfun<T>) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly linear model provided an invalid objective "
+                            "function pointer.");
+        }
+        if (opt->add_objgrd(objgrd<T>) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error,
+                            "Unexpectedly linear model provided an invalid objective "
+                            "gradient function pointer.");
         }
         status = opt->solve(coef, usrdata);
         if (status == da_status_success ||
@@ -728,20 +935,21 @@ template <typename T> da_status linear_model<T>::qr_lsq() {
 
 /* Option methods */
 template <typename T> da_status linear_model<T>::validate_options(da_int method) {
-
-    if (alpha != 0.0)
-        return da_error(this->err, da_status_not_implemented,
-                        "An optimization solver to solve requested linear model is not "
-                        "available, reformulate linear model problem.");
-
     switch (mod) {
+    case (linmod_model_mse):
+        if (method == 2 && lambda != 0)
+            return da_error(
+                this->err, da_status_incompatible_options,
+                "The chosen solver, QR, is incompatible with regularization. Either "
+                "remove regularization or choose different solver.");
+        break;
     case (linmod_model_logistic):
         if (method == 2)
             // QR not valid for logistic regression
-            return da_error(
-                this->err, da_status_incompatible_options,
-                "The chosen solver is incompatible with the defined model. Either "
-                "reformulate linear model problem or choose different solver.");
+            return da_error(this->err, da_status_incompatible_options,
+                            "The chosen solver, QR, is incompatible with the logistic "
+                            "regression model. Either choose different linear model or "
+                            "choose different solver.");
         break;
     default:
         break;
@@ -752,20 +960,27 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
 template <typename T> da_status linear_model<T>::choose_method() {
     switch (mod) {
     case (linmod_model_mse):
-        if (lambda == 0.0)
+        if (lambda == (T)0)
             // QR direct method
             opts.set("linmod optim method", "qr", da_options::solver);
-        else if (alpha == 0.0)
+        else if (alpha == (T)0)
             // L-BFGS-B handles L2 regularization
             opts.set("linmod optim method", "lbfgs", da_options::solver);
         else
             // Coordinate Descent for L1 [and L2 combined: Elastic Net]
-            return da_error(this->err, da_status_not_implemented,
-                            "There is no solver able to solve the model.");
+            opts.set("linmod optim method", "coord", da_options::solver);
         break;
     case (linmod_model_logistic):
         // Here we choose L-BFGS-B over Coordinate Descent
-        opts.set("linmod optim method", "lbfgs", da_options::solver);
+        if (alpha == (T)0)
+            // L-BFGS-B handles L2 regularization
+            opts.set("linmod optim method", "lbfgs", da_options::solver);
+        else
+            // Coordinate Descent for L1 [and L2 combined: Elastic Net]
+            // opts.set("linmod optim method", "coord", da_options::solver);
+            // TODO FIXME Enable this once coord+logistic is implemented
+            // --> uncomment opts.set("linmod optim method", "coord", da_options::solver);
+            return da_error(this->err, da_status_not_implemented, "Not yet implemented");
         break;
     default:
         // Shouldn't happen (would be nice to trap these with C++23 std::unreachable())

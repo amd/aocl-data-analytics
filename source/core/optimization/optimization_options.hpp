@@ -32,6 +32,10 @@
 #undef min
 #undef max
 
+namespace optim {
+enum solvers { solver_undefined = 0, solver_lbfgsb = 1, solver_qr = 2, solver_coord = 3 };
+}
+
 template <class T>
 inline da_status register_optimization_options(da_errors::da_error_t &err,
                                                da_options::OptionRegistry &opts) {
@@ -42,8 +46,15 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
     da_int imax = std::numeric_limits<da_int>::max();
 
     try {
-
+        // ===========================================================================
+        // INTEGER OPTIONS
+        // ===========================================================================
         std::shared_ptr<OptionNumeric<da_int>> oi;
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "coord iteration limit", "Maximum number of iterations to perform", 1,
+            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
+            imax));
+        opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "lbfgsb iteration limit", "Maximum number of iterations to perform", 1,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
@@ -70,6 +81,9 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             da_options::lbound_t::greaterequal, 3, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
+        // ===========================================================================
+        // REAL OPTIONS
+        // ===========================================================================
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("time limit", "maximum time allowed to run", 0.0,
@@ -98,16 +112,45 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             static_cast<T>(10.0) / safe_tol));
         opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "coord convergence tol",
+            "tolerance of the projected gradient infinity norm to declare convergence",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            safe_tol));
+        opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "coord progress factor",
+            "the iteration stops when (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= "
+            "factr*epsmch"
+            " where epsmch is the machine precision. Typical values for type double: "
+            "1.e+12 for"
+            " low accuracy; 1.e+7 for moderate accuracy; 1.e+1 for extremely"
+            " high accuracy.",
+            0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
+            static_cast<T>(10.0) / safe_tol));
+        opts.register_opt(oT);
 
+        // ===========================================================================
+        // STRING OPTIONS
+        // ===========================================================================
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
             "print options", "Print options list", {{"yes", 1}, {"no", 0}}, "no"));
         opts.register_opt(os);
 
+        os = std::make_shared<OptionString>(
+            OptionString("optim method", "Select optimization solver to use",
+                         {{"lbfgsb", optim::solvers::solver_lbfgsb},
+                          {"lbfgs", optim::solvers::solver_lbfgsb},
+                          {"bfgs", optim::solvers::solver_lbfgsb},
+                          {"coord", optim::solvers::solver_coord}},
+                         "lbfgsb"));
+        opts.register_opt(os);
+
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error,
                         "Memory allocation failed"); // LCOV_EXCL_LINE
-    } catch (...) {                               // LCOV_EXCL_LINE
+    } catch (...) {                                  // LCOV_EXCL_LINE
         // invalid use of the constructor, shouldn't happen (invalid_argument))
         return da_error(&err, da_status_internal_error,
                         "Unexpected internal error"); // LCOV_EXCL_LINE
