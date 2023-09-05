@@ -10,8 +10,7 @@
  * 
  * This handle is inherited by all specialized (internal) handles.
  */
-template <typename T>
-class basic_handle {
+template <typename T> class basic_handle {
   public:
     virtual ~basic_handle(){};
 
@@ -21,5 +20,7 @@ class basic_handle {
      */
     virtual da_status get_result(enum da_result query, da_int *dim, T *result) = 0;
     virtual da_status get_result(enum da_result query, da_int *dim, da_int *result) = 0;
+
+    // FIXME add err
 };
 #endif

@@ -48,7 +48,7 @@ da_status da_linmod_s_define_features(da_handle handle, da_int n, da_int m, floa
     return handle->linreg_s->define_features(n, m, A, b);
 }
 
-da_status da_linmod_d_fit(da_handle handle) {
+da_status da_linmod_d_fit_start(da_handle handle, da_int ncoefs, double *coefs) {
     if (!handle)
         return da_status_memory_error;
     if (handle->precision != da_double)
@@ -56,10 +56,15 @@ da_status da_linmod_d_fit(da_handle handle) {
     if (handle->linreg_d == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->linreg_d->fit();
+    return handle->linreg_d->fit(ncoefs, coefs);
 }
 
-da_status da_linmod_s_fit(da_handle handle) {
+da_status da_linmod_d_fit(da_handle handle) {
+    // Call fit with no initial starting point
+    return da_linmod_d_fit_start(handle, 0, nullptr);
+}
+
+da_status da_linmod_s_fit_start(da_handle handle, da_int ncoefs, float *coefs) {
     if (!handle)
         return da_status_memory_error;
     if (handle->precision != da_single)
@@ -67,7 +72,11 @@ da_status da_linmod_s_fit(da_handle handle) {
     if (handle->linreg_s == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->linreg_s->fit();
+    return handle->linreg_s->fit(ncoefs, coefs);
+}
+
+da_status da_linmod_s_fit(da_handle handle) {
+    return da_linmod_s_fit_start(handle, 0, nullptr);
 }
 
 da_status da_linmod_d_evaluate_model(da_handle handle, da_int n, da_int m, double *X,

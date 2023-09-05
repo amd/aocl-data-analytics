@@ -66,6 +66,8 @@ da_status da_datastore_init(da_datastore *store) {
     return exit_status;
 }
 
+void da_datastore_print_error_message(da_datastore store) { store->err->print(); }
+
 void da_datastore_destroy(da_datastore *store) {
 
     if (store) {

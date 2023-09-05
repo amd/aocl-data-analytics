@@ -1,5 +1,7 @@
 include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
+# FIXME: data files need also to be copied at installation of DA
+
 add_executable(lbfgsb_rc lbfgsb_rc.cpp)
 target_include_directories(
   lbfgsb_rc
@@ -27,6 +29,11 @@ target_link_libraries(linear_model aocl-da)
 add_executable(reglinear_model reglinear_model.cpp)
 target_link_libraries(reglinear_model aocl-da)
 
+add_executable(linmod_diabetes linmod_diabetes.cpp)
+target_link_libraries(linmod_diabetes aocl-da)
+target_compile_definitions(
+  linmod_diabetes PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
+
 add_executable(datastore datastore.cpp)
 target_link_libraries(datastore aocl-da)
 target_compile_definitions(
@@ -43,6 +50,7 @@ target_link_libraries(basic_pca aocl-da)
 set(EXAMPLE_EXES
     reglinear_model
     linear_model
+    linmod_diabetes
     basic_statistics
     lbfgsb_rc
     lbfgsb_fcomm

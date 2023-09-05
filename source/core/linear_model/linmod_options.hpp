@@ -24,6 +24,7 @@
 #ifndef LINMOD_OPTIONS_HPP
 #define LINMOD_OPTIONS_HPP
 
+#include "optimization.hpp"
 #include "options.hpp"
 #include <limits>
 
@@ -34,9 +35,10 @@
 template <class T>
 inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
     using namespace da_options;
-    T safe_eps = (T)2.0 * std::numeric_limits<T>::epsilon();
+    T safe_eps = (T)2 * std::numeric_limits<T>::epsilon();
     T safe_tol = std::sqrt(safe_eps);
     T max_real = std::numeric_limits<T>::max();
+    da_int imax = std::numeric_limits<da_int>::max();
 
     try {
 
@@ -50,6 +52,14 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "linmod intercept", "Add intercept variable to the model", 0,
             da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
+        opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "linmod optim iteration limit",
+            "Maximum number of iterations to perform in the optimization phase. Valid "
+            "only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.",
+            1, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
+            imax));
         opts.register_opt(oi);
 
         std::shared_ptr<OptionNumeric<T>> oT;
@@ -67,15 +77,32 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
                              0.0, da_options::lbound_t::greaterequal, max_real,
                              da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "linmod optim convergence tol",
+            "tolerance to declare convergence for the iterative optimization step. See "
+            "option in the corresponding optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            safe_tol));
+        opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "linmod optim progress factor",
+            "factor used to detect convergence of the iterative optimization step. See "
+            "option in the corresponding optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
+            static_cast<T>(10.0) / safe_tol));
+        opts.register_opt(oT);
 
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(
-            OptionString("linmod optim method", "Select optimization method to use",
-                         {{"auto", 0}, {"lbfgs", 1}, {"qr", 2}}, "auto"));
+            OptionString("linmod optim method", "Select optimization method to use.",
+                         {{"auto", optim::solvers::solver_undefined},
+                          {"lbfgs", optim::solvers::solver_lbfgsb},
+                          {"qr", optim::solvers::solver_qr},
+                          {"coord", optim::solvers::solver_coord}},
+                         "auto"));
         opts.register_opt(os);
-        os = std::make_shared<OptionString>(
-            OptionString("print options", "Print option list and set values.",
-                         {{"no", 0}, {"yes", 2}}, "no"));
+        os = std::make_shared<OptionString>(OptionString(
+            "print options", "Print options.", {{"no", 0}, {"yes", 2}}, "no"));
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {

@@ -199,8 +199,10 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     ASSERT_EQ(da_linreg_define_features(linmod_handle, n, m, a, b), da_status_success);
 
     // This should be options
-    //EXPECT_EQ(da_linmod_set_intercept<T>(linmod_handle, intercept), da_status_success);
     ASSERT_EQ(da_options_set_int(linmod_handle, "linmod intercept", intercept),
+              da_status_success);
+
+    ASSERT_EQ(da_options_set_string(linmod_handle, "print options", "yes"),
               da_status_success);
 
     // compute regression
