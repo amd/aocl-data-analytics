@@ -105,22 +105,22 @@ da_status preload(OptionRegistry &r) {
 };
 
 TEST(OpOptionInternal, OpClsCommon) {
-    ASSERT_THROW(OptionNumeric<da_int> opt_i("", "Preloaded Integer Option", 0,
+    EXPECT_THROW(OptionNumeric<da_int> opt_i("", "Preloaded Integer Option", 0,
                                              da_options::lbound_t::greaterequal, 10,
                                              da_options::ubound_t::lessequal, 10),
                  std::invalid_argument);
     OptionNumeric<da_int> opt_i(" IntegeR    OptiOn    ", "Preloaded Integer Option", 0,
                                 da_options::lbound_t::greaterequal, 10,
                                 da_options::ubound_t::lessequal, 10);
-    ASSERT_STRCASEEQ((opt_i.get_name()).c_str(), "integer option");
-    ASSERT_EQ(opt_i.get_option_t(), da_options::option_t::opt_int);
-    ASSERT_THROW(OptionString opt_s("      ", "Preloaded String Option",
+    EXPECT_STRCASEEQ((opt_i.get_name()).c_str(), "integer option");
+    EXPECT_EQ(opt_i.get_option_t(), da_options::option_t::opt_int);
+    EXPECT_THROW(OptionString opt_s("      ", "Preloaded String Option",
                                     {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes"),
                  std::invalid_argument);
     OptionString opt_s("  str   OPT  ", "Preloaded String Option",
                        {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes");
-    ASSERT_STRCASEEQ(opt_s.get_name().c_str(), "str opt");
-    ASSERT_EQ(opt_s.get_option_t(), da_options::option_t::opt_string);
+    EXPECT_STRCASEEQ(opt_s.get_name().c_str(), "str opt");
+    EXPECT_EQ(opt_s.get_option_t(), da_options::option_t::opt_string);
 };
 
 template <typename T> void OpClsNumeric(void) {
@@ -134,8 +134,8 @@ template <typename T> void OpClsNumeric(void) {
     bool has_nan = std::numeric_limits<T>::has_quiet_NaN;
     T val = -999;
     opt.get(val);
-    ASSERT_EQ(val, (T)10);
-    ASSERT_EQ(opt.set((T)1000), da_status_option_invalid_value);
+    EXPECT_EQ(val, (T)10);
+    EXPECT_EQ(opt.set((T)1000), da_status_option_invalid_value);
     // check print_detail() grep match Set-by: default
     std::string s_default("Set-by: (default");
     std::string s_user("Set-by: (user");
@@ -146,66 +146,66 @@ template <typename T> void OpClsNumeric(void) {
     std::string det = opt.print_details(false);
     std::smatch m;
     std::regex_search(det, m, reg_default);
-    ASSERT_STRCASEEQ(std::string(m[0]).c_str(), s_default.c_str());
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_default.c_str());
 
-    ASSERT_EQ(opt.set(1), da_status_success);
+    EXPECT_EQ(opt.set(1), da_status_success);
     // check print_detail() grep match Set-by: user
     det = opt.print_details(false);
     std::regex_search(det, m, reg_user);
-    ASSERT_STRCASEEQ(std::string(m[0]).c_str(), s_user.c_str());
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_user.c_str());
 
-    ASSERT_EQ(opt.set(2, da_options::setby_t::solver), da_status_success);
+    EXPECT_EQ(opt.set(2, da_options::setby_t::solver), da_status_success);
     // check print_detail() grep match Set-by: solver
     det = opt.print_details(false);
     std::regex_search(det, m, reg_solver);
-    ASSERT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
 
     std::string prn = opt.print_option();
-    ASSERT_EQ(prn.size(), std::string(" placeholder option = 2\n").size());
+    EXPECT_EQ(prn.size(), std::string(" placeholder option = 2\n").size());
 
     // lower > upper
-    ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 10,
+    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 10,
                                       da_options::lbound_t::greaterequal, 1,
                                       da_options::ubound_t::lessequal, 1),
                  std::invalid_argument);
     if (has_nan) {
         // lower = nan
-        ASSERT_THROW(OptionNumeric<T> opt("Opt", descr,
+        EXPECT_THROW(OptionNumeric<T> opt("Opt", descr,
                                           std::numeric_limits<T>::quiet_NaN(),
                                           da_options::lbound_t::greaterequal, 10,
                                           da_options::ubound_t::lessequal, 5),
                      std::invalid_argument);
         // upper = nan
-        ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, -1,
+        EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, -1,
                                           da_options::lbound_t::greaterequal,
                                           std::numeric_limits<T>::quiet_NaN(),
                                           da_options::ubound_t::lessequal, 5),
                      std::invalid_argument);
         // default = nan
-        ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, -9,
+        EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, -9,
                                           da_options::lbound_t::greaterequal, 10,
                                           da_options::ubound_t::lessequal,
                                           std::numeric_limits<T>::quiet_NaN()),
                      std::invalid_argument);
     }
     // default out of range l == u
-    ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 2, da_options::lbound_t::greaterthan,
+    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 2, da_options::lbound_t::greaterthan,
                                       2, da_options::ubound_t::lessequal, -11),
                  std::invalid_argument);
     // default out of range l <= x <= u < d
-    ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
+    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
                                       10, da_options::ubound_t::lessequal, 11),
                  std::invalid_argument);
     // default out of range l <= x < u = d
-    ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
+    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
                                       10, da_options::ubound_t::lessthan, 10),
                  std::invalid_argument);
     // default out of range d < l <= x <= u
-    ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
+    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
                                       10, da_options::ubound_t::lessequal, -11),
                  std::invalid_argument);
     // default out of range d = l <= x < u
-    ASSERT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterthan,
+    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterthan,
                                       10, da_options::ubound_t::lessthan, 0),
                  std::invalid_argument);
     {
@@ -224,7 +224,7 @@ template <typename T> void OpClsNumeric(void) {
 
 //template <> void OpClsNumeric<bool>(void) {
 // Empty name
-//    ASSERT_THROW(OptionNumeric<bool> opt("    ", "", true), std::invalid_argument);
+//    EXPECT_THROW(OptionNumeric<bool> opt("    ", "", true), std::invalid_argument);
 //    [[maybe_unused]] std::string pretty;
 //    pretty = opt_bool.print_details(true);
 //    pretty = opt_bool.print_details(false);
@@ -244,17 +244,17 @@ TEST(OpOptionInternal, OpClsStringAll) {
     da_int id;
     // Categorical String Option
     ::opt_string.get(val);
-    ASSERT_EQ(val, "yes");
+    EXPECT_EQ(val, "yes");
     ::opt_string.get(val, id);
-    ASSERT_EQ(id, 1);
+    EXPECT_EQ(id, 1);
     // Free-form String Option
     ::opt_ff_string.get(val);
-    ASSERT_EQ(val, "any");
-    ASSERT_THROW(::opt_ff_string.get(val, id), std::runtime_error);
-    ASSERT_EQ(::opt_ff_string.set("New Free-Form Value", da_options::setby_t::solver),
+    EXPECT_EQ(val, "any");
+    EXPECT_THROW(::opt_ff_string.get(val, id), std::runtime_error);
+    EXPECT_EQ(::opt_ff_string.set("New Free-Form Value", da_options::setby_t::solver),
               da_status_success);
     ::opt_ff_string.get(val);
-    ASSERT_EQ(val, "new free-form value");
+    EXPECT_EQ(val, "new free-form value");
     // check print_detail() grep match Set-by: default
     std::string s_default("Set-by: (default");
     std::string s_user("Set-by: (user");
@@ -265,89 +265,89 @@ TEST(OpOptionInternal, OpClsStringAll) {
     std::string det = opt_string.print_details(false);
     std::smatch m;
     std::regex_search(det, m, reg_default);
-    ASSERT_STRCASEEQ(std::string(m[0]).c_str(), s_default.c_str());
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_default.c_str());
 
-    ASSERT_EQ(::opt_string.set("maybe"), da_status_success);
+    EXPECT_EQ(::opt_string.set("maybe"), da_status_success);
     // check print_detail() grep match Set-by: user
     det = opt_string.print_details(false);
     std::regex_search(det, m, reg_user);
-    ASSERT_STRCASEEQ(std::string(m[0]).c_str(), s_user.c_str());
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_user.c_str());
 
-    ASSERT_EQ(::opt_string.set("no", da_options::setby_t::solver), da_status_success);
+    EXPECT_EQ(::opt_string.set("no", da_options::setby_t::solver), da_status_success);
     // check print_detail() grep match Set-by: solver
     det = ::opt_string.print_details(false);
     std::regex_search(det, m, reg_solver);
-    ASSERT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
     [[maybe_unused]] std::string prn;
     prn = opt_string.print_option();
-    ASSERT_EQ(prn.size(), std::string(" string option = no\n").size());
+    EXPECT_EQ(prn.size(), std::string(" string option = no\n").size());
     prn = opt_string.print_details(true);
 
-    ASSERT_NO_THROW(OptionString opt_string("string option", "Preloaded String Option",
+    EXPECT_NO_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                             {{"yes", 1}, {"yes", 0}, {"yes", 5}}, "yes"));
-    ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
+    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"No", 0}}, "           "),
                  std::invalid_argument);
-    ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
+    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"   No  ", 0}}, "no"),
                  std::invalid_argument);
-    ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
+    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"", 1}}, "yes"),
                  std::invalid_argument);
-    ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
+    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"", 2}}, "yes"),
                  std::invalid_argument);
-    ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
+    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"no", 0}, {"maybe", 2}},
                                          "   yes   "),
                  std::invalid_argument);
-    ASSERT_THROW(OptionString opt_string("string option", "Preloaded String Option",
+    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"no", 0}, {"maybe", 2}},
                                          "invalid"),
                  std::invalid_argument);
-    ASSERT_EQ(::opt_string.set("invalid"), da_status_option_invalid_value);
+    EXPECT_EQ(::opt_string.set("invalid"), da_status_option_invalid_value);
 }
 
 TEST(OpRegistryInternal, OpRegALL) {
     da_options::OptionRegistry reg;
-    ASSERT_EQ(preload(reg), da_status_success);
+    EXPECT_EQ(preload(reg), da_status_success);
     // test the lock
     reg.lock();
-    ASSERT_EQ(reg.register_opt(oI), da_status_option_locked);
+    EXPECT_EQ(reg.register_opt(oI), da_status_option_locked);
     reg.unlock();
     da_status status;
     // add option twice;
     status = reg.register_opt(oI);
-    ASSERT_EQ(status, da_status_invalid_input);
+    EXPECT_EQ(status, da_status_invalid_input);
     // add option (same name but different type)
     //OptionNumeric<bool> opt_over("integer option", "Preloaded bool Option", true);
     //std::shared_ptr<OptionNumeric<bool>> over =
     //    std::make_shared<OptionNumeric<bool>>(opt_over);
     //status = reg.register_opt(over);
-    ASSERT_EQ(status, da_status_invalid_input);
+    EXPECT_EQ(status, da_status_invalid_input);
 
     // set with locked registry
     reg.lock();
     da_int one = 1;
-    ASSERT_EQ(reg.set("integer opt", one), da_status_option_locked);
+    EXPECT_EQ(reg.set("integer opt", one), da_status_option_locked);
     reg.unlock();
     // option not found
-    ASSERT_EQ(reg.set("nonexistent option", one), da_status_option_not_found);
+    EXPECT_EQ(reg.set("nonexistent option", one), da_status_option_not_found);
     // set with the wrong type
-    ASSERT_EQ(reg.set("integer option", "wrong"), da_status_option_wrong_type);
-    ASSERT_EQ(reg.set("integer option", 3.33f), da_status_option_wrong_type);
-    //ASSERT_EQ(reg.set("integer option", true), da_status_option_wrong_type);
+    EXPECT_EQ(reg.set("integer option", "wrong"), da_status_option_wrong_type);
+    EXPECT_EQ(reg.set("integer option", 3.33f), da_status_option_wrong_type);
+    //EXPECT_EQ(reg.set("integer option", true), da_status_option_wrong_type);
     //bool b = false;
-    //ASSERT_EQ(reg.get("integer option", &b), da_status_option_wrong_type);
+    //EXPECT_EQ(reg.get("integer option", &b), da_status_option_wrong_type);
     string ret;
     da_int id;
-    ASSERT_EQ(reg.get("wrong string option", ret, id), da_status_option_not_found);
-    ASSERT_EQ(reg.get("integer option", ret, id), da_status_option_wrong_type);
+    EXPECT_EQ(reg.get("wrong string option", ret, id), da_status_option_not_found);
+    EXPECT_EQ(reg.get("integer option", ret, id), da_status_option_wrong_type);
     // test string ff and categorical
-    ASSERT_EQ(reg.set("string option", "yes"), da_status_success);
-    ASSERT_EQ(reg.set("free-form string option", " new   value "), da_status_success);
-    ASSERT_EQ(reg.get("free-form string option", ret), da_status_success);
-    ASSERT_EQ(ret, "new value");
+    EXPECT_EQ(reg.set("string option", "yes"), da_status_success);
+    EXPECT_EQ(reg.set("free-form string option", " new   value "), da_status_success);
+    EXPECT_EQ(reg.get("free-form string option", ret), da_status_success);
+    EXPECT_EQ(ret, "new value");
 
     reg.print_details(true);
     reg.print_details(false);
@@ -363,42 +363,42 @@ TEST(OpRegistryWrappers, getset_string) {
     char sv[] = "yes";
     char str[25];
     char cv[25] = "quite long option value;";
-    ASSERT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
-    ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
-    ASSERT_EQ(preload(*opts), da_status_success);
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
+    EXPECT_EQ(preload(*opts), da_status_success);
     // String categorical
-    ASSERT_EQ(da_options_set_string(nullptr, "string option", sv),
+    EXPECT_EQ(da_options_set_string(nullptr, "string option", sv),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_get_string(nullptr, "string option", str, &n),
+    EXPECT_EQ(da_options_get_string(nullptr, "string option", str, &n),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_set_string(handle, "string option", sv), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "string option", sv), da_status_success);
     char value[36];
-    ASSERT_EQ(da_options_get_string(handle, "string option", value, &n),
+    EXPECT_EQ(da_options_get_string(handle, "string option", value, &n),
               da_status_success);
-    ASSERT_EQ("yes", string(value));
+    EXPECT_EQ("yes", string(value));
     // String free-form
-    ASSERT_EQ(da_options_set_string(handle, "free-form string option", cv),
+    EXPECT_EQ(da_options_set_string(handle, "free-form string option", cv),
               da_status_success);
-    ASSERT_EQ(da_options_get_string(handle, "free-form string option", value, &n),
+    EXPECT_EQ(da_options_get_string(handle, "free-form string option", value, &n),
               da_status_invalid_input);
-    ASSERT_EQ(n, 25);
-    ASSERT_EQ(da_options_get_string(handle, "free-form string option", value, &n),
+    EXPECT_EQ(n, 25);
+    EXPECT_EQ(da_options_get_string(handle, "free-form string option", value, &n),
               da_status_success);
-    ASSERT_EQ(string(cv), string(value));
+    EXPECT_EQ(string(cv), string(value));
 
     // target char * is too small
     n = 1;
-    ASSERT_EQ(da_options_get_string(handle, "string option", value, &n),
+    EXPECT_EQ(da_options_get_string(handle, "string option", value, &n),
               da_status_invalid_input);
     // Try to get wrong option
-    ASSERT_EQ(da_options_get_string(handle, "nonexistent option", value, &n),
+    EXPECT_EQ(da_options_get_string(handle, "nonexistent option", value, &n),
               da_status_option_not_found);
     // Try to set option with incorrect value
     char invalid[] = "non existent";
-    ASSERT_EQ(da_options_set_string(handle, "string option", invalid),
+    EXPECT_EQ(da_options_set_string(handle, "string option", invalid),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
-    ASSERT_EQ(da_options_set_int(handle, "string option", 1),
+    EXPECT_EQ(da_options_set_int(handle, "string option", 1),
               da_status_option_wrong_type);
     da_handle_destroy(&handle);
 };
@@ -407,26 +407,26 @@ TEST(OpRegistryWrappers, getset_int) {
     da_handle handle;
     OptionRegistry *opts;
     da_int value = 5;
-    ASSERT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
-    ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
-    ASSERT_EQ(preload(*opts), da_status_success);
-    ASSERT_EQ(da_options_set_int(nullptr, "integer option", value),
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
+    EXPECT_EQ(preload(*opts), da_status_success);
+    EXPECT_EQ(da_options_set_int(nullptr, "integer option", value),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_get_int(nullptr, "integer option", &value),
+    EXPECT_EQ(da_options_get_int(nullptr, "integer option", &value),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_set_int(handle, "integer option", value), da_status_success);
-    ASSERT_EQ(da_options_get_int(handle, "integer option", &value), da_status_success);
-    ASSERT_EQ(5, value);
+    EXPECT_EQ(da_options_set_int(handle, "integer option", value), da_status_success);
+    EXPECT_EQ(da_options_get_int(handle, "integer option", &value), da_status_success);
+    EXPECT_EQ(5, value);
     // Try to get wrong option
-    ASSERT_EQ(da_options_get_int(handle, "nonexistent option", &value),
+    EXPECT_EQ(da_options_get_int(handle, "nonexistent option", &value),
               da_status_option_not_found);
     // Try to set option with incorrect value
     value = -99;
-    ASSERT_EQ(da_options_set_int(handle, "integer option", value),
+    EXPECT_EQ(da_options_set_int(handle, "integer option", value),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
     double dv = 1.0;
-    ASSERT_EQ(da_options_set_d_real(handle, "integer option", dv),
+    EXPECT_EQ(da_options_set_d_real(handle, "integer option", dv),
               da_status_option_wrong_type);
     da_handle_destroy(&handle);
 };
@@ -435,31 +435,31 @@ TEST(OpRegistryWrappers, getset_double) {
     da_handle handle;
     OptionRegistry *opts;
     double value = 5.0;
-    ASSERT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
-    ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
-    ASSERT_EQ(preload(*opts), da_status_success);
-    ASSERT_EQ(da_options_set_d_real(nullptr, "double option", value),
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
+    EXPECT_EQ(preload(*opts), da_status_success);
+    EXPECT_EQ(da_options_set_d_real(nullptr, "double option", value),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_get_d_real(nullptr, "double option", &value),
+    EXPECT_EQ(da_options_get_d_real(nullptr, "double option", &value),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_set_d_real(handle, "double option", value), da_status_success);
-    ASSERT_EQ(da_options_get_d_real(handle, "double option", &value), da_status_success);
-    ASSERT_EQ(5.0, value);
+    EXPECT_EQ(da_options_set_d_real(handle, "double option", value), da_status_success);
+    EXPECT_EQ(da_options_get_d_real(handle, "double option", &value), da_status_success);
+    EXPECT_EQ(5.0, value);
     // Try to get wrong option
-    ASSERT_EQ(da_options_get_d_real(handle, "nonexistent option", &value),
+    EXPECT_EQ(da_options_get_d_real(handle, "nonexistent option", &value),
               da_status_option_not_found);
     // Try to set option with incorrect value
     value = -99.0;
-    ASSERT_EQ(da_options_set_d_real(handle, "double option", value),
+    EXPECT_EQ(da_options_set_d_real(handle, "double option", value),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
     da_int iv = 1;
-    ASSERT_EQ(da_options_set_int(handle, "double option", iv),
+    EXPECT_EQ(da_options_set_int(handle, "double option", iv),
               da_status_option_wrong_type);
 
     float fv;
-    ASSERT_EQ(da_options_get_s_real(handle, "double option", &fv), da_status_wrong_type);
-    ASSERT_EQ(da_options_set_s_real(handle, "double option", fv), da_status_wrong_type);
+    EXPECT_EQ(da_options_get_s_real(handle, "double option", &fv), da_status_wrong_type);
+    EXPECT_EQ(da_options_set_s_real(handle, "double option", fv), da_status_wrong_type);
     da_handle_destroy(&handle);
 };
 
@@ -467,39 +467,39 @@ TEST(OpRegistryWrappers, getset_float) {
     da_handle handle;
     OptionRegistry *opts;
     float value = 5.0f;
-    ASSERT_EQ(da_handle_init_s(&handle, da_handle_linmod), da_status_success);
-    ASSERT_EQ(handle->get_current_opts(&opts), da_status_success);
-    ASSERT_EQ(preload(*opts), da_status_success);
-    ASSERT_EQ(da_options_set_s_real(nullptr, "float option", value),
+    EXPECT_EQ(da_handle_init_s(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
+    EXPECT_EQ(preload(*opts), da_status_success);
+    EXPECT_EQ(da_options_set_s_real(nullptr, "float option", value),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_get_s_real(nullptr, "float option", &value),
+    EXPECT_EQ(da_options_get_s_real(nullptr, "float option", &value),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_options_set_s_real(handle, "float option", value), da_status_success);
-    ASSERT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
-    ASSERT_EQ(5.0f, value);
+    EXPECT_EQ(da_options_set_s_real(handle, "float option", value), da_status_success);
+    EXPECT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
+    EXPECT_EQ(5.0f, value);
     // Try to get wrong option
-    ASSERT_EQ(da_options_get_s_real(handle, "nonexistent option", &value),
+    EXPECT_EQ(da_options_get_s_real(handle, "nonexistent option", &value),
               da_status_option_not_found);
     // Try to set option with incorrect value
     value = 20.0f;
-    ASSERT_EQ(da_options_set_s_real(handle, "float option", value),
+    EXPECT_EQ(da_options_set_s_real(handle, "float option", value),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
     da_int iv = 1;
-    ASSERT_EQ(da_options_set_int(handle, "double option", iv),
+    EXPECT_EQ(da_options_set_int(handle, "double option", iv),
               da_status_option_wrong_type);
-    ASSERT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
+    EXPECT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
     double dv;
-    ASSERT_EQ(da_options_get_d_real(handle, "float option", &dv), da_status_wrong_type);
-    ASSERT_EQ(da_options_set_d_real(handle, "float option", dv), da_status_wrong_type);
+    EXPECT_EQ(da_options_get_d_real(handle, "float option", &dv), da_status_wrong_type);
+    EXPECT_EQ(da_options_set_d_real(handle, "float option", dv), da_status_wrong_type);
     da_handle_destroy(&handle);
 };
 
 //TEST(OpRegistryWrappers, getset_bool) {
-//    ASSERT_EQ(da_options_set_bool(nullptr, "bool option", true),
+//    EXPECT_EQ(da_options_set_bool(nullptr, "bool option", true),
 //              da_status_invalid_pointer);
 //    bool value;
-//    ASSERT_EQ(da_options_get_bool(nullptr, "bool option", &value),
+//    EXPECT_EQ(da_options_get_bool(nullptr, "bool option", &value),
 //              da_status_invalid_pointer);
 //};
 } // namespace

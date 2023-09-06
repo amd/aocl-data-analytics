@@ -282,13 +282,13 @@ TYPED_TEST(CorrelationCovarianceTest, CorrelationCovarianceFunctionality) {
         std::vector<TypeParam> xcov(param.x);
         std::vector<TypeParam> xcorr(param.x);
 
-        ASSERT_EQ(da_covariance_matrix(param.n, param.p, xcov.data(), param.ldx,
+        EXPECT_EQ(da_covariance_matrix(param.n, param.p, xcov.data(), param.ldx,
                                        cov.data(), param.ldcov),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.x.data(), xcov.data(), param.epsilon);
         EXPECT_ARR_NEAR(param.ldcov * param.p, param.expected_cov.data(), cov.data(),
                         param.epsilon);
-        ASSERT_EQ(da_correlation_matrix(param.n, param.p, xcorr.data(), param.ldx,
+        EXPECT_EQ(da_correlation_matrix(param.n, param.p, xcorr.data(), param.ldx,
                                         corr.data(), param.ldcorr),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.x.data(), xcorr.data(), param.epsilon);
@@ -306,40 +306,40 @@ TYPED_TEST(CorrelationCovarianceTest, IllegalArgsCorrelationCovariance) {
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    ASSERT_EQ(da_covariance_matrix(n, p, x.data(), ldx_illegal, mat.data(), ldmat),
+    EXPECT_EQ(da_covariance_matrix(n, p, x.data(), ldx_illegal, mat.data(), ldmat),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_correlation_matrix(n, p, x.data(), ldx_illegal, mat.data(), ldmat),
+    EXPECT_EQ(da_correlation_matrix(n, p, x.data(), ldx_illegal, mat.data(), ldmat),
               da_status_invalid_leading_dimension);
 
     // Test with illegal p
     da_int p_illegal = 0;
-    ASSERT_EQ(da_covariance_matrix(n, p_illegal, x.data(), ldx, mat.data(), ldmat),
+    EXPECT_EQ(da_covariance_matrix(n, p_illegal, x.data(), ldx, mat.data(), ldmat),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_correlation_matrix(n, p_illegal, x.data(), ldx, mat.data(), ldmat),
+    EXPECT_EQ(da_correlation_matrix(n, p_illegal, x.data(), ldx, mat.data(), ldmat),
               da_status_invalid_array_dimension);
 
     // Test with illegal n
     da_int n_illegal = 1;
-    ASSERT_EQ(da_covariance_matrix(n_illegal, p, x.data(), ldx, mat.data(), ldmat),
+    EXPECT_EQ(da_covariance_matrix(n_illegal, p, x.data(), ldx, mat.data(), ldmat),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_correlation_matrix(n_illegal, p, x.data(), ldx, mat.data(), ldmat),
+    EXPECT_EQ(da_correlation_matrix(n_illegal, p, x.data(), ldx, mat.data(), ldmat),
               da_status_invalid_array_dimension);
 
     // Test with illegal ldmat
     da_int ldmat_illegal = 1;
-    ASSERT_EQ(da_covariance_matrix(n, p, x.data(), ldx, mat.data(), ldmat_illegal),
+    EXPECT_EQ(da_covariance_matrix(n, p, x.data(), ldx, mat.data(), ldmat_illegal),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_correlation_matrix(n, p, x.data(), ldx, mat.data(), ldmat_illegal),
+    EXPECT_EQ(da_correlation_matrix(n, p, x.data(), ldx, mat.data(), ldmat_illegal),
               da_status_invalid_leading_dimension);
 
     // Test illegal pointers
     TypeParam *matrixnull = nullptr;
-    ASSERT_EQ(da_covariance_matrix(n, p, matrixnull, ldx, mat.data(), ldmat),
+    EXPECT_EQ(da_covariance_matrix(n, p, matrixnull, ldx, mat.data(), ldmat),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_correlation_matrix(n, p, matrixnull, ldx, mat.data(), ldmat),
+    EXPECT_EQ(da_correlation_matrix(n, p, matrixnull, ldx, mat.data(), ldmat),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_covariance_matrix(n, p, x.data(), ldx, matrixnull, ldmat),
+    EXPECT_EQ(da_covariance_matrix(n, p, x.data(), ldx, matrixnull, ldmat),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_correlation_matrix(n, p, x.data(), ldx, matrixnull, ldmat),
+    EXPECT_EQ(da_correlation_matrix(n, p, x.data(), ldx, matrixnull, ldmat),
               da_status_invalid_pointer);
 }

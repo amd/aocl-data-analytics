@@ -110,13 +110,13 @@ TEST(ErrorStack, TraceStackMax) {
     da_error_trace(err, da_status_file_reading_error, "Stack [7] - file not found!");
     da_warn_trace(err, da_status_file_reading_error, "Stack [8] - file not found!");
     da_status status = da_error_trace(err, da_status_parsing_error, "Stack [9] - no digits!");
-    ASSERT_EQ(status, da_status_parsing_error);
+    EXPECT_EQ(status, da_status_parsing_error);
     status =
         da_error_trace(err, da_status_parsing_error, "Stack [10] - invalid boolean!");
-    ASSERT_EQ(status, da_status_parsing_error);
+    EXPECT_EQ(status, da_status_parsing_error);
     status =
         da_error_trace(err, da_status_invalid_pointer, "Stack [11] - invalid pointer!");
-    ASSERT_EQ(status, da_status_invalid_pointer);
+    EXPECT_EQ(status, da_status_invalid_pointer);
     err->print();
     delete err;
 };

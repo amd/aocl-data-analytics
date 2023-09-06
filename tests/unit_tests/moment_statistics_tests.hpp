@@ -612,72 +612,72 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
         std::vector<TypeParam> row_stat3(param.n);
         TypeParam overall_stat3;
 
-        ASSERT_EQ(da_mean(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_mean(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                           column_stat.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
                         param.epsilon);
-        ASSERT_EQ(da_mean(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_mean(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
                           row_stat.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
                         param.epsilon);
-        ASSERT_EQ(da_mean(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_mean(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                           &overall_stat),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat, param.epsilon);
 
-        ASSERT_EQ(da_harmonic_mean(da_axis_col, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_harmonic_mean(da_axis_col, param.n, param.p, param.x.data(),
                                    param.ldx, column_stat.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_harmonic_means.data(),
                         column_stat.data(), param.epsilon);
-        ASSERT_EQ(da_harmonic_mean(da_axis_row, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_harmonic_mean(da_axis_row, param.n, param.p, param.x.data(),
                                    param.ldx, row_stat.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_harmonic_means.data(),
                         row_stat.data(), param.epsilon);
-        ASSERT_EQ(da_harmonic_mean(da_axis_all, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_harmonic_mean(da_axis_all, param.n, param.p, param.x.data(),
                                    param.ldx, &overall_stat),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_harmonic_mean, overall_stat, param.epsilon);
 
-        ASSERT_EQ(da_geometric_mean(da_axis_col, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_geometric_mean(da_axis_col, param.n, param.p, param.x.data(),
                                     param.ldx, column_stat.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_geometric_means.data(),
                         column_stat.data(), param.epsilon);
-        ASSERT_EQ(da_geometric_mean(da_axis_row, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_geometric_mean(da_axis_row, param.n, param.p, param.x.data(),
                                     param.ldx, row_stat.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_geometric_means.data(),
                         row_stat.data(), param.epsilon);
-        ASSERT_EQ(da_geometric_mean(da_axis_all, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_geometric_mean(da_axis_all, param.n, param.p, param.x.data(),
                                     param.ldx, &overall_stat),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_geometric_mean, overall_stat, param.epsilon);
 
-        ASSERT_EQ(da_variance(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_variance(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                               column_stat.data(), column_stat2.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
                         param.epsilon);
         EXPECT_ARR_NEAR(param.p, param.expected_column_variances.data(),
                         column_stat2.data(), param.epsilon);
-        ASSERT_EQ(da_variance(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_variance(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
                               row_stat.data(), row_stat2.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
                         param.epsilon);
         EXPECT_ARR_NEAR(param.n, param.expected_row_variances.data(), row_stat2.data(),
                         param.epsilon);
-        ASSERT_EQ(da_variance(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_variance(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                               &overall_stat, &overall_stat2),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat, param.epsilon);
         EXPECT_NEAR(param.expected_overall_variance, overall_stat2, param.epsilon);
 
-        ASSERT_EQ(da_skewness(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_skewness(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                               column_stat.data(), column_stat2.data(),
                               column_stat3.data()),
                   param.expected_status);
@@ -687,7 +687,7 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                         column_stat2.data(), param.epsilon);
         EXPECT_ARR_NEAR(param.p, param.expected_column_skewnesses.data(),
                         column_stat3.data(), param.epsilon);
-        ASSERT_EQ(da_skewness(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_skewness(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
                               row_stat.data(), row_stat2.data(), row_stat3.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
@@ -696,14 +696,14 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                         param.epsilon);
         EXPECT_ARR_NEAR(param.n, param.expected_row_skewnesses.data(), row_stat3.data(),
                         param.epsilon);
-        ASSERT_EQ(da_skewness(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_skewness(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                               &overall_stat, &overall_stat2, &overall_stat3),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat, param.epsilon);
         EXPECT_NEAR(param.expected_overall_variance, overall_stat2, param.epsilon);
         EXPECT_NEAR(param.expected_overall_skewness, overall_stat3, param.epsilon);
 
-        ASSERT_EQ(da_kurtosis(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_kurtosis(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                               column_stat.data(), column_stat2.data(),
                               column_stat3.data()),
                   param.expected_status);
@@ -713,7 +713,7 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                         column_stat2.data(), param.epsilon);
         EXPECT_ARR_NEAR(param.p, param.expected_column_kurtoses.data(),
                         column_stat3.data(), param.epsilon);
-        ASSERT_EQ(da_kurtosis(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_kurtosis(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
                               row_stat.data(), row_stat2.data(), row_stat3.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
@@ -722,28 +722,28 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                         param.epsilon);
         EXPECT_ARR_NEAR(param.n, param.expected_row_kurtoses.data(), row_stat3.data(),
                         param.epsilon);
-        ASSERT_EQ(da_kurtosis(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_kurtosis(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                               &overall_stat, &overall_stat2, &overall_stat3),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat, param.epsilon);
         EXPECT_NEAR(param.expected_overall_variance, overall_stat2, param.epsilon);
         EXPECT_NEAR(param.expected_overall_kurtosis, overall_stat3, param.epsilon);
 
-        ASSERT_EQ(da_moment(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_moment(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                             param.k, 0, column_stat.data(), column_stat2.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
                         param.epsilon);
         EXPECT_ARR_NEAR(param.p, param.expected_column_moments.data(),
                         column_stat2.data(), param.epsilon);
-        ASSERT_EQ(da_moment(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_moment(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
                             param.k, 0, row_stat.data(), row_stat2.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
                         param.epsilon);
         EXPECT_ARR_NEAR(param.n, param.expected_row_moments.data(), row_stat2.data(),
                         param.epsilon);
-        ASSERT_EQ(da_moment(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_moment(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                             param.k, 0, &overall_stat, &overall_stat2),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat, param.epsilon);
@@ -762,98 +762,98 @@ TYPED_TEST(MomentStatisticsTest, IllegalArgsMoments) {
 
     // Test with illegal value of k
     da_int k_illegal = -3;
-    ASSERT_EQ(da_moment(da_axis_all, n, p, x.data(), ldx, k_illegal, 0, dummy1.data(),
+    EXPECT_EQ(da_moment(da_axis_all, n, p, x.data(), ldx, k_illegal, 0, dummy1.data(),
                         dummy2.data()),
               da_status_invalid_input);
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    ASSERT_EQ(da_mean(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data()),
+    EXPECT_EQ(da_mean(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data()),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_harmonic_mean(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data()),
+    EXPECT_EQ(da_harmonic_mean(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data()),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_geometric_mean(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data()),
+    EXPECT_EQ(da_geometric_mean(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data()),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_variance(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
+    EXPECT_EQ(da_variance(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
                           dummy2.data()),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_skewness(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
+    EXPECT_EQ(da_skewness(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
                           dummy2.data(), dummy3.data()),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_kurtosis(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
+    EXPECT_EQ(da_kurtosis(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
                           dummy2.data(), dummy3.data()),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_moment(da_axis_row, n, p, x.data(), ldx_illegal, k, 0, dummy1.data(),
+    EXPECT_EQ(da_moment(da_axis_row, n, p, x.data(), ldx_illegal, k, 0, dummy1.data(),
                         dummy2.data()),
               da_status_invalid_leading_dimension);
 
     // Test with illegal p
     da_int p_illegal = 0;
-    ASSERT_EQ(da_mean(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data()),
+    EXPECT_EQ(da_mean(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_harmonic_mean(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data()),
+    EXPECT_EQ(da_harmonic_mean(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_geometric_mean(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data()),
+    EXPECT_EQ(da_geometric_mean(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_variance(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_variance(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
                           dummy2.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_skewness(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_skewness(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
                           dummy2.data(), dummy3.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_kurtosis(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_kurtosis(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
                           dummy2.data(), dummy3.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_moment(da_axis_row, n, p_illegal, x.data(), ldx, k, 0, dummy1.data(),
+    EXPECT_EQ(da_moment(da_axis_row, n, p_illegal, x.data(), ldx, k, 0, dummy1.data(),
                         dummy2.data()),
               da_status_invalid_array_dimension);
 
     // Test with illegal n
     da_int n_illegal = 0;
-    ASSERT_EQ(da_mean(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data()),
+    EXPECT_EQ(da_mean(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_harmonic_mean(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data()),
+    EXPECT_EQ(da_harmonic_mean(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_geometric_mean(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data()),
+    EXPECT_EQ(da_geometric_mean(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_variance(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_variance(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
                           dummy2.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_skewness(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_skewness(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
                           dummy2.data(), dummy3.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_kurtosis(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_kurtosis(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
                           dummy2.data(), dummy3.data()),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_moment(da_axis_col, n_illegal, p, x.data(), ldx, k, 0, dummy1.data(),
+    EXPECT_EQ(da_moment(da_axis_col, n_illegal, p, x.data(), ldx, k, 0, dummy1.data(),
                         dummy2.data()),
               da_status_invalid_array_dimension);
 
     // Test illegal geometric mean
-    ASSERT_EQ(da_geometric_mean(da_axis_row, n, p, x.data(), ldx, dummy1.data()),
+    EXPECT_EQ(da_geometric_mean(da_axis_row, n, p, x.data(), ldx, dummy1.data()),
               da_status_negative_data);
-    ASSERT_EQ(da_geometric_mean(da_axis_col, n, p, x.data(), ldx, dummy2.data()),
+    EXPECT_EQ(da_geometric_mean(da_axis_col, n, p, x.data(), ldx, dummy2.data()),
               da_status_negative_data);
-    ASSERT_EQ(da_geometric_mean(da_axis_all, n, p, x.data(), ldx, dummy3.data()),
+    EXPECT_EQ(da_geometric_mean(da_axis_all, n, p, x.data(), ldx, dummy3.data()),
               da_status_negative_data);
 
     // Test illegal pointers
     TypeParam *x_null = nullptr;
-    ASSERT_EQ(da_mean(da_axis_col, n, p, x_null, ldx, dummy1.data()),
+    EXPECT_EQ(da_mean(da_axis_col, n, p, x_null, ldx, dummy1.data()),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_harmonic_mean(da_axis_col, n, p, x_null, ldx, dummy1.data()),
+    EXPECT_EQ(da_harmonic_mean(da_axis_col, n, p, x_null, ldx, dummy1.data()),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_geometric_mean(da_axis_col, n, p, x_null, ldx, dummy1.data()),
+    EXPECT_EQ(da_geometric_mean(da_axis_col, n, p, x_null, ldx, dummy1.data()),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_variance(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data()),
+    EXPECT_EQ(da_variance(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data()),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_skewness(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data(),
+    EXPECT_EQ(da_skewness(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data(),
                           dummy3.data()),
               da_status_invalid_pointer);
-    ASSERT_EQ(da_kurtosis(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data(),
+    EXPECT_EQ(da_kurtosis(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data(),
                           dummy3.data()),
               da_status_invalid_pointer);
-    ASSERT_EQ(
+    EXPECT_EQ(
         da_moment(da_axis_col, n, p, x_null, ldx, k, 0, dummy1.data(), dummy2.data()),
         da_status_invalid_pointer);
 }
