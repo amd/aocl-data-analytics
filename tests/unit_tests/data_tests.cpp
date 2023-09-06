@@ -1197,7 +1197,6 @@ TEST(dataStore, extractSelection) {
     std::vector<float> fdata;
     std::vector<std::string> sdata;
     get_heterogeneous_data_store(hds, m, n, idata, fdata, sdata);
-    interval rows, cols;
     std::vector<da_int> expected_slice;
     expected_slice.reserve(100);
 

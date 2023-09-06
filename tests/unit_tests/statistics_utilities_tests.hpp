@@ -467,17 +467,17 @@ TYPED_TEST(StatisticsUtilitiesTest, StatisticsUtilitiesFunctionality) {
         if (param.overall_scale.size() > 0)
             overall_scale = param.overall_scale.data();
 
-        ASSERT_EQ(da_standardize(da_axis_col, param.n, param.p, x_column.data(),
+        EXPECT_EQ(da_standardize(da_axis_col, param.n, param.p, x_column.data(),
                                  param.ldx, column_shift, column_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_column.data(),
                         x_column.data(), param.epsilon);
-        ASSERT_EQ(da_standardize(da_axis_row, param.n, param.p, x_row.data(), param.ldx,
+        EXPECT_EQ(da_standardize(da_axis_row, param.n, param.p, x_row.data(), param.ldx,
                                  row_shift, row_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_row.data(), x_row.data(),
                         param.epsilon);
-        ASSERT_EQ(da_standardize(da_axis_all, param.n, param.p, x_overall.data(),
+        EXPECT_EQ(da_standardize(da_axis_all, param.n, param.p, x_overall.data(),
                                  param.ldx, overall_shift, overall_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_overall.data(),
@@ -497,24 +497,24 @@ TYPED_TEST(StatisticsUtilitiesTest, IllegalArgsStatisticsUtilities) {
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    ASSERT_EQ(da_standardize(da_axis_all, n, p, x.data(), ldx_illegal, scale.data(),
+    EXPECT_EQ(da_standardize(da_axis_all, n, p, x.data(), ldx_illegal, scale.data(),
                              shift.data()),
               da_status_invalid_leading_dimension);
 
     // Test with illegal p
     da_int p_illegal = 0;
-    ASSERT_EQ(da_standardize(da_axis_all, n, p_illegal, x.data(), ldx, scale.data(),
+    EXPECT_EQ(da_standardize(da_axis_all, n, p_illegal, x.data(), ldx, scale.data(),
                              shift.data()),
               da_status_invalid_array_dimension);
 
     // Test with illegal n
     da_int n_illegal = 0;
-    ASSERT_EQ(da_standardize(da_axis_all, n_illegal, p, x.data(), ldx, scale.data(),
+    EXPECT_EQ(da_standardize(da_axis_all, n_illegal, p, x.data(), ldx, scale.data(),
                              shift.data()),
               da_status_invalid_array_dimension);
 
     // Test illegal pointers
     TypeParam *x_null = nullptr;
-    ASSERT_EQ(da_standardize(da_axis_all, n, p, x_null, ldx, scale.data(), shift.data()),
+    EXPECT_EQ(da_standardize(da_axis_all, n, p, x_null, ldx, scale.data(), shift.data()),
               da_status_invalid_pointer);
 }

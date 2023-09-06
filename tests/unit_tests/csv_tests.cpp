@@ -40,10 +40,10 @@
 #include <list>
 #include <string>
 
-// Overload some ASSERTs nan checks and free'ing functions for potential char* data
-template <typename T> void ASSERT_EQ_overload(T d1, T d2) { ASSERT_EQ(d1, d2); }
+// Overload some EXPECTs nan checks and free'ing functions for potential char* data
+template <typename T> void EXPECT_EQ_overload(T d1, T d2) { EXPECT_EQ(d1, d2); }
 
-void ASSERT_EQ_overload(const char *d1, const char *d2) { ASSERT_STREQ(d1, d2); }
+void EXPECT_EQ_overload(const char *d1, const char *d2) { EXPECT_STREQ(d1, d2); }
 
 template <typename T> bool check_nan(T num) {
     return std::isnan(static_cast<double>(num));
@@ -281,7 +281,7 @@ TYPED_TEST(CSVTest, basic_no_headings) {
 
     da_datastore store = nullptr;
     da_status err = da_datastore_init(&store);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
     TypeParam *a = nullptr;
 
@@ -289,14 +289,14 @@ TYPED_TEST(CSVTest, basic_no_headings) {
 
     err = da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr);
 
-    ASSERT_EQ(err, params->expected_status);
+    EXPECT_EQ(err, params->expected_status);
 
-    ASSERT_EQ(nrows, params->expected_rows);
-    ASSERT_EQ(ncols, params->expected_columns);
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
-            ASSERT_EQ_overload(a[j + ncols * i], GetExpectedData(params, j + ncols * i));
+            EXPECT_EQ_overload(a[j + ncols * i], GetExpectedData(params, j + ncols * i));
         }
     }
 
@@ -319,9 +319,9 @@ TYPED_TEST(DataStoreTest, datastore_no_headings) {
 
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
-    ASSERT_EQ(
+    EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
         da_status_success);
 
@@ -332,15 +332,15 @@ TYPED_TEST(DataStoreTest, datastore_no_headings) {
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
 
-    ASSERT_EQ(nrows, params->expected_rows);
-    ASSERT_EQ(ncols, params->expected_columns);
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
 
     TypeParam *T = new TypeParam[nrows];
 
     for (da_int i = 0; i < ncols; i++) {
-        ASSERT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
         for (da_int j = 0; j < nrows; j++) {
-            ASSERT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
+            EXPECT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
         }
     }
 
@@ -374,19 +374,19 @@ TYPED_TEST(CSVTest, basic_headings) {
 
     err = da_read_csv(store, filepath, &a, &nrows, &ncols, &headings);
 
-    ASSERT_EQ(err, params->expected_status);
+    EXPECT_EQ(err, params->expected_status);
 
-    ASSERT_EQ(nrows, params->expected_rows);
-    ASSERT_EQ(ncols, params->expected_columns);
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
-            ASSERT_EQ_overload(a[j + ncols * i], GetExpectedData(params, j + ncols * i));
+            EXPECT_EQ_overload(a[j + ncols * i], GetExpectedData(params, j + ncols * i));
         }
     }
 
     for (da_int j = 0; j < ncols; j++) {
-        ASSERT_EQ_overload(headings[j], params->expected_headings[j].c_str());
+        EXPECT_EQ_overload(headings[j], params->expected_headings[j].c_str());
     }
 
     da_csv::free_data(&a, nrows * ncols);
@@ -410,11 +410,11 @@ TYPED_TEST(DataStoreTest, datastore_headings) {
 
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
               da_status_success);
-    ASSERT_EQ(
+    EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
         da_status_success);
 
@@ -425,15 +425,15 @@ TYPED_TEST(DataStoreTest, datastore_headings) {
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
 
-    ASSERT_EQ(nrows, params->expected_rows);
-    ASSERT_EQ(ncols, params->expected_columns);
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
 
     TypeParam *T = new TypeParam[nrows];
 
     for (da_int i = 0; i < ncols; i++) {
-        ASSERT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
         for (da_int j = 0; j < nrows; j++) {
-            ASSERT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
+            EXPECT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
         }
     }
 
@@ -445,7 +445,7 @@ TYPED_TEST(DataStoreTest, datastore_headings) {
     char col_name[128];
     for (da_int j = 0; j < ncols; j++) {
         EXPECT_EQ(da_data_get_col_label(store, j, &name_sz, col_name), da_status_success);
-        ASSERT_EQ_overload(col_name, params->expected_headings[j].c_str());
+        EXPECT_EQ_overload(col_name, params->expected_headings[j].c_str());
     }
 
     da_datastore_destroy(&store);
@@ -466,27 +466,27 @@ TYPED_TEST(CSVTest, warn_for_missing_data) {
     strcat(filepath, ".csv");
 
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
     TypeParam *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
 
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV warn for missing data", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV warn for missing data", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
-    ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
               params->expected_status);
 
-    ASSERT_EQ(nrows, params->expected_rows);
-    ASSERT_EQ(ncols, params->expected_columns);
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
             if (check_nan(GetExpectedData(params, j + ncols * i))) {
-                ASSERT_TRUE(check_nan(a[j + ncols * i]));
+                EXPECT_TRUE(check_nan(a[j + ncols * i]));
             } else {
-                ASSERT_EQ_overload(a[j + ncols * i],
+                EXPECT_EQ_overload(a[j + ncols * i],
                                    GetExpectedData(params, j + ncols * i));
             }
         }
@@ -509,15 +509,15 @@ TYPED_TEST(DataStoreTest, warn_for_missing_data) {
     strcat(filepath, ".csv");
 
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
 
     da_int nrows = 0, ncols = 0;
 
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV warn for missing data", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV warn for missing data", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
-    ASSERT_EQ(
+    EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
         da_status_success);
 
@@ -526,18 +526,18 @@ TYPED_TEST(DataStoreTest, warn_for_missing_data) {
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
 
-    ASSERT_EQ(nrows, params->expected_rows);
-    ASSERT_EQ(ncols, params->expected_columns);
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
 
     TypeParam *T = new TypeParam[nrows];
 
     for (da_int i = 0; i < ncols; i++) {
-        ASSERT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
         for (da_int j = 0; j < nrows; j++) {
             if (check_nan(GetExpectedData(params, i + ncols * j))) {
-                ASSERT_TRUE(check_nan(T[j]));
+                EXPECT_TRUE(check_nan(T[j]));
             } else {
-                ASSERT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
+                EXPECT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
             }
         }
     }
@@ -557,7 +557,7 @@ TEST(CSVTest, skip_lines_test1) {
     strcat(filepath, "csv_test_skip_lines.csv");
 
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
     double *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
@@ -569,19 +569,19 @@ TEST(CSVTest, skip_lines_test1) {
                               9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0};
 
     // Set options
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
 
-    ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_success);
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
-            ASSERT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
+            EXPECT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
         }
     }
 
@@ -598,7 +598,7 @@ TEST(CSVTest, skip_lines_test2) {
     strcat(filepath, "csv_test_skip_lines.csv");
 
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
     double *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
@@ -610,18 +610,18 @@ TEST(CSVTest, skip_lines_test2) {
                               9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0};
 
     // Set options
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
               da_status_success);
 
-    ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_success);
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
-            ASSERT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
+            EXPECT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
         }
     }
 
@@ -638,7 +638,7 @@ TEST(CSVTest, options) {
     strcat(filepath, "csv_test_options.csv");
 
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
     double *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
@@ -649,36 +649,36 @@ TEST(CSVTest, options) {
     double expected_data[] = {1.1,     1e3, 1000000000, 0.03e6, 2,   -1,  -3.2,  -4.5e4,
                               -5.6e-7, -10, 0.0,        0.0,    0.0, 0.0, 4.5e+5};
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV delimiter", "x"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV delimiter", "x"),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV thousands", ","),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV thousands", ","),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV decimal", "p"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV decimal", "p"),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV comment", "}"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV comment", "}"),
               da_status_success);
-    ASSERT_EQ(
+    EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV scientific notation character", "g"),
         da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip footer", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip footer", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "5 9"),
-              da_status_success);
-
-    ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "5 9"),
               da_status_success);
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+              da_status_success);
+
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
-            ASSERT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
+            EXPECT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
         }
     }
 
@@ -687,22 +687,22 @@ TEST(CSVTest, options) {
 
     // Now try with a datastore object
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
     double *T = new double[nrows];
 
     for (da_int i = 0; i < ncols; i++) {
-        ASSERT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
         for (da_int j = 0; j < nrows; j++) {
-            ASSERT_EQ(T[j], expected_data[i + ncols * j]);
+            EXPECT_EQ(T[j], expected_data[i + ncols * j]);
         }
     }
 
@@ -720,70 +720,70 @@ TEST(csvtest, error_exits) {
 
     // Check for uninitialized handle
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
               da_status_invalid_pointer);
     double *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
-    ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_store_not_initialized);
 
     // Check for various error exits
     double *a_double = nullptr;
     da_int *a_int = nullptr;
     uint8_t *a_uint8 = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
               da_status_success);
 
-    ASSERT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
-    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "0"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "0"),
               da_status_success);
-    ASSERT_EQ(da_read_csv_uint8(store, filepath, &a_uint8, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv_uint8(store, filepath, &a_uint8, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "boolean"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "boolean"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
-    ASSERT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
-    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "0, 1"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV skip rows", "0, 1"),
               da_status_success);
 
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
-    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
+    EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 4), da_status_success);
-    ASSERT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 4), da_status_success);
+    EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     da_datastore_destroy(&store);
     da_datastore_destroy(&store);
@@ -802,7 +802,7 @@ TEST(csvtest, no_data) {
 
     // Check for uninitialized handle
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
 
     double *a = nullptr;
     char **headings = nullptr;
@@ -811,60 +811,60 @@ TEST(csvtest, no_data) {
 
     // Check we can handle headings but no other data
     da_datastore_options_set_int(store, "CSV use header row", 1);
-    ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
-    ASSERT_EQ(nrows, 0);
-    ASSERT_EQ(ncols, 5);
+    EXPECT_EQ(nrows, 0);
+    EXPECT_EQ(ncols, 5);
     for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], expected_headings[j]);
     }
     da_csv::free_data(&headings, ncols);
 
     // Now try the same thing in a datastore but just expect no data error
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
     da_datastore_destroy(&store);
 
     // Check we can deal with removing all rows
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV use header row", 0),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 0),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 1), da_status_success);
-    ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 1), da_status_success);
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_parsing_error);
-    ASSERT_EQ(nrows, 0);
-    ASSERT_EQ(ncols, 0);
+    EXPECT_EQ(nrows, 0);
+    EXPECT_EQ(ncols, 0);
 
     da_datastore_options_set_int(store, "CSV use header row", 1);
-    ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
-    ASSERT_EQ(nrows, 0);
-    ASSERT_EQ(ncols, 0);
+    EXPECT_EQ(nrows, 0);
+    EXPECT_EQ(ncols, 0);
 
     da_datastore_destroy(&store);
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV use header row", 0),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 0),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV row start", 1), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 1), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     da_datastore_destroy(&store);
 
     // Check for non-existent csv file
     da_datastore_destroy(&store);
     strcat(filepath, "does_not_exist");
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
-    ASSERT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_file_reading_error);
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_file_reading_error);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_file_reading_error);
 
     da_datastore_destroy(&store);
 
@@ -879,14 +879,14 @@ TEST(CSVTest, lineterminator) {
     strcat(filepath, "csv_test_lineterminator.csv");
 
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
     da_int *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV line terminator", "x"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV line terminator", "x"),
               da_status_success);
-    ASSERT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_success);
 
     da_int expected_rows = 2;
@@ -894,12 +894,12 @@ TEST(CSVTest, lineterminator) {
 
     da_int expected_data[] = {1, 2, 3, 4, 5, 6};
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
     for (da_int i = 0; i < nrows; i++) {
         for (da_int j = 0; j < ncols; j++) {
-            ASSERT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
+            EXPECT_EQ(a[j + ncols * i], expected_data[j + ncols * i]);
         }
     }
 
@@ -908,22 +908,22 @@ TEST(CSVTest, lineterminator) {
 
     // Check the same thing works when reading into a datastore
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
     double *T = new double[nrows];
 
     for (da_int i = 0; i < ncols; i++) {
-        ASSERT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
         for (da_int j = 0; j < nrows; j++) {
-            ASSERT_EQ(T[j], expected_data[i + ncols * j]);
+            EXPECT_EQ(T[j], expected_data[i + ncols * j]);
         }
     }
 
@@ -940,26 +940,26 @@ TEST(CSVTest, auto) {
     strcat(filepath, "csv_test_auto.csv");
 
     da_datastore store = nullptr;
-    ASSERT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
 
     da_int nrows, ncols, expected_rows = 4, expected_columns = 7;
 
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
 
-    ASSERT_EQ(da_data_print_options(store), da_status_success);
+    EXPECT_EQ(da_data_print_options(store), da_status_success);
 
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
     const char *expected_headings[] = {"a", "b", "c", "d", "e", "f", "g"};
     da_int c1[] = {1, 2, 3, 4};
@@ -980,113 +980,113 @@ TEST(CSVTest, auto) {
     char *Tc[4];
     char col_name[128];
 
-    ASSERT_EQ(da_data_extract_column_int(store, 0, nrows, Ti), da_status_success);
+    EXPECT_EQ(da_data_extract_column_int(store, 0, nrows, Ti), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(c1[j], Ti[j]);
+        EXPECT_EQ(c1[j], Ti[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_int(store, 1, nrows, Ti), da_status_success);
+    EXPECT_EQ(da_data_extract_column_int(store, 1, nrows, Ti), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(c2[j], Ti[j]);
+        EXPECT_EQ(c2[j], Ti[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_real_d(store, 2, nrows, Td), da_status_success);
+    EXPECT_EQ(da_data_extract_column_real_d(store, 2, nrows, Td), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(c3[j], Td[j]);
+        EXPECT_EQ(c3[j], Td[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_real_d(store, 3, nrows, Td), da_status_success);
+    EXPECT_EQ(da_data_extract_column_real_d(store, 3, nrows, Td), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(c4[j], Td[j]);
+        EXPECT_EQ(c4[j], Td[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_uint8(store, 4, nrows, Tu), da_status_success);
+    EXPECT_EQ(da_data_extract_column_uint8(store, 4, nrows, Tu), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(c5[j], Tu[j]);
+        EXPECT_EQ(c5[j], Tu[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_str(store, 5, nrows, Tc), da_status_success);
+    EXPECT_EQ(da_data_extract_column_str(store, 5, nrows, Tc), da_status_success);
     std::cout << Tc[0] << c6[0] << std::endl;
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ_overload(c6[j], Tc[j]);
+        EXPECT_EQ_overload(c6[j], Tc[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_str(store, 6, nrows, Tc), da_status_success);
+    EXPECT_EQ(da_data_extract_column_str(store, 6, nrows, Tc), da_status_success);
     std::cout << Tc[0] << c7[0] << std::endl;
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ_overload(c7[j], Tc[j]);
+        EXPECT_EQ_overload(c7[j], Tc[j]);
     }
 
     for (da_int j = 0; j < ncols; j++) {
         da_int name_sz = 128;
         EXPECT_EQ(da_data_get_col_label(store, j, &name_sz, col_name), da_status_success);
-        ASSERT_EQ_overload(col_name, expected_headings[j]);
+        EXPECT_EQ_overload(col_name, expected_headings[j]);
     }
 
     da_datastore_destroy(&store);
 
     // Repeat with option set for integer data being interpreted as float
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_int(store, "CSV integers as floats", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV integers as floats", 1),
               da_status_success);
-    ASSERT_EQ(da_datastore_options_set_string(store, "CSV datastore precision", "single"),
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datastore precision", "single"),
               da_status_success);
-    ASSERT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
     EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
     EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
 
-    ASSERT_EQ(nrows, expected_rows);
-    ASSERT_EQ(ncols, expected_columns);
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
 
-    ASSERT_EQ(da_data_extract_column_real_s(store, 0, nrows, Tf), da_status_success);
+    EXPECT_EQ(da_data_extract_column_real_s(store, 0, nrows, Tf), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(cc1[j], Tf[j]);
+        EXPECT_EQ(cc1[j], Tf[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_real_s(store, 1, nrows, Tf), da_status_success);
+    EXPECT_EQ(da_data_extract_column_real_s(store, 1, nrows, Tf), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(cc2[j], Tf[j]);
+        EXPECT_EQ(cc2[j], Tf[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_real_s(store, 2, nrows, Tf), da_status_success);
+    EXPECT_EQ(da_data_extract_column_real_s(store, 2, nrows, Tf), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(cc3[j], Tf[j]);
+        EXPECT_EQ(cc3[j], Tf[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_real_s(store, 3, nrows, Tf), da_status_success);
+    EXPECT_EQ(da_data_extract_column_real_s(store, 3, nrows, Tf), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(cc4[j], Tf[j]);
+        EXPECT_EQ(cc4[j], Tf[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_uint8(store, 4, nrows, Tu), da_status_success);
+    EXPECT_EQ(da_data_extract_column_uint8(store, 4, nrows, Tu), da_status_success);
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ(c5[j], Tu[j]);
+        EXPECT_EQ(c5[j], Tu[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_str(store, 5, nrows, Tc), da_status_success);
+    EXPECT_EQ(da_data_extract_column_str(store, 5, nrows, Tc), da_status_success);
     std::cout << Tc[0] << c6[0] << std::endl;
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ_overload(c6[j], Tc[j]);
+        EXPECT_EQ_overload(c6[j], Tc[j]);
     }
 
-    ASSERT_EQ(da_data_extract_column_str(store, 6, nrows, Tc), da_status_success);
+    EXPECT_EQ(da_data_extract_column_str(store, 6, nrows, Tc), da_status_success);
     std::cout << Tc[0] << c7[0] << std::endl;
     for (da_int j = 0; j < nrows; j++) {
-        ASSERT_EQ_overload(c7[j], Tc[j]);
+        EXPECT_EQ_overload(c7[j], Tc[j]);
     }
 
     da_int label_sz = 64;
     char col_label[64];
     for (da_int j = 0; j < ncols; j++) {
         da_data_get_col_label(store, j, &label_sz, col_label);
-        ASSERT_EQ_overload(col_label, expected_headings[j]);
+        EXPECT_EQ_overload(col_label, expected_headings[j]);
     }
 
     da_datastore_destroy(&store);

@@ -886,22 +886,22 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         std::vector<TypeParam> row_upper_hinges(param.n);
         TypeParam overall_upper_hinge;
 
-        ASSERT_EQ(da_quantile(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_quantile(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                               param.q, column_quantiles.data(), param.quantile_type),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_quantiles.data(),
                         column_quantiles.data(), param.epsilon);
-        ASSERT_EQ(da_quantile(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_quantile(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
                               param.q, row_quantiles.data(), param.quantile_type),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_quantiles.data(),
                         row_quantiles.data(), param.epsilon);
-        ASSERT_EQ(da_quantile(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
+        EXPECT_EQ(da_quantile(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                               param.q, &overall_quantile, param.quantile_type),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_quantile, overall_quantile, param.epsilon);
 
-        ASSERT_EQ(da_five_point_summary(da_axis_col, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_five_point_summary(da_axis_col, param.n, param.p, param.x.data(),
                                         param.ldx, column_minima.data(),
                                         column_lower_hinges.data(), column_medians.data(),
                                         column_upper_hinges.data(), column_maxima.data()),
@@ -917,7 +917,7 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         EXPECT_ARR_NEAR(param.p, param.expected_column_upper_hinges.data(),
                         column_upper_hinges.data(), param.epsilon);
 
-        ASSERT_EQ(da_five_point_summary(da_axis_row, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_five_point_summary(da_axis_row, param.n, param.p, param.x.data(),
                                         param.ldx, row_minima.data(),
                                         row_lower_hinges.data(), row_medians.data(),
                                         row_upper_hinges.data(), row_maxima.data()),
@@ -933,7 +933,7 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         EXPECT_ARR_NEAR(param.n, param.expected_row_upper_hinges.data(),
                         row_upper_hinges.data(), param.epsilon);
 
-        ASSERT_EQ(da_five_point_summary(da_axis_all, param.n, param.p, param.x.data(),
+        EXPECT_EQ(da_five_point_summary(da_axis_all, param.n, param.p, param.x.data(),
                                         param.ldx, &overall_minimum, &overall_lower_hinge,
                                         &overall_median, &overall_upper_hinge,
                                         &overall_maximum),
@@ -968,46 +968,46 @@ TYPED_TEST(OrderStatisticsTest, IllegalArgsOrderStatistics) {
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    ASSERT_EQ(da_quantile(da_axis_all, n, p, x.data(), ldx_illegal, q, dummy1.data(),
+    EXPECT_EQ(da_quantile(da_axis_all, n, p, x.data(), ldx_illegal, q, dummy1.data(),
                           da_quantile_type_1),
               da_status_invalid_leading_dimension);
-    ASSERT_EQ(da_five_point_summary(da_axis_all, n, p, x.data(), ldx_illegal,
+    EXPECT_EQ(da_five_point_summary(da_axis_all, n, p, x.data(), ldx_illegal,
                                     dummy1.data(), dummy2.data(), dummy3.data(),
                                     dummy4.data(), dummy5.data()),
               da_status_invalid_leading_dimension);
 
     // Test with illegal p
     da_int p_illegal = 0;
-    ASSERT_EQ(da_quantile(da_axis_all, n, p_illegal, x.data(), ldx, q, dummy1.data(),
+    EXPECT_EQ(da_quantile(da_axis_all, n, p_illegal, x.data(), ldx, q, dummy1.data(),
                           da_quantile_type_1),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_five_point_summary(da_axis_all, n, p_illegal, x.data(), ldx,
+    EXPECT_EQ(da_five_point_summary(da_axis_all, n, p_illegal, x.data(), ldx,
                                     dummy1.data(), dummy2.data(), dummy3.data(),
                                     dummy4.data(), dummy5.data()),
               da_status_invalid_array_dimension);
 
     // Test with illegal n
     da_int n_illegal = 0;
-    ASSERT_EQ(da_quantile(da_axis_all, n_illegal, p, x.data(), ldx, q, dummy1.data(),
+    EXPECT_EQ(da_quantile(da_axis_all, n_illegal, p, x.data(), ldx, q, dummy1.data(),
                           da_quantile_type_1),
               da_status_invalid_array_dimension);
-    ASSERT_EQ(da_five_point_summary(da_axis_all, n_illegal, p, x.data(), ldx,
+    EXPECT_EQ(da_five_point_summary(da_axis_all, n_illegal, p, x.data(), ldx,
                                     dummy1.data(), dummy2.data(), dummy3.data(),
                                     dummy4.data(), dummy5.data()),
               da_status_invalid_array_dimension);
 
     // Test illegal q
     TypeParam q_illegal = (TypeParam)-0.1;
-    ASSERT_EQ(da_quantile(da_axis_all, n, p, x.data(), ldx, q_illegal, dummy1.data(),
+    EXPECT_EQ(da_quantile(da_axis_all, n, p, x.data(), ldx, q_illegal, dummy1.data(),
                           da_quantile_type_1),
               da_status_invalid_input);
 
     // Test illegal pointers
     TypeParam *x_null = nullptr;
-    ASSERT_EQ(
+    EXPECT_EQ(
         da_quantile(da_axis_all, n, p, x_null, ldx, q, dummy1.data(), da_quantile_type_1),
         da_status_invalid_pointer);
-    ASSERT_EQ(da_five_point_summary(da_axis_all, n, p, x_null, ldx, dummy1.data(),
+    EXPECT_EQ(da_five_point_summary(da_axis_all, n, p, x_null, ldx, dummy1.data(),
                                     dummy2.data(), dummy3.data(), dummy4.data(),
                                     dummy5.data()),
               da_status_invalid_pointer);

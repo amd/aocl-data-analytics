@@ -133,26 +133,26 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
 
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
-    ASSERT_EQ(da_handle_init<T>(&linmod_handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_handle_init<T>(&linmod_handle, da_handle_linmod), da_status_success);
     for (auto &op : sopts)
-        ASSERT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
+        EXPECT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
                   da_status_success);
     for (auto &op : ropts)
-        ASSERT_EQ(da_options_set_real(linmod_handle, op.name.c_str(), op.value),
+        EXPECT_EQ(da_options_set_real(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
     for (auto &op : iopts)
-        ASSERT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
+        EXPECT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
 
     da_int intercept_int;
-    ASSERT_EQ(da_options_get_int(linmod_handle, "linmod intercept", &intercept_int),
+    EXPECT_EQ(da_options_get_int(linmod_handle, "linmod intercept", &intercept_int),
               da_status_success);
     bool intercept = (bool)intercept_int;
 
     T alpha = 0, lambda = 0;
-    ASSERT_EQ(da_options_set_real(linmod_handle, "linmod alpha", alpha),
+    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod alpha", alpha),
               da_status_success);
-    ASSERT_EQ(da_options_set_real(linmod_handle, "linmod lambda", lambda),
+    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod lambda", lambda),
               da_status_success);
 
     // get problem data and expected results
@@ -178,31 +178,31 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
 
     // Read features
     da_datastore csv_store = nullptr;
-    ASSERT_EQ(da_datastore_init(&csv_store), da_status_success);
+    EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
     T *a = nullptr, *b = nullptr;
 
     da_int n = 0, m = 0;
-    ASSERT_EQ(da_read_csv(csv_store, A_file.c_str(), &a, &n, &m, nullptr),
+    EXPECT_EQ(da_read_csv(csv_store, A_file.c_str(), &a, &n, &m, nullptr),
               da_status_success);
     da_int nb, mb;
-    ASSERT_EQ(da_read_csv(csv_store, b_file.c_str(), &b, &mb, &nb, nullptr),
+    EXPECT_EQ(da_read_csv(csv_store, b_file.c_str(), &b, &mb, &nb, nullptr),
               da_status_success);
-    ASSERT_EQ(m, nb); // b is stored in one row
+    EXPECT_EQ(m, nb); // b is stored in one row
     da_int nc = intercept ? n + 1 : n;
     /* expected results not tested ? check gradient of solution instead */
     //da_int nc, mc;
-    //ASSERT_EQ(da_read_csv(csv_store, coef_file.c_str(), &coef_exp, &mc, &nc),
+    //EXPECT_EQ(da_read_csv(csv_store, coef_file.c_str(), &coef_exp, &mc, &nc),
     //          da_status_success);
-    // ASSERT_EQ(n, nc); // TODO add check once the intersect has been solved
+    // EXPECT_EQ(n, nc); // TODO add check once the intersect has been solved
 
-    ASSERT_EQ(da_linmod_select_model<T>(linmod_handle, mod), da_status_success);
-    ASSERT_EQ(da_linreg_define_features(linmod_handle, n, m, a, b), da_status_success);
+    EXPECT_EQ(da_linmod_select_model<T>(linmod_handle, mod), da_status_success);
+    EXPECT_EQ(da_linreg_define_features(linmod_handle, n, m, a, b), da_status_success);
 
     // This should be options
-    ASSERT_EQ(da_options_set_int(linmod_handle, "linmod intercept", intercept),
+    EXPECT_EQ(da_options_set_int(linmod_handle, "linmod intercept", intercept),
               da_status_success);
 
-    ASSERT_EQ(da_options_set_string(linmod_handle, "print options", "yes"),
+    EXPECT_EQ(da_options_set_string(linmod_handle, "print options", "yes"),
               da_status_success);
 
     // compute regression

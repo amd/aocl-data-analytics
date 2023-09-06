@@ -5,5 +5,5 @@ endif()
 
 # Build gtests programs
 if(BUILD_GTEST)
-  add_subdirectory(gtests)
+  add_subdirectory(unit_tests)
 endif()
