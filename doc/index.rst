@@ -24,11 +24,13 @@ AOCL-DA's documentation
    linear-models
    trees-forests
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Internal help [TODO remove for release]:
+.. only:: internal
 
-   doc-utilities
+   .. toctree::
+      :maxdepth: 1
+      :caption: Internal help:
+
+      doc-utilities
 
 Search the documentation
 ========================

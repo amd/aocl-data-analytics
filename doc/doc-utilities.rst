@@ -29,12 +29,37 @@ The presence of the requirements is checked in the build system.
 
 **How to build documentation via CMake**
 
-Build the sphinx target. Ouput format can be controlled with the variable DOC_TYPE which can take either *pdf* or *html* as values (*html* is default)
+Build the doc target: it will build both the html and the pdf documentation
 
 .. code-block::
 
-   cmake -DBUILD_DOC=ON -DDOC_TYPE=[pdf|html]
-   cmake --build . --target sphinx 
+   cmake -DBUILD_DOC=ON
+   cmake --build . --target doc
+
+targets doc_html and doc_pdf are also available to build only one of the two.
+
+.. code-block::
+
+   cmake --build . --target doc_[html|pdf]
+
+To build the release version of the doc (excluding internal documentation), set the variable INTERNAL_DOC at configure time: 
+
+.. code-block::
+
+   cmake -DBUILD_DOC=ON -DINTERNAL_DOC=OFF
+   cmake --build . --target doc
+
+Adding internal documentation
+=============================
+
+Internal only doc can be added with the ``.. only`` directives. We tag every piece of internal doc as ``internal``
+
+.. code-block::
+
+   .. only:: internal
+
+      Your documentation here
+
 
 Documenting errors
 ==================

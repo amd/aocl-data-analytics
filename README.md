@@ -30,6 +30,8 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 * -DBUILD_DOC=On to build the documentation
 
+* -DINTERNAL_DOC=ON to build the internal documentation alongside the main one
+
 * -DBUILD_SMP=On to build using OpenMP and threaded BLIS (on by default)
 
 * -DVECTORIZATION_REPORTS=On to build with vectorizastion reports enabled
@@ -40,9 +42,9 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 * -DCMAKE_INSTALL_PREFIX=<install path>. If you wish to install the library (using the command make install in step 5) you can specify an install path here.
 
-5. Type make (or make doc, to make the documentation)
+1. Type cmake --build . --target all (or --target doc, to build the documentation)
 
-6. Run the tests or examples using ctest e.g. ctest -V –R followed by a string to find a particular set of tests 
+2. Run the tests or examples using ctest e.g. ctest -V –R followed by a string to find a particular set of tests 
 
 ## Building on Windows using the MSVC toolchain
 
