@@ -19,14 +19,15 @@ typedef enum da_handle_type_ {
                       ///< handle is to be used with functions from the :ref:`Linear Models chapter <chapter_linmod>`
                       ///< @endrst
     da_handle_pca, ///< handle is to be used with functions from the Matrix decomposition chapter TODO ADD LINK.
-    da_handle_decision_tree ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
+    da_handle_decision_tree,  ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
+    da_handle_decision_forest ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
 } da_handle_type;
 
 
 /**
- * @brief 
+ * @brief
  * @rst
- * Main handle object. For more info on the handle structure: :ref:`Handle description <intro_handle>` 
+ * Main handle object. For more info on the handle structure: :ref:`Handle description <intro_handle>`
  * @endrst
  */
 typedef struct _da_handle *da_handle;
@@ -36,9 +37,9 @@ typedef struct _da_handle *da_handle;
  * Set up handle to be used with a specific chapter.
  * This function must be called before calling any functions that requires a
  * valid handle.
- * 
+ *
  * @rst
- * For more info on the handle structure: :ref:`Handle description <intro_handle>` 
+ * For more info on the handle structure: :ref:`Handle description <intro_handle>`
  * @endrst
  *
  * @param[in,out] handle The main data structure.

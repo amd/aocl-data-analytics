@@ -28,8 +28,10 @@ struct _da_handle {
     da_precision precision = da_double;
     da_pca<double> *pca_d = nullptr;
     da_pca<float> *pca_s = nullptr;
-    decision_tree<double> *df_d = nullptr;
-    decision_tree<float> *df_s = nullptr;
+    decision_tree<double> *dt_d = nullptr;
+    decision_tree<float> *dt_s = nullptr;
+    decision_forest<double> *df_d = nullptr;
+    decision_forest<float> *df_s = nullptr;
 
     da_status get_current_opts(da_options::OptionRegistry **opts);
 };

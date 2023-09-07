@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -59,18 +59,20 @@ int decision_tree_ex_d(std::string score_criteria) {
 
     double *x = nullptr;
     uint8_t *y = nullptr;
-    da_int n_obs = 0, n_features = 0, nrows_y = 0, ncols_y = 0;
-    status = da_read_csv_d(csv_handle, features_fp, &x, &n_obs, &n_features, nullptr);
+    da_int n_obs = 0, d = 0, nrows_y = 0, ncols_y = 0;
+    status = da_read_csv_d(csv_handle, features_fp, &x, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, labels_fp, &y, &nrows_y, &ncols_y, nullptr);
 
     // Initialize the decision tree class and fit model
     df_handle = nullptr;
     status = da_handle_init_d(&df_handle, da_handle_decision_tree);
-    status = da_df_set_training_data_d(df_handle, n_obs, n_features, x, y);
+    status = da_options_set_int(df_handle, "n_features", d);
+    status = da_df_tree_set_training_data_d(df_handle, n_obs, x, y);
+
     status = da_options_set_int(df_handle, "depth", 5);
     status = da_options_set_int(df_handle, "seed", 77);
     status = da_options_set_string(df_handle, "scoring function", score_criteria.data());
-    status = da_df_fit_d(df_handle);
+    status = da_df_tree_fit_d(df_handle);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
@@ -94,20 +96,20 @@ int decision_tree_ex_d(std::string score_criteria) {
     double *x_test = nullptr;
     uint8_t *y_test = nullptr;
     n_obs = 0;
-    n_features = 0;
+    d = 0;
     nrows_y = 0;
     ncols_y = 0;
 
-    status = da_read_csv_d(csv_handle, test_features_fp, &x_test, &n_obs, &n_features,
+    status = da_read_csv_d(csv_handle, test_features_fp, &x_test, &n_obs, &d,
                            nullptr);
     status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
                                nullptr);
 
     // Make predictions with model and evaluate score
     std::vector<uint8_t> y_pred(n_obs);
-    status = da_df_predict_d(df_handle, n_obs, n_features, x_test, y_pred.data());
+    status = da_df_tree_predict_d(df_handle, n_obs, x_test, y_pred.data());
     double score = 0.0;
-    status = da_df_score_d(df_handle, n_obs, n_features, x_test, y_test, &score);
+    status = da_df_tree_score_d(df_handle, n_obs, x_test, y_test, &score);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
@@ -184,18 +186,20 @@ int decision_tree_ex_s(std::string score_criteria) {
 
     float *x = nullptr;
     uint8_t *y = nullptr;
-    da_int n_obs = 0, n_features = 0, nrows_y = 0, ncols_y = 0;
-    status = da_read_csv_s(csv_handle, features_fp, &x, &n_obs, &n_features, nullptr);
+    da_int n_obs = 0, d = 0, nrows_y = 0, ncols_y = 0;
+    status = da_read_csv_s(csv_handle, features_fp, &x, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, labels_fp, &y, &nrows_y, &ncols_y, nullptr);
 
     // Initialize the decision tree class and fit model
     df_handle = nullptr;
     status = da_handle_init_s(&df_handle, da_handle_decision_tree);
-    status = da_df_set_training_data_s(df_handle, n_obs, n_features, x, y);
+    status = da_options_set_int(df_handle, "n_features", d);
+    status = da_df_tree_set_training_data_s(df_handle, n_obs, x, y);
+
     status = da_options_set_int(df_handle, "depth", 5);
     status = da_options_set_int(df_handle, "seed", 77);
     status = da_options_set_string(df_handle, "scoring function", score_criteria.data());
-    status = da_df_fit_s(df_handle);
+    status = da_df_tree_fit_s(df_handle);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
@@ -219,20 +223,20 @@ int decision_tree_ex_s(std::string score_criteria) {
     float *x_test = nullptr;
     uint8_t *y_test = nullptr;
     n_obs = 0;
-    n_features = 0;
+    d = 0;
     nrows_y = 0;
     ncols_y = 0;
 
-    status = da_read_csv_s(csv_handle, test_features_fp, &x_test, &n_obs, &n_features,
+    status = da_read_csv_s(csv_handle, test_features_fp, &x_test, &n_obs, &d,
                            nullptr);
     status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
                                nullptr);
 
     // Make predictions with model and evaluate score
     std::vector<uint8_t> y_pred(n_obs);
-    status = da_df_predict_s(df_handle, n_obs, n_features, x_test, y_pred.data());
+    status = da_df_tree_predict_s(df_handle, n_obs, x_test, y_pred.data());
     float score = 0.0;
-    status = da_df_score_s(df_handle, n_obs, n_features, x_test, y_test, &score);
+    status = da_df_tree_score_s(df_handle, n_obs, x_test, y_test, &score);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
