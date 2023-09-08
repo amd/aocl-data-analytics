@@ -1,0 +1,19 @@
+{
+   ignore_blis
+   Memcheck:Cond
+   ...
+   obj:*blis*
+}
+{
+   ignore_blis
+   Memcheck:Leak
+   ...
+   obj:*blis*
+}
+
+{
+   ignore_gomp
+   Memcheck:Leak
+   ...
+   obj:*gomp*
+}

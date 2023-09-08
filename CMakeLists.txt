@@ -265,6 +265,14 @@ add_subdirectory(external/Lbfgsb.3.0)
 # compile data analytics core library
 add_subdirectory(source)
 
+# Put all custom configuration BEFORE including "CTest"
+if(VALGRIND)
+  set(MEMORYCHECK_COMMAND_OPTIONS
+      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all --gen-suppressions=all")
+  set(MEMORYCHECK_TYPE "valgrind")
+  set(MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+endif()
+
 # build example and unit test programs
 include(CTest)
 add_subdirectory(tests)
@@ -284,12 +292,6 @@ install(DIRECTORY tests/examples/
 install(FILES tests/examples/README.txt
     DESTINATION examples
 )
-
-if(VALGRIND)
-  set(CTEST_MEMORYCHECK_TYPE "valgrind")
-  set(CTEST_MEMORYCHECK_COMMAND_OPTIONS
-      '--track-origins=yes --leak-check=full -s --show-leak-kinds=all')
-endif()
 
 # Convenience Banner, print relevent info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
@@ -325,8 +327,13 @@ message(NOTICE "Debug printing          : ${DA_LOGGING}")
 if(${VALGRIND})
   message(
     NOTICE
-    "         Valgrind flags : ${CTEST_MEMORYCHECK_COMMAND_OPTIONS}. Use with `ctest -T MemCheck`"
+    "         Valgrind flags : ${MEMORYCHECK_COMMAND_OPTIONS}. Use with `ctest -T MemCheck`"
   )
+  message(
+    NOTICE
+    "         Valgrind suppression: ${MEMORYCHECK_SUPPRESSIONS_FILE}"
+  )
+
 endif()
 message(NOTICE "Building with Coverage  : ${COVERAGE}")
 message(NOTICE "Building docs           : ${BUILD_DOC}")
