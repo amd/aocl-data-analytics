@@ -75,25 +75,6 @@ add_custom_target(
   VERBATIM
   SOURCES Doxyfile)
 
-# This target does the following 1. Bump version in configuration file: replace
-# PORJECT_NAME = .* for the string "version ${AOCLDA_VERSION} (date)" OR (git
-# commit hash?) 2. Run doxygen on the sources 3. Run pdflatex 4. Move and rename
-# the pdf file
-add_custom_target(
-  doc
-  COMMAND
-    ${SED} -i -e
-    "s/^\\(PROJECT_NUMBER[[:space:]]*=\\).*$/\\1 \"version ${AOCLDA_VERSION} (${BUILD_DATE})\"/"
-    -e "s+^\\(OUTPUT_DIRECTORY[[:space:]]*=\\).*$+\\1 ${PROJECT_BINARY_DIR}+"
-    Doxyfile && cd ../source && doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile &&
-    cd ${PROJECT_BINARY_DIR}/latex/ && make && cp -v refman.pdf
-    ${CMAKE_CURRENT_BINARY_DIR}/AOCL-DA_Documentation_${AOCLDA_VERSION}.pdf
-  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
-  COMMENT "Building documentation (Doxygen XML, no PDF) from source"
-  VERBATIM
-  SOURCES Doxyfile
-  DEPENDS latexdeps.pdf)
-
 add_custom_target(
   clean-doc
   COMMAND cd ${PROJECT_BINARY_DIR} && rm -vrf html/ latex/ rtf/ xml/ sphinx/
@@ -115,27 +96,19 @@ find_package(Sphinx REQUIRED)
 
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
-set(SPHINX_INDEX_FILE ${SPHINX_BUILD}/index.html)
 set(PDF_DOC_NAME AOCL-DA_Documentation_${AOCLDA_VERSION})
-set(SPHINX_PDF ${SPHINX_BUILD}/${PDF_DOC_NAME})
-
-if(NOT DOC_TYPE)
-  message(STATUS "Setting the default documentation to html")
-  set(DOC_TYPE
-      "html"
-      CACHE STRING "Choose the documentation format" FORCE)
-endif()
-
-if(${DOC_TYPE} MATCHES "pdf")
-  set(SPHINX_FORMAT "latex")
-  set(SPHINX_DEP "${SPHINX_PDF}")
+option(INTERNAL_DOC "Build internal documentation" ON)
+if (INTERNAL_DOC)
+  set(SPHINX_TAG "-t" "internal")
+  message(NOTICE "Internal documentation  : ${INTERNAL_DOC}")
 else()
-  set(SPHINX_FORMAT "html")
-  set(SPHINX_DEP "${SPHINX_INDEX_FILE}")
+  set(SPHINX_TAG "")
 endif()
 
 # Target building the doxygen XML Also modifies the output directory and the
-# version number in the Doxyfile
+# version number in the Doxyfile:
+# 1. replace PROJECT_NAME = .* for the string "version ${AOCLDA_VERSION} (date)" 
+# 2. Run doxygen on the sources
 add_custom_target(
   doxygen_xml
   COMMAND
@@ -150,29 +123,37 @@ add_custom_target(
   DEPENDS latexdeps.pdf
   COMMENT "Building doxygen xml files")
 
-# Build the sphinx documentation html or latex depending on which one is
-# required
-add_custom_command(
-  OUTPUT ${SPHINX_INDEX_FILE}
+# Build the html documentation in doc/sphinx/html
+add_custom_target(doc_html 
   COMMAND
-    ${SPHINX_EXECUTABLE} -b ${SPHINX_FORMAT}
+  ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b html -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE} ${SPHINX_BUILD}/html
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  DEPENDS
+    doxygen_xml
+  COMMENT "Generating HTML documentation"
+)
+
+# Build a latex documentation in doc/sphinx/latex
+add_custom_target(doc_latex
+  COMMAND
+  ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b latex
     # Tell Breathe where to find the Doxygen output
     -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
-    ${SPHINX_BUILD}
-  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/index.rst doxygen_xml
-  MAIN_DEPENDENCY ${SPHINX_SOURCE}/conf.py
-  COMMENT "Generating (Sphinx HTML) documentation from source")
+    ${SPHINX_BUILD}/latex
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+ DEPENDS doxygen_xml
+ COMMENT "Generating latex documentation")
 
-# run pdflatex on the tex file produced by sphinx if DOC_TYPE was set to pdf
-add_custom_command(
-  OUTPUT ${SPHINX_PDF}
-  COMMAND pdflatex -jobname=${PDF_DOC_NAME} ${SPHINX_BUILD}/aocl-da.tex
-  WORKING_DIRECTORY ${SPHINX_BUILD}
-  DEPENDS ${SPHINX_INDEX_FILE})
-
-# Nice named target so we can run the job easily
-add_custom_target(sphinx DEPENDS ${SPHINX_DEP})
+ # Build the pdf documentation from the generated latex file using pdflatex
+ add_custom_target(doc_pdf
+  COMMAND 
+    pdflatex -jobname=${PDF_DOC_NAME} ${SPHINX_BUILD}/latex/aocl-da.tex
+ WORKING_DIRECTORY ${SPHINX_BUILD}/latex
+ DEPENDS doc_latex
+ COMMENT "Building pdf from generated latex")
+ 
+# Main target doc, builds both html and pdf
+add_custom_target(doc DEPENDS doc_pdf doc_html)
 
 # Courtesy "Release Notes" section in the doc
 write_file(${PROJECT_BINARY_DIR}/ReleaseNotes.md "# Release Notes\n\n")
