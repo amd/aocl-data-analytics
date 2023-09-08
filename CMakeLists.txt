@@ -253,6 +253,11 @@ add_compile_options(
 if(BUILD_DOC)
   add_subdirectory(doc)
 endif()
+if(NOT BUILD_DOC AND INTERNAL_DOC)
+  message(WARNING "Turning off internal documentation since docs are not being built, set BUILD_DOC=On to enable also internal documentation")
+  set(INTERNAL_DOC Off)
+endif()
+
 
 # compile external packages
 add_subdirectory(external/Lbfgsb.3.0)
@@ -325,6 +330,9 @@ if(${VALGRIND})
 endif()
 message(NOTICE "Building with Coverage  : ${COVERAGE}")
 message(NOTICE "Building docs           : ${BUILD_DOC}")
+if(INTERNAL_DOC)
+    message(NOTICE "Build internal docs     : ${INTERNAL_DOC}")
+endif()
 message(NOTICE "\nTARGETS")
 message(NOTICE "Build the EXAMPLE programs   : ${BUILD_EXAMPLES}")
 message(NOTICE "Build GTEST unit-tests       : ${BUILD_GTEST}")
