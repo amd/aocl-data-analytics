@@ -1,6 +1,6 @@
 .. _data-management:
 
-Data management Functionalities
+Data management functionalities
 *******************************
 
 Introduction
@@ -116,7 +116,7 @@ The following string options can be set:
 
 Note that, with the exception of the *'CSV skip rows'* option, only single characters can be used in the options above.
 
-The following :ref:`da_int` options can be set:
+The following :ref:`da_int<da_int>` options can be set:
 
 - *CSV double quote* - specify whether or not to interpret two consecutive quote characters within a field as a single quote character. This option can only take the values 0 or 1.
 

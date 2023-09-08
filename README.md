@@ -28,7 +28,7 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 * -DBUILD_EXAMPLES and –DBUILD_GTEST both of which are on by default
 
-* -DBUILD_DOC=On to build the documentation
+* -DBUILD_DOC=On to build the documentation (with cmake --build . --target doc/doc_pdf/doc_html to build both pdf and html, only pdf or only html)
 
 * -DINTERNAL_DOC=ON to build the internal documentation alongside the main one
 
@@ -80,11 +80,15 @@ Note that not all the options available in Linux are available in Windows
 
 9. Use ctest in your powershell/command prompt window to run the tests
 
-10. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following command:
+10. It is possible that you will have issues with your MSVC installation, inparticular numerous users have reported that installation of the Windows SDK is partly broken. You may need to fix this by correcting the INCLUDE paths that are set by the batch scripts when loading the command prompt e.g.:
+
+set INCLUDE=%INCLUDE%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\cppwinrt
+
+11. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following command:
 cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
 (optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja. You can also specify an install directory, using -DCMAKE_INSTALL_PREFIX, and build with ninja install.
 
-11. Note also that it is possible to build with shared libraries on Windows by adding -DBUILD_SHARED_LIBS=ON to the cmake command. However, you must ensure that your Windows PATH environemnt variable contains all the folders where cmake will put dlls (gtest, da_core, lbfgsb, etc.). Furthermore, gtest is unable to discover tests and add them to the ctests due to an issue with gtest and shared library dependencies on Windows.
+12. Note also that it is possible to build with shared libraries on Windows by adding -DBUILD_SHARED_LIBS=ON to the cmake command. However, you must ensure that your Windows PATH environemnt variable contains all the folders where cmake will put dlls (gtest, da_core, lbfgsb, etc.). Furthermore, gtest is unable to discover tests and add them to the ctests due to an issue with gtest and shared library dependencies on Windows.
 
 ## Building on Windows using the GCC toolchain
 

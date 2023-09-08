@@ -3,8 +3,12 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-AOCL-DA's documentation
-***********************
+AOCL-DA documentation
+*********************
+
+The AOCL Data Analytics Library is a software library providing optimized building blocks for data analysis.
+It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
+It is designed with a focus on usability, reliability and performance.
 
 .. toctree::
    :maxdepth: 1
