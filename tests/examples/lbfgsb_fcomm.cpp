@@ -119,7 +119,7 @@ int main(void) {
         goto abort;
     if (pd->opts.set("LBfgSB Iteration Limit", (da_int)31) != da_status_success)
         goto abort;
-    if (pd->opts.set("time limit", 0.1) != da_status_success)
+    if (pd->opts.set("time limit", 100.1) != da_status_success)
         goto abort;
     if (pd->opts.set("LBfgSB memory Limit", (da_int)12) != da_status_success)
         goto abort;
