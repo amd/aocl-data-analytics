@@ -107,7 +107,7 @@ int decision_tree_ex_d(std::string score_criteria) {
     std::vector<uint8_t> y_pred(n_obs);
     status = da_df_predict_d(df_handle, n_obs, n_features, x_test, y_pred.data());
     double score = 0.0;
-    status = da_df_score_d(df_handle, n_obs, n_features, x_test, y_test, score);
+    status = da_df_score_d(df_handle, n_obs, n_features, x_test, y_test, &score);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
@@ -232,7 +232,7 @@ int decision_tree_ex_s(std::string score_criteria) {
     std::vector<uint8_t> y_pred(n_obs);
     status = da_df_predict_s(df_handle, n_obs, n_features, x_test, y_pred.data());
     float score = 0.0;
-    status = da_df_score_s(df_handle, n_obs, n_features, x_test, y_test, score);
+    status = da_df_score_s(df_handle, n_obs, n_features, x_test, y_test, &score);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {

@@ -87,7 +87,7 @@ typedef enum pca_results_flags_ {
 da_status da_pca_d_init(da_handle handle, da_int n, da_int p, double *A);
 da_status da_pca_s_init(da_handle handle, da_int n, da_int p, float *A);
 
-da_status da_pca_set_method(da_handle, pca_comp_method_ method);
+da_status da_pca_set_method(da_handle, pca_comp_method method);
 da_status da_pca_set_num_components(da_handle, da_int num_components);
 
 /** \{

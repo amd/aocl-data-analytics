@@ -51,7 +51,7 @@ da_status da_pca_s_init(da_handle handle, da_int n, da_int p, float *dataX) {
     return da_status_success;
 }
 
-da_status da_pca_set_method(da_handle handle, pca_comp_method_ method) {
+da_status da_pca_set_method(da_handle handle, pca_comp_method method) {
     if (handle != nullptr) {
         if (handle->precision != da_single) {
             if (handle->pca_d != nullptr)

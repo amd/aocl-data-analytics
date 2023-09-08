@@ -164,7 +164,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
 
     /* get_result (required to be defined by basic_handle) */
-    da_status get_result(enum da_result query, da_int *dim, T *result) {
+    da_status get_result(da_result query, da_int *dim, T *result) {
         // Don't return anything if model not trained!
         if (!model_trained)
             return da_warn(this->err, da_status_unknown_query,
@@ -204,7 +204,7 @@ template <typename T> class linear_model : public basic_handle<T> {
         }
     };
 
-    da_status get_result(enum da_result query, da_int *dim, da_int *result) {
+    da_status get_result(da_result query, da_int *dim, da_int *result) {
         return da_warn(this->err, da_status_unknown_query,
                        "Handle does not contain data relevant to this query. Was the "
                        "last call to the solver successful?");

@@ -133,7 +133,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     da_status init_results();
 
     /* get_result (required to be defined by basic_handle) */
-    da_status get_result(enum da_result query, da_int *dim, T *result) {
+    da_status get_result(da_result query, da_int *dim, T *result) {
         da_status status = da_status_success;
         // Don't return anything if PCA compute is not done!
         if (!iscomputed) {
@@ -189,7 +189,7 @@ template <typename T> class da_pca : public basic_handle<T> {
         return status;
     };
 
-    da_status get_result(enum da_result query, da_int *dim, da_int *result) {
+    da_status get_result(da_result query, da_int *dim, da_int *result) {
         return da_warn(this->err, da_status_unknown_query,
                        "There is no pca implementation done for integer datatye!");
     };
