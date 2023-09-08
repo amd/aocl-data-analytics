@@ -269,12 +269,17 @@ add_subdirectory(source)
 if(VALGRIND)
   set(MEMORYCHECK_COMMAND_OPTIONS
       "--track-origins=yes --leak-check=full -s --show-leak-kinds=all --gen-suppressions=all")
-  set(MEMORYCHECK_TYPE "valgrind")
-  set(MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+    set(MEMORYCHECK_TYPE "valgrind")
 endif()
 
 # build example and unit test programs
 include(CTest)
+
+# Suppression list file needs to be defined AFTER including ctest
+if(VALGRIND)
+  set(MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+endif()
+
 add_subdirectory(tests)
 
 # Install examples and README files
