@@ -28,7 +28,7 @@ extern "C" {
  * \brief Enumeration defining the type object (result)
  * to query or extract from a handle
  */
-enum da_result {
+typedef enum da_result_ {
     // General purpose data 1..100
     da_rinfo = 1, ///< General information array, containing a varierty of metrics,
     //see each solver's details for further information.
@@ -44,7 +44,7 @@ enum da_result {
     // Nonlinear Optimization 301..400
     // Random Forrests 401..500
     // ...
-};
+} da_result;
 
 /** \{
  * @brief Get results stored in handle

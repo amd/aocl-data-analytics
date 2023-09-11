@@ -18,8 +18,8 @@ template <typename T> class basic_handle {
      * Generic interface to extract all data stored
      * in handle via the da_get_result_? C API
      */
-    virtual da_status get_result(enum da_result query, da_int *dim, T *result) = 0;
-    virtual da_status get_result(enum da_result query, da_int *dim, da_int *result) = 0;
+    virtual da_status get_result(da_result query, da_int *dim, T *result) = 0;
+    virtual da_status get_result(da_result query, da_int *dim, da_int *result) = 0;
 
     // FIXME add err
 };

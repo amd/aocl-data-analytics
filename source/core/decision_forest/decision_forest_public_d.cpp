@@ -38,7 +38,7 @@ da_status da_df_predict_d(da_handle handle, da_int n_obs, da_int n_features, dou
 }
 
 da_status da_df_score_d(da_handle handle, da_int n_obs, da_int n_features, double *x,
-                        uint8_t *y_test, double &score) {
+                        uint8_t *y_test, double *score) {
     if (!handle)
         return da_status_invalid_input;
     if (handle->precision != da_double)
@@ -46,5 +46,5 @@ da_status da_df_score_d(da_handle handle, da_int n_obs, da_int n_features, doubl
     if (handle->df_d == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->df_d->score(n_obs, n_features, x, y_test, score);
+    return handle->df_d->score(n_obs, n_features, x, y_test, *score);
 }

@@ -99,7 +99,7 @@ cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
 
 2. Make sure you have set the AOCL_ROOT environment variable to your AOCL installation directory (e.g. C:\Users\username\AOCL-4.0), gcc, g++ and gfortran (and clang too ,if you wish to use it) on your Windows PATH and MINGW_BIN to the location of the library libgfortran (e.g. C:\msys64\mingw64\bin)
 
-3. In your checkout create a directory called build
+3. In your checkout create a directory called build.
 
 4. Open a standard Windows command prompt, navigate to build and type cmake -G Ninja -DCMAKE_C_COMPILER=gcc (or clang) -DCMAKE_CXX_COMPILER=g++ (or clang++) .. along with any (or none) of the following options depending on the build that is desired: 
 
