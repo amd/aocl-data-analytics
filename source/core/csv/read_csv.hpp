@@ -55,7 +55,8 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
 
     istatus = tokenize_all_rows(parser, encoding_errors);
     if (istatus != 0) {
-        return da_error(csv->err, da_status_memory_error, "Memory allocation failure");
+        da_error(csv->err, da_status_memory_error, "Memory allocation failure");
+        goto exit;
     } else if (parser->skipped_lines != nullptr) {
         std::string buff;
         buff = "The following lines of the CSV file were ignored:\n";
@@ -64,15 +65,18 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
         for (khint64_t it = kh_begin((kh_int64_t *)parser->skipped_lines);
              it != kh_end((kh_int64_t *)parser->skipped_lines); ++it) {
             if (kh_exist((kh_int64_t *)parser->skipped_lines, it))
-                keys.push_back((khint64_t)kh_key(((kh_int64_t *)parser->skipped_lines), it));
+                keys.push_back(
+                    (khint64_t)kh_key(((kh_int64_t *)parser->skipped_lines), it));
         };
         std::sort(keys.begin(), keys.end());
         for (const khint64_t &key : keys) {
             buff += std::to_string(key) + " ";
         }
-        return da_warn(csv->err, da_status_success, buff);
+        da_warn(csv->err, da_status_success, buff);
+        goto exit;
     }
 
+exit:
     fclose(fp);
     parser->source = nullptr;
 
