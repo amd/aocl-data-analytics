@@ -82,9 +82,17 @@ gtest_discover_tests(data)
 gtest_discover_tests(interval_map)
 gtest_discover_tests(errors_tests)
 
-# add unit test programs that are not gtest programs to CTEST
+# Add unit test programs that are not gtest programs to CTEST
 string(CONCAT TNAME printf_debug "_ex")
 add_test(${TNAME} printf_debug)
+
+# C compatibility test - compile with C compiler and link with C++ compiler
+set_source_files_properties(c_compatibility.c PROPERTIES LANGUAGE C)
+add_executable(c_compatibility c_compatibility.c)
+set_target_properties(c_compatibility PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(c_compatibility aocl-da)
+string(CONCAT TNAME c_compatibility "_test")
+add_test(${TNAME} c_compatibility)
 
 # Add all executables to the coverage test
 if(COVERAGE)
