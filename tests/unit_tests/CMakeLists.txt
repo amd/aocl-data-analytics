@@ -51,6 +51,9 @@ endif()
 target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 
+add_executable(decision_forest decision_forest_tests.cpp)
+target_link_libraries(decision_forest aocl-da gtest_main)
+
 add_executable(option_registry option_registry_tests.cpp)
 target_link_libraries(option_registry aocl-da gtest_main gmock_main)
 
@@ -77,6 +80,7 @@ target_link_libraries(printf_debug aocl-da)
 gtest_discover_tests(basic_stats)
 gtest_discover_tests(csv)
 gtest_discover_tests(linmod)
+gtest_discover_tests(decision_forest)
 gtest_discover_tests(option_registry)
 gtest_discover_tests(data)
 gtest_discover_tests(interval_map)
