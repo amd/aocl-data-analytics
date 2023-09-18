@@ -44,7 +44,7 @@ if(WIN32)
     "${CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/single_cmake/${CMAKE_BUILD_TYPE}")
 endif()
 
-target_link_libraries(da_core lbfgsb lbfgsb_s ${FLAME} ${BLIS})
+target_link_libraries(da_core lbfgsb lbfgsb_s ${LAPACK} ${BLAS})
 if(NOT WIN32)
   target_link_libraries(da_core ${OpenMP_CXX_FLAGS})
 endif()
@@ -55,7 +55,7 @@ endif()
 
 # Create combined library from da_core and Fortran libraries
 add_library(aocl-da $<TARGET_OBJECTS:da_core>  $<TARGET_OBJECTS:lbfgsb>  $<TARGET_OBJECTS:lbfgsb_s>)
-target_link_libraries(aocl-da PUBLIC da_core lbfgsb lbfgsb_s ${FLAME} ${BLIS})
+target_link_libraries(aocl-da PUBLIC da_core lbfgsb lbfgsb_s ${LAPACK} ${BLAS})
 
 # Installation commands
 install(TARGETS aocl-da
