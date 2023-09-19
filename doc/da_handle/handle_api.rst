@@ -1,12 +1,5 @@
-.. _intro_handle:
-
-Modeling in AOCL-DA: the da_handle structure 
-********************************************
-
-TODO explain what and why
-
-API Reference
--------------
+Handle APIs
+***********
 
 .. doxygentypedef:: da_handle
 .. doxygentypedef:: da_handle_type

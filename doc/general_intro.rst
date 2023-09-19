@@ -7,13 +7,14 @@ This section contains instructions for writing code that calls AOCL-DA and for b
 Numerous example programs are also provided in the ``examples`` folder within your AOCL-DA installation directory.
 
 AOCL-DA has a C-compatible interface, which has been chosen to make it as seemless as possible to integrate with the library from whichever programming language you are using.
+Future releases of the library will introduce further language-specific interfaces, such as a Python interface.
 
 Library workflow
 ================
 
 The intended workflow for using the AOCL-DA library is as follows:
 
-1. **Load data from memory.** Data can be obtained from various sources (see :ref:`Data management functionalities<data-management>` for full details):
+1. **Load data from memory.** Data can be obtained from various sources:
 
   * pass arrays of data directly from another part of your application;
   * read directly from CSV files into floating-point or integer arrays;
@@ -51,7 +52,7 @@ To compile and link to static AOCL libraries using ``g++``:
         <AOCL_ROOT>/lib_<INT_LIB>/libaocl-da.a <AOCL_ROOT>/lib_<INT_LIB>/libflame.a
         <AOCL_ROOT>/lib_<INT_LIB>/libblis-mt.a -lgfortran -lgomp
 
-To compile and link to static AOCL libraries using ``aocc``:
+To compile and link to static AOCL libraries using ``clang++``:
 
 .. code-block::
 
@@ -122,7 +123,7 @@ NaN data
 
 When using a :cpp:type:`da_datastore` for data management, ``NaN`` can be used to denote missing data. See :ref:`Data management functionalities<data-management>` for further details.
 
-In order to provide the best possible performance, the data processing functions will not check for ``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behaviour is undefined.
+In order to provide the best possible performance, the algorithmic functions will not check for ``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behaviour is undefined.
 It is therefore your responsibility to ensure your data is sanitized (for example, by using :cpp:func:`da_data_select_non_missing`) before passing it to one of the algorithms.
 
 Error handling

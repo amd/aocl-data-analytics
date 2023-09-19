@@ -34,6 +34,16 @@ find_program(SORT NAMES sort REQUIRED)
 # sphinxcontrib.bibtex
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c "from rocm_docs import ROCmDocs"
+  RESULT_VARIABLE EXIT_CODE
+  OUTPUT_QUIET)
+if(NOT ${EXIT_CODE} EQUAL 0)
+  message(
+    FATAL_ERROR
+      "Python3 package rocm_docs is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install rocm-docs-core"
+  )
+endif()
+execute_process(
   COMMAND ${Python3_EXECUTABLE} -c "import breathe"
   RESULT_VARIABLE EXIT_CODE
   OUTPUT_QUIET)
@@ -98,16 +108,15 @@ set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 set(PDF_DOC_NAME AOCL-DA_Documentation_${AOCLDA_VERSION})
 option(INTERNAL_DOC "Build internal documentation" ON)
-if (INTERNAL_DOC)
+if(INTERNAL_DOC)
   set(SPHINX_TAG "-t" "internal")
 else()
   set(SPHINX_TAG "")
 endif()
 
 # Target building the doxygen XML Also modifies the output directory and the
-# version number in the Doxyfile:
-# 1. replace PROJECT_NAME = .* for the string "version ${AOCLDA_VERSION} (date)" 
-# 2. Run doxygen on the sources
+# version number in the Doxyfile: 1. replace PROJECT_NAME = .* for the string
+# "version ${AOCLDA_VERSION} (date)" 2. Run doxygen on the sources
 add_custom_target(
   doxygen_xml
   COMMAND
@@ -123,34 +132,31 @@ add_custom_target(
   COMMENT "Building doxygen xml files")
 
 # Build the html documentation in doc/sphinx/html
-add_custom_target(doc_html 
+add_custom_target(
+  doc_html
   COMMAND
-  ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b html -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE} ${SPHINX_BUILD}/html
+    ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b html
+    -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
+    ${SPHINX_BUILD}/html
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS
-    doxygen_xml
-  COMMENT "Generating HTML documentation"
-)
+  DEPENDS doxygen_xml
+  COMMENT "Generating HTML documentation")
 
 # Build a latex documentation in doc/sphinx/latex
-add_custom_target(doc_latex
+add_custom_target(
+  doc_pdf
   COMMAND
-  ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b latex
+    ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b latex
     # Tell Breathe where to find the Doxygen output
     -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
-    ${SPHINX_BUILD}/latex
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
- DEPENDS doxygen_xml
- COMMENT "Generating latex documentation")
+    ${SPHINX_BUILD}/latex/
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+  COMMAND
+    cd ${SPHINX_BUILD}/latex && make && mv ${SPHINX_BUILD}/latex/aocl-da.pdf
+    ${SPHINX_BUILD}/latex/${PDF_DOC_NAME}.pdf
+  DEPENDS doxygen_xml
+  COMMENT "Generating pdf documentation")
 
- # Build the pdf documentation from the generated latex file using pdflatex
- add_custom_target(doc_pdf
-  COMMAND 
-    pdflatex -jobname=${PDF_DOC_NAME} ${SPHINX_BUILD}/latex/aocl-da.tex
- WORKING_DIRECTORY ${SPHINX_BUILD}/latex
- DEPENDS doc_latex
- COMMENT "Building pdf from generated latex")
- 
 # Main target doc, builds both html and pdf
 add_custom_target(doc DEPENDS doc_pdf doc_html)
 

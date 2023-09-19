@@ -124,7 +124,7 @@ tables
 Adding a picture
 ----------------
 
-.. image:: pics/kitten.jpg
+.. image:: ../pics/kitten.jpg
    :align: center
 
 `link to more documentation <https://pandemic-overview.readthedocs.io/en/latest/myGuides/reStructuredText-Images-and-Figures-Examples.html>`_

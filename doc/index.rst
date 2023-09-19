@@ -1,7 +1,4 @@
-.. AOCL-DA documentation master file, created by
-   sphinx-quickstart on Mon May 22 10:35:28 2023.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. AOCL-DA documentation master file
 
 AOCL-DA documentation
 *********************
@@ -11,22 +8,22 @@ It provides users with a complete workflow, including data handling, preprocessi
 It is designed with a focus on usability, reliability and performance.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: How to use AOCL-DA:
 
-   general-intro
-   data-management
-   da-handle
-   option-setting
-   error-codes
+   general_intro
+   data_management/data_intro
+   da_handle/handle_intro
+   options/option_intro
+   errors/error_intro
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Algorithms:
 
-   basic-statistics
-   linear-models
-   trees-forests
+   basic_statistics/basic_stats_intro
+   linear_models/linmod_intro
+   trees_forests/df_intro
 
 .. only:: internal
 
@@ -34,7 +31,7 @@ It is designed with a focus on usability, reliability and performance.
       :maxdepth: 1
       :caption: Internal help:
 
-      doc-utilities
+      doc_utilities/utils.rst
 
 Search the documentation
 ========================

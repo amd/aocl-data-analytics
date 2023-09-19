@@ -22,9 +22,8 @@ in Chapters 3-5 of :cite:t:`hastie`.
 
 [Generalize to add hyperparameters / regularization.]
 
-API Reference
-=============
-
-.. doxygentypedef:: linmod_model
-.. doxygenenum:: linmod_model_
-.. doxygenfunction:: da_linmod_d_fit
+.. toctree::
+    :maxdepth: 1
+    :hidden:
+    
+    linmod_api
