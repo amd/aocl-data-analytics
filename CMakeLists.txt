@@ -173,7 +173,7 @@ if(WIN32)
 
 else()
 
-  if (DEFINED $ENV{AOCL_ROOT})
+  if (DEFINED ENV{AOCL_ROOT})
     include_directories($ENV{AOCL_ROOT}/include_${INT_LIB})
   endif()
   if (DEFINED BLAS_INCLUDE_DIR)
