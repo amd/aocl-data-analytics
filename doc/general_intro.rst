@@ -95,7 +95,7 @@ Linking on Windows
 
 The same command should work with cl replaced by clang-cl and linking statically using /MT.
 
-Note that you should ensure the folders containing the libraries to be linked are on your Windows ``PATH`` environment variable e.g. using ``set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>``. You may also need to link to a Fortran runtime library such as ``libfifcore-mt.lib``.
+Note that you should ensure the folders containing the libraries to be linked are on your Windows ``PATH`` environment variable e.g. using ``set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>``. Depending on how your system is set up, and which functions you are using, you may also need to link to some Fortran runtime libraries such as ``libfifcore-mt.lib``, ``ifconsol.lib``, ``libifportmd.lib``, ``libmmd.lib``, ``libirc.lib`` and ``svml_dispmd.lib``.
 
 Miscellaneous topics
 ====================
