@@ -1208,7 +1208,7 @@ class data_store {
 
     exit:
         if (cleanup) {
-            if (bl) {
+            if (bl != nullptr) {
                 if (!C_data)
                     delete[] bl;
                 else

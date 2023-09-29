@@ -48,6 +48,7 @@ da_status da_data::data_store::concatenate_cols_csv<char **>(
     da_int mc, da_int nc, char ***data, da_ordering order, bool copy_data, bool C_data) {
     char **deref_data = *data;
     free(data);
+    data = nullptr;
     da_status status =
         concatenate_columns(mc, nc, deref_data, order, copy_data, true, C_data);
     return status;
