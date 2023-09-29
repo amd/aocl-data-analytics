@@ -835,7 +835,7 @@ class data_store {
             status = select_rows(key, {0, m - 1});
             if (status != da_status_success) {
                 exit_status = da_status_internal_error; // LCOV_EXCL_LINE
-                goto exit; // LCOV_EXCL_LINE
+                goto exit;                              // LCOV_EXCL_LINE
             }
             clear_rows = true;
         }
@@ -1047,7 +1047,8 @@ class data_store {
         auto it = cmap.find(j);
         if (it == cmap.end())
             // cannot happen, checks on i and j would have returned invalid input already
-            return da_error(err, da_status_internal_error, "Couldn't find the element"); // LCOV_EXCL_LINE
+            return da_error(err, da_status_internal_error,
+                            "Couldn't find the element"); // LCOV_EXCL_LINE
 
         std::shared_ptr<block_id> bid = it->second;
         if (bid->b->btype != get_block_type<T>())
@@ -1078,7 +1079,8 @@ class data_store {
         auto it = cmap.find(j);
         if (it == cmap.end())
             // cannot happen, checks on i and j would have returned invalid input already
-            return da_error(err, da_status_internal_error, "Couldn't find the element"); // LCOV_EXCL_LINE
+            return da_error(err, da_status_internal_error,
+                            "Couldn't find the element"); // LCOV_EXCL_LINE
 
         std::shared_ptr<block_id> bid = it->second;
         if (bid->b->btype != get_block_type<T>())
@@ -1151,10 +1153,12 @@ class data_store {
                 buf = std::string(headings[j]);
                 status = label_column(buf, j);
                 if (status != da_status_success) {
-                    std::string err_msg = "Could not label column number: "; // LCOV_EXCL_LINE
-                    err_msg += std::to_string(j); // LCOV_EXCL_LINE
-                    return da_error_trace(err, da_status_internal_error, err_msg); // LCOV_EXCL_LINE
-                } // LCOV_EXCL_LINE
+                    std::string err_msg =
+                        "Could not label column number: "; // LCOV_EXCL_LINE
+                    err_msg += std::to_string(j);          // LCOV_EXCL_LINE
+                    return da_error_trace(err, da_status_internal_error,
+                                          err_msg); // LCOV_EXCL_LINE
+                }                                   // LCOV_EXCL_LINE
             }
         }
         return status;
@@ -1174,22 +1178,44 @@ class data_store {
                                             da_int start_column, da_int end_column,
                                             da_int nrows) {
         da_status status;
+        bool cleanup = false;
+        da_int ncols;
 
         T *bl = nullptr;
         bool C_data;
         status = raw_ptr_from_csv_columns(csv, columns, start_column, end_column, nrows,
                                           &bl, C_data);
-        if (status != da_status_success)
-            return (
-                da_error_trace(err, da_status_internal_error, "Unexpected error in creating raw pointers")); // LCOV_EXCL_LINE
+        if (status != da_status_success) {
+            // LCOV_EXCL_START
+            cleanup = true;
+            status = da_error_trace(err, da_status_internal_error,
+                                    "Unexpected error in creating raw pointers");
+            goto exit;
+            // LCOV_EXCL_STOP
+        }
 
-        da_int ncols = end_column - start_column + 1;
+        ncols = end_column - start_column + 1;
         status = concatenate_cols_csv(nrows, ncols, bl, col_major, false, C_data);
-        if (status != da_status_success)
-            return (
-                da_error_trace(err, da_status_internal_error, "Unexpected error in concatenating columns")); // LCOV_EXCL_LINE
+        if (status != da_status_success) {
+            // LCOV_EXCL_START
+            cleanup = true;
+            status = da_error_trace(
+                err, da_status_internal_error,
+                "Unexpected error in concatenating columns");
+            goto exit;
+            // LCOV_EXCL_STOP
+        }
 
-        return da_status_success;
+    exit:
+        if (cleanup) {
+            if (bl) {
+                if (!C_data)
+                    delete[] bl;
+                else
+                    free(bl);
+            }
+        }
+        return status;
     }
 
     template <class T>
@@ -1203,10 +1229,12 @@ class data_store {
                                        da_int start_column, da_int end_column,
                                        da_int nrows, T **bl, bool &C_data) {
         da_int ncols = end_column - start_column + 1;
+        C_data = false;
         try {
             *bl = new T[ncols * nrows];
         } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
-            return da_error(err, da_status_memory_error, "Allocation error"); // LCOV_EXCL_LINE
+            return da_error(err, da_status_memory_error,
+                            "Allocation error"); // LCOV_EXCL_LINE
         }
 
         for (da_int i = 0; i < ncols; i++) {
@@ -1217,11 +1245,10 @@ class data_store {
                 }
             } else {
                 // This shouldn't be possible
-                return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+                return da_error(err, da_status_internal_error,       // LCOV_EXCL_LINE
                                 "wrong type detected unexpectedly"); // LCOV_EXCL_LINE
             }
         }
-        C_data = false;
 
         return da_status_success;
     }
@@ -1254,7 +1281,7 @@ class data_store {
                     columns[i - 1]);
                 if (status != da_status_success)
                     return da_error_trace(err, da_status_internal_error, // LCOV_EXCL_LINE
-                                          "Unexpected error"); 
+                                          "Unexpected error");
 
                 // Update the active index and start_column variables
                 start_column = i;
@@ -1282,7 +1309,8 @@ class data_store {
 
         status = csv->read_options();
         if (status != da_status_success) {
-            return da_error(err, da_status_internal_error, "Error reading CSV options"); // LCOV_EXCL_LINE
+            return da_error(err, da_status_internal_error,
+                            "Error reading CSV options"); // LCOV_EXCL_LINE
         }
 
         da_int get_headings = csv->first_row_header;
@@ -1343,7 +1371,7 @@ class data_store {
             if (status != da_status_success)
                 return da_error_trace(err, status, // LCOV_EXCL_LINE
                                       "Could not concatenate the columns to the data "
-                                      "store"); 
+                                      "store");
             block_dense<double> *tmp_bd =
                 dynamic_cast<block_dense<double> *>((*cmap.begin()).second->b);
             if (tmp_bd) {
@@ -1478,8 +1506,7 @@ class data_store {
         }
         if (status != da_status_success)
             return da_error_trace( // LCOV_EXCL_LINE
-                err, da_status_internal_error,
-                "Unexpected error in column labeling");
+                err, da_status_internal_error, "Unexpected error in column labeling");
         status = tmp_status;
 
         return status;
