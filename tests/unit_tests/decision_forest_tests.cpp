@@ -19,11 +19,11 @@ TEST(decision_forest, cpp_api_sample_features) {
 
     da_df_sample_features_s(df_handle, n);
 
+    da_handle_destroy(&df_handle);
 }
 
-TEST(decision_forest, cpp_api_generate_trees)
-{
-    da_int n_features          = 20;
+TEST(decision_forest, cpp_api_generate_trees) {
+    da_int n_features = 20;
     da_int n_features_per_tree = 5;
 
     da_int n_trees = 4;
@@ -36,5 +36,5 @@ TEST(decision_forest, cpp_api_generate_trees)
     status = da_handle_init_s(&df_handle, da_handle_decision_forest);
 
     da_df_bootstrap_obs_s(df_handle, n_trees, n_features_per_tree);
-
+    da_handle_destroy(&df_handle);
 }
