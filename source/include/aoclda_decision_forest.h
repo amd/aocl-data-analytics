@@ -25,8 +25,13 @@ da_status da_df_tree_predict_s(da_handle handle, da_int n_obs,  float *x,
 da_status da_df_tree_score_s(da_handle handle, da_int n_obs, float *x,
                         uint8_t *y_test, float *score);
 
-da_status da_df_sample_features_s(da_handle handle, da_int d);
+// da_status da_df_sample_features_s(da_handle handle, da_int d);
 
-da_status da_df_bootstrap_obs_s(da_handle handle, da_int n_trees, da_int d);
+// da_status da_df_bootstrap_obs_s(da_handle handle, da_int n_trees, da_int d);
+
+da_status da_df_set_training_data_s(da_handle handle, da_int n_obs,
+                                    float *x, uint8_t *y);
+
+da_status da_df_fit_s(da_handle handle);
 
 #endif

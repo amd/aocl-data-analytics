@@ -49,6 +49,31 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
                                               max_int, ubound_t::lessequal,
                                               1));
         status = opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("n_obs_per_tree",
+                                  "set number of observations in each tree",
+                                              0, lbound_t::greaterthan,
+                                              max_int, ubound_t::lessequal,
+                                              1));
+        status = opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("n_features_per_tree",
+                                  "set number of features in each tree",
+                                              0, lbound_t::greaterthan,
+                                              max_int, ubound_t::lessequal,
+                                              1));
+        status = opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("n_trees",
+                                  "set number of features in each tree",
+                                              0, lbound_t::greaterthan,
+                                              max_int, ubound_t::lessequal,
+                                              1));
+        status = opts.register_opt(oi);
+
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     } catch (std::invalid_argument &e) {
@@ -64,17 +89,17 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
 
 template <typename T> struct Node {
     // data required for leaf nodes during prediction
-    bool is_leaf;
-    uint8_t y_pred;
+    bool is_leaf = true;
+    uint8_t y_pred = 0;
     // data required for leaf nodes during fitting
-    da_int start_idx;
-    da_int n_obs;
+    da_int start_idx = 0;
+    da_int n_obs = 0;
     // data required for root nodes during prediction
-    da_int child_node_l_idx;
-    da_int child_node_r_idx;
-    da_int col_idx;
-    T x_threshold;
-    da_int level;
+    da_int child_node_l_idx = 0;
+    da_int child_node_r_idx = 0;
+    da_int col_idx = 0;
+    T x_threshold = 0.0;
+    da_int level = 0;
 };
 
 // ---------------------------------------------
@@ -116,6 +141,9 @@ template <typename T> class decision_tree {
 
 template <typename T> class decision_forest {
     private:
+        /* pointer to error trace */
+        da_errors::da_error_t *err = nullptr;
+
         da_int n_obs = 0;
         T *x = nullptr;
         uint8_t *y = nullptr;
@@ -132,8 +160,12 @@ template <typename T> class decision_forest {
 
         da_status set_training_data(da_int n_obs, T *x, uint8_t *y);
 
-        da_status sample_features(da_int n_col_x_subset);
-        da_status bootstrap_obs(da_int n_trees, da_int n_features_per_tree);
+        da_status sample_feature_ind(da_int n_features, da_int n_samples,
+                                     da_int *feature_ind);
+        da_status sample_obs_ind(da_int n_obs, da_int n_samples,
+                                 da_int *obs_ind);
+        da_status fit_tree();
+        da_status fit();
 };
 
 // ---------------------------------------------
@@ -144,10 +176,11 @@ template <typename T>
 da_status decision_tree<T>::set_training_data(da_int n_obs, T *x,
                                               uint8_t *y) {
 
+    da_status status = da_status_success;
+
     da_int d;
     opts.get("n_features", d);
 
-    da_status status = da_status_success;
     if (n_obs <= 0 || x == nullptr || y == nullptr)
         return da_error(this->err, da_status_invalid_input,
                         "Either n_obs,  x, or y are not valid pointers.");
@@ -464,7 +497,29 @@ da_status decision_tree<T>::score(da_int n_obs, T *x, uint8_t *y_test,
 // ---------------------------------------------
 
 template <typename T>
-da_status decision_forest<T>::sample_features(da_int n_samples)
+da_status decision_forest<T>::set_training_data(da_int n_obs, T *x,
+                                                uint8_t *y) {
+
+    da_status status = da_status_success;
+
+    da_int d;
+    opts.get("n_features", d);
+
+    if (n_obs <= 0 || x == nullptr || y == nullptr)
+        return da_error(this->err, da_status_invalid_input,
+                        "Either n_obs,  x, or y are not valid pointers.");
+
+    this->n_obs = n_obs;
+    // copy user's feature pointers
+    this->x = x;
+    this->y = y;
+
+    return status;
+}
+
+template <typename T>
+da_status decision_forest<T>::sample_feature_ind(da_int n_features, da_int n_samples,
+                                                 da_int *samples)
 {
     printf("Inside decision_forest<T>::sample_features \n");
     opts.print_options();
@@ -538,7 +593,7 @@ da_status decision_forest<T>::sample_features(da_int n_samples)
     }
     printf("\n\n");
 
-    std::vector<int> samples(n_samples);
+    // std::vector<int> samples(n_samples);
     for (int i=0; i < n_samples; i++)
     {
         samples[i] = subsample[i];
@@ -567,13 +622,84 @@ da_status decision_forest<T>::sample_features(da_int n_samples)
 }
 
 template <typename T>
-da_status decision_forest<T>::bootstrap_obs(da_int n_trees,
-                                             da_int n_features_per_tree)
+da_status decision_forest<T>::sample_obs_ind(da_int n_obs, da_int n_samples,
+                                            da_int *obs_ind)
 {
     printf("Inside decision_forest<T>::bootstrap_obs \n");
     da_status status = da_status_success;
 
+    // sample n_samples time with replacement
+    // from uniform integer distribution on range 0, (n_obs - 1)
+
+    std::uniform_int_distribution<int> uniform_dist(0, n_obs - 1);
+
+    for(int i=0; i < n_samples; i++)
+    {
+        obs_ind[i] = uniform_dist(mt_gen);
+    }
+
     return status;
 }
+
+template <typename T>
+da_status decision_forest<T>::fit_tree()
+{
+    da_status status = da_status_success;
+
+    da_int d, n_obs_per_tree, n_features_per_tree;
+    opts.get("n_features", d);
+    opts.get("n_obs_per_tree", n_obs_per_tree);
+    opts.get("n_features_per_tree", n_features_per_tree);
+
+    std::vector<int> obs_ind(n_obs_per_tree);
+    std::vector<int> feature_ind(n_features_per_tree);
+
+    sample_obs_ind(n_obs, n_obs_per_tree, obs_ind.data() );
+    sample_feature_ind(n_obs, n_features_per_tree, feature_ind.data() );
+
+    std::vector<T> xr(n_obs_per_tree * n_features_per_tree);
+    std::vector<uint8_t> yr(n_obs_per_tree);
+
+    for (int i=0; i < n_obs_per_tree; i++)
+    {
+        for (int j=0; j < n_features_per_tree; j++)
+        {
+            int ii = obs_ind[i];
+            int jj = feature_ind[j];
+            xr[i * n_features_per_tree + j ] = x[ii * d + jj ];
+            yr[i] = y[ii];
+        }
+    }
+
+    decision_tree<T> tree;
+
+    // copy options from forest to tree
+    tree.opts = this->opts;
+
+    // modify tree options
+    tree.opts.set("n_features", n_features_per_tree);
+
+    status = tree.set_training_data(n_obs_per_tree, xr.data(), yr.data());
+    status = tree.fit();
+
+    return status;
+}
+
+template <typename T>
+da_status decision_forest<T>::fit()
+{
+    da_status status = da_status_success;
+
+    da_int n_trees;
+    opts.get("n_trees", n_trees);
+
+    for (int k=0; k < n_trees; k++)
+    {
+        status = fit_tree();
+    }
+
+    return status;
+}
+
 
 #endif

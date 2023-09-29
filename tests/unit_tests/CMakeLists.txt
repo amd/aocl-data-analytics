@@ -53,6 +53,11 @@ target_compile_definitions(
 
 add_executable(decision_forest decision_forest_tests.cpp)
 target_link_libraries(decision_forest aocl-da gtest_main)
+if(WIN32)
+  target_link_libraries(decision_forest "$ENV{LIBIFCORE}")
+endif()
+target_compile_definitions(
+  decision_forest PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(option_registry option_registry_tests.cpp)
 target_link_libraries(option_registry aocl-da gtest_main gmock_main)
