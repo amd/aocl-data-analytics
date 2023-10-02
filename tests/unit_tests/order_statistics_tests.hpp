@@ -869,22 +869,22 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
     for (auto &param : params) {
         std::vector<TypeParam> column_quantiles(param.p);
         std::vector<TypeParam> row_quantiles(param.n);
-        TypeParam overall_quantile;
+        TypeParam overall_quantile[1];
         std::vector<TypeParam> column_medians(param.p);
         std::vector<TypeParam> row_medians(param.n);
-        TypeParam overall_median;
+        TypeParam overall_median[1];
         std::vector<TypeParam> column_maxima(param.p);
         std::vector<TypeParam> row_maxima(param.n);
-        TypeParam overall_maximum;
+        TypeParam overall_maximum[1];
         std::vector<TypeParam> column_minima(param.p);
         std::vector<TypeParam> row_minima(param.n);
-        TypeParam overall_minimum;
+        TypeParam overall_minimum[1];
         std::vector<TypeParam> column_lower_hinges(param.p);
         std::vector<TypeParam> row_lower_hinges(param.n);
-        TypeParam overall_lower_hinge;
+        TypeParam overall_lower_hinge[1];
         std::vector<TypeParam> column_upper_hinges(param.p);
         std::vector<TypeParam> row_upper_hinges(param.n);
-        TypeParam overall_upper_hinge;
+        TypeParam overall_upper_hinge[1];
 
         EXPECT_EQ(da_quantile(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                               param.q, column_quantiles.data(), param.quantile_type),
@@ -897,9 +897,9 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         EXPECT_ARR_NEAR(param.n, param.expected_row_quantiles.data(),
                         row_quantiles.data(), param.epsilon);
         EXPECT_EQ(da_quantile(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
-                              param.q, &overall_quantile, param.quantile_type),
+                              param.q, overall_quantile, param.quantile_type),
                   param.expected_status);
-        EXPECT_NEAR(param.expected_overall_quantile, overall_quantile, param.epsilon);
+        EXPECT_NEAR(param.expected_overall_quantile, overall_quantile[0], param.epsilon);
 
         EXPECT_EQ(da_five_point_summary(da_axis_col, param.n, param.p, param.x.data(),
                                         param.ldx, column_minima.data(),
@@ -934,16 +934,16 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
                         row_upper_hinges.data(), param.epsilon);
 
         EXPECT_EQ(da_five_point_summary(da_axis_all, param.n, param.p, param.x.data(),
-                                        param.ldx, &overall_minimum, &overall_lower_hinge,
-                                        &overall_median, &overall_upper_hinge,
-                                        &overall_maximum),
+                                        param.ldx, overall_minimum, overall_lower_hinge,
+                                        overall_median, overall_upper_hinge,
+                                        overall_maximum),
                   param.expected_status);
-        EXPECT_NEAR(param.expected_overall_minimum, overall_minimum, param.epsilon);
-        EXPECT_NEAR(param.expected_overall_maximum, overall_maximum, param.epsilon);
-        EXPECT_NEAR(param.expected_overall_median, overall_median, param.epsilon);
-        EXPECT_NEAR(param.expected_overall_lower_hinge, overall_lower_hinge,
+        EXPECT_NEAR(param.expected_overall_minimum, overall_minimum[0], param.epsilon);
+        EXPECT_NEAR(param.expected_overall_maximum, overall_maximum[0], param.epsilon);
+        EXPECT_NEAR(param.expected_overall_median, overall_median[0], param.epsilon);
+        EXPECT_NEAR(param.expected_overall_lower_hinge, overall_lower_hinge[0],
                     param.epsilon);
-        EXPECT_NEAR(param.expected_overall_upper_hinge, overall_upper_hinge,
+        EXPECT_NEAR(param.expected_overall_upper_hinge, overall_upper_hinge[0],
                     param.epsilon);
     }
 }

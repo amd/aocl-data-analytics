@@ -1198,7 +1198,7 @@ class data_store {
         status = concatenate_cols_csv(nrows, ncols, bl, col_major, false, C_data);
         if (status != da_status_success) {
             // LCOV_EXCL_START
-            cleanup = true;
+            // cleanup = true;
             status = da_error_trace(
                 err, da_status_internal_error,
                 "Unexpected error in concatenating columns");
@@ -1211,7 +1211,8 @@ class data_store {
             if (bl != nullptr) {
                 if (!C_data)
                     delete[] bl;
-                // else branch is only for char ** and will be freed in concatenate 
+                else
+                    free(bl);
             }
         }
         return status;

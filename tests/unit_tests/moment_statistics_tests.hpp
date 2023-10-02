@@ -607,10 +607,10 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
         TypeParam overall_stat[1];
         std::vector<TypeParam> column_stat2(param.p);
         std::vector<TypeParam> row_stat2(param.n);
-        TypeParam overall_stat2;
+        TypeParam overall_stat2[1];
         std::vector<TypeParam> column_stat3(param.p);
         std::vector<TypeParam> row_stat3(param.n);
-        TypeParam overall_stat3;
+        TypeParam overall_stat3[1];
 
         EXPECT_EQ(da_mean(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                           column_stat.data()),
@@ -673,10 +673,10 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
         EXPECT_ARR_NEAR(param.n, param.expected_row_variances.data(), row_stat2.data(),
                         param.epsilon);
         EXPECT_EQ(da_variance(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
-                              overall_stat, &overall_stat2),
+                              overall_stat, overall_stat2),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
-        EXPECT_NEAR(param.expected_overall_variance, overall_stat2, param.epsilon);
+        EXPECT_NEAR(param.expected_overall_variance, overall_stat2[0], param.epsilon);
 
         EXPECT_EQ(da_skewness(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                               column_stat.data(), column_stat2.data(),
@@ -698,11 +698,11 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
         EXPECT_ARR_NEAR(param.n, param.expected_row_skewnesses.data(), row_stat3.data(),
                         param.epsilon);
         EXPECT_EQ(da_skewness(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
-                              overall_stat, &overall_stat2, &overall_stat3),
+                              overall_stat, overall_stat2, overall_stat3),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
-        EXPECT_NEAR(param.expected_overall_variance, overall_stat2, param.epsilon);
-        EXPECT_NEAR(param.expected_overall_skewness, overall_stat3, param.epsilon);
+        EXPECT_NEAR(param.expected_overall_variance, overall_stat2[0], param.epsilon);
+        EXPECT_NEAR(param.expected_overall_skewness, overall_stat3[0], param.epsilon);
 
         EXPECT_EQ(da_kurtosis(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                               column_stat.data(), column_stat2.data(),
@@ -724,11 +724,11 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
         EXPECT_ARR_NEAR(param.n, param.expected_row_kurtoses.data(), row_stat3.data(),
                         param.epsilon);
         EXPECT_EQ(da_kurtosis(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
-                              overall_stat, &overall_stat2, &overall_stat3),
+                              overall_stat, overall_stat2, overall_stat3),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
-        EXPECT_NEAR(param.expected_overall_variance, overall_stat2, param.epsilon);
-        EXPECT_NEAR(param.expected_overall_kurtosis, overall_stat3, param.epsilon);
+        EXPECT_NEAR(param.expected_overall_variance, overall_stat2[0], param.epsilon);
+        EXPECT_NEAR(param.expected_overall_kurtosis, overall_stat3[0], param.epsilon);
 
         EXPECT_EQ(da_moment(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
                             param.k, 0, column_stat.data(), column_stat2.data()),
@@ -745,10 +745,10 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
         EXPECT_ARR_NEAR(param.n, param.expected_row_moments.data(), row_stat2.data(),
                         param.epsilon);
         EXPECT_EQ(da_moment(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
-                            param.k, 0, overall_stat, &overall_stat2),
+                            param.k, 0, overall_stat, overall_stat2),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
-        EXPECT_NEAR(param.expected_overall_moment, overall_stat2, param.epsilon);
+        EXPECT_NEAR(param.expected_overall_moment, overall_stat2[0], param.epsilon);
     }
 }
 
