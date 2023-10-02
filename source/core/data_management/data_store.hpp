@@ -1211,8 +1211,7 @@ class data_store {
             if (bl != nullptr) {
                 if (!C_data)
                     delete[] bl;
-                else
-                    free(bl);
+                // else branch is only for char ** and will be freed in concatenate 
             }
         }
         return status;
