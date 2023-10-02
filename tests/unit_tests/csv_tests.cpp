@@ -813,6 +813,11 @@ TEST(csvtest, no_data) {
     da_datastore_options_set_int(store, "CSV use header row", 1);
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
+    if (a != nullptr) {
+        // Added for coverity checks. Should not be exercised.
+        free(a);
+        a = nullptr;
+    }
     EXPECT_EQ(nrows, 0);
     EXPECT_EQ(ncols, 5);
     for (da_int j = 0; j < ncols; j++) {
@@ -835,6 +840,10 @@ TEST(csvtest, no_data) {
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 1), da_status_success);
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_parsing_error);
+    if (a != nullptr) {
+        free(a);
+        a = nullptr;
+    }
     EXPECT_EQ(nrows, 0);
     EXPECT_EQ(ncols, 0);
 
@@ -843,6 +852,10 @@ TEST(csvtest, no_data) {
               da_status_parsing_error);
     EXPECT_EQ(nrows, 0);
     EXPECT_EQ(ncols, 0);
+    if (a != nullptr) {
+        free(a);
+        a = nullptr;
+    }
 
     da_datastore_destroy(&store);
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
@@ -861,6 +874,10 @@ TEST(csvtest, no_data) {
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_file_reading_error);
+    if (a != nullptr) {
+        free(a);
+        a = nullptr;
+    }
 
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
@@ -870,6 +887,8 @@ TEST(csvtest, no_data) {
 
     if (a)
         free(a);
+    if (headings != nullptr)
+        da_csv::free_data(&headings, ncols);
 }
 
 TEST(CSVTest, lineterminator) {

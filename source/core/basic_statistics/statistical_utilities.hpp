@@ -14,7 +14,7 @@ template <typename T>
 da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shift,
                       T *scale) {
 
-    da_status status;
+    da_status status = da_status_success;
 
     if (ldx < n)
         return da_status_invalid_leading_dimension;
@@ -57,7 +57,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
 
         status = variance(axis, n, p, x, ldx, amean, var);
         if (status != da_status_success)
-            return status;
+            goto exit;
 
         for (da_int i = 0; i < length; i++) {
             var[i] = std::sqrt(var[i]);
@@ -116,13 +116,14 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
 
         break;
     default:
-        return da_status_internal_error; // LCOV_EXCL_LINE
-        break;
+        status = da_status_internal_error; // LCOV_EXCL_LINE
+        goto exit; // LCOV_EXCL_LINE
     }
 
+exit:
     delete[] amean;
     delete[] var;
-    return da_status_success;
+    return status;
 }
 
 } // namespace da_basic_statistics

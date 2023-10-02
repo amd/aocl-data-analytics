@@ -233,6 +233,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
         iprint = 100;
         break;
     default:
+        delete w;
         return da_error(&err, da_status_internal_error, "print level is out of range");
     }
 
