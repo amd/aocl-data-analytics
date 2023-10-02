@@ -168,6 +168,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
         modname = "log";
         break;
     default:
+        da_handle_destroy(&linmod_handle);
         FAIL() << "Unknown model\n";
         break;
     }
