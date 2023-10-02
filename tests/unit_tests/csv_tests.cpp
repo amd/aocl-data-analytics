@@ -738,12 +738,20 @@ TEST(csvtest, error_exits) {
 
     EXPECT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
               da_status_parsing_error);
+    if (a_double != nullptr) {
+        free(a_double);
+        a_double = nullptr;
+    }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
+    if (a_int != nullptr) {
+        free(a_int);
+        a_int = nullptr;
+    }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
@@ -758,12 +766,20 @@ TEST(csvtest, error_exits) {
 
     EXPECT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
               da_status_parsing_error);
+    if (a_double != nullptr) {
+        free(a_double);
+        a_double = nullptr;
+    }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
+    if (a_int != nullptr) {
+        free(a_int);
+        a_int = nullptr;
+    }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
@@ -774,6 +790,10 @@ TEST(csvtest, error_exits) {
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
     EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
+    if (a_int != nullptr) {
+        free(a_int);
+        a_int = nullptr;
+    }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
@@ -781,6 +801,10 @@ TEST(csvtest, error_exits) {
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 4), da_status_success);
     EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
               da_status_parsing_error);
+    if (a_int != nullptr) {
+        free(a_int);
+        a_int = nullptr;
+    }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
@@ -788,9 +812,9 @@ TEST(csvtest, error_exits) {
     da_datastore_destroy(&store);
     da_datastore_destroy(&store);
 
-    if (a)
+    if (a != nullptr)
         free(a);
-    if (a_double)
+    if (a_double != nullptr)
         free(a_double);
 }
 
