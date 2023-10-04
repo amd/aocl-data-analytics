@@ -52,7 +52,8 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 1. Install Visual Studio 2022 (the free version, which also comes with Ninja, CMake and clang) and the Intel Fortran compiler for Windows
 
-2. Make sure you have set the AOCL_ROOT environment variable to your AOCL installation directory (e.g. C:\Users\username\AOCL-4.0) and INTEL_FCOMPILER to the location of the Intel fortran compiler (e.g. C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows)
+2. Make sure you have set the AOCL_ROOT environment variable to your AOCL installation directory (e.g. C:\Users\username\AOCL-4.0) and INTEL_FCOMPILER to the location of the Intel fortran compiler (e.g. C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows). You can also update your PATH to take in the relevant BLAS and LAPACK libraries e.g.
+set PATH=C:\path\to\AOCL\amd-blis\lib\LP64;C:\path\to\AOCL\amd-libflame\lib\LP64;%PATH%
 
 3. In your checkout create a directory called build
 
@@ -80,7 +81,7 @@ Note that not all the options available in Linux are available in Windows
 
 * In your powershell type devenv .\AOCL-DA.sln /build "Debug" to build the solution (change to Release as appropriate) 
 
-8. Depending on your particular environment variables, the compiled executables may only work if the Blis and Flame dlls are in the same directory so you might need to copy AOCL-LibBlis-Win-MT-dll.dll and AOCL-LibFlame-Win-MT-dll.dll into, for example, C:\path\to\aocl-da\build\tests\gtests\Debug
+8. Depending on whether BLAS/LAPACK libraries are on your PATH, the compiled executables may only work if the BLAS and LAPACK dlls are in the same directory so you might need to copy AOCL-LibBlis-Win-MT-dll.dll and AOCL-LibFlame-Win-MT-dll.dll into, for example, C:\path\to\aocl-da\build\tests\gtests\Debug
 
 9. Use ctest in your powershell/command prompt window to run the tests
 
