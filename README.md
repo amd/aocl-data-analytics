@@ -91,9 +91,9 @@ set INCLUDE=%INCLUDE%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.
 
 11. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following command:
 cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
-(optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja. You can also specify an install directory, using -DCMAKE_INSTALL_PREFIX, and build with ninja install.
+(optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja. You can also specify an install directory, using -DCMAKE_INSTALL_PREFIX, and build with ninja install. Depending on your system, you may also need to contact IT to enable registry editing on your machine.
 
-12. Note also that it is possible to build with shared libraries on Windows by adding -DBUILD_SHARED_LIBS=ON to the cmake command. However, you must ensure that your Windows PATH environemnt variable contains all the folders where cmake will put dlls (gtest, da_core, lbfgsb, etc.). Furthermore, gtest is unable to discover tests and add them to the ctests due to an issue with gtest and shared library dependencies on Windows.
+12. Note also that it is possible to build with shared libraries on Windows by adding -DBUILD_SHARED_LIBS=ON to the cmake command. However, gtest is unable to discover tests and add them to the ctests due to an issue with gtest and shared library dependencies on Windows, so not all tests will run.
 
 ## Building on Windows using the GCC toolchain
 

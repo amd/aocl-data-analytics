@@ -57,7 +57,18 @@ set(EXAMPLE_EXES
     datastore
     decision_tree)
 
-# add all example programs to CTEST
+# For Windows shared library builds copying some relevant DLLs into the examples bin folder enables ctest to run without needing to update PATH
+if (WIN32 AND BUILD_SHARED_LIBS)
+  foreach(EXAMPLE_EXE ${EXAMPLE_EXES})
+    add_custom_command(
+        TARGET ${EXAMPLE_EXE} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:${EXAMPLE_EXE}> $<TARGET_FILE_DIR:${EXAMPLE_EXE}>
+        COMMAND_EXPAND_LISTS
+	)
+  endforeach()
+endif ()
+
+# Add all example programs to CTEST
 foreach(EX_NAME ${EXAMPLE_EXES})
   string(CONCAT TNAME ${EX_NAME} "_ex")
   add_test(${TNAME} ${EX_NAME})

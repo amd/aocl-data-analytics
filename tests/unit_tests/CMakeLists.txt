@@ -90,15 +90,34 @@ endif()
 add_executable(printf_debug printf_debug.cpp)
 target_link_libraries(printf_debug aocl-da)
 
-gtest_discover_tests(basic_stats)
-gtest_discover_tests(csv)
-gtest_discover_tests(linmod)
-gtest_discover_tests(decision_forest)
-gtest_discover_tests(option_registry)
-gtest_discover_tests(data)
-gtest_discover_tests(interval_map)
-gtest_discover_tests(errors_tests)
-gtest_discover_tests(pca)
+set(GTEST_EXES
+    basic_stats
+	csv
+	linmod
+	decision_forest
+	option_registry
+	data
+	interval_map
+	errors_tests
+	pca
+)
+
+# For Windows shared library builds copying some relevant DLLs into the unit_tests bin folder enables ctest to run without needing to update PATH
+if (WIN32 AND BUILD_SHARED_LIBS)
+  foreach(GTEST_EXE ${GTEST_EXES})
+    add_custom_command(
+        TARGET ${GTEST_EXE} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_RUNTIME_DLLS:${GTEST_EXE}> $<TARGET_FILE_DIR:${GTEST_EXE}>
+        COMMAND_EXPAND_LISTS
+	)
+	# gtest_discover_tests does not work on Windows shared library builds - this is the best we can do for now
+	add_test(${GTEST_EXE} ${GTEST_EXE})
+  endforeach()
+endif ()
+
+foreach(GTEST_EXE ${GTEST_EXES})
+    gtest_discover_tests(${GTEST_EXE})
+endforeach()
 
 # Add unit test programs that are not gtest programs to CTEST
 string(CONCAT TNAME printf_debug "_ex")
