@@ -9,7 +9,7 @@ then
     WORKSPACE=$(pwd)
 fi
 BUILD_DIR="build"
-JOB_THREADS=5
+THREADS=5
 
 # default compiler
 CC=gcc
@@ -24,6 +24,7 @@ ILP64="OFF"
 COVERAGE="OFF"
 UNIT_TESTS="ON"
 VALGRIND="OFF"
+TARGET="all"
 
 while [ "${1:-}" != "" ]
 do 
@@ -48,6 +49,15 @@ do
         ;;
     "--valgrind")
         VALGRIND="ON"
+        ;;
+    "--target")
+        if [[ "$2" == "" ]] || [[ $2 =~ ^-.* ]]
+        then
+            echo "ERROR: A valid target must be provided after the option --target"
+            exit 1
+        fi
+        TARGET="$2"
+        shift 1
         ;;
     "--build")
         if [[ "$2" == "" ]] || [[ $2 =~ ^-.* ]]
@@ -111,7 +121,8 @@ do
             echo "ERROR: A valid number must be provided after the option --parallel"
             exit 1
         fi
-        JOB_THREADS=$2
+        THREADS=$2
+        shift 1
         ;;
     *)
         echo "Unrecognized build option $1. EXITING"
@@ -174,6 +185,6 @@ rm -rf ${BUILD_DIR}
 git clone -b amd-main ssh://gerritgit/cpulibraries/er/aocl-da
 cmake S aocl-da -B ${BUILD_DIR} ${CMAKE_COMPILERS} ${CMAKE_OPTIONS}
 cd ${BUILD_DIR}
-cmake --build . --target all --parallel ${JOB_THREADS}
-ctest -j ${JOB_THREADS}
+cmake --build . --target ${TARGET} --parallel ${THREADS}
+ctest -j ${THREADS}
 
