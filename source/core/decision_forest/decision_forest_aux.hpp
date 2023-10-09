@@ -6,7 +6,7 @@ T no_split_score(uint8_t *y, da_int n, uint8_t &y_pred,
                  std::function<T(T, da_int, T, da_int)> score_fun) {
     float acc_r = 0.0;
 
-    for (int idx = 0; idx < n; idx++) {
+    for (da_int idx = 0; idx < n; idx++) {
         acc_r += y[idx];
     }
 

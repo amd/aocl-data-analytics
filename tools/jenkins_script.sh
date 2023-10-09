@@ -19,7 +19,8 @@ USAGE="$(basename "$0") [options]
 --aocl_path       - Specify the path to AOCL libraries. take ACOL_PATH enviorment variable if not set.
 --spack_path path - Specify the spack path. 
                     Either the option or SPACK_PATH must be set if using the --gnu_version option
---parallel nthreads - Specify the number of threads to use. Default is 1        
+--parallel nthreads - Specify the number of threads to use. Default is 1      
+--verbose         - Build with verbose compilation commands   
 "
 
 # Clean up the existing path
@@ -48,6 +49,7 @@ UNIT_TESTS="ON"
 VALGRIND="OFF"
 TARGET="all"
 SHARED="OFF"
+VERBOSE=""
 
 while [ "${1:-}" != "" ]
 do 
@@ -75,6 +77,9 @@ do
         ;;
     "--shared")
         SHARED="ON"
+        ;;
+    "--verbose")
+        VERBOSE="--verbose"
         ;;
     "--target")
         if [[ "$2" == "" ]] || [[ $2 =~ ^-.* ]]
@@ -233,7 +238,7 @@ fi
 cd ${BUILD_DIR}
 if [[ $COVERAGE=="ON" ]]
 then
-    cmake --build . --target coverage --parallel ${THREADS}
+    cmake --build . --target coverage --parallel ${THREADS} 
 fi
-cmake --build . --target ${TARGET} --parallel ${THREADS}
+cmake --build . --target ${TARGET} --parallel ${THREADS} ${VERBOSE}
 ctest -j ${THREADS}

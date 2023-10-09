@@ -324,10 +324,9 @@ template <typename T> da_status decision_tree<T>::fit() {
                 score = min_score;
                 split_node = 0;
 
-                for (int i=0; i < (d-2); i++)
-                {
+                for (da_int i = 0; i < (d - 2); i++) {
                     std::uniform_int_distribution<int> uniform_dist(i, d-1);
-                    int j = uniform_dist(mt_gen);
+                    da_int j = uniform_dist(mt_gen);
                     DA_PRINTF_DEBUG("Randomly-chosen uniform int: " DA_INT_FMT " \n", j);
                     std::swap(shuff_vec[i], shuff_vec[j]);
                 }
@@ -542,13 +541,13 @@ da_status decision_forest<T>::sample_feature_ind(da_int n_features, da_int n_sam
 
     double top = N-n_samples;
     double Nreal = N;
-    int idx0 = -1;
+    da_int idx0 = -1;
     std::vector<int> subsample(n_samples);
 
-    int i=0;
-    int n = n_samples;
+    da_int i = 0;
+    da_int n = n_samples;
     double v, quot;
-    int S;
+    da_int S;
 
     auto uniform_real_dist = std::uniform_real_distribution<double>(0.0, 1.0);
 
@@ -587,33 +586,29 @@ da_status decision_forest<T>::sample_feature_ind(da_int n_features, da_int n_sam
 
     printf("\n");
     printf("Sequential sample from unshuffled vector: \n");
-    for (int i=0; i < n_samples; i++)
-    {
+    for (da_int i = 0; i < n_samples; i++) {
         printf("%2d, ", subsample[i]);
     }
     printf("\n\n");
 
     // std::vector<int> samples(n_samples);
-    for (int i=0; i < n_samples; i++)
-    {
+    for (da_int i = 0; i < n_samples; i++) {
         samples[i] = subsample[i];
     }
 
     // Shuffle algorithm
     std::uniform_int_distribution<int> uniform_dist(0, n_samples-1);
 
-    for (int i=0; i < (n_samples-2); i++)
-    {
+    for (da_int i = 0; i < (n_samples - 2); i++) {
         uniform_dist = std::uniform_int_distribution<int>(i, n_samples-1);
-        int j = uniform_dist(mt_gen);
+        da_int j = uniform_dist(mt_gen);
         printf("Randomly-chosen uniform int: %2d \n", j);
         std::swap(samples[i], samples[j]);
     }
 
     printf("\n");
     printf("Shuffled sequential sample: \n");
-    for (int i=0; i < n_samples; i++)
-    {
+    for (da_int i = 0; i < n_samples; i++) {
         printf("%2d, ", samples[i]);
     }
 
@@ -633,8 +628,7 @@ da_status decision_forest<T>::sample_obs_ind(da_int n_obs, da_int n_samples,
 
     std::uniform_int_distribution<int> uniform_dist(0, n_obs - 1);
 
-    for(int i=0; i < n_samples; i++)
-    {
+    for (da_int i = 0; i < n_samples; i++) {
         obs_ind[i] = uniform_dist(mt_gen);
     }
 
@@ -651,8 +645,8 @@ da_status decision_forest<T>::fit_tree()
     opts.get("n_obs_per_tree", n_obs_per_tree);
     opts.get("n_features_per_tree", n_features_per_tree);
 
-    std::vector<int> obs_ind(n_obs_per_tree);
-    std::vector<int> feature_ind(n_features_per_tree);
+    std::vector<da_int> obs_ind(n_obs_per_tree);
+    std::vector<da_int> feature_ind(n_features_per_tree);
 
     sample_obs_ind(n_obs, n_obs_per_tree, obs_ind.data() );
     sample_feature_ind(n_obs, n_features_per_tree, feature_ind.data() );
@@ -660,12 +654,10 @@ da_status decision_forest<T>::fit_tree()
     std::vector<T> xr(n_obs_per_tree * n_features_per_tree);
     std::vector<uint8_t> yr(n_obs_per_tree);
 
-    for (int i=0; i < n_obs_per_tree; i++)
-    {
-        for (int j=0; j < n_features_per_tree; j++)
-        {
-            int ii = obs_ind[i];
-            int jj = feature_ind[j];
+    for (da_int i = 0; i < n_obs_per_tree; i++) {
+        for (da_int j = 0; j < n_features_per_tree; j++) {
+            da_int ii = obs_ind[i];
+            da_int jj = feature_ind[j];
             xr[i * n_features_per_tree + j ] = x[ii * d + jj ];
             yr[i] = y[ii];
         }
@@ -693,8 +685,7 @@ da_status decision_forest<T>::fit()
     da_int n_trees;
     opts.get("n_trees", n_trees);
 
-    for (int k=0; k < n_trees; k++)
-    {
+    for (da_int k = 0; k < n_trees; k++) {
         status = fit_tree();
     }
 
