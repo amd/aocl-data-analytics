@@ -26,6 +26,7 @@ project(aoclda-doc)
 
 find_package(Doxygen REQUIRED)
 find_package(LATEX REQUIRED)
+find_program(LATEXMK NAMES latexmk REQUIRED)
 find_program(SED NAMES sed REQUIRED)
 find_program(GREP NAMES grep REQUIRED)
 find_program(SORT NAMES sort REQUIRED)
