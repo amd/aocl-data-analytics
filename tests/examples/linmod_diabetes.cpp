@@ -49,6 +49,9 @@
  * extract data, but it can be directly loaded using
  * dense matrices using e.g., da_read_csv_d API.
  */
+#ifndef DATA_DIR
+#define DATA_DIR "data"
+#endif
 
 int main() {
 

@@ -28,23 +28,23 @@ include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
 # FIXME: data files need also to be copied at installation of DA
 
-add_executable(lbfgsb_rc lbfgsb_rc.cpp)
-target_include_directories(
-  lbfgsb_rc
-  PRIVATE ${CMAKE_SOURCE_DIR}/source/core/drivers
-          ${CMAKE_SOURCE_DIR}/source/core/optimization
-          ${CMAKE_SOURCE_DIR}/source/core/utilities
-          ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
-target_link_libraries(lbfgsb_rc aocl-da)
+#add_executable(lbfgsb_rc lbfgsb_rc.cpp)
+#target_include_directories(
+#  lbfgsb_rc
+#  PRIVATE ${CMAKE_SOURCE_DIR}/source/core/drivers
+#          ${CMAKE_SOURCE_DIR}/source/core/optimization
+#          ${CMAKE_SOURCE_DIR}/source/core/utilities
+#          ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
+#target_link_libraries(lbfgsb_rc aocl-da)
 
-add_executable(lbfgsb_fcomm lbfgsb_fcomm.cpp)
-target_include_directories(
-  lbfgsb_fcomm
-  PRIVATE ${CMAKE_SOURCE_DIR}/source/core/optimization
-          ${CMAKE_SOURCE_DIR}/source/core/utilities
-          ${CMAKE_SOURCE_DIR}/source/core/drivers
-          ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
-target_link_libraries(lbfgsb_fcomm aocl-da)
+#add_executable(lbfgsb_fcomm lbfgsb_fcomm.cpp)
+#target_include_directories(
+#  lbfgsb_fcomm
+#  PRIVATE ${CMAKE_SOURCE_DIR}/source/core/optimization
+#          ${CMAKE_SOURCE_DIR}/source/core/utilities
+#          ${CMAKE_SOURCE_DIR}/source/core/drivers
+#          ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
+# target_link_libraries(lbfgsb_fcomm aocl-da)
 
 add_executable(basic_statistics basic_statistics.cpp)
 target_link_libraries(basic_statistics aocl-da)
@@ -58,7 +58,7 @@ target_link_libraries(reglinear_model aocl-da)
 add_executable(linmod_diabetes linmod_diabetes.cpp)
 target_link_libraries(linmod_diabetes aocl-da)
 target_compile_definitions(
-  linmod_diabetes PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
+  linmod_diabetes PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(datastore datastore.cpp)
 target_link_libraries(datastore aocl-da)
@@ -78,8 +78,6 @@ set(EXAMPLE_EXES
     linear_model
     linmod_diabetes
     basic_statistics
-    lbfgsb_rc
-    lbfgsb_fcomm
     datastore
     decision_tree)
 

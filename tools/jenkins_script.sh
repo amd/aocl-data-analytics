@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without modification,
@@ -23,9 +25,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # 
 
-
-#!/bin/bash
-
 USAGE="$(basename "$0") [options]
 
 --help            - Print this message
@@ -36,6 +35,7 @@ USAGE="$(basename "$0") [options]
 --no_unit_tests   - Disable the unit tests. ON by defaults
 --valgrind        - Enable valgrind utilities. OFF by default
 --shared          - build shared libraries. OFF by default
+--omp             - Build SMP library. OFF by default
 --target target   - Secify which target to build. all by default.
 --build folder    - Spcify the build folder. build by default
 --compiler comp   - Secify the compiler to use, can be gnu or aocc. gcc by default
@@ -76,6 +76,7 @@ VALGRIND="OFF"
 TARGET="all"
 SHARED="OFF"
 VERBOSE=""
+OMP="OFF"
 
 while [ "${1:-}" != "" ]
 do 
@@ -103,6 +104,9 @@ do
         ;;
     "--shared")
         SHARED="ON"
+        ;;
+    "--omp")
+        OMP="ON"
         ;;
     "--verbose")
         VERBOSE="--verbose"
@@ -240,7 +244,7 @@ then
     exit 1
 fi
 
-CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DASAN=${ASAN} -DBUILD_ILP64=${ILP64} -DCOVERAGE=${COVERAGE} -DBUILD_GTEST=${UNIT_TESTS} -DVALGRIND=${VALGRIND} -DBUILD_SHARED_LIBS=${SHARED}"
+CMAKE_OPTIONS="-DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DASAN=${ASAN} -DBUILD_ILP64=${ILP64} -DCOVERAGE=${COVERAGE} -DBUILD_GTEST=${UNIT_TESTS} -DVALGRIND=${VALGRIND} -DBUILD_SHARED_LIBS=${SHARED} -DBUILD_SMP=${OMP}"
 CMAKE_COMPILERS="-DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_Fortran_COMPILER=${FC}"
 
 echo "Work space     : ${WORKSPACE}"

@@ -348,7 +348,9 @@ install(FILES License
 )
 install(DIRECTORY tests/examples/
     DESTINATION examples
-    FILES_MATCHING PATTERN "*.cpp"
+    FILES_MATCHING 
+    PATTERN "*.cpp"
+    PATTERN "*.csv"
 )
 install(FILES tests/examples/README.txt
     DESTINATION examples
