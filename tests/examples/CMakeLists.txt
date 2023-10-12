@@ -1,5 +1,5 @@
 # Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -10,7 +10,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 # 
-
 
 include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
@@ -65,10 +64,10 @@ target_link_libraries(datastore aocl-da)
 target_compile_definitions(
   datastore PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
-add_executable(decision_tree decision_tree.cpp)
-target_link_libraries(decision_tree aocl-da)
+add_executable(decision_tree_ex decision_tree_ex.cpp)
+target_link_libraries(decision_tree_ex aocl-da)
 target_compile_definitions(
-  decision_tree PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
+  decision_tree_ex PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 
 add_executable(basic_pca basic_pca.cpp)
 target_link_libraries(basic_pca aocl-da)
@@ -79,7 +78,7 @@ set(EXAMPLE_EXES
     linmod_diabetes
     basic_statistics
     datastore
-    decision_tree)
+    decision_tree_ex)
 
 # For Windows shared library builds copying some relevant DLLs into the examples bin folder enables ctest to run without needing to update PATH
 if (WIN32 AND BUILD_SHARED_LIBS)

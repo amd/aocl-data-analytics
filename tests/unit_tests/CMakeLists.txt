@@ -77,6 +77,14 @@ endif()
 target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 
+add_executable(decision_tree decision_tree_tests.cpp)
+target_link_libraries(decision_tree aocl-da gtest_main)
+if(WIN32)
+  target_link_libraries(decision_tree "$ENV{LIBIFCORE}")
+endif()
+target_compile_definitions(
+  decision_tree PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+
 add_executable(decision_forest decision_forest_tests.cpp)
 target_link_libraries(decision_forest aocl-da gtest_main)
 if(WIN32)

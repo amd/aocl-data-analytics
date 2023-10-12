@@ -88,18 +88,25 @@ TEST(decision_forest, cpp_api_sample_features) {
     float *x = nullptr;
     uint8_t *y = nullptr;
     da_int n_obs = 0, d = 0, nrows_y = 0, ncols_y = 0;
+    // read in x (row major)
     status = da_read_csv_s(csv_handle, features_fp, &x, &n_obs, &d, nullptr);
+    // read in y
     status = da_read_csv_uint8(csv_handle, labels_fp, &y, &nrows_y, &ncols_y, nullptr);
+
+    // convert x from row major to column major
 
     // Initialize the decision forest class and fit model
     da_handle df_handle = nullptr;
     status = da_handle_init_s(&df_handle, da_handle_decision_forest);
 
-    status = da_options_set_int(df_handle, "n_features", d);
     status = da_options_set_int(df_handle, "n_obs_per_tree", 100);
     status = da_options_set_int(df_handle, "n_features_per_tree", 3);
     status = da_options_set_int(df_handle, "n_trees", 4);
-    status = da_df_set_training_data_s(df_handle, n_obs, x, y);
+
+    // copy x and y into df class members and convert x, y from row major to column major
+    // ldx is leading domension of column-major input
+    // (i.e. stride between columns in 2-d column-major array)
+    status = da_df_set_training_data_s(df_handle, n_obs, d, x, n_obs, y);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {

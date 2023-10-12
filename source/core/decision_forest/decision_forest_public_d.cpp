@@ -29,8 +29,8 @@
 #include "da_handle.hpp"
 #include "decision_forest.hpp"
 
-da_status da_df_tree_set_training_data_d(da_handle handle, da_int n_obs,
-                                    double *x, uint8_t *y) {
+da_status da_df_tree_set_training_data_d(da_handle handle, da_int n_obs, da_int n_features,
+                                    double *x, da_int ldx, uint8_t *y) {
     if (!handle)
         return da_status_invalid_input;
     if (handle->precision != da_double)
@@ -38,7 +38,7 @@ da_status da_df_tree_set_training_data_d(da_handle handle, da_int n_obs,
     if (handle->dt_d == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->dt_d->set_training_data(n_obs, x, y);
+    return handle->dt_d->set_training_data(n_obs, n_features, x, ldx, y);
 }
 
 da_status da_df_tree_fit_d(da_handle handle) {

@@ -67,13 +67,13 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_decision_tree:
         try {
-            (*handle)->dt_d = new decision_tree<double>();
+            (*handle)->dt_d = new decision_tree<double>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
     case da_handle_decision_forest:
         try {
-            (*handle)->df_d = new decision_forest<double>();
+            (*handle)->df_d = new decision_forest<double>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
@@ -128,13 +128,13 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_decision_tree:
         try {
-            (*handle)->dt_s = new decision_tree<float>();
+            (*handle)->dt_s = new decision_tree<float>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
     case da_handle_decision_forest:
         try {
-            (*handle)->df_s = new decision_forest<float>();
+            (*handle)->df_s = new decision_forest<float>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }

@@ -70,8 +70,7 @@ int decision_tree_ex_d(std::string score_criteria) {
     // Initialize the decision tree class and fit model
     df_handle = nullptr;
     status = da_handle_init_d(&df_handle, da_handle_decision_tree);
-    status = da_options_set_int(df_handle, "n_features", d);
-    status = da_df_tree_set_training_data_d(df_handle, n_obs, x, y);
+    status = da_df_tree_set_training_data_d(df_handle, n_obs, d, x, n_obs, y);
 
     status = da_options_set_int(df_handle, "depth", 5);
     status = da_options_set_int(df_handle, "seed", 77);
@@ -197,8 +196,7 @@ int decision_tree_ex_s(std::string score_criteria) {
     // Initialize the decision tree class and fit model
     df_handle = nullptr;
     status = da_handle_init_s(&df_handle, da_handle_decision_tree);
-    status = da_options_set_int(df_handle, "n_features", d);
-    status = da_df_tree_set_training_data_s(df_handle, n_obs, x, y);
+    status = da_df_tree_set_training_data_s(df_handle, n_obs, d, x, n_obs, y);
 
     status = da_options_set_int(df_handle, "depth", 5);
     status = da_options_set_int(df_handle, "seed", 77);
@@ -298,7 +296,14 @@ int main(int argc, char **argv) {
 
     int exit_code = 0;
     exit_code = decision_tree_ex_d(score_criteria);
+    if (exit_code != 0){
+        return exit_code;
+    }
+
     exit_code = decision_tree_ex_s(score_criteria);
+    if (exit_code != 0){
+        return exit_code;
+    }
 
     return exit_code;
 }

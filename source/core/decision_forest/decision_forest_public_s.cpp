@@ -29,8 +29,8 @@
 #include "da_handle.hpp"
 #include "decision_forest.hpp"
 
-da_status da_df_tree_set_training_data_s(da_handle handle, da_int n_obs,
-                                    float *x, uint8_t *y) {
+da_status da_df_tree_set_training_data_s(da_handle handle, da_int n_obs, da_int n_features,
+                                    float *x, da_int ldx, uint8_t *y) {
     if (!handle)
         return da_status_invalid_input;
     if (handle->precision != da_single)
@@ -38,7 +38,7 @@ da_status da_df_tree_set_training_data_s(da_handle handle, da_int n_obs,
     if (handle->dt_s == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->dt_s->set_training_data(n_obs, x, y);
+    return handle->dt_s->set_training_data(n_obs, n_features, x, ldx, y);
 }
 
 da_status da_df_tree_fit_s(da_handle handle) {
@@ -98,8 +98,8 @@ da_status da_df_tree_score_s(da_handle handle, da_int n_obs, float *x,
 //     return handle->df_s->bootstrap_obs(n_trees, d);
 // }
 
-da_status da_df_set_training_data_s(da_handle handle, da_int n_obs,
-                                    float *x, uint8_t *y) {
+da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_features,
+                                    float *x, da_int ldx, uint8_t *y) {
     if (!handle)
         return da_status_invalid_input;
     if (handle->precision != da_single)
@@ -107,7 +107,7 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs,
     if (handle->df_s == nullptr)
         return da_status_invalid_pointer;
 
-    return handle->df_s->set_training_data(n_obs, x, y);
+    return handle->df_s->set_training_data(n_obs, n_features, x, ldx, y);
 }
 
 da_status da_df_fit_s(da_handle handle) {
