@@ -54,6 +54,7 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 2. Make sure you have set the AOCL_ROOT environment variable to your AOCL installation directory (e.g. C:\Users\username\AOCL-4.0) and INTEL_FCOMPILER to the location of the Intel fortran compiler (e.g. C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows). You can also update your PATH to take in the relevant BLAS and LAPACK libraries e.g.
 set PATH=C:\path\to\AOCL\amd-blis\lib\LP64;C:\path\to\AOCL\amd-libflame\lib\LP64;%PATH%
+It is most likely to work if BLAS and LAPACK are installed within your user directory rather than e.g. Program Files.
 
 3. In your checkout create a directory called build
 

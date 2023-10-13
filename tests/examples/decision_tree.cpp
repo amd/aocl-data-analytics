@@ -29,6 +29,10 @@
 #include <iostream>
 #include <vector>
 
+#ifndef DATA_DIR
+#define DATA_DIR "data"
+#endif
+
 int decision_tree_ex_d(std::string score_criteria) {
     int exit_code = 0;
     double tol = 1.0e-6;
@@ -48,12 +52,12 @@ int decision_tree_ex_d(std::string score_criteria) {
     status = da_datastore_init(&csv_handle);
 
     char features_fp[256] = DATA_DIR;
-    strcat(features_fp, "df_data/");
+    strcat(features_fp, "/df_data/");
     strcat(features_fp, "training_features");
     strcat(features_fp, ".csv");
 
     char labels_fp[256] = DATA_DIR;
-    strcat(labels_fp, "df_data/");
+    strcat(labels_fp, "/df_data/");
     strcat(labels_fp, "training_labels");
     strcat(labels_fp, ".csv");
 
@@ -84,12 +88,12 @@ int decision_tree_ex_d(std::string score_criteria) {
 
     // Read in data for making predictions
     char test_features_fp[256] = DATA_DIR;
-    strcat(test_features_fp, "df_data/");
+    strcat(test_features_fp, "/df_data/");
     strcat(test_features_fp, "test_features");
     strcat(test_features_fp, ".csv");
 
     char test_labels_fp[256] = DATA_DIR;
-    strcat(test_labels_fp, "df_data/");
+    strcat(test_labels_fp, "/df_data/");
     strcat(test_labels_fp, "test_labels");
     strcat(test_labels_fp, ".csv");
 
@@ -175,12 +179,12 @@ int decision_tree_ex_s(std::string score_criteria) {
     status = da_datastore_init(&csv_handle);
 
     char features_fp[256] = DATA_DIR;
-    strcat(features_fp, "df_data/");
+    strcat(features_fp, "/df_data/");
     strcat(features_fp, "training_features");
     strcat(features_fp, ".csv");
 
     char labels_fp[256] = DATA_DIR;
-    strcat(labels_fp, "df_data/");
+    strcat(labels_fp, "/df_data/");
     strcat(labels_fp, "training_labels");
     strcat(labels_fp, ".csv");
 
@@ -211,12 +215,12 @@ int decision_tree_ex_s(std::string score_criteria) {
 
     // Read in data for making predictions
     char test_features_fp[256] = DATA_DIR;
-    strcat(test_features_fp, "df_data/");
+    strcat(test_features_fp, "/df_data/");
     strcat(test_features_fp, "test_features");
     strcat(test_features_fp, ".csv");
 
     char test_labels_fp[256] = DATA_DIR;
-    strcat(test_labels_fp, "df_data/");
+    strcat(test_labels_fp, "/df_data/");
     strcat(test_labels_fp, "test_labels");
     strcat(test_labels_fp, ".csv");
 

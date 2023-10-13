@@ -30,6 +30,10 @@
 #include <string>
 #include <vector>
 
+#ifndef DATA_DIR
+#define DATA_DIR "data"
+#endif
+
 int main() {
     std::cout << "----------------------------------------" << std::endl;
     std::cout << "Load data from csv file" << std::endl;

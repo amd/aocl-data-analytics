@@ -63,12 +63,12 @@ target_compile_definitions(
 add_executable(datastore datastore.cpp)
 target_link_libraries(datastore aocl-da)
 target_compile_definitions(
-  datastore PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
+  datastore PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(decision_tree decision_tree.cpp)
 target_link_libraries(decision_tree aocl-da)
 target_compile_definitions(
-  decision_tree PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+  decision_tree PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 
 add_executable(basic_pca basic_pca.cpp)
 target_link_libraries(basic_pca aocl-da)
