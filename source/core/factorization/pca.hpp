@@ -30,6 +30,7 @@
 #include "aoclda_pca.h"
 #include "basic_handle.hpp"
 #include "callbacks.hpp"
+#include "da_cblas.hh"
 #include "da_error.hpp"
 #include "lapack_templates.hpp"
 #include "options.hpp"
@@ -37,460 +38,581 @@
 #include <iostream>
 #include <string.h>
 
-/*
-    data struct required to compute pca using 
-    svd method 
-*/
-template <typename T> struct pca_usr_data_svd {
-    T *colmean = nullptr; //Store Column Mean of X
-    T *u = nullptr;
-    T *sigma = nullptr;
-    T *vt = nullptr;
-    T *work = nullptr;
-    // A needs to be copied as lapack's dgesvd modifies the matrix
-    T *A = nullptr;
-    da_int *iwork = nullptr;
-};
+namespace da_pca {
 
-/* 
-    TODO: Yet to define internal data struct required to
-    compute pca using correlation method
-*/
-template <typename T> struct pca_usr_data_corr {};
-
-/* PCA Results data struct  */
-template <typename T> struct pca_results {
-    T *scores = nullptr;     /*U*Sigma*/
-    T *components = nullptr; /*Vt*/
-    T *variance = nullptr;   /*S**2*/
-    T total_variance = 0;    /*Sum((MeanCentered X [][])**2)*/
-};
-
-/* PCA Internal Class */
+/* PCA class */
 template <typename T> class da_pca : public basic_handle<T> {
   private:
-    /*n_samples x n_features = (nxp) */
+    // n x p (samples x features)
     da_int n = 0;
     da_int p = 0;
-    da_int lda = 0;
 
-    /*Set true when init done*/
+    // If we go on to transform another data matrix, store the number of rows here
+    da_int m = 0;
+
+    // If we go on to compute the inverse transform of another data matrix, store the number of rows here
+    da_int k = 0;
+
+    // Set true when initialization is complete
     bool initdone = false;
 
-    /*Set true when compute done successfully*/
+    // Set true when PCA is computed successfully
     bool iscomputed = false;
 
-    /*Define default pca compute method to svd*/
-    pca_comp_method method = pca_method_svd;
+    // Correlation or covariance based PCA
+    pca_method method = pca_method_cov;
 
-    /*Define default pca compute method to svd*/
+    // Sign flip flag for consistency with sklearn results
     bool svd_flip_u_based = true;
 
-    /*Defult number of output Components */
-    da_int npc = 5;
+    // Number of principal components requested
+    da_int npc = 1;
 
-    /*Data required to compute pca using svd method*/
-    pca_usr_data_svd<T> *svd_data = nullptr;
+    // Actual number of principal components found - on output should be the same as npc unless dgesvdx gives unexpected behaviour
+    da_int ns = 0;
 
-    /*Data required to compute pca using corr method*/
-    pca_usr_data_corr<T> *corr_data = nullptr;
-
-    /*pca results*/
-    pca_results<T> *results = nullptr;
-
-    /* pointer to error trace */
+    // Pointer to error trace
     da_errors::da_error_t *err = nullptr;
+
+    // Arrays used by the SVD, and to store results
+    std::vector<T> scores;               // U*Sigma
+    std::vector<T> variance;             // Sigma**2 / n-1
+    std::vector<T> principal_components; // Vt
+    std::vector<T> column_means, column_sdevs; // Store standardization data
+    std::vector<T> transformed_data; // Used by the transform function
+    std::vector<T> inverse_transformed_data; // Used by the inverse_transform function
+    T total_variance = 0.0; // Sum((MeanCentered A [][])**2)
+    da_int n_components = 0;
+    std::vector<T> u, sigma, vt, work, A_copy;
+    std::vector<da_int> iwork;
 
   public:
     da_options::OptionRegistry opts;
+
     da_pca(da_errors::da_error_t &err) {
         this->err = &err;
-        svd_data = new pca_usr_data_svd<T>;
-        corr_data = new pca_usr_data_corr<T>;
-        results = new pca_results<T>;
         register_pca_options<T>(opts);
     };
-    ~da_pca();
 
-    da_status init(da_int n, da_int p, T *dataX, da_int lda);
-
-    void set_pca_compute_method(pca_comp_method method) {
-        if (method != this->method) {
-            this->method = method;
-            iscomputed = false;
-        }
-    };
-
-    void set_pca_components(da_int npc) {
-        if (npc != this->npc) {
-            this->npc = npc;
-            iscomputed = false;
-        }
-    };
+    da_status init(da_int n, da_int p, const T *A, da_int lda);
 
     da_status compute();
 
-    da_status init_results();
+    da_status transform(da_int m, da_int p, const T *X, da_int ldx);
 
-    /* get_result (required to be defined by basic_handle) */
+    da_status inverse_transform(da_int k, da_int r, const T *X, da_int ldx);
+
     da_status get_result(da_result query, da_int *dim, T *result) {
         da_status status = da_status_success;
-        // Don't return anything if PCA compute is not done!
+
+        // Don't return anything if PCA has not been computed
         if (!iscomputed) {
-            return da_warn(this->err, da_status_no_data,
-                           "pca_compute is not done!. "
-                           "Call compute before calling get_results");
-        }
-        if (this->method == pca_method_corr) {
-            return da_error(this->err, da_status::da_status_not_implemented,
-                            "PCA using corr method is not yet implemented!");
+            return da_warn(err, da_status_no_data,
+                           "PCA has not yet been computed. Please call da_pca_compute_s "
+                           "or da_pca_compute_d before extracting results.");
         }
 
-        //FIXME: Currently assuming da_rinfo query can take all results computed
-        da_int rinfo_size = (2 * (this->npc * this->npc) + this->npc + 2);
-        if (result == nullptr || *dim <= 0 ||
-            ((query == da_result::da_pca_scores ||
-              query == da_result::da_pca_components) &&
-             *dim < (npc * npc)) ||
-            (query == da_result::da_pca_variance && *dim < npc) ||
-            (query == da_result::da_rinfo && *dim < rinfo_size)) {
-            return da_warn(this->err, da_status::da_status_invalid_array_dimension,
-                           "Size of the array is too small, provide an array of at "
-                           "least size: " +
-                               std::to_string(*dim) + ".");
+        da_int rinfo_size = 5;
+
+        if (result == nullptr || *dim <= 0) {
+            return da_warn(err, da_status_invalid_array_dimension,
+                           "The results array has not been allocated, or an unsuitable "
+                           "dimension has been provided.");
         }
 
         switch (query) {
         case da_result::da_rinfo:
-            //FIXME: Currently giving all results info if the buffer has space
-            for (da_int i = 0; i < rinfo_size; i++)
-                result[i] = *(results->scores + i);
+            if (*dim < rinfo_size)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(rinfo_size) + ".");
+            result[0] = (T)n;
+            result[1] = (T)p;
+            result[2] = (T)npc;
+            result[3] = (T)m;
+            result[4] = (T)k;
             break;
         case da_result::da_pca_scores:
-            for (da_int i = 0; i < (npc * npc); i++)
-                result[i] = *(results->scores + i);
+            if (*dim < n * ns)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(n * ns) + ".");
+            for (da_int i = 0; i < n * ns; i++)
+                result[i] = scores[i];
             break;
-        case da_result::da_pca_components:
-            for (da_int i = 0; i < (npc * npc); i++)
-                result[i] = *(results->components + i);
+        case da_result::da_pca_u:
+            if (*dim < n * ns)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(n * ns) + ".");
+            for (da_int i = 0; i < n * ns; i++)
+                result[i] = u[i];
+            break;
+        case da_result::da_pca_principal_components:
+            if (*dim < ns * p)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(ns * p) + ".");
+            for (da_int i = 0; i < ns * p; i++)
+                result[i] = principal_components[i];
+            break;
+        case da_result::da_pca_vt:
+            if (*dim < npc * p)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(npc * p) + ".");
+            for (da_int i = 0; i < npc * p; i++)
+                result[i] = vt[i];
             break;
         case da_result::da_pca_variance:
-            for (da_int i = 0; i < npc; i++)
-                result[i] = *(results->variance + i);
+            if (*dim < ns)
+                return da_warn(this->err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(ns) + ".");
+            for (da_int i = 0; i < ns; i++)
+                result[i] = variance[i];
+            break;
+        case da_result::da_pca_sigma:
+            if (*dim < ns)
+                return da_warn(this->err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(ns) + ".");
+            for (da_int i = 0; i < ns; i++)
+                result[i] = sigma[i];
+            break;
+        case da_result::da_pca_column_means:
+            if (method == pca_method_svd)
+                return da_warn(err, da_status_unknown_query,
+                               "Column means are only computed if the 'PCA method' "
+                               "option is set to 'covariance' or 'correlation'.");
+            if (*dim < p)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(p) + ".");
+            for (da_int i = 0; i < p; i++)
+                result[i] = column_means[i];
+            break;
+        case da_result::da_pca_column_sdevs:
+            if (method != pca_method_corr)
+                return da_warn(err, da_status_unknown_query,
+                               "Standard deviations are only computed if the 'PCA "
+                               "method' option is set to 'correlation'.");
+            if (*dim < p)
+                return da_warn(this->err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(p) + ".");
+            for (da_int i = 0; i < p; i++)
+                result[i] = column_sdevs[i];
             break;
         case da_result::da_pca_total_variance:
-            result[0] = results->total_variance;
+            result[0] = total_variance;
+            break;
+        case da_result::da_pca_transformed_data:
+            if (m == 0)
+                return da_warn(err, da_status_unknown_query,
+                               "No data matrices have been transformed yet. Please call "
+                               "da_pca_transform_s or da_pca_transform_d before "
+                               "extracting transformed data.");
+            if (*dim < m * ns)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(ns * m) + ".");
+            for (da_int i = 0; i < ns * m; i++)
+                result[i] = transformed_data[i];
+            break;
+        case da_result::da_pca_inverse_transformed_data:
+            if (k == 0)
+                return da_warn(err, da_status_unknown_query,
+                               "No data matrices have been inverse transformed yet. Please call "
+                               "da_pca_inverse_transform_s or da_pca_inverse_transform_d before "
+                               "extracting inverse transformed data.");
+            if (*dim < k * p)
+                return da_warn(err, da_status_invalid_array_dimension,
+                               "The array is too small. Please provide an array of at "
+                               "least size: " +
+                                   std::to_string(k * p) + ".");
+            for (da_int i = 0; i < k * p; i++)
+                result[i] = inverse_transformed_data[i];
             break;
         default:
-            return da_warn(this->err, da_status_unknown_query,
-                           "The requested result could not be queried by this handle.");
+            return da_warn(err, da_status_unknown_query,
+                           "The requested result could not be found.");
         }
         return status;
     };
 
     da_status get_result(da_result query, da_int *dim, da_int *result) {
-        return da_warn(this->err, da_status_unknown_query,
-                       "There is no pca implementation done for integer datatye!");
+        da_status status = da_status_success;
+        // Don't return anything if PCA compute is not done!
+        if (!iscomputed) {
+            return da_warn(err, da_status_no_data,
+                           "PCA has not yet been computed. Please call da_pca_compute_s "
+                           "or da_pca_compute_d before extracting results.");
+        }
+
+        if (result == nullptr || *dim <= 0) {
+            return da_warn(err, da_status_invalid_array_dimension,
+                           "The results array has not been allocated, or an unsuitable "
+                           "dimension has been provided.");
+        }
+
+        switch (query) {
+        case da_result::da_pca_n_components:
+            result[0] = n_components;
+            break;
+        default:
+            return da_warn(err, da_status_unknown_query,
+                           "The requested result could not found.");
+        }
+        return status;
     };
 };
 
-/*Deallocate major strucures*/
-template <typename T> da_pca<T>::~da_pca() {
-    if (svd_data) {
-        if (svd_data->colmean != nullptr)
-            delete[] svd_data->colmean;
-        if (svd_data->u)
-            delete[] svd_data->u;
-        if (svd_data->sigma)
-            delete[] svd_data->sigma;
-        if (svd_data->vt)
-            delete[] svd_data->vt;
-        if (svd_data->A)
-            delete[] svd_data->A;
-        if (svd_data->iwork)
-            delete[] svd_data->iwork;
-        delete svd_data;
-    }
+/* Store the user's data matrix in preparation for PCA computation */
+template <typename T> da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
 
-    if (corr_data)
-        delete corr_data;
-
-    if (results) {
-        if (results->scores)
-            delete[] results->scores;
-        if (results->components)
-            delete[] results->components;
-        if (results->variance)
-            delete[] results->variance;
-        delete results;
-    }
-}
-
-/*
-    Initialize all the memory required to compute PCA based on inputs
-*/
-template <typename T>
-da_status da_pca<T>::init(da_int n, da_int p, T *dataX, da_int lda) {
-    /*Init with success */
     da_status status = da_status_success;
-    da_int ldu, ldvt, npc;
-    std::string method;
 
-    /*Return error any dimension is less than 2*/
-    if (n <= 1 || p <= 1)
-        return da_status_invalid_input;
+    // Check for illegal arguments and function calls
+    if (n < 1)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with n = " + std::to_string(n) +
+                            ". Constraint: n >= 1.");
+    if (p < 1)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with p = " + std::to_string(p) +
+                            ". Constraint: p >= 1.");
+    if (lda < n)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with n = " + std::to_string(n) +
+                            " and lda = " + std::to_string(lda) +
+                            ". Constraint: lda >= n.");
 
-    if (this->opts.get("npc", npc) != da_status_success) {
-        return da_error(this->err, da_status_internal_error,
-                        "Unexpectedly <number of principal components> option not "
-                        "found in the pca option registry.");
-    }
-
-    /*Save the A dims, assuming the data is in ColMajor order*/
+    // Store dimensions of A and rezero other scalars in case handle is being reused
     this->n = n;
     this->p = p;
-    this->lda = lda;
-    npc = std::min(npc, std::min(n, p));
-    this->npc = npc;
+    this->m = 0;
+    this->k = 0;
 
-    if (this->opts.set("npc", npc) != da_status_success) {
-        return da_error(this->err, da_status_internal_error,
-                        "Unexpectedly pca provided an invalid value to the number of "
-                        "principal components option");
+    A_copy.resize(n * p);
+
+    // Copy the input matrix into internal matrix buffer
+    for (da_int j = 0; j < p; j++) {
+        for (da_int i = 0; i < n; i++) {
+            A_copy[i + j * n] = A[i + lda * j];
+        }
     }
 
-    if (this->opts.get("pca method", method) != da_status_success) {
-        return da_error(
-            this->err, da_status_internal_error,
-            "Unexpectedly pca provided an invalid value to the pca method option");
-    }
-
-    if (method == "svd")
-        this->method = pca_method_svd;
-    else
-        this->method = pca_method_corr;
-
-    /*Initialize with A values*/
-    ldu = this->n;
-    ldvt = this->npc;
-
-    switch (this->method) {
-    case pca_method_svd:
-        svd_data->colmean = new T[std::max(n, p)];
-        svd_data->u = new T[ldu * std::max(n, p)];
-        svd_data->sigma = new T[std::max(n, p)];
-        svd_data->vt = new T[ldvt * std::max(n, p)];
-        svd_data->iwork = new da_int[12 * std::min(n, p)];
-        svd_data->A = new T[std::max(n, p) * std::max(n, p)];
-
-        /*Copy the given input dataX matrix into internal A matrix buffer */
-        if (this->lda > n)
-            memcpy(svd_data->A, dataX, sizeof(T) * n * p);
-        else
-            for (da_int i = 0; i < p; i++)
-                memcpy(svd_data->A + i * n, dataX + i * lda, sizeof(T) * n);
-        break;
-    case pca_method_corr:
-        //corr_data = new pca_usr_data_corr<T>;
-        /*TODO: Yet to implement this method*/
-        status = da_status_not_implemented;
-        break;
-    default:
-        status = da_status_invalid_input;
-        break;
-    }
-
-    status = da_pca<T>::init_results();
-
-    /*Reset init done*/
+    // Record that initialization is complete but computation has not yet been performed
     initdone = true;
+    iscomputed = false;
+
+    // Now that we have a data matrix we can reregister the n_components option with new constraints
+    da_int npc, max_npc = std::min(n, p);
+    opts.get("n_components", npc);
+    reregister_pca_option<T>(opts, max_npc);
+
+    if (npc > max_npc)
+        return da_warn(
+            err, da_status_incompatible_options,
+            "The requested number of principal components has been decreased from " +
+                std::to_string(npc) + " to " + std::to_string(max_npc) +
+                " due to the size (" + std::to_string(n) + " x " + std::to_string(p) +
+                ") of the data array.");
 
     return status;
 }
 
-/*
-    Initialize memory for results
-*/
-template <typename T> da_status da_pca<T>::init_results() {
-    results->components = new T[npc * npc];
-    results->scores = new T[npc * npc];
-    results->variance = new T[npc];
+/* Compute the PCA */
+template <typename T> da_status da_pca<T>::compute() {
+
+    if (initdone == false)
+        return da_error(err, da_status_no_data,
+                        "No data has been passed to the handle. Please call "
+                        "da_pca_set_data_s or da_pca_set_data_d.");
+
+    // Read in options and store in class
+    this->opts.get("n_components", npc);
+    std::string opt_method;
+    this->opts.get("PCA method", opt_method);
+    if (opt_method == "covariance")
+        method = pca_method_cov;
+    else if (opt_method == "correlation")
+        method = pca_method_corr;
+    else
+        method = pca_method_svd;
+
+    // Initialize some workspace arrays
+    u.resize(n * npc);
+    //TODO: without the 2 it falls over - potential bug in flame being investigated
+    sigma.resize(2*std::min(n, p)+1);
+    vt.resize(npc * p);
+    iwork.resize(12 * std::min(n, p));
+
+    // Depending on the chosen method standardize by column means and possible standard deviations
+    column_means.resize(p);
+
+    switch (method) {
+    case pca_method_cov:
+        da_basic_statistics::mean(da_axis_col, n, p, A_copy.data(), n,
+                                  column_means.data());
+        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n,
+                                         column_means.data(), (T *)nullptr);
+        break;
+    case pca_method_corr:
+        column_sdevs.resize(p);
+        da_basic_statistics::variance(da_axis_col, n, p, A_copy.data(), n,
+                                      column_means.data(),
+                                      column_sdevs.data());
+        for (da_int i = 0; i < p; i++)
+            column_sdevs[i] = std::sqrt(column_sdevs[i]);
+        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n,
+                                         column_means.data(),
+                                         column_sdevs.data());
+        break;
+    default:
+        // No standardization is required
+        break;
+    }
+
+    // Compute and store the total variance of the (standardized) input matrix
+    da_int div = (n == 1) ? 1 : n - 1;
+    total_variance = 0.0;
+    for (da_int j = 0; j < p; j++) {
+        for (da_int i = 0; i < n; i++) {
+            total_variance += A_copy[i + n * j] * A_copy[i + n * j];
+        }
+    }
+
+    total_variance /= div;
+
+    // Compute SVD of standardized data matrix
+    char JOBU = 'V';
+    char JOBVT = 'V';
+    char RANGE = 'I';
+    da_int INFO = 0;
+    T vl = 0.0;
+    T vu = 0.0;
+    T estworkspace[1];
+    da_int iu = npc;
+    da_int il = 1;
+
+    ns = npc;
+
+    // Query gesvdx for optimal work space required
+    da_int lwork = -1;
+
+    da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu, &ns,
+               sigma.data(), u.data(), &n, vt.data(), &npc,
+               estworkspace, &lwork, iwork.data(), &INFO);
+
+    // Handle SVD Error
+    if (INFO != 0) {
+        return da_error(err, da_status_internal_error,
+                        "An internal error occured while computing the PCA. Please check "
+                        "for input data for undefined values.");
+    }
+
+    // Allocate the workspace required
+    lwork = (da_int)estworkspace[0];
+    work.resize(lwork);
+
+    INFO = -1;
+
+    /*Call gesvdx*/
+    da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu, &ns,
+               sigma.data(), u.data(), &n, vt.data(), &npc,
+               work.data(), &lwork, iwork.data(), &INFO);
+
+    // Handle SVD Error
+    if (INFO != 0) {
+        return da_error(err, da_status_internal_error,
+                        "An internal error occured while computing the PCA. Please check "
+                        "for input data for undefined values.");
+    }
+
+    // Go through the ns columns of U and find the max absolute value
+    // If that value is negative, flip sign of that column of U and that row of VT
+
+    T colmax;
+    for (da_int j = 0; j < ns; j++) {
+        // Look at column j of U
+        colmax = (T)0.0;
+        for (da_int i = 0; i < n; i++) {
+            colmax = std::abs(u[i + n * j]) > std::abs(colmax) ? u[i + n * j]
+                                                                     : colmax;
+        }
+        if (colmax < 0) {
+            // Negate column j of U and row j of VT
+            for (da_int i = 0; i < n; i++) {
+                u[i + n * j] = -u[i + n * j];
+            }
+            for (da_int i = 0; i < p; i++) {
+                vt[j + ns * i] = -vt[j + ns * i];
+            }
+        }
+    }
+
+    // Allocate space for the results
+    principal_components.resize(ns * p);
+    scores.resize(n * ns);
+    variance.resize(ns);
+
+    // Compute Scores matrix, U * Sigma
+    for (da_int j = 0; j < ns; j++) {
+        for (da_int i = 0; i < n; i++) {
+            scores[j * n + i] = sigma[j] * u[j * n + i];
+        }
+    }
+
+    // Save the principal components
+    // Note careful use of ns vs npc: they should be identical, but this guards against unexpected dgesvdx behaviour
+    for (da_int j = 0; j < p; j++) {
+        for (da_int i = 0; i < ns; i++) {
+            principal_components[j * ns + i] = vt[j * npc + i];
+        }
+    }
+
+    // Compute variance, (Sigma**2) / (n_samples-1)
+    for (da_int j = 0; j < ns; j++) {
+        variance[j] = sigma[j] * sigma[j] / div;
+    }
+
+    n_components = ns;
+
+    // Update flag to true
+    iscomputed = true;
+
     return da_status_success;
 }
 
-/*
-    Compute PCA of matrix X (n x p) using user choosen method,
-    defult is svd_method and save results 
-*/
-template <typename T> da_status da_pca<T>::compute() {
-    char JOBU, JOBVT, RANGE;
-    da_int lwork, ldu, ldvt, INFO, lm, ln, lda;
-    da_int il, iu, ns = 1;
-    T vu, vl;
-    T estworkspace[1];
-    T tv = 0;
+template <typename T>
+da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx) {
 
-    if (initdone == false)
-        return da_error(this->err, da_status_invalid_pointer, "pca is not initialized!");
+    if (!iscomputed) {
+        return da_warn(err, da_status_no_data,
+                       "The PCA has not been computed. Please call da_pca_compute_s or "
+                       "da_pca_compute_d.");
+    }
 
+    /* Check for illegal arguments */
+    if (m < 1)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with m = " + std::to_string(m) +
+                            ". Constraint: m >= 1.");
+    if (p != this->p)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with p = " + std::to_string(p) +
+                            " but the PCA has been computed with p = " +
+                            std::to_string(this->p) + ".");
+    if (ldx < m)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with m = " + std::to_string(m) +
+                            " and ldx = " + std::to_string(ldx) +
+                            ". Constraint: ldx >= m.");
+
+    this->m = m;
+
+    // We need a copy of X to avoid changing the user's data
+    std::vector<T> X_copy(p * m);
+    for (da_int j = 0; j < p; j++) {
+        for (da_int i = 0; i < m; i++) {
+            X_copy[i + j * m] = X[i + ldx * j];
+        }
+    }
+
+    // Standardize the new data matrix based on the standardization used in the PCA computation
     switch (method) {
-    case pca_method_svd:
-        //Input data matrix X (n x p) is A matrix
-        //step 1:  Find column Mean of X
-        da_basic_statistics::mean(da_axis_col, n, p, svd_data->A, n, svd_data->colmean);
-
-        //step 2:  Substract column mean from A matrix
-        da_basic_statistics::standardize(da_axis_col, n, p, svd_data->A, n,
-                                         svd_data->colmean, (T *)nullptr);
-
-        /*Save the total variance of mean centered input A*/
-        results->total_variance = tv;
-
-        //step 3:  Find Singular values using SVD
-        //Construct SVD args based on inputs
-        JOBU = 'V';
-        JOBVT = 'V';
-        RANGE = 'I';
-        ldu = std::max(n, p);
-        lda = std::max(n, p);
-        INFO = 0;
-        lm = n;
-        ln = p;
-        vl = 0.0;
-        vu = 0.0;
-        iu = std::min(n, p);
-        il = iu - npc + 1;
-        if (RANGE == 'A') {
-            ns = std::min(n, p);
-        } else if (RANGE == 'I') {
-            ns = iu - il + 1;
-        }
-        ldvt = ns;
-
-        //Query gesvdx for optimal work space required
-        lwork = -1;
-
-        da::gesvdx(&JOBU, &JOBVT, &RANGE, &lm, &ln, svd_data->A, &lda, &vl, &vu, &il, &iu,
-                   &ns, svd_data->sigma, svd_data->u, &ldu, svd_data->vt, &ldvt,
-                   estworkspace, &lwork, svd_data->iwork, &INFO);
-
-        //Handle SVD Error
-        if (INFO != 0) {
-            if (INFO < 0)
-                return da_error(this->err, da_status_invalid_input,
-                                std::to_string(INFO) +
-                                    "th argument had an illegal value. Please verify "
-                                    "the input arguments");
-            if (INFO > 0)
-                return da_error(this->err, da_status_invalid_input,
-                                "ith eigen value is not converged or something went "
-                                "wrong in svd computation!");
-        }
-
-        /*Read the space required*/
-        lwork = (da_int)estworkspace[0];
-
-        /*Allocate optimal memory required to compute SVD*/
-        svd_data->work = new T[lwork];
-
-        /*Initialize the INFO with failure */
-        INFO = -1;
-
-        /*Call gesvdx*/
-        da::gesvdx(&JOBU, &JOBVT, &RANGE, &lm, &ln, svd_data->A, &lda, &vl, &vu, &il, &iu,
-                   &ns, svd_data->sigma, svd_data->u, &ldu, svd_data->vt, &ldvt,
-                   svd_data->work, &lwork, svd_data->iwork, &INFO);
-
-        //Handle SVD Error
-        if (INFO != 0) {
-            if (INFO < 0)
-                return da_error(this->err, da_status_invalid_input,
-                                std::to_string(INFO) +
-                                    "th argument had an illegal value. Please verify "
-                                    "the input arguments");
-
-            if (INFO > 0) {
-                if (INFO == (2 * this->n + 1))
-                    return da_error(this->err, da_status_internal_error,
-                                    "An internal error occured in gesvdx!");
-                else
-                    return da_error(
-                        this->err, da_status_invalid_input,
-                        std::to_string(INFO) +
-                            "th eigen value is not converged or something went "
-                            "wrong in svd computation!");
-            }
-        }
-
-        //Step 4: Compute and save the results
-        //Find the sign of column/row max in U/VT, flip the signs of U & Vt if negative
-        //TODO: Simplify for various shapes of A
-        for (da_int j = 0; j < n; j++) {
-            T *uptr = &svd_data->u[j * n];
-            T *vtptr = &svd_data->vt[j];
-            T *ptr = svd_flip_u_based ? uptr : vtptr; //load the first column value
-            da_int uv_size = svd_flip_u_based ? n : p;
-            T colmax = std::abs(ptr[0]);
-            da_int maxidx = 0;
-            for (da_int i = 1; i < uv_size; i++) {
-                T u_t = std::abs(ptr[i]);
-                if (u_t > colmax) {
-                    colmax = u_t;
-                    maxidx = i;
-                }
-            }
-            //If the max value is negative flip the sign of all values
-            bool iscolmax_neg = std::signbit(ptr[maxidx]);
-            if (iscolmax_neg) {
-                for (da_int i = 0; i < n; i++) {
-                    uptr[i] = -uptr[i];
-                }
-                for (da_int i = 0; i < p; i++) {
-                    vtptr[i * p] = -vtptr[i * p];
-                }
-            }
-        }
-
-        //Compute Scores (n x n) = U (nxn) * Sigma (n x n) and save
-        for (da_int i = 0; i < npc; i++) {
-            for (da_int j = 0; j < npc; j++) {
-                *(results->scores + i * npc + j) =
-                    (*(svd_data->sigma + i) * (*(svd_data->u + i * npc + j)));
-            }
-        }
-
-        //Save npc
-        for (da_int i = 0; i < npc; i++) {
-            for (da_int j = 0; j < npc; j++) {
-                *(results->components + i * npc + j) = *(svd_data->vt + i * npc + j);
-            }
-        }
-
-        //compute variance
-        //variance = (S**2) / (nsamples-1)
-        for (da_int j = 0; j < npc; j++) {
-            T sigma = *(svd_data->sigma + j);
-            *(results->variance + j) = (sigma * sigma) / (this->n - 1);
-        }
-
-        //update flag to true!
-        iscomputed = true;
-
-        //Free the temporary memory created for gesvdx workspace
-        delete[] svd_data->work;
-
+    case pca_method_cov:
+        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m,
+                                         column_means.data(), (T *)nullptr);
         break;
-
     case pca_method_corr:
-        //TODO: Yet to implement
-        return da_error(this->err, da_status_not_implemented,
-                        "PCA using corr method is not yet implemented!");
+        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m,
+                                         column_means.data(),
+                                         column_sdevs.data());
         break;
     default:
-        return da_error(this->err, da_status_invalid_input, "Invalid pca method !");
+        // No standardization is required
+        break;
+    }
+
+    // Compute X * VT^T and store in transformed_data
+    transformed_data.resize(m * ns);
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, m, ns, p, 1.0,
+                        X_copy.data(), m, principal_components.data(), ns, 0.0,
+                        transformed_data.data(), m);
+
+    return da_status_success;
+}
+
+template <typename T>
+da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ldx) {
+
+    if (!iscomputed) {
+        return da_warn(err, da_status_no_data,
+                       "The PCA has not been computed. Please call da_pca_compute_s or "
+                       "da_pca_compute_d.");
+    }
+
+    /* Check for illegal arguments */
+    if (k < 1)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with k = " + std::to_string(k) +
+                            ". Constraint: k >= 1.");
+    if (r != ns)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with r = " + std::to_string(r) +
+                            " but the PCA has been computed with r = " +
+                            std::to_string(ns) + ".");
+    if (ldx < k)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with k = " + std::to_string(k) +
+                            " and ldx = " + std::to_string(ldx) +
+                            ". Constraint: ldx >= k.");
+
+    this->k = k;
+
+    // Compute X * VT and store in inverse_transformed_data
+    inverse_transformed_data.resize(k * p);
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0,
+                        X, ldx, principal_components.data(), ns, 0.0,
+                        inverse_transformed_data.data(), k);
+
+    // Undo the standardization used in the PCA computation
+    switch (method) {
+    case pca_method_cov:
+        for (da_int j = 0; j < p; j++) {
+            for (da_int i = 0; i < k; i++) {
+                    inverse_transformed_data[i + k*j] += column_means[j];
+                }
+            }
+        break;
+    case pca_method_corr:
+        for (da_int j = 0; j < p; j++) {
+            for (da_int i = 0; i < k; i++) {
+                    inverse_transformed_data[i + k*j] = inverse_transformed_data[i + k*j] * column_sdevs[j] + column_means[j];
+            }
+        }
+        break;
+    default:
+        // No standardization is required
+        break;
     }
 
     return da_status_success;
 }
+
+} // namespace da_pca
 
 #endif //PCA_HPP

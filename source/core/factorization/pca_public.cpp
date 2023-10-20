@@ -25,7 +25,7 @@
 #include "da_handle.hpp"
 #include "pca.hpp"
 
-da_status da_pca_init_d(da_handle handle, da_int n, da_int p, double *dataX, da_int lda) {
+da_status da_pca_set_data_d(da_handle handle, da_int n, da_int p, const double *A, da_int lda) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_double)
@@ -34,11 +34,10 @@ da_status da_pca_init_d(da_handle handle, da_int n, da_int p, double *dataX, da_
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    handle->pca_d->init(n, p, dataX, lda);
-    return da_status_success;
+    return handle->pca_d->init(n, p, A, lda);
 }
 
-da_status da_pca_init_s(da_handle handle, da_int n, da_int p, float *dataX, da_int lda) {
+da_status da_pca_set_data_s(da_handle handle, da_int n, da_int p, const float *A, da_int lda) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_single)
@@ -47,38 +46,7 @@ da_status da_pca_init_s(da_handle handle, da_int n, da_int p, float *dataX, da_i
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    handle->pca_s->init(n, p, dataX, lda);
-    return da_status_success;
-}
-
-da_status da_pca_set_method(da_handle handle, pca_comp_method method) {
-    if (handle != nullptr) {
-        if (handle->precision != da_single) {
-            if (handle->pca_d != nullptr)
-                handle->pca_d->set_pca_compute_method(method);
-        } else {
-            if (handle->pca_s != nullptr)
-                handle->pca_s->set_pca_compute_method(method);
-        }
-        return da_status_success;
-    } else {
-        return da_status_invalid_pointer;
-    }
-}
-
-da_status da_pca_set_num_components(da_handle handle, da_int num_components) {
-    if (handle != nullptr) {
-        if (handle->precision != da_single) {
-            if (handle->pca_d != nullptr)
-                handle->pca_d->set_pca_components(num_components);
-        } else {
-            if (handle->pca_s != nullptr)
-                handle->pca_s->set_pca_components(num_components);
-        }
-        return da_status_success;
-    } else {
-        return da_status_invalid_pointer;
-    }
+    return handle->pca_s->init(n, p, A, lda);
 }
 
 da_status da_pca_compute_d(da_handle handle) {
@@ -101,4 +69,54 @@ da_status da_pca_compute_s(da_handle handle) {
         return da_status_invalid_pointer;
 
     return handle->pca_s->compute();
+}
+
+da_status da_pca_transform_s(da_handle handle, da_int m, da_int p, const float *X, da_int ldx) {
+    if (!handle)
+        return da_status_invalid_pointer;
+    if (handle->precision != da_single)
+        return da_status_wrong_type;
+    if (handle->pca_s == nullptr)
+        return da_status_invalid_pointer;
+
+    /*Initialize*/
+    return handle->pca_s->transform(m, p, X, ldx);
+}
+
+da_status da_pca_transform_d(da_handle handle, da_int m, da_int p, const double *X,
+                             da_int ldx) {
+    if (!handle)
+        return da_status_invalid_pointer;
+    if (handle->precision != da_double)
+        return da_status_wrong_type;
+    if (handle->pca_d == nullptr)
+        return da_status_invalid_pointer;
+
+    /*Initialize*/
+    return handle->pca_d->transform(m, p, X, ldx);
+}
+
+da_status da_pca_inverse_transform_s(da_handle handle, da_int k, da_int r, const float *X, da_int ldx) {
+    if (!handle)
+        return da_status_invalid_pointer;
+    if (handle->precision != da_single)
+        return da_status_wrong_type;
+    if (handle->pca_s == nullptr)
+        return da_status_invalid_pointer;
+
+    /*Initialize*/
+    return handle->pca_s->inverse_transform(k, r, X, ldx);
+}
+
+da_status da_pca_inverse_transform_d(da_handle handle, da_int k, da_int r, const double *X,
+                             da_int ldx) {
+    if (!handle)
+        return da_status_invalid_pointer;
+    if (handle->precision != da_double)
+        return da_status_wrong_type;
+    if (handle->pca_d == nullptr)
+        return da_status_invalid_pointer;
+
+    /*Initialize*/
+    return handle->pca_d->inverse_transform(k, r, X, ldx);
 }

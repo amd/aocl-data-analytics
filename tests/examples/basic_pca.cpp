@@ -45,12 +45,12 @@ int main() {
     double doutput[24];
 
     da_handle_init_d(&handle, da_handle_pca);
-    status = da_pca_init_d(handle, n, p, A, n);
+    status = da_pca_set_data_d(handle, n, p, A, n);
     status = da_pca_compute_d(handle);
     if (status == da_status_success) {
         std::cout << " PCA computed successfully " << std::endl;
         da_int dim = num_compnents * num_compnents;
-        status = da_handle_get_result_d(handle, da_pca_components, &dim, doutput);
+        status = da_handle_get_result_d(handle, da_pca_principal_components, &dim, doutput);
         if (status == da_status_success) {
             std::cout << " Successfully read the PCA results" << std::endl;
         } else {
@@ -74,12 +74,12 @@ int main() {
     da_handle handle_s = nullptr;
 
     da_handle_init_s(&handle_s, da_handle_pca);
-    status = da_pca_init_s(handle_s, ns, ps, As, ns);
+    status = da_pca_set_data_s(handle_s, ns, ps, As, ns);
     status = da_pca_compute_s(handle_s);
     if (status == da_status_success) {
         std::cout << " PCA computed successfully " << std::endl;
         da_int dim = num_compnents * num_compnents;
-        status = da_handle_get_result_s(handle_s, da_pca_components, &dim, soutput);
+        status = da_handle_get_result_s(handle_s, da_pca_principal_components, &dim, soutput);
         if (status == da_status_success) {
             std::cout << " Successfully read the PCA results" << std::endl;
         } else {

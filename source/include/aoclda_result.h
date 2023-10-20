@@ -65,9 +65,17 @@ typedef enum da_result_ {
         101, ///< Optimal fitted coefficients produced by the last call to a linear regression solver.
     // PCA 201..300
     da_pca_scores = 201,
-    da_pca_variance = 202,
-    da_pca_components = 203,
-    da_pca_total_variance = 204,
+    da_pca_variance,
+    da_pca_principal_components,
+    da_pca_total_variance,
+    da_pca_n_components,
+    da_pca_column_means,
+    da_pca_column_sdevs,
+    da_pca_transformed_data,
+    da_pca_inverse_transformed_data,
+    da_pca_u,
+    da_pca_sigma,
+    da_pca_vt,
     // Nonlinear Optimization 301..400
     // Random Forrests 401..500
     // ...

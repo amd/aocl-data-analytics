@@ -53,8 +53,8 @@ struct _da_handle {
     // Pointer to error trace and related methods
     da_errors::da_error_t *err = nullptr;
     da_precision precision = da_double;
-    da_pca<double> *pca_d = nullptr;
-    da_pca<float> *pca_s = nullptr;
+    da_pca::da_pca<double> *pca_d = nullptr;
+    da_pca::da_pca<float> *pca_s = nullptr;
     decision_tree<double> *dt_d = nullptr;
     decision_tree<float> *dt_s = nullptr;
     decision_forest<double> *df_d = nullptr;

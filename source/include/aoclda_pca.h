@@ -47,23 +47,6 @@ extern "C" {
 #endif
 
 /** \{
- * \brief enum to specify PCA compute method
- *  pca_method_svd=0 
- *  pca_method_corr=1
- */
-typedef enum pca_comp_method_ { pca_method_svd = 0, pca_method_corr = 1 } pca_comp_method;
-
-/** \{
- * \brief enum to get specific PCA results 
- */
-typedef enum pca_results_flags_ {
-    pca_components = 1,
-    pca_scores = 2,
-    pca_variance = 4,
-    pca_total_variance = 8
-} pca_results_flags;
-
-/** \{
  * \brief Create and init PCA data structures
  *
  * Creates pca_d handle and allocates the memory/buffers required 
@@ -84,11 +67,8 @@ typedef enum pca_results_flags_ {
  * - \ref da_status_wrong_type = 7 = when the input type is not matching with api
  * - \ref da_status_invalid_pointer = 3 - When the pca handle is not created
  */
-da_status da_pca_init_d(da_handle handle, da_int n, da_int p, double *A, da_int lda);
-da_status da_pca_init_s(da_handle handle, da_int n, da_int p, float *A, da_int lda);
-
-da_status da_pca_set_method(da_handle, pca_comp_method method);
-da_status da_pca_set_num_components(da_handle, da_int num_components);
+da_status da_pca_set_data_d(da_handle handle, da_int n, da_int p, const double *A, da_int lda);
+da_status da_pca_set_data_s(da_handle handle, da_int n, da_int p, const float *A, da_int lda);
 
 /** \{
  * \brief Create and init PCA data structures
@@ -106,8 +86,14 @@ da_status da_pca_set_num_components(da_handle, da_int num_components);
  * - \ref da_status_internal_error =  1 - When lapack/internal routines error out
  * - \ref da_status_not_implemented = 5 - When requested features/method is not implemented/supported
  */
-da_status da_pca_compute_d(da_handle);
-da_status da_pca_compute_s(da_handle);
+da_status da_pca_compute_d(da_handle handle);
+da_status da_pca_compute_s(da_handle handle);
+
+da_status da_pca_transform_d(da_handle handle, da_int m, da_int p, const double *X, da_int ldx);
+da_status da_pca_transform_s(da_handle handle, da_int m, da_int p, const float *X, da_int ldx);
+
+da_status da_pca_inverse_transform_d(da_handle handle, da_int k, da_int r, const double *X, da_int ldx);
+da_status da_pca_inverse_transform_s(da_handle handle, da_int k, da_int r, const float *X, da_int ldx);
 
 #ifdef __cplusplus
 }

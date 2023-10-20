@@ -60,7 +60,7 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_pca:
         try {
-            (*handle)->pca_d = new da_pca<double>(*(*handle)->err);
+            (*handle)->pca_d = new da_pca::da_pca<double>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }
@@ -121,7 +121,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
         break;
     case da_handle_pca:
         try {
-            (*handle)->pca_s = new da_pca<float>(*(*handle)->err);
+            (*handle)->pca_s = new da_pca::da_pca<float>(*(*handle)->err);
         } catch (std::bad_alloc &) {
             return da_status_memory_error;
         }

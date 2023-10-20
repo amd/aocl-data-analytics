@@ -517,18 +517,25 @@ class OptionRegistry {
     void unlock(void) { readonly = false; }
     string errmsg = "";
 
-    da_status register_opt(std::shared_ptr<OptionBase> o) {
+    da_status register_opt(std::shared_ptr<OptionBase> o, bool overwrite = false) {
 
         if (readonly) {
             errmsg = "Registry is locked";
             return da_status_option_locked;
         }
+        if (overwrite) {
+            // Special case where we want to replace an already registered option
+            auto search = registry.find(o->get_name());
+            registry.erase(search);
+        } 
         size_t n = registry.size();
         registry.insert({o->get_name(), o});
+        //TODO add unit tests for overwrite (ANDREW!!!!!)
         bool ok = (n != registry.size());
         if (!ok) {
             errmsg = "Registry could not add option. Duplicate?";
             return da_status_invalid_input;
+            
         }
         return da_status_success;
     }

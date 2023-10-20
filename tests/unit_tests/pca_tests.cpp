@@ -25,175 +25,514 @@
  * 
  */
 
+
 #include <iostream>
+#include <limits>
+#include <list>
 #include <stdio.h>
 #include <string.h>
 
 #include "aoclda.h"
-#include "da_handle.hpp"
-#include "options.hpp"
-#include "utest_utils.hpp"
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include "pca_test_data.hpp"
 
-namespace {
+template <typename T> class PCATest : public testing::Test {
+  public:
+    using List = std::list<T>;
+    static T shared_;
+    T value_;
+};
 
-/* simple errors tests */
-TEST(pca, badHandle) {
+using FloatTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(PCATest, FloatTypes);
+
+TYPED_TEST(PCATest, PCAFunctionality) {
+
+    std::vector<PCAParamType<TypeParam>> params;
+    GetPCAData(params);
     da_handle handle = nullptr;
-    da_int n = 2;
+    da_int count = 0;
 
-    EXPECT_EQ(da_pca_set_method(handle, pca_method_svd), da_status_invalid_pointer);
-    EXPECT_EQ(da_pca_set_num_components(handle, n), da_status_invalid_pointer);
+    for (auto &param : params) {
 
-    EXPECT_EQ(da_pca_compute_d(handle), da_status_invalid_pointer);
-    EXPECT_EQ(da_pca_compute_s(handle), da_status_invalid_pointer);
+        count++;
+        std::cout << "Test " << std::to_string(count) << ": " << param.test_name
+                  << std::endl;
 
-    da_int dim = 5;
-    double *resultd = nullptr;
-    float *results = nullptr;
-    EXPECT_EQ(da_handle_get_result_d(handle, da_pca_components, &dim, resultd),
-              da_status_invalid_pointer);
-    EXPECT_EQ(da_handle_get_result_s(handle, da_pca_components, &dim, results),
-              da_status_invalid_pointer);
+        EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
+
+        EXPECT_EQ(da_pca_set_data(handle, param.n, param.p, param.A.data(), param.lda),
+                  da_status_success);
+
+        if (param.method.size() != 0) {
+            EXPECT_EQ(da_options_set_string(handle, "PCA method", param.method.c_str()),
+                      da_status_success);
+        }
+        if (param.components_required != 0) {
+            EXPECT_EQ(
+                da_options_set_int(handle, "n_components", param.components_required),
+                da_status_success);
+        }
+
+        EXPECT_EQ(da_pca_compute<TypeParam>(handle), param.expected_status);
+
+        if (param.X.size() > 0) {
+            EXPECT_EQ(
+                da_pca_transform(handle, param.m, param.p, param.X.data(), param.ldx),
+                da_status_success);
+        }
+
+        if (param.Xinv.size() > 0) {
+            EXPECT_EQ(da_pca_inverse_transform(handle, param.k,
+                                               param.expected_n_components,
+                                               param.Xinv.data(), param.ldxinv),
+                      da_status_success);
+        }
+
+        da_int n_components;
+        da_int size_one = 1;
+        EXPECT_EQ(da_handle_get_result_int(handle, da_pca_n_components, &size_one,
+                                           &n_components),
+                  da_status_success);
+        EXPECT_EQ(n_components, param.expected_n_components);
+
+        da_int size_scores = param.n * param.expected_n_components;
+        da_int size_principal_components = param.p * param.expected_n_components;
+        da_int size_variance = param.expected_n_components;
+        da_int size_u = param.n * param.expected_n_components;
+        da_int size_vt = param.p * param.expected_n_components;
+        da_int size_sigma = param.expected_n_components;
+        std::vector<TypeParam> scores(size_scores);
+        std::vector<TypeParam> components(size_principal_components);
+        std::vector<TypeParam> variance(size_variance);
+        std::vector<TypeParam> u(size_u);
+        std::vector<TypeParam> vt(size_vt);
+        std::vector<TypeParam> sigma(size_sigma);
+        TypeParam total_variance;
+
+        if (param.expected_scores.size() != 0) {
+            EXPECT_EQ(
+                da_handle_get_result(handle, da_pca_scores, &size_scores, scores.data()),
+                da_status_success);
+            EXPECT_ARR_NEAR(size_scores, scores.data(), param.expected_scores.data(),
+                            param.epsilon);
+        }
+        if (param.expected_components.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_principal_components,
+                                           &size_principal_components, components.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_principal_components, components.data(),
+                            param.expected_components.data(), param.epsilon);
+        }
+        if (param.expected_variance.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_variance, &size_variance,
+                                           variance.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_variance, variance.data(),
+                            param.expected_variance.data(), param.epsilon);
+        }
+        if (param.expected_u.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &size_u, u.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_u, u.data(), param.expected_u.data(), param.epsilon);
+        }
+        if (param.expected_vt.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &size_vt, vt.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_vt, vt.data(), param.expected_vt.data(), param.epsilon);
+        }
+        if (param.expected_sigma.size() != 0) {
+            EXPECT_EQ(
+                da_handle_get_result(handle, da_pca_sigma, &size_sigma, sigma.data()),
+                da_status_success);
+            EXPECT_ARR_NEAR(size_sigma, sigma.data(), param.expected_sigma.data(),
+                            param.epsilon);
+        }
+        EXPECT_EQ(da_handle_get_result(handle, da_pca_total_variance, &size_one,
+                                       &total_variance),
+                  da_status_success);
+        EXPECT_NEAR(total_variance, param.expected_total_variance, param.epsilon);
+
+        if (param.expected_means.size() != 0) {
+            da_int size_means = param.p;
+            std::vector<TypeParam> means(size_means);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_column_means, &size_means,
+                                           means.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_means, means.data(), param.expected_means.data(),
+                            param.epsilon);
+        }
+
+        if (param.expected_sdevs.size() != 0) {
+            da_int size_sdevs = param.p;
+            std::vector<TypeParam> sdevs(size_sdevs);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_column_sdevs, &size_sdevs,
+                                           sdevs.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_sdevs, sdevs.data(), param.expected_sdevs.data(),
+                            param.epsilon);
+        }
+
+        if (param.X.size() != 0) {
+            da_int size_X_transform = param.m * param.expected_n_components;
+            std::vector<TypeParam> X_transform(size_X_transform);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_transformed_data,
+                                           &size_X_transform, X_transform.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_X_transform, X_transform.data(),
+                            param.expected_X_transform.data(), param.epsilon);
+        }
+
+        if (param.Xinv.size() != 0) {
+            da_int size_Xinv_transform = param.k * param.p;
+            std::vector<TypeParam> Xinv_transform(size_Xinv_transform);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_inverse_transformed_data,
+                                           &size_Xinv_transform, Xinv_transform.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_Xinv_transform, Xinv_transform.data(),
+                            param.expected_Xinv_transform.data(), param.epsilon);
+        }
+
+        if (param.expected_rinfo.size() > 0) {
+            da_int size_rinfo = 5;
+            std::vector<TypeParam> rinfo(size_rinfo);
+            EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &size_rinfo, rinfo.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_rinfo, rinfo.data(), param.expected_rinfo.data(),
+                            param.epsilon);
+        }
+
+        da_handle_destroy(&handle);
+    }
 }
 
-TEST(pca, wrongType) {
+TYPED_TEST(PCATest, MultipleCalls) {
+    // Check we can repeatedly call compute etc with the same single handle
+
+    // Get some data to use
+    std::vector<PCAParamType<TypeParam>> params;
+    GetSquareData(params);
+    GetTallThinData(params);
+    GetShortFatData(params);
+
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
+
+    for (auto &param : params){
+        EXPECT_EQ(da_pca_set_data(handle, param.n, param.p, param.A.data(), param.lda),
+                  da_status_success);
+
+        if (param.method.size() != 0) {
+            EXPECT_EQ(da_options_set_string(handle, "PCA method", param.method.c_str()),
+                      da_status_success);
+        }
+        if (param.components_required != 0) {
+            EXPECT_EQ(
+                da_options_set_int(handle, "n_components", param.components_required),
+                da_status_success);
+        }
+
+        EXPECT_EQ(da_pca_compute<TypeParam>(handle), param.expected_status);
+
+        da_int size_scores = param.n * param.expected_n_components;
+        da_int size_principal_components = param.p * param.expected_n_components;
+        da_int size_variance = param.expected_n_components;
+        da_int size_u = param.n * param.expected_n_components;
+        da_int size_vt = param.p * param.expected_n_components;
+        da_int size_sigma = param.expected_n_components;
+        da_int size_one = 1;
+        std::vector<TypeParam> scores(size_scores);
+        std::vector<TypeParam> components(size_principal_components);
+        std::vector<TypeParam> variance(size_variance);
+        std::vector<TypeParam> u(size_u);
+        std::vector<TypeParam> vt(size_vt);
+        std::vector<TypeParam> sigma(size_sigma);
+        TypeParam total_variance;
+
+        if (param.expected_scores.size() != 0) {
+            EXPECT_EQ(
+                da_handle_get_result(handle, da_pca_scores, &size_scores, scores.data()),
+                da_status_success);
+            EXPECT_ARR_NEAR(size_scores, scores.data(), param.expected_scores.data(),
+                            param.epsilon);
+        }
+        if (param.expected_components.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_principal_components,
+                                           &size_principal_components, components.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_principal_components, components.data(),
+                            param.expected_components.data(), param.epsilon);
+        }
+        if (param.expected_variance.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_variance, &size_variance,
+                                           variance.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_variance, variance.data(),
+                            param.expected_variance.data(), param.epsilon);
+        }
+        if (param.expected_u.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &size_u, u.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_u, u.data(), param.expected_u.data(), param.epsilon);
+        }
+        if (param.expected_vt.size() != 0) {
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &size_vt, vt.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_vt, vt.data(), param.expected_vt.data(), param.epsilon);
+        }
+        if (param.expected_sigma.size() != 0) {
+            EXPECT_EQ(
+                da_handle_get_result(handle, da_pca_sigma, &size_sigma, sigma.data()),
+                da_status_success);
+            EXPECT_ARR_NEAR(size_sigma, sigma.data(), param.expected_sigma.data(),
+                            param.epsilon);
+        }
+        EXPECT_EQ(da_handle_get_result(handle, da_pca_total_variance, &size_one,
+                                       &total_variance),
+                  da_status_success);
+        EXPECT_NEAR(total_variance, param.expected_total_variance, param.epsilon);
+
+        if (param.X.size() > 0) {
+            EXPECT_EQ(
+                da_pca_transform(handle, param.m, param.p, param.X.data(), param.ldx),
+                da_status_success);
+        }
+
+        if (param.Xinv.size() > 0) {
+            EXPECT_EQ(da_pca_inverse_transform(handle, param.k,
+                                               param.expected_n_components,
+                                               param.Xinv.data(), param.ldxinv),
+                      da_status_success);
+        }
+
+        if (param.X.size() != 0) {
+            da_int size_X_transform = param.m * param.expected_n_components;
+            std::vector<TypeParam> X_transform(size_X_transform);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_transformed_data,
+                                           &size_X_transform, X_transform.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_X_transform, X_transform.data(),
+                            param.expected_X_transform.data(), param.epsilon);
+        }
+
+        if (param.Xinv.size() != 0) {
+            da_int size_Xinv_transform = param.k * param.p;
+            std::vector<TypeParam> Xinv_transform(size_Xinv_transform);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_inverse_transformed_data,
+                                           &size_Xinv_transform, Xinv_transform.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_Xinv_transform, Xinv_transform.data(),
+                            param.expected_Xinv_transform.data(), param.epsilon);
+        }
+
+        if (param.expected_rinfo.size() > 0) {
+            da_int size_rinfo = 5;
+            std::vector<TypeParam> rinfo(size_rinfo);
+            EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &size_rinfo, rinfo.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(size_rinfo, rinfo.data(), param.expected_rinfo.data(),
+                            param.epsilon);
+        }
+    }
+
+    da_handle_destroy(&handle);
+}
+
+TYPED_TEST(PCATest, ErrorExits) {
+
+    // Get some data to use
+    std::vector<PCAParamType<TypeParam>> params;
+    GetSquareData(params);
+    TypeParam results_arr[1];
+    da_int results_arr_int[1];
+    da_int dim = 1;
+
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
+
+    // Check da_pca_set_data error exits
+    EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
+                              params[0].n - 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_pca_set_data(handle, 0, params[0].p, params[0].A.data(), params[0].lda),
+              da_status_invalid_input);
+    EXPECT_EQ(da_pca_set_data(handle, params[0].n, 0, params[0].A.data(), params[0].lda),
+              da_status_invalid_input);
+
+    // Check error exits to catch incorrect order of routine calls
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_no_data);
+    EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p, params[0].X.data(),
+                               params[0].ldx),
+              da_status_no_data);
+    EXPECT_EQ(da_pca_inverse_transform(handle, params[0].k,
+                                       params[0].expected_n_components,
+                                       params[0].Xinv.data(), params[0].ldxinv),
+              da_status_no_data);
+    EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, results_arr),
+              da_status_no_data);
+    EXPECT_EQ(da_handle_get_result_int(handle, da_rinfo, &dim, results_arr_int),
+              da_status_no_data);
+
+    EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
+                              params[0].lda),
+              da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+
+    // Check da_pca_transform and da_pca_inverse_transform error exits
+    EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p, params[0].X.data(),
+                               params[0].m - 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_pca_transform(handle, 0, params[0].p, params[0].X.data(), params[0].ldx),
+              da_status_invalid_input);
+    EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p + 1, params[0].X.data(),
+                               params[0].ldx),
+              da_status_invalid_input);
+    EXPECT_EQ(da_pca_inverse_transform(handle, params[0].k,
+                                       params[0].expected_n_components,
+                                       params[0].Xinv.data(), params[0].k - 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_pca_inverse_transform(handle, 0, params[0].expected_n_components,
+                                       params[0].Xinv.data(), params[0].ldxinv),
+              da_status_invalid_input);
+    EXPECT_EQ(da_pca_inverse_transform(handle, params[0].k,
+                                       params[0].expected_n_components + 1,
+                                       params[0].Xinv.data(), params[0].ldxinv),
+              da_status_invalid_input);
+
+    // Check da_handle_get_results error exits for 'standard' results
+    EXPECT_EQ(da_handle_get_result(handle, da_linmod_coeff, &dim, results_arr),
+              da_status_unknown_query);
+    EXPECT_EQ(da_handle_get_result_int(handle, da_linmod_coeff, &dim, results_arr_int),
+              da_status_unknown_query);
+    dim = 0;
+    EXPECT_EQ(
+        da_handle_get_result_int(handle, da_pca_n_components, &dim, results_arr_int),
+        da_status_invalid_array_dimension);
+    dim = 0;
+    EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_scores, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_variance, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_sigma, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(
+        da_handle_get_result(handle, da_pca_principal_components, &dim, results_arr),
+        da_status_invalid_array_dimension);
+
+    // da_handle_results error exits for transform and inverse transform data
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_transformed_data, &dim, results_arr),
+              da_status_unknown_query);
+    dim = 1;
+    EXPECT_EQ(
+        da_handle_get_result(handle, da_pca_inverse_transformed_data, &dim, results_arr),
+        da_status_unknown_query);
+    EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p, params[0].X.data(),
+                               params[0].ldx),
+              da_status_success);
+    EXPECT_EQ(da_pca_inverse_transform(handle, params[0].k,
+                                       params[0].expected_n_components,
+                                       params[0].Xinv.data(), params[0].ldxinv),
+              da_status_success);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_transformed_data, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    dim = 1;
+    EXPECT_EQ(
+        da_handle_get_result(handle, da_pca_inverse_transformed_data, &dim, results_arr),
+        da_status_invalid_array_dimension);
+
+    // da_handle_results error exits for columns means and column sdevs
+    EXPECT_EQ(da_options_set_string(handle, "PCA method", "svd"), da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_column_means, &dim, results_arr),
+              da_status_unknown_query);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_column_sdevs, &dim, results_arr),
+              da_status_unknown_query);
+    EXPECT_EQ(da_options_set_string(handle, "PCA method", "covariance"),
+              da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_column_means, &dim, results_arr),
+              da_status_invalid_array_dimension);
+    EXPECT_EQ(da_options_set_string(handle, "PCA method", "correlation"),
+              da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_column_sdevs, &dim, results_arr),
+              da_status_invalid_array_dimension);
+
+    da_handle_destroy(&handle);
+}
+
+TYPED_TEST(PCATest, BadHandleTests) {
+
+    // handle not initialized
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
+
+    TypeParam A = 1;
+    EXPECT_EQ(da_pca_set_data(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
+
+    EXPECT_EQ(da_pca_transform(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_inverse_transform(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+
+    // incorrect handle type
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
+
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
+
+    EXPECT_EQ(da_pca_set_data(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
+
+    EXPECT_EQ(da_pca_transform(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_inverse_transform(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+
+    da_handle_destroy(&handle);
+}
+
+TEST(PCATest, IncorrectHandlePrecision) {
+
     da_handle handle_d = nullptr;
     da_handle handle_s = nullptr;
 
     EXPECT_EQ(da_handle_init_d(&handle_d, da_handle_pca), da_status_success);
     EXPECT_EQ(da_handle_init_s(&handle_s, da_handle_pca), da_status_success);
 
+    double Ad;
+    float As;
+
+    EXPECT_EQ(da_pca_set_data_d(handle_s, 1, 1, &Ad, 1), da_status_wrong_type);
+    EXPECT_EQ(da_pca_set_data_s(handle_d, 1, 1, &As, 1), da_status_wrong_type);
+
     EXPECT_EQ(da_pca_compute_d(handle_s), da_status_wrong_type);
     EXPECT_EQ(da_pca_compute_s(handle_d), da_status_wrong_type);
 
-    EXPECT_EQ(da_pca_compute_d(handle_d), da_status_invalid_pointer);
-    EXPECT_EQ(da_pca_compute_s(handle_s), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_transform_d(handle_s, 1, 1, &Ad, 1), da_status_wrong_type);
+    EXPECT_EQ(da_pca_transform_s(handle_d, 1, 1, &As, 1), da_status_wrong_type);
 
-    da_int dim = 5;
-    double *resultd = nullptr;
-    float *results = nullptr;
-    EXPECT_EQ(da_handle_get_result_d(handle_d, da_pca_components, &dim, resultd),
-              da_status_no_data);
-    EXPECT_EQ(da_handle_get_result_s(handle_s, da_pca_components, &dim, results),
-              da_status_no_data);
+    EXPECT_EQ(da_pca_inverse_transform_d(handle_s, 1, 1, &Ad, 1), da_status_wrong_type);
+    EXPECT_EQ(da_pca_inverse_transform_s(handle_d, 1, 1, &As, 1), da_status_wrong_type);
 
     da_handle_destroy(&handle_d);
     da_handle_destroy(&handle_s);
 }
-
-/*
-    This test compares the computed pca components 
-    with the reference pca components which are computed 
-    using scikit learn using below python code
-
-    import numpy as np
-    from scipy import linalg
-    from sklearn.decomposition import PCA
-    import csv
-    import time
-    import random
-
-    # dump 10 random input and outputs into csv file
-    num_test = np.array([10])
-    filename = "pca_data.csv"
-    csvfile = open(filename, "w")
-    csvwriter = csv.writer(csvfile)
-    csvwriter.writerow(num_test)
-    for x in range(num_test.data[0]):
-        isize = random.randint(2, 30)
-        X = np.random.rand(isize, isize)
-        X = X.transpose()
-        pca = PCA(svd_solver="auto")
-        pca.fit(X)
-        csvwriter.writerow(X.shape)
-        csvwriter.writerows(X.transpose())
-        csvwriter.writerows(pca.components_.transpose())
-
-*/
-#if defined(_MSC_VER)
-#define FSCANF_PCA fscanf_s
-#else
-#define FSCANF_PCA fscanf
-#endif
-
-TEST(pca, wrongPCAoutput) {
-    GTEST_SKIP() << "Skipping failing test";
-    char filepath[256] = DATA_DIR;
-    da_int ntest, n, p;
-
-    strcat(filepath, "pca_data.csv");
-    FILE *fp = nullptr;
-
-/* Most of the time MSVC compiler can automatically replace CRT functions with _s versions, but not this one */
-#if defined(_MSC_VER)
-    if (fopen_s(&fp, filepath, "r") != 0) {
-#else
-    fp = fopen(filepath, "r");
-    if (fp == nullptr) {
-#endif
-    }
-
-    if (fp != NULL) {
-        FSCANF_PCA(fp, "%d,\n", &ntest);
-        if (ntest < 0)
-            ntest = 0;
-        for (da_int i = 0; i < ntest; i++) {
-
-            /*scan the dims*/
-            FSCANF_PCA(fp, "%d,%d\n", &n, &p);
-            if (n < 2 || p < 2)
-                continue;
-
-            /*create memory and handle*/
-            da_handle handle_d = nullptr;
-            da_int npc = std::min(n, p);
-            double *A = new double[n * p];
-
-            /*Read the input matrix A from file*/
-            for (da_int i = 0; i < n; i++) {
-                for (int j = 0; j < p; j++) {
-                    FSCANF_PCA(fp, "%lf,", (A + i * p + j));
-                }
-                FSCANF_PCA(fp, "\n");
-            }
-
-            /*Perform PCA */
-            EXPECT_EQ(da_handle_init_d(&handle_d, da_handle_pca), da_status_success);
-            EXPECT_EQ(da_options_set_string(handle_d, "pca method", "svd"),
-                      da_status_success);
-            EXPECT_EQ(da_options_set_int(handle_d, "npc", npc), da_status_success);
-            EXPECT_EQ(da_pca_init_d(handle_d, n, p, A, n), da_status_success);
-            EXPECT_EQ(da_pca_compute_d(handle_d), da_status_success);
-
-            /*Get the result*/
-            double *components = new double[npc * npc];
-            da_int dim = npc * npc;
-            EXPECT_EQ(
-                da_handle_get_result_d(handle_d, da_pca_components, &dim, components),
-                da_status_success);
-
-            /*Read the reference output from file*/
-            double *ref_components = new double[npc * npc];
-            for (da_int i = 0; i < npc; i++) {
-                for (int j = 0; j < npc; j++) {
-                    FSCANF_PCA(fp, "%lf,", (ref_components + j + i * npc));
-                }
-                FSCANF_PCA(fp, "\n");
-            }
-
-            /*Verify the result with ref*/
-            EXPECT_ARR_ABS_NEAR((npc * npc), ref_components, components, 1e-8);
-
-            delete[] ref_components;
-            delete[] components;
-            delete[] A;
-            da_handle_destroy(&handle_d);
-        }
-    }
-    if (fp)
-        fclose(fp);
-}
-
-} // namespace
