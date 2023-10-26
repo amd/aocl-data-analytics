@@ -20,7 +20,7 @@
 * THE SOFTWARE.
 *******************************************************************************/
 
-/*! @file cblas.hh
+/*  cblas.hh
  *  cblas.hh defines all the overloaded CPP functions to be invoked from 
  *  template da_interfaces
  *  */

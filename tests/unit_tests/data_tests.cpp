@@ -1178,8 +1178,8 @@ TEST(datastore, nullArguments) {
     EXPECT_EQ(da_data_get_col_label(store, 0, nullptr, label), da_status_invalid_input);
 
     // getters
-    EXPECT_EQ(da_data_get_num_rows(store, nullptr), da_status_invalid_input);
-    EXPECT_EQ(da_data_get_num_cols(store, nullptr), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_n_rows(store, nullptr), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_n_cols(store, nullptr), da_status_invalid_input);
     EXPECT_EQ(da_data_get_element_int(store, 0, 0, nullptr), da_status_invalid_input);
     EXPECT_EQ(da_data_get_element_uint8(store, 0, 0, nullptr), da_status_invalid_input);
     EXPECT_EQ(da_data_get_element_real_d(store, 0, 0, nullptr), da_status_invalid_input);
@@ -1334,8 +1334,8 @@ TEST(dataStore, nullStore) {
     double delem;
     float selem;
     uint8_t uielem;
-    EXPECT_EQ(da_data_get_num_rows(store, &ielem), da_status_invalid_input);
-    EXPECT_EQ(da_data_get_num_cols(store, &ielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_n_rows(store, &ielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_n_cols(store, &ielem), da_status_invalid_input);
     EXPECT_EQ(da_data_get_element_int(store, 1, 1, &ielem), da_status_invalid_input);
     EXPECT_EQ(da_data_get_element_real_d(store, 1, 1, &delem), da_status_invalid_input);
     EXPECT_EQ(da_data_get_element_real_s(store, 1, 1, &selem), da_status_invalid_input);

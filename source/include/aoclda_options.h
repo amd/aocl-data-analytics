@@ -23,21 +23,13 @@
 
 #ifndef AOCLDA_OPTIONS_H
 #define AOCLDA_OPTIONS_H
-/** \file
- * \anchor apx_o
- * \brief Appendix O - Options registry
- *
- * Registry for setting and getting option values.
- *
- * The registry has four option types: integer, real (float and double), and
- * string.
- *
- * Options are set using the "setters" and options setting can be retrieved
- * using the "getters".
- */
 
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
+
+/**
+ * \file
+ */
 
 /** \{
  * \brief Member of the option setters group

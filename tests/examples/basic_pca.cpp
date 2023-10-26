@@ -28,71 +28,130 @@
 #include "aoclda.h"
 #include <iostream>
 
+/* Basic PCA example
+ *
+ * This example computes a principal component
+ * analysis for a small data matrix.
+ */
+
 int main() {
 
-    // Initialize the pca object
+    // Initialize the handle
     da_handle handle = nullptr;
-    da_status status;
 
-    std::cout << "-----------------------------------------------" << std::endl;
-    std::cout << " Example to Use AOCLDA-PCA for double precision" << std::endl;
-    std::cout << std::fixed << std::endl;
+    std::cout << "-----------------------------------------------------------------------"
+              << std::endl;
+    std::cout << "Basic PCA" << std::endl;
+    std::cout << "Principal component analysis for a 6x5 data matrix" << std::endl
+              << std::endl;
+    std::cout << std::fixed;
+    std::cout.precision(5);
 
-    // A: num_samples x num_features (n x p)
-    da_int n = 3, p = 3;
-    double A[9] = {3, 2, 2, 2, 3, -2, 3, 1, 2};
-    da_int num_compnents = std::min((da_int)3, std::min(n, p));
-    double doutput[24];
+    int exit_code = 0;
+    bool pass = true;
 
-    da_handle_init_d(&handle, da_handle_pca);
-    status = da_pca_set_data_d(handle, n, p, A, n);
-    status = da_pca_compute_d(handle);
-    if (status == da_status_success) {
-        std::cout << " PCA computed successfully " << std::endl;
-        da_int dim = num_compnents * num_compnents;
-        status = da_handle_get_result_d(handle, da_pca_principal_components, &dim, doutput);
-        if (status == da_status_success) {
-            std::cout << " Successfully read the PCA results" << std::endl;
-        } else {
-            std::cout << " PCA get results failed with status" << status << std::endl;
+    // Input data
+    double A[30] = {2.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 5.0, 2.0, 8.0,
+                    3.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0, 2.0, 8.0,
+                    4.0, 6.0, 9.0, 5.0, 4.0, 3.0, 1.0, 4.0, 2.0, 2.0};
+
+    da_int n_samples = 6, n_features = 5, n_components = 3, lda = 6;
+
+    // Create the handle and pass it the data matrix
+    pass = pass && (da_handle_init_d(&handle, da_handle_pca) == da_status_success);
+    pass = pass && (da_pca_set_data_d(handle, n_samples, n_features, A, lda) ==
+                    da_status_success);
+
+    // Set options
+    pass = pass && (da_options_set_string(handle, "PCA method", "covariance") ==
+                    da_status_success);
+    pass = pass && (da_options_set_int(handle, "n_components", n_components) ==
+                    da_status_success);
+
+    // Compute the PCA
+    pass = pass && (da_pca_compute_d(handle) == da_status_success);
+
+    // Transform another data matrix into the same feature space
+    double X[15] = {7.0, 3.0, 3.0, 4.0, 2.0, 3.0, 2.0, 5.0,
+                    2.0, 9.0, 6.0, 4.0, 3.0, 4.0, 1.0};
+    da_int m_samples = 3, m_features = 5, ldx = 3;
+    pass = pass && (da_pca_transform_d(handle, m_samples, m_features, X, ldx) ==
+                    da_status_success);
+
+    // Extract results from the handle
+    da_int principal_components_dim = n_components * n_features;
+    da_int scores_dim = n_samples * n_components;
+    da_int X_transform_dim = m_samples * n_components;
+    double *principal_components = new double[principal_components_dim];
+    double *scores = new double[scores_dim];
+    double *X_transform = new double[X_transform_dim];
+    pass = pass && (da_handle_get_result_d(handle, da_pca_principal_components,
+                                           &principal_components_dim,
+                                           principal_components) == da_status_success);
+    pass = pass && (da_handle_get_result_d(handle, da_pca_scores, &scores_dim, scores) ==
+                    da_status_success);
+    pass =
+        pass && (da_handle_get_result_d(handle, da_pca_transformed_data, &X_transform_dim,
+                                        X_transform) == da_status_success);
+
+    // Check status (we could do this after every function call)
+    if (pass) {
+        std::cout << "PCA computed successfully" << std::endl << std::endl;
+
+        std::cout << "Principal components:" << std::endl;
+        for (da_int j = 0; j < n_features; j++) {
+            for (da_int i = 0; i < n_components; i++) {
+                std::cout << principal_components[n_components * i + j] << "  ";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+
+        // Check against expected results
+        double principal_components_exp[15] = {
+            -0.14907884486130418,  -0.07220367025708045, -0.38718653977350936,
+            -0.6612054163818867,   0.623738867070505,    -0.06907631947413592,
+            -0.031706610956396264, 0.20952521660694667,  0.8854125206703791,
+            -0.7289116905829763,   -0.6138062400926413,  0.1296593407398653,
+            -0.09091387966203135,  0.4302063910917139,   -0.21106437194645863};
+        double scores_exp[18] = {
+            3.797261129593253,    -2.5006179943446254,  2.431393931595693,
+            -3.383775820752579,   -2.0509494403116166,  1.7066881942198742,
+            1.8917911630360351,   -0.14051085079306697, -0.48911894407452433,
+            3.0345920645743383,   -2.9954589898464876,  -1.3012944428962916,
+            -0.10695425296598449, 1.5602497256676358,   1.2837835252499912,
+            -0.7771478863983585,  -0.5060720435855457,  -1.4538590679677388};
+        double X_transform_exp[9] = {
+            -3.250305270939447,  0.6691223004872521,   1.833601737126601,
+            -2.1581247424555086, -0.21658703437771865, -0.2844305102179128,
+            -1.9477723543266676, 1.7953216115607247,   -0.5561178355649032};
+
+        double tol = 1.0e-14;
+        double err = 0.0;
+        for (da_int i = 0; i < principal_components_dim; i++)
+            err = std::max(
+                err, std::abs(principal_components[i] - principal_components_exp[i]));
+        for (da_int i = 0; i < scores_dim; i++)
+            err = std::max(err, std::abs(scores[i] - scores_exp[i]));
+        for (da_int i = 0; i < X_transform_dim; i++)
+            err = std::max(err, std::abs(X_transform[i] - X_transform_exp[i]));
+        if (err > tol) {
+            std::cout << "Solution is not within the expected tolerance: " << err
+                      << std::endl;
+            exit_code = 1;
         }
     } else {
-        std::cout << " PCA computation Failed with status" << status << std::endl;
+        exit_code = 1;
     }
 
-    std::cout << " PCA computed successfully for double precision" << std::endl;
-    std::cout << "------------------------------------------------" << std::endl;
-
-    std::cout << "-------------------------------------------------" << std::endl;
-    std::cout << " Example to Use AOCLDA-PCA for single precision" << std::endl;
-    std::cout << std::fixed << std::endl;
-
-    // A: num_samples x num_features (n x p)
-    da_int ns = 3, ps = 3;
-    float As[9] = {3, 2, 2, 2, 3, -2, 3, 1, 2};
-    float soutput[24];
-    da_handle handle_s = nullptr;
-
-    da_handle_init_s(&handle_s, da_handle_pca);
-    status = da_pca_set_data_s(handle_s, ns, ps, As, ns);
-    status = da_pca_compute_s(handle_s);
-    if (status == da_status_success) {
-        std::cout << " PCA computed successfully " << std::endl;
-        da_int dim = num_compnents * num_compnents;
-        status = da_handle_get_result_s(handle_s, da_pca_principal_components, &dim, soutput);
-        if (status == da_status_success) {
-            std::cout << " Successfully read the PCA results" << std::endl;
-        } else {
-            std::cout << " PCA get results failed with status" << status << std::endl;
-        }
-    } else {
-        std::cout << " PCA computation Failed with status" << status << std::endl;
-    }
-
+    // Clean up
     da_handle_destroy(&handle);
-    da_handle_destroy(&handle_s);
-    std::cout << " PCA computed successfully for single precision " << std::endl;
-    std::cout << "-------------------------------------------------" << std::endl;
+    delete[] principal_components;
+    delete[] scores;
+    delete[] X_transform;
 
-    return 0;
+    std::cout << "-----------------------------------------------------------------------"
+              << std::endl;
+
+    return exit_code;
 }

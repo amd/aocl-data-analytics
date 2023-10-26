@@ -120,7 +120,7 @@ Linking on Windows
        <AOCL_ROOT>\amd-libflame\lib\<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
        <AOCL_ROOT>\amd-blis\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
 
-The same command should work with cl replaced by clang-cl and linking statically using /MT.
+The same command should work with ``cl`` replaced by ``clang-cl`` and linking statically using ``/MT``.
 
 Note that you should ensure the folders containing the libraries to be linked are on your Windows ``PATH`` environment variable e.g. using ``set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>``. Depending on how your system is set up, and which functions you are using, you may also need to link to some Fortran runtime libraries such as ``libfifcore-mt.lib``, ``ifconsol.lib``, ``libifportmd.lib``, ``libmmd.lib``, ``libirc.lib`` and ``svml_dispmd.lib``.
 

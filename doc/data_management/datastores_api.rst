@@ -102,8 +102,8 @@ Column headers
 Data edition
 ^^^^^^^^^^^^
 
-.. doxygenfunction:: da_data_get_num_rows
-.. doxygenfunction:: da_data_get_num_cols
+.. doxygenfunction:: da_data_get_n_rows
+.. doxygenfunction:: da_data_get_n_cols
 .. doxygenfunction:: da_data_get_element_int
 .. doxygenfunction:: da_data_get_element_real_d
 .. doxygenfunction:: da_data_get_element_real_s

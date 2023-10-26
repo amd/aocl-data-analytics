@@ -38,6 +38,10 @@ extern "C" {
 #endif
 
 /**
+ * \file
+ */
+
+/**
  * @brief Enumeration defining the types of handles available
  */
 typedef enum da_handle_type_ {

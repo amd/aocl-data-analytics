@@ -30,26 +30,6 @@
 
 /**
  * \file
- * \anchor apx_e
- * \brief Error codes
- *
- * The following error codes can be returned by any of the routines in this library:
- * - \ref da_status_success = 0 - operation was successful
- * - \ref da_status_internal_error - unexpected error occurred
- * - \ref da_status_memory_error - memory could not be allocated
- * - \ref da_status_invalid_pointer - a provided pointer was invalid
- * - \ref da_status_invalid_input - an input parameter had an invalid value
- * - \ref da_status_not_implemented - this feature has not been implemented
- * - \ref da_status_out_of_date - the data is out of date
- * - \ref da_status_wrong_type - a function was called with the wrong data type
- * - \ref da_status_overflow - numerical overflow detected
- * - \ref da_status_invalid_handle_type - invalid handle type provided
- * - \ref da_status_handle_not_initialized - handle was not initialized properly or is corrupted
- * - \ref da_status_invalid_option - invalid option detected
- * - \ref da_status_incompatible_options - incompatible option detected
- *
- * Additional error exits specific to particular routines are detailed in the individual routine documentation.
-
  */
 
 /**
@@ -77,6 +57,7 @@ typedef enum da_status_ {
     da_status_invalid_array_dimension, ///< The size of an array was too small
     da_status_unknown_query,    ///< The result queried cannot be found in the handle
     da_status_incorrect_output, ///< Wrong output
+     da_status_no_data, ///< No data was found
 
     // CSV errors 100-199
     da_status_file_reading_error = 100, ///< An error occured when reading a CSV file
@@ -85,7 +66,6 @@ typedef enum da_status_ {
 
     // linreg errors 200-299
     // PCA errors 300-399
-    da_status_no_data = 300,
 
     // Options errors 400-499
     da_status_option_not_found = 400, ///< Option not found

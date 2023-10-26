@@ -35,26 +35,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-/* header file for public API to extract data from a handle
- */
 
-/** \file
- *  \anchor getresult
- *  \brief Extracting results from \ref handles
- *
- *  These functions extract data stored in the handle by any given solver.
- *
- *  Some functions in the library store in the handle relevant data produced during the
- *  solving phase of a given problem. For example, while performing a linear regression,
- *  the solver will store in the handle the optimal fitting coefficients as well as other
- *  data of interest.
- *
+/**
+ * \file
  */
 
 /**
  * \brief Enumeration defining the type object (result)
  * to query or extract from a handle
- */
+ **/
 typedef enum da_result_ {
     // General purpose data 1..100
     da_rinfo = 1, ///< General information array, containing a varierty of metrics,
@@ -64,18 +53,17 @@ typedef enum da_result_ {
     da_linmod_coeff =
         101, ///< Optimal fitted coefficients produced by the last call to a linear regression solver.
     // PCA 201..300
-    da_pca_scores = 201,
-    da_pca_variance,
-    da_pca_principal_components,
-    da_pca_total_variance,
-    da_pca_n_components,
-    da_pca_column_means,
-    da_pca_column_sdevs,
-    da_pca_transformed_data,
-    da_pca_inverse_transformed_data,
-    da_pca_u,
-    da_pca_sigma,
-    da_pca_vt,
+    da_pca_scores = 201, ///< Matrix of scores computed by the PCA API.
+    da_pca_variance, ///< The variance explained by each component computed by the PCA API.
+    da_pca_principal_components, ///< Matrix of principal components computed by the PCA API.
+    da_pca_total_variance, ///< The toal variance of the data matrix supplied to the PCA API.
+    da_pca_column_means, ///< Column means of the data matrix supplied to the PCA API.
+    da_pca_column_sdevs, ///< Column standard deviations of the data matrix supplied to the PCA API.
+    da_pca_transformed_data, ///< Transformed data matrix computed by projecting into principal component space following a PCA computation.
+    da_pca_inverse_transformed_data, ///< Inverse transformed data matrix computed by projecting from principal component space into the original coordinate space used by a PCA computation.
+    da_pca_u, ///< The matrix @f$U@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
+    da_pca_sigma,  ///< The nonzero diagonal entries of @f$\Sigma@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
+    da_pca_vt,  ///< The matrix @f$V^T@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     // Nonlinear Optimization 301..400
     // Random Forrests 401..500
     // ...
@@ -119,7 +107,7 @@ da_status da_handle_get_result_s(const da_handle handle, da_result query, da_int
 
 da_status da_handle_get_result_int(const da_handle handle, da_result query, da_int *dim,
                                    da_int *result);
-/* \} */
+/** \} */
 
 #ifdef __cplusplus
 }

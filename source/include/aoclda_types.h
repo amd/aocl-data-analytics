@@ -34,12 +34,6 @@
 
 /**
  * \file
- * \anchor apx_d
- * \brief Appendix D - Data types.
- *
- * \todo This header file defines data type precision to use
- * for floating point data type as well as the data type for
- * integers.
  */
 
 /**

@@ -75,13 +75,13 @@ template <typename T> class da_pca : public basic_handle<T> {
     da_errors::da_error_t *err = nullptr;
 
     // Arrays used by the SVD, and to store results
-    std::vector<T> scores;               // U*Sigma
-    std::vector<T> variance;             // Sigma**2 / n-1
-    std::vector<T> principal_components; // Vt
+    std::vector<T> scores;                     // U*Sigma
+    std::vector<T> variance;                   // Sigma**2 / n-1
+    std::vector<T> principal_components;       // Vt
     std::vector<T> column_means, column_sdevs; // Store standardization data
-    std::vector<T> transformed_data; // Used by the transform function
-    std::vector<T> inverse_transformed_data; // Used by the inverse_transform function
-    T total_variance = 0.0; // Sum((MeanCentered A [][])**2)
+    std::vector<T> transformed_data;           // Used by the transform function
+    std::vector<T> inverse_transformed_data;   // Used by the inverse_transform function
+    T total_variance = 0.0;                    // Sum((MeanCentered A [][])**2)
     da_int n_components = 0;
     std::vector<T> u, sigma, vt, work, A_copy;
     std::vector<da_int> iwork;
@@ -129,7 +129,7 @@ template <typename T> class da_pca : public basic_handle<T> {
                                    std::to_string(rinfo_size) + ".");
             result[0] = (T)n;
             result[1] = (T)p;
-            result[2] = (T)npc;
+            result[2] = (T)ns;
             result[3] = (T)m;
             result[4] = (T)k;
             break;
@@ -232,10 +232,11 @@ template <typename T> class da_pca : public basic_handle<T> {
             break;
         case da_result::da_pca_inverse_transformed_data:
             if (k == 0)
-                return da_warn(err, da_status_unknown_query,
-                               "No data matrices have been inverse transformed yet. Please call "
-                               "da_pca_inverse_transform_s or da_pca_inverse_transform_d before "
-                               "extracting inverse transformed data.");
+                return da_warn(
+                    err, da_status_unknown_query,
+                    "No data matrices have been inverse transformed yet. Please call "
+                    "da_pca_inverse_transform_s or da_pca_inverse_transform_d before "
+                    "extracting inverse transformed data.");
             if (*dim < k * p)
                 return da_warn(err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
@@ -252,51 +253,32 @@ template <typename T> class da_pca : public basic_handle<T> {
     };
 
     da_status get_result(da_result query, da_int *dim, da_int *result) {
-        da_status status = da_status_success;
-        // Don't return anything if PCA compute is not done!
-        if (!iscomputed) {
-            return da_warn(err, da_status_no_data,
-                           "PCA has not yet been computed. Please call da_pca_compute_s "
-                           "or da_pca_compute_d before extracting results.");
-        }
 
-        if (result == nullptr || *dim <= 0) {
-            return da_warn(err, da_status_invalid_array_dimension,
-                           "The results array has not been allocated, or an unsuitable "
-                           "dimension has been provided.");
-        }
-
-        switch (query) {
-        case da_result::da_pca_n_components:
-            result[0] = n_components;
-            break;
-        default:
-            return da_warn(err, da_status_unknown_query,
-                           "The requested result could not found.");
-        }
-        return status;
+        return da_warn(err, da_status_unknown_query,
+                       "There are no integer results available for this API.");
     };
 };
 
 /* Store the user's data matrix in preparation for PCA computation */
-template <typename T> da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
+template <typename T>
+da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
 
     da_status status = da_status_success;
 
     // Check for illegal arguments and function calls
     if (n < 1)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with n = " + std::to_string(n) +
-                            ". Constraint: n >= 1.");
+                        "The function was called with n_samples = " + std::to_string(n) +
+                            ". Constraint: n_samples >= 1.");
     if (p < 1)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with p = " + std::to_string(p) +
-                            ". Constraint: p >= 1.");
+                        "The function was called with n_features = " + std::to_string(p) +
+                            ". Constraint: n_features >= 1.");
     if (lda < n)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with n = " + std::to_string(n) +
+                        "The function was called with n_samples = " + std::to_string(n) +
                             " and lda = " + std::to_string(lda) +
-                            ". Constraint: lda >= n.");
+                            ". Constraint: lda >= n_samples.");
 
     // Store dimensions of A and rezero other scalars in case handle is being reused
     this->n = n;
@@ -355,7 +337,7 @@ template <typename T> da_status da_pca<T>::compute() {
     // Initialize some workspace arrays
     u.resize(n * npc);
     //TODO: without the 2 it falls over - potential bug in flame being investigated
-    sigma.resize(2*std::min(n, p)+1);
+    sigma.resize(2 * std::min(n, p) + 1);
     vt.resize(npc * p);
     iwork.resize(12 * std::min(n, p));
 
@@ -372,13 +354,11 @@ template <typename T> da_status da_pca<T>::compute() {
     case pca_method_corr:
         column_sdevs.resize(p);
         da_basic_statistics::variance(da_axis_col, n, p, A_copy.data(), n,
-                                      column_means.data(),
-                                      column_sdevs.data());
+                                      column_means.data(), column_sdevs.data());
         for (da_int i = 0; i < p; i++)
             column_sdevs[i] = std::sqrt(column_sdevs[i]);
         da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n,
-                                         column_means.data(),
-                                         column_sdevs.data());
+                                         column_means.data(), column_sdevs.data());
         break;
     default:
         // No standardization is required
@@ -413,8 +393,8 @@ template <typename T> da_status da_pca<T>::compute() {
     da_int lwork = -1;
 
     da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu, &ns,
-               sigma.data(), u.data(), &n, vt.data(), &npc,
-               estworkspace, &lwork, iwork.data(), &INFO);
+               sigma.data(), u.data(), &n, vt.data(), &npc, estworkspace, &lwork,
+               iwork.data(), &INFO);
 
     // Handle SVD Error
     if (INFO != 0) {
@@ -431,8 +411,8 @@ template <typename T> da_status da_pca<T>::compute() {
 
     /*Call gesvdx*/
     da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu, &ns,
-               sigma.data(), u.data(), &n, vt.data(), &npc,
-               work.data(), &lwork, iwork.data(), &INFO);
+               sigma.data(), u.data(), &n, vt.data(), &npc, work.data(), &lwork,
+               iwork.data(), &INFO);
 
     // Handle SVD Error
     if (INFO != 0) {
@@ -449,8 +429,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Look at column j of U
         colmax = (T)0.0;
         for (da_int i = 0; i < n; i++) {
-            colmax = std::abs(u[i + n * j]) > std::abs(colmax) ? u[i + n * j]
-                                                                     : colmax;
+            colmax = std::abs(u[i + n * j]) > std::abs(colmax) ? u[i + n * j] : colmax;
         }
         if (colmax < 0) {
             // Negate column j of U and row j of VT
@@ -508,18 +487,18 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx) {
     /* Check for illegal arguments */
     if (m < 1)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with m = " + std::to_string(m) +
-                            ". Constraint: m >= 1.");
+                        "The function was called with m_samples = " + std::to_string(m) +
+                            ". Constraint: m_samples >= 1.");
     if (p != this->p)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with p = " + std::to_string(p) +
-                            " but the PCA has been computed with p = " +
-                            std::to_string(this->p) + ".");
+                        "The function was called with m_features = " + std::to_string(p) +
+                            " but the PCA has been computed with " +
+                            std::to_string(this->p) + " features.");
     if (ldx < m)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with m = " + std::to_string(m) +
+                        "The function was called with m_samples = " + std::to_string(m) +
                             " and ldx = " + std::to_string(ldx) +
-                            ". Constraint: ldx >= m.");
+                            ". Constraint: ldx >= m_samples.");
 
     this->m = m;
 
@@ -539,8 +518,7 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx) {
         break;
     case pca_method_corr:
         da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m,
-                                         column_means.data(),
-                                         column_sdevs.data());
+                                         column_means.data(), column_sdevs.data());
         break;
     default:
         // No standardization is required
@@ -568,25 +546,25 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
     /* Check for illegal arguments */
     if (k < 1)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with k = " + std::to_string(k) +
-                            ". Constraint: k >= 1.");
+                        "The function was called with k_samples = " + std::to_string(k) +
+                            ". Constraint: k_samples >= 1.");
     if (r != ns)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with r = " + std::to_string(r) +
-                            " but the PCA has been computed with r = " +
-                            std::to_string(ns) + ".");
+                        "The function was called with k_features = " + std::to_string(r) +
+                            " but the PCA has been computed with " + std::to_string(ns) +
+                            " components.");
     if (ldx < k)
         return da_error(err, da_status_invalid_input,
-                        "The function was called with k = " + std::to_string(k) +
+                        "The function was called with k_samples = " + std::to_string(k) +
                             " and ldx = " + std::to_string(ldx) +
-                            ". Constraint: ldx >= k.");
+                            ". Constraint: ldx >= k_samples.");
 
     this->k = k;
 
     // Compute X * VT and store in inverse_transformed_data
     inverse_transformed_data.resize(k * p);
-    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0,
-                        X, ldx, principal_components.data(), ns, 0.0,
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X, ldx,
+                        principal_components.data(), ns, 0.0,
                         inverse_transformed_data.data(), k);
 
     // Undo the standardization used in the PCA computation
@@ -594,14 +572,16 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
     case pca_method_cov:
         for (da_int j = 0; j < p; j++) {
             for (da_int i = 0; i < k; i++) {
-                    inverse_transformed_data[i + k*j] += column_means[j];
-                }
+                inverse_transformed_data[i + k * j] += column_means[j];
             }
+        }
         break;
     case pca_method_corr:
         for (da_int j = 0; j < p; j++) {
             for (da_int i = 0; i < k; i++) {
-                    inverse_transformed_data[i + k*j] = inverse_transformed_data[i + k*j] * column_sdevs[j] + column_means[j];
+                inverse_transformed_data[i + k * j] =
+                    inverse_transformed_data[i + k * j] * column_sdevs[j] +
+                    column_means[j];
             }
         }
         break;

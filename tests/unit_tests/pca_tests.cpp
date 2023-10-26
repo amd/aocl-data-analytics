@@ -88,12 +88,7 @@ TYPED_TEST(PCATest, PCAFunctionality) {
                       da_status_success);
         }
 
-        da_int n_components;
         da_int size_one = 1;
-        EXPECT_EQ(da_handle_get_result_int(handle, da_pca_n_components, &size_one,
-                                           &n_components),
-                  da_status_success);
-        EXPECT_EQ(n_components, param.expected_n_components);
 
         da_int size_scores = param.n * param.expected_n_components;
         da_int size_principal_components = param.p * param.expected_n_components;
@@ -370,7 +365,7 @@ TYPED_TEST(PCATest, ErrorExits) {
     EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, results_arr),
               da_status_no_data);
     EXPECT_EQ(da_handle_get_result_int(handle, da_rinfo, &dim, results_arr_int),
-              da_status_no_data);
+              da_status_unknown_query);
 
     EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
                               params[0].lda),
@@ -405,8 +400,8 @@ TYPED_TEST(PCATest, ErrorExits) {
               da_status_unknown_query);
     dim = 0;
     EXPECT_EQ(
-        da_handle_get_result_int(handle, da_pca_n_components, &dim, results_arr_int),
-        da_status_invalid_array_dimension);
+        da_handle_get_result_int(handle, da_rinfo, &dim, results_arr_int),
+        da_status_unknown_query);
     dim = 0;
     EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, results_arr),
               da_status_invalid_array_dimension);

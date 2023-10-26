@@ -46,8 +46,9 @@ int main() {
     std::cout.precision(5);
 
     // Problem data
-    double x[20]{1, 2, 3, 4, 4, 3, 2, 1, 2, 8, 4, 6, 9, 5, 4, 3, 1, 1, 2, 2};
-    da_int n = 4, p = 5, ldx = 4, ldcov = 5;
+    double X[20]{1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0, 2.0, 8.0,
+                 4.0, 6.0, 9.0, 5.0, 4.0, 3.0, 1.0, 1.0, 2.0, 2.0};
+    da_int n_rows = 4, n_cols = 5, ldx = 4, ldcov = 5;
 
     // Arrays for output data
     double harmonic_mean[5], mean[4], variance[4], kurtosis[4];
@@ -88,7 +89,7 @@ int main() {
                        0.0,
                        -1.1666666666666665,
                        0.3333333333333333};
-    double x_exp[20]{-1.1618950038622251, -0.3872983346207417, 0.3872983346207417,
+    double X_exp[20]{-1.1618950038622251, -0.3872983346207417, 0.3872983346207417,
                      1.1618950038622251,  1.1618950038622251,  0.3872983346207417,
                      -0.3872983346207417, -1.1618950038622251, -1.1618950038622251,
                      1.1618950038622251,  -0.3872983346207417, 0.3872983346207417,
@@ -100,24 +101,24 @@ int main() {
     bool pass = true;
 
     // Compute column-wise harmonic means
-    pass = pass && (da_harmonic_mean_d(da_axis_col, n, p, x, ldx, harmonic_mean) ==
-                    da_status_success);
+    pass = pass && (da_harmonic_mean_d(da_axis_col, n_rows, n_cols, X, ldx,
+                                       harmonic_mean) == da_status_success);
 
     // Compute row-wise mean, variance and kurtosis
-    pass = pass && (da_kurtosis_d(da_axis_row, n, p, x, ldx, mean, variance, kurtosis) ==
-                    da_status_success);
+    pass = pass && (da_kurtosis_d(da_axis_row, n_rows, n_cols, X, ldx, mean, variance,
+                                  kurtosis) == da_status_success);
 
     // Compute overall max/min, median and hinges
-    pass = pass &&
-           (da_five_point_summary_d(da_axis_all, n, p, x, ldx, minimum, lower_hinge,
-                                    median, upper_hinge, maximum) == da_status_success);
+    pass = pass && (da_five_point_summary_d(da_axis_all, n_rows, n_cols, X, ldx, minimum,
+                                            lower_hinge, median, upper_hinge,
+                                            maximum) == da_status_success);
 
     // Compute covariance matrix
-    pass =
-        pass && (da_covariance_matrix_d(n, p, x, ldx, cov, ldcov) == da_status_success);
+    pass = pass && (da_covariance_matrix_d(n_rows, n_cols, X, ldx, cov, ldcov) ==
+                    da_status_success);
 
     // Standardize the original data matrix
-    pass = pass && (da_standardize_d(da_axis_col, n, p, x, ldx, dummy, dummy) ==
+    pass = pass && (da_standardize_d(da_axis_col, n_rows, n_cols, X, ldx, dummy, dummy) ==
                     da_status_success);
 
     // Check status (we could do this after every function call)
@@ -126,22 +127,22 @@ int main() {
 
         // Print computed statistics
         std::cout << "Column-wise harmonic means:  ";
-        for (da_int i = 0; i < p; i++)
+        for (da_int i = 0; i < n_cols; i++)
             std::cout << "  " << harmonic_mean[i];
         std::cout << std::endl << std::endl;
 
         std::cout << "Row-wise means:  ";
-        for (da_int i = 0; i < n; i++)
+        for (da_int i = 0; i < n_rows; i++)
             std::cout << "  " << mean[i];
         std::cout << std::endl << std::endl;
 
         std::cout << "Row-wise variances:  ";
-        for (da_int i = 0; i < n; i++)
+        for (da_int i = 0; i < n_rows; i++)
             std::cout << "  " << variance[i];
         std::cout << std::endl << std::endl;
 
         std::cout << "Row-wise kurtoses:  ";
-        for (da_int i = 0; i < n; i++)
+        for (da_int i = 0; i < n_rows; i++)
             std::cout << "  " << kurtosis[i];
         std::cout << std::endl << std::endl;
 
@@ -151,8 +152,8 @@ int main() {
                   << std::endl;
 
         std::cout << "Covariance matrix:" << std::endl;
-        for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < p; i++) {
+        for (da_int j = 0; j < n_cols; j++) {
+            for (da_int i = 0; i < n_cols; i++) {
                 std::cout << cov[ldcov * i + j] << "  ";
             }
             std::cout << std::endl;
@@ -160,9 +161,9 @@ int main() {
         std::cout << std::endl;
 
         std::cout << "Standardized data matrix:" << std::endl;
-        for (da_int j = 0; j < n; j++) {
-            for (da_int i = 0; i < p; i++) {
-                std::cout << x[ldx * i + j] << "  ";
+        for (da_int j = 0; j < n_rows; j++) {
+            for (da_int i = 0; i < n_cols; i++) {
+                std::cout << X[ldx * i + j] << "  ";
             }
             std::cout << std::endl;
         }
@@ -171,28 +172,28 @@ int main() {
         // Check the outputs match the expected results
         double tol = 1.0e-14;
         double err = 0.0;
-        for (da_int i = 0; i < p; i++)
+        for (da_int i = 0; i < n_cols; i++)
             err = std::max(err, std::abs(harmonic_mean[i] - harmonic_mean_exp[i]));
-        for (da_int i = 0; i < n; i++)
+        for (da_int i = 0; i < n_rows; i++)
             err = std::max(err, std::abs(mean[i] - mean_exp[i]));
-        for (da_int i = 0; i < n; i++)
+        for (da_int i = 0; i < n_rows; i++)
             err = std::max(err, std::abs(variance[i] - variance_exp[i]));
-        for (da_int i = 0; i < n; i++)
+        for (da_int i = 0; i < n_rows; i++)
             err = std::max(err, std::abs(kurtosis[i] - kurtosis_exp[i]));
         err = std::max(err, std::abs(minimum[0] - minimum_exp[0]));
         err = std::max(err, std::abs(lower_hinge[0] - lower_hinge_exp[0]));
         err = std::max(err, std::abs(median[0] - median_exp[0]));
         err = std::max(err, std::abs(upper_hinge[0] - upper_hinge_exp[0]));
         err = std::max(err, std::abs(maximum[0] - maximum_exp[0]));
-        for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < p; i++) {
+        for (da_int j = 0; j < n_cols; j++) {
+            for (da_int i = 0; i < n_cols; i++) {
                 err =
                     std::max(err, std::abs(cov[ldcov * j + i] - cov_exp[ldcov * j + i]));
             }
         }
-        for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < n; i++) {
-                err = std::max(err, std::abs(x[ldx * j + i] - x_exp[ldx * j + i]));
+        for (da_int j = 0; j < n_cols; j++) {
+            for (da_int i = 0; i < n_rows; i++) {
+                err = std::max(err, std::abs(X[ldx * j + i] - X_exp[ldx * j + i]));
             }
         }
         if (err > tol) {

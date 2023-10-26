@@ -96,8 +96,8 @@ int main() {
         return 1;
     }
     da_int nr, nc;
-    status = da_data_get_num_rows(csv, &nr);
-    status = da_data_get_num_cols(csv, &nc);
+    status = da_data_get_n_rows(csv, &nr);
+    status = da_data_get_n_cols(csv, &nc);
     if (nr != 442 || nc != 11) {
         std::cout << "Unexpected size for the loaded data: "
                      "(rows="

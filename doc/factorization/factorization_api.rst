@@ -25,50 +25,17 @@
     
 
 
-.. AOCL-DA documentation master file
-
-AOCL-DA documentation
+Factorization APIs
 *********************
 
-The AOCL Data Analytics Library is a software library providing optimized building blocks for data analysis.
-It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
-It is designed with a focus on usability, reliability and performance.
+Principal component analysis and the SVD
+========================================
 
-.. toctree::
-   :maxdepth: 1
-   :caption: How to use AOCL-DA:
-
-   general_intro
-   data_management/data_intro
-   da_handle/handle_intro
-   options/option_intro
-   errors/error_intro
-   results/results_intro
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Algorithms:
-
-   basic_statistics/basic_stats_intro
-   factorization/factorization_intro
-   linear_models/linmod_intro
-   trees_forests/df_intro
-
-.. only:: internal
-
-   .. toctree::
-      :maxdepth: 1
-      :caption: Internal help:
-
-      doc_utilities/utils.rst
-
-Search the documentation
-========================
-
-* :ref:`genindex`
-* :ref:`search`
-
-References
-==========
-
-.. bibliography::
+.. doxygenfunction:: da_pca_set_data_s
+.. doxygenfunction:: da_pca_set_data_d
+.. doxygenfunction:: da_pca_compute_s
+.. doxygenfunction:: da_pca_compute_d
+.. doxygenfunction:: da_pca_transform_s
+.. doxygenfunction:: da_pca_transform_d
+.. doxygenfunction:: da_pca_inverse_transform_s
+.. doxygenfunction:: da_pca_inverse_transform_d

@@ -37,6 +37,10 @@ extern "C" {
 #endif
 
 /**
+ * \file
+ */
+
+/**
  * @brief The main structure storing the data. 
  * All functions of this chapter operate on this internal data structure.
  */
@@ -101,7 +105,7 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * If data was already loaded in the store, the number of rows of the new block must match
  * with the number of rows already present. 
  * 
- * The new data is expected to be provided as an \p m * \p n dense block and can be passed in row
+ * The new data is expected to be provided as an \p n_rows * \p n_cols dense block and can be passed in row
  * major or column major ordering.
  * 
  * The data provided can be optionally copied into the store (for non C-string data blocks) 
@@ -111,8 +115,8 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * unintended behaviour. 
  * 
  * @param[inout] store The main structure.
- * @param[in] m Number of rows of the new block.
- * @param[in] n Number of columns of the new block. 
+ * @param[in] n_rows Number of rows of the new block.
+ * @param[in] n_cols Number of columns of the new block. 
  * @param[in] int_block Pointer to the raw data to add to the store [integer].  
  * @param[in] str_block Pointer to the raw data to add to the store [C string].  
  * @param[in] real_block Pointer to the raw data to add to the store [real].  
@@ -127,16 +131,16 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * - \ref da_status_invalid_pointer The store was not correctly initialized
  * - \ref da_status_memory_error Internal memory allocation encountered a problem. 
  */
-da_status da_data_load_col_int(da_datastore store, da_int m, da_int n, da_int *int_block,
+da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols, da_int *int_block,
                                da_ordering order, da_int copy_data);
-da_status da_data_load_col_str(da_datastore store, da_int m, da_int n,
+da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **str_block, da_ordering order);
-da_status da_data_load_col_real_d(da_datastore store, da_int m, da_int n,
+da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
                                   double *real_block, da_ordering order,
                                   da_int copy_data);
-da_status da_data_load_col_real_s(da_datastore store, da_int m, da_int n,
+da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_cols,
                                   float *real_block, da_ordering order, da_int copy_data);
-da_status da_data_load_col_uint8(da_datastore store, da_int m, da_int n,
+da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_cols,
                                  uint8_t *uint_block, da_ordering order,
                                  da_int copy_data);
 /** \} */
@@ -151,7 +155,7 @@ da_status da_data_load_col_uint8(da_datastore store, da_int m, da_int n,
  * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the stores structure).
  * @endrst
  *  
- * The new data is expected to be provided as an \p m * \p n dense block and can be passed in row major
+ * The new data is expected to be provided as an \p n_rows * \p n_cols dense block and can be passed in row major
  * or column major ordering.
  * 
  * The data provided can be optionally copied into the store (for non C-string data blocks) 
@@ -161,8 +165,8 @@ da_status da_data_load_col_uint8(da_datastore store, da_int m, da_int n,
  * unintended behaviour. 
  * 
  * @param[inout] store The main structure.
- * @param[in] m Number of rows of the new block.
- * @param[in] n Number of columns of the new block. 
+ * @param[in] n_rows Number of rows of the new block.
+ * @param[in] n_cols Number of columns of the new block. 
  * @param[in] int_block Pointer to the raw data to add to the store [integer].  
  * @param[in] str_block Pointer to the raw data to add to the store [C string].  
  * @param[in] real_block Pointer to the raw data to add to the store [real].  
@@ -177,16 +181,16 @@ da_status da_data_load_col_uint8(da_datastore store, da_int m, da_int n,
  * - \ref da_status_invalid_pointer The store was not correctly initialized
  * - \ref da_status_memory_error Internal memory allocation encountered a problem. 
  */
-da_status da_data_load_row_int(da_datastore store, da_int m, da_int n, da_int *int_block,
+da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols, da_int *int_block,
                                da_ordering order, da_int copy_data);
-da_status da_data_load_row_str(da_datastore store, da_int m, da_int n,
+da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **str_block, da_ordering order);
-da_status da_data_load_row_real_d(da_datastore store, da_int m, da_int n,
+da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
                                   double *real_block, da_ordering order,
                                   da_int copy_data);
-da_status da_data_load_row_real_s(da_datastore store, da_int m, da_int n,
+da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_cols,
                                   float *real_block, da_ordering order, da_int copy_data);
-da_status da_data_load_row_uint8(da_datastore store, da_int m, da_int n,
+da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_cols,
                                  uint8_t *uint_block, da_ordering order,
                                  da_int copy_data);
 /** \} */
@@ -299,12 +303,12 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
  * @brief Extract a column from a store into a pre-allocated array. 
  * The last suffix of the function name marks the type of the data to add. 
  * 
- *  \p m is the size of the output array provided to the function and must
+ *  \p dim is the size of the output array provided to the function and must
  *  be at least the number or rows in the store. 
  * 
  * @param[in] store Main data structure. 
  * @param[in] idx Index of the column to extract. 
- * @param[in] m Size of the vector provided.
+ * @param[in] dim Size of the vector provided.
  * @param[out] col Array the column will be exported to.
  * @return \ref da_status. 
  * - \ref da_status_success The operation was successful.
@@ -314,15 +318,15 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
  * - \ref da_status_missing_block The store contains incomplete row blocks 
  * - \ref da_status_internal_error An unexpected error occured. 
  */
-da_status da_data_extract_column_int(da_datastore store, da_int idx, da_int m,
+da_status da_data_extract_column_int(da_datastore store, da_int idx, da_int dim,
                                      da_int *col);
-da_status da_data_extract_column_real_s(da_datastore store, da_int idx, da_int m,
+da_status da_data_extract_column_real_s(da_datastore store, da_int idx, da_int dim,
                                         float *col);
-da_status da_data_extract_column_real_d(da_datastore store, da_int idx, da_int m,
+da_status da_data_extract_column_real_d(da_datastore store, da_int idx, da_int dim,
                                         double *col);
-da_status da_data_extract_column_uint8(da_datastore store, da_int idx, da_int m,
+da_status da_data_extract_column_uint8(da_datastore store, da_int idx, da_int dim,
                                        uint8_t *col); // For boolean data
-da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int m,
+da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
                                      char **col);
 
 /** \} */
@@ -416,15 +420,29 @@ da_status da_data_get_col_label(da_datastore store, da_int col_idx, da_int *labe
  * @brief Get the number of rows in the store.
  * 
  * @param[in] store Main data structure.  
- * @param[out] num_rows Contains the number of rows in \p store on output.
+ * @param[out] n_rows Contains the number of rows in \p store on output.
  * @return \ref da_status. 
  * - \ref da_status_success The operation was successful.
  * - \ref da_status_invalid_input Some of the input data was not correct. 
  *     Use da_handle_print_error_message to get more details. 
  * - \ref da_status_invalid_pointer The store was not correctly initialized
  */
-da_status da_data_get_num_rows(da_datastore store, da_int *num_rows);
-da_status da_data_get_num_cols(da_datastore store, da_int *num_cols);
+da_status da_data_get_n_rows(da_datastore store, da_int *n_rows);
+/** \} */
+
+/** \{ */
+/**
+ * @brief Get the number of rows in the store.
+ * 
+ * @param[in] store Main data structure.  
+ * @param[out] n_cols Contains the number of columns in \p store on output.
+ * @return \ref da_status. 
+ * - \ref da_status_success The operation was successful.
+ * - \ref da_status_invalid_input Some of the input data was not correct. 
+ *     Use da_handle_print_error_message to get more details. 
+ * - \ref da_status_invalid_pointer The store was not correctly initialized
+ */
+da_status da_data_get_n_cols(da_datastore store, da_int *n_cols);
 /** \} */
 
 /** \{ */

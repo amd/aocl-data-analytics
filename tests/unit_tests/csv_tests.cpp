@@ -329,8 +329,8 @@ TYPED_TEST(DataStoreTest, datastore_no_headings) {
 
     EXPECT_EQ(da_data_load_from_csv(store, filepath), params->expected_status);
 
-    EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
 
     EXPECT_EQ(nrows, params->expected_rows);
     EXPECT_EQ(ncols, params->expected_columns);
@@ -422,8 +422,8 @@ TYPED_TEST(DataStoreTest, datastore_headings) {
 
     EXPECT_EQ(da_data_load_from_csv(store, filepath), params->expected_status);
 
-    EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
 
     EXPECT_EQ(nrows, params->expected_rows);
     EXPECT_EQ(ncols, params->expected_columns);
@@ -523,8 +523,8 @@ TYPED_TEST(DataStoreTest, warn_for_missing_data) {
 
     EXPECT_EQ(da_data_load_from_csv(store, filepath), params->expected_status);
 
-    EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
 
     EXPECT_EQ(nrows, params->expected_rows);
     EXPECT_EQ(ncols, params->expected_columns);
@@ -691,8 +691,8 @@ TEST(CSVTest, options) {
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
-    EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
 
     EXPECT_EQ(nrows, expected_rows);
     EXPECT_EQ(ncols, expected_columns);
@@ -955,8 +955,8 @@ TEST(CSVTest, lineterminator) {
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
-    EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
 
     EXPECT_EQ(nrows, expected_rows);
     EXPECT_EQ(ncols, expected_columns);
@@ -998,8 +998,8 @@ TEST(CSVTest, auto) {
 
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
-    EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
 
     EXPECT_EQ(nrows, expected_rows);
     EXPECT_EQ(ncols, expected_columns);
@@ -1082,8 +1082,8 @@ TEST(CSVTest, auto) {
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
-    EXPECT_EQ(da_data_get_num_rows(store, &nrows), da_status_success);
-    EXPECT_EQ(da_data_get_num_cols(store, &ncols), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
 
     EXPECT_EQ(nrows, expected_rows);
     EXPECT_EQ(ncols, expected_columns);
