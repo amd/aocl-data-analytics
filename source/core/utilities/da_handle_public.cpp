@@ -167,7 +167,14 @@ da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_
     return da_status_success;
 }
 
-void da_handle_print_error_message(da_handle handle) { handle->err->print(); }
+da_status da_handle_print_error_message(da_handle handle) {
+    // check to see if we have a valid handle
+    if (handle) {
+        handle->err->print();
+        return da_status_success;
+    }
+    return da_status_invalid_input;
+}
 
 /* Destroy the da_handle struct */
 void da_handle_destroy(da_handle *handle) {

@@ -52,9 +52,20 @@ typedef struct _da_datastore *da_datastore;
  * @param store The \ref da_datastore to initialize
  */
 da_status da_datastore_init(da_datastore *store);
-void da_datastore_print_error_message(da_datastore store);
-void da_datastore_destroy(da_datastore *store);
 
+/**
+ * @brief  Print error information stored in the store handle.
+ *
+ * Print (trace of) error message(s) stored in the handle.
+ * Some functions store extra information about errors and
+ * this function prints (to standard output) the stored error message(s).
+ *
+ * @param[in,out] store The da_datastore structure.
+ * @return \ref da_status_success on success and \ref da_status_invalid_input 
+ *         if the handle pointer is invalid.
+ */
+da_status da_datastore_print_error_message(da_datastore store);
+void da_datastore_destroy(da_datastore *store);
 
 /**
  * @anchor da_datastore_destroy
@@ -65,7 +76,6 @@ void da_datastore_destroy(da_datastore *store);
  * @param store The \ref da_datastore to destroy
  */
 void da_datastore_destroy(da_datastore *store);
-
 
 /**
  * @brief print The list and the values of all the optional parameter of a given datastore.
@@ -219,7 +229,6 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * - \ref da_status_missing_data
  */
 da_status da_data_load_from_csv(da_datastore store, const char *filename);
-
 
 /* ************************************* selection *********************************** */
 /* *********************************************************************************** */

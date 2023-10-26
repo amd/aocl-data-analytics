@@ -46,14 +46,13 @@ extern "C" {
  */
 typedef enum da_handle_type_ {
     da_handle_uninitialized, ///< handle is not initialized,
-    da_handle_linmod, ///< @rst
-                      ///< handle is to be used with functions from the :ref:`Linear Models chapter <chapter_linmod>`
-                      ///< @endrst
+    da_handle_linmod,        ///< @rst
+    ///< handle is to be used with functions from the :ref:`Linear Models chapter <chapter_linmod>`
+    ///< @endrst
     da_handle_pca, ///< handle is to be used with functions from the Matrix decomposition chapter TODO ADD LINK.
     da_handle_decision_tree,  ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
     da_handle_decision_forest ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
 } da_handle_type;
-
 
 /**
  * @brief
@@ -84,16 +83,17 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type);
 /** \} */
 
 /**
- * @brief  Print error information stored in the struct.
+ * @brief  Print error information stored in the handle.
  *
- * Print the last error message stored in the handle.
- * Some functions store extra information about the last error.
- * The function prints (to standard output) the stored error message.
+ * Print (trace of) error message(s) stored in the handle.
+ * Some functions store extra information about errors and
+ * this function prints (to standard output) the stored error message(s).
  *
- * @param[in,out] handle The main data structure.
- * @return void.
- **/
-void da_handle_print_error_message(da_handle handle);
+ * @param[in,out] handle The handle structure.
+ * @return \ref da_status_success on success and \ref da_status_invalid_input 
+ *         if the handle pointer is invalid.
+ */
+da_status da_handle_print_error_message(da_handle handle);
 
 /**
  * @brief Check whether the handle is of the correct type.

@@ -109,7 +109,8 @@ TEST(ErrorStack, TraceStackMax) {
     da_warn_trace(err, da_status_file_reading_error, "Stack [6] - file not found!");
     da_error_trace(err, da_status_file_reading_error, "Stack [7] - file not found!");
     da_warn_trace(err, da_status_file_reading_error, "Stack [8] - file not found!");
-    da_status status = da_error_trace(err, da_status_parsing_error, "Stack [9] - no digits!");
+    da_status status =
+        da_error_trace(err, da_status_parsing_error, "Stack [9] - no digits!");
     EXPECT_EQ(status, da_status_parsing_error);
     status =
         da_error_trace(err, da_status_parsing_error, "Stack [10] - invalid boolean!");
@@ -120,5 +121,24 @@ TEST(ErrorStack, TraceStackMax) {
     err->print();
     delete err;
 };
+
+TEST(ErrorStack, PublicChecks) {
+    // Check for handle and datastore
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_print_error_message(handle), da_status_invalid_input);
+
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_print_error_message(store), da_status_invalid_input);
+
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_type::da_handle_linmod),
+              da_status_success);
+    EXPECT_EQ(da_handle_print_error_message(handle), da_status_success);
+
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_print_error_message(store), da_status_success);
+
+    da_handle_destroy(&handle);
+    da_datastore_destroy(&store);
+}
 
 } // namespace
