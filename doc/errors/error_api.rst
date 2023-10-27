@@ -23,10 +23,15 @@
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
     
-
+.. _error_api:
 
 Error handling APIs
 *******************
 
+.. _handle_error_api:
+.. doxygenfunction:: da_handle_print_error_message
+
+.. _datastore_error_api:
+.. doxygenfunction:: da_datastore_print_error_message
 .. doxygentypedef:: da_status
 .. doxygenenum:: da_status_

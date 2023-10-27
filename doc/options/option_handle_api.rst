@@ -27,21 +27,21 @@
 
 .. _api_handle_options:
 
-Handle options APIs
-*******************
+Option API for ``da_handle``
+****************************
 
-Setters
--------
+Option Setters
+--------------
 
 .. doxygenfunction:: da_options_set_int
 .. doxygenfunction:: da_options_set_string
-.. doxygenfunction:: da_options_set_d_real
-.. doxygenfunction:: da_options_set_s_real
+.. doxygenfunction:: da_options_set_real_d
+.. doxygenfunction:: da_options_set_real_s
 
-Getters
--------
+Option Getters
+--------------
 
 .. doxygenfunction:: da_options_get_int
 .. doxygenfunction:: da_options_get_string
-.. doxygenfunction:: da_options_get_d_real
-.. doxygenfunction:: da_options_get_s_real
+.. doxygenfunction:: da_options_get_real_d
+.. doxygenfunction:: da_options_get_real_s

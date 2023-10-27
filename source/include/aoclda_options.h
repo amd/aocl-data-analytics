@@ -32,95 +32,175 @@
  */
 
 /** \{
- * \brief Member of the option setters group
- *
- * This function is part of the group of "option setters" and are all quite similar and differ on the last parameter \p value.
- * \param[in,out] handle The handle where to store the option setting,
- * \param[in] option Name of the option to set,
- * \param[in] value Value to set the option to.
- * \return Returns \ref da_status.
- *
- * These functions do not handle missing values.
- *
- * The function returns
- *
- * * \ref da_status_success          - option was successfully set,
- * * \ref da_status_option_not_found - option not found,
- * * \ref da_status_option_locked    - cannot change option at this point,
- * * \ref da_status_option_wrong_type - wrong option type passed,
- * * \ref da_status_option_invalid_bounds - option value is out-of-bounds,
- * * \ref da_status_option_invalid_value - cannot set option to an invalid value.
- *
+ * \brief Set an option, to be stored inside the \p handle argument.
+ * \param[in,out] handle the \ref da_handle which will store the value of the option.
+ * \param[in] option the name of the option to set.
+ * \param[in] value the value to set the option to.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully set.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_locked - the option cannot be changed at this point.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_option_invalid_bounds - the option value is out of bounds.
+ * - \ref da_status_option_invalid_value - cannot set option to an invalid value.
+ * - \ref da_status_invalid_pointer - the \p handle has not been initialized.
  */
 da_status da_options_set_int(da_handle handle, const char *option, da_int value);
 da_status da_options_set_string(da_handle handle, const char *option, const char *value);
-da_status da_options_set_s_real(da_handle handle, const char *option, float value);
-da_status da_options_set_d_real(da_handle handle, const char *option, double value);
 /** \} */
 
 /** \{
- * \brief Member of the option getters group
- *
- * This function is part of the group of "option getters" and are all quite similar and differ
- * on the last parameters \p value and \p lvalue.
- * \param[in,out] handle The handle where to retrieve the option value,
- * \param[in] option Name of the option to get,
- * \param[in] value Value that contains the option setting.
- * \return Returns \ref da_status.
- * 
- * These functions do not handle missing values.
- * The function returns
- *
- * * \ref da_status_success          - option was successfully set,
- * * \ref da_status_option_not_found - option not found,
- * * \ref da_status_option_wrong_type - wrong option type passed.
- *
+ * \brief Set an option, to be stored inside the \p handle argument.
+ * \param[in,out] handle the \ref da_handle which will store the value of the option.
+ * \param[in] option the name of the option to set.
+ * \param[in] value the value to set the option to.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully set.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_locked - the option cannot be changed at this point.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_option_invalid_bounds - the option value is out of bounds.
+ * - \ref da_status_option_invalid_value - cannot set option to an invalid value.
+ * - \ref da_status_invalid_pointer - the \p handle has not been initialized.
+ * - \ref da_status_wrong_type - the \p handle was initialized with a different floating-point precision from \p value.
  */
+da_status da_options_set_real_s(da_handle handle, const char *option, float value);
+da_status da_options_set_real_d(da_handle handle, const char *option, double value);
+/** \} */
+
+/**
+ * \brief Get the current value of an option stored inside the \p handle argument.
+ * \param[in] handle the \ref da_handle which stores the options.
+ * \param[in] option the name of the option to get.
+ * \param[out] value the value of the option obtained from the \p handle.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully returned in \p value.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_invalid_pointer - the \p handle has not been initialized.
+ **/
 da_status da_options_get_int(da_handle handle, const char *option, da_int *value);
-da_status da_options_get_s_real(da_handle handle, const char *option, float *value);
-da_status da_options_get_d_real(da_handle handle, const char *option, double *value);
-/** \} */
 
 /** \{
- * \brief Member of the option getters group
- *
- * This function is part of the group of "option getters" and are all quite similar and differ
- * on the last parameters \p value and \p lvalue.
- * \param[in,out] handle The handle where to retrieve the option value,
- * \param[in] option Name of the option to get,
- * \param[in] value Value that contains the option setting.
- * \param[in] lvalue length of the string \p value.
- * \return Returns \ref da_status.
- * 
- * These functions do not handle missing values.
- * 
- * The function returns
- *
- * * \ref da_status_success          - option was successfully set,
- * * \ref da_status_invalid_input    - length of string \p value, lvalue, is too small to containt the option value. Provide more space.
- * * \ref da_status_option_not_found - option not found,
- * * \ref da_status_option_wrong_type - wrong option type passed.
- *
+ * \brief Get the current value of an option stored inside the \p handle argument.
+ * \param[in] handle the \ref da_handle which stores the options.
+ * \param[in] option the name of the option to get.
+ * \param[out] value the value of the option obtained from the \p handle.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully returned in \p value.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_invalid_pointer - the \p handle has not been initialized.
+ * - \ref da_status_wrong_type - the \p handle was initialized with a different floating-point precision from \p value.
  */
-da_status da_options_get_string(da_handle handle, const char *option, char *value,
-                                size_t *lvalue);
+da_status da_options_get_real_s(da_handle handle, const char *option, float *value);
+da_status da_options_get_real_d(da_handle handle, const char *option, double *value);
+/** \} */
 
+/**
+ * \brief Get the current value of an option stored inside the \p handle argument.
+ * \param[in] handle the \ref da_handle which stores the options.
+ * \param[in] option the name of the option to get.
+ * \param[out] value the value of the option obtained from the \p handle.
+ * \param[in] lvalue the length of the string \p value.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully returned in \p value.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_invalid_input - the length of the string \p value, lvalue, is too small to contain the option value. Please provide more space.
+ * - \ref da_status_invalid_pointer - the \p handle has not been initialized.
+ **/
+da_status da_options_get_string(da_handle handle, const char *option, char *value,
+                                da_int *lvalue);
+
+
+/** \{
+ * \brief Set an option, to be stored inside the \p store argument.
+ * \param[in,out] store the \ref da_datastore which will store the value of the option.
+ * \param[in] option the name of the option to set.
+ * \param[in] value the value to set the option to.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully set.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_locked - the option cannot be changed at this point.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_option_invalid_bounds - the option value is out of bounds.
+ * - \ref da_status_option_invalid_value - cannot set option to an invalid value.
+ * - \ref da_status_invalid_pointer - the \p store has not been initialized.
+ */
 da_status da_datastore_options_set_int(da_datastore store, const char *option,
                                        da_int value);
 da_status da_datastore_options_set_string(da_datastore store, const char *option,
                                           const char *value);
-da_status da_datastore_options_set_s_real(da_datastore store, const char *option,
+/** \} */
+
+/** \{
+ * \brief Set an option, to be stored inside the \p store argument.
+ * \param[in,out] store the \ref da_datastore which will store the value of the option.
+ * \param[in] option the name of the option to set.
+ * \param[in] value the value to set the option to.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully set.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_locked - the option cannot be changed at this point.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_option_invalid_bounds - the option value is out of bounds.
+ * - \ref da_status_option_invalid_value - cannot set option to an invalid value.
+ * - \ref da_status_invalid_pointer - the \p store has not been initialized.
+ * - \ref da_status_wrong_type - the \p store was initialized with a different floating-point precision from \p value.
+ */
+da_status da_datastore_options_set_real_s(da_datastore store, const char *option,
                                           float value);
-da_status da_datastore_options_set_d_real(da_datastore store, const char *option,
+da_status da_datastore_options_set_real_d(da_datastore store, const char *option,
                                           double value);
+/** \} */
+
+/**
+ * \brief Get the current value of an option stored inside the \p store argument.
+ * \param[in] store the \ref da_datastore which stores the options.
+ * \param[in] option the name of the option to get.
+ * \param[out] value the value of the option obtained from the \p store.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully returned in \p value.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_invalid_pointer - the \p store has not been initialized.
+ **/
 da_status da_datastore_options_get_int(da_datastore store, const char *option,
                                        da_int *value);
-da_status da_datastore_options_get_s_real(da_datastore store, const char *option,
+                                       
+/** \{
+ * \brief Get the current value of an option stored inside the \p store argument.
+ * \param[in] store the \ref da_datastore which stores the options.
+ * \param[in] option the name of the option to get.
+ * \param[out] value the value of the option obtained from the \p store.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully returned in \p value.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_invalid_pointer - the \p store has not been initialized.
+ * - \ref da_status_wrong_type - the \p store was initialized with a different floating-point precision from \p value.
+ */                           
+da_status da_datastore_options_get_real_s(da_datastore store, const char *option,
                                           float *value);
-da_status da_datastore_options_get_d_real(da_datastore store, const char *option,
+da_status da_datastore_options_get_real_d(da_datastore store, const char *option,
                                           double *value);
-da_status da_datastore_options_get_string(da_datastore store, const char *option,
-                                          char *value, size_t lvalue);
 /** \} */
+
+/**
+ * \brief Get the current value of an option stored inside the \p store argument.
+ * \param[in] handle the \ref da_datastore which stores the options.
+ * \param[in] option the name of the option to get.
+ * \param[out] value the value of the option obtained from the \p store.
+ * \param[in] lvalue the length of the string \p value.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully returned in \p value.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_invalid_input - the length of the string \p value, lvalue, is too small to contain the option value. Please provide more space.
+ * - \ref da_status_invalid_pointer - the \p store has not been initialized.
+ **/
+da_status da_datastore_options_get_string(da_datastore store, const char *option,
+                                          char *value, da_int lvalue);
 
 #endif //AOCLDA_OPTIONS_H

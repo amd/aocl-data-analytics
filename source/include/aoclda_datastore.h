@@ -225,7 +225,6 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * - \ref da_status_success
  * - \ref da_status_file_reading_error
  * - \ref da_status_parsing_error
- * - \ref da_status_bad_lines
  * - \ref da_status_missing_data
  */
 da_status da_data_load_from_csv(da_datastore store, const char *filename);

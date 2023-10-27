@@ -27,10 +27,27 @@
 
 .. _intro_handle:
 
-Modeling in AOCL-DA
-*******************
+Building and Solving Models
+***************************
 
-TODO explain what and why
+Most of the computational functions in AOCL-DA use a :cpp:type:`da_handle` as their first argument. This serves several purposes.
+
+- It is used to store internal data which can be passed between the different APIs (for example, :cpp:func:`da_pca_compute_d` computes the principal components of a data matrix, which can be passed via the handle to :cpp:func:`da_pca_transform_d`).
+- It stores :ref:`error information <error_api>` which may be useful if a function call does not complete as expected.
+- It can be used to set additional :ref:`options <option_setting>` for customizing computations.
+
+Using the AOCL-DA computational functions involves the following steps.
+
+1. Initialize a :cpp:type:`da_handle` using :cpp:func:`da_handle_init_d` (for double precision data) or :cpp:func:`da_handle_init_s` (for single precision data) and specify the :cpp:type:`da_handle_type`.
+2. Pass data into the :cpp:type:`da_handle`. The exact API for doing this will depend on the computation you wish to perform and will be detailed in the relevant chapter of this documentation.
+3. Set any additional options for the computation. All algorithms in AOCL-DA use the same :ref:`option setting APIs <api_handle_options>`, but the exact choice of options will depend on the algorithm.
+4. Perform the computation.
+5. Extract :ref:`results <extracting-results>` from the handle.
+6. Destroy the handle using :cpp:func:`da_handle_destroy`. Destroying the handle will free up the internally allocated memory and avoid potential memory leaks.
+
+Throughout this workflow, you may wish to query the handle for any additional :ref:`error <error-handling>` information by calling :cpp:func:`da_handle_print_error_message` or :cpp:func:`da_datastore_print_error_message`.
+
+Further details on the APIs for creating/destroying handles, setting options, error handling and extracting results are provided in the subsequent sections of this documentation.
 
 .. toctree::
     :maxdepth: 1

@@ -359,7 +359,7 @@ TEST(OpRegistryInternal, OpRegALL) {
 TEST(OpRegistryWrappers, getset_string) {
     da_handle handle;
     OptionRegistry *opts;
-    size_t n = 16;
+    da_int n = 16;
     char sv[] = "yes";
     char str[25];
     char cv[25] = "quite long option value;";
@@ -426,7 +426,7 @@ TEST(OpRegistryWrappers, getset_int) {
               da_status_option_invalid_value);
     // Try to set option with incorrect value
     double dv = 1.0;
-    EXPECT_EQ(da_options_set_d_real(handle, "integer option", dv),
+    EXPECT_EQ(da_options_set_real_d(handle, "integer option", dv),
               da_status_option_wrong_type);
     da_handle_destroy(&handle);
 };
@@ -438,19 +438,19 @@ TEST(OpRegistryWrappers, getset_double) {
     EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
     EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
     EXPECT_EQ(preload(*opts), da_status_success);
-    EXPECT_EQ(da_options_set_d_real(nullptr, "double option", value),
+    EXPECT_EQ(da_options_set_real_d(nullptr, "double option", value),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_options_get_d_real(nullptr, "double option", &value),
+    EXPECT_EQ(da_options_get_real_d(nullptr, "double option", &value),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_options_set_d_real(handle, "double option", value), da_status_success);
-    EXPECT_EQ(da_options_get_d_real(handle, "double option", &value), da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle, "double option", value), da_status_success);
+    EXPECT_EQ(da_options_get_real_d(handle, "double option", &value), da_status_success);
     EXPECT_EQ(5.0, value);
     // Try to get wrong option
-    EXPECT_EQ(da_options_get_d_real(handle, "nonexistent option", &value),
+    EXPECT_EQ(da_options_get_real_d(handle, "nonexistent option", &value),
               da_status_option_not_found);
     // Try to set option with incorrect value
     value = -99.0;
-    EXPECT_EQ(da_options_set_d_real(handle, "double option", value),
+    EXPECT_EQ(da_options_set_real_d(handle, "double option", value),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
     da_int iv = 1;
@@ -458,8 +458,8 @@ TEST(OpRegistryWrappers, getset_double) {
               da_status_option_wrong_type);
 
     float fv;
-    EXPECT_EQ(da_options_get_s_real(handle, "double option", &fv), da_status_wrong_type);
-    EXPECT_EQ(da_options_set_s_real(handle, "double option", fv), da_status_wrong_type);
+    EXPECT_EQ(da_options_get_real_s(handle, "double option", &fv), da_status_wrong_type);
+    EXPECT_EQ(da_options_set_real_s(handle, "double option", fv), da_status_wrong_type);
     da_handle_destroy(&handle);
 };
 
@@ -470,28 +470,28 @@ TEST(OpRegistryWrappers, getset_float) {
     EXPECT_EQ(da_handle_init_s(&handle, da_handle_linmod), da_status_success);
     EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
     EXPECT_EQ(preload(*opts), da_status_success);
-    EXPECT_EQ(da_options_set_s_real(nullptr, "float option", value),
+    EXPECT_EQ(da_options_set_real_s(nullptr, "float option", value),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_options_get_s_real(nullptr, "float option", &value),
+    EXPECT_EQ(da_options_get_real_s(nullptr, "float option", &value),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_options_set_s_real(handle, "float option", value), da_status_success);
-    EXPECT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
+    EXPECT_EQ(da_options_set_real_s(handle, "float option", value), da_status_success);
+    EXPECT_EQ(da_options_get_real_s(handle, "float option", &value), da_status_success);
     EXPECT_EQ(5.0f, value);
     // Try to get wrong option
-    EXPECT_EQ(da_options_get_s_real(handle, "nonexistent option", &value),
+    EXPECT_EQ(da_options_get_real_s(handle, "nonexistent option", &value),
               da_status_option_not_found);
     // Try to set option with incorrect value
     value = 20.0f;
-    EXPECT_EQ(da_options_set_s_real(handle, "float option", value),
+    EXPECT_EQ(da_options_set_real_s(handle, "float option", value),
               da_status_option_invalid_value);
     // Try to set option with incorrect value
     da_int iv = 1;
     EXPECT_EQ(da_options_set_int(handle, "double option", iv),
               da_status_option_wrong_type);
-    EXPECT_EQ(da_options_get_s_real(handle, "float option", &value), da_status_success);
+    EXPECT_EQ(da_options_get_real_s(handle, "float option", &value), da_status_success);
     double dv;
-    EXPECT_EQ(da_options_get_d_real(handle, "float option", &dv), da_status_wrong_type);
-    EXPECT_EQ(da_options_set_d_real(handle, "float option", dv), da_status_wrong_type);
+    EXPECT_EQ(da_options_get_real_d(handle, "float option", &dv), da_status_wrong_type);
+    EXPECT_EQ(da_options_set_real_d(handle, "float option", dv), da_status_wrong_type);
     da_handle_destroy(&handle);
 };
 

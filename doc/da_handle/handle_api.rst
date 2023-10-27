@@ -22,17 +22,17 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
 
-
-Handle APIs
-***********
+Creating and destroying handles
+*******************************
 
 .. doxygentypedef:: da_handle
 .. doxygentypedef:: da_handle_type
 .. doxygenenum:: da_handle_type_
 .. doxygenfunction:: da_handle_init_d
 .. doxygenfunction:: da_handle_init_s
-.. doxygenfunction:: da_handle_print_error_message
-.. doxygenfunction:: da_check_handle_type
 .. doxygenfunction:: da_handle_destroy
+
+Note that the :cpp:type:`da_handle` functionality also includes :ref:`option setting <api_handle_options>`, 
+:ref:`result extraction <extracting-results>` and :ref:`error handling <handle_error_api>` 
+capabilities, which are described separately.

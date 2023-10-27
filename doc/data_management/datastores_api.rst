@@ -37,7 +37,7 @@ Datastores
 
 .. _api_init:
 
-Initialize and destroy datastores
+Initialize and Destroy Datastores
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_datastore_init
@@ -46,7 +46,7 @@ Initialize and destroy datastores
 
 .. _api_load_data:
 
-Load data into a datastore
+Load Data into a Datastore
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfunction:: da_data_load_from_csv
 .. doxygenfunction:: da_data_hconcat
@@ -64,7 +64,7 @@ Load data into a datastore
 
 .. _api_data_selection:
 
-Data selection
+Data Selection
 ^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_select_columns
@@ -74,7 +74,7 @@ Data selection
 
 .. _api_data_extraction:
 
-Data extraction
+Data Extraction
 ^^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_extract_selection_int
@@ -89,7 +89,7 @@ Data extraction
 
 .. _api_column_header:
 
-Column headers
+Column Headers
 ^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_label_column
@@ -99,7 +99,7 @@ Column headers
 
 .. _api_data_edition:
 
-Data edition
+Data Edition
 ^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_get_n_rows
@@ -112,3 +112,11 @@ Data edition
 .. doxygenfunction:: da_data_set_element_real_d
 .. doxygenfunction:: da_data_set_element_real_s
 .. doxygenfunction:: da_data_set_element_uint8
+
+.. _api_data_miscellaneous:
+
+Miscellaneous
+^^^^^^^^^^^^^
+The :cpp:type:`da_datastore` functionality also includes 
+:ref:`option setting <api_datastore_options>` and 
+:ref:`error handling <datastore_error_api>` capabilities.

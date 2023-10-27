@@ -63,7 +63,7 @@ da_status da_options_set_string(da_handle handle, const char *option, const char
     return status;
 }
 
-da_status da_options_set_s_real(da_handle handle, const char *option, float value) {
+da_status da_options_set_real_s(da_handle handle, const char *option, float value) {
     da_status status;
 
     if (!handle)
@@ -81,7 +81,7 @@ da_status da_options_set_s_real(da_handle handle, const char *option, float valu
     return status;
 }
 
-da_status da_options_set_d_real(da_handle handle, const char *option, double value) {
+da_status da_options_set_real_d(da_handle handle, const char *option, double value) {
     da_status status;
 
     if (!handle)
@@ -115,7 +115,7 @@ da_status da_options_get_int(da_handle handle, const char *option, da_int *value
 }
 
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
-                                size_t *lvalue) {
+                                da_int *lvalue) {
     da_status status;
 
     if (!handle)
@@ -130,7 +130,7 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     // Need to make sure *value is big enough...
     if (status == da_status_success) {
         size_t n = svalue.size();
-        if (n >= *lvalue) {
+        if (n >= (size_t)(*lvalue)) {
             *lvalue = n + 1; // inform the user of the correct size
             std::string buf = "target storage where to store option string value is too "
                               "small, make it at least " +
@@ -144,7 +144,7 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     return status;
 }
 
-da_status da_options_get_d_real(da_handle handle, const char *option, double *value) {
+da_status da_options_get_real_d(da_handle handle, const char *option, double *value) {
     da_status status;
 
     if (!handle)
@@ -161,7 +161,7 @@ da_status da_options_get_d_real(da_handle handle, const char *option, double *va
     status = opts->get(option, *value);
     return status;
 }
-da_status da_options_get_s_real(da_handle handle, const char *option, float *value) {
+da_status da_options_get_real_s(da_handle handle, const char *option, float *value) {
     da_status status;
 
     if (!handle)
@@ -203,7 +203,7 @@ da_status da_datastore_options_set_string(da_datastore store, const char *option
     return status;
 }
 
-da_status da_datastore_options_set_s_real(da_datastore store, const char *option,
+da_status da_datastore_options_set_real_s(da_datastore store, const char *option,
                                           float value) {
     da_status status;
 
@@ -214,7 +214,7 @@ da_status da_datastore_options_set_s_real(da_datastore store, const char *option
     return status;
 }
 
-da_status da_datastore_options_set_d_real(da_datastore store, const char *option,
+da_status da_datastore_options_set_real_d(da_datastore store, const char *option,
                                           double value) {
     da_status status;
 
@@ -237,7 +237,7 @@ da_status da_datastore_options_get_int(da_datastore store, const char *option,
 }
 
 da_status da_datastore_options_get_string(da_datastore store, const char *option,
-                                          char *value, size_t *lvalue) {
+                                          char *value, da_int *lvalue) {
 
     da_status status;
 
@@ -249,7 +249,7 @@ da_status da_datastore_options_get_string(da_datastore store, const char *option
     // Need to make sure *value is big enough...
     if (status == da_status_success) {
         size_t n = svalue.size();
-        if (n >= *lvalue) {
+        if (n >= (size_t)(*lvalue)) {
             *lvalue = n + 1; // inform the user of the correct size
             std::string buf = "target storage where to store option string value is too "
                               "small, make it at least " +
@@ -263,7 +263,7 @@ da_status da_datastore_options_get_string(da_datastore store, const char *option
     return status;
 }
 
-da_status da_datastore_options_get_d_real(da_datastore store, const char *option,
+da_status da_datastore_options_get_real_d(da_datastore store, const char *option,
                                           double *value) {
     da_status status;
 
@@ -273,7 +273,7 @@ da_status da_datastore_options_get_d_real(da_datastore store, const char *option
     status = store->opts->get(option, *value);
     return status;
 }
-da_status da_datastore_options_get_s_real(da_datastore store, const char *option,
+da_status da_datastore_options_get_real_s(da_datastore store, const char *option,
                                           float *value) {
     da_status status;
 

@@ -150,23 +150,6 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
     return error;
 }
 
-da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_type) {
-
-    if (handle == nullptr)
-        return da_status_handle_not_initialized;
-
-    if (handle->handle_type == da_handle_uninitialized) {
-        return da_error(handle->err, da_status_handle_not_initialized,
-                        "The handle must be initialized before calling this routine.");
-    } else if (handle->handle_type != expected_handle_type) {
-        //TODO: would be nice to have enum->string conversion at some point so more error info can be printed
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "The handle has been initialized to the incorrect type.");
-    }
-
-    return da_status_success;
-}
-
 da_status da_handle_print_error_message(da_handle handle) {
     // check to see if we have a valid handle
     if (handle) {

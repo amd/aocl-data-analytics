@@ -50,4 +50,5 @@ html_theme_options = {
     "link_main_doc": False,
     "flavor": "local",
     "repository_provider" : None,
+    "navigation_with_keys" : False,
 }

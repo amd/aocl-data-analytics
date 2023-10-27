@@ -193,14 +193,14 @@ int main() {
     da_handle handle = nullptr;
     da_handle_init_d(&handle, da_handle_linmod);
     da_linmod_d_select_model(handle, linmod_model_mse);
-    da_options_set_d_real(handle, "linmod alpha", 1);
-    da_options_set_d_real(handle, "linmod lambda", 88);
+    da_options_set_real_d(handle, "linmod alpha", 1);
+    da_options_set_real_d(handle, "linmod lambda", 88);
     da_options_set_string(handle, "print options", "yes");
     da_options_set_int(handle, "linmod intercept", 0);
     da_options_set_int(handle, "print level", 2);
     da_options_set_int(handle, "linmod optim iteration limit", 35);
-    da_options_set_d_real(handle, "linmod optim convergence tol", 1.0e-5);
-    da_options_set_d_real(handle, "linmod optim progress factor", 1.0);
+    da_options_set_real_d(handle, "linmod optim convergence tol", 1.0e-5);
+    da_options_set_real_d(handle, "linmod optim progress factor", 1.0);
 
     da_linmod_d_define_features(handle, n, m, features.data(), rhs.data());
     // compute regression

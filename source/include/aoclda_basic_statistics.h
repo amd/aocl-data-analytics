@@ -101,7 +101,7 @@ da_status da_mean_s(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
  * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array. Note that \p X must contain non-negative data only.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] geometric_mean the array which will hold the computed geometric means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p geometric_mean is null.
@@ -123,7 +123,7 @@ da_status da_geometric_mean_s(da_axis axis, da_int n_rows, da_int n_cols, const 
  * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] harmonic_mean the array which will hold the computed harmonic means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p harmonic_mean is null.
@@ -147,7 +147,7 @@ da_status da_harmonic_mean_s(da_axis axis, da_int n_rows, da_int n_cols, const f
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] variance the array which will hold the computed variances. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X, \p mean or \p variance is null.
@@ -173,7 +173,7 @@ da_status da_variance_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] variance the array which will hold the computed variances. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] skewness the array which will hold the computed skewnesses. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X, \p mean, \p variance or \p skewness is null.
@@ -199,7 +199,7 @@ da_status da_skewness_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n.  If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] variance the array which will hold the computed variances. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] kurtosis the array which will hold the computed skewnesses. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X, \p mean, \p variance or \p kurtosis is null.
@@ -227,7 +227,7 @@ da_status da_kurtosis_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
  * \param[in] use_precomputed_mean if nonzero, then means supplied by the calling program will be used. Otherwise means will be computed internally and returned to the calling program.
  * \param[in,out] mean the array which will hold the computed means. If use_precomputed_mean is zero then this array need not be set on entry. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n.  If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] moment the array which will hold the computed moments. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p mean is null.
@@ -256,7 +256,7 @@ da_status da_moment_s(da_axis axis, da_int n_rows, da_int n_cols, const float *X
  * \param[in] q the quantile required. Constraint: q must lie in the interval [0,1].
  * \param[out] quantile the array which will hold the computed quantiles. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[in] quantile_type specifies the method used to compute the quantiles.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p quantile is null.
@@ -287,7 +287,7 @@ da_status da_quantile_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
  * \param[out] median the array which will hold the computed medians. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] upper_hinge the array which will hold the computed upper_hinges. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n.  If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] maximum the array which will hold the computed maxima. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the array arguments is null.
@@ -320,7 +320,7 @@ da_status da_five_point_summary_s(da_axis axis, da_int n_rows, da_int n_cols,
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[in] shift the array of values for shifting the data. Can be null (see above). If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[in] scale the array of values for scaling the data. Can be null (see above). If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer -\p X is null.
@@ -343,7 +343,7 @@ da_status da_standardize_s(da_axis axis, da_int n_rows, da_int n_cols, float *X,
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] cov the array which will hold the p &times; p covariance matrix. Must be of size at least p*ldcov. Data will be returned in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) &times; \a ldcov + <i>i</i> - 1]th entry of the array.
  * \param[in] ldcov the leading dimension of the covariance matrix. Constraint: \p ldcov >= \p n_cols.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - one of the constraints \p ldx @f$\ge@f$ \p n_rows or \p ldcov >= \p n_cols was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p cov is null.
@@ -367,7 +367,7 @@ da_status da_covariance_matrix_s(da_int n, da_int p, const float *X, da_int ldx,
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] corr the array which will hold the p &times; p correlation matrix. Must be of size at least p*ldcov. Data will be returned in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) &times; \a ldcov + <i>i</i> - 1]th entry of the array.
  * \param[in] ldcorr the leading dimension of the correlation matrix. Constraint: \p ldcorr >= \p n_cols.
- * \return \ref da_status_. The function returns:
+ * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - one of the constraints \p ldx @f$\ge@f$ \p n_rows or \p ldcorr >= \p n_cols was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p corr is null.

@@ -44,39 +44,48 @@ extern "C" {
 /**
  * @brief Enumeration defining the types of handles available
  */
+
+// clang-format off
 typedef enum da_handle_type_ {
-    da_handle_uninitialized, ///< handle is not initialized,
-    da_handle_linmod,        ///< @rst
-    ///< handle is to be used with functions from the :ref:`Linear Models chapter <chapter_linmod>`
-    ///< @endrst
-    da_handle_pca, ///< handle is to be used with functions from the Matrix decomposition chapter TODO ADD LINK.
-    da_handle_decision_tree,  ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
-    da_handle_decision_forest ///< handle is to be used with functions from the Decision Forests chapter TODO ADD LINK.
+    da_handle_uninitialized, ///< the handle has not yet been initialized.
+    da_handle_linmod, ///< @rst
+                      ///< the handle is to be used with functions from the :ref:`linear models chapter <chapter_linmod>`.
+                      ///< @endrst
+    da_handle_pca, ///< @rst
+                   ///< the handle is to be used with functions for computing the :ref:`principal component analysis <PCA_intro>`.
+                   ///< @endrst
+    da_handle_decision_tree, ///< the handle is to be used with functions from the decision trees (not yet implemented).
+    da_handle_decision_forest ///< the handle is to be used with functions from the decision forests chapter (not yet implemented).
 } da_handle_type;
+// clang-format on
 
 /**
  * @brief
  * @rst
- * Main handle object. For more info on the handle structure: :ref:`Handle description <intro_handle>`
+ * The main handle object.
+ * 
+ * For more info on the handle structure see the :ref:`higher-level handle description <intro_handle>`.
  * @endrst
  */
 typedef struct _da_handle *da_handle;
 
 /** \{
- * @brief Initialize da_handle struct with default values.
- * Set up handle to be used with a specific chapter.
- * This function must be called before calling any functions that requires a
+ * @brief Initialize a \ref da_handle with default values.
+ * 
+ * Set up a \ref da_handle to be used with a specific chapter.
+ * This function must be called before calling any functions that require a
  * valid handle.
  *
  * @rst
- * For more info on the handle structure: :ref:`Handle description <intro_handle>`
+ * For more info on the handle structure: :ref:`higher-level handle description <intro_handle>`
  * @endrst
  *
- * @param[in,out] handle The main data structure.
- * @param[in] handle_type type of handle to intialize use @ref da_handle_type.
- * @returns @ref da_status
- * - @ref da_status_success operation was successfully completed.
- * - TODO write other error codes
+ * @param[in,out] handle the main data structure.
+ * @param[in] handle_type the type of handle to intialize (see @ref da_handle_type).
+ * @returns @ref da_status. The function returns:
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_memory_error - a memory allocation error occured.
+ * - @ref da_status_internal_error - this should not occur and indicates a memory corruption issue.
  */
 da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type);
 da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type);
@@ -85,28 +94,15 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type);
 /**
  * @brief  Print error information stored in the handle.
  *
- * Print (trace of) error message(s) stored in the handle.
  * Some functions store extra information about errors and
  * this function prints (to standard output) the stored error message(s).
  *
- * @param[in,out] handle The handle structure.
- * @return \ref da_status_success on success and \ref da_status_invalid_input 
- *         if the handle pointer is invalid.
+ * @param[in,out] handle the @ref da_handle structure.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_invalid_input - the handle pointer is invalid.
  */
 da_status da_handle_print_error_message(da_handle handle);
-
-/**
- * @brief Check whether the handle is of the correct type.
- *
- * TODO add description
- * @param[in,out] handle The main data structure.
- * @param[in] expected_handle_type type of handle to check for.
- *
- * @returns @ref da_status
- * - @ref da_status_success Handle type matches with expected type.
- * - @retval TODO add others.
- */
-da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_type);
 
 /**
  * @brief Destroy the da_handle struct.
@@ -117,7 +113,7 @@ da_status da_check_handle_type(da_handle handle, da_handle_type expected_handle_
  *
  * @note memory leaks may occur if handles are not destroyed after use.
  *
- * @param[in,out] handle The main data structure.
+ * @param[in,out] handle the main \ref da_handle structure.
  * @return void.
  */
 void da_handle_destroy(da_handle *handle);

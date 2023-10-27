@@ -26,8 +26,8 @@
 
 
 
-Factorization
-****************
+Matrix Factorizations
+*********************
 
 This chapter contains functions for decomposing a data matrix into the product of two or more matrices.
 Matrix factorizations are commonly used for dimensionality reduction and feature extraction.
@@ -35,7 +35,7 @@ Matrix factorizations are commonly used for dimensionality reduction and feature
 Principal component analysis
 ============================
 
-In a Principal Component Analysis (PCA) a set of possibly correlated feature vectors (the columns of the data matrix) is transformed linearly into a new, uncorrelated coordinate system.
+In a principal component analysis (PCA) a set of possibly correlated feature vectors (the columns of the data matrix) is transformed linearly into a new, uncorrelated coordinate system.
 The new coordinates (which are known as the principal components) are chosen such that the first coordinate accounts for the greatest variance in the data, the second coordinate accounts for the second greatest variance, etc.
 By using only the first few such coordinates, the data matrix can be reduced in dimension.
 
@@ -90,17 +90,17 @@ Options
 
 The following option is set using  :cpp:func:`da_options_set_string`:
 
-- *PCA method* - the type of PCA to compute (and, equivalently, the type of standardization applied to :math:`A`). This option can take the following values:
+- ``PCA method`` - the type of PCA to compute (and, equivalently, the type of standardization applied to :math:`A`). This option can take the following values:
 
-  -*covariance* - the data matrix is mean-centered. The computed PCA then corresponds to the eigendecomposition of the covariance matrix.
+   - ``covariance`` - the data matrix is mean-centered. The computed PCA then corresponds to the eigendecomposition of the covariance matrix.
 
-  -*correlation* - the data matrix is mean-ceneterd and normalized so that each column has unit standard deviation. The computed PCA then corresponds to the eigendecomposition of the correlation matrix. This option should be chosen if the columns vary significantly in magnitude.
+   - ``correlation`` - the data matrix is mean-centered and normalized so that each column has unit standard deviation. The computed PCA then corresponds to the eigendecomposition of the correlation matrix. This option should be chosen if the columns vary significantly in magnitude.
   
-  -*svd* - no standardization is applied to the data matrix. This option should be chosen if the data matrix has already been normalized, or if a plain SVD is required.
+   - ``svd`` - no standardization is applied to the data matrix. This option should be chosen if the data matrix has already been normalized, or if a plain SVD is required.
 
 The following option is set using  :cpp:func:`da_options_set_int`:
 
-- *n_components* - the number of principal components (or singular values) to compute. This option must lie between :math:`1` and :math:`\min(n\_samples, n\_features)`.
+- ``n_components`` - the number of principal components (or singular values) to compute. This option must lie between :math:`1` and :math:`\min(n\_samples, n\_features)`.
 
 
 Examples

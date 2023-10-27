@@ -33,7 +33,7 @@
  */
 
 /**
- * \brief This enumeration describes all the possible return values from the exposed APIs.
+ * \brief This enumeration describes all the possible return values from AOCL-DA APIs.
  */
 typedef enum da_status_ {
     // Common errors 0-99

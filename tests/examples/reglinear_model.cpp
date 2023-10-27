@@ -66,8 +66,8 @@ int main(void) {
     da_linmod_d_select_model(handle, linmod_model_mse);
     da_linmod_d_define_features(handle, n, m, Al, bl);
     da_options_set_int(handle, "linmod intercept", 0);
-    da_options_set_d_real(handle, "linmod alpha", 0.0);
-    da_options_set_d_real(handle, "linmod lambda", 10.0);
+    da_options_set_real_d(handle, "linmod alpha", 0.0);
+    da_options_set_real_d(handle, "linmod lambda", 10.0);
     da_options_set_string(handle, "print options", "yes");
     da_options_set_string(handle, "linmod optim method", "lbfgs");
 

@@ -26,7 +26,7 @@
 
 
 Get results APIs
-*******************
+****************
 
 .. doxygenfunction:: da_handle_get_result_d
 .. doxygenfunction:: da_handle_get_result_s

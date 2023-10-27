@@ -82,12 +82,12 @@ inline da_status da_options_set_real(da_handle handle, const char *option, T val
 template <>
 inline da_status da_options_set_real<float>(da_handle handle, const char *option,
                                             float value) {
-    return da_options_set_s_real(handle, option, value);
+    return da_options_set_real_s(handle, option, value);
 }
 template <>
 inline da_status da_options_set_real<double>(da_handle handle, const char *option,
                                              double value) {
-    return da_options_set_d_real(handle, option, value);
+    return da_options_set_real_d(handle, option, value);
 }
 
 /* FIXME The tests should be able to include directly read_csv.hpp

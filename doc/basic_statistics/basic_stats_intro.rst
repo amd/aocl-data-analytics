@@ -26,17 +26,21 @@
 
 
 
-Basic statistics
+Basic Statistics
 ****************
 
 
-This chapter contains functions to compute basic statistical quantities such as the mean, variance or quantiles of a data matrix. Utility routines for standardizing the data are also available, and correlation and covariance matrices can also be computed.
-These functions operate on an :math:`n \times p` data array (:math:`n` observations and :math:`p` variables) stored in column major format.
+This chapter contains functions to compute basic statistical quantities such as the mean, 
+variance or quantiles of a data matrix. Utility routines for standardizing the data are 
+also available, and correlation and covariance matrices can also be computed.
+These functions operate on an :math:`n \times p` data array (:math:`n` observations and 
+:math:`p` variables) stored in column major format.
 
-Choosing an axis
--------------------
+Choosing an `axis`
+------------------
 
-Most statistical quantities can be computed by column, by row or for the data matrix overall. This is specified using the :cpp:enum:`da_axis_` enum.
+Most statistical quantities can be computed by column, by row or for the data matrix overall. 
+This is specified using the :cpp:enum:`da_axis_` enum.
 
 The :cpp:enum:`da_axis_` enum can take the following values:
 
@@ -46,12 +50,14 @@ The :cpp:enum:`da_axis_` enum can take the following values:
 
 - :cpp:enumerator:`da_axis_all` - statistical quantities will be computed for the whole data matrix
 
-For example, if the routine :cpp:func:`da_mean_s` is called with the :cpp:enum:`da_axis_` argument set to :cpp:enumerator:`da_axis_col`, then :math:`p` means will be computed, one for each column. If the :cpp:enum:`da_axis_` argument is set to :cpp:enumerator:`da_axis_all`, then a single mean will be computed.
+For example, if the routine :cpp:func:`da_mean_s` is called with the :cpp:enum:`da_axis_` argument set 
+to :cpp:enumerator:`da_axis_col`, then :math:`p` means will be computed, one for each column. If the 
+:cpp:enum:`da_axis_` argument is set to :cpp:enumerator:`da_axis_all`, then a single mean will be computed.
 
 Examples
 --------
 
-See ``basic_statistics.cpp`` in the examples folder of your installation for examples of how to use these functions.
+See ``basic_statistics.cpp`` in the ``examples`` folder of your installation for examples of how to use these functions.
 
 .. toctree::
     :maxdepth: 1

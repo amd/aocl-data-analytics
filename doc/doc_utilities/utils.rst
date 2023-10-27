@@ -25,10 +25,10 @@
     
 
 
-Documentation utilities
+Documentation Utilities
 ***********************
 
-Creating and building new doc
+Creating and Building New Doc
 =============================
 
 **How to document a new chapter / area of AOCL-DA functionality**
@@ -76,7 +76,7 @@ To build the release version of the doc (excluding internal documentation), set 
    cmake -DBUILD_DOC=ON -DINTERNAL_DOC=OFF
    cmake --build . --target doc
 
-Adding internal documentation
+Adding Internal Documentation
 =============================
 
 Internal only doc can be added with the ``.. only`` directives. We tag every piece of internal doc as ``internal``
@@ -88,21 +88,21 @@ Internal only doc can be added with the ``.. only`` directives. We tag every pie
       Your documentation here
 
 
-Documenting errors
+Documenting Errors
 ==================
 All public APIs returning da_status should document the error codes as:
 
 .. code-block::
 
-    * @returns @ref da_status
+    * - @returns @ref da_status
     * - @ref da_status_success Add description here
     * - @ref da_status_internal_errors Add description here
     * - @TODO add others.
 
-Embeding links and equation in Doxygen comments
-===============================================
+Embedding Links and Equation in Doxygen Comments
+================================================
 
-A special doxygen command was made to be able to embed restructured text in Doxygen comments.
+A special ``doxygen`` command was made to be able to embed restructured text in Doxygen comments.
 
 .. code-block::
 
@@ -110,23 +110,23 @@ A special doxygen command was made to be able to embed restructured text in Doxy
     * write your rst code here such as references: `link to chapter introduction <chapter_gen_intro>`_
     * @rst
 
-Note that the leading asterisk is madatory for this command to work. See ``aoclda-handle.h`` for an example.
+Note that the leading asterisk is mandatory for this command to work. See ``aoclda-handle.h`` for an example.
 
 
-Restructured text examples
+Restructured Text Examples
 ==========================
 
-Numbered lists
+Numbered Lists
 --------------
 
 1. explicitly numbered list
 2. new element
-#. implicitely numbered 
+#. implicitly numbered 
    element of the same list
 
 New List:
 
-#. new implicitely numbered list
+#. new implicitly numbered list
    
    #. sublist
    #. with implicit
@@ -135,7 +135,7 @@ New List:
 #. second element
 #. `link to the doc <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html#lists-and-quote-like-blocks>`_
 
-tables
+Tables
 ------
 
 .. csv-table:: Example
@@ -146,9 +146,9 @@ tables
    <https://pandemic-overview.readthedocs.io/en/latest/myGuides/reStructuredText-Tables-Examples.html#csv-table-example>`_"
    "Another", 10.4, "This is a long description over
    several lines"
-   "new line", 1.99, "longer line decscription"
+   "new line", 1.99, "longer line description"
 
-Adding a picture
+Adding a Picture
 ----------------
 
 .. image:: ../pics/kitten.jpg

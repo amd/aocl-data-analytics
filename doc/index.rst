@@ -27,16 +27,38 @@
 
 .. AOCL-DA documentation master file
 
-AOCL-DA documentation
+AOCL-DA Documentation
 *********************
 
 The AOCL Data Analytics Library is a software library providing optimized building blocks for data analysis.
 It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
 It is designed with a focus on usability, reliability and performance.
 
+he AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing 
+optimized building blocks for data analysis. It is written with a C-compatible 
+interface to make it as seamless as possible to integrate with the library from 
+whichever programming language you are using. This documentation is also available 
+online in the form of web pages.
+
+The intended workflow for using the library is as follows:
+
+ - load data from memory by reading CSV files or using the in-built da_datastore object
+ 
+ - preprocess the data by removing missing values, standardizing, and selecting certain subsets of the data, before extracting contiguous arrays of data from the da_datastore objects
+  
+ -  data processing (e.g. principal component analysis, linear model fitting, etc.)
+
+
+C++ example programs can be found in the ``examples`` folder of your installation.
+
+
+AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on 
+toolchainsupport@amd.com.
+
+
 .. toctree::
    :maxdepth: 1
-   :caption: How to use AOCL-DA:
+   :caption: AOCL Data Analytics Library
 
    general_intro
    data_management/data_intro
@@ -47,7 +69,7 @@ It is designed with a focus on usability, reliability and performance.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Algorithms:
+   :caption: Algorithms
 
    basic_statistics/basic_stats_intro
    factorization/factorization_intro
@@ -62,7 +84,7 @@ It is designed with a focus on usability, reliability and performance.
 
       doc_utilities/utils.rst
 
-Search the documentation
+Search the Documentation
 ========================
 
 * :ref:`genindex`

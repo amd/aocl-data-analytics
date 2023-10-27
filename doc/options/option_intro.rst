@@ -22,14 +22,23 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
 
+.. _option_setting:
 
+Setting Options
+***************
 
-Option setting
-**************
+Most APIs in AOCL-DA often rely on a large number of parameters, which can all influence the internal behaviour of the functions.
+For example, when reading in a CSV file the specific characters used to denote comments, decimal points, scientific notation, quotes and delimiters can all be specified.
 
-TODO write about option setting and cross reference to doc for da_handle and da_datastore.
+Rather than forcing users to supply all such parameters through the API signature, the defaults are automatically stored.
+Any parameters which you wish to change from their default values can then be changed using the option setting APIs.
+
+The :cpp:type:`da_handle` and :cpp:type:`da_datastore` structs can both be used to set options.
+This should be done after the :cpp:type:`da_handle` or :cpp:type:`da_datastore` has been initialized, but prior to calling any computational routines.
+
+The available options depend on the particular computation being performed, and are detailed in the specific APIs you are using, but all options have a string name and are set or queried using the functions described in :ref:`Options APIs for da_handle <api_handle_options>` and :ref:`Options APIs for da_datastore <api_datastore_options>`.
+The APIs are all very similar and differ only in the type of the final parameter (which contains the value of the option itself), which may be a string, integer, double or float. 
 
 .. toctree::
     :maxdepth: 1

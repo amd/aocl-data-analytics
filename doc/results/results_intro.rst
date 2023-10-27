@@ -27,10 +27,22 @@
 
 .. _extracting-results:
 
-Extracting results
+Extracting Results
 ******************
 
-TODO write about extracting results APIs
+In order to simplify APIs, the results of computations are stored within the :cpp:type:`da_handle`.
+Results can be extracted from handles using :cpp:func:`da_handle_get_result_d`, :cpp:func:`da_handle_get_result_s` and :cpp:func:`da_handle_get_result_int`, depending on the datatype of the required result.
+Each of these routines takes four arguments:
+
+1. the :cpp:type:`da_handle` used in the computation,
+2. a :cpp:type:`da_result` enumeration, specifying which result is required,
+3. a pointer to the size of the array which the result will be written to,
+4. an array in which to write the result.
+
+The specific results available (i.e. the possible values of :cpp:type:`da_result`) are described in the documentation for the particular computational API you are using.
+
+If the array supplied is too small, then the error :cpp:enum:`da_status_invalid_array_dimension` will be returned and the pointer to the size of the array will be overwritten with the minimum size required to hold the result.
+
 
 .. toctree::
     :maxdepth: 1
