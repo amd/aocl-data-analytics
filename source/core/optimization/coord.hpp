@@ -434,8 +434,8 @@ template <typename T>
 da_status coord_rcomm(da_int n, std::vector<T> &x, constraints::bound_constr<T> &bc,
                       [[maybe_unused]] T factr, T tol, coord::solver_tasks &itask,
                       da_int &k, T &newxk, da_int &iter, T &inorm, da_int &action,
-                      da_errors::da_error_t &err, std::vector<T> &w,
-                      std::vector<uint32_t> &iw) {
+                      da_errors::da_error_t &err,  [[maybe_unused]] std::vector<T> &w,
+                      [[maybe_unused]] std::vector<uint32_t> &iw) {
     T change;
     switch (itask) {
     case START:

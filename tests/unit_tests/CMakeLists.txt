@@ -77,6 +77,24 @@ endif()
 target_compile_definitions(
   linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 
+add_executable(logreg linmod_logreg_tests.cpp)
+target_link_libraries(logreg aocl-da gtest_main gmock_main)
+if(WIN32)
+  target_link_libraries(logreg "$ENV{LIBIFCORE}")
+endif()
+target_compile_definitions(
+  logreg PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/logistic")
+
+add_executable(linreg linmod_linreg_tests.cpp)
+target_link_libraries(linreg aocl-da gtest_main gmock_main)
+if(WIN32)
+  target_link_libraries(linreg "$ENV{LIBIFCORE}")
+endif()
+target_compile_definitions(
+  linreg PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/linear_reg")
+  
+
+
 add_executable(decision_tree decision_tree_tests.cpp)
 target_link_libraries(decision_tree aocl-da gtest_main)
 if(WIN32)
@@ -126,14 +144,16 @@ target_link_libraries(printf_debug aocl-da)
 
 set(GTEST_EXES
     basic_stats
-	  csv
-	  linmod
-	  decision_forest
-	  option_registry
-	  data
-	  interval_map
-	  errors_tests
-	  pca_tests
+	csv
+	linmod
+  logreg
+  linreg
+	decision_forest
+	option_registry
+	data
+	interval_map
+	errors_tests
+	pca_tests
 )
 
 # For Windows shared library builds copying some relevant DLLs into the unit_tests bin folder enables ctest to run without needing to update PATH

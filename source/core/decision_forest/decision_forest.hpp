@@ -587,7 +587,7 @@ da_status decision_forest<T>::set_training_data(da_int n_obs, da_int n_features,
 }
 
 template <typename T>
-da_status decision_forest<T>::sample_feature_ind(da_int n_features, da_int n_samples,
+da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_features, da_int n_samples,
                                                  da_int *samples)
 {
     printf("Inside decision_forest<T>::sample_features \n");

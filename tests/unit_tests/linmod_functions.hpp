@@ -180,7 +180,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     // Read features
     da_datastore csv_store = nullptr;
     EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    T *a = nullptr, *b = nullptr;
+    T *a = nullptr, *b = nullptr, *coef_exp = nullptr;
 
     da_int n = 0, m = 0;
     EXPECT_EQ(da_read_csv(csv_store, A_file.c_str(), &a, &n, &m, nullptr),
@@ -191,9 +191,9 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     EXPECT_EQ(m, nb); // b is stored in one row
     da_int nc = intercept ? n + 1 : n;
     /* expected results not tested ? check gradient of solution instead */
-    //da_int nc, mc;
-    //EXPECT_EQ(da_read_csv(csv_store, coef_file.c_str(), &coef_exp, &mc, &nc),
-    //          da_status_success);
+    da_int mc;
+    EXPECT_EQ(da_read_csv(csv_store, coef_file.c_str(), &coef_exp, &mc, &nc, nullptr),
+              da_status_success);
     // EXPECT_EQ(n, nc); // TODO add check once the intersect has been solved
 
     EXPECT_EQ(da_linmod_select_model<T>(linmod_handle, mod), da_status_success);
@@ -241,7 +241,6 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
                   da_status_success);
     }
     // Don't check for entries 6 and 7 of rinfo
-    rinfo[6] = rinfo[7] = 0;
     EXPECT_ARR_EQ(100, rexp, rinfo, 1, 1, 0, 0);
 
     std::vector<T> X(n);
@@ -251,15 +250,19 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
               da_status_success);
     // TODO check model evaluation
 
+    // Check coefficients
+    EXPECT_ARR_NEAR(ncc, coef, coef_exp, expected_precision<T>());
+
     // Check that the gradient is close enough to 0
-    std::vector<T> grad;
-    grad.resize(nc);
-    objgrd(mod, nc, m, coef, grad, a, b, intercept);
-    EXPECT_THAT(grad,
-                Each(AllOf(Gt(-expected_precision<T>()), Lt(expected_precision<T>()))));
+    //std::vector<T> grad;
+    //grad.resize(nc);
+    //objgrd(mod, nc, m, coef, grad, a, b, intercept);
+    //EXPECT_THAT(grad,
+    //            Each(AllOf(Gt(-expected_precision<T>()), Lt(expected_precision<T>()))));
 
     free(a);
     free(b);
+    free(coef_exp);
     delete[] coef;
     da_datastore_destroy(&csv_store);
     da_handle_destroy(&linmod_handle);

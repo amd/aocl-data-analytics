@@ -34,7 +34,9 @@
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "lapack_templates.hpp"
+#include "linmod_nln_optim.hpp"
 #include "linmod_options.hpp"
+#include "linmod_qr.hpp"
 #include "optimization.hpp"
 #include "options.hpp"
 #include <cstdlib>
@@ -65,54 +67,6 @@
  *
  */
 
-/* Type of transforms for the residuals
- * residual(xi) = \psi(yi, \phi(xi;t))
- * with phi the linear model e.g. \phi(x) = Ax
- *
- * TRANSFORMS
- * identity / residual: \psi(u, v) = u - v
- * logistic: psi(u, v) = logistic(u)
- */
-enum transform_t { trn_identity = 0, trn_residual = 0, trn_logistic = 1 };
-
-/* Loss functions
- *      * MSE (mean square error) or SEL (squared-error loss) or L2 loss
- *        \Xi(ri) = ri^2 [should not be used with logistic transform]
- *      * Logistic (uses log loss)
- *        \Xi(ri) = log_loss(bi, ri) [only to be used with logistic transform]
- */
-enum loss_t { loss_mse, loss_logistic };
-
-/* User and solver data
- * struct to pass pointers to optimization callbacks
- */
-template <typename T> struct fit_usrdata {
-    // Number of parameters
-    da_int m;
-    // Feature matrix of size (m x n)
-    T *A = nullptr;
-    // Responce vector
-    T *b = nullptr;
-    // y=A*coef, but can also contain residuals. FIXME add a separate vector for res
-    T *y = nullptr;
-    // Intercept
-    bool intercept = false;
-    // Additional paremeters that enhance the model
-    // Transform on the residuals, loss function and regularization
-    T l1reg = 0.0;
-    T l2reg = 0.0;
-    enum transform_t trn = trn_identity;
-    enum loss_t loss = loss_mse;
-    // T chauchy_d = 0.0; Add Cauchy loss function (and also atan SmoothL1, quantile?, huber)
-};
-
-// data for QR factorization used in standard linear least squares
-template <typename T> struct qr_data {
-    // A needs to be copied as lapack's dgeqr modifies the matrix
-    std::vector<T> A, b, tau, work;
-    da_int lwork = 0;
-};
-
 enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq, fit_opt_coord };
 
 template <typename T> class linear_model : public basic_handle<T> {
@@ -129,11 +83,13 @@ template <typename T> class linear_model : public basic_handle<T> {
     /* Regression data
      * n: number of features
      * m: number of data points
+     * nclass: number of different classes in the case of linear classification. unused otherwise
      * intercept: controls if the linear regression intercept is to be set
      * A[m*n]: feature matrix, pointer to user data directly - will not be modified by any function 
      * b[m]: model response, pointer to user data - will not be modified by any function
      */
     da_int n = 0, m = 0;
+    da_int nclass = 0;
     bool intercept = false;
     T *b = nullptr;
     T *A = nullptr;
@@ -146,14 +102,11 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_int ncoef = 0;
     std::vector<T> coef;
 
-    // Elastic net penalty parameters (Regularization L1: LASSO, L2: Ridge, combination => Elastic net)
-    // Penalty parameters are: lambda ( (1-alpha)L2 + alpha*L1 )
-    // lambda >= 0 and 0<=alpha<=1.
+    /* Elastic net penalty parameters (Regularization L1: LASSO, L2: Ridge, combination => Elastic net)
+     * Penalty parameters are: lambda ( (1-alpha)L2 + alpha*L1 )
+     * lambda >= 0 and 0<=alpha<=1.
+     */
     T alpha, lambda;
-    // Transform operator
-    enum transform_t trn = trn_identity;
-    // Loss function
-    enum loss_t loss = loss_mse;
 
     /* optimization object to call generic algorithms */
     optim::da_optimization<T> *opt = nullptr;
@@ -162,7 +115,7 @@ template <typename T> class linear_model : public basic_handle<T> {
 
     /* private methods to allocate memory */
     da_status init_opt_method(std::string &method, da_int mid);
-    void init_usrdata();
+
     /* QR fact data */
     da_status init_qr_data();
     da_status qr_lsq();
@@ -186,7 +139,7 @@ template <typename T> class linear_model : public basic_handle<T> {
 
     da_status define_features(da_int n, da_int m, T *A, T *b);
     da_status select_model(linmod_model mod);
-    da_status fit(da_int ncoefs, const T *coefs);
+    da_status fit(da_int usr_ncoefs, const T *coefs);
     da_status get_coef(da_int &nx, T *x);
     da_status evaluate_model(da_int n, da_int m, T *X, T *predictions);
 
@@ -213,10 +166,8 @@ template <typename T> class linear_model : public basic_handle<T> {
             result[3] = (T)(this->intercept ? 1.0 : 0.0);
             result[4] = alpha;
             result[5] = lambda;
-            result[6] = (T)this->trn;
-            result[7] = (T)this->loss;
             // Reserved for future use
-            for (auto i = 8; i < 100; i++)
+            for (auto i = 6; i < 100; i++)
                 result[i] = static_cast<T>(0);
             return da_status_success;
             break;
@@ -285,201 +236,6 @@ template <typename T> da_status linear_model<T>::select_model(linmod_model mod) 
     return da_status_success;
 }
 
-template <typename T> void linear_model<T>::init_usrdata() {
-    usrdata = new fit_usrdata<T>;
-    usrdata->A = A;
-    usrdata->b = b;
-    usrdata->m = m;
-    usrdata->y = new T[m];
-    usrdata->intercept = intercept;
-    usrdata->l1reg = lambda * alpha;
-    usrdata->l2reg = lambda * ((T)1.0 - alpha) / (T)2.0;
-    usrdata->loss = loss;
-    usrdata->trn = trn;
-}
-
-/* Evaluate feature matrix and store result y = Ax
- * takes care of intercept
- */
-template <typename T> void eval_feature_matrix(da_int n, T *x, void *usrdata) {
-    fit_usrdata<T> *data;
-    data = (fit_usrdata<T> *)usrdata;
-    da_int m{data->m};
-    T alpha{1}, beta{0};
-    T *y{data->y};
-    da_int aux = data->intercept ? 1 : 0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n - aux, alpha, data->A, m,
-                        x, 1, beta, y, 1);
-    if (data->intercept) {
-        for (da_int i = 0; i < m; i++)
-            y[i] += x[n - 1];
-    }
-}
-
-template <typename T> T log_loss(T y, T p) { return -y * log(p) - (1 - y) * log(1 - p); }
-template <typename T> T logistic(T x) { return 1 / (1 + exp(-x)); }
-
-template <typename T>
-void eval_residuals(void *usrdata, enum transform_t transform = trn_residual) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    da_int m = data->m;
-    T *y = data->y;
-    T alpha = -1.0;
-    switch (transform) {
-    case trn_identity: // same as trn_residual
-        da_blas::cblas_axpy(m, alpha, data->b, 1, data->y, 1);
-        break;
-    case trn_logistic: // return y = logistic(A*x), b is NOT substracted here
-        for (da_int i = 0; i < m; i++)
-            y[i] = logistic(y[i]);
-        break;
-    }
-}
-
-template <typename T> T lossfun(void *usrdata, loss_t loss = loss_mse) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    da_int m = data->m;
-    T *y = data->y;
-    T *b = data->b;
-    T f = 0.0;
-
-    switch (loss) {
-    case loss_mse:
-        for (da_int i = 0; i < m; i++) {
-            f += pow(data->y[i], (T)2.0);
-        }
-        break;
-    case loss_logistic:
-        // sum of log loss of logistic function for all observations
-        for (da_int i = 0; i < m; i++) {
-            f += log_loss(b[i], y[i]);
-        }
-        break;
-    }
-    return f;
-}
-
-template <typename T>
-void lossgrd(da_int n, T *grad, void *usrdata, loss_t loss = loss_mse) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    da_int m = data->m;
-    T *y = data->y;
-    T *b = data->b;
-    T *A = data->A;
-    da_int aux = data->intercept ? 1 : 0;
-    T alpha{0}, beta{0};
-
-    switch (loss) {
-    case loss_mse:
-        alpha = 2;
-        da_blas::cblas_gemv(CblasColMajor, CblasTrans, m, n - aux, alpha, data->A, m, y,
-                            1, beta, grad, 1);
-        if (data->intercept) {
-            grad[n - 1] = 0;
-            for (da_int i = 0; i < m; i++)
-                grad[n - 1] += alpha * y[i];
-        }
-        break;
-    case loss_logistic:
-        /* gradient of log loss of the logistic function
-         * g_j = sum_i{A_ij*(b[i]-logistic(A_i^t x + x[n-1]))}
-         */
-        std::fill(grad, grad + n, 0);
-        for (da_int i = 0; i < m; i++) {
-            for (da_int j = 0; j < n - aux; j++)
-                grad[j] += (y[i] - b[i]) * A[m * j + i];
-        }
-        if (data->intercept) {
-            grad[n - 1] = 0.0;
-            for (da_int i = 0; i < m; i++) {
-                grad[n - 1] += (y[i] - b[i]);
-            }
-        }
-        break;
-    }
-}
-
-/* Add regularization, l1 and l2 terms */
-template <typename T> T regfun(void *usrdata, da_int n, T const *x) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    T l1{data->l1reg};
-    T l2{data->l2reg};
-    T f1{0}, f2{0};
-
-    if (l1 > 0) {
-        // Add LASSO term
-        for (da_int i = 0; i < n; i++) {
-            f1 += fabs(x[i]);
-        }
-        f1 *= l1;
-    }
-
-    if (l2 > 0) {
-        // Add Ridge term
-        for (da_int i = 0; i < n; i++) {
-            f2 += x[i] * x[i];
-        }
-        f2 *= l2;
-    }
-    return f1 + f2;
-}
-
-/* Add regularization, l1 and l2 term derivatives */
-template <typename T> void reggrd(void *usrdata, da_int n, T const *x, T *grad) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    T l1{data->l1reg};
-    T l2{data->l2reg};
-
-    if (l1 > 0) {
-        // Add LASSO term
-        for (da_int i = 0; i < n; i++) {
-            // at xi = 0 there is no derivative => set to 0
-            if (x[i] != 0)
-                grad[i] += x[i] < 0 ? -l1 : l1;
-        }
-    }
-
-    if (l2 > 0) {
-        // Add Ridge term
-        for (da_int i = 0; i < n; i++) {
-            grad[i] += 2 * l2 * x[i];
-        }
-    }
-}
-
-//////////////////////// Objective Functions ////////////////////////
-/* Helper callback to deal with model, transform, loss, regularization */
-template <typename T> da_int objfun(da_int n, T *x, T *f, void *usrdata) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    // Compute A*x = *y (takes care of intercept)
-    eval_feature_matrix(n, x, usrdata);
-    // Evaluate residuals and apply transform, store in: *y
-    eval_residuals<T>(usrdata, data->trn);
-    // loss_function
-    *f = lossfun<T>(usrdata, data->loss);
-    // Add regularization (exclude intercept)
-    da_int nmod = data->intercept ? n - 1 : n;
-    *f += regfun(usrdata, nmod, x);
-    return 0;
-}
-
-/* Helper callback to deal with model, transform, loss, regularization */
-template <typename T> da_int objgrd(da_int n, T *x, T *grad, void *usrdata, da_int xnew) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    if (xnew) {
-        // Compute A*x = *y (takes care of intercept)
-        eval_feature_matrix(n, x, usrdata);
-        // Evaluate residuals and apply transform, store in: *y
-        eval_residuals<T>(usrdata, data->trn);
-    }
-    // loss_function
-    lossgrd(n, grad, usrdata, data->loss);
-    // Add regularization (exclude intercept)
-    da_int nmod = data->intercept ? n - 1 : n;
-    reggrd(usrdata, nmod, x, grad);
-    return 0;
-}
-
 /* Helper callback to get step for coordinate descent method */
 template <typename T>
 da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int action) {
@@ -491,7 +247,7 @@ da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int ac
     // from the last call? This can be handled by the caller with active set.
     // POSSIBLE ACTIONS regarting feature matrix evaluation
     // action < 0 means that feature matrix was previously called and that only a low rank
-    //            update is requested and -action contains the previous k that changed 
+    //            update is requested and -action contains the previous k that changed
     //            kold = -action;
     // action = 0 means not to evaluate the feature matrix
     // action > 0 evaluate the matrix.
@@ -549,9 +305,18 @@ da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int ac
     }
 
     // Evaluate residuals and apply transform, store in: *y
-    eval_residuals<T>(usrdata, data->trn);
-    // loss_function
-    *f = lossfun<T>(usrdata, data->loss);
+    //eval_residuals<T>(usrdata, data->trn);
+    //// loss_function
+    //*f = lossfun<T>(usrdata, data->loss);
+
+    // y = y - b
+    T alpha = -1.0;
+    da_blas::cblas_axpy(m, alpha, data->b, 1, data->y, 1);
+
+    // sum (A * x (+itct) - b)^2
+    for (da_int i = 0; i < m; i++) {
+        *f += pow(data->y[i], (T)2.0);
+    }
     // Add regularization (exclude intercept)
     *f += regfun(usrdata, nmod, x);
 
@@ -559,8 +324,6 @@ da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int ac
 
     return 0;
 }
-
-/////////////////////////////////////////////////////////////////////
 
 /*
  * Common setting for all optimization solvers for linear models
@@ -664,7 +427,7 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
                     "> option.");
         }
 
-        init_usrdata();
+        usrdata = new fit_usrdata(A, b, m, n, intercept, lambda, alpha, nclass, mod);
         break;
 
     default:
@@ -710,22 +473,57 @@ da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictio
 
     // X is assumed to be of shape (m,n)
     // b is assumed to be of size m
-    // start by computing X*coef = predictions
     T alpha = 1.0, beta = 0.0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n, alpha, X, m, coef.data(), 1,
-                        beta, predictions, 1);
-    if (intercept) {
-        for (i = 0; i < m; i++)
-            predictions[i] += coef[ncoef - 1];
-    }
+    T *cf_p = coef.data();
+    T aux;
+    da_int nmod;
+    std::vector<T> log_proba;
+    T *log_p;
     switch (mod) {
     case linmod_model_mse:
+        // start by computing X*coef = predictions
+        da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n, alpha, X, m, cf_p, 1, beta,
+                            predictions, 1);
+        if (intercept) {
+            for (i = 0; i < m; i++)
+                predictions[i] += coef[ncoef - 1];
+        }
         for (i = 0; i < m; i++)
             predictions[i] -= b[i];
         break;
     case linmod_model_logistic:
-        for (i = 0; i < m; i++)
-            predictions[i] = logistic(predictions[i]);
+        nmod = intercept ? n + 1 : n;
+        log_proba.resize(m * nclass, 0);
+        std::fill(predictions, predictions + m, 0.0);
+        log_p = log_proba.data();
+        std::fill(&log_p[m * (nclass - 1)], &log_p[m * nclass], 1.0);
+        for (da_int k = 0; k < nclass - 1; k++) {
+            da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n, alpha, X, m,
+                                &cf_p[k * nmod], 1, beta, &log_p[k * m], 1);
+            if (intercept) {
+                for (i = 0; i < m; i++)
+                    log_proba[k * m + i] += coef[(k + 1) * nmod - 1];
+            }
+            for (i = 0; i < m; i++)
+                log_proba[k * m + i] = exp(log_proba[k * m + i]);
+        }
+        for (i = 0; i < m; i++) {
+            aux = 0;
+            for (da_int k = 0; k < nclass; k++) {
+                aux += log_proba[k * m + i];
+            }
+            for (da_int k = 0; k < nclass; k++)
+                log_proba[k * m + i] /= aux;
+        }
+        for (i = 0; i < m; i++) {
+            aux = 0.0;
+            for (da_int k = 0; k < nclass; k++) {
+                if (log_proba[k * m + i] > aux) {
+                    aux = log_proba[k * m + i];
+                    predictions[i] = (T)k;
+                }
+            }
+        }
         break;
 
     default:
@@ -738,7 +536,7 @@ da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictio
     return da_status_success;
 }
 
-template <typename T> da_status linear_model<T>::fit(da_int ncoefs, const T *coefs) {
+template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T *coefs) {
 
     if (model_trained)
         return da_status_success;
@@ -772,29 +570,27 @@ template <typename T> da_status linear_model<T>::fit(da_int ncoefs, const T *coe
     }
     opts.get("linmod optim method", method, mid);
 
-    ncoef = n;
-    if (intercept)
-        ncoef += 1;
-
-    bool copycoefs = (coefs != nullptr) && (ncoefs >= n);
-
-    if (copycoefs) {
-        coef.resize(ncoef);
-        // user provided starting coefficients, check, copy and use.
-        // copy first n elements, then check the intercept
-        for (da_int j = 0; j < n; j++)
-            coef[j] = coefs[j];
-        if (intercept) {
-            coef[ncoef - 1] = ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
-        }
-    } else {
-        coef.resize(ncoef, (T)0);
-    }
-
+    bool copycoefs = false;
     switch (mod) {
     case linmod_model_mse:
-        this->trn = trn_residual;
-        this->loss = loss_mse;
+        ncoef = n;
+        if (intercept)
+            ncoef += 1;
+
+        copycoefs = (coefs != nullptr) && (usr_ncoefs >= n);
+
+        if (copycoefs) {
+            coef.resize(ncoef);
+            // user provided starting coefficients, check, copy and use.
+            // copy first n elements, then check the intercept
+            for (da_int j = 0; j < n; j++)
+                coef[j] = coefs[j];
+            if (intercept) {
+                coef[ncoef - 1] = usr_ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
+            }
+        } else {
+            coef.resize(ncoef, (T)0);
+        }
         switch (mid) {
         case optim::solvers::solver_lbfgsb:
             // Call LBFGS
@@ -804,12 +600,12 @@ template <typename T> da_status linear_model<T>::fit(da_int ncoefs, const T *coe
                     this->err, da_status_internal_error,
                     "Unexpectedly could not initialize an optimization model.");
             // Add callbacks
-            if (opt->add_objfun(objfun<T>) != da_status_success) {
+            if (opt->add_objfun(objfun_mse<T>) != da_status_success) {
                 return da_error(opt->err, da_status_internal_error,
                                 "Unexpectedly linear model provided an invalid objective "
                                 "function pointer.");
             }
-            if (opt->add_objgrd(objgrd<T>) != da_status_success) {
+            if (opt->add_objgrd(objgrd_mse<T>) != da_status_success) {
                 return da_error(opt->err, da_status_internal_error,
                                 "Unexpectedly linear model provided an invalid objective "
                                 "gradient function pointer.");
@@ -863,20 +659,39 @@ template <typename T> da_status linear_model<T>::fit(da_int ncoefs, const T *coe
         break;
 
     case linmod_model_logistic:
-        this->trn = trn_logistic;
-        this->loss = loss_logistic;
+
+        // b rhs is assumed to only contain values from 0 to K-1 (K being the number of classes)
+        nclass = std::round(*std::max_element(b, b + m)) + 1;
+        ncoef = (nclass - 1) * n;
+        if (intercept)
+            ncoef += nclass - 1;
+        copycoefs = (coefs != nullptr) && (usr_ncoefs >= ncoef);
+
+        if (copycoefs) {
+            coef.resize(ncoef);
+            // user provided starting coefficients, check, copy and use.
+            // copy first n elements, then check the intercept
+            for (da_int j = 0; j < n; j++)
+                coef[j] = coefs[j];
+            if (intercept) {
+                coef[ncoef - 1] = usr_ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
+            }
+        } else {
+            coef.resize(ncoef, (T)0);
+        }
+
         //intercept = true;
         status = init_opt_method(method, mid);
         if (status != da_status_success) {
             // this->err already populated
             return status;
         }
-        if (opt->add_objfun(objfun<T>) != da_status_success) {
+        if (opt->add_objfun(objfun_logistic<T>) != da_status_success) {
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided an invalid objective "
                             "function pointer.");
         }
-        if (opt->add_objgrd(objgrd<T>) != da_status_success) {
+        if (opt->add_objgrd(objgrd_logistic<T>) != da_status_success) {
             return da_error(opt->err, da_status_internal_error,
                             "Unexpectedly linear model provided an invalid objective "
                             "gradient function pointer.");
@@ -903,57 +718,44 @@ template <typename T> da_status linear_model<T>::fit(da_int ncoefs, const T *coe
     return da_status_success;
 }
 
-template <typename T> da_status linear_model<T>::init_qr_data() {
-    qr = new qr_data<T>();
-    qr->A.resize(m * ncoef);
-    for (da_int j = 0; j < n; j++) {
-        for (da_int i = 0; i < m; i++) {
-            qr->A[j * m + i] = A[j * m + i];
-        }
-    }
-    if (intercept) {
-        for (da_int i = 0; i < m; i++)
-            qr->A[n * m + i] = 1.0;
-    }
-    qr->b.resize(m);
-    for (da_int i = 0; i < m; i++)
-        qr->b[i] = b[i];
-    qr->tau.resize(std::min(m, ncoef));
-    qr->lwork = ncoef;
-    qr->work.resize(qr->lwork);
-
-    return da_status_success;
-}
-
 /* Compute least squares factorization from QR factorization */
 template <typename T> da_status linear_model<T>::qr_lsq() {
-    /* has to be called after init_qr_data, qr_data is always allocated */
-    /* initialize qr struct memory*/
-    da_status status;
-    status = init_qr_data();
-    if (status != da_status_success)
-        return status;
+
+    try {
+        qr = new qr_data<T>(m, n, A, b, intercept, ncoef);
+    } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation error");
+    }
 
     /* Compute QR factorization */
     da_int info = 1;
     da::geqrf(&m, &ncoef, qr->A.data(), &m, qr->tau.data(), qr->work.data(), &qr->lwork,
               &info);
-    if (info != 0)
-        return da_status_internal_error;
+    if (info != 0) {
+        return da_error( // LCOV_EXCL_LINE
+            err, da_status_internal_error,
+            "encountered an unexpected error in the QR factorization (geqrf)");
+    }
     /* Compute Q^tb*/
     char side = 'L', trans = 'T';
     da_int nrhs = 1;
     da::ormqr(&side, &trans, &m, &nrhs, &ncoef, qr->A.data(), &m, qr->tau.data(),
               qr->b.data(), &m, qr->work.data(), &qr->lwork, &info);
-    if (info != 0)
-        return da_status_internal_error;
+    if (info != 0) {
+        return da_error( // LCOV_EXCL_LINE
+            err, da_status_internal_error,
+            "encountered an unexpected error in the QR factorization (ormqr)");
+    }
     /* triangle solve R^-t*Q^Tb */
     char uplo = 'U', diag = 'N';
     trans = 'N';
     da::trtrs(&uplo, &trans, &diag, &ncoef, &nrhs, qr->A.data(), &m, qr->b.data(), &m,
               &info);
-    if (info != 0)
-        return da_status_internal_error;
+    if (info != 0) {
+        return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "encountered an unexpected error in the triangle solve (trtrs)");
+    }
     for (da_int i = 0; i < ncoef; i++)
         coef[i] = qr->b[i];
 

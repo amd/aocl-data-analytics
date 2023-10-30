@@ -69,13 +69,17 @@ da_status da_handle_init<float>(da_handle *handle, da_handle_type handle_type) {
     return da_handle_init_s(handle, handle_type);
 }
 
-inline da_status da_handle_get_result(da_handle handle, da_result result, da_int *n,
-                                      double *x) {
-    return da_handle_get_result_d(handle, result, n, x);
+inline da_status da_handle_get_result(da_handle handle, da_result query, da_int *dim,
+                                      double *result) {
+    return da_handle_get_result_d(handle, query, dim, result);
 }
-inline da_status da_handle_get_result(da_handle handle, da_result result, da_int *n,
-                                      float *x) {
-    return da_handle_get_result_s(handle, result, n, x);
+inline da_status da_handle_get_result(da_handle handle, da_result query, da_int *dim,
+                                      float *result) {
+    return da_handle_get_result_s(handle, query, dim, result);
+}
+inline da_status da_handle_get_result(da_handle handle, da_result query, da_int *dim,
+                                      da_int *result) {
+    return da_handle_get_result_int(handle, query, dim, result);
 }
 
 /* Options overloaded functons */
@@ -312,6 +316,23 @@ inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m
 inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m,
                                         char **col) {
     return da_data_extract_column_str(store, idx, m, col);
+}
+
+inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
+                                           da_int *data) {
+    return da_data_extract_selection_int(store, key, ld, data);
+}
+inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
+                                           float *data) {
+    return da_data_extract_selection_real_s(store, key, ld, data);
+}
+inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
+                                           double *data) {
+    return da_data_extract_selection_real_d(store, key, ld, data);
+}
+inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
+                                           uint8_t *data) {
+    return da_data_extract_selection_uint8(store, key, ld, data);
 }
 
 /* PCA overloaded functions */
