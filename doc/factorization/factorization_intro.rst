@@ -30,22 +30,22 @@ Factorization
 ****************
 
 This chapter contains functions for decomposing a data matrix into the product of two or more matrices.
-Matrix factorizations are commonly used for dimensionalty reduction and feature extraction.
+Matrix factorizations are commonly used for dimensionality reduction and feature extraction.
 
-Principal component analysis and the SVD
-========================================
+Principal component analysis
+============================
 
-In a principal component analysis (PCA) a set of possibly correlated feature vectors (the columns of the data matrix) is transformed linearly into a new, uncorrelated coordinate system.
-The new coordinates (which are known as the principal components) are chosen such that the first coordinate accounts for the greatest varaince in the data, the second coordinate accounts for the second greatest variance, etc.
+In a Principal Component Analysis (PCA) a set of possibly correlated feature vectors (the columns of the data matrix) is transformed linearly into a new, uncorrelated coordinate system.
+The new coordinates (which are known as the principal components) are chosen such that the first coordinate accounts for the greatest variance in the data, the second coordinate accounts for the second greatest variance, etc.
 By using only the first few such coordinates, the data matrix can be reduced in dimension.
 
 Prior to computing the PCA the data matrix is typically standardized by shifting each column so that it has a mean of zero.
 It can then be shown that the principal components are the eigenvalues of the *covariance matrix* corresponding to the mean-centered data matrix.
 
-If the features of the data matrix vary greatly in magnitude, then in addition to mean-centering it can be useful to normalize each column by dividing by its standard deviation.
+If the features of the data matrix vary greatly in magnitude, then in addition to mean-centering it can be useful to normalize each column by its standard deviation.
 In this case the principal components are the eigenvalues of the *correlation matrix* corresponding to the mean-centered data matrix.
 
-The PCA is cloesly related to a matrix factorization known as the *singular value decomposition* (or SVD),
+The PCA is closely related to a matrix factorization known as the *singular value decomposition* (or SVD),
 
 .. math::
    A = U\Sigma V^T,
@@ -53,20 +53,19 @@ The PCA is cloesly related to a matrix factorization known as the *singular valu
 where :math:`A` is a (standardized) data matrix of size :math:`n\_samples \times n\_features`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n\_samples \times n\_features` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n\_samples \times n\_samples` and :math:`n\_features \times n\_features` respectively.
 The nonzero entries of :math:`\Sigma` are known as the *singular values* of :math:`A`. 
 
-Internally, AOCL-DA computes the PCA via the SVD rather than by eigendecomposition of the covariance/correlation matrix because it is more efficient.
+Internally, AOCL-DA computes the PCA via the SVD rather than by eigenvalue decomposition of the covariance/correlation matrix.
 
 Outputs from the PCA
 ---------------------
-When AOCL-DA computes a PCA it stores the following results:
+After a PCA computation the following results are stored:
 
 - **principal components** - the "new coordinates" expressed in terms of the old coordinates. These are sorted in order of decreasing variance, and are given by the rows of :math:`V^T`.
 - **scores** - the data matrix expressed in terms of the new coordinates. This is given by :math:`U\Sigma`.
 - **variance** - the amount of variance explained by each of the principal components. Note that :math:`n\_samples -1` degrees of freedom are used when computing variances.
 - **total variance** - the total variance across the whole dataset.
+- **the SVD matrices** - :math:`U`, :math:`V^T` and :math:`\Sigma` together with the column means and standard deviations.
 
-In addition, when AOCL-DA computes a PCA it stores the SVD matrices :math:`U`, :math:`V^T` and :math:`\Sigma` together with the column means and standard deviations.
-
-After computing the PCA, AOCL-DA two further computations may be of interest:
+After the PCA has been computed, two post-processing operations may be of interest:
 
 - **transform** - given a data matrix :math:`X` in the same coordinates as the original data matrix :math:`A`, express :math:`X` in terms of the new coordinates (the principal components of :math:`A`). This is computed by applying any standardization used on :math:`A` to :math:`X` and post-multiplying by :math:`V`.
 - **inverse transform** - given a data matrix :math:`Y` in the new coordinate system, express :math:`Y` in terms of the original coordinates. This is computed by post-multiplying by :math:`V^T` and inverting the standardization used on :math:`A`.

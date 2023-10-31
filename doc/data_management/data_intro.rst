@@ -78,7 +78,7 @@ For more details on each of the available functions, see the :ref:`API documenta
 Loading data into a datastore
 -----------------------------
 
-Loading data into a data store can be done by adding blocks from different sources. A typical example would be to load data from a file and add columns that were allocated dynamically in your program. This can be achived by calling :cpp:func:`da_data_load_from_csv` and :cpp:func:`da_data_load_col_int` consecucutively for example.
+Loading data into a data store can be done by adding blocks from different sources. A typical example would be to load data from a file and add columns that were allocated dynamically in your program. This can be achieved by calling :cpp:func:`da_data_load_from_csv` and :cpp:func:`da_data_load_col_int` consecutively for example.
 
 When calling any of the ``da_data_load_*`` functions on a data store that is not empty, certain constraints must be respected:
 
