@@ -141,8 +141,8 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * - \ref da_status_invalid_pointer The store was not correctly initialized
  * - \ref da_status_memory_error Internal memory allocation encountered a problem. 
  */
-da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols, da_int *int_block,
-                               da_ordering order, da_int copy_data);
+da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
+                               da_int *int_block, da_ordering order, da_int copy_data);
 da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **str_block, da_ordering order);
 da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
@@ -191,8 +191,8 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
  * - \ref da_status_invalid_pointer The store was not correctly initialized
  * - \ref da_status_memory_error Internal memory allocation encountered a problem. 
  */
-da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols, da_int *int_block,
-                               da_ordering order, da_int copy_data);
+da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
+                               da_int *int_block, da_ordering order, da_int copy_data);
 da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **str_block, da_ordering order);
 da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
@@ -210,15 +210,17 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * 
  * Prior to calling this function, the standard CSV options can be set using calls to \ref da_options_set_int or \ref da_options_set_string.
  * 
- * The following additional options can be set using \ref da_options_set_string.
+ * The following additional options can be set:
  * 
- * - <em>CSV datatype</em> - if the CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker. The allowed values are: \a float, \a double, \a integer, \a string and \a boolean, with a default of \a auto to use autodetection.
- * - <em>CSV datastore precision</em> - select the precision when reading floating point numbers. The allowed values are \a double (default) or \a single.
+ \rst
+ .. csv-table:: Datastore file reading options
+   :header: "Option Name", "Type", "Default", "Description", "Constraints"
+
+   "csv integers as floats", "da_int", ":math:`i = 0`", "Whether or not to interpret integers as floating point numbers when using autodetection", ":math:`0 \le i \le 1`"
+   "csv datastore precision", "string", ":math:`s =` `'double'`", "The precision used when reading floating point numbers using autodetection", ":math:`s =` `'double'`, or `'single'`"
+   "csv datatype", "string", ":math:`s =` `'auto'`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker", ":math:`s =` `'auto'`, `'boolean'`, `'double'`, `'float'`, `'integer'`, or `'string'`"
+\endrst
  *
- * The following additional option can be set using \ref da_options_set_int.
- * 
- * - <em>CSV integers as floats</em> - whether or not to interpret integers as floating point numbers when using autodetection. This option can take the values 0 or 1.
- * 
  * \param[in,out] store a \ref _da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
  * \return \ref da_status.

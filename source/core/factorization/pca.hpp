@@ -252,7 +252,7 @@ template <typename T> class da_pca : public basic_handle<T> {
         return status;
     };
 
-    da_status get_result(da_result query, da_int *dim, da_int *result) {
+    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim, [[maybe_unused]] da_int *result) {
 
         return da_warn(err, da_status_unknown_query,
                        "There are no integer results available for this API.");

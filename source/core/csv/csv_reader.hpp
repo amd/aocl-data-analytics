@@ -63,8 +63,8 @@ class csv_reader {
     csv_reader(da_options::OptionRegistry &opts, da_errors::da_error_t &err) {
         da_status error = da_parser_init(&parser);
         if (error != da_status_success) {
-            std::bad_alloc exception;
-            throw exception;
+            std::bad_alloc exception; // LCOV_EXCL_LINE
+            throw exception;          // LCOV_EXCL_LINE
         }
         this->opts = &opts;
         this->err = &err;
@@ -125,7 +125,7 @@ class csv_reader {
                     int64_t num = (int64_t)std::stoi(item);
                     parser_add_skiprow(parser, num);
                 } catch (std::exception const &) {
-                    return da_status_option_invalid_value;
+                    return da_status_option_invalid_value; // LCOV_EXCL_LINE
                 }
             }
         }

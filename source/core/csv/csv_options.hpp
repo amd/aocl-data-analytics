@@ -36,49 +36,55 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
     std::shared_ptr<OptionString> os;
     std::map<string, da_int> dummy;
 
+    os = std::make_shared<OptionString>(OptionString(
+        "CSV delimiter", "The delimiter used when reading CSV files.", dummy, ","));
+    opts.register_opt(os);
+
     os = std::make_shared<OptionString>(
-        OptionString("CSV delimiter", "Select CSV delimiter", dummy, ","));
+        OptionString("CSV thousands",
+                     "The character used to separate thousands when reading numeric "
+                     "values in CSV files",
+                     dummy, ""));
     opts.register_opt(os);
 
     os = std::make_shared<OptionString>(OptionString(
-        "CSV thousands", "Select which character separates thousands in CSV files", dummy,
-        ""));
+        "CSV decimal", "The character used to denote a decimal point in CSV files", dummy,
+        "."));
     opts.register_opt(os);
 
     os = std::make_shared<OptionString>(OptionString(
-        "CSV decimal", "Select which character denotes a decimal point in CSV files",
-        dummy, "."));
-    opts.register_opt(os);
-
-    os = std::make_shared<OptionString>(OptionString(
-        "CSV comment", "Select which character is used to denote comments in CSV files",
+        "CSV comment",
+        "The character used to denote comments in CSV files (note, if a line in a CSV "
+        "file is to be interpreted as only containing a comment, the comment character "
+        "should be the first character on the line)",
         dummy, "#"));
     opts.register_opt(os);
 
     os = std::make_shared<OptionString>(OptionString(
-        "CSV quote character",
-        "Select which character is used to denote quotations in CSV files", dummy, "\""));
+        "CSV quote character", "The character used to denote quotations in CSV files",
+        dummy, "\""));
     opts.register_opt(os);
 
     os = std::make_shared<OptionString>(OptionString(
-        "CSV escape character", "Select the escape character in CSV files", dummy, "\\"));
-    opts.register_opt(os);
-
-    os = std::make_shared<OptionString>(OptionString(
-        "CSV line terminator",
-        "Select which character is used to denote line termination in CSV files", dummy,
-        ""));
+        "CSV escape character", "The escape character in CSV files", dummy, "\\"));
     opts.register_opt(os);
 
     os = std::make_shared<OptionString>(
-        OptionString("CSV scientific notation character",
-                     "Select which character is used to denote powers of 10 in CSV files",
-                     dummy, "e"));
+        OptionString("CSV line terminator",
+                     "The character used to denote line termination in CSV files (leave "
+                     "this empty to use the default)",
+                     dummy, ""));
     opts.register_opt(os);
 
     os = std::make_shared<OptionString>(OptionString(
-        "CSV skip rows", "Comma or space separated list of rows to ignore in CSV files",
-        dummy, "\0"));
+        "CSV scientific notation character",
+        "The character used to denote powers of 10 in floating point values in CSV files",
+        dummy, "e"));
+    opts.register_opt(os);
+
+    os = std::make_shared<OptionString>(OptionString(
+        "CSV skip rows",
+        "A comma- or space-separated list of rows to ignore in CSV files", dummy, "\0"));
     opts.register_opt(os);
 
     oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
@@ -94,16 +100,21 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
         da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
     opts.register_opt(oi);
 
-    oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-        "CSV row start",
-        "Ignore the specified number of lines from the top of the CSV file", 0,
-        da_options::lbound_t::greaterequal, DA_INT_MAX, da_options::ubound_t::lessequal,
-        0));
+    oi = std::make_shared<OptionNumeric<da_int>>(
+        OptionNumeric<da_int>("CSV row start",
+                              "Ignore the specified number of lines from the top of the "
+                              "CSV file (note that line numbers in CSV files start at 1)",
+                              0, da_options::lbound_t::greaterequal, DA_INT_MAX,
+                              da_options::ubound_t::lessequal, 0));
     opts.register_opt(oi);
 
     oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-        "CSV skip empty lines", "Whether or not to ignore empty lines in CSV files", 0,
-        da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
+        "CSV skip empty lines",
+        "Whether or not to ignore empty lines in CSV files (note that caution should be "
+        "used when using this in conjunction with options such as CSV skip rows since "
+        "line numbers may no longer correspond to the original line numbers in the CSV "
+        "file)",
+        0, da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
     opts.register_opt(oi);
 
     oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
@@ -113,23 +124,30 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
     opts.register_opt(oi);
 
     oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-        "CSV skip footer", "Whether or not to ignore the last line of the CSV file", 0,
+        "CSV skip footer",
+        "Whether or not to ignore the last line when reading a CSV file", 0,
         da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
     opts.register_opt(oi);
 
     oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
         "CSV warn for missing data",
-        "If 0 return error if missing data is encountered; if 1 issue warning and store "
+        "If set to 0, return error if missing data is encountered; if set to, 1 issue a "
+        "warning and store "
         "missing data as either a NaN (for floating point data) or the maximum value of "
-        "the integer type being used.",
+        "the integer type being used",
         0, da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
+    opts.register_opt(oi);
+
+    oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+        "CSV use header row", "Whether or not to interpret the first row as a header", 0,
+        da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
     opts.register_opt(oi);
 
     /* These additional options only apply when reading CSV files into a datastore object */
 
     os = std::make_shared<OptionString>(OptionString(
         "CSV datatype",
-        "If a CSV file is known to be of a single datatype, this can be specified to "
+        "If a CSV file is known to be of a single datatype, set this option to "
         "disable autodetection and make reading the file quicker",
         {{"auto", 0},
          {"float", 1},
@@ -142,7 +160,7 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
 
     os = std::make_shared<OptionString>(
         OptionString("CSV datastore precision",
-                     "Select precision when reading floating point numbers "
+                     "The precision used when reading floating point numbers "
                      "using autodetection",
                      {{"single", 0}, {"double", 1}}, "double"));
     opts.register_opt(os);
@@ -152,11 +170,6 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
         "Whether or not to interpret integers as floating point numbers when "
         "using autodetection",
         0, da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
-    opts.register_opt(oi);
-
-    oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-        "CSV use header row", "Whether or not to interpret the first row as a header", 0,
-        da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
     opts.register_opt(oi);
 
     return da_status_success;

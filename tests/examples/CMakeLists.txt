@@ -69,15 +69,15 @@ target_link_libraries(decision_tree_ex aocl-da)
 target_compile_definitions(
   decision_tree_ex PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 
-add_executable(basic_pca basic_pca.cpp)
-target_link_libraries(basic_pca aocl-da)
+add_executable(pca pca.cpp)
+target_link_libraries(pca aocl-da)
 
 set(EXAMPLE_EXES
     reglinear_model
     linear_model
     linmod_diabetes
     basic_statistics
-    basic_pca
+    pca
     datastore
     decision_tree_ex)
 

@@ -30,6 +30,8 @@
 #define _CRT_SECURE_NO_DEPRECATE
 
 #include "aoclda.h"
+#include "char_to_num.hpp"
+#include "da_datastore.hpp"
 #include "da_handle.hpp"
 #include "data_store.hpp"
 #include "options.hpp"
@@ -283,6 +285,8 @@ TYPED_TEST(CSVTest, basic_no_headings) {
     da_status err = da_datastore_init(&store);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV thousands", "f"),
+              da_status_success);
     TypeParam *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
@@ -319,11 +323,14 @@ TYPED_TEST(DataStoreTest, datastore_no_headings) {
 
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
     EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
         da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV thousands", "f"),
+              da_status_success);
 
     da_int nrows = 0, ncols = 0;
 
@@ -712,6 +719,42 @@ TEST(CSVTest, options) {
     da_datastore_destroy(&store);
 }
 
+TEST(csvtest, incorrect_headings) {
+    char filename[] = "csv_test_incorrect_headings.csv";
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, filename);
+
+    double *a = nullptr;
+    da_datastore store = nullptr;
+    da_int nrows = 0, ncols = 0;
+    char **headings = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
+              da_status_parsing_error);
+    da_datastore_destroy(&store);
+}
+
+TEST(csvtest, incorrect_headings2) {
+    char filename[] = "csv_test_incorrect_headings2.csv";
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, filename);
+
+    double *a = nullptr;
+    da_datastore store = nullptr;
+    da_int nrows = 0, ncols = 0;
+    char **headings = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
+              da_status_parsing_error);
+    da_datastore_destroy(&store);
+}
+
 TEST(csvtest, error_exits) {
     char filename[] = "csv_test_errors.csv";
     char filepath[256] = DATA_DIR;
@@ -723,15 +766,25 @@ TEST(csvtest, error_exits) {
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
               da_status_invalid_pointer);
     double *a = nullptr;
+    float *a_f = nullptr;
+    da_int *a_int = nullptr;
+    uint8_t *a_uint8 = nullptr;
+    char **a_char = nullptr;
 
     da_int nrows = 0, ncols = 0;
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_store_not_initialized);
+    EXPECT_EQ(da_read_csv_s(store, filepath, &a_f, &nrows, &ncols, nullptr),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_read_csv_uint8(store, filepath, &a_uint8, &nrows, &ncols, nullptr),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_read_csv_char(store, filepath, &a_char, &nrows, &ncols, nullptr),
+              da_status_store_not_initialized);
 
     // Check for various error exits
     double *a_double = nullptr;
-    da_int *a_int = nullptr;
-    uint8_t *a_uint8 = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
               da_status_success);
@@ -1132,5 +1185,56 @@ TEST(CSVTest, auto) {
         EXPECT_EQ_overload(col_label, expected_headings[j]);
     }
 
+    da_datastore_destroy(&store);
+}
+
+TEST(csvtest, char_to_num) {
+    // Unit test to exercise some of the more obscure code paths in char_to_num
+    double number_d;
+    float number_s;
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    char **endptr = nullptr;
+    int maybe_int = 1;
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "£", endptr, &number_d,
+                                  &maybe_int),
+              da_status_parsing_error);
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "1e-100000", endptr,
+                                  &number_d, &maybe_int),
+              da_status_success);
+    EXPECT_EQ(number_d, 0.0);
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "1e100000", endptr,
+                                  &number_d, &maybe_int),
+              da_status_parsing_error);
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "1e-400", endptr, &number_d,
+                                  &maybe_int),
+              da_status_success);
+    EXPECT_EQ(number_d, 0.0);
+    EXPECT_EQ(
+        da_csv::char_to_num(store->csv_parser->parser,
+                            "1.3948394582957560682857698275827458672847856285728567",
+                            endptr, &number_d, &maybe_int),
+        da_status_success);
+    EXPECT_NEAR(number_d, 1.394839458295756, 1e-14);
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "£", endptr, &number_s,
+                                  &maybe_int),
+              da_status_parsing_error);
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "1e-100000", endptr,
+                                  &number_s, &maybe_int),
+              da_status_success);
+    EXPECT_EQ(number_s, 0.0);
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "1e100000", endptr,
+                                  &number_s, &maybe_int),
+              da_status_parsing_error);
+    EXPECT_EQ(da_csv::char_to_num(store->csv_parser->parser, "1e-50", endptr, &number_s,
+                                  &maybe_int),
+              da_status_success);
+    EXPECT_EQ(number_s, 0.0f);
+    EXPECT_EQ(
+        da_csv::char_to_num(store->csv_parser->parser,
+                            "1.3948394582957560682857698275827458672847856285728567",
+                            endptr, &number_s, &maybe_int),
+        da_status_success);
+    EXPECT_NEAR(number_s, 1.39483941, 1e-6);
     da_datastore_destroy(&store);
 }

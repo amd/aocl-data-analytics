@@ -45,7 +45,7 @@ extern "C" {
 /** \{
  * \brief Read data of a single type from a CSV file, optionally with a header row containing the column labels.
  * 
- * \param[in,out] store a \ref _da_datastore object, initialized using \ref da_datastore_init.
+ * \param[in,out] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
  * \param[out] A a pointer to the size \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in row major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>i</i> - 1) &times; \p n_cols + <i>j</i> - 1]th entry of the array. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
@@ -73,7 +73,7 @@ da_status da_read_csv_int(da_datastore store, const char *filename, da_int **A,
  *
  * This routine reads files consisting of the (case-insensitive) words \a True and \a False and stores them in an array of type uint8_t containing the values 1 or 0 respectively.
  * 
- * \param[in,out] store a \ref _da_datastore object, initialized using \ref da_datastore_init.
+ * \param[in,out] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
  * \param[out] A a pointer to the size \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in row major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>i</i> - 1) &times; \p n_cols + <i>j</i> - 1]th entry of the array. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
@@ -94,7 +94,7 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
  * 
  * This routine reads files consisting of the character data and stores them in an array of type char* character strings.
  * 
- * \param[in,out] store a \ref _da_datastore object, initialized using \ref da_datastore_init.
+ * \param[in,out] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
  * \param[out] A a pointer to the size \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in row major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>i</i> - 1) &times; \p n_cols + <i>j</i> - 1]th entry of the array. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.

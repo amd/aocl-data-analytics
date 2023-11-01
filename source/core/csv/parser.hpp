@@ -48,17 +48,17 @@ inline void *read_bytes(void *source, size_t nbytes, size_t *bytes_read, int *st
     FILE *fp = (FILE *)source;
     char *buffer = (char *)malloc(nbytes);
     if (buffer == NULL && nbytes > 0) {
-        *status = PARSER_OUT_OF_MEMORY;
-        return NULL;
+        *status = PARSER_OUT_OF_MEMORY; // LCOV_EXCL_LINE
+        return NULL;                    // LCOV_EXCL_LINE
     }
 
     size_t read_status = fread(buffer, 1, nbytes, fp);
     *bytes_read = read_status;
 
     if (read_status == nbytes) {
-        *status = 0;
-        return (void *)buffer;
-    } else { // error handling
+        *status = 0;           // LCOV_EXCL_LINE
+        return (void *)buffer; // LCOV_EXCL_LINE
+    } else {                   // error handling
         if (read_status == 0) {
             *status = REACHED_EOF;
             return (void *)buffer;
@@ -74,9 +74,9 @@ inline void *read_bytes(void *source, size_t nbytes, size_t *bytes_read, int *st
 
 inline int cleanup(void *source) {
     if (source) {
-        FILE *fp = (FILE *)source;
-        fclose(fp);
-        source = NULL;
+        FILE *fp = (FILE *)source; // LCOV_EXCL_LINE
+        fclose(fp);                // LCOV_EXCL_LINE
+        source = NULL;             // LCOV_EXCL_LINE
     }
     return 0;
 }
@@ -98,14 +98,14 @@ inline da_status da_parser_init(parser_t **parser) {
     try {
         *parser = new parser_t;
     } catch (std::bad_alloc &) {
-        return da_status_memory_error;
+        return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
     int istatus = parser_init(*parser);
 
     if (istatus != 0) {
-        da_parser_destroy(parser);
-        return da_status_memory_error;
+        da_parser_destroy(parser);     // LCOV_EXCL_LINE
+        return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
     parser_set_default_options(*parser);

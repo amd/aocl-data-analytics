@@ -82,8 +82,9 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
 
     istatus = tokenize_all_rows(parser, encoding_errors);
     if (istatus != 0) {
-        da_error(csv->err, da_status_memory_error, "Memory allocation failure");
-        goto exit;
+        da_error(csv->err, da_status_memory_error,
+                 "Memory allocation failure"); // LCOV_EXCL_LINE
+        goto exit;                             // LCOV_EXCL_LINE
     } else if (parser->skipped_lines != nullptr) {
         std::string buff;
         buff = "The following lines of the CSV file were ignored:\n";
@@ -147,8 +148,8 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
     uint64_t fields_per_line = words_len / lines;
     int64_t fields_per_line_signed;
     if (fields_per_line > DA_INT_MAX || lines > DA_INT_MAX) {
-        return da_error(csv->err, da_status_overflow,
-                        "Too many fields were found in the CSV file.");
+        return da_error(csv->err, da_status_overflow,                   // LCOV_EXCL_LINE
+                        "Too many fields were found in the CSV file."); // LCOV_EXCL_LINE
     } else {
         fields_per_line_signed = (int64_t)(fields_per_line);
     }
@@ -159,7 +160,8 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
     data = (T *)calloc(n, sizeof(T));
 
     if (data == NULL) {
-        return da_error(csv->err, da_status_memory_error, "Memory allocation failure");
+        return da_error(csv->err, da_status_memory_error,
+                        "Memory allocation failure"); // LCOV_EXCL_LINE
     }
 
     char *p_end = NULL;
@@ -219,17 +221,19 @@ inline da_status parse_headings(csv_reader *csv, da_int ncols, char ***headings)
     }
 
     if (!(ncols == parser->line_fields[0])) {
-        std::string buff;
-        buff = "An unexpected number of headings was found (found " +
-               std::to_string(parser->line_fields[0]);
-        buff += ", expected " + std::to_string(ncols) + ").";
-        return da_error(csv->err, da_status_parsing_error, buff);
+        // This error exit should be caught earlier
+        std::string buff;                                             // LCOV_EXCL_LINE
+        buff = "An unexpected number of headings was found (found " + // LCOV_EXCL_LINE
+               std::to_string(parser->line_fields[0]);                // LCOV_EXCL_LINE
+        buff += ", expected " + std::to_string(ncols) + ").";         // LCOV_EXCL_LINE
+        return da_error(csv->err, da_status_parsing_error, buff);     // LCOV_EXCL_LINE
     }
 
     // Calloc rather than new as can be called from C code amd want char pointers set to null
     *headings = (char **)calloc(ncols, sizeof(char *));
     if (*headings == nullptr) {
-        return da_error(csv->err, da_status_memory_error, "Memory allocation failure");
+        return da_error(csv->err, da_status_memory_error,
+                        "Memory allocation failure"); // LCOV_EXCL_LINE
     }
 
     char *p = nullptr;
@@ -240,9 +244,10 @@ inline da_status parse_headings(csv_reader *csv, da_int ncols, char ***headings)
 
         status = char_to_num(parser, p, &p_end, &(*headings)[i], nullptr);
         if (status != da_status_success) {
-            std::string buff = "Unable to parse header " + std::to_string(i) + ".";
-            free_data(headings, ncols);
-            return da_error(csv->err, status, buff);
+            std::string buff =
+                "Unable to parse header " + std::to_string(i) + "."; // LCOV_EXCL_LINE
+            free_data(headings, ncols);                              // LCOV_EXCL_LINE
+            return da_error(csv->err, status, buff);                 // LCOV_EXCL_LINE
         }
     }
 
@@ -275,16 +280,18 @@ inline da_status parse_and_process(csv_reader *csv, const char *filename, T **a,
 
         tmp_error = parse_headings(csv, *ncols, headings);
         if (tmp_error != da_status_success) {
-            free_data(a, (*ncols) * (*nrows));
-            parser_reset(csv->parser);
-            return da_error_trace(csv->err, tmp_error, "Error parsing Headings");
+            free_data(a, (*ncols) * (*nrows)); // LCOV_EXCL_LINE
+            parser_reset(csv->parser);         // LCOV_EXCL_LINE
+            return da_error_trace(csv->err, tmp_error,
+                                  "Error parsing headings"); // LCOV_EXCL_LINE
         }
     }
 
     int istatus = parser_reset(csv->parser);
     if (istatus != 0) {
-        return da_error(csv->err, da_status_memory_error,
-                        "A memory allocation error occurred while resetting the parser.");
+        return da_error(
+            csv->err, da_status_memory_error, // LCOV_EXCL_LINE
+            "A memory allocation error occurred while resetting the parser."); // LCOV_EXCL_LINE
     }
 
     return error;

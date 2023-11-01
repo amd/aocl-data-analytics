@@ -728,7 +728,7 @@ inline da_status char_to_num([[maybe_unused]] parser_t *parser, const char *str,
     memset(*store, '\0', 1 + len);
 
     if (*store == NULL) {
-        return da_status_memory_error;
+        return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
 /* Most of the time MSVC compiler can automatically replace CRT functions with _s versions, but not this one */

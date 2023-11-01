@@ -90,25 +90,18 @@ The standard way of computing the principal component analysis using AOCL-DA  is
 Options
 -------
 
-The following option is set using  :cpp:func:`da_options_set_string`:
+The following options can be set using  :cpp:func:`da_options_set_string` or :cpp:func:`da_options_set_int`:
 
-- ``PCA method`` - the type of PCA to compute (and, equivalently, the type of standardization applied to :math:`A`). This option can take the following values:
+.. csv-table:: PCA options
+   :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
-   - ``covariance`` - the data matrix is mean-centered. The computed PCA then corresponds to the eigendecomposition of the covariance matrix.
-
-   - ``correlation`` - the data matrix is mean-centered and normalized so that each column has unit standard deviation. The computed PCA then corresponds to the eigendecomposition of the correlation matrix. This option should be chosen if the columns vary significantly in magnitude.
-  
-   - ``svd`` - no standardization is applied to the data matrix. This option should be chosen if the data matrix has already been normalized, or if a plain SVD is required.
-
-The following option is set using  :cpp:func:`da_options_set_int`:
-
-- ``n_components`` - the number of principal components (or singular values) to compute. This option must lie between :math:`1` and :math:`\min(n\_samples, n\_features)`.
-
+   "PCA method", "string", ":math:`s =` `'covariance'`", "The type of PCA to compute (and, equivalently, the type of standardization applied to :math:`A`)", ":math:`s =` `'covariance'`, `'correlation'`, or `'svd'`"
+   "n_components", "da_int", ":math:`i =\min(n\_samples, n\_features)`", "The number of principal components (or singular values) to compute", ":math:`1 \le i \le \min(n\_samples,n\_features)`"
 
 Examples
 ========
 
-See ``basic_pca.cpp`` in the examples folder of your installation for examples of how to use these functions.
+See ``pca.cpp`` in the examples folder of your installation for examples of how to use these functions.
 
 .. toctree::
     :maxdepth: 1
