@@ -32,6 +32,8 @@ Matrix Factorizations
 This chapter contains functions for decomposing a data matrix into the product of two or more matrices.
 Matrix factorizations are commonly used for dimensionality reduction and feature extraction.
 
+.. _pca_intro:
+
 Principal component analysis
 ============================
 
@@ -75,12 +77,12 @@ Typical workflow for PCA
 ------------------------
 The standard way of computing the principal component analysis using AOCL-DA  is as follows.
 
-1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` :cpp:enum:`da_handle_pca`.
+1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_pca``.
 2. Pass data to the handle using either :cpp:func:`da_pca_set_data_s` or :cpp:func:`da_pca_set_data_d`.
 3. Set the number of principal components required and the type of PCA using :cpp:func:`da_options_set_int` and :cpp:func:`da_options_set_string` (see :ref:`below <pca_options>`).
 4. Compute the PCA using :cpp:func:`da_pca_compute_s` or :cpp:func:`da_pca_compute_d`.
 5. Perform further transformations as required, using :cpp:func:`da_pca_transform_s`, :cpp:func:`da_pca_transform_d`, :cpp:func:`da_pca_inverse_transform_s`, or :cpp:func:`da_pca_inverse_transform_d`.
-6. Extract results using :cpp:func:`da_handle_get_results_d` or :cpp:func:`da_handle_get_results_s`.
+6. Extract results using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`.
 
 
 .. _pca_options:

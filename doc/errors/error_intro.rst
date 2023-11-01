@@ -31,7 +31,7 @@ Error Handling
 **************
 
 Almost all functions in AOCL-DA return a :cpp:type:`da_status` enumerated type.
-If the function exited successfully then this will take the value :cpp:enum:`da_status_success`, otherwise the value will indicate the type of error that was encountered.
+If the function exited successfully then this will take the value ``da_status_success``, otherwise the value will indicate the type of error that was encountered.
 
 Functions which take a :cpp:type:`da_handle` or :cpp:type:`da_datastore` as their first argument will store further information about any errors that have been encountered.
 This information can be extracted using :cpp:func:`da_handle_print_error_message` :cpp:func:`da_datastore_print_error_message`.

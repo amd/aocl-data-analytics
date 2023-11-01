@@ -41,7 +41,7 @@ Each of these routines takes four arguments:
 
 The specific results available (i.e. the possible values of :cpp:type:`da_result`) are described in the documentation for the particular computational API you are using.
 
-If the array supplied is too small, then the error :cpp:enum:`da_status_invalid_array_dimension` will be returned and the pointer to the size of the array will be overwritten with the minimum size required to hold the result.
+If the array supplied is too small, then the error ``da_status_invalid_array_dimension`` will be returned and the pointer to the size of the array will be overwritten with the minimum size required to hold the result.
 
 
 .. toctree::
