@@ -50,14 +50,16 @@ typedef enum da_axis_ {
 /**
  * \brief Defines the method used to compute quantiles in \ref da_quantile_s and \ref da_quantile_d.
  * 
- * The available quantile types correspond to the 9 different quantile types commonly used. It is recommended to use type 6 or type 7 as a default.
+ * @rst
+ * The available quantile types correspond to the 9 different quantile types commonly used (see :cite:t:`hyfa96` for further details). It is recommended to use type 6 or type 7 as a default.
+ * @endrst
  * 
  * Notes about the available types:
  * - Types 1, 2 and 3 give discontinuous results.
  * - Type 8 is recommended if the sample distribution function is unknown.
  * - Type 9 is recommended if the sample distribution function is known to be normal.
  * 
- * In each case a number @f$h@f$ is computed, corresponding to the approximate location of the quantile within the data array, then the quantile is computed as follows:
+ * In each case a number @f$h@f$ is computed, corresponding to the approximate location in the data array of the required quantile, \p q @f$\in [0,1]@f$. Then the quantile is computed as follows:
  */
 typedef enum da_quantile_type_ {
     da_quantile_type_1, ///< @f$h=n \times q@f$; return @f$\texttt{x[i]}@f$, where @f$i = \lceil h \rceil@f$.
@@ -72,12 +74,17 @@ typedef enum da_quantile_type_ {
 } da_quantile_type;
 
 /** \{
- * \brief Arithmetic mean of a data array.
+ * \brief Arithmetic mean of a data matrix.
+ * 
+ * For a dataset  @f$\{x_1, \dots, x_n\}@f$, the arithmetic mean,  @f$\bar{x}@f$, is defined as
+ * \f[
+ * \bar{x} = \frac{1}{n}\sum_{i=1}^n x_i.
+ * \f]
  * 
  * \param[in] axis a \ref da_axis enumerated type, specifying whether means are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size @f$p@f$. If \p axis = \ref da_axis_row the array must be at least of size @f$n@f$. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \return \ref da_status. The function returns:
@@ -93,12 +100,16 @@ da_status da_mean_s(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
 /** \} */
 
 /** \{
- * \brief Geometric mean of a data array.
+ * \brief Geometric mean of a data matrix.
  * 
+ * For a dataset  @f$\{x_1, \dots, x_n\}@f$, the geometric mean,  @f$\bar{x}_{geom}@f$, is defined as
+ * \f[
+ * \bar{x}_{geom} = \left(\prod_{i=1}^n x_i\right)^{\frac{1}{n}} \equiv \exp\left(\frac{1}{n}\sum_{i=1}^n\ln x_i\right).
+ * \f]
  * \param[in] axis a \ref da_axis enumerated type, specifying whether geometric means are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array. Note that \p X must contain non-negative data only.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X. Note that \p X must contain non-negative data only.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] geometric_mean the array which will hold the computed geometric means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \return \ref da_status. The function returns:
@@ -115,12 +126,17 @@ da_status da_geometric_mean_s(da_axis axis, da_int n_rows, da_int n_cols, const 
 /** \} */
 
 /** \{
- * \brief Harmonic mean of a data array.
+ * \brief Harmonic mean of a data matrix.
+ * 
+ *  For a dataset  @f$\{x_1, \dots, x_n\}@f$, the harmonic mean,  @f$\bar{x}_{harm}@f$, is defined as
+ * \f[
+ * \bar{x}_{harm} = \frac{n}{\sum_{i=1}^n \frac{1}{x_i}}.
+ * \f]
  * 
  * \param[in] axis a \ref da_axis enumerated type, specifying whether harmonic means are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] harmonic_mean the array which will hold the computed harmonic means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \return \ref da_status. The function returns:
@@ -136,14 +152,19 @@ da_status da_harmonic_mean_s(da_axis axis, da_int n_rows, da_int n_cols, const f
 /** \} */
 
 /** \{
- * \brief Arithmetic mean and variance of a data array.
+ * \brief Arithmetic mean and variance of a data matrix.
  * 
- * The degrees of freedom used to compute the variance is given by the number of observations - 1, to give an unbiased estimate of the population variance, based on the sample in the data matrix. The number of observations is \p n_rows for column-wise variances, \p n_cols for row-wise variances and \p n_rows &times; \p n_cols for the overall variance.
+ * The degrees of freedom used to compute the variance is given by the number of observations - 1, to give an unbiased estimate of the population variance, based on the sample.
+ * Thus, for a dataset  @f$\{x_1, \dots, x_n\}@f$, the variance,  @f$s^2@f$, is defined as
+ * \f[
+ * s^2 = \frac{1}{n-1}\sum_{i=1}^n(x_i-\bar{x})^2.
+ * \f]
+ * Here, the number of observations is \p n_rows for column-wise variances, \p n_cols for row-wise variances and \p n_rows @f$\times @f$ \p n_cols for the overall variance.
  * 
  * \param[in] axis a \ref da_axis enumerated type, specifying whether statistics are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] variance the array which will hold the computed variances. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
@@ -160,15 +181,21 @@ da_status da_variance_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
 /** \} */
 
 /** \{
- * \brief Arithmetic mean, variance and skewness of a data array.
+ * \brief Arithmetic mean, variance and skewness of a data matrix.
  * 
- * The degrees of freedom used to compute the variance is given by the number of observations - 1, to give an unbiased estimate of the population variance, based on the sample in the data matrix. The number of observations is \p n_rows for column-wise variances, \p n_cols for row-wise variances and \p n_rows &times; \p n_cols for the overall variance.
- * The skewness is computed as the Fischer-Pearson coefficient of skewness (that is, with the central moments scaled by the number of observations).
+ * @rst
+ * The skewness is computed as the Fischer-Pearson coefficient of skewness (that is, with the central moments scaled by the number of observations, see :cite:t:`kozw2000`).
+ * @endrst
+ * Thus, for a dataset  @f$\{x_1, \dots, x_n\}@f$, the skewness, @f$g_1@f$, is defined as
+ * \f[
+ * g_1 = \frac{\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^3}{\left[\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^2\right]^{3/2}}.
+ * \f]
+ * The variance is computed as described in \ref da_variance_d.
  * 
  * \param[in] axis a \ref da_axis enumerated type, specifying whether statistics are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] variance the array which will hold the computed variances. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
@@ -186,15 +213,20 @@ da_status da_skewness_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
 /** \} */
 
 /** \{
- * \brief Arithmetic mean, variance and kurtosis of a data array.
+ * \brief Arithmetic mean, variance and kurtosis of a data matrix.
  * 
- * The degrees of freedom used to compute the variance is given by the number of observations - 1, to give an unbiased estimate of the population variance, based on the sample in the data matrix. The number of observations is \p n_rows for column-wise variances, \p n_cols for row-wise variances and \p n_rows &times; \p n_cols for the overall variance.
- * The kurtosis is computed using Fischer's definition of excess kurtosis (that is, with the central moments scaled by the number of observations and 3 subtracted to ensure normally distributed data gives a value of 0).
- * 
+ * @rst
+ * The kurtosis is computed using Fischer's coefficient of excess kurtosis (that is, with the central moments scaled by the number of observations and 3 subtracted to ensure normally distributed data gives a value of 0, see :cite:t:`kozw2000`).
+ * @endrst
+ * Thus, for a dataset  @f$\{x_1, \dots, x_n\}@f$, the kurtosis, @f$g_2@f$, is defined as
+ * \f[
+ * g_2 = \frac{\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^4}{\left[\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^2\right]^{2}}-3.
+ * \f]
+ * The variance is computed as described in \ref da_variance_d.
  * \param[in] axis a \ref da_axis enumerated type, specifying whether statistics are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n.  If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] variance the array which will hold the computed variances. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
@@ -212,16 +244,19 @@ da_status da_kurtosis_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
 /** \} */
 
 /** \{
- * \brief Central moment a data array.
+ * \brief Central moment a data matrix.
  * 
- * The <i>k</i>th central moments of a data array are computed along the specified axis.
- * The moments are scaled by the number of observations: \p n_rows for column-wise moments, \p n_cols for row-wise moments and \p n_rows &times; \p n_cols for the overall moment.
+ * For a dataset  @f$\{x_1, \dots, x_n\}@f$, the <i>k</i>th central moment, @f$m_k@f$, is defined as
+ * \f[
+ * m_k=\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^k.
+ * \f]
+ * Here, the moments are scaled by the number of observations: \p n_rows for column-wise moments, \p n_cols for row-wise moments and \p n_rows @f$\times @f$ \p n_cols for the overall moment.
  * The function gives you the option of supplying precomputed means about which the moments are computed. Otherwise it will compute the means and return them along with the moments.
  * 
  * \param[in] axis a \ref da_axis enumerated type, specifying whether moments are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[in] k the order of the moment to be computed. Constraint: k >= 0.
  * \param[in] use_precomputed_mean if nonzero, then means supplied by the calling program will be used. Otherwise means will be computed internally and returned to the calling program.
@@ -243,7 +278,7 @@ da_status da_moment_s(da_axis axis, da_int n_rows, da_int n_cols, const float *X
 /** \} */
 
 /** \{
- * \brief Selected quantile of a data array.
+ * \brief Selected quantile of a data matrix.
  * 
  * Computes the <i>q</i>th quantiles of a data array along the specified axis.
  * Note that there are multiple ways to define quantiles. These are specified using the \ref da_quantile_type enum.
@@ -251,7 +286,7 @@ da_status da_moment_s(da_axis axis, da_int n_rows, da_int n_cols, const float *X
  * \param[in] axis a \ref da_axis enumerated type, specifying whether quantiles are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[in] q the quantile required. Constraint: q must lie in the interval [0,1].
  * \param[out] quantile the array which will hold the computed quantiles. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
@@ -273,14 +308,14 @@ da_status da_quantile_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
 /** \} */
 
 /** \{
- * \brief Summary statistics of a data array.
+ * \brief Summary statistics of a data matrix.
  * 
  * Computes the maximum/minumum, median and upper/lower hinges of a data array along the specified axis.
  * 
  * \param[in] axis a \ref da_axis enumerated type, specifying whether statistics are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] minimum the array which will hold the computed minima. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] lower_hinge the array which will hold the computed lower_hinges. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n.  If \p axis = \ref da_axis_all the array must be at least of size 1.
@@ -305,7 +340,7 @@ da_status da_five_point_summary_s(da_axis axis, da_int n_rows, da_int n_cols,
 /** \} */
 
 /** \{
- * \brief Standardize a data array.
+ * \brief Standardize a data matrix.
  * 
  * This routine can be called in various different ways:
  * - if the arrays shift and scale are both supplied, then the data matrix x will be shifted (by subtracting the values in shift) and scaled (by dividing by the values in scale) along the selected axis.
@@ -316,7 +351,7 @@ da_status da_five_point_summary_s(da_axis axis, da_int n_rows, da_int n_cols,
  * \param[in] axis a \ref da_axis enumerated type, specifying whether statistics are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[in] shift the array of values for shifting the data. Can be null (see above). If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[in] scale the array of values for scaling the data. Can be null (see above). If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
@@ -333,13 +368,13 @@ da_status da_standardize_s(da_axis axis, da_int n_rows, da_int n_cols, float *X,
 /** \} */
 
 /** \{
- * \brief Covariance matrix of a data array.
+ * \brief Covariance matrix of a data matrix.
  * 
- * Covariance matrix of a data array, with the rows treated as observations and the columns treated as variables. The scaling factor n - 1 is used in computing the covariances.
+ * Covariance matrix of a data matrix, with the rows treated as observations and the columns treated as variables. The scaling factor \p n_rows @f$-1@f$ is used in computing the covariances.
  * 
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] cov the array which will hold the p &times; p covariance matrix. Must be of size at least p*ldcov. Data will be returned in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) &times; \a ldcov + <i>i</i> - 1]th entry of the array.
  * \param[in] ldcov the leading dimension of the covariance matrix. Constraint: \p ldcov >= \p n_cols.
@@ -357,13 +392,13 @@ da_status da_covariance_matrix_s(da_int n, da_int p, const float *X, da_int ldx,
 /** \} */
 
 /** \{
- * \brief Correlation matrix of a data array.
+ * \brief Correlation matrix of a data matrix.
  * 
- * Correlation matrix of a data array, with the rows treated as observations and the columns treated as variables.
+ * Correlation matrix of a data matrix, with the rows treated as observations and the columns treated as variables.
  * 
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
- * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) @f$\times@f$ \p ldx + <i>i</i> - 1]th entry of the array.
+ * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] corr the array which will hold the p &times; p correlation matrix. Must be of size at least p*ldcov. Data will be returned in column major order, so that the element in the <i>i</i>th row and <i>j</i>th column is stored in the [(<i>j</i> - 1) &times; \a ldcov + <i>i</i> - 1]th entry of the array.
  * \param[in] ldcorr the leading dimension of the correlation matrix. Constraint: \p ldcorr >= \p n_cols.

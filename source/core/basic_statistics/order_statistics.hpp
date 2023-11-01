@@ -333,7 +333,7 @@ da_status five_point_summary(da_axis axis, da_int n, da_int p, const T *x, da_in
     try {
         xindex = new da_int[length];
     } catch (std::bad_alloc const &) {
-        return da_status_memory_error;
+        return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
     for (da_int i = 0; i < num_stats; i++) {

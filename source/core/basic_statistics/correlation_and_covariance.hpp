@@ -57,7 +57,7 @@ da_status cov_corr_matrix(da_int n, da_int p, const T *x, da_int ldx, T *mat,
     try {
         x_copy = new T[n * p];
     } catch (std::bad_alloc const &) {
-        return da_status_memory_error;
+        return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
     for (da_int j = 0; j < p; j++) {

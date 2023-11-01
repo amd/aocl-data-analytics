@@ -28,7 +28,9 @@
 Basic statistics APIs
 *********************
 
+.. doxygentypedef:: da_axis
 .. doxygenenum:: da_axis_
+.. doxygentypedef:: da_quantile_type
 .. doxygenenum:: da_quantile_type_
 .. doxygenfunction:: da_mean_d
 .. doxygenfunction:: da_mean_s

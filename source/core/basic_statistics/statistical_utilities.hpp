@@ -79,7 +79,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
             amean = new T[length];
             var = new T[length];
         } catch (std::bad_alloc const &) {
-            return da_status_memory_error;
+            return da_status_memory_error; // LCOV_EXCL_LINE
         }
 
         status = variance(axis, n, p, x, ldx, amean, var);
@@ -98,7 +98,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
             amean = new T[length];
             std::fill(amean, amean + length, 0.0);
         } catch (std::bad_alloc const &) {
-            return da_status_memory_error;
+            return da_status_memory_error; // LCOV_EXCL_LINE
         }
         internal_shift = &amean;
 
@@ -108,7 +108,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
             var = new T[length];
             std::fill(var, var + length, 1.0);
         } catch (std::bad_alloc const &) {
-            return da_status_memory_error;
+            return da_status_memory_error; // LCOV_EXCL_LINE
         }
         internal_scale = &var;
     }
