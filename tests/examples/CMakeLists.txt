@@ -77,6 +77,7 @@ set(EXAMPLE_EXES
     linear_model
     linmod_diabetes
     basic_statistics
+    basic_pca
     datastore
     decision_tree_ex)
 
