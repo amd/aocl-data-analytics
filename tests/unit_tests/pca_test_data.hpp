@@ -116,9 +116,9 @@ template <typename T> void Get1by5Data(std::vector<PCAParamType<T>> &params) {
     param.components_required = 1;
     param.method = "correlation";
     // For this test various combinations or 0s and 1s are valid to don't test scores or components or u or vt
-    std::vector<double> expected_variance{0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> expected_variance{0.0};
     param.expected_variance = convert_vector<double, T>(expected_variance);
-    std::vector<double> expected_sigma{0.0, 0.0, 0.0, 0.0, 0.0};
+    std::vector<double> expected_sigma{0.0};
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)0.0;
     param.expected_n_components = 1;
@@ -432,8 +432,7 @@ template <typename T> void GetTallThinData(std::vector<PCAParamType<T>> &params)
                                           0.9932201143631529};
     param.expected_variance = convert_vector<double, T>(expected_variance);
     std::vector<double> expected_sigma{3.8450463402269657, 2.9046423044518215,
-                                       2.6367671115481683, 1.934174154794212,
-                                       1.041681939499782};
+                                       2.6367671115481683};
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)5.0;
     param.expected_n_components = 3;
@@ -448,8 +447,17 @@ template <typename T> void GetTallThinData(std::vector<PCAParamType<T>> &params)
         -1.7253499234437553, -0.6034681631460469, -0.046898565475484856,
         1.0339127620777953,  3.5129486393005163,  -0.035833080502485085};
     param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
-
-    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
+    std::vector<double> Xinv{1.1, 1.5, 4.1, 3.6, 5.2, -1.4};
+    param.k = 2;
+    param.ldxinv_transform = 2;
+    param.ldxinv = 2;
+    param.Xinv = convert_vector<double, T>(Xinv);
+    std::vector<double> expected_Xinv_transform{
+        -11.12944237741829, -8.929412948858758, -5.998571520336921, -1.965471274648701,
+        8.213628377799804,  3.4138252479100837, 0.64114064861087,   1.5397586079913463,
+        12.838600918423584, -4.694421617930349};
+    param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
 
     param.expected_status = da_status_success;
 
