@@ -735,6 +735,8 @@ TEST(csvtest, incorrect_headings) {
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
     da_datastore_destroy(&store);
+    if (headings != nullptr)
+        da_csv::free_data(&headings, ncols);
 }
 
 TEST(csvtest, incorrect_headings2) {
@@ -753,6 +755,8 @@ TEST(csvtest, incorrect_headings2) {
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
     da_datastore_destroy(&store);
+    if (headings != nullptr)
+        da_csv::free_data(&headings, ncols);
 }
 
 TEST(csvtest, error_exits) {

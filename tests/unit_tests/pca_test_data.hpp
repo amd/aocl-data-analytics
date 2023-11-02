@@ -58,12 +58,12 @@ template <typename T> struct PCAParamType {
     std::vector<T> expected_sdevs;
     std::vector<T> expected_rinfo;
 
-    da_int m;
+    da_int m = 0;
     std::vector<T> X;
     da_int ldx;
     std::vector<T> expected_X_transform;
 
-    da_int k;
+    da_int k = 0;
     std::vector<T> Xinv;
     da_int ldxinv;
     std::vector<T> expected_Xinv_transform;
