@@ -37,10 +37,10 @@ template <typename T> struct PCAParamType {
 
     std::string test_name;
 
-    da_int n;
-    da_int p;
+    da_int n = 0;
+    da_int p = 0;
     std::vector<T> A;
-    da_int lda;
+    da_int lda = 0;
 
     da_int components_required = 0;
     std::string method;
@@ -51,8 +51,8 @@ template <typename T> struct PCAParamType {
     std::vector<T> expected_u;
     std::vector<T> expected_vt;
     std::vector<T> expected_sigma;
-    T expected_total_variance;
-    da_int expected_n_components;
+    T expected_total_variance = 0.0;
+    da_int expected_n_components = 0;
 
     std::vector<T> expected_means;
     std::vector<T> expected_sdevs;
@@ -60,12 +60,12 @@ template <typename T> struct PCAParamType {
 
     da_int m = 0;
     std::vector<T> X;
-    da_int ldx;
+    da_int ldx = 0;
     std::vector<T> expected_X_transform;
 
     da_int k = 0;
     std::vector<T> Xinv;
-    da_int ldxinv;
+    da_int ldxinv = 0;
     std::vector<T> expected_Xinv_transform;
 
     da_status expected_status = da_status_success;
