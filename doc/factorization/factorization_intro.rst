@@ -98,6 +98,9 @@ The following options can be set using  :cpp:func:`da_options_set_string` or :cp
    "PCA method", "string", ":math:`s =` `'covariance'`", "The type of PCA to compute (and, equivalently, the type of standardization applied to :math:`A`)", ":math:`s =` `'covariance'`, `'correlation'`, or `'svd'`"
    "n_components", "da_int", ":math:`i =\min(n\_samples, n\_features)`", "The number of principal components (or singular values) to compute", ":math:`1 \le i \le \min(n\_samples,n\_features)`"
 
+If the `PCA method` option is set to `'svd'` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
+Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
+
 Examples
 ========
 

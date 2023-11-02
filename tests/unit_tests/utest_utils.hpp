@@ -69,10 +69,12 @@ da_status da_handle_init<float>(da_handle *handle, da_handle_type handle_type) {
     return da_handle_init_s(handle, handle_type);
 }
 
-inline da_status da_handle_get_result(da_handle handle, da_result result, da_int *n, double *x) {
+inline da_status da_handle_get_result(da_handle handle, da_result result, da_int *n,
+                                      double *x) {
     return da_handle_get_result_d(handle, result, n, x);
 }
-inline da_status da_handle_get_result(da_handle handle, da_result result, da_int *n, float *x) {
+inline da_status da_handle_get_result(da_handle handle, da_result result, da_int *n,
+                                      float *x) {
     return da_handle_get_result_s(handle, result, n, x);
 }
 
@@ -313,41 +315,48 @@ inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m
 }
 
 /* PCA overloaded functions */
-inline da_status da_pca_set_data(da_handle handle, da_int n, da_int p, double *A, da_int lda) {
+inline da_status da_pca_set_data(da_handle handle, da_int n, da_int p, double *A,
+                                 da_int lda) {
     return da_pca_set_data_d(handle, n, p, A, lda);
 }
 
-inline da_status da_pca_set_data(da_handle handle, da_int n, da_int p, float *A, da_int lda) {
+inline da_status da_pca_set_data(da_handle handle, da_int n, da_int p, float *A,
+                                 da_int lda) {
     return da_pca_set_data_s(handle, n, p, A, lda);
 }
 
-template <class T>
-inline da_status da_pca_compute(da_handle handle);
+template <class T> inline da_status da_pca_compute(da_handle handle);
 
-template<>
-inline da_status da_pca_compute<double>(da_handle handle) {
+template <> inline da_status da_pca_compute<double>(da_handle handle) {
     return da_pca_compute_d(handle);
 }
 
-template<>
-inline da_status da_pca_compute<float>(da_handle handle) {
+template <> inline da_status da_pca_compute<float>(da_handle handle) {
     return da_pca_compute_s(handle);
 }
 
-inline da_status da_pca_transform(da_handle handle, da_int m, da_int p, double *X, da_int ldx) {
-    return da_pca_transform_d(handle, m, p, X, ldx);
+inline da_status da_pca_transform(da_handle handle, da_int m, da_int p, double *X,
+                                  da_int ldx, double *X_transform, da_int ldx_transform) {
+    return da_pca_transform_d(handle, m, p, X, ldx, X_transform, ldx_transform);
 }
 
-inline da_status da_pca_transform(da_handle handle, da_int m, da_int p, float *X, da_int ldx) {
-    return da_pca_transform_s(handle, m, p, X, ldx);
+inline da_status da_pca_transform(da_handle handle, da_int m, da_int p, float *X,
+                                  da_int ldx, float *X_transform, da_int ldx_transform) {
+    return da_pca_transform_s(handle, m, p, X, ldx, X_transform, ldx_transform);
 }
 
-inline da_status da_pca_inverse_transform(da_handle handle, da_int m, da_int r, double *X, da_int ldx) {
-    return da_pca_inverse_transform_d(handle, m, r, X, ldx);
+inline da_status da_pca_inverse_transform(da_handle handle, da_int m, da_int r, double *X,
+                                          da_int ldx, double *Xinv_transform,
+                                          da_int ldxinv_transform) {
+    return da_pca_inverse_transform_d(handle, m, r, X, ldx, Xinv_transform,
+                                      ldxinv_transform);
 }
 
-inline da_status da_pca_inverse_transform(da_handle handle, da_int m, da_int r, float *X, da_int ldx) {
-    return da_pca_inverse_transform_s(handle, m, r, X, ldx);
+inline da_status da_pca_inverse_transform(da_handle handle, da_int m, da_int r, float *X,
+                                          da_int ldx, float *Xinv_transform,
+                                          da_int ldxinv_transform) {
+    return da_pca_inverse_transform_s(handle, m, r, X, ldx, Xinv_transform,
+                                      ldxinv_transform);
 }
 
 #endif

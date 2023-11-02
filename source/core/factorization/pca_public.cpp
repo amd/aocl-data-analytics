@@ -25,7 +25,8 @@
 #include "da_handle.hpp"
 #include "pca.hpp"
 
-da_status da_pca_set_data_d(da_handle handle, da_int n_samples, da_int n_features, const double *A, da_int lda) {
+da_status da_pca_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
+                            const double *A, da_int lda) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_double)
@@ -37,7 +38,8 @@ da_status da_pca_set_data_d(da_handle handle, da_int n_samples, da_int n_feature
     return handle->pca_d->init(n_samples, n_features, A, lda);
 }
 
-da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_features, const float *A, da_int lda) {
+da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_features,
+                            const float *A, da_int lda) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_single)
@@ -71,7 +73,9 @@ da_status da_pca_compute_s(da_handle handle) {
     return handle->pca_s->compute();
 }
 
-da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_features, const float *X, da_int ldx) {
+da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_features,
+                             const float *X, da_int ldx, float *X_transform,
+                             da_int ldx_transform) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_single)
@@ -80,11 +84,13 @@ da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_featur
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    return handle->pca_s->transform(m_samples, m_features, X, ldx);
+    return handle->pca_s->transform(m_samples, m_features, X, ldx, X_transform,
+                                    ldx_transform);
 }
 
-da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_features, const double *X,
-                             da_int ldx) {
+da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_features,
+                             const double *X, da_int ldx, double *X_transform,
+                             da_int ldx_transform) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_double)
@@ -93,10 +99,13 @@ da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_featur
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    return handle->pca_d->transform(m_samples, m_features, X, ldx);
+    return handle->pca_d->transform(m_samples, m_features, X, ldx, X_transform,
+                                    ldx_transform);
 }
 
-da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples, da_int k_features, const float *X, da_int ldx) {
+da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples,
+                                     da_int k_features, const float *X, da_int ldx,
+                                     float *X_inv_transform, da_int ldx_inv_transform) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_single)
@@ -105,11 +114,13 @@ da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples, da_int 
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    return handle->pca_s->inverse_transform(k_samples, k_features, X, ldx);
+    return handle->pca_s->inverse_transform(k_samples, k_features, X, ldx,
+                                            X_inv_transform, ldx_inv_transform);
 }
 
-da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples, da_int k_features, const double *X,
-                             da_int ldx) {
+da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples,
+                                     da_int k_features, const double *X, da_int ldx,
+                                     double *X_inv_transform, da_int ldx_inv_transform) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_double)
@@ -118,5 +129,6 @@ da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples, da_int 
         return da_status_invalid_pointer;
 
     /*Initialize*/
-    return handle->pca_d->inverse_transform(k_samples, k_features, X, ldx);
+    return handle->pca_d->inverse_transform(k_samples, k_features, X, ldx,
+                                            X_inv_transform, ldx_inv_transform);
 }

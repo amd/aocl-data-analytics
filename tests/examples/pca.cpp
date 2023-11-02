@@ -74,25 +74,22 @@ int main() {
     // Transform another data matrix into the same feature space
     double X[15] = {7.0, 3.0, 3.0, 4.0, 2.0, 3.0, 2.0, 5.0,
                     2.0, 9.0, 6.0, 4.0, 3.0, 4.0, 1.0};
-    da_int m_samples = 3, m_features = 5, ldx = 3;
-    pass = pass && (da_pca_transform_d(handle, m_samples, m_features, X, ldx) ==
-                    da_status_success);
+    da_int m_samples = 3, m_features = 5, ldx = 3, ldx_transform = 3;
+    double *X_transform = new double[m_samples * n_components];
+    pass = pass && (da_pca_transform_d(handle, m_samples, m_features, X, ldx, X_transform,
+                                       ldx_transform) == da_status_success);
 
     // Extract results from the handle
     da_int principal_components_dim = n_components * n_features;
     da_int scores_dim = n_samples * n_components;
-    da_int X_transform_dim = m_samples * n_components;
     double *principal_components = new double[principal_components_dim];
     double *scores = new double[scores_dim];
-    double *X_transform = new double[X_transform_dim];
+
     pass = pass && (da_handle_get_result_d(handle, da_pca_principal_components,
                                            &principal_components_dim,
                                            principal_components) == da_status_success);
     pass = pass && (da_handle_get_result_d(handle, da_pca_scores, &scores_dim, scores) ==
                     da_status_success);
-    pass =
-        pass && (da_handle_get_result_d(handle, da_pca_transformed_data, &X_transform_dim,
-                                        X_transform) == da_status_success);
 
     // Check status (we could do this after every function call)
     if (pass) {
@@ -133,7 +130,7 @@ int main() {
                 err, std::abs(principal_components[i] - principal_components_exp[i]));
         for (da_int i = 0; i < scores_dim; i++)
             err = std::max(err, std::abs(scores[i] - scores_exp[i]));
-        for (da_int i = 0; i < X_transform_dim; i++)
+        for (da_int i = 0; i < m_samples * n_components; i++)
             err = std::max(err, std::abs(X_transform[i] - X_transform_exp[i]));
         if (err > tol) {
             std::cout << "Solution is not within the expected tolerance: " << err

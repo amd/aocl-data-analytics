@@ -62,11 +62,13 @@ template <typename T> struct PCAParamType {
     std::vector<T> X;
     da_int ldx = 0;
     std::vector<T> expected_X_transform;
+    da_int ldx_transform = 0;
 
     da_int k = 0;
     std::vector<T> Xinv;
     da_int ldxinv = 0;
     std::vector<T> expected_Xinv_transform;
+    da_int ldxinv_transform = 0;
 
     da_status expected_status = da_status_success;
     T epsilon = 10 * std::numeric_limits<T>::epsilon();
@@ -92,7 +94,7 @@ template <typename T> void Get1by1Data(std::vector<PCAParamType<T>> &params) {
     param.expected_n_components = 1;
     std::vector<double> expected_means{2.1};
     param.expected_means = convert_vector<double, T>(expected_means);
-    std::vector<double> expected_rinfo{1.0, 1.0, 1.0, 0.0, 0.0};
+    std::vector<double> expected_rinfo{1.0, 1.0, 1.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
 
     param.epsilon = 10 * std::numeric_limits<T>::epsilon();
@@ -124,7 +126,7 @@ template <typename T> void Get1by5Data(std::vector<PCAParamType<T>> &params) {
     param.expected_means = convert_vector<double, T>(expected_means);
     std::vector<double> expected_sdevs{0.0, 0.0, 0.0, 0.0, 0.0};
     param.expected_sdevs = convert_vector<double, T>(expected_sdevs);
-    std::vector<double> expected_rinfo{1.0, 5.0, 1.0, 0.0, 0.0};
+    std::vector<double> expected_rinfo{1.0, 5.0, 1.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
 
     param.epsilon = 10 * std::numeric_limits<T>::epsilon();
@@ -162,7 +164,7 @@ template <typename T> void Get5by1Data(std::vector<PCAParamType<T>> &params) {
     param.expected_n_components = 1;
     std::vector<double> expected_means{3.0};
     param.expected_means = convert_vector<double, T>(expected_means);
-    std::vector<double> expected_rinfo{5.0, 1.0, 1.0, 0.0, 0.0};
+    std::vector<double> expected_rinfo{5.0, 1.0, 1.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
 
     param.epsilon = 100 * std::numeric_limits<T>::epsilon();
@@ -203,9 +205,10 @@ template <typename T> void GetDiagonalData(std::vector<PCAParamType<T>> &params)
     std::vector<double> expected_Xinv_transform{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                                                 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 4.0};
     param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.ldxinv_transform = 4;
     param.k = 4;
     param.ldxinv = 4;
-    std::vector<double> expected_rinfo{4.0, 4.0, 2.0, 0.0, 4.0};
+    std::vector<double> expected_rinfo{4.0, 4.0, 2.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     param.epsilon = 100 * std::numeric_limits<T>::epsilon();
 
@@ -233,7 +236,7 @@ template <typename T> void GetIdentityData(std::vector<PCAParamType<T>> &params)
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)1.33333333333333333;
     param.expected_n_components = 2;
-    std::vector<double> expected_rinfo{4.0, 4.0, 2.0, 0.0, 0.0};
+    std::vector<double> expected_rinfo{4.0, 4.0, 2.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
 
     param.epsilon = 100 * std::numeric_limits<T>::epsilon();
@@ -262,7 +265,7 @@ template <typename T> void GetZeroData(std::vector<PCAParamType<T>> &params) {
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)0.0;
     param.expected_n_components = 4;
-    std::vector<double> expected_rinfo{4.0, 4.0, 4.0, 0.0, 0.0};
+    std::vector<double> expected_rinfo{4.0, 4.0, 4.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
 
     param.epsilon = 100 * std::numeric_limits<T>::epsilon();
@@ -330,13 +333,14 @@ template <typename T> void GetSquareData(std::vector<PCAParamType<T>> &params) {
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)28.864;
     param.expected_n_components = 5;
-    std::vector<double> expected_rinfo{5.0, 5.0, 5.0, 5.0, 5.0};
+    std::vector<double> expected_rinfo{5.0, 5.0, 5.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> X{1.0, 3.0, 0.0, 0.0, 0.0, 2.0, 2.0, 5.5, 1.0, 2.0, 3.0, 0.2, 0.1,
                           0.8, 6.0, 4.0, 1.0, 0.9, 3.1, 0.0, 0.0, 9.8, 0.7, 4.0, 4.1};
     param.X = convert_vector<double, T>(X);
     param.m = 5;
     param.ldx = 5;
+    param.ldx_transform = 5;
     std::vector<double> expected_X_transform{-3.8337591301763827,
                                              6.682121109823703,
                                              -3.044191200205261,
@@ -366,6 +370,7 @@ template <typename T> void GetSquareData(std::vector<PCAParamType<T>> &params) {
     param.Xinv = convert_vector<double, T>(expected_scores);
     param.expected_Xinv_transform = convert_vector<double, T>(A);
     param.k = 5;
+    param.ldxinv_transform = 5;
     param.ldxinv = 5;
 
     param.epsilon = 100 * std::numeric_limits<T>::epsilon();
@@ -432,12 +437,13 @@ template <typename T> void GetTallThinData(std::vector<PCAParamType<T>> &params)
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)5.0;
     param.expected_n_components = 3;
-    std::vector<double> expected_rinfo{8.0, 5.0, 3.0, 2.0, 0.0};
+    std::vector<double> expected_rinfo{8.0, 5.0, 3.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> X{0.1, 1.2, 3.1, 0.6, 5.1, -0.4, 0.1, -0.9, 12.3, 1.1};
     param.X = convert_vector<double, T>(X);
     param.m = 2;
     param.ldx = 2;
+    param.ldx_transform = 2;
     std::vector<double> expected_X_transform{
         -1.7253499234437553, -0.6034681631460469, -0.046898565475484856,
         1.0339127620777953,  3.5129486393005163,  -0.035833080502485085};
@@ -533,7 +539,7 @@ template <typename T> void GetShortFatData(std::vector<PCAParamType<T>> &params)
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)114.02720666666669;
     param.expected_n_components = 5;
-    std::vector<double> expected_rinfo{6.0, 9.0, 5.0, 3.0, 3.0};
+    std::vector<double> expected_rinfo{6.0, 9.0, 5.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> X{1.0, 3.0, 0.0, 0.0, 0.0, 2.0, 2.0, 5.5, 1.0,
                           2.0, 3.0, 0.2, 0.1, 0.8, 6.0, 4.0, 1.0, 0.9,
@@ -541,6 +547,7 @@ template <typename T> void GetShortFatData(std::vector<PCAParamType<T>> &params)
     param.X = convert_vector<double, T>(X);
     param.m = 3;
     param.ldx = 3;
+    param.ldx_transform = 3;
     std::vector<double> expected_X_transform{
         0.06883314625917261, 3.067184077786804,  1.187570713636344,   -0.7293564433902677,
         -2.8435147124468876, 1.4002843875775814, 0.4948410127545904,  -1.3134710855645326,
@@ -560,6 +567,7 @@ template <typename T> void GetShortFatData(std::vector<PCAParamType<T>> &params)
         2.0127690616095415,  -0.21397680461528235, 2.6382802438058706};
     param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
     param.k = 3;
+    param.ldxinv_transform = 3;
     param.ldxinv = 3;
 
     param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
@@ -654,7 +662,7 @@ template <typename T> void GetSubarrayData(std::vector<PCAParamType<T>> &params)
     param.expected_sigma = convert_vector<double, T>(expected_sigma);
     param.expected_total_variance = (T)114.02720666666669;
     param.expected_n_components = 5;
-    std::vector<double> expected_rinfo{6.0, 9.0, 5.0, 3.0, 3.0};
+    std::vector<double> expected_rinfo{6.0, 9.0, 5.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> X{1.0, 3.0, 0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 2.0, 5.5, 1.0, 0.0,
                           2.0, 3.0, 0.2, 0.0, 0.1, 0.8, 6.0, 0.0, 4.0, 1.0, 0.9, 0.0,
@@ -662,11 +670,13 @@ template <typename T> void GetSubarrayData(std::vector<PCAParamType<T>> &params)
     param.X = convert_vector<double, T>(X);
     param.m = 3;
     param.ldx = 4;
+    param.ldx_transform = 4;
     std::vector<double> expected_X_transform{
-        0.06883314625917261, 3.067184077786804,  1.187570713636344,   -0.7293564433902677,
-        -2.8435147124468876, 1.4002843875775814, 0.4948410127545904,  -1.3134710855645326,
-        4.089344441106332,   5.500616391996301,  -1.6234071319427146, 1.4456803905297901,
-        0.33017954870069866, 0.8380569485849144, 0.13563129080749659};
+        0.06883314625917261, 3.067184077786804,   1.187570713636344,   0.0,
+        -0.7293564433902677, -2.8435147124468876, 1.4002843875775814,  0.0,
+        0.4948410127545904,  -1.3134710855645326, 4.089344441106332,   0.0,
+        5.500616391996301,   -1.6234071319427146, 1.4456803905297901,  0.0,
+        0.33017954870069866, 0.8380569485849144,  0.13563129080749659, 0.0};
     param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
     std::vector<double> Xinv{
         0.06883314625917261, 3.067184077786804,   1.187570713636344,   0.0, 0.0,
@@ -676,18 +686,19 @@ template <typename T> void GetSubarrayData(std::vector<PCAParamType<T>> &params)
         0.33017954870069866, 0.8380569485849144,  0.13563129080749659, 0.0, 0.0};
     param.Xinv = convert_vector<double, T>(Xinv);
     std::vector expected_Xinv_transform{
-        2.3727464809747536,  1.167704861326678,    1.9491100025678718,
-        -1.0410548955121248, 0.8795015790116714,   1.3394734576143197,
-        0.16368327363466295, 4.246551067854854,    1.9975875461887138,
-        3.4925903140035346,  2.977830659903403,    0.0060815050263896,
-        4.146195117872927,   0.4575615602370817,   5.555985870600144,
-        2.6255627330279974,  1.3563351426138448,   0.6747389661282728,
-        2.6405060011039225,  -0.3622556749930357,  -0.031135412980347166,
-        5.100726104247336,   1.0421504520475111,   4.393430813484434,
-        2.0127690616095415,  -0.21397680461528235, 2.6382802438058706};
+        2.3727464809747536,  1.167704861326678,    1.9491100025678718,    0.0, 0.0,
+        -1.0410548955121248, 0.8795015790116714,   1.3394734576143197,    0.0, 0.0,
+        0.16368327363466295, 4.246551067854854,    1.9975875461887138,    0.0, 0.0,
+        3.4925903140035346,  2.977830659903403,    0.0060815050263896,    0.0, 0.0,
+        4.146195117872927,   0.4575615602370817,   5.555985870600144,     0.0, 0.0,
+        2.6255627330279974,  1.3563351426138448,   0.6747389661282728,    0.0, 0.0,
+        2.6405060011039225,  -0.3622556749930357,  -0.031135412980347166, 0.0, 0.0,
+        5.100726104247336,   1.0421504520475111,   4.393430813484434,     0.0, 0.0,
+        2.0127690616095415,  -0.21397680461528235, 2.6382802438058706,    0.0, 0.0};
     param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
     param.k = 3;
     param.ldxinv = 5;
+    param.ldxinv_transform = 5;
 
     param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
 

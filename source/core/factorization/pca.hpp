@@ -47,12 +47,6 @@ template <typename T> class da_pca : public basic_handle<T> {
     da_int n = 0;
     da_int p = 0;
 
-    // If we go on to transform another data matrix, store the number of rows here
-    da_int m = 0;
-
-    // If we go on to compute the inverse transform of another data matrix, store the number of rows here
-    da_int k = 0;
-
     // Set true when initialization is complete
     bool initdone = false;
 
@@ -79,8 +73,6 @@ template <typename T> class da_pca : public basic_handle<T> {
     std::vector<T> variance;                   // Sigma**2 / n-1
     std::vector<T> principal_components;       // Vt
     std::vector<T> column_means, column_sdevs; // Store standardization data
-    std::vector<T> transformed_data;           // Used by the transform function
-    std::vector<T> inverse_transformed_data;   // Used by the inverse_transform function
     T total_variance = 0.0;                    // Sum((MeanCentered A [][])**2)
     da_int n_components = 0;
     std::vector<T> u, sigma, vt, work, A_copy;
@@ -98,9 +90,11 @@ template <typename T> class da_pca : public basic_handle<T> {
 
     da_status compute();
 
-    da_status transform(da_int m, da_int p, const T *X, da_int ldx);
+    da_status transform(da_int m, da_int p, const T *X, da_int ldx, T *X_transform,
+                        da_int ldx_transform);
 
-    da_status inverse_transform(da_int k, da_int r, const T *X, da_int ldx);
+    da_status inverse_transform(da_int k, da_int r, const T *X, da_int ldx,
+                                T *X_inv_transform, da_int ldx_inv_transform);
 
     da_status get_result(da_result query, da_int *dim, T *result) {
         da_status status = da_status_success;
@@ -112,7 +106,7 @@ template <typename T> class da_pca : public basic_handle<T> {
                            "or da_pca_compute_d before extracting results.");
         }
 
-        da_int rinfo_size = 5;
+        da_int rinfo_size = 3;
 
         if (result == nullptr || *dim <= 0) {
             return da_warn(err, da_status_invalid_array_dimension,
@@ -130,8 +124,6 @@ template <typename T> class da_pca : public basic_handle<T> {
             result[0] = (T)n;
             result[1] = (T)p;
             result[2] = (T)ns;
-            result[3] = (T)m;
-            result[4] = (T)k;
             break;
         case da_result::da_pca_scores:
             if (*dim < n * ns)
@@ -216,35 +208,6 @@ template <typename T> class da_pca : public basic_handle<T> {
         case da_result::da_pca_total_variance:
             result[0] = total_variance;
             break;
-        case da_result::da_pca_transformed_data:
-            if (m == 0)
-                return da_warn(err, da_status_unknown_query,
-                               "No data matrices have been transformed yet. Please call "
-                               "da_pca_transform_s or da_pca_transform_d before "
-                               "extracting transformed data.");
-            if (*dim < m * ns)
-                return da_warn(err, da_status_invalid_array_dimension,
-                               "The array is too small. Please provide an array of at "
-                               "least size: " +
-                                   std::to_string(ns * m) + ".");
-            for (da_int i = 0; i < ns * m; i++)
-                result[i] = transformed_data[i];
-            break;
-        case da_result::da_pca_inverse_transformed_data:
-            if (k == 0)
-                return da_warn(
-                    err, da_status_unknown_query,
-                    "No data matrices have been inverse transformed yet. Please call "
-                    "da_pca_inverse_transform_s or da_pca_inverse_transform_d before "
-                    "extracting inverse transformed data.");
-            if (*dim < k * p)
-                return da_warn(err, da_status_invalid_array_dimension,
-                               "The array is too small. Please provide an array of at "
-                               "least size: " +
-                                   std::to_string(k * p) + ".");
-            for (da_int i = 0; i < k * p; i++)
-                result[i] = inverse_transformed_data[i];
-            break;
         default:
             return da_warn(err, da_status_unknown_query,
                            "The requested result could not be found.");
@@ -252,7 +215,8 @@ template <typename T> class da_pca : public basic_handle<T> {
         return status;
     };
 
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim, [[maybe_unused]] da_int *result) {
+    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
+                         [[maybe_unused]] da_int *result) {
 
         return da_warn(err, da_status_unknown_query,
                        "There are no integer results available for this API.");
@@ -279,12 +243,12 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
                         "The function was called with n_samples = " + std::to_string(n) +
                             " and lda = " + std::to_string(lda) +
                             ". Constraint: lda >= n_samples.");
+    if (A == nullptr)
+        return da_error(err, da_status_invalid_pointer, "The array A is null.");
 
-    // Store dimensions of A and rezero other scalars in case handle is being reused
+    // Store dimensions of A
     this->n = n;
     this->p = p;
-    this->m = 0;
-    this->k = 0;
 
     A_copy.resize(n * p);
 
@@ -476,7 +440,8 @@ template <typename T> da_status da_pca<T>::compute() {
 }
 
 template <typename T>
-da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx) {
+da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_transform,
+                               da_int ldx_transform) {
 
     if (!iscomputed) {
         return da_warn(err, da_status_no_data,
@@ -500,7 +465,17 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx) {
                             " and ldx = " + std::to_string(ldx) +
                             ". Constraint: ldx >= m_samples.");
 
-    this->m = m;
+    if (ldx_transform < m)
+        return da_error(err, da_status_invalid_input,
+                        "The function was called with m_samples = " + std::to_string(m) +
+                            " and ldx_transform = " + std::to_string(ldx_transform) +
+                            ". Constraint: ldx_transform >= m_samples.");
+
+    if (X == nullptr)
+        return da_error(err, da_status_invalid_pointer, "The array X is null.");
+
+    if (X_transform == nullptr)
+        return da_error(err, da_status_invalid_pointer, "The array X_transform is null.");
 
     // We need a copy of X to avoid changing the user's data
     std::vector<T> X_copy(p * m);
@@ -526,16 +501,16 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx) {
     }
 
     // Compute X * VT^T and store in transformed_data
-    transformed_data.resize(m * ns);
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, m, ns, p, 1.0,
                         X_copy.data(), m, principal_components.data(), ns, 0.0,
-                        transformed_data.data(), m);
+                        X_transform, ldx_transform);
 
     return da_status_success;
 }
 
 template <typename T>
-da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ldx) {
+da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ldx,
+                                       T *X_inv_transform, da_int ldx_inv_transform) {
 
     if (!iscomputed) {
         return da_warn(err, da_status_no_data,
@@ -559,28 +534,39 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
                             " and ldx = " + std::to_string(ldx) +
                             ". Constraint: ldx >= k_samples.");
 
-    this->k = k;
+    if (ldx_inv_transform < k)
+        return da_error(
+            err, da_status_invalid_input,
+            "The function was called with k_samples = " + std::to_string(k) +
+                " and ldy_inv_transform = " + std::to_string(ldx_inv_transform) +
+                ". Constraint: ldy_inv_transform >= k_samples.");
 
-    // Compute X * VT and store in inverse_transformed_data
-    inverse_transformed_data.resize(k * p);
+    if (X == nullptr)
+        return da_error(err, da_status_invalid_pointer, "The array Y is null.");
+
+    if (X_inv_transform == nullptr)
+        return da_error(err, da_status_invalid_pointer,
+                        "The array Y_inv_transform is null.");
+
+    // Compute X * VT and store
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X, ldx,
-                        principal_components.data(), ns, 0.0,
-                        inverse_transformed_data.data(), k);
+                        principal_components.data(), ns, 0.0, X_inv_transform,
+                        ldx_inv_transform);
 
     // Undo the standardization used in the PCA computation
     switch (method) {
     case pca_method_cov:
         for (da_int j = 0; j < p; j++) {
             for (da_int i = 0; i < k; i++) {
-                inverse_transformed_data[i + k * j] += column_means[j];
+                X_inv_transform[i + ldx_inv_transform * j] += column_means[j];
             }
         }
         break;
     case pca_method_corr:
         for (da_int j = 0; j < p; j++) {
             for (da_int i = 0; i < k; i++) {
-                inverse_transformed_data[i + k * j] =
-                    inverse_transformed_data[i + k * j] * column_sdevs[j] +
+                X_inv_transform[i + ldx_inv_transform * j] =
+                    X_inv_transform[i + ldx_inv_transform * j] * column_sdevs[j] +
                     column_means[j];
             }
         }

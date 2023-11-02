@@ -58,8 +58,6 @@ typedef enum da_result_ {
     da_pca_total_variance, ///< The toal variance of the data matrix supplied to the PCA API.
     da_pca_column_means, ///< Column means of the data matrix supplied to the PCA API.
     da_pca_column_sdevs, ///< Column standard deviations of the data matrix supplied to the PCA API.
-    da_pca_transformed_data, ///< Transformed data matrix computed by projecting into principal component space following a PCA computation.
-    da_pca_inverse_transformed_data, ///< Inverse transformed data matrix computed by projecting from principal component space into the original coordinate space used by a PCA computation.
     da_pca_u, ///< The matrix @f$U@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     da_pca_sigma, ///< The nonzero diagonal entries of @f$\Sigma@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     da_pca_vt, ///< The matrix @f$V^T@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
