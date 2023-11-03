@@ -39,12 +39,12 @@ The general form of a Linear Model fitting problem is as follows:
 
     \min_{\beta}\left[ C_{\theta}\left( y, g^{-1}(\ \beta \, \phi(X)\ ) \right) \right],
 
-where :math:`X` is an array of :math:`n_{\text{sample}}` observations with :math:`n_{\text{feat}}` features, :math:`y` is an array of :math:`n_{sample}` responses
+where :math:`X` is an array of :math:`n_{\text{sample}}` observations with :math:`n_{\text{feat}}` features, :math:`y` is an array of :math:`n_{\text{sample}}` responses
 / labels, :math:`\phi` is a set of (possibly nonlinear) basis functions, :math:`\beta` is a set of weights /
 coefficients, :math:`g^{-1}` is a (possibly nonlinear) activation / link function, and :math:`C_{\theta}` is a cost /
 error function, which may depend on a set of (fixed) hyperparameters, :math:`\theta`.
 
-Several Linear Models satisfy a form where the cost function can be split into a Loss function (which measures quality
+Most Linear Models satisfy a form where the cost function can be split into a Loss function (which measures quality
 of fit to the data) and a penalty term (which regularizes the model parameters).  Regularization is also referred to as
 shrinkage because it tends to shrink the size of the parameter values and/or shrink the number of non-zero parameters.
 
@@ -52,16 +52,16 @@ The Loss function is typically a function of the responses or labels (:math:`y`)
 parameters (:math:`\beta`), whereas the penalty term is typically only a function of the 1-norm and/or the 2-norm of the
 model parameters (:math:`\beta`).  Such Linear Models are often referred to as Elastic-Nets.
 
-If, in addition to the conditions above, :math:`\phi` and :math:`g^{-1}` are identity mappings we get the following form
-for the cost function,
+Typically, in addition to the conditions above, :math:`\phi` and :math:`g^{-1}` are identity mappings and the general form
+for the cost function becomes,
 
 .. math::
 
-   C_{\{\lambda,\alpha\}} \left( \beta \right) = L(y, \beta X) 
+   C_{\{\lambda,\alpha\}} \left( \beta \right) = L(y, \beta X)
    + \lambda \bigg( \alpha \lVert \beta \rVert_1 + (1 - \alpha) \lVert \beta \rVert_2^2  \bigg),
 
-where :math:`0\le\lambda, 0\le\alpha\le1` are hyperparameters, :math:`\lVert \beta \rVert_1` is the 1-norm of :math:`\beta`
-and :math:`\lVert \beta \rVert_2` is the 2-norm, while :math:`\lambda` sets the magnitude of the overall penalization,
+where :math:`0\le\lambda, 0\le\alpha\le1` are hyperparameters, :math:`\lVert \beta \rVert_1` is the 1-norm
+and :math:`\lVert \beta \rVert_2` is the 2-norm of :math:`\beta`, while :math:`\lambda` sets the magnitude of the overall penalization,
 :math:`\alpha` distributes its share across the :math:`\ell_1` and :math:`\ell_2` regularization terms. :math:`L` is known as the
 *Loss function*. Linear Models
 where :math:`\alpha=0` are called Ridge Regression, conversely, when :math:`\alpha=1` the model is called Lasso.
@@ -71,57 +71,25 @@ where :math:`\alpha=0` are called Ridge Regression, conversely, when :math:`\alp
 
 If a Linear Model contains an intercept term, the parameter vector :math:`\beta` has dimension :math:`n_{\text{feat}}+1` and the
 observations :math:`X_i` are extended with a constant of :math:`1`.  For example, if there is a single feature and the
-Linear Model has an intercept term the cost function becomes,
+Linear Model has an intercept term the Mean Square Error Loss cost function becomes,
 
 .. math::
 
    C\left( \beta_0, \beta_1 \right) = \sum_{i=0}^n (y_i - \beta_0 - \beta_1 x_i)^2,
 
-where :math:`x_i` represents a single (scalar) observation.
+where :math:`x_i` represents a single (scalar) observation and without any regularization terms.
 
 In general, the intercept can be added or not by setting an option in the linear regression handle.
 
-**Regularization**
+Available Models
+================
 
-Ridge regression is a shrinkage method that penalizes large parameter values.  More specifically, Ridge Regression is an
-extension of the basic Linear Model with :math:`\ell_2`` regularization.  The cost function for Ridge
-regression with MSE loss function is,
-
-.. math::
-   C_{\{0<\lambda,\alpha=0\}} \left( \beta \right) &= \text{MSE}(y, \beta X) 
-   + \lambda \bigg( \alpha \lVert \beta \rVert_1 + (1 - \alpha) \lVert \beta \rVert_2^2  \bigg)\\
-   C_{\lambda}\left( \beta \right) &= \sum_{i=1}^n (y_i - \beta X_i)^2 + \lambda \lVert \beta \rVert_2^2,
-
-where :math:`\lambda` is a user-defined hyperparameter controlling the amount of regularization, and :math:`\lVert \beta
-\rVert_2` is the :math:`\ell_2` norm of :math:`\beta`,
-
-.. math::
-
-   \lVert \beta \rVert_2^2 = \sum_{i=1}^d \beta_j^2.
-
-The Lasso is another shrinkage method similar to Ridge regression but the :math:`\ell_1` norm is used instead of the :math:`\ell_2` norm.
-It can be thought of as a kind of continuous subset selection as the penalty term causes some of the coefficients to be
-exactly zero when :math:`\lambda` is sufficiently large, these are also known as *sparse solutions*.  The cost function for the Lasso (with a general Loss function)
-is,
-
-.. math::
-
-   C_{\lambda}\left( \beta \right) = L(y, \beta X) + \lambda \sum_{i=1}^d \left| \beta_j \right|,
-
-where :math:`\lambda` is again a user-defined hyperparameter controlling the amount of regularization.
-
-
-
-Linear Regression Models
-========================
-
-Models can be classified by their loss function, these TODO
-
-The following subsection presents the supported loss functions.
+Models can be classified by their loss function, the following subsections present the supported loss functions.
 
 Mean Square Error
 -----------------
 
+This is the most basic model and its use is notoriously widespread across many applications.
 The cost function for a Linear Regression Model where the fit (loss) is measured by the Mean Square Error (MSE) is,
 
 .. math::
@@ -130,35 +98,32 @@ The cost function for a Linear Regression Model where the fit (loss) is measured
    + \lambda \bigg( \alpha \lVert \beta \rVert_1 + (1 - \alpha) \lVert \beta \rVert_2^2  \bigg),
 
 where :math:`X_i` represents a single (multi-dimensional) observation, i.e., a row in a table of observations.
-In the following sections we describe each component of the model.
 
 Logistic Regression
 -------------------
 
-Logistic Regression is a type of Linear Classification Model. Its main use is to classify 2 or more classes 
-provided by labels in a categorical response variable, :math:`y`, encoded by :math:`\{0, 1, 2, \ldots, K-1 \}`. 
-The fit is based on maximizing the log-likelihood (loss function) for the probabilities that each observation :math:`i` belongs to a given class,
+Logistic Regression is a type of supervised classification model aiming at assigning labels.
+In AOCL-DA, the labels are expected to be provided in a categorical response variable, :math:`y`, encoded by :math:`\{0, 1, 2, \ldots, K-1 \}`.
+The fit is based on maximizing the log-likelihood (loss function) of the probabilities that each observation :math:`i` belongs to a given class,
 inturn defined by,
 
 .. math::
    p(y_i=k\,|\,X_i, \beta) = \frac{ \exp(\beta_k X_i) }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }, \text{ for } 0 \leq k < K-1,\\
    p(y_i=K-1\,|\,X_i, \beta) = \frac{ 1 }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }.
 
-As an example, if :math:`K=2` classes, the loss function simplifies to, 
+As an example, if :math:`K=2` classes, the loss function simplifies to,
 
 .. math::
 
-   C\left( \beta \right) = -L(y, \beta X) = \sum_{i=0}^n \bigg( y_i \log p(X_i, \beta) + (1 - y_i) \log \big( (1 - p(X_i, \beta) \big) \bigg).
+   C\left( \beta \right) = -L(y, \beta X) = \sum_{i=0}^n \bigg( y_i \log p(X_i, \beta) + (1 - y_i) \log \big( 1 - p(X_i, \beta) \big) \bigg).
 
-As in the Linear Regession Model, :math:`\ell_1` or :math:`\ell_2` regularization can be applied by adding the corresponding 
+As in the Linear Regession Model, :math:`\ell_1` or :math:`\ell_2` regularization can be applied by adding the corresponding
 penalty term to the cost function.
 
 .. only:: internal
 
     Extensions [Internal]
     =====================
-
-        
 
     Beyond MSE regression, ridge regression, the Lasso, and logistic regression, there are other classes of Linear
     Model which are not currently supported by AOCL-DA.  This includes,
@@ -172,19 +137,46 @@ penalty term to the cost function.
 Fitting Methods
 ===============
 
-Direct solver
- QR: TODO
+Different methods are available to compute the models. The method is chosen automatically by default but can be set manually using the optional parameter ``linmod optim method`` (see the :ref:`options section <linmod_options>`).
 
-Iterative solver
- L-BFGS-B: TODO
+**Direct solvers**
 
- COORD: TODO
+* QR (``linmod optim method = QR``). The standard MSE linear regression model can be computed using the QR factorization of the data matcrix if no regularization term is required.
 
+.. math::
+
+   X = QR,
+
+where :math:`Q` is an :math:`n_{\text{sample}} \times n_{\text{feat}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\text{feat}}\times n_{\text{feat}}` triangular matrix.
+
+**Iterative solvers**
+
+* L-BFGS-B (``linmod optim method = lbfgs``) is a solver aimed at minimizing smooth nonlinear functions (:cite:t:`lbfgsb`). It can be used to compute both MSE and logistic models with or without :math:`\ell_2` regularization. It is not suitable when an :math:`\ell_1` regularization term is required.
+
+* Coordinate Descent (``linmod optim method = coord``) is a solver aimed at minimizing nonlinear functions. It is particularly suitable for linear models with an :math:`\ell_1` regularization term (:cite:t:`coord_elastic`).
+
+
+.. _linmod_options:
 
 Linear Model Options
 ====================
 
-TODO
+Various options can be set to customize the linear models by calling one of these
+:ref:`functions <api_handle_options>`. The following table details the available options
+
+.. csv-table:: CSV file reading options
+   :header: "Option Name", "Type", "Default", "Description", "Constraints"
+
+   "linmod optim method", "string", ":math:`s =` `'auto'`", "Select optimization method to use.", ":math:`s = ` `auto`, `coord`, `lbfgs`, or `qr`"
+   "linmod optim progress factor", "real", ":math:`r = 4.74531e+08`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.",  ":math:`0 \le r`"
+   "linmod optim convergence tol", "real", ":math:`r = 2.10734e-08`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:0 \lt r \lt 1"
+   "print options", "string", ":math:`s =` `'no'`", "Print options.", ":math:`s =` `'no'`, or `'yes'`."
+   "linmod lambda", "real", ":math:`r = 0`", "Penalty coefficient for the regularization terms :math:`\lambda ( (1-\alpha ) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r`"
+   "linmod alpha", "real", ":math:`r = 0`", "Coefficient of alpha in the regularization terms :math:`\lambda ( (1-\alpha) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r \le 1`"
+   "linmod optim iteration limit", "da_int", ":math:`i = \inf`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
+   "linmod intercept", "da_int", ":math:`i = 0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
+   "print level", "da_int", ":math:`i = 0`", "Set the level of verbosity for the solver", ":math:`0 \le i \le 5`"
+
 
 Further Reading
 ===============
