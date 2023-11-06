@@ -320,19 +320,19 @@ inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int m
 
 inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
                                            da_int *data) {
-    return da_data_extract_selection_int(store, key, ld, data);
+    return da_data_extract_selection_int(store, key, data, ld);
 }
 inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
                                            float *data) {
-    return da_data_extract_selection_real_s(store, key, ld, data);
+    return da_data_extract_selection_real_s(store, key, data, ld);
 }
 inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
                                            double *data) {
-    return da_data_extract_selection_real_d(store, key, ld, data);
+    return da_data_extract_selection_real_d(store, key, data, ld);
 }
 inline da_status da_data_extract_selection(da_datastore store, const char *key, da_int ld,
                                            uint8_t *data) {
-    return da_data_extract_selection_uint8(store, key, ld, data);
+    return da_data_extract_selection_uint8(store, key, data, ld);
 }
 
 /* PCA overloaded functions */

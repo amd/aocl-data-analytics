@@ -34,9 +34,16 @@
 #define DATA_DIR "data"
 #endif
 
+/* Data store example
+ * This example demonstrates on a small data set how to:
+ * - load data from a CSV files
+ * - select and extract different subsets of the data
+ * - pass the extracted data to an AOCL-DA algorithms and compute a model
+ */
+
 int main() {
     std::cout << "----------------------------------------" << std::endl;
-    std::cout << "Load data from csv file" << std::endl;
+    std::cout << "Load data from a CSV file" << std::endl;
 
     da_datastore store;
     std::string filename = std::string(DATA_DIR) + "/" + "datastore_ex.csv";
@@ -56,8 +63,8 @@ int main() {
     std::vector<double> features(10), rhs(5);
     da_data_select_columns(store, "features", 0, 1);
     da_data_select_columns(store, "rhs", 2, 2);
-    da_data_extract_selection_real_d(store, "features", 5, features.data());
-    da_data_extract_selection_real_d(store, "rhs", 5, rhs.data());
+    da_data_extract_selection_real_d(store, "features", features.data(), 5);
+    da_data_extract_selection_real_d(store, "rhs", rhs.data(), 5);
 
     // define the regression problem to solve
     da_handle handle;
@@ -70,7 +77,7 @@ int main() {
 
     int exit = 0;
     if (status == da_status_success) {
-        std::cout << "regression computed successfully!" << std::endl;
+        std::cout << "Regression computed successfully!" << std::endl;
         da_int nx = 2;
         std::vector<double> x(2);
         da_handle_get_result_d(handle, da_result::da_linmod_coeff, &nx, x.data());

@@ -85,5 +85,6 @@ typedef enum da_status_ {
     // datastores 600-699
     da_status_missing_block =
         600, ///< The store is missing a block, the requested operation cannot be performed
+    da_status_full_extraction, ///< No selection was defined, the full store is being extracted
 } da_status;
 #endif

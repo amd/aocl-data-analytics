@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef DATA_STORE_HPP
@@ -103,8 +103,8 @@ template <> struct get_block_type<uint8_t *> {
  * - real numbers: missing if value = NaN
  * - intgral types: missing if value >= max int
  * - all other types fall into non_missing_types which cannot always return not missing
- * 
- * If missing values for other types are added, non_missing_types needs to be updated to not include 
+ *
+ * If missing values for other types are added, non_missing_types needs to be updated to not include
  * the new type.
  */
 template <class T> struct non_missing_types {
@@ -130,7 +130,7 @@ class block {
     block_type btype = block_none;
     da_errors::da_error_t *err = nullptr;
     virtual ~block(){};
-    /* mark in a boolean vector which rows contain missing 
+    /* mark in a boolean vector which rows contain missing
      * the vector is expected to be initialized, rows marked as containing missing values will be skipped
      * Input:
      * - idx_valid: index in the bool vector of the first row of the block.
@@ -142,7 +142,7 @@ class block {
 
 template <class T> class block_base : public block {
   public:
-    /* Get a column of the block 
+    /* Get a column of the block
      * on output:
      * - col contains a pointer to the column idx of the block, data is not copied.
      * - "stride" contains the increment needed to get consecutive elements of the column
@@ -154,13 +154,13 @@ template <class T> class block_base : public block {
      *
      * The subset is defined by the 2 index intervals:
      * cols = [lc, uc] and rows = [lr, ur]
-     * 
-     * The output data is a dense matrix in column major ordering. 
-     * "data" can be bigger than the requested elements. the position where 
+     *
+     * The output data is a dense matrix in column major ordering.
+     * "data" can be bigger than the requested elements. the position where
      * the elements are defined in "data" is controlled by:
      * - ld_data: the leading dimension of the dense block data
      * - idx_start: the index where the first element of the slice should be placed in "data"
-     * It is assumed enough memory has been allocated in "data", its dimensions are NOT checked. 
+     * It is assumed enough memory has been allocated in "data", its dimensions are NOT checked.
      *  exit_status:
      * - invalid_input
      */
@@ -170,7 +170,7 @@ template <class T> class block_base : public block {
 
 /* Define a block of dense base data (int, float, double, string) */
 template <class T> class block_dense : public block_base<T> {
-    /* bl: dense data stored in a m*n vector 
+    /* bl: dense data stored in a m*n vector
      * order: storage scheme used for the matrix in bl, row major or column major
      * own_data: mark if the memory is owned by the block
      * C_data: if true, bl needs to be deallocated with free instead of new.
@@ -238,9 +238,20 @@ template <class T> class block_dense : public block_base<T> {
     da_status copy_slice_dense(interval cols, interval rows, da_int idx_start,
                                da_int ld_data, T *data) {
 
-        if (!validate_interval(cols, this->n) || !validate_interval(rows, this->m))
-            return da_error(this->err, da_status_invalid_input,
-                            "The input intervals are not valid");
+        if (!validate_interval(cols, this->n)) {
+            std::string msg = "Column interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(cols.first) + ", " + std::to_string(cols.second) +
+                   "]. ";
+            msg += "Expected in: [0, " + std::to_string(this->n - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
+        if (!validate_interval(rows, this->m)) {
+            std::string msg = "Row interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(rows.first) + ", " + std::to_string(rows.second) +
+                   "].";
+            msg += "Expected in: [0, " + std::to_string(this->m - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
 
         da_int idx, ncols, nrows, idx_d;
         ncols = cols.second - cols.first + 1;
@@ -282,9 +293,21 @@ template <class T> class block_dense : public block_base<T> {
     da_status missing_rows(std::vector<bool> &valid_row, da_int idx_valid, interval rows,
                            interval cols) {
 
-        if (!validate_interval(cols, this->n) || !validate_interval(rows, this->m))
-            return da_error(this->err, da_status_invalid_input,
-                            "The input intervals are not valid");
+        if (!validate_interval(cols, this->n)) {
+            std::string msg = "Column interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(cols.first) + ", " + std::to_string(cols.second) +
+                   "]. ";
+            msg += "Expected in: [0, " + std::to_string(this->n - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
+        if (!validate_interval(rows, this->m)) {
+            std::string msg = "Row interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(rows.first) + ", " + std::to_string(rows.second) +
+                   "].";
+            msg += "Expected in: [0, " + std::to_string(this->m - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
+
         da_int ncols, nrows, idx;
         ncols = cols.second - cols.first + 1;
         nrows = rows.second - rows.first + 1;
@@ -360,21 +383,21 @@ using selection_map =
     std::unordered_map<std::string,
                        std::pair<std::unique_ptr<idx_slice>, std::unique_ptr<idx_slice>>>;
 
-/* Main data store structure for heterogeneous data manipulation 
+/* Main data store structure for heterogeneous data manipulation
  * supported features:
  * - Vertical and horizontal block concatenation
  * - slice extraction of homogeneous type in given rows and columns intervals
- * - rows and columns selection 
+ * - rows and columns selection
  */
 class data_store {
     /* m, n: total dimension of the data_store (aggregate of all the blocks)
-     * cmap: interval map linking column indices to block IDs. 
+     * cmap: interval map linking column indices to block IDs.
      *       [0, n-1] should have no missing element in cmap
      * */
     da_int m = 0, n = 0;
     columns_map cmap;
 
-    /* Data to handle partially added rows 
+    /* Data to handle partially added rows
      * missing_block: if true, blocks the other functionality until the partial row block is finished
      * idx_start_missing: column index of the start of the missing block
      */
@@ -423,9 +446,9 @@ class data_store {
      * - nc/nr: number of columns of the dense block to add
      * - data: user data in a dense matrix to be added to the data store
      * - order: row or column major ordering for the data
-     * - copy_data: controls if the user data is copied. 
+     * - copy_data: controls if the user data is copied.
      *              if false, the user's pointer will be copied instead
-     * - own_data: is the datastore the owner of the data in the block 
+     * - own_data: is the datastore the owner of the data in the block
      *             (e.g., copy_data is false but another function wants to transfer ownership of the pointer)
      * exit:
      * - invalid_input
@@ -444,9 +467,16 @@ class data_store {
 
         // mc must match m except if the initial data.frame is empty (new block is created)
         // mc*nc input data must not be empty
-        if (mc <= 0 || nc <= 0 || (m > 0 && m != mc))
+        if (mc <= 0)
             return da_error(err, da_status_invalid_input,
-                            "Invalid dimensions in the provided data");
+                            "Number of rows must be positive");
+        if (nc <= 0)
+            return da_error(err, da_status_invalid_input,
+                            "Number of columns must be positive");
+        if (m > 0 && m != mc)
+            return da_error(err, da_status_invalid_input,
+                            "Number of rows must match " + std::to_string(m) +
+                                " (input: " + std::to_string(mc) + ")");
 
         // Create a dense block from the raw data
         std::shared_ptr<block_id> new_block;
@@ -491,9 +521,16 @@ class data_store {
             idx_start = 0;
             if (missing_block)
                 idx_start = idx_start_missing;
-            if (mr <= 0 || nr <= 0 || (n > 0 && nr + idx_start > n))
+            if (mr <= 0)
                 return da_error(err, da_status_invalid_input,
-                                "Invalid dimensions in the provided data");
+                                "Number of rows must be positive");
+            if (nr <= 0)
+                return da_error(err, da_status_invalid_input,
+                                "Number of columns must be positive");
+            if (n > 0 && nr + idx_start > n)
+                return da_error(err, da_status_invalid_input,
+                                "Number of rows must match " + std::to_string(m) +
+                                    " (input: " + std::to_string(nr + idx_start) + ")");
 
             // Create a dense block from the raw data
             try {
@@ -561,13 +598,15 @@ class data_store {
         return status;
     }
 
-    /* concat the current datastore with the store passed on the interface horizontally 
+    /* concat the current datastore with the store passed on the interface horizontally
      * in output, 'this' will contain the concatenation and store will be destroyed.
      */
     da_status horizontal_concat(data_store &store) {
         if (m != store.m)
             return da_error(err, da_status_invalid_input,
-                            "Invalid dimensions in the provided data");
+                            "The number of rows in both stores must match (" +
+                                std::to_string(m) + " vs " + std::to_string(store.m) +
+                                ").");
         if (missing_block || store.missing_block)
             return da_error(
                 err, da_status_invalid_input,
@@ -613,12 +652,18 @@ class data_store {
                 "Row blocks are not complete, cannot extract columns at this point");
 
         if (m != this->m) {
+            da_error(err, da_status_invalid_input,
+                     "n_rows must match the size of the desired column. n_rows = " +
+                         std::to_string(m) +
+                         ", store n_rows = " + std::to_string(this->m));
             m = this->m;
-            return da_error(err, da_status_invalid_input,
-                            "Invalid dimensions in the provided data");
+            return da_status_invalid_input;
         }
         if (idx < 0 || idx >= this->n)
-            return da_error(err, da_status_invalid_input, "Invalid idx");
+            return da_error(err, da_status_invalid_input,
+                            "idx = " + std::to_string(idx) +
+                                ". It must be set between 0 and " +
+                                std::to_string(this->n - 1) + ".");
 
         T *c;
         da_int stride, nrows, lb, ub;
@@ -634,8 +679,9 @@ class data_store {
             bb = static_cast<block_base<T> *>(id->b);
             status = bb->get_col(idx - id->offset, &c, stride);
             if (status != da_status_success)
-                return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
-                                "get_col failed unexpectedly:" + err->get_mesg());
+                return da_error_trace( // LCOV_EXCL_LINE
+                    err, da_status_internal_error, // LCOV_EXCL_LINE
+                    "Unexpected error occurred. Possible memory corruption.");
             nrows = bb->m;
             for (da_int i = 0; i < nrows; i++)
                 col[idxrow + i] = c[i * stride];
@@ -646,7 +692,7 @@ class data_store {
         return da_status_success;
     }
 
-    /* Extract a slice in column major ordering from the data store 
+    /* Extract a slice in column major ordering from the data store
      * slice is defined by the 2 intervals rows and cols
      * On output, the data is stored in slice, starting in slice[first_idx], with the leading dimension ld_slice
      * dimensions of slice are NOT checked
@@ -655,10 +701,24 @@ class data_store {
     da_status extract_slice(interval rows, interval cols, da_int ld_slice,
                             da_int first_idx, T *slice) {
 
-        if (!validate_interval(rows, this->m) || !validate_interval(cols, this->n))
-            return da_error(err, da_status_invalid_input, "Invalid intervals");
+        if (!validate_interval(cols, this->n)) {
+            std::string msg = "Column interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(cols.first) + ", " + std::to_string(cols.second) +
+                   "]. ";
+            msg += "Expected in: [0, " + std::to_string(this->n - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
+        if (!validate_interval(rows, this->m)) {
+            std::string msg = "Row interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(rows.first) + ", " + std::to_string(rows.second) +
+                   "].";
+            msg += "Expected in: [0, " + std::to_string(this->m - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
         if (ld_slice < rows.second - rows.first + 1)
-            return da_error(err, da_status_invalid_input, "Invalid leading dimension");
+            return da_error(err, da_status_invalid_input,
+                            "The leading dimension must be lower than " +
+                                std::to_string(rows.second - rows.first + 1));
 
         da_status status;
 
@@ -706,7 +766,7 @@ class data_store {
 
     void remove_selection(std::string key) { selections.erase(key); }
 
-    /* select_[slice|columns|rows]; add an interval to the selection 'key' in the data_store 
+    /* select_[slice|columns|rows]; add an interval to the selection 'key' in the data_store
      * the indices have to be in the correct range
      * trying to add an index already in the selection will result in an error
      * exit status:
@@ -721,9 +781,20 @@ class data_store {
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
 
-        if (!validate_interval(cols, this->n) || !validate_interval(rows, this->m))
-            return da_error(err, da_status_invalid_input,
-                            "Invalid dimensions in the provided data");
+        if (!validate_interval(cols, this->n)) {
+            std::string msg = "Column interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(cols.first) + ", " + std::to_string(cols.second) +
+                   "]. ";
+            msg += "Expected in: [0, " + std::to_string(this->n - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
+        if (!validate_interval(rows, this->m)) {
+            std::string msg = "Row interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(rows.first) + ", " + std::to_string(rows.second) +
+                   "].";
+            msg += "Expected in: [0, " + std::to_string(this->m - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
 
         auto it = selections.find(key);
         if (it == selections.end()) {
@@ -756,8 +827,13 @@ class data_store {
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
 
-        if (!validate_interval(cols, this->n))
-            return da_error(err, da_status_invalid_input, "Invalid intervals");
+        if (!validate_interval(cols, this->n)) {
+            std::string msg = "Column interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(cols.first) + ", " + std::to_string(cols.second) +
+                   "]. ";
+            msg += "Expected in: [0, " + std::to_string(this->n - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
 
         auto it = selections.find(key);
         if (it == selections.end()) {
@@ -782,8 +858,13 @@ class data_store {
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
 
-        if (!validate_interval(rows, this->m))
-            return da_error(err, da_status_invalid_input, "Invalid interval");
+        if (!validate_interval(rows, this->m)) {
+            std::string msg = "Row interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(rows.first) + ", " + std::to_string(rows.second) +
+                   "].";
+            msg += "Expected in: [0, " + std::to_string(this->m - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
 
         auto it = selections.find(key);
         if (it == selections.end()) {
@@ -793,7 +874,7 @@ class data_store {
                                                    std::make_unique<idx_slice>())));
             if (!inserted) {
                 return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
-                                "Unexpected error in the interval insertion");
+                                "Unexpected error. Possible memory corruption.");
             }
         }
 
@@ -816,7 +897,7 @@ class data_store {
         da_int ncols = 0;
         std::string internal_key;
         if (selections.empty()) {
-            // no selection defined create a temporary selection all
+            // no selection defined create a temporary selection All
             internal_key = DA_STRINTERNAL;
             internal_key += "All";
             status = select_slice(internal_key, {0, m - 1}, {0, n - 1});
@@ -825,8 +906,12 @@ class data_store {
                                 "Internal error selecting a valid slice");
             it = selections.find(internal_key);
             clear_selections = true;
+            exit_status = da_status_full_extraction;
+            da_warn(err, exit_status,
+                    "No selection was defined, the full store is being extracted");
         } else if (it == selections.end()) {
             exit_status = da_status_invalid_input;
+            da_error(err, exit_status, "key was not found");
             goto exit;
         }
 
@@ -835,7 +920,10 @@ class data_store {
             status = select_rows(key, {0, m - 1});
             if (status != da_status_success) {
                 exit_status = da_status_internal_error; // LCOV_EXCL_LINE
-                goto exit;                              // LCOV_EXCL_LINE
+                da_error_trace(
+                    err, exit_status,
+                    "Internal error selecting a valid row slice"); // LCOV_EXCL_LINE
+                goto exit;                                         // LCOV_EXCL_LINE
             }
             clear_rows = true;
         }
@@ -845,7 +933,10 @@ class data_store {
             status = select_columns(key, {0, n - 1});
             if (status != da_status_success) {
                 exit_status = da_status_internal_error; // LCOV_EXCL_LINE
-                goto exit;                              // LCOV_EXCL_LINE
+                da_error_trace(
+                    err, exit_status,
+                    "Internal error selecting a valid column slice"); // LCOV_EXCL_LINE
+                goto exit;                                         // LCOV_EXCL_LINE
             }
             clear_cols = true;
         }
@@ -857,9 +948,11 @@ class data_store {
             for (auto it_row = it->second.first->begin();
                  it_row != it->second.first->end(); ++it_row) {
                 da_int nrows = it_row->second;
-                exit_status = extract_slice(it_row->first, it_col->first, ld, idx, data);
-                if (exit_status != da_status_success)
+                status = extract_slice(it_row->first, it_col->first, ld, idx, data);
+                if (status != da_status_success) {
+                    exit_status = status;
                     goto exit;
+                }
                 idx += nrows;
             }
         }
@@ -876,7 +969,7 @@ class data_store {
     }
 
     /* From a given selection remove all rows that have missing data in it.
-     * Input: 
+     * Input:
      * - key: name of the selection. If the key is not already present in the map, all rows will be considered
      * - full_rows: If true, the full columns in all the rows of the selection are checked.
      *              Otherwise, only the columns selected are.
@@ -922,7 +1015,7 @@ class data_store {
             internal_key += "all cols";
             status = select_columns(internal_key, {0, n - 1});
             if (status != da_status_success) {
-                status = da_error( // LCOV_EXCL_LINE
+                status = da_error_trace( // LCOV_EXCL_LINE
                     err, da_status_internal_error,
                     "Could not create new tag with all columns");
                 goto exit; // LCOV_EXCL_LINE
@@ -948,7 +1041,7 @@ class data_store {
                 if (status != da_status_success) {
                     status =
                         da_error_trace(err, da_status_internal_error, // LCOV_EXCL_LINE
-                                       "Unexpected error.");
+                                       "Unexpected error. Possible memory corruption.");
                     goto exit; // LCOV_EXCL_LINE
                 }
             }
@@ -995,11 +1088,25 @@ class data_store {
 
     da_status mark_missing_slice(interval rows, interval cols,
                                  std::vector<bool> &valid_rows) {
-        if (!validate_interval(rows, this->m) || !validate_interval(cols, this->n))
-            return da_error(err, da_status_invalid_input, "Invalid intervals");
+        if (!validate_interval(cols, this->n)) {
+            std::string msg = "Column interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(cols.first) + ", " + std::to_string(cols.second) +
+                   "]. ";
+            msg += "Expected in: [0, " + std::to_string(this->n - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
+        if (!validate_interval(rows, this->m)) {
+            std::string msg = "Row interval not valid. Input bounds: ";
+            msg += "[" + std::to_string(rows.first) + ", " + std::to_string(rows.second) +
+                   "].";
+            msg += "Expected in: [0, " + std::to_string(this->m - 1) + "]";
+            return da_error(this->err, da_status_invalid_input, msg);
+        }
         if ((da_int)valid_rows.size() != this->m)
             return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
-                            "Wrong valid rows vector size");
+                            "Wrong valid rows vector size: " +
+                                std::to_string((da_int)valid_rows.size()) +
+                                " != " + std::to_string(this->m));
 
         da_status status;
         da_int lcol = cols.first;
@@ -1020,9 +1127,9 @@ class data_store {
                     block_cols = {lcol - bid->offset, uc - bid->offset};
                     status = bid->b->missing_rows(valid_rows, lr, block_rows, block_cols);
                     if (status != da_status_success)
-                        return da_error( // LCOV_EXCL_LINE
+                        return da_error_trace( // LCOV_EXCL_LINE
                             err, da_status_internal_error,
-                            "Unexpected error in copy_slice_dense");
+                            "Internal error. Possible  memory corruption.");
                 }
                 lr = ur + 1;
                 first_row_idx = lr;
@@ -1033,16 +1140,23 @@ class data_store {
         return da_status_success;
     }
 
-    /* get|set_element access and modify a single element in the data store 
+    /* get|set_element access and modify a single element in the data store
      * exit status:
      * - invalid_input
      * - internal_error
      */
     template <class T> da_status get_element(da_int i, da_int j, T &elem) {
 
-        if (i < 0 || i >= this->m || j < 0 || j >= this->n)
+        if (i < 0 || i >= this->m)
             return da_error(err, da_status_invalid_input,
-                            "Invalid dimensions in the provided data");
+                            "i = " + std::to_string(i) +
+                                ". The row index must be beteween 0 and " +
+                                std::to_string(this->m - 1) + ".");
+        if (j < 0 || j >= this->n)
+            return da_error(err, da_status_invalid_input,
+                            "j = " + std::to_string(i) +
+                                ". The column index must be beteween 0 and " +
+                                std::to_string(this->n - 1) + ".");
 
         auto it = cmap.find(j);
         if (it == cmap.end())
@@ -1072,9 +1186,16 @@ class data_store {
     }
     template <class T> da_status set_element(da_int i, da_int j, T elem) {
 
-        if (i < 0 || i >= this->m || j < 0 || j >= this->n)
+        if (i < 0 || i >= this->m)
             return da_error(err, da_status_invalid_input,
-                            "indices outside of the store dimensions");
+                            "i = " + std::to_string(i) +
+                                ". The row index must be beteween 0 and " +
+                                std::to_string(this->m - 1) + ".");
+        if (j < 0 || j >= this->n)
+            return da_error(err, da_status_invalid_input,
+                            "j = " + std::to_string(i) +
+                                ". The column index must be beteween 0 and " +
+                                std::to_string(this->n - 1) + ".");
 
         auto it = cmap.find(j);
         if (it == cmap.end())
@@ -1121,7 +1242,7 @@ class data_store {
     da_status get_idx_from_label(std::string label, da_int &idx) {
         auto it = name_to_index.find(label);
         if (it == name_to_index.end()) {
-            return da_error(err, da_status_invalid_input, "key is not in the map");
+            return da_error(err, da_status_invalid_input, "key " + label + " is not in the map");
         }
         idx = it->second;
         return da_status_success;
@@ -1139,10 +1260,10 @@ class data_store {
         return da_status_success;
     }
 
-    /* Label all columns from an array of C strings 
+    /* Label all columns from an array of C strings
      * headings is NOT checked:
      * if set to nullptr, no columns will be tagged but no error will be returned
-     * 
+     *
      */
     da_status label_all_columns(char **headings) {
         da_status status = da_status_success;
@@ -1199,9 +1320,8 @@ class data_store {
         if (status != da_status_success) {
             // LCOV_EXCL_START
             // cleanup = true;
-            status = da_error_trace(
-                err, da_status_internal_error,
-                "Unexpected error in concatenating columns");
+            status = da_error_trace(err, da_status_internal_error,
+                                    "Unexpected error in concatenating columns");
             goto exit;
             // LCOV_EXCL_STOP
         }
@@ -1294,7 +1414,7 @@ class data_store {
         return da_status_success;
     }
 
-    /* Get data from a CSV file and create blocks appropriately 
+    /* Get data from a CSV file and create blocks appropriately
      * Exit status:
      * - da_status_parsing_error
      * - da_status_ragged_csv

@@ -1128,6 +1128,9 @@ TEST(datastore, nullArguments) {
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
 
+    // Load
+    EXPECT_EQ(da_data_load_from_csv(store, nullptr), da_status_invalid_input);
+
     // Select
     EXPECT_EQ(da_data_select_columns(store, nullptr, 0, 0), da_status_invalid_input);
     EXPECT_EQ(da_data_select_rows(store, nullptr, 0, 0), da_status_invalid_input);
@@ -1145,25 +1148,25 @@ TEST(datastore, nullArguments) {
     EXPECT_EQ(da_data_extract_column_str(store, 0, 0, nullptr), da_status_invalid_input);
 
     // Extract selection
-    EXPECT_EQ(da_data_extract_selection_int(store, "A", 1, nullptr),
+    EXPECT_EQ(da_data_extract_selection_int(store, "A", nullptr, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_real_d(store, "A", 1, nullptr),
+    EXPECT_EQ(da_data_extract_selection_real_d(store, "A", nullptr, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_real_s(store, "A", 1, nullptr),
+    EXPECT_EQ(da_data_extract_selection_real_s(store, "A", nullptr, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_uint8(store, "A", 1, nullptr),
+    EXPECT_EQ(da_data_extract_selection_uint8(store, "A", nullptr, 1),
               da_status_invalid_input);
     da_int i;
     float f;
     double d;
     uint8_t ui;
-    EXPECT_EQ(da_data_extract_selection_int(store, nullptr, 1, &i),
+    EXPECT_EQ(da_data_extract_selection_int(store, nullptr, &i, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_real_d(store, nullptr, 1, &d),
+    EXPECT_EQ(da_data_extract_selection_real_d(store, nullptr, &d, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_real_s(store, nullptr, 1, &f),
+    EXPECT_EQ(da_data_extract_selection_real_s(store, nullptr, &f, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_uint8(store, nullptr, 1, &ui),
+    EXPECT_EQ(da_data_extract_selection_uint8(store, nullptr, &ui, 1),
               da_status_invalid_input);
 
     // Label
@@ -1250,7 +1253,7 @@ TEST(dataStore, extractSelection) {
     get_block_data_int(test1_2rows, new_m, n, bl3, order);
     ds.concatenate_rows(new_m, n, bl3.data(), order);
     ld = 7;
-    EXPECT_EQ(ds.extract_selection("", ld, islice.data()), da_status_success);
+    EXPECT_EQ(ds.extract_selection("", ld, islice.data()), da_status_full_extraction);
     expected_slice = {1, 3, 5, 7, 9, 2, 3, 2, 4, 6, 8, 10, 4, 5,
                       1, 3, 5, 7, 9, 6, 7, 2, 4, 6, 8, 10, 8, 9};
     EXPECT_ARR_EQ(28, islice, expected_slice, 1, 1, 0, 0);
@@ -1307,13 +1310,13 @@ TEST(dataStore, nullStore) {
     EXPECT_EQ(da_data_select_slice(store, "A", 1, 1, 1, 1), da_status_invalid_input);
 
     // extract selection
-    EXPECT_EQ(da_data_extract_selection_int(store, "A", 1, &int_block),
+    EXPECT_EQ(da_data_extract_selection_int(store, "A", &int_block, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_real_d(store, "A", 1, &d_block),
+    EXPECT_EQ(da_data_extract_selection_real_d(store, "A", &d_block, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_real_s(store, "A", 1, &s_block),
+    EXPECT_EQ(da_data_extract_selection_real_s(store, "A", &s_block, 1),
               da_status_invalid_input);
-    EXPECT_EQ(da_data_extract_selection_uint8(store, "A", 1, &uint_block),
+    EXPECT_EQ(da_data_extract_selection_uint8(store, "A", &uint_block, 1),
               da_status_invalid_input);
 
     // Extract columns
@@ -1369,7 +1372,7 @@ TEST(dataStore, extractSelPub) {
               da_status_success);
     EXPECT_EQ(da_data_select_slice(store, "int", 0, 1, 0, 0), da_status_success);
     std::vector<da_int> isel(2);
-    EXPECT_EQ(da_data_extract_selection_int(store, "int", 2, isel.data()),
+    EXPECT_EQ(da_data_extract_selection_int(store, "int", isel.data(), 2),
               da_status_success);
     std::vector<da_int> iexp = {1, 2};
     EXPECT_ARR_EQ(2, isel, iexp, 1, 1, 0, 0);
@@ -1380,7 +1383,7 @@ TEST(dataStore, extractSelPub) {
               da_status_success);
     EXPECT_EQ(da_data_select_slice(store, "uint", 0, 1, 2, 3), da_status_success);
     std::vector<uint8_t> uisel(4);
-    EXPECT_EQ(da_data_extract_selection_uint8(store, "uint", 2, uisel.data()),
+    EXPECT_EQ(da_data_extract_selection_uint8(store, "uint", uisel.data(), 2),
               da_status_success);
     std::vector<uint8_t> uiexp = {1, 2, 3, 4};
     EXPECT_ARR_EQ(2, uisel, uiexp, 1, 1, 0, 0);
@@ -1391,7 +1394,7 @@ TEST(dataStore, extractSelPub) {
               da_status_success);
     EXPECT_EQ(da_data_select_slice(store, "float", 0, 1, 4, 4), da_status_success);
     std::vector<float> ssel(2);
-    EXPECT_EQ(da_data_extract_selection_real_s(store, "float", 2, ssel.data()),
+    EXPECT_EQ(da_data_extract_selection_real_s(store, "float", ssel.data(), 2),
               da_status_success);
     std::vector<float> sexp = {1, 2};
     EXPECT_ARR_EQ(2, ssel, sexp, 1, 1, 0, 0);
@@ -1403,7 +1406,7 @@ TEST(dataStore, extractSelPub) {
     EXPECT_EQ(da_data_select_rows(store, "double", 0, 1), da_status_success);
     EXPECT_EQ(da_data_select_columns(store, "double", 6, 6), da_status_success);
     std::vector<double> dsel(2);
-    EXPECT_EQ(da_data_extract_selection_real_d(store, "double", 2, dsel.data()),
+    EXPECT_EQ(da_data_extract_selection_real_d(store, "double", dsel.data(), 2),
               da_status_success);
     std::vector<double> dexp = {5, 6};
     EXPECT_ARR_EQ(2, dsel, dexp, 1, 1, 0, 0);
@@ -1526,7 +1529,7 @@ TEST(dataStore, missingDataPub) {
     EXPECT_EQ(da_data_select_non_missing(store, tag, true), da_status_success);
     EXPECT_EQ(da_data_select_columns(store, tag, 0, 3), da_status_success);
     std::vector<da_int> int_sel(12);
-    EXPECT_EQ(da_data_extract_selection_int(store, tag, 3, int_sel.data()),
+    EXPECT_EQ(da_data_extract_selection_int(store, tag, int_sel.data(), 3),
               da_status_success);
     std::vector<da_int> iexp = {3, 7, 21, 4, 8, 22, 2, 4, 23, 6, 8, 24};
     EXPECT_ARR_EQ(12, int_sel, iexp, 1, 1, 0, 0);
@@ -1633,13 +1636,13 @@ TEST(datastore, incompleteStore) {
     EXPECT_EQ(da_data_extract_column_str(store, 1, 1, Tc), da_status_missing_block);
 
     // extract selection
-    EXPECT_EQ(da_data_extract_selection_int(store, "key", 1, &idummy),
+    EXPECT_EQ(da_data_extract_selection_int(store, "key", &idummy, 1),
               da_status_missing_block);
-    EXPECT_EQ(da_data_extract_selection_real_s(store, "key", 1, &fdummy),
+    EXPECT_EQ(da_data_extract_selection_real_s(store, "key", &fdummy, 1),
               da_status_missing_block);
-    EXPECT_EQ(da_data_extract_selection_real_d(store, "key", 1, &ddummy),
+    EXPECT_EQ(da_data_extract_selection_real_d(store, "key", &ddummy, 1),
               da_status_missing_block);
-    EXPECT_EQ(da_data_extract_selection_uint8(store, "key", 1, &uidummy),
+    EXPECT_EQ(da_data_extract_selection_uint8(store, "key", &uidummy, 1),
               da_status_missing_block);
     da_datastore_destroy(&store);
 }
@@ -1662,7 +1665,7 @@ TEST(datastore, selectInvalid) {
 
     // Extraction
     da_int extract;
-    EXPECT_EQ(da_data_extract_selection_int(store, "Non valid", 1, &extract), da_status_invalid_input);
+    EXPECT_EQ(da_data_extract_selection_int(store, "Non valid", &extract, 1), da_status_invalid_input);
 
 
     da_datastore_destroy(&store);

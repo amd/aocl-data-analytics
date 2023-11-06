@@ -112,7 +112,7 @@ int main() {
                   << __LINE__ << std::endl;
         return 1;
     }
-    status = da_data_extract_selection_real_d(csv, "features", m, features.data());
+    status = da_data_extract_selection_real_d(csv, "features", features.data(), m);
     if (status != da_status_success) {
         std::cout << "Unexpected status: " << status << " (expecting 0) on line "
                   << __LINE__ << std::endl;
@@ -125,7 +125,7 @@ int main() {
                   << __LINE__ << std::endl;
         return 1;
     }
-    status = da_data_extract_selection_real_d(csv, "response", m, rhs.data());
+    status = da_data_extract_selection_real_d(csv, "response", rhs.data(), m);
     if (status != da_status_success) {
         std::cout << "Unexpected status: " << status << " (expecting 0) on line "
                   << __LINE__ << std::endl;

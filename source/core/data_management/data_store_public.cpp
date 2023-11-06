@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -118,150 +118,140 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2) {
 /* ********************************** Load routines ********************************** */
 /* *********************************************************************************** */
 da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
-                               da_int *int_block, da_ordering order, da_int copy_data) {
+                               da_int *block, da_ordering order, da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
-    if (!int_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "int_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_columns(n_rows, n_cols, int_block, order, cpy);
+    return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
-                               da_int *int_block, da_ordering order, da_int copy_data) {
+                               da_int *block, da_ordering order, da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
-    if (!int_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "int_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_rows(n_rows, n_cols, int_block, order, cpy);
+    return store->store->concatenate_rows(n_rows, n_cols, block, order, cpy);
 }
 
 da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **str_block, da_ordering order) {
+                               const char **block, da_ordering order) {
     if (!store)
         return da_status_invalid_input;
-    if (!str_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "str_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     // FIXME
     // The current version  is copying the data TWICE.
     // We need a better way to convert C style character arrays to C++ strings
-    std::vector<std::string> vecstr(str_block, str_block + n_rows * n_cols);
+    std::vector<std::string> vecstr(block, block + n_rows * n_cols);
     return store->store->concatenate_columns(n_rows, n_cols, vecstr.data(), order, true);
 }
 da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **str_block, da_ordering order) {
+                               const char **block, da_ordering order) {
     if (!store)
         return da_status_invalid_input;
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
-    if (!str_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "str_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
 
     // FIXME
     // The current version  is copying the data TWICE.
     // We need a better way to convert C style character arrays to C++ strings
-    std::vector<std::string> vecstr(str_block, str_block + n_rows * n_cols);
+    std::vector<std::string> vecstr(block, block + n_rows * n_cols);
     return store->store->concatenate_rows(n_rows, n_cols, vecstr.data(), order, true);
 }
 
 da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *real_block, da_ordering order,
+                                  double *block, da_ordering order,
                                   da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
-    if (!real_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "real_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_columns(n_rows, n_cols, real_block, order, cpy);
+    return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *real_block, da_ordering order,
+                                  double *block, da_ordering order,
                                   da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
-    if (!real_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "real_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_rows(n_rows, n_cols, real_block, order, cpy);
+    return store->store->concatenate_rows(n_rows, n_cols, block, order, cpy);
 }
 
 da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_cols,
-                                  float *real_block, da_ordering order,
+                                  float *block, da_ordering order,
                                   da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
-    if (!real_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "real_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_columns(n_rows, n_cols, real_block, order, cpy);
+    return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_cols,
-                                  float *real_block, da_ordering order,
+                                  float *block, da_ordering order,
                                   da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
-    if (!real_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "real_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_rows(n_rows, n_cols, real_block, order, cpy);
+    return store->store->concatenate_rows(n_rows, n_cols, block, order, cpy);
 }
 
 da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *uint_block, da_ordering order,
+                                 uint8_t *block, da_ordering order,
                                  da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
-    if (!uint_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "uint_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_columns(n_rows, n_cols, uint_block, order, cpy);
+    return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *uint_block, da_ordering order,
+                                 uint8_t *block, da_ordering order,
                                  da_int copy_data) {
     if (!store)
         return da_status_invalid_input;
-    if (!uint_block)
-        return da_error(store->err, da_status_invalid_input,
-                        "uint_block has to be defined");
+    if (!block)
+        return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
-    return store->store->concatenate_rows(n_rows, n_cols, uint_block, order, cpy);
+    return store->store->concatenate_rows(n_rows, n_cols, block, order, cpy);
 }
 
 /* ************************************* selection *********************************** */
@@ -273,7 +263,7 @@ da_status da_data_select_columns(da_datastore store, const char *key, da_int lbo
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
     if (!key)
-        return da_error(store->err, da_status_invalid_input, "Key has to be defined");
+        return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
     std::string key_str(key);
     if (!da_data::check_internal_string(key_str)) {
@@ -291,7 +281,7 @@ da_status da_data_select_rows(da_datastore store, const char *key, da_int lbound
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
     if (!key)
-        return da_error(store->err, da_status_invalid_input, "Key has to be defined");
+        return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
     std::string key_str(key);
     if (!da_data::check_internal_string(key_str)) {
@@ -309,7 +299,7 @@ da_status da_data_select_slice(da_datastore store, const char *key, da_int row_l
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
     if (!key)
-        return da_error(store->err, da_status_invalid_input, "Key has to be defined");
+        return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
     std::string key_str(key);
     if (!da_data::check_internal_string(key_str)) {
@@ -328,7 +318,7 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
     if (!key)
-        return da_error(store->err, da_status_invalid_input, "Key has to be defined");
+        return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
     std::string key_str(key);
     bool fr = full_rows > 0;
@@ -402,8 +392,8 @@ da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
 
 /* ********************************* extract selections ****************************** */
 /* *********************************************************************************** */
-da_status da_data_extract_selection_int(da_datastore store, const char *key, da_int ld,
-                                        da_int *data) {
+da_status da_data_extract_selection_int(da_datastore store, const char *key, da_int *data,
+                                        da_int lddata) {
     if (!store)
         return da_status_invalid_input;
     if (!key)
@@ -415,10 +405,10 @@ da_status da_data_extract_selection_int(da_datastore store, const char *key, da_
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, ld, data);
+    return store->store->extract_selection(key, lddata, data);
 }
-da_status da_data_extract_selection_real_d(da_datastore store, const char *key, da_int ld,
-                                           double *data) {
+da_status da_data_extract_selection_real_d(da_datastore store, const char *key,
+                                           double *data, da_int lddata) {
     if (!store)
         return da_status_invalid_input;
     if (!key)
@@ -430,10 +420,10 @@ da_status da_data_extract_selection_real_d(da_datastore store, const char *key, 
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, ld, data);
+    return store->store->extract_selection(key, lddata, data);
 }
-da_status da_data_extract_selection_real_s(da_datastore store, const char *key, da_int ld,
-                                           float *data) {
+da_status da_data_extract_selection_real_s(da_datastore store, const char *key,
+                                           float *data, da_int lddata) {
     if (!store)
         return da_status_invalid_input;
     if (!key)
@@ -445,10 +435,10 @@ da_status da_data_extract_selection_real_s(da_datastore store, const char *key, 
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, ld, data);
+    return store->store->extract_selection(key, lddata, data);
 }
-da_status da_data_extract_selection_uint8(da_datastore store, const char *key, da_int ld,
-                                          uint8_t *data) {
+da_status da_data_extract_selection_uint8(da_datastore store, const char *key,
+                                          uint8_t *data, da_int lddata) {
     if (!store)
         return da_status_invalid_input;
     if (!key)
@@ -460,7 +450,7 @@ da_status da_data_extract_selection_uint8(da_datastore store, const char *key, d
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, ld, data);
+    return store->store->extract_selection(key, lddata, data);
 }
 
 /* ************************************* headings ************************************ */
@@ -530,6 +520,9 @@ da_status da_data_load_from_csv(da_datastore store, const char *filename) {
     if (store->store == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
+    if (filename == nullptr)
+        return da_error(store->err, da_status_invalid_input, "filename has to be defined");
+
     return store->store->load_from_csv(store->csv_parser, filename);
 }
 
@@ -543,7 +536,7 @@ da_status da_data_get_n_rows(da_datastore store, da_int *n_rows) {
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
     if (n_rows == nullptr)
         return da_error(store->err, da_status_invalid_input,
-                        "num_rows has to be defined");
+                        "n_rows has to be defined");
 
     *n_rows = store->store->get_num_rows();
     return da_status_success;
@@ -556,7 +549,7 @@ da_status da_data_get_n_cols(da_datastore store, da_int *n_cols) {
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
     if (n_cols == nullptr)
         return da_error(store->err, da_status_invalid_input,
-                        "num_cols has to be defined");
+                        "n_cols has to be defined");
 
     *n_cols = store->store->get_num_cols();
     return da_status_success;
