@@ -117,7 +117,7 @@ int decision_tree_ex_d(std::string score_criteria) {
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
         std::cout << "Scoring complete." << std::endl;
-        double score_exp;
+        double score_exp = 0.0;
         std::cout << "Score    = " << score << std::endl;
         if (score_criteria == "gini") {
             score_exp = 0.93250;
@@ -243,7 +243,7 @@ int decision_tree_ex_s(std::string score_criteria) {
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
         std::cout << "Scoring complete." << std::endl;
-        double score_exp;
+        double score_exp = 0.0;
         std::cout << "Score    = " << score << std::endl;
         if (score_criteria == "gini") {
             score_exp = 0.93250;

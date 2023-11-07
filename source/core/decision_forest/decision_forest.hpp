@@ -443,11 +443,11 @@ template <typename T> da_status decision_tree<T>::fit() {
                     DA_PRINTF_DEBUG("leaf1.start_idx = %" DA_INT_FMT
                                     ", leaf1.n_obs = %" DA_INT_FMT
                                     ", leaf1.y_pred = %d \n",
-                                    leaf1.start_idx, leaf1.n_obs, leaf1.y_pred);
+                                    leaf1.start_idx, leaf1.n_obs, (int) leaf1.y_pred);
                     DA_PRINTF_DEBUG("leaf2.start_idx = %" DA_INT_FMT
                                     ", leaf2.n_obs = %" DA_INT_FMT
                                     ", leaf2.y_pred = %d \n",
-                                    leaf2.start_idx, leaf2.n_obs, leaf2.y_pred);
+                                    leaf2.start_idx, leaf2.n_obs, (int) leaf2.y_pred);
                     DA_PRINTF_DEBUG("min_score = %8.4f \n", min_score);
                     DA_PRINTF_DEBUG("score_leaf1 + score_leaf2 = %8.4f \n",
                                     score_leaf1 + score_leaf2);
@@ -638,7 +638,7 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
         // if S=0 we take the following record from the previous iteration
         // if S>0 we skip S records
         subsample[i] = idx0 + S + 1;
-        printf("idx0+S+1 = %d \n", idx0 + S + 1);
+        printf("idx0+S+1 = %d \n", (int) (idx0 + S + 1));
 
         // if S=0 we need to increment record index by 1   ahead of next iteration
         // if S>0 we need to increment record index by S+1 ahead of next iteration
@@ -651,12 +651,12 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
     v = uniform_real_dist(mt_gen);
     S = std::floor( std::nearbyint(Nreal) * v);
     subsample[i] = idx0 + S + 1;
-    printf("idx0+S+1 = %d \n", idx0 + S + 1);
+    printf("idx0+S+1 = %d \n", (int) (idx0 + S + 1));
 
     printf("\n");
     printf("Sequential sample from unshuffled vector: \n");
     for (da_int i = 0; i < n_samples; i++) {
-        printf("%2d, ", subsample[i]);
+        printf("%2d, ", (int) subsample[i]);
     }
     printf("\n\n");
 
@@ -670,14 +670,14 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
     for (da_int i = 0; i < (n_samples - 2); i++) {
         uniform_dist = std::uniform_int_distribution<da_int>(i, n_samples-1);
         da_int j = uniform_dist(mt_gen);
-        printf("Randomly-chosen uniform int: %2d \n", j);
+        printf("Randomly-chosen uniform int: %2d \n", (int) j);
         std::swap(samples[i], samples[j]);
     }
 
     printf("\n");
     printf("Shuffled sequential sample: \n");
     for (da_int i = 0; i < n_samples; i++) {
-        printf("%2d, ", samples[i]);
+        printf("%2d, ", (int) samples[i]);
     }
 
     printf("\n");

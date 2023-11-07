@@ -120,6 +120,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
     switch (*p) {
     case '-':
         negative = 1; // Fall through to increment position.
+        [[fallthrough]];
     case '+':
         p++;
     }
@@ -182,6 +183,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
         switch (*++p) {
         case '-':
             negative = 1; // Fall through to increment pos.
+            [[fallthrough]];
         case '+':
             p++;
         }
@@ -335,6 +337,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
         switch (*++p) {
         case '-':
             negative = 1; // Fall through to increment pos.
+            [[fallthrough]];
         case '+':
             p++;
         }
