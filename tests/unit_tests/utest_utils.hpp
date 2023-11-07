@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef UTEST_UTILS_HPP
@@ -257,27 +257,27 @@ inline da_status da_correlation_matrix(da_int n, da_int p, double *x, da_int ldx
 /* linmod overloaded functions */
 template <class T> da_status da_linmod_select_model(da_handle handle, linmod_model mod);
 template <> da_status da_linmod_select_model<double>(da_handle handle, linmod_model mod) {
-    return da_linmod_d_select_model(handle, mod);
+    return da_linmod_select_model_d(handle, mod);
 }
 template <> da_status da_linmod_select_model<float>(da_handle handle, linmod_model mod) {
-    return da_linmod_s_select_model(handle, mod);
+    return da_linmod_select_model_s(handle, mod);
 }
 
 inline da_status da_linreg_define_features(da_handle handle, da_int n, da_int m,
                                            double *A, double *b) {
-    return da_linmod_d_define_features(handle, n, m, A, b);
+    return da_linmod_define_features_d(handle, n, m, A, b);
 }
 inline da_status da_linreg_define_features(da_handle handle, da_int n, da_int m, float *A,
                                            float *b) {
-    return da_linmod_s_define_features(handle, n, m, A, b);
+    return da_linmod_define_features_s(handle, n, m, A, b);
 }
 
 template <class T> da_status da_linreg_fit(da_handle handle);
 template <> da_status da_linreg_fit<double>(da_handle handle) {
-    return da_linmod_d_fit(handle);
+    return da_linmod_fit_d(handle);
 }
 template <> da_status da_linreg_fit<float>(da_handle handle) {
-    return da_linmod_s_fit(handle);
+    return da_linmod_fit_s(handle);
 }
 
 inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, double *x) {
@@ -289,11 +289,11 @@ inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, float *x) {
 
 inline da_status da_linmod_evaluate_model(da_handle handle, da_int n, da_int m, double *X,
                                           double *predictions) {
-    return da_linmod_d_evaluate_model(handle, n, m, X, predictions);
+    return da_linmod_evaluate_model_d(handle, n, m, X, predictions);
 }
 inline da_status da_linmod_evaluate_model(da_handle handle, da_int n, da_int m, float *X,
                                           float *predictions) {
-    return da_linmod_s_evaluate_model(handle, n, m, X, predictions);
+    return da_linmod_evaluate_model_s(handle, n, m, X, predictions);
 }
 
 /* Datastore overloaded functions */

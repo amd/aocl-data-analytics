@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -39,18 +39,18 @@ namespace {
 TEST(linmod, badHandle) {
     da_handle handle = nullptr;
     EXPECT_EQ(da_linmod_select_model<double>(handle, linmod_model_mse),
-              da_status_memory_error);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_select_model<float>(handle, linmod_model_logistic),
-              da_status_memory_error);
+              da_status_invalid_pointer);
 
     da_int n = 1, m = 1;
     float *af = 0, *bf = 0;
     double *ad = 0, *bd = 0;
-    EXPECT_EQ(da_linreg_define_features(handle, n, m, af, bf), da_status_memory_error);
-    EXPECT_EQ(da_linreg_define_features(handle, n, m, ad, bd), da_status_memory_error);
+    EXPECT_EQ(da_linreg_define_features(handle, m, n, af, bf), da_status_invalid_pointer);
+    EXPECT_EQ(da_linreg_define_features(handle, m, n, ad, bd), da_status_invalid_pointer);
 
-    EXPECT_EQ(da_linmod_d_fit(handle), da_status_memory_error);
-    EXPECT_EQ(da_linmod_s_fit(handle), da_status_memory_error);
+    EXPECT_EQ(da_linmod_fit_d(handle), da_status_invalid_pointer);
+    EXPECT_EQ(da_linmod_fit_s(handle), da_status_invalid_pointer);
 
     da_int nc = 1;
     float *xf = 0;
@@ -60,8 +60,10 @@ TEST(linmod, badHandle) {
 
     float *predf = 0;
     double *predd = 0;
-    EXPECT_EQ(da_linmod_evaluate_model(handle, n, m, xf, predf), da_status_memory_error);
-    EXPECT_EQ(da_linmod_evaluate_model(handle, n, m, xd, predd), da_status_memory_error);
+    EXPECT_EQ(da_linmod_evaluate_model(handle, m, n, xf, predf),
+              da_status_invalid_pointer);
+    EXPECT_EQ(da_linmod_evaluate_model(handle, m, n, xd, predd),
+              da_status_invalid_pointer);
 }
 
 TEST(linmod, wrongType) {
@@ -79,11 +81,11 @@ TEST(linmod, wrongType) {
     da_int n = 1, m = 1;
     float *af = 0, *bf = 0;
     double *ad = 0, *bd = 0;
-    EXPECT_EQ(da_linreg_define_features(handle_d, n, m, af, bf), da_status_wrong_type);
-    EXPECT_EQ(da_linreg_define_features(handle_s, n, m, ad, bd), da_status_wrong_type);
+    EXPECT_EQ(da_linreg_define_features(handle_d, m, n, af, bf), da_status_wrong_type);
+    EXPECT_EQ(da_linreg_define_features(handle_s, m, n, ad, bd), da_status_wrong_type);
 
-    EXPECT_EQ(da_linmod_d_fit(handle_s), da_status_wrong_type);
-    EXPECT_EQ(da_linmod_s_fit(handle_d), da_status_wrong_type);
+    EXPECT_EQ(da_linmod_fit_d(handle_s), da_status_wrong_type);
+    EXPECT_EQ(da_linmod_fit_s(handle_d), da_status_wrong_type);
 
     da_int nc = 1;
     float *xf = 0;
@@ -93,8 +95,8 @@ TEST(linmod, wrongType) {
 
     float *predf = 0;
     double *predd = 0;
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, n, m, xf, predf), da_status_wrong_type);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, n, m, xd, predd), da_status_wrong_type);
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, m, n, xf, predf), da_status_wrong_type);
+    EXPECT_EQ(da_linmod_evaluate_model(handle_s, m, n, xd, predd), da_status_wrong_type);
 
     da_handle_destroy(&handle_d);
     da_handle_destroy(&handle_s);
@@ -115,34 +117,34 @@ TEST(linmod, invalidInput) {
     da_handle handle_d = nullptr;
     da_handle handle_s = nullptr;
     EXPECT_EQ(da_handle_init_d(&handle_d, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_d_select_model(handle_d, linmod_model_mse), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
     EXPECT_EQ(da_handle_init_s(&handle_s, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_s_select_model(handle_s, linmod_model_mse), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_s(handle_s, linmod_model_mse), da_status_success);
 
     // define features
-    EXPECT_EQ(da_linmod_d_define_features(handle_d, 0, m, Ad, bd),
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, 0, Ad, bd),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_d_define_features(handle_d, n, 0, Ad, bd),
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, 0, n, Ad, bd),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_d_define_features(handle_d, n, m, nullptr, bd),
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, nullptr, bd),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_d_define_features(handle_d, n, m, Ad, nullptr),
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, nullptr),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_d_define_features(handle_d, n, m, Ad, bd), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
 
-    EXPECT_EQ(da_linmod_s_define_features(handle_s, 0, m, As, bs),
+    EXPECT_EQ(da_linmod_define_features_s(handle_s, m, 0, As, bs),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_s_define_features(handle_s, n, 0, As, bs),
+    EXPECT_EQ(da_linmod_define_features_s(handle_s, 0, n, As, bs),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_s_define_features(handle_s, n, m, nullptr, bs),
+    EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, nullptr, bs),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_s_define_features(handle_s, n, m, As, nullptr),
+    EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, nullptr),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_s_define_features(handle_s, n, m, As, bs), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, bs), da_status_success);
 
     // comput regression
-    EXPECT_EQ(da_linmod_d_fit(handle_d), da_status_success);
-    EXPECT_EQ(da_linmod_s_fit(handle_s), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_success);
+    EXPECT_EQ(da_linmod_fit_s(handle_s), da_status_success);
 
     // get coefficients
     nx = -1;
@@ -164,21 +166,21 @@ TEST(linmod, invalidInput) {
     // evaluate models
     double X[2] = {1., 2.};
     double pred[1];
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 3, 1, X, pred), da_status_invalid_input);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, n, 1, nullptr, pred),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, 3, X, pred), da_status_invalid_input);
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, nullptr, pred),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, n, 1, X, nullptr),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, X, nullptr),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, n, 0, X, pred), da_status_invalid_input);
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 0, n, X, pred), da_status_invalid_input);
     float Xs[2] = {1., 2.};
     float preds[1];
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 3, 1, Xs, preds),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, 3, Xs, preds),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, n, 1, nullptr, preds),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, nullptr, preds),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, n, 1, Xs, nullptr),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, Xs, nullptr),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, n, 0, Xs, preds),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 0, n, Xs, preds),
               da_status_invalid_input);
 
     da_handle_destroy(&handle_d);
@@ -201,8 +203,8 @@ TEST(linmod, modOutOfDate) {
 
     EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_handle_init<float>(&handle_s, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_d_define_features(handle_d, n, m, Ad, bd), da_status_success);
-    EXPECT_EQ(da_linmod_s_define_features(handle_s, n, m, As, bs), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, bs), da_status_success);
 
     // Model was not yet fitted or out-of-date request of coefficients
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coeff, &nx, xd),
@@ -215,8 +217,8 @@ TEST(linmod, modOutOfDate) {
     double pred[1];
     float Xs[2] = {1., 2.};
     float preds[1];
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, n, 1, X, pred), da_status_out_of_date);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, n, 1, Xs, preds), da_status_out_of_date);
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, X, pred), da_status_out_of_date);
+    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, Xs, preds), da_status_out_of_date);
 
     da_handle_destroy(&handle_d);
     da_handle_destroy(&handle_s);
@@ -230,14 +232,14 @@ TEST(linmod, incompatibleOptions) {
     da_handle handle_d = nullptr;
 
     EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_d_define_features(handle_d, n, m, Ad, bd), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, n, m, Ad, bd), da_status_success);
     EXPECT_EQ(da_options_set_string(handle_d, "linmod optim method", "QR"),
               da_status_success);
-    EXPECT_EQ(da_linmod_d_select_model(handle_d, linmod_model_logistic),
+    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_logistic),
               da_status_success);
 
     // QR factorization should not be compatible with logistic regression
-    EXPECT_EQ(da_linmod_d_fit(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
     da_handle_destroy(&handle_d);
 }

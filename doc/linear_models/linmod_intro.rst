@@ -156,6 +156,35 @@ where :math:`Q` is an :math:`n_{\text{sample}} \times n_{\text{feat}}` matrix wi
 * Coordinate Descent (``linmod optim method = coord``) is a solver aimed at minimizing nonlinear functions. It is particularly suitable for linear models with an :math:`\ell_1` regularization term (:cite:t:`coord_elastic`).
 
 
+Available outputs
+=================
+
+Once a model is computed, some elements can be retrieved using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`:
+
+* coefficients (:cpp:enum:`da_linmod_coeff`): The optimal coefficients of the fitted model
+* rinfo[100] (:cpp:enum:`da_linmod_rinfo`): a set of values of interest
+   * rinfo[0]: :math:`n_{feat}`, the number of features in the model.
+   * rinfo[1]: :math:`n_{samples}`, the number of samples the model has been trained on.
+   * rinfo[2]: :math:`n_{coef}`, the number of model coefficients.
+   * rinfo[3]: intercept, 1 if an intercept term is present in the model, 0 otherwise.
+   * rinfo[4]: :math:`\alpha`, share of the :math:`\ell_1` term in the regularization.
+   * rinfo[5]: :math:`\lambda`, the magnitude of the regularization term.
+   * rinfo[6-99]: reserved for future use.
+
+
+Typical workflow for linear models
+==================================
+
+The standard way of computing a linear model using AOCL-DA is as follows.
+
+1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
+2. Pass data to the handle using either :cpp:func:`da_linmod_define_features_s` or :cpp:func:`da_linmod_define_features_d`.
+3. Customize the model using :cpp:func:`da_options_set_int`, :cpp:func:`da_options_set_real_d`, :cpp:func:`da_options_set_real_s` and :cpp:func:`da_options_set_string` (see :ref:`below <linmod_options>` for a list of the available options).
+4. Compute the linear mdoel using :cpp:func:`da_linmod_fit_d` or :cpp:func:`da_linmod_fit_s`.
+5. Evaluate the model on new data using :cpp:func:`da_linmod_evaluate_model_d` or :cpp:func:`da_linmod_evaluate_model_s`
+6. Extract results using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`.
+
+
 .. _linmod_options:
 
 Linear Model Options
@@ -167,9 +196,9 @@ Various options can be set to customize the linear models by calling one of thes
 .. csv-table:: CSV file reading options
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
-   "linmod optim method", "string", ":math:`s =` `'auto'`", "Select optimization method to use.", ":math:`s = ` `auto`, `coord`, `lbfgs`, or `qr`"
-   "linmod optim progress factor", "real", ":math:`r = 4.74531e+08`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.",  ":math:`0 \le r`"
-   "linmod optim convergence tol", "real", ":math:`r = 2.10734e-08`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:0 \lt r \lt 1"
+   "linmod optim method", "string", ":math:`s =` `'auto'`", "Select the optimization method to use.", "`s = 'auto', 'coord', 'lbfgs' or 'qr'`"
+   "linmod optim progress factor", "real", ":math:`r = 4.7e08`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.",  ":math:`0 \le r`"
+   "linmod optim convergence tol", "real", ":math:`r = 2.1e-08`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "print options", "string", ":math:`s =` `'no'`", "Print options.", ":math:`s =` `'no'`, or `'yes'`."
    "linmod lambda", "real", ":math:`r = 0`", "Penalty coefficient for the regularization terms :math:`\lambda ( (1-\alpha ) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r`"
    "linmod alpha", "real", ":math:`r = 0`", "Coefficient of alpha in the regularization terms :math:`\lambda ( (1-\alpha) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r \le 1`"

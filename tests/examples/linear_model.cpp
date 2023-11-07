@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -48,10 +48,10 @@ int main() {
     da_handle handle = nullptr;
     da_status status;
     da_handle_init_d(&handle, da_handle_linmod);
-    da_linmod_d_select_model(handle, linmod_model_mse);
-    da_linmod_d_define_features(handle, n, m, Al, bl);
+    da_linmod_select_model_d(handle, linmod_model_mse);
+    da_linmod_define_features_d(handle, n, m, Al, bl);
     // compute regression
-    status = da_linmod_d_fit(handle);
+    status = da_linmod_fit_d(handle);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
         nx = 0; // Query the correct size
@@ -76,10 +76,10 @@ int main() {
     // Initialize the linear regression
     da_handle handle_s = nullptr;
     da_handle_init_s(&handle_s, da_handle_linmod);
-    da_linmod_s_select_model(handle_s, linmod_model_mse);
-    da_linmod_s_define_features(handle_s, n, m, As, bs);
+    da_linmod_select_model_s(handle_s, linmod_model_mse);
+    da_linmod_define_features_s(handle_s, n, m, As, bs);
     // compute regression
-    status = da_linmod_s_fit(handle_s);
+    status = da_linmod_fit_s(handle_s);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
         // status = da_linmod_s_get_coef(handle_s, &nx, xs);

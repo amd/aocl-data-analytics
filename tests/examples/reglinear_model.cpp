@@ -63,8 +63,8 @@ int main(void) {
         da_handle_print_error_message(handle);
         return 1;
     }
-    da_linmod_d_select_model(handle, linmod_model_mse);
-    da_linmod_d_define_features(handle, n, m, Al, bl);
+    da_linmod_select_model_d(handle, linmod_model_mse);
+    da_linmod_define_features_d(handle, m, n, Al, bl);
     da_options_set_int(handle, "linmod intercept", 0);
     da_options_set_real_d(handle, "linmod alpha", 0.0);
     da_options_set_real_d(handle, "linmod lambda", 10.0);
@@ -74,7 +74,7 @@ int main(void) {
     int exit_code = 0;
 
     // Compute Linear Ridge Regression
-    status = da_linmod_d_fit(handle);
+    status = da_linmod_fit_d(handle);
     if (status == da_status_success) {
         std::cout << "Regression computed successfully" << std::endl;
         if (da_handle_get_result_d(handle, da_linmod_coeff, &nx, x) !=

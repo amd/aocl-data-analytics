@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -35,16 +35,16 @@
 /*
  * Linear model elastic net regresion example
  * using the data set from
- * 
+ *
  * EFRON, HASTIE, JOHNSTONE, and TIBSHIRANI (2004).
- * Least angle regression (with discussion). 
+ * Least angle regression (with discussion).
  * Ann. Statist. 32 407–499. MR2060166
  * https://hastie.su.domains/Papers/LARS/data64.txt
- * 
- * The "diabetes data set" consists of 441 observations 
- * and 10 features, while the model chosen is linear and 
+ *
+ * The "diabetes data set" consists of 441 observations
+ * and 10 features, while the model chosen is linear and
  * fitted with both L1 and L2 penalty terms.
- * 
+ *
  * The example showcases how to use datastore framework to
  * extract data, but it can be directly loaded using
  * dense matrices using e.g., da_read_csv_d API.
@@ -134,7 +134,7 @@ int main() {
 
     da_datastore_destroy(&csv);
 
-    /* Note: The linear model iterative coordinate solver expects data to be 
+    /* Note: The linear model iterative coordinate solver expects data to be
      * of the form:
      * norm(features(:,i)) = 1 for all i.
      * mean(features(:,1)) = 0 for all i.
@@ -192,7 +192,7 @@ int main() {
     da_int nx = 0;
     da_handle handle = nullptr;
     da_handle_init_d(&handle, da_handle_linmod);
-    da_linmod_d_select_model(handle, linmod_model_mse);
+    da_linmod_select_model_d(handle, linmod_model_mse);
     da_options_set_real_d(handle, "linmod alpha", 1);
     da_options_set_real_d(handle, "linmod lambda", 88);
     da_options_set_string(handle, "print options", "yes");
@@ -202,9 +202,9 @@ int main() {
     da_options_set_real_d(handle, "linmod optim convergence tol", 1.0e-5);
     da_options_set_real_d(handle, "linmod optim progress factor", 1.0);
 
-    da_linmod_d_define_features(handle, n, m, features.data(), rhs.data());
+    da_linmod_define_features_d(handle, m, n, features.data(), rhs.data());
     // compute regression
-    status = da_linmod_d_fit_start(handle, n + 1, x.data());
+    status = da_linmod_fit_start_d(handle, n + 1, x.data());
     bool ok = false;
     if (status == da_status_success) {
         std::cout << "Regression computed" << std::endl;

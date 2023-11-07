@@ -621,7 +621,9 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
         case optim::solvers::solver_qr:
             // No regularization, standard linear least-squares through QR factorization
-            qr_lsq();
+            status = qr_lsq();
+            if (status != da_status_success)
+                return status; // Error message already loaded 
             break;
 
         case optim::solvers::solver_coord:
