@@ -198,8 +198,6 @@ template <typename T> linear_model<T>::~linear_model() {
     if (opt)
         delete opt;
     if (usrdata) {
-        if (usrdata->y)
-            delete[] usrdata->y;
         delete usrdata;
     }
     if (qr) {

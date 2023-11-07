@@ -44,6 +44,7 @@ template <typename T> struct fit_usrdata {
         if (mod == linmod_model_logistic)
             aux.resize(m);
     };
+    ~fit_usrdata() { delete[] y; };
 };
 
 /* Evaluate feature matrix and store result in (fir_usrdata) usrdata 
@@ -205,7 +206,7 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *usrdata,
         }
     }
 
-    // NOTE: This could be made simpler by using more working memory (nclass-1*m auxiliary vector) 
+    // NOTE: This could be made simpler by using more working memory (nclass-1*m auxiliary vector)
 
     // Add regularization (exclude intercept)
     reggrd(usrdata, data->nfeatures, x, grad);
@@ -272,6 +273,5 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *usrdata, [[maybe_unused]] da_in
 
     return 0;
 }
-
 
 #endif
