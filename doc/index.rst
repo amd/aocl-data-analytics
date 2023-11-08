@@ -80,7 +80,7 @@ toolchainsupport@amd.com.
 
    .. toctree::
       :maxdepth: 1
-      :caption: Internal help:
+      :caption: Internal help
 
       doc_utilities/utils.rst
 

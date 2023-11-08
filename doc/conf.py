@@ -30,8 +30,8 @@
 project = 'AOCL-DA'
 copyright = '2023, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
-version = '0.1.0'
-release = '0.1.0'
+version = '1.0'
+release = '4.2'
 
 
 # -- General configuration ---------------------------------------------------
@@ -41,9 +41,6 @@ bibtex_reference_style = 'author_year'
 breathe_default_project = 'aocl-da'
 
 # -- Option for generating output conditional on cmake INTERNAL_DOC variable --
-
-# include_patterns = ['**/doc/index.rst', '**/doc/linear_models']
-
 exclude_patterns = ['**/doc/trees_forests/df_intro.rst']
 
 # Add any paths that contain templates here, relative to this directory.

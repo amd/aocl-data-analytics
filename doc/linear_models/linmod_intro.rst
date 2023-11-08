@@ -161,8 +161,8 @@ Available outputs
 
 Once a model is computed, some elements can be retrieved using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`:
 
-* coefficients (:cpp:enum:`da_linmod_coeff`): The optimal coefficients of the fitted model
-* rinfo[100] (:cpp:enum:`da_linmod_rinfo`): a set of values of interest
+* coefficients (:cpp:enumerator:`da_linmod_coeff`): The optimal coefficients of the fitted model
+* rinfo[100] (:cpp:enumerator:`da_linmod_rinfo`): a set of values of interest
    * rinfo[0]: :math:`n_{feat}`, the number of features in the model.
    * rinfo[1]: :math:`n_{samples}`, the number of samples the model has been trained on.
    * rinfo[2]: :math:`n_{coef}`, the number of model coefficients.
