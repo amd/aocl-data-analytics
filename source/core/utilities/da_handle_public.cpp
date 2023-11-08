@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "da_error.hpp"
@@ -203,6 +203,12 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
 
+    if (dim == nullptr)
+        return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
+    else if (result == nullptr)
+        return da_error(handle->err, da_status_invalid_input,
+                        "The result array has not been allocated");
+
     // Currently there can only be a SINGLE valid internal handle pointer,
     // so we cycle through them and query to see if the result is
     // provided by it.
@@ -226,6 +232,12 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than float.");
 
+    if (dim == nullptr)
+        return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
+    else if (result == nullptr)
+        return da_error(handle->err, da_status_invalid_input,
+                        "The result array has not been allocated");
+
     // Currently there can only be a SINGLE valid internal handle pointer,
     // so we cycle through them and query to see if the result is
     // provided by it.
@@ -245,6 +257,12 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
     if (!handle)
         return da_status_invalid_pointer;
 
+    if (dim == nullptr)
+        return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
+    else if (result == nullptr)
+        return da_error(handle->err, da_status_invalid_input,
+                        "The result array has not been allocated");
+
     // Currently there can only be a SINGLE valid internal handle pointer,
     // so we cycle through them and query to see if the result is
     // provided by it.
@@ -256,6 +274,7 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
         return handle->pca_d->get_result(query, dim, result);
     else if (handle->pca_s != nullptr)
         return handle->pca_s->get_result(query, dim, result);
+
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
                     "The handle does not have any results to export. Have you "
