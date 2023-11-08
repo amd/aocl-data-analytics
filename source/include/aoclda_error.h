@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef AOCLDA_ERROR_H
@@ -57,11 +57,11 @@ typedef enum da_status_ {
     da_status_invalid_array_dimension, ///< The size of an array was too small
     da_status_unknown_query,    ///< The result queried cannot be found in the handle
     da_status_incorrect_output, ///< Wrong output
-     da_status_no_data, ///< No data was found
+    da_status_no_data,          ///< No data was found
 
     // CSV errors 100-199
-    da_status_file_reading_error = 100, ///< An error occured when reading a CSV file
-    da_status_parsing_error, ///< An error occured when parsing a CSV file into numeric data
+    da_status_file_reading_error = 100, ///< An error occurred when reading a CSV file
+    da_status_parsing_error, ///< An error occurred when parsing a CSV file into numeric data
     da_status_missing_data, ///< The array returned from reading a CSV file contains missing data
 
     // linreg errors 200-299
@@ -76,7 +76,7 @@ typedef enum da_status_ {
 
     // Optimization solvers 500-599
     da_status_optimization_usrstop = 500, ///< User requested to stop optimization process
-    da_status_optimization_num_difficult, ///< Numerical difficulties encoutered during the optimization process
+    da_status_optimization_num_difficult, ///< Numerical difficulties encountered during the optimization process
     da_status_optimization_infeasible, ///< The problem is infeasible, the bounds describe an empty domain
     da_status_optimization_empty_space, ///< No variables are defined in the problem
     da_status_optimization_maxit,       ///< Iteration limit reached without converging

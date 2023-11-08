@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef BASIC_HANDLE_HPP
@@ -31,10 +31,10 @@
 #include "aoclda_result.h"
 
 /*
- * Base handle class (basic_handle) that contains members that 
- * are common for all specialized handles types, pca, linear 
+ * Base handle class (basic_handle) that contains members that
+ * are common for all specialized handles types, pca, linear
  * models, etc.
- * 
+ *
  * This handle is inherited by all specialized (internal) handles.
  */
 template <typename T> class basic_handle {
@@ -43,11 +43,10 @@ template <typename T> class basic_handle {
 
     /*
      * Generic interface to extract all data stored
-     * in handle via the da_get_result_? C API
+     * in handle via the da_get_result_X C API
      */
     virtual da_status get_result(da_result query, da_int *dim, T *result) = 0;
     virtual da_status get_result(da_result query, da_int *dim, da_int *result) = 0;
 
-    // FIXME add err
 };
 #endif
