@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef LINEAR_MODEL_HPP
@@ -62,7 +62,7 @@
  *         and \phi is the linear model e.g. \phi(x) = Ax
  *
  *  * \eta is the regularization term
- * 
+ *
  *  FIXME ADD BOX BOUNDS
  *
  */
@@ -85,7 +85,7 @@ template <typename T> class linear_model : public basic_handle<T> {
      * m: number of data points
      * nclass: number of different classes in the case of linear classification. unused otherwise
      * intercept: controls if the linear regression intercept is to be set
-     * A[m*n]: feature matrix, pointer to user data directly - will not be modified by any function 
+     * A[m*n]: feature matrix, pointer to user data directly - will not be modified by any function
      * b[m]: model response, pointer to user data - will not be modified by any function
      */
     da_int n = 0, m = 0;
@@ -462,12 +462,21 @@ template <typename T>
 da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictions) {
     da_int i;
 
-    if (n != this->n || m <= 0)
-        return da_status_invalid_input;
+    if (n != this->n)
+        return da_error(
+            this->err, da_status_invalid_input,
+            "nt_feat = " + std::to_string(n) +
+                ". it must match the number of features f the computed model: n_feat = " +
+                std::to_string(this->n));
+    if (m <= 0)
+        return da_error(this->err, da_status_invalid_input,
+                        "nt_samples must be positive.");
     if (X == nullptr || predictions == nullptr)
-        return da_status_invalid_pointer;
+        return da_error(this->err, da_status_invalid_input,
+                        "One of Xt or predictions was a null pointer.");
     if (!model_trained)
-        return da_status_out_of_date;
+        return da_error(this->err, da_status_out_of_date,
+                        "The model has not been trained yet");
 
     // X is assumed to be of shape (m,n)
     // b is assumed to be of size m
@@ -623,7 +632,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             // No regularization, standard linear least-squares through QR factorization
             status = qr_lsq();
             if (status != da_status_success)
-                return status; // Error message already loaded 
+                return status; // Error message already loaded
             break;
 
         case optim::solvers::solver_coord:

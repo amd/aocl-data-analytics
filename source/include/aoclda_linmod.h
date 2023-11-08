@@ -51,7 +51,9 @@ typedef enum linmod_model_ {
 
 /** \{
  * @brief Select which linear model to compute.
- * The last suffix of the function name marks the floating point precision on which the handle operates.
+ * @rst
+ * The last suffix of the function name marks the floating point precision on which the handle operates (see :ref:`precision section <da_real_prec>`).
+ * @endrst
  *
  * @rst
  * The model definition can be further enhanced with elements such as a reguarization term by setting up optional parameters.
@@ -71,12 +73,14 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
 
 /** \{
  * @brief Define the data to train a linear model.
- * The last suffix of the function name marks the floating point precision on which the handle operates.
+ * @rst
+ * The last suffix of the function name marks the floating point precision on which the handle operates (see :ref:`precision section <da_real_prec>`).
+ * @endrst
  *
  * Pass pointers to a data matrix @p X containing @p n_samples observations (rows) over @p n_feat features (columns)
  * and a response vector @p y of size @p n_samples.
  *
- * Only the pointers to @p X and @p y are stored, no internal copy is made at this stage.
+ * Only the pointers to @p X and @p y are stored; no internal copy is made.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples the number of observations (rows) of the data matrix @p X. Constraint: @p n_samples @f$\ge@f$ 1.
@@ -108,6 +112,10 @@ da_status da_linmod_define_features_s(da_handle handle, da_int n_samples, da_int
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
  * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
+ * - @ref da_status_incompatible_options - some of the options set are incompatible with the model defined in \p handle.
+ *        You can obtain further information using @ref da_handle_print_error_message.
+ * - @ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - @ref da_status_internal_error - an unexpected error occurred.
  */
 da_status da_linmod_fit_d(da_handle handle);
 da_status da_linmod_fit_s(da_handle handle);
@@ -136,7 +144,7 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int ncoefs, float *coefs);
 /** \} */
 
 /**
- * @brief Evaluate the model previously computed on a new set of data @p X.
+ * @brief Evaluate the model previously computed on a new set of data @p Xt.
  *
  * After a model has been fit using @ref da_linmod_fit_d or @ref da_linmod_fit_s, it can be evaluated on  a new set of data.
  * This function returns the model evaluation in the array @p predictions.
@@ -145,16 +153,21 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int ncoefs, float *coefs);
  * For each data point i, prediction[i] will contain the index of the most likely class according to the model.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
- * @param n_feat number of columns of \p X: the number of features of the data. It must match the number features of the data defined in the \p handle.
- * @param n_samples number of rows of \p X: the number of samples to estimate the model on.
- * @param X the @p n_samples @f$\times@f$ @p n_feat data matrix to evaluate the model on, in column major format.
+ * @param nt_feat number of columns of \p Xt: the number of features of the test data. It must match the number features of the data defined in the \p handle.
+ * @param nt_samples number of rows of \p Xt: the number of samples to estimate the model on.
+ * @param Xt the @p nt_samples @f$\times@f$ @p nt_feat data matrix to evaluate the model on, in column major format.
  * @param predictions
  * @return da_status
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
+ * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
+ * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
+ * - @ref da_status_out_of_date - the model has not been trained yet.
  */
-da_status da_linmod_evaluate_model_d(da_handle handle, da_int n_samples, da_int n_feat,
-                                     double *X, double *predictions);
-da_status da_linmod_evaluate_model_s(da_handle handle, da_int n_samples, da_int n_feat,
-                                     float *X, float *predictions);
+da_status da_linmod_evaluate_model_d(da_handle handle, da_int nt_samples, da_int nt_feat,
+                                     double *Xt, double *predictions);
+da_status da_linmod_evaluate_model_s(da_handle handle, da_int nt_samples, da_int nt_feat,
+                                     float *Xt, float *predictions);
 /** \} */
 
 #ifdef __cplusplus

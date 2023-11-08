@@ -27,30 +27,30 @@
 
 .. _chapter_linmod:
 
-Linear Models
+Linear models
 *************
 
-The topic of Linear Models encompasses a range of commonly used statistical models and fitting algorithms, including
-Multiple Linear Regression, Logistic Regression, Polynomial Regression, and Nonparametric Regression.
+The topic of linear models encompasses a range of commonly used statistical models and fitting algorithms, including
+Multiple linear regression, logistic regression, polynomial regression, and nonparametric regression.
 
-The general form of a Linear Model fitting problem is as follows:
+The general form of a linear model fitting problem is as follows:
 
 .. math::
 
     \min_{\beta}\left[ C_{\theta}\left( y, g^{-1}(\ \beta \, \phi(X)\ ) \right) \right],
 
-where :math:`X` is an array of :math:`n_{\text{sample}}` observations with :math:`n_{\text{feat}}` features, :math:`y` is an array of :math:`n_{\text{sample}}` responses
+where :math:`X` is an array of :math:`n_{\text{samples}}` observations with :math:`n_{\text{feat}}` features, :math:`y` is an array of :math:`n_{\text{samples}}` responses
 / labels, :math:`\phi` is a set of (possibly nonlinear) basis functions, :math:`\beta` is a set of weights /
 coefficients, :math:`g^{-1}` is a (possibly nonlinear) activation / link function, and :math:`C_{\theta}` is a cost /
 error function, which may depend on a set of (fixed) hyperparameters, :math:`\theta`.
 
-Most Linear Models satisfy a form where the cost function can be split into a Loss function (which measures quality
+Most linear models satisfy a form where the cost function can be split into a Loss function (which measures quality
 of fit to the data) and a penalty term (which regularizes the model parameters).  Regularization is also referred to as
 shrinkage because it tends to shrink the size of the parameter values and/or shrink the number of non-zero parameters.
 
 The Loss function is typically a function of the responses or labels (:math:`y`), the features (:math:`X`), and the model
 parameters (:math:`\beta`), whereas the penalty term is typically only a function of the 1-norm and/or the 2-norm of the
-model parameters (:math:`\beta`).  Such Linear Models are often referred to as Elastic-Nets.
+model parameters (:math:`\beta`).  Such linear models are often referred to as Elastic-Nets.
 
 Typically, in addition to the conditions above, :math:`\phi` and :math:`g^{-1}` are identity mappings and the general form
 for the cost function becomes,
@@ -63,15 +63,15 @@ for the cost function becomes,
 where :math:`0\le\lambda, 0\le\alpha\le1` are hyperparameters, :math:`\lVert \beta \rVert_1` is the 1-norm
 and :math:`\lVert \beta \rVert_2` is the 2-norm of :math:`\beta`, while :math:`\lambda` sets the magnitude of the overall penalization,
 :math:`\alpha` distributes its share across the :math:`\ell_1` and :math:`\ell_2` regularization terms. :math:`L` is known as the
-*Loss function*. Linear Models
-where :math:`\alpha=0` are called Ridge Regression, conversely, when :math:`\alpha=1` the model is called Lasso.
+*Loss function*. Linear models
+where :math:`\alpha=0` are called Ridge Regression. Conversely, when :math:`\alpha=1` the model is called Lasso.
 
 **Intercept**
 
 
-If a Linear Model contains an intercept term, the parameter vector :math:`\beta` has dimension :math:`n_{\text{feat}}+1` and the
+If a linear model contains an intercept term, the parameter vector :math:`\beta` has dimension :math:`n_{\text{feat}}+1` and the
 observations :math:`X_i` are extended with a constant of :math:`1`.  For example, if there is a single feature and the
-Linear Model has an intercept term the Mean Square Error Loss cost function becomes,
+linear model has an intercept term the Mean Square Error Loss cost function becomes,
 
 .. math::
 
@@ -89,8 +89,8 @@ Models can be classified by their loss function, the following subsections prese
 Mean Square Error
 -----------------
 
-This is the most basic model and its use is notoriously widespread across many applications.
-The cost function for a Linear Regression Model where the fit (loss) is measured by the Mean Square Error (MSE) is,
+This is the most basic model and its use is widespread across many applications.
+The cost function for a linear regression Model where the fit (loss) is measured by the Mean Square Error (MSE) is,
 
 .. math::
 
@@ -99,19 +99,19 @@ The cost function for a Linear Regression Model where the fit (loss) is measured
 
 where :math:`X_i` represents a single (multi-dimensional) observation, i.e., a row in a table of observations.
 
-Logistic Regression
+logistic regression
 -------------------
 
-Logistic Regression is a type of supervised classification model aiming at assigning labels.
+logistic regression is a type of supervised classification model aiming at assigning labels.
 In AOCL-DA, the labels are expected to be provided in a categorical response variable, :math:`y`, encoded by :math:`\{0, 1, 2, \ldots, K-1 \}`.
 The fit is based on maximizing the log-likelihood (loss function) of the probabilities that each observation :math:`i` belongs to a given class,
-inturn defined by,
+in turn defined by,
 
 .. math::
    p(y_i=k\,|\,X_i, \beta) = \frac{ \exp(\beta_k X_i) }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }, \text{ for } 0 \leq k < K-1,\\
    p(y_i=K-1\,|\,X_i, \beta) = \frac{ 1 }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }.
 
-As an example, if :math:`K=2` classes, the loss function simplifies to,
+As an example, if :math:`K=2`, the loss function simplifies to,
 
 .. math::
 
@@ -141,13 +141,13 @@ Different methods are available to compute the models. The method is chosen auto
 
 **Direct solvers**
 
-* QR (``linmod optim method = QR``). The standard MSE linear regression model can be computed using the QR factorization of the data matcrix if no regularization term is required.
+* QR (``linmod optim method = QR``). The standard MSE linear regression model can be computed using the QR factorization of the data matrix if no regularization term is required.
 
 .. math::
 
    X = QR,
 
-where :math:`Q` is an :math:`n_{\text{sample}} \times n_{\text{feat}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\text{feat}}\times n_{\text{feat}}` triangular matrix.
+where :math:`Q` is an :math:`n_{\text{samples}} \times n_{\text{feat}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\text{feat}}\times n_{\text{feat}}` triangular matrix.
 
 **Iterative solvers**
 
@@ -191,14 +191,14 @@ Linear Model Options
 ====================
 
 Various options can be set to customize the linear models by calling one of these
-:ref:`functions <api_handle_options>`. The following table details the available options
+:ref:`functions <api_handle_options>`. The following table details the available options, where :math:`\epsilon` represents the machine precision.
 
-.. csv-table:: CSV file reading options
+.. csv-table:: Linear models options
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
    "linmod optim method", "string", ":math:`s =` `'auto'`", "Select the optimization method to use.", "`s = 'auto', 'coord', 'lbfgs' or 'qr'`"
-   "linmod optim progress factor", "real", ":math:`r = 4.7e08`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.",  ":math:`0 \le r`"
-   "linmod optim convergence tol", "real", ":math:`r = 2.1e-08`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
+   "linmod optim progress factor", "real", ":math:`r = \frac{10}{\sqrt{2\epsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.",  ":math:`0 \le r`"
+   "linmod optim convergence tol", "real", ":math:`r = \sqrt{2\epsilon}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "print options", "string", ":math:`s =` `'no'`", "Print options.", ":math:`s =` `'no'`, or `'yes'`."
    "linmod lambda", "real", ":math:`r = 0`", "Penalty coefficient for the regularization terms :math:`\lambda ( (1-\alpha ) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r`"
    "linmod alpha", "real", ":math:`r = 0`", "Coefficient of alpha in the regularization terms :math:`\lambda ( (1-\alpha) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r \le 1`"
@@ -210,7 +210,7 @@ Various options can be set to customize the linear models by calling one of thes
 Further Reading
 ===============
 
-An introduction to Linear Models for Regression and Classification can be found in Chapters 3, 4 of :cite:t:`bishop`, or
+An introduction to linear models for Regression and Classification can be found in Chapters 3, 4 of :cite:t:`bishop`, or
 in Chapters 3-5 of :cite:t:`hastie`.
 
 .. toctree::

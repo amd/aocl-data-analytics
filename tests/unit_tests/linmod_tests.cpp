@@ -168,18 +168,18 @@ TEST(linmod, invalidInput) {
     double pred[1];
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, 3, X, pred), da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, nullptr, pred),
-              da_status_invalid_pointer);
+              da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, X, nullptr),
-              da_status_invalid_pointer);
+              da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 0, n, X, pred), da_status_invalid_input);
     float Xs[2] = {1., 2.};
     float preds[1];
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, 3, Xs, preds),
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, nullptr, preds),
-              da_status_invalid_pointer);
+              da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, Xs, nullptr),
-              da_status_invalid_pointer);
+              da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 0, n, Xs, preds),
               da_status_invalid_input);
 
