@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,9 +22,8 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
 
-
+:orphan:
 
 Decision Trees and Random Forests
 *********************************
@@ -34,8 +33,18 @@ make predictions based on the label values in each region.
 
 An introduction to Decision Trees and to Random Forests can be found in Chapters 9, 15 of :cite:t:`hastie`.
 
+Release 4.2 Status
+------------------
+
+* Decision Tree functionality has a working example - ``tests/examples/decision_tree_ex.cpp``.
+* Decision Tree functionality still needs unit tests (not yet started).
+* Random Sampling primitives have been written for Decision Forest fuctionality -
+  ``tests/unit_tests/decision_forest_tests.cpp``.  Testing of these primitives is in progress (not yet complete).
+* Development of a working Decision Forest example using the Decision Tree functionality and the Random Sampling
+  primitives is in progress (not yet complete).
+
 .. toctree::
     :maxdepth: 1
     :hidden:
-    
+
     decision_tree_api

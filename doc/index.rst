@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 .. AOCL-DA documentation master file
@@ -34,25 +34,25 @@ The AOCL Data Analytics Library is a software library providing optimized buildi
 It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
 It is designed with a focus on usability, reliability and performance.
 
-he AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing 
-optimized building blocks for data analysis. It is written with a C-compatible 
-interface to make it as seamless as possible to integrate with the library from 
-whichever programming language you are using. This documentation is also available 
+he AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing
+optimized building blocks for data analysis. It is written with a C-compatible
+interface to make it as seamless as possible to integrate with the library from
+whichever programming language you are using. This documentation is also available
 online in the form of web pages.
 
 The intended workflow for using the library is as follows:
 
  - load data from memory by reading CSV files or using the in-built da_datastore object
- 
+
  - preprocess the data by removing missing values, standardizing, and selecting certain subsets of the data, before extracting contiguous arrays of data from the da_datastore objects
-  
+
  -  data processing (e.g. principal component analysis, linear model fitting, etc.)
 
 
 C++ example programs can be found in the ``examples`` folder of your installation.
 
 
-AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on 
+AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
 toolchainsupport@amd.com.
 
 
@@ -74,7 +74,7 @@ toolchainsupport@amd.com.
    basic_statistics/basic_stats_intro
    factorization/factorization_intro
    linear_models/linmod_intro
-   trees_forests/df_intro
+..  trees_forests/df_intro
 
 .. only:: internal
 
