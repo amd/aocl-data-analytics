@@ -26,8 +26,8 @@
  */
 
 #include "aoclda.h"
-#include <iostream>
 #include <assert.h>
+#include <iostream>
 
 int main() {
 
@@ -47,22 +47,32 @@ int main() {
     // Initialize the linear regression
     da_handle handle = nullptr;
     da_status status;
-    da_handle_init_d(&handle, da_handle_linmod);
-    da_linmod_select_model_d(handle, linmod_model_mse);
-    da_linmod_define_features_d(handle, n, m, Al, bl);
+    bool pass = true;
+    pass = pass && da_handle_init_d(&handle, da_handle_linmod) == da_status_success;
+    pass =
+        pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
+    pass = pass && da_linmod_define_features_d(handle, m, n, Al, bl) == da_status_success;
+    if (!pass) {
+        std::cout << "Something unexpected happened in the model definition\n";
+        da_handle_destroy(&handle);
+        return 1;
+    }
+
     // compute regression
     status = da_linmod_fit_d(handle);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
         nx = 0; // Query the correct size
         da_handle_get_result_d(handle, da_linmod_coeff, &nx, x);
-        assert(nx==2);
+        assert(nx == 2);
         da_handle_get_result_d(handle, da_linmod_coeff, &nx, x);
         std::cout << "Coefficients: " << x[0] << " " << x[1] << std::endl;
         std::cout << "(Expected   : " << 0.199256 << " " << 0.130354 << ")" << std::endl;
     } else {
         std::cout << "Something wrong happened during MSE regression. Terminating"
                   << std::endl;
+        da_handle_destroy(&handle);
+        return 1;
     }
     std::cout << "----------------------------------------" << std::endl;
 
@@ -75,9 +85,19 @@ int main() {
     std::cout.precision(2);
     // Initialize the linear regression
     da_handle handle_s = nullptr;
-    da_handle_init_s(&handle_s, da_handle_linmod);
-    da_linmod_select_model_s(handle_s, linmod_model_mse);
-    da_linmod_define_features_s(handle_s, n, m, As, bs);
+    pass = true;
+    pass = pass && da_handle_init_s(&handle_s, da_handle_linmod) == da_status_success;
+    pass =
+        pass && da_linmod_select_model_s(handle_s, linmod_model_mse) == da_status_success;
+    pass =
+        pass && da_linmod_define_features_s(handle_s, m, n, As, bs) == da_status_success;
+    if (!pass) {
+        std::cout << "Something unexpected happened in the model definition\n";
+        da_handle_destroy(&handle);
+        da_handle_destroy(&handle_s);
+        return 1;
+    }
+
     // compute regression
     status = da_linmod_fit_s(handle_s);
     if (status == da_status_success) {
@@ -85,13 +105,16 @@ int main() {
         // status = da_linmod_s_get_coef(handle_s, &nx, xs);
         nx = 0; // Query the correct size
         da_handle_get_result_s(handle_s, da_linmod_coeff, &nx, xs);
-        assert(nx==2);
+        assert(nx == 2);
         da_handle_get_result_s(handle_s, da_linmod_coeff, &nx, xs);
         std::cout << "Coefficients: " << xs[0] << " " << xs[1] << std::endl;
         std::cout << "(Expected   : " << 0.20 << " " << 0.13 << ")" << std::endl;
     } else {
         std::cout << "Something wrong happened during MSE regression. Terminating"
                   << std::endl;
+        da_handle_destroy(&handle);
+        da_handle_destroy(&handle_s);
+        return 1;
     }
     std::cout << "----------------------------------------" << std::endl;
 

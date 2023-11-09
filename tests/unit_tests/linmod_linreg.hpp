@@ -147,6 +147,23 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         free(coef_exp);
     }
 
+    // Check that rinfo contains the correct values
+    da_int n_rinfo = 100;
+    T rinfo[100];
+    T rinfo_exp[100];
+    for (da_int i = 0; i < 100; i++)
+        rinfo_exp[i] = (T)0.0;
+    rinfo_exp[0] = (T)(ncols - 1);
+    rinfo_exp[1] = (T)nrows;
+    rinfo_exp[2] = intercept ? (T)(ncols - 1) : ncols;
+    rinfo_exp[3] = intercept ? (T)1 : (T)0;
+    EXPECT_EQ(da_options_get_real(linmod_handle, "linmod alpha", &rinfo_exp[4]),
+              da_status_success);
+    EXPECT_EQ(da_options_get_real(linmod_handle, "linmod lambda", &rinfo_exp[4]),
+              da_status_success);
+    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &n_rinfo, rinfo),
+              da_status_success);
+
     //////////////
     // Free memory
     //////////////

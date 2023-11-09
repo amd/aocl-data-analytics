@@ -95,6 +95,12 @@ inline da_status da_options_set_real<double>(da_handle handle, const char *optio
                                              double value) {
     return da_options_set_real_d(handle, option, value);
 }
+inline da_status da_options_get_real(da_handle handle, const char *option, double *val) {
+    return da_options_get_real_d(handle, option, val);
+}
+inline da_status da_options_get_real(da_handle handle, const char *option, float *val) {
+    return da_options_get_real_s(handle, option, val);
+}
 
 /* FIXME The tests should be able to include directly read_csv.hpp
  * This is a workaround for now
