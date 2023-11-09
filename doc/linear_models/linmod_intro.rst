@@ -99,10 +99,10 @@ The cost function for a linear regression Model where the fit (loss) is measured
 
 where :math:`X_i` represents a single (multi-dimensional) observation, i.e., a row in a table of observations.
 
-logistic regression
+Logistic regression
 -------------------
 
-logistic regression is a type of supervised classification model aiming at assigning labels.
+Logistic regression is a type of supervised classification model aiming at assigning labels.
 In AOCL-DA, the labels are expected to be provided in a categorical response variable, :math:`y`, encoded by :math:`\{0, 1, 2, \ldots, K-1 \}`.
 The fit is based on maximizing the log-likelihood (loss function) of the probabilities that each observation :math:`i` belongs to a given class,
 in turn defined by,
@@ -122,8 +122,8 @@ penalty term to the cost function.
 
 .. only:: internal
 
-    Extensions [Internal]
-    =====================
+    Extensions
+    ==========
 
     Beyond MSE regression, ridge regression, the Lasso, and logistic regression, there are other classes of Linear
     Model which are not currently supported by AOCL-DA.  This includes,
@@ -153,7 +153,8 @@ where :math:`Q` is an :math:`n_{\text{samples}} \times n_{\text{feat}}` matrix w
 
 * L-BFGS-B (``linmod optim method = lbfgs``) is a solver aimed at minimizing smooth nonlinear functions (:cite:t:`lbfgsb`). It can be used to compute both MSE and logistic models with or without :math:`\ell_2` regularization. It is not suitable when an :math:`\ell_1` regularization term is required.
 
-* Coordinate Descent (``linmod optim method = coord``) is a solver aimed at minimizing nonlinear functions. It is particularly suitable for linear models with an :math:`\ell_1` regularization term (:cite:t:`coord_elastic`).
+* Coordinate Descent (``linmod optim method = coord``) is a solver aimed at minimizing nonlinear functions.
+  It is particularly suitable for linear models with an :math:`\ell_1` regularization term and even Elastic Nets (:cite:t:`coord_elastic`).
 
 
 Available outputs
@@ -194,7 +195,7 @@ Various options can be set to customize the linear models by calling one of thes
 :ref:`functions <api_handle_options>`. The following table details the available options, where :math:`\epsilon` represents the machine precision.
 
 .. csv-table:: Linear models options
-   :header: "Option Name", "Type", "Default", "Description", "Constraints"
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
 
    "linmod optim method", "string", ":math:`s =` `'auto'`", "Select the optimization method to use.", "`s = 'auto', 'coord', 'lbfgs' or 'qr'`"
    "linmod optim progress factor", "real", ":math:`r = \frac{10}{\sqrt{2\epsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.",  ":math:`0 \le r`"

@@ -106,33 +106,21 @@ int main() {
     }
 
     // extract the 10 features into a dense matrix
-    status = da_data_select_columns(csv, "features", 0, n - 1);
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
-    status = da_data_extract_selection_real_d(csv, "features", features.data(), m);
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
+    bool pass = true;
+    pass = pass && da_data_select_columns(csv, "features", 0, n - 1) == da_status_success;
+    pass = pass && da_data_extract_selection_real_d(csv, "features", features.data(),
+                                                    m) == da_status_success;
     // extract response variable
-    status = da_data_select_columns(csv, "response", rhs_pos, rhs_pos);
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
-    status = da_data_extract_selection_real_d(csv, "response", rhs.data(), m);
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
-
+    pass = pass &&
+           da_data_select_columns(csv, "response", rhs_pos, rhs_pos) == da_status_success;
+    pass = pass && da_data_extract_selection_real_d(csv, "response", rhs.data(), m) ==
+                       da_status_success;
     da_datastore_destroy(&csv);
+    if (!pass) {
+        std::cout
+            << "Unexpected error in the feature and response matrices extraction.\n";
+        return 1;
+    }
 
     /* Note: The linear model iterative coordinate solver expects data to be
      * of the form:
@@ -142,67 +130,51 @@ int main() {
      */
 
     // estimate mean and variance per each feature
+    pass = true;
     std::vector<double> means(n), scale(n);
-    status = da_mean_d(da_axis_col, m, n, features.data(), m, means.data());
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
-    status =
-        da_standardize_d(da_axis_col, m, n, features.data(), m, means.data(), nullptr);
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
+    pass = pass && da_mean_d(da_axis_col, m, n, features.data(), m, means.data()) ==
+                       da_status_success;
+    pass = pass && da_standardize_d(da_axis_col, m, n, features.data(), m, means.data(),
+                                    nullptr) == da_status_success;
     std::vector<double> tmp(n);
-    status =
-        da_variance_d(da_axis_col, m, n, features.data(), m, tmp.data(), scale.data());
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
+    pass = pass && da_variance_d(da_axis_col, m, n, features.data(), m, tmp.data(),
+                                 scale.data()) == da_status_success;
     for (size_t i = 0; i < scale.size(); i++)
         scale[i] = std::sqrt(m * scale[i]); // use variance to scale vector length
-    status =
-        da_standardize_d(da_axis_col, m, n, features.data(), m, nullptr, scale.data());
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
+    pass = pass && da_standardize_d(da_axis_col, m, n, features.data(), m, nullptr,
+                                    scale.data()) == da_status_success;
 
     double rhs_mean;
-    status = da_mean_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean);
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
-        return 1;
-    }
-    status = da_standardize_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean, nullptr);
-    if (status != da_status_success) {
-        std::cout << "Unexpected status: " << status << " (expecting 0) on line "
-                  << __LINE__ << std::endl;
+    pass = pass &&
+           da_mean_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean) == da_status_success;
+    pass = pass && da_standardize_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean,
+                                    nullptr) == da_status_success;
+    if (!pass) {
+        std::cout << "Unexpected error in the data standardization.\n";
         return 1;
     }
 
     // initialize the linear regression
+    pass = true;
     da_int nx = 0;
     da_handle handle = nullptr;
-    da_handle_init_d(&handle, da_handle_linmod);
-    da_linmod_select_model_d(handle, linmod_model_mse);
-    da_options_set_real_d(handle, "linmod alpha", 1);
-    da_options_set_real_d(handle, "linmod lambda", 88);
-    da_options_set_string(handle, "print options", "yes");
-    da_options_set_int(handle, "linmod intercept", 0);
-    da_options_set_int(handle, "print level", 2);
-    da_options_set_int(handle, "linmod optim iteration limit", 35);
-    da_options_set_real_d(handle, "linmod optim convergence tol", 1.0e-5);
-    da_options_set_real_d(handle, "linmod optim progress factor", 1.0);
+    pass = pass && da_handle_init_d(&handle, da_handle_linmod) == da_status_success;
+    pass = pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "linmod alpha", 1) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "linmod lambda", 88) == da_status_success;
+    pass = pass && da_options_set_string(handle, "print options", "yes") == da_status_success;
+    pass = pass && da_options_set_int(handle, "linmod intercept", 0) == da_status_success;
+    pass = pass && da_options_set_int(handle, "print level", 2) == da_status_success;
+    pass = pass && da_options_set_int(handle, "linmod optim iteration limit", 35) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "linmod optim convergence tol", 1.0e-5) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "linmod optim progress factor", 1.0) == da_status_success;
+    pass = pass && da_linmod_define_features_d(handle, m, n, features.data(), rhs.data()) == da_status_success;
+    if (!pass) {
+        std::cout << "Unexpected error in the model definition.\n";
+        da_handle_destroy(&handle);
+        return 1;
+    }
 
-    da_linmod_define_features_d(handle, m, n, features.data(), rhs.data());
     // compute regression
     status = da_linmod_fit_start_d(handle, n + 1, x.data());
     bool ok = false;

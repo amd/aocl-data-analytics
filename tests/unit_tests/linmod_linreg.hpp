@@ -75,13 +75,6 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
               da_status_success);
     bool intercept = (bool)intercept_int;
 
-    // No regularisation
-    T alpha = 0, lambda = 0;
-    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod alpha", alpha),
-              da_status_success);
-    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod lambda", lambda),
-              da_status_success);
-
     ///////////////
     // Get the data
     ///////////////

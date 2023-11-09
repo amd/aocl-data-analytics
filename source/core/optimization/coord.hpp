@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef COORD_HPP
@@ -32,6 +32,7 @@
 #include "aoclda_result.h"
 #include "da_error.hpp"
 #include "info.hpp"
+#include "linmod_nln_optim.hpp"
 #include "options.hpp"
 #include <cmath>
 #include <iomanip>
@@ -43,9 +44,22 @@
 #undef min
 #define HDRCNT 30 // how frequent to print iteration banner
 
+// LCOV_EXCL_START
+// Excluding bound constraint class, this feature is for
+// future use once bounds are supported in Linear Models
 namespace constraints {
 enum bound_t { none = 0, lower = 1, both = 2, upper = 3 };
 
+/** Class for Constraint Bounds
+  *  ===========================
+  * if constrained = false
+  *  * btyp = not allocated
+  *  * lptr and uptr and not set
+  * if constrained = true
+  *  * vector btyp(n) = {none|lower|upper|both}
+  *  * lptr => user l (readonly)
+  *  * uptr => user u (readonly)
+  */
 template <typename T> class bound_constr {
 
   public:
@@ -185,54 +199,9 @@ template <typename T> class bound_constr {
     }
 };
 } // namespace constraints
+// LCOV_EXCL_STOP
 
 namespace coord {
-
-/**
- * 
- * COORD Coordinate Descent solver for Generalized Linear Models with Elastic Net
- * 
- * Problem to solve is
- *   min f(x) subject to l <= x <= u
- * x \in R^n
- * f(x) should be C1 inside the bounding box
- * The solver requires a user call-back that specifies the next iterate for a specific coordinate, say k \in {1..n},
- * and satisfies \nabla x_k f(x) = 0, that is, the next iterate x_k minimizes f with respect to the k-th coordinate.
- */
-
-/* Internal notes
- *
- * Bounds
- * ======
- * After check_bounds
- * if constrained = false
- *  * btyp = not allocated
- *  * lptr and uptr and not set
- * if constrained = true
- *  * vector btyp(n) = {none|lower|upper|both}
- *  * lptr => user l (readonly)
- *  * uptr => user u (readonly)
- */
-
-/* COORD Forward Communication <templated>
- * This is the main entry point for the solver
- * It expects to have coord_data already initialized and
- * all the rest of input to have been validated.
- * 
- * This solver assumes that the data matrix is standardized, that is
- * Standardize so for each column j = 1:n we have
- *   zero-mean, and
- *   sum xij^2 = 1, i=1:m
- *
- * TODO
- * Coord solver
- * ============
- * - [ ] Recovery, restore last iterate and exit.
- * - [ ] Progress tolerance check.
- * - [ ] Add active constraint logic (ledger).
- * - [ ] Test the box bounds.
- * - [ ] Add spare matrix evaluation. PAPER! We have a POC in the octave file
- */
 
 enum solver_tasks { START = 1, NEWX = 2, EVAL = 3, STOP = 4 };
 
@@ -242,6 +211,18 @@ da_status coord_rcomm(da_int n, std::vector<T> &x, constraints::bound_constr<T> 
                       da_int &iter, T &inorm, da_int &action, da_errors::da_error_t &err,
                       std::vector<T> &w, std::vector<uint32_t> &iw);
 
+/** Coordinate Descent Method - Forward Communication <templated>
+ *
+ * COORD Coordinate Descent solver for Generalized Linear Models with Elastic Net
+ *
+ * Problem to solve is
+ *           min f(x) subject to l <= x <= u
+ *           x \in R^n
+ * f(x) should be C1 inside the bounding box
+ * The solver requires a user call-back that specifies the next iterate for a specific coordinate, say k \in {1..n},
+ * and satisfies \nabla x_k f(x) = 0, that is, the next iterate x_k minimizes f with respect to the k-th coordinate.
+ * Regularization is taken care implicitly in f(x)
+ */
 template <typename T>
 da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 std::vector<T> &l, std::vector<T> &u, std::vector<T> &info,
@@ -249,48 +230,110 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 da_errors::da_error_t &err) {
 
     if (!stepfun)
-        return da_error(
-            &err, da_status_invalid_pointer,
-            "Solver requires a valid pointer to the step function call-back.");
+        return da_error(&err, da_status_invalid_pointer,
+                        "Solver requires a valid pointer to the step function "
+                        "call-back."); // LCOV_EXCL_LINE
     T bigbnd;
     if (opts.get("infinite bound size", bigbnd))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <infinite bound size>.");
+        return da_error(
+            &err, da_status_internal_error,
+            "expected option not found: <infinite bound size>."); // LCOV_EXCL_LINE
     T tol;
     if (opts.get("coord convergence tol", tol))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <coord convergence tol>.");
-    T factr;
+        return da_error(
+            &err, da_status_internal_error,
+            "expected option not found: <coord convergence tol>."); // LCOV_EXCL_LINE
+    T factr; // FIXME currently not used
     if (opts.get("coord progress factor", factr))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <coord progress factor>.");
+        return da_error(
+            &err, da_status_internal_error,
+            "expected option not found: <coord progress factor>."); // LCOV_EXCL_LINE
     T maxtime;
     if (opts.get("time limit", maxtime))
         return da_error(&err, da_status_internal_error,
-                        "expected option not found: <time limit>.");
+                        "expected option not found: <time limit>."); // LCOV_EXCL_LINE
     da_int prnlvl;
     if (opts.get("print level", prnlvl))
         return da_error(&err, da_status_internal_error,
-                        "expected option not found: <print level>.");
+                        "expected option not found: <print level>."); // LCOV_EXCL_LINE
     da_int maxit;
     if (opts.get("coord iteration limit", maxit))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <coord iteration limit>.");
+        return da_error(
+            &err, da_status_internal_error,
+            "expected option not found: <coord iteration limit>."); // LCOV_EXCL_LINE
     da_int mon = 0;
     if (monit) // monitor provided
         if (opts.get("monitoring frequency", mon))
-            return da_error(&err, da_status_internal_error,
-                            "expected option not found: <monitoring frequency>.");
+            return da_error(
+                &err, da_status_internal_error,
+                "expected option not found: <monitoring frequency>."); // LCOV_EXCL_LINE
+
+    // Active-set ledger
+    // =================
+
+    // tolerance to consider skipping the coordinate
+    T skiptol;
+    if (opts.get("coord skip tol", skiptol))
+        return da_error(
+            &err, da_status_internal_error,
+            "expected option not found: <coord skip tolerance>."); // LCOV_EXCL_LINE
+    // minimum times a coordinate change is smaller than skiptol to start skipping
+    // needs to be at least 1.
+    da_int skipmin;
+    if (opts.get("coord skip min", skipmin))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: <coord skip min>."); // LCOV_EXCL_LINE
+
+    // initial max times a coordinate can be skipped after this the coordinate is checked
+    // expected to be greater that skipmin+3
+    da_int skipmax_reset;
+    if (opts.get("coord skip max", skipmax_reset))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: <coord skip max>."); // LCOV_EXCL_LINE
+    if (skipmax_reset != std::max(skipmin + 3, skipmax_reset)) {
+        skipmax_reset = std::max(skipmin + 3, skipmax_reset);
+        opts.set("coord skip max", skipmax_reset, da_options::solver);
+    }
+
+    // Restart (force expensive iteration every <restart>)
+    da_int restart;
+    if (opts.get("coord restart", restart))
+        return da_error(&err, da_status_internal_error,
+                        "expected option not found: <coord restart>."); // LCOV_EXCL_LINE
 
     if (n <= 0) {
         return da_error(&err, da_status_invalid_input,
-                        "Number of variables needs to be positive.");
+                        "Number of variables needs to be positive."); // LCOV_EXCL_LINE
     }
 
     if (x.size() != (size_t)n) {
         return da_error(&err, da_status_invalid_input,
-                        "Vector x needs to be of size n=" + std::to_string(n) + ".");
+                        "Vector x needs to be of size n=" + std::to_string(n) +
+                            "."); // LCOV_EXCL_LINE
     }
+
+    // Work space
+    std::vector<T> rw(10, 0);
+    std::vector<size_t> iw;
+    try {
+        iw.resize(2 * n + 10);
+    } catch (std::bad_alloc const &) {
+        return da_error(
+            &err, da_status_memory_error,
+            "Could not allocate work space for the coord solver"); // LCOV_EXCL_LINE
+    }
+
+    // Copy params into workspace
+    iw[0] = restart;
+    iw[1] = skipmin;
+    iw[2] = skipmax_reset;
+    iw[3] = true;
+    iw[4] = 0;
+    rw[0] = skiptol;
+    rw[1] = 0;
+    rw[2] = 0;
+    rw[3] = 0;
+    rw[4] = 0;
 
     da_status status;
     constraints::bound_constr<T> bc;
@@ -300,9 +343,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     if (status != da_status_success)
         return status;
 
-    // Work vectors
-    std::vector<uint32_t> iw;
-    std::vector<T> w;
+    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
 
     // info
     info.resize(optim::info_number);
@@ -313,7 +354,13 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     T *time = &info[optim::info_t::info_time];
     T newxk, inorm;
     da_int k, action;
-    size_t hdr = 0, fcnt = 0;
+    size_t hdr = 0, fcnt = 0, lowrk = 0;
+
+    // Convenience pointers
+    size_t *cheapk = nullptr;
+    size_t *skipk = nullptr;
+    size_t *skipmaxk = nullptr;
+    size_t *flags = nullptr;
 
     solver_tasks itask = START;
 
@@ -321,42 +368,95 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
 
     if (prnlvl >= 5) {
         std::cout << "Initial coefficients:" << std::endl;
-        for (da_int i = 0; i < n; i++) {
+        for (da_int i = 0; i < n; ++i) {
             std::cout << " x[" << i << "] = " << x[i] << std::endl;
         }
     }
 
     while (itask == NEWX || itask == START || itask == EVAL) {
-        coord_rcomm<T>(n, x, bc, factr, tol, itask, k, newxk, iter, inorm, action, err, w, iw);
+        coord_rcomm<T>(n, x, bc, factr, tol, itask, k, newxk, iter, inorm, action, err,
+                       rw, iw);
 
         switch (itask) {
         case EVAL: // Compute objective and step-length from current X
-            // This solver does not have recovery, stop
-            // FIXME-FUTURE: restore last valid x (and stats?)
-            // FIXME: action > 0 => full eval action < 0 low rank update,
-            // action = 0 no feature matrix eval, just step calculation
+            if (action > 0)
+                fcnt++;
+            else if (action < 0) {
+                lowrk++;
+                data->aux[data->m] = rw[5]; // kdiff
+            }
             if (stepfun(n, &x[0], &newxk, k, f, usrdata, action) != 0) {
-                // step could not be evaluated?
+                // This solver does not have recovery, stop
+                // FIXME restore last valid x (and stats?)
                 return da_warn(&err, da_status_optimization_num_difficult,
                                "Could not evaluate step at current point.");
             }
-            if (action)
-                fcnt++;
-            // FIXME
-            // else if action < 0
-            //   lowrk++;
             if (prnlvl >= 4) {
+                std::string flagss;
+                cheapk = &iw[6];                 // cheap iteration
+                skipk = &iw[7];                  // the current value of skip[k]
+                skipmaxk = &iw[8];               // the current value of skipmax[k]
+                flags = &iw[9];                  // flags
+                da_int restartk = (*flags) & 1U; // requested restart
+                da_int reset = (*flags) & 2U;    // tolerance check requested restart
+                da_int reqskip = (*flags) & 4U;  // in skip regime
+                flagss += (reqskip) ? "S" : "";
+                flagss += (*cheapk ? "c" : "e");
+                flagss += (restartk) ? "z" : "";
+                flagss += (reset) ? "R" : "";
+
+                /*
+                 * Iteration banner
+                 * ================
+                 * Low detail
+                 * ----------
+                 * After each outer iteration this banner is printed
+                 *
+                 * ------------------------------------------------------
+                 *  iteration objective maxchange       neval       lowrk
+                 * ------------------------------------------------------
+                 *         20 2.920e+08 8.844e-06           4         115
+                 * Where
+                 * * maxchange is the infitity-norm of xk and xk-1
+                 * * neval are the number of calls to step function
+                 * * lowrk are the number of calls to step function hinting
+                 *   to use a low rank update is possible
+                 * Total number of functions calls is neval+lowrk
+                 *
+                 * Detailed output
+                 * ---------------
+                 * for each inner iteration this banner is printed
+                 *
+                 * iteration coordinate   current       new    change      skip/  skipmax
+                 *        19          9 +1.25e+00 +1.25e+00 +5.43e-06         0/        8 cSzR
+                 * Where
+                 * * current is the value of xold[k]
+                 * * new is the value of x[k]
+                 * * change is xold[k] - x[k]
+                 * * skip is the ledged entry for coordinate k
+                 * * skipmax is the next count for when the coordinate k will be checked
+                 * The "flags" at the end of the line inform about:
+                 *  * "c" or "e" hinting to cheap or expensive step function evaluation
+                 *  * "S" ledger indicates that the current coordiante is skipped
+                 *  * "z" a restart (reset of ledger and expensive evaliation) is requested
+                 *  * "R" iterate seems to be a solution but some coordinates where skipt, resetting
+                 *    ledger to evaluate them.
+                 */
+
                 std::cout.precision(2);
                 std::cout << std::setw(10) << "iteration" << std::setw(1) << ""
                           << std::setw(10) << "coordinate" << std::setw(1) << ""
                           << std::setw(9) << "current" << std::setw(1) << ""
                           << std::setw(9) << "new" << std::setw(1) << "" << std::setw(9)
-                          << "change" << std::setw(1) << "" << std::setw(9) << std::endl;
+                          << "change" << std::setw(1) << "" << std::setw(9) << "skip"
+                          << "/" << std::setw(9) << "skipmax" << std::endl;
+
                 std::cout << std::setw(10) << iter << std::setw(1) << "" << std::setw(10)
                           << k << std::setw(1) << "" << std::scientific << std::showpos
                           << std::setw(9) << x[k] << std::setw(1) << "" << std::setw(9)
                           << newxk << std::setw(1) << "" << std::setw(9) << x[k] - newxk
-                          << std::endl
+                          << std::setw(1) << "" << std::setw(9) << *skipk << "/"
+                          << std::setw(9) << *skipmaxk << " " << flagss << std::endl
                           << std::noshowpos;
                 std::cout.precision(coutprec);
             }
@@ -366,20 +466,22 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             if (prnlvl > 1) {
                 if (hdr == 0 || prnlvl >= 4) {
                     hdr = HDRCNT;
-                    std::cout << std::setw(42) << std::setfill('-') << "" << std::endl
+                    std::cout << std::setw(54) << std::setfill('-') << "" << std::endl
                               << std::setfill(' ');
                     std::cout << std::setw(10) << "iteration" << std::setw(1) << ""
                               << std::setw(9) << std::scientific << "objective"
                               << std::setw(1) << "" << std::setw(9) << "maxchange"
-                              << std::setw(12) << "neval" << std::endl;
-                    std::cout << std::setw(42) << std::setfill('-') << "" << std::endl
+                              << std::setw(12) << "neval" << std::setw(12) << "lowrk"
+                              << std::endl;
+                    std::cout << std::setw(54) << std::setfill('-') << "" << std::endl
                               << std::setfill(' ');
                 }
                 --hdr;
                 std::cout.precision(3);
                 std::cout << std::setw(10) << iter << std::setw(1) << ""
                           << std::scientific << std::setw(9) << *f << std::setw(1) << ""
-                          << std::setw(9) << inorm << std::setw(12) << fcnt << std::endl;
+                          << std::setw(9) << inorm << std::setw(12) << fcnt
+                          << std::setw(12) << lowrk << std::endl;
                 std::cout.precision(coutprec);
                 if (prnlvl >= 5) {
                     std::cout << "Current coefficients:" << std::endl;
@@ -391,6 +493,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
 
             // Copy all metrics to info
             info[optim::info_t::info_nevalf] = fcnt;
+            info[optim::info_t::info_ncheap] = lowrk;
             info[optim::info_t::info_inorm] = inorm;
             info[optim::info_t::info_iter] = iter;
 
@@ -427,21 +530,162 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             break;
         }
     }
+    data = nullptr;
     return status;
 }
 
+/* Reset the ledger stored in the work array
+ * iw[0:n-1]  - the ledger set to 0
+ * iw[n:2n-1] - skipmax for each coordiante, set to skipmax_reset
+ */
+inline void reset_skip_ledger(const da_int n, std::vector<size_t> &iw) {
+    size_t *skip = &iw[10];
+    size_t *skipmax = &iw[10 + n];
+    const size_t skipmax_reset = iw[2];
+    for (da_int i = 0; i < n; ++i) {
+        skipmax[i] = skipmax_reset;
+        skip[i] = 0U;
+    }
+}
+
+// Check ledger to see if all coordinate skip counters are less than skipmin.
+// True indicates that all the coordinates have been checked and none as been
+// skipped.
+inline bool check_skip_ledger(const da_int n, std::vector<size_t> &iw) {
+    size_t *skip = &iw[10];
+    const size_t skipmin = iw[1];
+    bool ok = true;
+    for (da_int i = 0; i < n; ++i) {
+        ok &= skip[i] <= skipmin;
+    }
+    return ok;
+}
+
+/**
+ * @brief Coordinate Descent Method RCI
+ *
+ * Reverse Comumication Interface (solver) for the Coordinate Descent Method
+ * The solver comunicates back to the user the required task to complete, this
+ * is using TASK parameter
+ *
+ * TASK
+ * ====
+ * START: initial call to rci indicating to initialize data.
+ * NEWX: solver found the next iterate and information can be either printed or
+ *       inspected.
+ * EVAL: evaluate the step function (see ACTION)
+ * STOP: search terminated, either found a solution or error ocurred,
+ *       also check the exit status.
+ *
+ * ACTION
+ * ======
+ * Action to perform by the callback when TASK=EVAL.
+ * This parameter adds hints on how to evaluate the step function
+ * action < 0, perform a (cheap iteration) low-rank update from kold to k
+ *             elements kold = -(action+1).
+ * action = 0, no change in x don't evaluate matrix.
+ * action > 0, evaluate the feature matrix, perform MV on x.
+ *
+ * COORD Work arrays
+ * =================
+ * IW Integer work array
+ * iw[0] IN restart
+ * iw[1] IN skipmin
+ * iw[2] IN skipmax_reset
+ * iw[3] IN cheap - allow cheap iterations
+ * iw[4] IN reserved
+ * iw[5] OUT kold
+ * iw[6] OUT cheap
+ * iw[7] OUT skip[k]
+ * iw[8] OUT skipmax[k]
+ * iw[9] OUT reserved
+ *
+ * RW Real work array
+ * rw[0] IN skiptol
+ * rw[1] IN reserved
+ * rw[2] IN reserved
+ * rw[3] IN reserved
+ * rw[4] IN reserved
+ * rw[5] OUT kdiff
+ * rw[6] OUT reserved
+ * rw[7] OUT reserved
+ * rw[8] OUT reserved
+ * rw[9] OUT reserved
+ */
 template <typename T>
-da_status coord_rcomm(da_int n, std::vector<T> &x, constraints::bound_constr<T> &bc,
+da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_constr<T> &bc,
                       [[maybe_unused]] T factr, T tol, coord::solver_tasks &itask,
                       da_int &k, T &newxk, da_int &iter, T &inorm, da_int &action,
-                      da_errors::da_error_t &err,  [[maybe_unused]] std::vector<T> &w,
-                      [[maybe_unused]] std::vector<uint32_t> &iw) {
-    T change;
+                      da_errors::da_error_t &err, std::vector<T> &rw,
+                      std::vector<size_t> &iw) {
+    // kchange = abs(kdiff)
+    T kchange;
+    // Restart the skip ledger every <restart> iterations
+    // restart = MAXINT disables periodic restarts
+    // restart = 0 forces every iteration to be expensive
+    size_t restart; // = iw[0];
+    // Tolerance to skip a coordinate
+    T skiptol; // = rw[0];
+    // kdiff = x[k] - x_old[k]
+    T *kdiff; // = rw[5];
+    // Minimum times a coordinate change must be less than skiptol
+    // before it can start to be skipped
+    // skipmin = max(1, skipmin); % needs to be at least 1
+    size_t skipmin; // = iw[1];
+    // Initial maximum time a coordinate can be skiped, after this
+    // the coordinate is checked.
+    // skipmax_reset = max(skipmin+3, skipmax_reset); % needs to be bigger that skipmin
+    size_t skipmax_reset; // = iw[2];
+    // Maximum times a coordinate can be skiped, after this
+    // the coordinate is checked. This count is customized per coordinate,
+    // so coordinates that are fixed or active are less frequently checked
+    // [ARRAY:p]
+    size_t *skipmax; // = &iw[10] + n; // counter vector of size n
+    // Skip counter for each coordiante [ARRAY:p]
+    size_t *skip; // = &iw[10]; // the ledger of size n
+    // Metrics (move to RINFO)
+    size_t *kold;     // = iw[5] old k user for low rank update (cheap iteration)
+    size_t *cheap;    // = iw[6] allow cheap iter
+    size_t *skipk;    // = iw[7] the current value of skip[k]
+    size_t *skipmaxk; // = iw[8] the current value of skipmax[k]
+    size_t *flags;    // information flags
+
+    bool endcycle;
+
+    // Quick check of work spaces
+    if ((iw.size() < (size_t)(10 + 2 * n)) || (rw.size() < 10U)) {
+        itask = STOP;
+        return da_error(&err, da_status_invalid_array_dimension,
+                        "Integer work space vector needs to be at least of size " +
+                            std::to_string(2 * n + 10) + " and real work space " +
+                            "vector needs to be at least of size " +
+                            std::to_string(10)); // LCOV_EXCL_LINE
+    }
+
+    // get parameter values
+    skiptol = rw[0];
+    restart = iw[0];
+    skipmin = iw[1];
+    skipmax_reset = iw[2];
+
+    // link aliases to work array
+    kdiff = &rw[5];
+    kold = &iw[5];
+    cheap = &iw[6];
+    skipk = &iw[7];    // the current value of skip[k]
+    skipmaxk = &iw[8]; // the current value of skipmax[k]
+    flags = &iw[9];
+    skip = &iw[10];        // the ledger of size n
+    skipmax = &iw[10] + n; // counter vector of size n
+
     switch (itask) {
     case START:
-
-        // Allocate space for the solver
-        // integer ledger (size n) + skipchk (size n) + change
+        // reset non-input work entries
+        for (size_t i = 5; i < 10; ++i) {
+            iw[i] = 0;
+            rw[i] = 0;
+        }
+        reset_skip_ledger(n, iw);
 
         iter = 0;
         // Make initial X feasible
@@ -450,49 +694,121 @@ da_status coord_rcomm(da_int n, std::vector<T> &x, constraints::bound_constr<T> 
         k = 0;
         // Request to evaluate objective and new update.
         action = 1;
+        *cheap = false;
         itask = EVAL;
+        // Update stats
+        *skipk = skip[k];
+        *skipmaxk = skipmax[k];
+        inorm = static_cast<T>(0);
         return da_status_success;
         break;
     case EVAL:
-        if (k == 0)
-            inorm = static_cast<T>(0);
+        // reset flags
+        *flags = 0;
+        // try to allow cheap iteration
+        *cheap = true;
         bc.proj(k, newxk);
-        change = std::abs(x[k] - newxk);
-        // Set callback action to perform
-        // action < 0, low rank update using change and kold = -action
-        // action = 0, no change in x, don't evaluate feature matrix
-        // action > 0, evaluate feature matrix
-        // FIXME for now we don't request low rank updates
-        action = 1; // FOR NOW ONLY >0 allowed, see step callback. change != 0;
-        inorm = std::max(inorm, change);
-        // w.ledger[k] = kchange <= factr ? w.ledger[k]++ : 0;
+        *kdiff = newxk - x[k];
+        kchange = std::abs(*kdiff);
+        inorm = std::max(inorm, kchange);
         x[k] = newxk;
 
+        if (kchange == (T)0)
+            action = 0; // iterate did not change
+        else {
+            *kold = k;
+            action = -(k + 1); // inform the last coordinate to use for cheap iter
+        }
+
+        if (kchange > skiptol) {
+            if (skip[k] > 0) {
+                // Reset skip counter only for k
+                skip[k] = 0;
+                skipmax[k] = skipmax_reset;
+                *flags |= 8U; // mark k coord reset;
+            }
+        } else {
+            if (skip[k] >= skipmax[k])
+                skipmax[k] *= 2; // double the threshold;
+            // increment ledger
+            ++skip[k];
+        }
+
+        // Check that one full cycle was performed
         if (k < n - 1) {
             // keep cycling
-            k++;
+            ++k;
+            endcycle = false;
         } else {
+            // mark end of cycle
+            k = 0;
+            endcycle = true;
+        }
+
+        while (skipmin <= skip[k] && skip[k] < skipmax[k]) {
+            ++skip[k];
+            *flags |= 4U; // mark iter as skipped;
+            ++k;
+            if (k >= n) {
+                // last coord was also skipped, mark end-of-cycle
+                k = 0; // FIXME 0 may not be the next coord not to skip
+                // This requires exploring the next candidate.
+                // Split RCI: EVAL+CHECKSKIP
+                endcycle = true;
+                break;
+            }
+        }
+
+        if (endcycle) {
             // completed a full cycle
-            iter++;
+            ++iter;
             // check for convergence
             if (inorm <= tol) {
-                itask = STOP;
+                if (check_skip_ledger(n, iw)) {
+                    // No coordinates where skipped and tol reached
+                    itask = STOP;
+                } else {
+                    // There is at least one skipped coordinate, reset ledger
+                    // and check the coordiante(s)
+                    reset_skip_ledger(n, iw);
+                    *cheap = false;
+                    itask = NEWX;
+                    *flags |= 2U;
+                }
             } else {
                 // indicate that point x can be printed, monitored, etc.
                 itask = NEWX;
             }
-            k = 0;
         }
+        // Check to see if a cheap iteration can be performed and check that
+        // it is not time to restart... iter=k=0 also does a MV eval.
+        // if restart=1 then all iters are MV eval.
+        if (*cheap) {
+            da_int rst = ((iter * n + k) % restart);
+            *flags |= (rst == 0);
+            *cheap = !(rst == 0);
+        }
+        if (!(*cheap)) {
+            // request to perform MV operation (expensive iteration)
+            action = 1;
+        }
+
+        // Update stats
+        *skipk = skip[k];
+        *skipmaxk = skipmax[k];
         return da_status_success;
         break;
     case NEWX:
-        // user did not stop, continue
+        // User did not stop, continue...
         itask = EVAL;
+        // reset inorm
+        inorm = static_cast<T>(0);
         return da_status_success;
         break;
     default:
         itask = STOP;
-        return da_error(&err, da_status_internal_error, "Unexpected taskid provided?");
+        return da_error(&err, da_status_internal_error,
+                        "Unexpected taskid provided?"); // LCOV_EXCL_LINE
         break;
     }
 }

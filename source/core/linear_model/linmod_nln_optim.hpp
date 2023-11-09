@@ -19,9 +19,6 @@ template <typename T> struct fit_usrdata {
     /* y=A*coef, but can also contain residuals. */
     T *y = nullptr;
 
-    /* additional auxiliary memory for logistic regression */
-    std::vector<T> aux;
-
     /* Intercept */
     bool intercept = false;
     /* Additional paremeters that enhance the model
@@ -33,23 +30,30 @@ template <typename T> struct fit_usrdata {
     /* linear classification parameters */
     da_int nclass = 0;
 
+    /* auxiliary elements */
+    // std::vector<T> iaux;
+    std::vector<T> aux;
+
     /* constructor */
     fit_usrdata(){};
     fit_usrdata(T *A, T *b, da_int m, da_int nfeatures, bool intercept, T lambda, T alpha,
-                da_int nclass, linmod_model mod)
+                da_int nclass, linmod_model mod, da_int naux = 0) // , da_int niaux = 0)
         : m(m), nfeatures(nfeatures), A(A), b(b), intercept(intercept), nclass(nclass) {
         l1reg = lambda * alpha;
         l2reg = lambda * ((T)1.0 - alpha) / (T)2.0;
-        y = new T[m];
-        if (mod == linmod_model_logistic)
+        if (mod == linmod_model_logistic) // FIXME remove this if and pass correct naux
             aux.resize(m);
+        else
+            aux.resize(naux);
+        // iaux.resize(niaux);
+        y = new T[m];
     };
     ~fit_usrdata() { delete[] y; };
 };
 
-/* Evaluate feature matrix and store result in (fir_usrdata) usrdata 
+/* Evaluate feature matrix and store result in (fir_usrdata) usrdata
  * result is stored in usrdata->y = Ax (+ o)
- * o is a vector of one added if the intercept variable is defined 
+ * o is a vector of one added if the intercept variable is defined
  */
 template <typename T> void eval_feature_matrix(da_int n, T *x, void *usrdata) {
     fit_usrdata<T> *data;
@@ -114,7 +118,7 @@ template <typename T> void reggrd(void *usrdata, da_int n, T const *x, T *grad) 
     }
 }
 
-/* Callbacks for the various models 
+/* Callbacks for the various models
  * Intended for a nonlinear unconstrained solver of AOCL-DA
  */
 

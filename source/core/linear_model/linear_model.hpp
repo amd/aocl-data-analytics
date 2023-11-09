@@ -237,29 +237,58 @@ template <typename T> da_status linear_model<T>::select_model(linmod_model mod) 
 /* Helper callback to get step for coordinate descent method */
 template <typename T>
 da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int action) {
-    if (k >= n || k < 0) { // FIXME: Assume and remove this if
-        return 1;
-    }
     fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    // FIXME: we need a "sparse" eval_feature_matrix since not much changed
-    // from the last call? This can be handled by the caller with active set.
-    // POSSIBLE ACTIONS regarting feature matrix evaluation
-    // action < 0 means that feature matrix was previously called and that only a low rank
-    //            update is requested and -action contains the previous k that changed
-    //            kold = -action;
-    // action = 0 means not to evaluate the feature matrix
-    // action > 0 evaluate the matrix.
-    // FIXME, for now action < 0 is an alias to action > 0.
-    // FIXME, action for now MUST always be 1 since data->y is later reused to
-    // store the residuals, destroying the y = Matrix-Vector product.
-    // Add new entry to fit_usrdata to duplicate the vector?
-    if (action) {
+    /* Actions regarting feature matrix evaluation
+     * action < 0 means that feature matrix was previously called and that only a low rank
+     *            update is requested and -(action+1) contains the previous k that changed
+     *            kold = -(action+1);
+     * action = 0 means not to evaluate the feature matrix (restore y from aux)
+     * action > 0 evaluate the matrix.
+     *
+     * Assumptions:
+     *  * usrdata->A is standardized:
+     *    for each column j = 1:n we have
+     *    zero-mean, and
+     *    sum xij^2 = 1, i=1:m
+     *  * usrdata->aux is of size m+1
+     *    aux = [ y | kdiff ]
+     */
+
+    da_int m = data->m;
+    if (action > 0) {
         // Compute A*x = *y (takes care of intercept)
         eval_feature_matrix(n, x, usrdata);
-        // FIXME copy vector data->y
+        // Copy vector data->y into data->aux
+        for (da_int i = 0; i < m; ++i)
+            data->aux[i] = data->y[i];
+    } else if (action < 0) {
+        /* Low rank update.
+         * Only one single entry of x[1..n] has changed and we have
+         * the entry and the ammount.
+         * data->y = data->aux + kdiff * A[:,kold];
+         */
+        T kdiff = data->aux[m];
+        da_int kold = -(action + 1);
+        for (da_int i = 0; i < m; ++i) {
+            data->y[i] = data->aux[i] + kdiff * data->A[kold * m + i];
+            // Copy vector data->y into data->aux
+            data->aux[i] = data->y[i];
+        }
+        /* Low-rank update validation
+         * eval_feature_matrix(n, x, usrdata);
+         * for (da_int i = 0; i < m; ++i){
+         *     T d = data->y[i] - data->aux[i];
+         *     if (std::abs(d) > 1e-9) {
+         *         return 99;
+         *     }
+         * }
+         */
+    } else {
+        // Copy vector back from data->aux to data->y
+        for (da_int i = 0; i < m; ++i)
+            data->y[i] = data->aux[i];
     }
-    // FIXME: this all should be encapsulated into a "presidual<T>(usrdata, data->loss)"
-    // For now it only deals with MSE Loss
+
     T betak{0};
     da_int nmod = data->intercept ? n - 1 : n;
     auto sign = [](T num) {
@@ -271,7 +300,6 @@ da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int ac
     };
     T ak;
     T presidual;
-    da_int m = data->m;
     if (k < nmod) {
         // handle model coefficients beta1..betaN
         if (x[k] != (T)0) {
@@ -302,24 +330,21 @@ da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int ac
         }
     }
 
-    // Evaluate residuals and apply transform, store in: *y
-    //eval_residuals<T>(usrdata, data->trn);
-    //// loss_function
-    //*f = lossfun<T>(usrdata, data->loss);
-
     // y = y - b
     T alpha = -1.0;
     da_blas::cblas_axpy(m, alpha, data->b, 1, data->y, 1);
 
-    // sum (A * x (+itct) - b)^2
+    // sum (A * x (+intercept) - b)^2
     for (da_int i = 0; i < m; i++) {
         *f += pow(data->y[i], (T)2.0);
     }
+
     // Add regularization (exclude intercept)
     *f += regfun(usrdata, nmod, x);
 
     *step = soft(betak, data->l1reg) / ((T)1 + data->l2reg);
 
+    data = nullptr;
     return 0;
 }
 
@@ -329,7 +354,7 @@ da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int ac
 template <typename T>
 da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
     da_status status;
-    da_int maxit, prnlvl;
+    da_int maxit, prnlvl, naux = 0;
     std::string slv, prnopt, optstr;
     T tol, factr;
 
@@ -339,8 +364,11 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
         [[fallthrough]];
 
     case optim::solvers::solver_coord:
-        if (slv == "")
+        if (slv == "") {
             slv = "coord";
+            // solver requires usrdata->aux[m+1]
+            naux = m + 1;
+        }
         opt = new optim::da_optimization<T>(status, *(this->err));
         if (status != da_status_success) {
             opt = nullptr;
@@ -425,7 +453,8 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
                     "> option.");
         }
 
-        usrdata = new fit_usrdata(A, b, m, n, intercept, lambda, alpha, nclass, mod);
+        usrdata =
+            new fit_usrdata(A, b, m, n, intercept, lambda, alpha, nclass, mod, naux);
         break;
 
     default:

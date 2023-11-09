@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -41,17 +41,39 @@ typedef struct {
     std::vector<option_t<double>> dopts;
 } linregParam;
 
+// clang-format off
 const linregParam linregPosValuesD[] = {
-    {"trivialNoint", "trivial", {}, {}, {}, {}},
+    {"trivialNoint",      "trivial", {}, {}, {}, {}},
     {"trivialNointLbfgs", "trivial", {}, {{"linmod optim method", "lbfgs"}}, {}, {}},
-    {"trivialIntercept", "trivial", {{"linmod intercept", 1}}, {}, {}, {}},
-    {"trivialILbfgs",
-     "trivial",
-     {{"linmod intercept", 1}},
-     {{"linmod optim method", "lbfgs"}},
-     {},
-     {}},
+    {"trivialIntercept",  "trivial", {{"linmod intercept", 1}}, {}, {}, {}},
+    {"trivialILbfgs",     "trivial", {{"linmod intercept", 1}}, {{"linmod optim method", "lbfgs"}}, {}, {}},
+    {"CoordNoReg", "trivialstd", {{"print level", 1}, {"linmod optim iteration limit", 300}},
+                                     {{"linmod optim method", "coord"}},
+                                     {{"linmod lambda",0.0},{"linmod alpha",0.5}},
+                                     {{"linmod lambda",0.0f},{"linmod alpha",0.5f}}
+                                     },
+    {"CoordL1Reg", "trivialstdl1",   {{"print level", 5}, {"linmod optim iteration limit", 15}},
+                                     {{"linmod optim method", "coord"}},
+                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}},
+                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}}
+                                     },
+    {"CoordL2Reg", "trivialstdl2",   {{"print level", 1}, {"linmod optim iteration limit", 10}},
+                                     {{"linmod optim method", "coord"}},
+                                     {{"linmod lambda",10.0},{"linmod alpha",0.0}},
+                                     {{"linmod lambda",10.0f},{"linmod alpha",0.0f}}
+                                     },
+    {"CoordElastic", "trivialstdl12",{{"print level", 1}, {"linmod optim iteration limit", 20}},
+                                     {{"linmod optim method", "coord"}},
+                                     {{"linmod lambda",12.0},{"linmod alpha",0.9}},
+                                     {{"linmod lambda",12.0f},{"linmod alpha",0.9f}}
+                                     },
+    {"CoordL1Reg_intrp", "trivialstdl1",   {{"linmod intercept", 1},{"print level", 1}, {"linmod optim iteration limit", 15}},
+                                     {{"linmod optim method", "coord"}},
+                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}},
+                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}}
+                                     },
 };
+// clang-format on
 const linregParam linregPosValuesF[] = {linregPosValuesD[0], linregPosValuesD[2]};
 
 // Data  Tests

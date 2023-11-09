@@ -35,7 +35,7 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod) {
     if (handle->precision != da_double)
         return da_status_wrong_type;
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_d->select_model(mod);
 }
@@ -46,7 +46,7 @@ da_status da_linmod_select_model_s(da_handle handle, linmod_model mod) {
     if (handle->precision != da_single)
         return da_status_wrong_type;
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_s->select_model(mod);
 }
@@ -58,7 +58,7 @@ da_status da_linmod_define_features_d(da_handle handle, da_int m, da_int n, doub
     if (handle->precision != da_double)
         return da_status_wrong_type;
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_d->define_features(n, m, A, b);
 }
@@ -70,7 +70,7 @@ da_status da_linmod_define_features_s(da_handle handle, da_int m, da_int n, floa
     if (handle->precision != da_single)
         return da_status_wrong_type;
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_s->define_features(n, m, A, b);
 }
@@ -81,7 +81,7 @@ da_status da_linmod_fit_start_d(da_handle handle, da_int ncoefs, double *coefs) 
     if (handle->precision != da_double)
         return da_status_wrong_type;
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_d->fit(ncoefs, coefs);
 }
@@ -97,7 +97,7 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int ncoefs, float *coefs) {
     if (handle->precision != da_single)
         return da_status_wrong_type;
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_s->fit(ncoefs, coefs);
 }
@@ -113,7 +113,7 @@ da_status da_linmod_evaluate_model_d(da_handle handle, da_int m, da_int n, doubl
     if (handle->precision != da_double)
         return da_status_wrong_type;
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_d->evaluate_model(n, m, X, predictions);
 }
@@ -125,7 +125,7 @@ da_status da_linmod_evaluate_model_s(da_handle handle, da_int m, da_int n, float
     if (handle->precision != da_single)
         return da_status_wrong_type;
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer;
+        return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
     return handle->linreg_s->evaluate_model(n, m, X, predictions);
 }
