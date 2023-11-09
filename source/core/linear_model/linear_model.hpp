@@ -376,7 +376,7 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
             return status;
         }
         if (opt->add_vars(ncoef) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly linear model provided for the optimization "
                             "problem has an invalid number of coefficients ncoef=" +
                                 std::to_string(ncoef) + ", expecting ncoef > 0.");
@@ -384,7 +384,7 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
         // Set options here
         // Pass print level option from linmod to optimization
         if (this->opts.get("print level", prnlvl) != da_status_success) {
-            return da_error(
+            return da_error( // LCOV_EXCL_LINE
                 opt->err, da_status_internal_error,
                 "Unexpectedly <print level> option not found in the linear model "
                 "option registry.");
@@ -392,63 +392,63 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
         // Decrease print level for optimization stage
         if (opt->opts.set("print level", std::max((da_int)0, prnlvl - 1)) !=
             da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly linear model provided an invalid value to the "
                             "<print level> option.");
         }
         // Pass print options
         if (this->opts.get("print options", prnopt) != da_status_success) {
-            return da_error(
+            return da_error( // LCOV_EXCL_LINE
                 opt->err, da_status_internal_error,
                 "Unexpectedly <print options> option not found in the linear model "
                 "option registry.");
         }
         if (opt->opts.set("print options", prnopt) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly linear model provided an invalid value to the "
                             "<print options> option.");
         }
         // Setup optimization method
         if (opt->opts.set("optim method", method) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly linear model provided an invalid value to the "
                             "<optim method> option.");
         }
         // Pass convergence parameters
         if (this->opts.get("linmod optim iteration limit", maxit) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly <linmod optim iteration limit> option not "
                             "found in the linear model "
                             "option registry.");
         }
         optstr = slv + " iteration limit";
         if (opt->opts.set(optstr, maxit) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly linear model provided an invalid value to the "
                             "<" +
                                 optstr + "> option.");
         }
         if (this->opts.get("linmod optim convergence tol", tol) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly <linmod optim convergence tol> option not "
                             "found in the linear model option registry.");
         }
         optstr = slv + " convergence tol";
         if (opt->opts.set(optstr, tol) != da_status_success) {
-            return da_error(
+            return da_error( // LCOV_EXCL_LINE
                 opt->err, da_status_internal_error,
                 "Unexpectedly linear model provided an invalid value to the <" + optstr +
                     "> option.");
         }
         if (this->opts.get("linmod optim progress factor", factr) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly <linmod optim progress factor> option not "
                             "found in the linear model option registry.");
         }
         optstr = slv + " progress factor";
         if (opt->opts.set(optstr, factr) != da_status_success) {
             return da_error(
-                opt->err, da_status_internal_error,
+                opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                 "Unexpectedly linear model provided an invalid value to the <" + optstr +
                     "> option.");
         }
@@ -458,7 +458,7 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
         break;
 
     default:
-        return da_error(opt->err, da_status_internal_error,
+        return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpected optimization problem class requested.");
     }
 
@@ -563,7 +563,7 @@ da_status linear_model<T>::evaluate_model(da_int n, da_int m, T *X, T *predictio
         break;
 
     default:
-        return da_error(this->err, da_status_not_implemented,
+        return da_error(this->err, da_status_not_implemented, // LCOV_EXCL_LINE
                         "No optimization solver for the requested linear model is "
                         "available, reformulate linear model problem.");
         break;
@@ -632,17 +632,17 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             // Call LBFGS
             status = init_opt_method(method, mid);
             if (status != da_status_success)
-                return da_error(
+                return da_error( // LCOV_EXCL_LINE
                     this->err, da_status_internal_error,
                     "Unexpectedly could not initialize an optimization model.");
             // Add callbacks
             if (opt->add_objfun(objfun_mse<T>) != da_status_success) {
-                return da_error(opt->err, da_status_internal_error,
+                return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                                 "Unexpectedly linear model provided an invalid objective "
                                 "function pointer.");
             }
             if (opt->add_objgrd(objgrd_mse<T>) != da_status_success) {
-                return da_error(opt->err, da_status_internal_error,
+                return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                                 "Unexpectedly linear model provided an invalid objective "
                                 "gradient function pointer.");
             }
@@ -668,12 +668,12 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             // Call Coordinate Descent Method (Elastic Nets)
             status = init_opt_method(method, mid);
             if (status != da_status_success)
-                return da_error(
+                return da_error( // LCOV_EXCL_LINE
                     this->err, da_status_internal_error,
                     "Unexpectedly could not initialize an optimization model.");
             // Add callback
             if (opt->add_stepfun(stepfun<T>) != da_status_success) {
-                return da_error(opt->err, da_status_internal_error,
+                return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                                 "Unexpectedly linear model provided an invalid step "
                                 "function pointer.");
             }
@@ -690,7 +690,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
         default:
             // should not happen
-            return da_error(this->err, da_status_internal_error,
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly an invalid optimization solver was requested.");
             break;
         }
@@ -725,12 +725,12 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             return status;
         }
         if (opt->add_objfun(objfun_logistic<T>) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly linear model provided an invalid objective "
                             "function pointer.");
         }
         if (opt->add_objgrd(objgrd_logistic<T>) != da_status_success) {
-            return da_error(opt->err, da_status_internal_error,
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Unexpectedly linear model provided an invalid objective "
                             "gradient function pointer.");
         }
@@ -748,7 +748,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         break;
 
     default:
-        return da_error(this->err, da_status_not_implemented,
+        return da_error(this->err, da_status_not_implemented, // LCOV_EXCL_LINE
                         "Unexpectedly an invalid linear model was requested.");
     }
 
@@ -847,11 +847,13 @@ template <typename T> da_status linear_model<T>::choose_method() {
             // opts.set("linmod optim method", "coord", da_options::solver);
             // TODO FIXME Enable this once coord+logistic is implemented
             // --> uncomment opts.set("linmod optim method", "coord", da_options::solver);
-            return da_error(this->err, da_status_not_implemented, "Not yet implemented");
+            return da_error(this->err, da_status_not_implemented, // LCOV_EXCL_LINE
+                            "Not yet implemented");
         break;
     default:
         // Shouldn't happen (would be nice to trap these with C++23 std::unreachable())
-        return da_error(this->err, da_status_internal_error, "New linmod model?");
+        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "New linmod model?");
     }
 
     return da_status_success;

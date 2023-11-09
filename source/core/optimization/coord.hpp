@@ -230,43 +230,43 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 da_errors::da_error_t &err) {
 
     if (!stepfun)
-        return da_error(&err, da_status_invalid_pointer,
+        return da_error(&err, da_status_invalid_pointer, // LCOV_EXCL_LINE
                         "Solver requires a valid pointer to the step function "
-                        "call-back."); // LCOV_EXCL_LINE
+                        "call-back.");
     T bigbnd;
     if (opts.get("infinite bound size", bigbnd))
-        return da_error(
+        return da_error( // LCOV_EXCL_LINE
             &err, da_status_internal_error,
-            "expected option not found: <infinite bound size>."); // LCOV_EXCL_LINE
+            "expected option not found: <infinite bound size>.");
     T tol;
     if (opts.get("coord convergence tol", tol))
-        return da_error(
+        return da_error( // LCOV_EXCL_LINE
             &err, da_status_internal_error,
-            "expected option not found: <coord convergence tol>."); // LCOV_EXCL_LINE
+            "expected option not found: <coord convergence tol>.");
     T factr; // FIXME currently not used
     if (opts.get("coord progress factor", factr))
-        return da_error(
+        return da_error( // LCOV_EXCL_LINE
             &err, da_status_internal_error,
-            "expected option not found: <coord progress factor>."); // LCOV_EXCL_LINE
+            "expected option not found: <coord progress factor>.");
     T maxtime;
     if (opts.get("time limit", maxtime))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <time limit>."); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "expected option not found: <time limit>.");
     da_int prnlvl;
     if (opts.get("print level", prnlvl))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <print level>."); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "expected option not found: <print level>.");
     da_int maxit;
     if (opts.get("coord iteration limit", maxit))
-        return da_error(
+        return da_error( // LCOV_EXCL_LINE
             &err, da_status_internal_error,
-            "expected option not found: <coord iteration limit>."); // LCOV_EXCL_LINE
+            "expected option not found: <coord iteration limit>.");
     da_int mon = 0;
     if (monit) // monitor provided
         if (opts.get("monitoring frequency", mon))
-            return da_error(
+            return da_error( // LCOV_EXCL_LINE
                 &err, da_status_internal_error,
-                "expected option not found: <monitoring frequency>."); // LCOV_EXCL_LINE
+                "expected option not found: <monitoring frequency>.");
 
     // Active-set ledger
     // =================
@@ -274,22 +274,22 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     // tolerance to consider skipping the coordinate
     T skiptol;
     if (opts.get("coord skip tol", skiptol))
-        return da_error(
+        return da_error( // LCOV_EXCL_LINE
             &err, da_status_internal_error,
-            "expected option not found: <coord skip tolerance>."); // LCOV_EXCL_LINE
+            "expected option not found: <coord skip tolerance>.");
     // minimum times a coordinate change is smaller than skiptol to start skipping
     // needs to be at least 1.
     da_int skipmin;
     if (opts.get("coord skip min", skipmin))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <coord skip min>."); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "expected option not found: <coord skip min>.");
 
     // initial max times a coordinate can be skipped after this the coordinate is checked
     // expected to be greater that skipmin+3
     da_int skipmax_reset;
     if (opts.get("coord skip max", skipmax_reset))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <coord skip max>."); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "expected option not found: <coord skip max>.");
     if (skipmax_reset != std::max(skipmin + 3, skipmax_reset)) {
         skipmax_reset = std::max(skipmin + 3, skipmax_reset);
         opts.set("coord skip max", skipmax_reset, da_options::solver);
@@ -298,18 +298,17 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     // Restart (force expensive iteration every <restart>)
     da_int restart;
     if (opts.get("coord restart", restart))
-        return da_error(&err, da_status_internal_error,
-                        "expected option not found: <coord restart>."); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "expected option not found: <coord restart>.");
 
     if (n <= 0) {
-        return da_error(&err, da_status_invalid_input,
-                        "Number of variables needs to be positive."); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_invalid_input, // LCOV_EXCL_LINE
+                        "Number of variables needs to be positive.");
     }
 
     if (x.size() != (size_t)n) {
-        return da_error(&err, da_status_invalid_input,
-                        "Vector x needs to be of size n=" + std::to_string(n) +
-                            "."); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_invalid_input, // LCOV_EXCL_LINE
+                        "Vector x needs to be of size n=" + std::to_string(n) + ".");
     }
 
     // Work space
@@ -318,9 +317,9 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     try {
         iw.resize(2 * n + 10);
     } catch (std::bad_alloc const &) {
-        return da_error(
+        return da_error( // LCOV_EXCL_LINE
             &err, da_status_memory_error,
-            "Could not allocate work space for the coord solver"); // LCOV_EXCL_LINE
+            "Could not allocate work space for the coord solver");
     }
 
     // Copy params into workspace
@@ -655,11 +654,10 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
     // Quick check of work spaces
     if ((iw.size() < (size_t)(10 + 2 * n)) || (rw.size() < 10U)) {
         itask = STOP;
-        return da_error(&err, da_status_invalid_array_dimension,
+        return da_error(&err, da_status_invalid_array_dimension, // LCOV_EXCL_LINE
                         "Integer work space vector needs to be at least of size " +
                             std::to_string(2 * n + 10) + " and real work space " +
-                            "vector needs to be at least of size " +
-                            std::to_string(10)); // LCOV_EXCL_LINE
+                            "vector needs to be at least of size " + std::to_string(10));
     }
 
     // get parameter values
@@ -807,8 +805,8 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         break;
     default:
         itask = STOP;
-        return da_error(&err, da_status_internal_error,
-                        "Unexpected taskid provided?"); // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected taskid provided?");
         break;
     }
 }
