@@ -25,20 +25,30 @@
  *
  */
 
-#ifndef AOCLDA
-#define AOCLDA
+/* This file is a place for miscellaneous utility functions that do not belong with
+ * any particular classes and do not fit elsewhere. */
 
-#include "aoclda_basic_statistics.h"
-#include "aoclda_csv.h"
-#include "aoclda_datastore.h"
-#include "aoclda_decision_forest.h"
-#include "aoclda_error.h"
-#include "aoclda_handle.h"
-#include "aoclda_linmod.h"
-#include "aoclda_miscellaneous.h"
-#include "aoclda_options.h"
-#include "aoclda_pca.h"
-#include "aoclda_result.h"
-#include "aoclda_types.h"
+#include "aoclda.h"
 
-#endif // AOCLDA
+#if defined(_OPENMP)
+#include "omp.h"
+#endif
+
+// Check that parallel builds of AOCL-DA work. Once we have further OpenMP functionality, this can probably be removed
+da_status da_parallel_check() {
+#if defined(_OPENMP)
+    da_int max_threads = omp_get_max_threads();
+
+    da_int n_threads = 1;
+
+// We could do anything here really - we just want to check we are linking omp.h correctly
+#pragma omp parallel reduction(max : n_threads) num_threads(max_threads) default(none)
+    { n_threads = omp_get_thread_num() + 1; }
+
+    if (n_threads != max_threads)
+        return da_status_internal_error;
+
+#endif
+
+    return da_status_success;
+}

@@ -25,51 +25,49 @@
 include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
 add_executable(basic_statistics basic_statistics.cpp)
-target_link_libraries(basic_statistics aocl-da)
 
 add_executable(linear_model linear_model.cpp)
-target_link_libraries(linear_model aocl-da)
 
 add_executable(reglinear_model reglinear_model.cpp)
-target_link_libraries(reglinear_model aocl-da)
 
 add_executable(linmod_diabetes linmod_diabetes.cpp)
-target_link_libraries(linmod_diabetes aocl-da)
-target_compile_definitions(linmod_diabetes
-                           PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+target_compile_definitions(
+  linmod_diabetes PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(datastore datastore.cpp)
-target_link_libraries(datastore aocl-da)
-target_compile_definitions(datastore
-                           PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+target_compile_definitions(
+  datastore PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(decision_tree_ex decision_tree_ex.cpp)
-target_link_libraries(decision_tree_ex aocl-da)
-target_compile_definitions(decision_tree_ex
-                           PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
+
+target_compile_definitions(
+  decision_tree_ex PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 
 add_executable(pca pca.cpp)
 target_link_libraries(pca aocl-da)
 
 set(EXAMPLE_EXES
-    reglinear_model
-    linear_model
-    linmod_diabetes
-    basic_statistics
-    pca
-    datastore
-    decision_tree_ex)
+  reglinear_model
+  linear_model
+  linmod_diabetes
+  basic_statistics
+  pca
+  datastore
+  decision_tree_ex)
 
-# For Windows shared library builds copying some relevant DLLs into the examples
-# bin folder enables ctest to run without needing to update PATH
+foreach(target ${EXAMPLE_EXES})
+  target_link_libraries(${target} aocl-da)
+endforeach()
+
+# For Windows shared library builds copying some relevant DLLs into the examples bin folder enables ctest to run without needing to update PATH
 if(WIN32 AND BUILD_SHARED_LIBS)
   foreach(EXAMPLE_EXE ${EXAMPLE_EXES})
     add_custom_command(
       TARGET ${EXAMPLE_EXE}
       POST_BUILD
       COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_RUNTIME_DLLS:${EXAMPLE_EXE}> $<TARGET_FILE_DIR:${EXAMPLE_EXE}>
+      ${CMAKE_COMMAND} -E copy_if_different
+      $<TARGET_RUNTIME_DLLS:${EXAMPLE_EXE}> $<TARGET_FILE_DIR:${EXAMPLE_EXE}>
       COMMAND_EXPAND_LISTS)
   endforeach()
 endif()

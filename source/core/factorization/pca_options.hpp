@@ -34,7 +34,6 @@ enum pca_method { pca_method_cov = 0, pca_method_corr, pca_method_svd };
 template <class T>
 inline da_status register_pca_options(da_options::OptionRegistry &opts) {
     using namespace da_options;
-    T max_real = std::numeric_limits<T>::max();
     da_int imax = std::numeric_limits<da_int>::max();
 
     try {
