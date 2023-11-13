@@ -38,7 +38,6 @@
 #include "decision_forest.hpp"
 #include "linear_model.hpp"
 #include "pca.hpp"
-#include "decision_forest.hpp"
 
 /**
  * @brief Handle structure containing input / output data required for functions such as fit and predict

@@ -112,8 +112,7 @@ TEST(decision_forest, cpp_api_sample_features) {
     if (status == da_status_success) {
         std::cout << "Setup complete." << std::endl;
     } else {
-        std::cout << "Something wrong happened during training setup."
-                  << std::endl;
+        std::cout << "Something wrong happened during training setup." << std::endl;
     }
 
     // status = da_options_set_int(df_handle, "seed", 1201);
@@ -124,8 +123,7 @@ TEST(decision_forest, cpp_api_sample_features) {
     if (status == da_status_success) {
         std::cout << "Fitting complete." << std::endl;
     } else {
-        std::cout << "Something wrong happened during fitting."
-                  << std::endl;
+        std::cout << "Something wrong happened during fitting." << std::endl;
     }
 
     if (x)
@@ -136,5 +134,4 @@ TEST(decision_forest, cpp_api_sample_features) {
 
     da_datastore_destroy(&csv_handle);
     da_handle_destroy(&df_handle);
-
 }

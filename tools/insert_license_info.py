@@ -1,3 +1,4 @@
+#! /usr/bin/python3
 # Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without modification,
@@ -58,8 +59,9 @@ POSSIBILITY OF SUCH DAMAGE.
 star_extensions = [".c", ".cc", ".h", ".hh", ".c++", ".cpp", ".h++", ".hpp", ".cxx", ".hxx"]
 # .txt for CMakeLists.txt files
 hash_extensions = [".py", ".sh", ".txt", ".cmake"]
-exclamation_extensions = [".f90", ".i90"]
-f77_extensions = [".f", ".fpp", ".for", ".ftn", ".i"]
+# Fortran extension require explicit lower/upper case names to be added
+exclamation_extensions = [".f90", ".i90", ".FPP", ".F90", ".I90"]
+f77_extensions = [".f", ".fpp", ".for", ".ftn", ".i", ".F", ".FOR", ".FTN", ".I"]
 rst_extensions = [".rst"]
 
 def get_comment_character(extension):
@@ -71,9 +73,9 @@ def get_comment_character(extension):
         post_comment = " */"
     elif extension.lower() in hash_extensions:
         comment = "# "
-    elif extension.lower() in exclamation_extensions:
+    elif extension in exclamation_extensions:
         comment = "! "
-    elif extension.lower() in f77_extensions:
+    elif extension in f77_extensions:
         comment = "c    "
     elif extension.lower() in rst_extensions:
         pre_comment = ".."
@@ -138,3 +140,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

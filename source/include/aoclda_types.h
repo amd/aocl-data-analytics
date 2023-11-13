@@ -28,9 +28,9 @@
 #ifndef AOCLDA_TYPES
 #define AOCLDA_TYPES
 
+#include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <inttypes.h>
 
 /**
  * \file

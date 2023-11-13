@@ -663,17 +663,27 @@ TEST(datastore, invalidLoad) {
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
 
-    EXPECT_EQ(da_data_load_col_int(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_col_str(store, 1, 1, nullptr, col_major), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_col_real_d(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_col_real_s(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_col_uint8(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_int(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_str(store, 1, 1, nullptr, col_major),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_real_d(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_real_s(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_col_uint8(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
 
-    EXPECT_EQ(da_data_load_row_int(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_row_str(store, 1, 1, nullptr, col_major), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_row_real_d(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_row_real_s(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_load_row_uint8(store, 1, 1, nullptr, col_major, 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_int(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_str(store, 1, 1, nullptr, col_major),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_real_d(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_real_s(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_load_row_uint8(store, 1, 1, nullptr, col_major, 1),
+              da_status_invalid_input);
 
     da_datastore_destroy(&store);
 }
@@ -1659,14 +1669,17 @@ TEST(datastore, selectInvalid) {
 
     // Selections
     EXPECT_EQ(da_data_select_rows(store, "dainternal_A", 0, 0), da_status_invalid_input);
-    EXPECT_EQ(da_data_select_columns(store, "dainternal_A", 0, 0), da_status_invalid_input);
-    EXPECT_EQ(da_data_select_slice(store, "dainternal_A", 0, 0, 0, 0), da_status_invalid_input);
-    EXPECT_EQ(da_data_select_non_missing(store, "dainternal_A", 0), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_columns(store, "dainternal_A", 0, 0),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "dainternal_A", 0, 0, 0, 0),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_non_missing(store, "dainternal_A", 0),
+              da_status_invalid_input);
 
     // Extraction
     da_int extract;
-    EXPECT_EQ(da_data_extract_selection_int(store, "Non valid", &extract, 1), da_status_invalid_input);
-
+    EXPECT_EQ(da_data_extract_selection_int(store, "Non valid", &extract, 1),
+              da_status_invalid_input);
 
     da_datastore_destroy(&store);
 }

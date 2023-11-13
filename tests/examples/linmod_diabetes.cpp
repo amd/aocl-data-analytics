@@ -159,16 +159,23 @@ int main() {
     da_int nx = 0;
     da_handle handle = nullptr;
     pass = pass && da_handle_init_d(&handle, da_handle_linmod) == da_status_success;
-    pass = pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
+    pass =
+        pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
     pass = pass && da_options_set_real_d(handle, "linmod alpha", 1) == da_status_success;
-    pass = pass && da_options_set_real_d(handle, "linmod lambda", 88) == da_status_success;
-    pass = pass && da_options_set_string(handle, "print options", "yes") == da_status_success;
+    pass =
+        pass && da_options_set_real_d(handle, "linmod lambda", 88) == da_status_success;
+    pass = pass &&
+           da_options_set_string(handle, "print options", "yes") == da_status_success;
     pass = pass && da_options_set_int(handle, "linmod intercept", 0) == da_status_success;
     pass = pass && da_options_set_int(handle, "print level", 2) == da_status_success;
-    pass = pass && da_options_set_int(handle, "linmod optim iteration limit", 35) == da_status_success;
-    pass = pass && da_options_set_real_d(handle, "linmod optim convergence tol", 1.0e-5) == da_status_success;
-    pass = pass && da_options_set_real_d(handle, "linmod optim progress factor", 1.0) == da_status_success;
-    pass = pass && da_linmod_define_features_d(handle, m, n, features.data(), rhs.data()) == da_status_success;
+    pass = pass && da_options_set_int(handle, "linmod optim iteration limit", 35) ==
+                       da_status_success;
+    pass = pass && da_options_set_real_d(handle, "linmod optim convergence tol",
+                                         1.0e-5) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "linmod optim progress factor", 1.0) ==
+                       da_status_success;
+    pass = pass && da_linmod_define_features_d(handle, m, n, features.data(),
+                                               rhs.data()) == da_status_success;
     if (!pass) {
         std::cout << "Unexpected error in the model definition.\n";
         da_handle_destroy(&handle);

@@ -44,7 +44,7 @@
 !                        March  2011
 !
 !=============================================================================
-#include "preprocessor.fpp"
+#include "preprocessor.FPP"
 
     Subroutine PREC(setulb)(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, task, &
       iprint, csave, lsave, isave, dsave)

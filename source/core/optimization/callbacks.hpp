@@ -86,8 +86,8 @@ template <typename T> using objgrd_t = typename meta_grdcb<T>::type;
 template <typename T> struct meta_stepcb {
     static_assert(std::is_floating_point<T>::value,
                   "Step function arguments must be floating point");
-    using type =
-        std::function<da_int(da_int n, T *x, T *s, da_int k, T *f, void *usrdata, da_int action)>;
+    using type = std::function<da_int(da_int n, T *x, T *s, da_int k, T *f, void *usrdata,
+                                      da_int action)>;
 };
 template <typename T> using stepfun_t = typename meta_stepcb<T>::type;
 

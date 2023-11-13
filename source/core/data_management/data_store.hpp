@@ -680,7 +680,7 @@ class data_store {
             status = bb->get_col(idx - id->offset, &c, stride);
             if (status != da_status_success)
                 return da_error_trace( // LCOV_EXCL_LINE
-                    err, da_status_internal_error, // LCOV_EXCL_LINE
+                    err, da_status_internal_error,
                     "Unexpected error occurred. Possible memory corruption.");
             nrows = bb->m;
             for (da_int i = 0; i < nrows; i++)
@@ -936,7 +936,7 @@ class data_store {
                 da_error_trace(
                     err, exit_status,
                     "Internal error selecting a valid column slice"); // LCOV_EXCL_LINE
-                goto exit;                                         // LCOV_EXCL_LINE
+                goto exit;                                            // LCOV_EXCL_LINE
             }
             clear_cols = true;
         }
@@ -1242,7 +1242,8 @@ class data_store {
     da_status get_idx_from_label(std::string label, da_int &idx) {
         auto it = name_to_index.find(label);
         if (it == name_to_index.end()) {
-            return da_error(err, da_status_invalid_input, "key " + label + " is not in the map");
+            return da_error(err, da_status_invalid_input,
+                            "key " + label + " is not in the map");
         }
         idx = it->second;
         return da_status_success;

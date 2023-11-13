@@ -28,8 +28,7 @@
 #include "aoclda.h"
 #include <iostream>
 
-int main()
-{
+int main() {
     std::cout << "----------------------------------------" << std::endl;
     std::cout << "Unit test for DA_PRINTF_DEBUG" << std::endl;
     std::cout << "If DA_LOGGING is defined output should be" << std::endl;

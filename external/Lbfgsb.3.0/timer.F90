@@ -3,7 +3,7 @@
 !  or “3-clause license”)
 !  Please read attached file License.txt
 !
-#include "preprocessor.fpp"
+#include "preprocessor.FPP"
     Subroutine PREC(timer)(ttime)
 #ifdef SINGLE_PREC
    Use sworking_precision, Only: wp

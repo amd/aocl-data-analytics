@@ -50,18 +50,24 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // INTEGER OPTIONS
         // ===========================================================================
         std::shared_ptr<OptionNumeric<da_int>> oi;
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "coord skip min", "Minimum times a coordinate change is smaller than \"coord skip tol\" to start skipping",
-            1, da_options::lbound_t::greaterequal, imax-3, da_options::ubound_t::lessequal,
-            5));
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("coord skip min",
+                                  "Minimum times a coordinate change is smaller than "
+                                  "\"coord skip tol\" to start skipping",
+                                  1, da_options::lbound_t::greaterequal, imax - 3,
+                                  da_options::ubound_t::lessequal, 5));
+        opts.register_opt(oi);
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("coord skip max",
+                                  "Initial max times a coordinate can be skipped after "
+                                  "this the coordinate is checked",
+                                  4, da_options::lbound_t::greaterequal, imax,
+                                  da_options::ubound_t::lessequal, 8));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "coord skip max", "Initial max times a coordinate can be skipped after this the coordinate is checked",
-            4, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
-            8));
-        opts.register_opt(oi);
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "coord restart", "Number of inner iteration to perform before requesting to perform a full evaluation of the step function",
+            "coord restart",
+            "Number of inner iteration to perform before requesting to perform a full "
+            "evaluation of the step function",
             0, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
             imax));
         opts.register_opt(oi);
@@ -133,10 +139,9 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             safe_tol));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("coord skip tol", "Coordinate skip tolerance", 0.0,
-                             da_options::lbound_t::greaterthan, 0,
-                             da_options::ubound_t::p_inf, safe_tol));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "coord skip tol", "Coordinate skip tolerance", 0.0,
+            da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf, safe_tol));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord progress factor",

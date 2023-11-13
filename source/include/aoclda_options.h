@@ -113,7 +113,6 @@ da_status da_options_get_real_d(da_handle handle, const char *option, double *va
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
                                 da_int *lvalue);
 
-
 /** \{
  * \brief Set an option, to be stored inside the \p store argument.
  * \param[in,out] store the \ref da_datastore which will store the value of the option.
@@ -168,7 +167,7 @@ da_status da_datastore_options_set_real_d(da_datastore store, const char *option
  **/
 da_status da_datastore_options_get_int(da_datastore store, const char *option,
                                        da_int *value);
-                                       
+
 /** \{
  * \brief Get the current value of an option stored inside the \p store argument.
  * \param[in] store the \ref da_datastore which stores the options.
@@ -180,7 +179,7 @@ da_status da_datastore_options_get_int(da_datastore store, const char *option,
  * - \ref da_status_option_wrong_type - the wrong option type was passed.
  * - \ref da_status_invalid_pointer - the \p store has not been initialized.
  * - \ref da_status_wrong_type - the \p store was initialized with a different floating-point precision from \p value.
- */                           
+ */
 da_status da_datastore_options_get_real_s(da_datastore store, const char *option,
                                           float *value);
 da_status da_datastore_options_get_real_d(da_datastore store, const char *option,

@@ -75,7 +75,7 @@ da_status da_data::data_store::raw_ptr_from_csv_columns<char **>(
                     da_csv::char_to_num(parser, *(*char_col)[j], &p_end,
                                         (char **)&(**bl)[i * nrows + j], maybe_int);
                 if (tmp_error != da_status_success) {
-                    // Only possible error from char_to_num when extratcting char* is memory. Exclude this from coverage 
+                    // Only possible error from char_to_num when extratcting char* is memory. Exclude this from coverage
                     // LCOV_EXCL_START
                     std::string buff;
                     buff = "Unable to parse data on line " + std::to_string(i) +

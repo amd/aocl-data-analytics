@@ -103,8 +103,7 @@ int decision_tree_ex_d(std::string score_criteria) {
     nrows_y = 0;
     ncols_y = 0;
 
-    status = da_read_csv_d(csv_handle, test_features_fp, &x_test, &n_obs, &d,
-                           nullptr);
+    status = da_read_csv_d(csv_handle, test_features_fp, &x_test, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
                                nullptr);
 
@@ -229,8 +228,7 @@ int decision_tree_ex_s(std::string score_criteria) {
     nrows_y = 0;
     ncols_y = 0;
 
-    status = da_read_csv_s(csv_handle, test_features_fp, &x_test, &n_obs, &d,
-                           nullptr);
+    status = da_read_csv_s(csv_handle, test_features_fp, &x_test, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
                                nullptr);
 
@@ -296,12 +294,12 @@ int main(int argc, char **argv) {
 
     int exit_code = 0;
     exit_code = decision_tree_ex_d(score_criteria);
-    if (exit_code != 0){
+    if (exit_code != 0) {
         return exit_code;
     }
 
     exit_code = decision_tree_ex_s(score_criteria);
-    if (exit_code != 0){
+    if (exit_code != 0) {
         return exit_code;
     }
 

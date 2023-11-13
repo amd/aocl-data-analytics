@@ -144,7 +144,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, T *shi
         break;
     default:
         status = da_status_internal_error; // LCOV_EXCL_LINE
-        goto exit; // LCOV_EXCL_LINE
+        goto exit;                         // LCOV_EXCL_LINE
     }
 
 exit:

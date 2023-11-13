@@ -144,13 +144,11 @@ da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
 da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **block, da_ordering order);
 da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *block, da_ordering order,
-                                  da_int copy_data);
+                                  double *block, da_ordering order, da_int copy_data);
 da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_cols,
                                   float *block, da_ordering order, da_int copy_data);
 da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *block, da_ordering order,
-                                 da_int copy_data);
+                                 uint8_t *block, da_ordering order, da_int copy_data);
 /** \} */
 
 /** \{
@@ -191,13 +189,11 @@ da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
 da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **block, da_ordering order);
 da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *block, da_ordering order,
-                                  da_int copy_data);
+                                  double *block, da_ordering order, da_int copy_data);
 da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_cols,
                                   float *block, da_ordering order, da_int copy_data);
 da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *block, da_ordering order,
-                                 da_int copy_data);
+                                 uint8_t *block, da_ordering order, da_int copy_data);
 /** \} */
 
 /**
@@ -356,8 +352,8 @@ da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
  * - @ref da_status_missing_block - the store contains incomplete row blocks.
  * - @ref da_status_internal_error - an unexpected error occured.
  */
-da_status da_data_extract_selection_int(da_datastore store, const char *key,
-                                        da_int *data, da_int lddata);
+da_status da_data_extract_selection_int(da_datastore store, const char *key, da_int *data,
+                                        da_int lddata);
 da_status da_data_extract_selection_real_d(da_datastore store, const char *key,
                                            double *data, da_int lddata);
 da_status da_data_extract_selection_real_s(da_datastore store, const char *key,

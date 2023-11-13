@@ -34,7 +34,7 @@
 #include <limits>
 #include <list>
 
-#include "order_statistics_tests.hpp"
-#include "moment_statistics_tests.hpp"
-#include "statistics_utilities_tests.hpp"
 #include "correlation_and_covariance_tests.hpp"
+#include "moment_statistics_tests.hpp"
+#include "order_statistics_tests.hpp"
+#include "statistics_utilities_tests.hpp"

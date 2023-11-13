@@ -47,6 +47,5 @@ template <typename T> class basic_handle {
      */
     virtual da_status get_result(da_result query, da_int *dim, T *result) = 0;
     virtual da_status get_result(da_result query, da_int *dim, da_int *result) = 0;
-
 };
 #endif

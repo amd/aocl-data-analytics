@@ -194,8 +194,8 @@ TEST(intervalMap, iterator) {
     EXPECT_EQ(i, 4);
 }
 
-TEST(interval, intersection){
-    interval i1 = {1,3}, i2= {2,4};
+TEST(interval, intersection) {
+    interval i1 = {1, 3}, i2 = {2, 4};
     interval res = intersection(i1, i2);
     EXPECT_EQ(res.first, 2);
     EXPECT_EQ(res.second, 3);

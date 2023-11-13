@@ -527,7 +527,7 @@ class OptionRegistry {
             // Special case where we want to replace an already registered option
             auto search = registry.find(o->get_name());
             registry.erase(search);
-        } 
+        }
         size_t n = registry.size();
         registry.insert({o->get_name(), o});
         //TODO add unit tests for overwrite (ANDREW!!!!!)
@@ -535,7 +535,6 @@ class OptionRegistry {
         if (!ok) {
             errmsg = "Registry could not add option. Duplicate?";
             return da_status_invalid_input;
-            
         }
         return da_status_success;
     }

@@ -29,13 +29,13 @@
 #define DA_ERROR_HPP
 
 #include "aoclda_error.h"
+#include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <cstdint>
 
 /** Generating and storing error messages
  *
@@ -295,9 +295,7 @@ constexpr int32_t strip_path(const char *const path, const int32_t pos = 0,
 // This strips the path from the string PATH at compile time, that is
 // it provides a new starting point for the PATH string where the filename
 // starts. Does the same as "basename file"
-constexpr const char * basename(const char *const path) {
-    return &path[strip_path(path)];
-}
+constexpr const char *basename(const char *const path) { return &path[strip_path(path)]; }
 
 #define da_error(e, status, msg)                                                         \
     (e)->rec(status, (msg), "", std::string(da_errors::basename(__FILE__)) + ":",        \
