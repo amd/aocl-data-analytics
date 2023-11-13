@@ -1381,7 +1381,7 @@ class data_store {
         da_status status = da_status_success;
 
         // Active index denotes the type of the column we are currently looking at
-        da_int active_index = columns[0].index();
+        da_int active_index = (da_int)columns[0].index();
         da_int start_column = 0;
 
         for (da_int i = 1; i <= ncols; i++) {

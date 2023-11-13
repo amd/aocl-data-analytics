@@ -42,39 +42,38 @@ typedef struct {
 } linregParam;
 
 // clang-format off
-const linregParam linregPosValuesD[] = {
+const linregParam linregParamPos[] = {
     {"trivialNoint",      "trivial", {}, {}, {}, {}},
     {"trivialNointLbfgs", "trivial", {}, {{"linmod optim method", "lbfgs"}}, {}, {}},
     {"trivialIntercept",  "trivial", {{"linmod intercept", 1}}, {}, {}, {}},
     {"trivialILbfgs",     "trivial", {{"linmod intercept", 1}}, {{"linmod optim method", "lbfgs"}}, {}, {}},
     {"CoordNoReg", "trivialstd", {{"print level", 1}, {"linmod optim iteration limit", 300}},
                                      {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",0.0},{"linmod alpha",0.5}},
-                                     {{"linmod lambda",0.0f},{"linmod alpha",0.5f}}
+                                     {{"linmod lambda",0.0f},{"linmod alpha",0.5f}},
+                                     {{"linmod lambda",0.0},{"linmod alpha",0.5}}
                                      },
     {"CoordL1Reg", "trivialstdl1",   {{"print level", 5}, {"linmod optim iteration limit", 15}},
                                      {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}},
-                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}}
+                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}},
+                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}}
                                      },
     {"CoordL2Reg", "trivialstdl2",   {{"print level", 1}, {"linmod optim iteration limit", 10}},
                                      {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",10.0},{"linmod alpha",0.0}},
-                                     {{"linmod lambda",10.0f},{"linmod alpha",0.0f}}
+                                     {{"linmod lambda",10.0f},{"linmod alpha",0.0f}},
+                                     {{"linmod lambda",10.0},{"linmod alpha",0.0}}
                                      },
     {"CoordElastic", "trivialstdl12",{{"print level", 1}, {"linmod optim iteration limit", 20}},
                                      {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",12.0},{"linmod alpha",0.9}},
-                                     {{"linmod lambda",12.0f},{"linmod alpha",0.9f}}
+                                     {{"linmod lambda",12.0f},{"linmod alpha",0.9f}},
+                                     {{"linmod lambda",12.0},{"linmod alpha",0.9}}
                                      },
     {"CoordL1Reg_intrp", "trivialstdl1",   {{"linmod intercept", 1},{"print level", 1}, {"linmod optim iteration limit", 15}},
                                      {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}},
-                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}}
+                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}},
+                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}}
                                      },
 };
 // clang-format on
-const linregParam linregPosValuesF[] = {linregPosValuesD[0], linregPosValuesD[2]};
 
 // Data  Tests
 class linregPosD : public testing::TestWithParam<linregParam> {};
@@ -97,7 +96,5 @@ TEST_P(linregPosF, Float) {
     test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts);
 }
 
-INSTANTIATE_TEST_SUITE_P(linregPosSuiteD, linregPosD,
-                         testing::ValuesIn(linregPosValuesD));
-INSTANTIATE_TEST_SUITE_P(linregPosSuiteF, linregPosF,
-                         testing::ValuesIn(linregPosValuesF));
+INSTANTIATE_TEST_SUITE_P(linregPosSuiteD, linregPosD, testing::ValuesIn(linregParamPos));
+INSTANTIATE_TEST_SUITE_P(linregPosSuiteF, linregPosF, testing::ValuesIn(linregParamPos));

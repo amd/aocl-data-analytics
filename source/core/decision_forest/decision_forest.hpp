@@ -326,8 +326,10 @@ template <typename T> da_status decision_tree<T>::fit() {
     } else if (scoring_fun_str == "misclassification-error") {
         // Misclassification error
         this->score_fun = [](T acc_l, da_int n_l, T acc_r, da_int n_r) {
-            da_int acc_l_argmax = (acc_l > (n_l - acc_l)) ? acc_l : (n_l - acc_l);
-            da_int acc_r_argmax = (acc_r > (n_r - acc_r)) ? acc_r : (n_r - acc_r);
+            da_int acc_l_argmax =
+                (da_int)((acc_l > (n_l - acc_l)) ? acc_l : (n_l - acc_l));
+            da_int acc_r_argmax =
+                (da_int)((acc_r > (n_r - acc_r)) ? acc_r : (n_r - acc_r));
 
             T score = 0.0;
             if (acc_l_argmax > 0) {
@@ -649,7 +651,7 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
     }
 
     v = uniform_real_dist(mt_gen);
-    S = std::floor( std::nearbyint(Nreal) * v);
+    S = (da_int)std::floor(std::nearbyint(Nreal) * v);
     subsample[i] = idx0 + S + 1;
     printf("idx0+S+1 = %d \n", (int) (idx0 + S + 1));
 

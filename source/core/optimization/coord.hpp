@@ -348,12 +348,10 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     info.resize(optim::info_number);
     std::fill(info.begin(), info.end(), 0);
 
-    da_int iter;
+    da_int hdr = 0, fcnt = 0, lowrk = 0, iter = 0, k, action;
     T *f = &info[optim::info_t::info_objective];
     T *time = &info[optim::info_t::info_time];
     T newxk, inorm;
-    da_int k, action;
-    size_t hdr = 0, fcnt = 0, lowrk = 0;
 
     // Convenience pointers
     size_t *cheapk = nullptr;
@@ -491,10 +489,10 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             }
 
             // Copy all metrics to info
-            info[optim::info_t::info_nevalf] = fcnt;
-            info[optim::info_t::info_ncheap] = lowrk;
+            info[optim::info_t::info_nevalf] = (T)fcnt;
+            info[optim::info_t::info_ncheap] = (T)lowrk;
             info[optim::info_t::info_inorm] = inorm;
-            info[optim::info_t::info_iter] = iter;
+            info[optim::info_t::info_iter] = (T)iter;
 
             if (itask == STOP)
                 break;

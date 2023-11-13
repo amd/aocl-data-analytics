@@ -131,7 +131,7 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     if (status == da_status_success) {
         size_t n = svalue.size();
         if (n >= (size_t)(*lvalue)) {
-            *lvalue = n + 1; // inform the user of the correct size
+            *lvalue = (da_int)(n + 1); // inform the user of the correct size
             std::string buf = "target storage where to store option string value is too "
                               "small, make it at least " +
                               std::to_string(n + 1);
@@ -250,7 +250,7 @@ da_status da_datastore_options_get_string(da_datastore store, const char *option
     if (status == da_status_success) {
         size_t n = svalue.size();
         if (n >= (size_t)(*lvalue)) {
-            *lvalue = n + 1; // inform the user of the correct size
+            *lvalue = (da_int)(n + 1); // inform the user of the correct size
             std::string buf = "target storage where to store option string value is too "
                               "small, make it at least " +
                               std::to_string(n + 1);

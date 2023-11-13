@@ -699,7 +699,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     case linmod_model_logistic:
 
         // b rhs is assumed to only contain values from 0 to K-1 (K being the number of classes)
-        nclass = std::round(*std::max_element(b, b + m)) + 1;
+        nclass = (da_int)(std::round(*std::max_element(b, b + m)) + 1);
         ncoef = (nclass - 1) * n;
         if (intercept)
             ncoef += nclass - 1;
