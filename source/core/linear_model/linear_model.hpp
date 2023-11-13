@@ -159,7 +159,6 @@ template <typename T> class linear_model : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(*dim) + ".");
             }
-            //TODO FIXME ADD DOCUMENTATION of these "rinfo"
             result[0] = (T)this->n;
             result[1] = (T)this->m;
             result[2] = (T)this->ncoef;
@@ -182,7 +181,8 @@ template <typename T> class linear_model : public basic_handle<T> {
         }
     };
 
-    da_status get_result(da_result query, da_int *dim, da_int *result) {
+    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
+                         [[maybe_unused]] da_int *result) {
         return da_warn(this->err, da_status_unknown_query,
                        "Handle does not contain data relevant to this query. Was the "
                        "last call to the solver successful?");
