@@ -71,8 +71,8 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_features_per_tree", "set number of features in each tree", 0,
-            lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
+            "n_features_to_select", "set number of features in selection for splitting",
+            0, lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(
@@ -122,6 +122,7 @@ template <typename T> class decision_tree {
 
     // variables that get set inside set_training_data(...)
     da_int n_obs = 0;
+    da_int n_features_to_select = 0;
     da_int d = 0;
     std::vector<T> x;
     std::vector<uint8_t> y;
@@ -135,7 +136,7 @@ template <typename T> class decision_tree {
     // other variables that get set / modified inside fit()
     std::vector<Node<T>> model;
     std::mt19937_64 mt_gen;
-    std::vector<da_int> shuff_vec;
+    std::vector<da_int> feature_ind;
 
   public:
     da_options::OptionRegistry opts;
@@ -147,6 +148,14 @@ template <typename T> class decision_tree {
 
     da_status set_training_data(da_int n_obs, da_int n_features, T *x, da_int ldx,
                                 uint8_t *y);
+    da_status sample_feature_ind(da_int n_samples, da_int *samples);
+    da_status set_rng(std::mt19937_64 mt_gen) {
+        da_status status = da_status_success;
+        this->opts.set("seed", 0, da_options::solver);
+        this->mt_gen = mt_gen;
+        return status;
+    };
+    std::mt19937_64 get_rng() { return this->mt_gen; };
     da_status fit();
     da_status predict(da_int n_obs, T *x, uint8_t *y_pred);
     da_status score(da_int n_obs, T *x, uint8_t *y_test, T *score);
@@ -185,8 +194,10 @@ template <typename T> class decision_forest {
     da_status sample_feature_ind(da_int n_features, da_int n_samples,
                                  da_int *feature_ind);
     da_status sample_obs_ind(da_int n_obs, da_int n_samples, da_int *obs_ind);
-    da_status fit_tree();
+    da_status fit_tree(decision_tree<T> *p_tree);
     da_status fit();
+    da_status predict(da_int n_obs, T *x, uint8_t *y_pred);
+    da_status score(da_int n_obs, T *x, uint8_t *y_test, T *score);
 };
 
 // ---------------------------------------------
@@ -200,14 +211,14 @@ da_status decision_tree<T>::set_training_data(da_int n_obs, da_int n_features, T
     da_status status = da_status_success;
 
     if (n_obs <= 0 || n_features <= 0) {
-        printf("n_obs = %" DA_INT_FMT ", n_features = %" DA_INT_FMT " \n", n_obs,
-               n_features);
+        DA_PRINTF_DEBUG("n_obs = %" DA_INT_FMT ", n_features = %" DA_INT_FMT " \n", n_obs,
+                        n_features);
         return da_error(this->err, da_status_invalid_input,
                         "The values of n_obs and n_features need to be greater than 0");
     }
 
     if (ldx < n_obs) {
-        printf("ldx = %" DA_INT_FMT ", n_obs = %" DA_INT_FMT " \n", ldx, n_obs);
+        DA_PRINTF_DEBUG("ldx = %" DA_INT_FMT ", n_obs = %" DA_INT_FMT " \n", ldx, n_obs);
         return da_error(
             this->err, da_status_invalid_input,
             "The value of ldx needs to be at least as big as the value of n_obs");
@@ -224,10 +235,11 @@ da_status decision_tree<T>::set_training_data(da_int n_obs, da_int n_features, T
     this->x.resize(n_obs * n_features);
     this->y.resize(n_obs);
 
-    // copy user data
+    // copy user data (convert order from column-major to row-major)
     for (da_int j = 0; j < n_features; j++) {
         for (da_int i = 0; i < n_obs; i++) {
-            this->x[i + (j * n_obs)] = x[i + (j * ldx)];
+            // ldx >= n_obs
+            this->x[j + (i * n_features)] = x[i + (j * ldx)];
         }
     }
 
@@ -250,23 +262,24 @@ template <typename T> da_status decision_tree<T>::fit() {
     // set internal class data variables that directly correspond to options
     opts.get("seed", this->seed_val);
     opts.get("scoring function", scoring_fun_str, this->scoring_fun_id);
-    opts.get("depth", max_level);
+    opts.get("depth", this->max_level);
+    opts.get("n_features_to_select", this->n_features_to_select);
 
     // set mt_gen (internal class data)
     if (seed_val == -1) {
         std::random_device r;
         seed_val = r();
         mt_gen.seed(seed_val);
-    } else {
+    } else if (seed_val > 0) {
         mt_gen.seed(seed_val);
     }
 
-    // initialize shuff_vec (order in which features get selected)
-    this->shuff_vec.resize(d);
+    // initialize feature_ind (subset of indices and order in which features get selected)
+    this->feature_ind.resize(n_features_to_select);
 
-    for (da_int j = 0; j < d; j++) {
-        shuff_vec[j] = j;
-    }
+    // for (da_int j = 0; j < d; j++) {
+    //     shuff_vec[j] = j;
+    // }
 
     // set scoe_fun (std::function inside class)
     if (scoring_fun_str == "gini") {
@@ -363,15 +376,10 @@ template <typename T> da_status decision_tree<T>::fit() {
                 score = min_score;
                 split_node = 0;
 
-                for (da_int i = 0; i < (d - 2); i++) {
-                    std::uniform_int_distribution<da_int> uniform_dist(i, d - 1);
-                    da_int j = uniform_dist(mt_gen);
-                    DA_PRINTF_DEBUG("Randomly-chosen uniform int: " DA_INT_FMT " \n", j);
-                    std::swap(shuff_vec[i], shuff_vec[j]);
-                }
+                sample_feature_ind(n_features_to_select, feature_ind.data());
 
-                for (da_int i = 0; i < d; i++) {
-                    da_int col_idx = shuff_vec[i];
+                for (da_int i = 0; i < n_features_to_select; i++) {
+                    da_int col_idx = feature_ind[i];
                     da_int split_idx;
 
                     sort_1d_array(&y[ii], nn, &x[ii * d], d, col_idx);
@@ -461,7 +469,7 @@ da_status decision_tree<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
 
     DA_PRINTF_DEBUG("Inside decision_tree<T>::predict \n");
 
-    // check fit has been called
+    // [TODO] check fit has been called
 
     // print parameters in fitted model
     for (da_int node_idx = 0; node_idx < (da_int)model.size(); node_idx++) {
@@ -512,7 +520,7 @@ da_status decision_tree<T>::score(da_int n_obs, T *x, uint8_t *y_test, T *p_scor
             node = model[child_idx];
         }
         y_pred = node.y_pred;
-        score += y_test[i] == y_pred ? 1 : 0;
+        score += (y_test[i] == y_pred) ? 1 : 0;
         if (i % 20 == 0) {
             DA_PRINTF_DEBUG("y_pred = %hhu \n", y_pred);
         }
@@ -560,14 +568,15 @@ da_status decision_forest<T>::set_training_data(da_int n_obs, da_int n_features,
 }
 
 template <typename T>
-da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_features,
-                                                 da_int n_samples, da_int *samples) {
-    printf("Inside decision_forest<T>::sample_features \n");
+da_status decision_tree<T>::sample_feature_ind(da_int n_samples, da_int *samples) {
+    DA_PRINTF_DEBUG("Inside decision_forest<T>::sample_features \n");
+#ifdef DA_LOGGING
     opts.print_options();
-    printf("\n");
+#endif
+    DA_PRINTF_DEBUG("\n");
     da_status status = da_status_success;
 
-    da_int N = d; // n_features
+    da_int N = this->d; // n_features (set inside set_training_data)
 
     da_int seed_val;
     opts.get("seed", seed_val);
@@ -575,7 +584,7 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
     if (seed_val == -1) {
         std::random_device r;
         mt_gen.seed(r());
-    } else {
+    } else if (seed_val > 0) {
         mt_gen.seed(seed_val);
     }
 
@@ -608,7 +617,7 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
         // if S=0 we take the following record from the previous iteration
         // if S>0 we skip S records
         subsample[i] = idx0 + S + 1;
-        printf("idx0+S+1 = %d \n", (int)(idx0 + S + 1));
+        DA_PRINTF_DEBUG("idx0+S+1 = %d \n", (int)(idx0 + S + 1));
 
         // if S=0 we need to increment record index by 1   ahead of next iteration
         // if S>0 we need to increment record index by S+1 ahead of next iteration
@@ -621,14 +630,14 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
     v = uniform_real_dist(mt_gen);
     S = (da_int)std::floor(std::nearbyint(Nreal) * v);
     subsample[i] = idx0 + S + 1;
-    printf("idx0+S+1 = %d \n", (int)(idx0 + S + 1));
+    DA_PRINTF_DEBUG("idx0+S+1 = %d \n", (int)(idx0 + S + 1));
 
-    printf("\n");
-    printf("Sequential sample from unshuffled vector: \n");
+    DA_PRINTF_DEBUG("\n");
+    DA_PRINTF_DEBUG("Sequential sample from unshuffled vector: \n");
     for (da_int i = 0; i < n_samples; i++) {
-        printf("%2d, ", (int)subsample[i]);
+        DA_PRINTF_DEBUG("%2d, ", (int)subsample[i]);
     }
-    printf("\n\n");
+    DA_PRINTF_DEBUG("\n\n");
 
     for (da_int i = 0; i < n_samples; i++) {
         samples[i] = subsample[i];
@@ -640,24 +649,24 @@ da_status decision_forest<T>::sample_feature_ind([[maybe_unused]] da_int n_featu
     for (da_int i = 0; i < (n_samples - 2); i++) {
         uniform_dist = std::uniform_int_distribution<da_int>(i, n_samples - 1);
         da_int j = uniform_dist(mt_gen);
-        printf("Randomly-chosen uniform int: %2d \n", (int)j);
+        DA_PRINTF_DEBUG("Randomly-chosen uniform int: %2d \n", (int)j);
         std::swap(samples[i], samples[j]);
     }
 
-    printf("\n");
-    printf("Shuffled sequential sample: \n");
+    DA_PRINTF_DEBUG("\n");
+    DA_PRINTF_DEBUG("Shuffled sequential sample: \n");
     for (da_int i = 0; i < n_samples; i++) {
-        printf("%2d, ", (int)samples[i]);
+        DA_PRINTF_DEBUG("%2d, ", (int)samples[i]);
     }
 
-    printf("\n");
+    DA_PRINTF_DEBUG("\n");
     return status;
 }
 
 template <typename T>
 da_status decision_forest<T>::sample_obs_ind(da_int n_obs, da_int n_samples,
                                              da_int *obs_ind) {
-    printf("Inside decision_forest<T>::bootstrap_obs \n");
+    DA_PRINTF_DEBUG("Inside decision_forest<T>::bootstrap_obs \n");
     da_status status = da_status_success;
 
     // sample n_samples time with replacement
@@ -672,40 +681,45 @@ da_status decision_forest<T>::sample_obs_ind(da_int n_obs, da_int n_samples,
     return status;
 }
 
-template <typename T> da_status decision_forest<T>::fit_tree() {
+template <typename T> da_status decision_forest<T>::fit_tree(decision_tree<T> *p_tree) {
     da_status status = da_status_success;
 
-    da_int n_obs_per_tree, n_features_per_tree;
+    da_int n_obs_per_tree, n_features_to_select;
     opts.get("n_obs_per_tree", n_obs_per_tree);
-    opts.get("n_features_per_tree", n_features_per_tree);
+    opts.get("n_features_to_select", n_features_to_select);
 
     std::vector<da_int> obs_ind(n_obs_per_tree);
-    std::vector<da_int> feature_ind(n_features_per_tree);
+    std::vector<da_int> feature_ind(n_features_to_select);
 
     sample_obs_ind(n_obs, n_obs_per_tree, obs_ind.data());
-    sample_feature_ind(n_obs, n_features_per_tree, feature_ind.data());
+    // sample_feature_ind(n_features_to_select, feature_ind.data());
 
-    std::vector<T> xr(n_obs_per_tree * n_features_per_tree);
+    std::vector<T> xr(n_obs_per_tree * d);
     std::vector<uint8_t> yr(n_obs_per_tree);
 
     for (da_int i = 0; i < n_obs_per_tree; i++) {
-        for (da_int j = 0; j < n_features_per_tree; j++) {
-            da_int ii = obs_ind[i];
-            da_int jj = feature_ind[j];
-            xr[i * n_features_per_tree + j] = x[ii * d + jj];
-            yr[i] = y[ii];
+        da_int ii = obs_ind[i];
+        for (da_int j = 0; j < d; j++) {
+            xr[i + j * (n_obs_per_tree)] = x[ii + j * (n_obs)];
         }
+        yr[i] = y[ii];
     }
 
-    decision_tree<T> tree(*(this->err));
+    // decision_tree<T> tree(*(this->err));
+    // da_options::OptionRegistry & opts = this->opts;
+    // da_options::OptionRegistry *opts = new da_options::OptionRegistry;
+    // tree.opts = this->opts;
 
     // copy options from forest to tree
-    tree.opts = this->opts;
+    p_tree->opts = this->opts;
+    p_tree->set_rng(this->mt_gen);
 
     // copy data from forest into tree
-    status = tree.set_training_data(n_obs_per_tree, n_features_per_tree, xr.data(),
-                                    n_obs_per_tree, yr.data());
-    status = tree.fit();
+    status = p_tree->set_training_data(n_obs_per_tree, d, xr.data(), n_obs_per_tree,
+                                       yr.data());
+    status = p_tree->fit();
+
+    this->mt_gen = p_tree->get_rng();
 
     return status;
 }
@@ -716,9 +730,81 @@ template <typename T> da_status decision_forest<T>::fit() {
     da_int n_trees;
     opts.get("n_trees", n_trees);
 
+    // allocate memory for tree objects in tree_vec using
+    // decision_tree(da_errors::da_error_t &err) constructor
+    tree_vec.resize(n_trees, decision_tree<T>(*(this->err)));
+
     for (da_int k = 0; k < n_trees; k++) {
-        status = fit_tree();
+        status = fit_tree(&tree_vec[k]);
     }
+
+    return status;
+}
+
+template <typename T>
+da_status decision_forest<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
+    da_status status = da_status_success;
+
+    da_int n_trees;
+    opts.get("n_trees", n_trees);
+
+    // predict class using majority vote over trees in ensemble
+    std::vector<da_int> count(n_obs);
+    for (da_int k = 0; k < n_trees; k++) {
+        std::vector<uint8_t> y_pred_tree(n_obs);
+        status = tree_vec[k].predict(n_obs, x, y_pred_tree.data());
+        for (da_int i = 0; i < n_obs; i++) {
+            count[i] += y_pred_tree[i];
+        }
+    }
+
+    for (da_int i = 0; i < n_obs; i++) {
+        if (2 * count[i] >= n_trees) {
+            y_pred[i] = 1;
+        } else {
+            y_pred[i] = 0;
+        }
+    }
+
+    return status;
+}
+
+template <typename T>
+da_status decision_forest<T>::score(da_int n_obs, T *x, uint8_t *y_test, T *p_score) {
+    da_status status = da_status_success;
+
+    da_int n_trees;
+    opts.get("n_trees", n_trees);
+
+    DA_PRINTF_DEBUG("Inside decision_forest<T>::score \n");
+    DA_PRINTF_DEBUG("model[0].col_idx = %" DA_INT_FMT " \n", model[0].col_idx);
+    DA_PRINTF_DEBUG("model[0].x_threshold = %8.4f \n", model[0].x_threshold);
+
+    // evaluate prediction counts across trees
+    std::vector<da_int> count(n_obs);
+    for (da_int k = 0; k < n_trees; k++) {
+        std::vector<uint8_t> y_pred_tree(n_obs);
+        status = tree_vec[k].predict(n_obs, x, y_pred_tree.data());
+        for (da_int i = 0; i < n_obs; i++) {
+            count[i] += y_pred_tree[i];
+        }
+    }
+
+    // predict using majority vote, compare with y_test, and update score
+    uint8_t y_pred;
+    T score = 0.0;
+    for (da_int i = 0; i < n_obs; i++) {
+        if (2 * count[i] > n_trees) {
+            y_pred = 1;
+        } else {
+            y_pred = 0;
+        }
+        score += (y_test[i] == y_pred) ? 1 : 0;
+    }
+
+    score = score / n_obs;
+    DA_PRINTF_DEBUG("score = %10.4f \n", score);
+    (*p_score) = score;
 
     return status;
 }

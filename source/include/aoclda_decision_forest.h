@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef AOCLDA_DF
@@ -32,9 +32,19 @@
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
+/** \{
+ * \brief Pass a 2-d feature matrix and a 1-d label array to the \ref da_handle object in preparation for fitting a
+ * decision tree.
+ *
+ * A copy of the training data is stored internally, to avoid overwriting the user's data during computation.
+ * @rst
+ * After calling this function you may use the option setting APIs to set :ref:`options <df_options>`.
+ * @endrst
+ */
 da_status da_df_tree_set_training_data_d(da_handle handle, da_int n_obs,
                                          da_int n_features, double *x, da_int ldx,
                                          uint8_t *y);
+/** \} */
 
 da_status da_df_tree_fit_d(da_handle handle);
 da_status da_df_tree_predict_d(da_handle handle, da_int n_obs, double *x,
@@ -61,5 +71,10 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_fea
                                     float *x, da_int ldx, uint8_t *y);
 
 da_status da_df_fit_s(da_handle handle);
+
+da_status da_df_predict_s(da_handle handle, da_int n_obs, float *x, uint8_t *y_pred);
+
+da_status da_df_score_s(da_handle handle, da_int n_obs, float *x, uint8_t *y_test,
+                        float *score);
 
 #endif

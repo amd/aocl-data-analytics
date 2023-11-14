@@ -33,6 +33,24 @@
 #define DATA_DIR "data"
 #endif
 
+template <typename T>
+da_status convert_2d_array_r_major_to_c_major(da_int n_row, da_int n_col, T *a_in,
+                                              da_int lda, T *a_out) {
+    da_status status = da_status_success;
+
+    for (da_int i = 0; i < n_row; i++) {
+        for (da_int j = 0; j < n_col; j++) {
+            // a_in is row major (contiguous over j for fixed i)
+            // a_out is column major (contiguous over i for fixed j)
+            // outer loop is over rows so wthis code should read contiguous block from a_in
+            // and do scattered write to a_out
+            a_out[i + (j * n_row)] = a_in[(i * lda) + j];
+        }
+    }
+
+    return status;
+}
+
 int decision_tree_ex_d(std::string score_criteria) {
     int exit_code = 0;
     double tol = 1.0e-6;
@@ -61,11 +79,14 @@ int decision_tree_ex_d(std::string score_criteria) {
     strcat(labels_fp, "training_labels");
     strcat(labels_fp, ".csv");
 
-    double *x = nullptr;
+    double *x_r_major = nullptr, *x = nullptr;
     uint8_t *y = nullptr;
     da_int n_obs = 0, d = 0, nrows_y = 0, ncols_y = 0;
-    status = da_read_csv_d(csv_handle, features_fp, &x, &n_obs, &d, nullptr);
+    status = da_read_csv_d(csv_handle, features_fp, &x_r_major, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, labels_fp, &y, &nrows_y, &ncols_y, nullptr);
+
+    x = new double[n_obs * d];
+    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_r_major, d, x);
 
     // Initialize the decision tree class and fit model
     df_handle = nullptr;
@@ -74,6 +95,7 @@ int decision_tree_ex_d(std::string score_criteria) {
 
     status = da_options_set_int(df_handle, "depth", 5);
     status = da_options_set_int(df_handle, "seed", 77);
+    status = da_options_set_int(df_handle, "n_features_to_select", d);
     status = da_options_set_string(df_handle, "scoring function", score_criteria.data());
     status = da_df_tree_fit_d(df_handle);
 
@@ -147,7 +169,10 @@ int decision_tree_ex_d(std::string score_criteria) {
         free(y_test);
 
     if (x)
-        free(x);
+        delete[] x;
+
+    if (x_r_major)
+        free(x_r_major);
 
     if (y)
         free(y);
@@ -186,11 +211,14 @@ int decision_tree_ex_s(std::string score_criteria) {
     strcat(labels_fp, "training_labels");
     strcat(labels_fp, ".csv");
 
-    float *x = nullptr;
+    float *x_r_major = nullptr, *x = nullptr;
     uint8_t *y = nullptr;
     da_int n_obs = 0, d = 0, nrows_y = 0, ncols_y = 0;
-    status = da_read_csv_s(csv_handle, features_fp, &x, &n_obs, &d, nullptr);
+    status = da_read_csv_s(csv_handle, features_fp, &x_r_major, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, labels_fp, &y, &nrows_y, &ncols_y, nullptr);
+
+    x = new float[n_obs * d];
+    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_r_major, d, x);
 
     // Initialize the decision tree class and fit model
     df_handle = nullptr;
@@ -199,6 +227,7 @@ int decision_tree_ex_s(std::string score_criteria) {
 
     status = da_options_set_int(df_handle, "depth", 5);
     status = da_options_set_int(df_handle, "seed", 77);
+    status = da_options_set_int(df_handle, "n_features_to_select", d);
     status = da_options_set_string(df_handle, "scoring function", score_criteria.data());
     status = da_df_tree_fit_s(df_handle);
 
@@ -272,7 +301,10 @@ int decision_tree_ex_s(std::string score_criteria) {
         free(y_test);
 
     if (x)
-        free(x);
+        delete[] x;
+
+    if (x_r_major)
+        free(x_r_major);
 
     if (y)
         free(y);

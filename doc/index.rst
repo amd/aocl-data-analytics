@@ -76,7 +76,7 @@ Library Reference Documentation
    basic_statistics/basic_stats_intro
    factorization/factorization_intro
    linear_models/linmod_intro
-..  trees_forests/df_intro
+   trees_forests/df_intro
 
 .. only:: internal
 

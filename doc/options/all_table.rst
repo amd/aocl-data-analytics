@@ -32,7 +32,6 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances", ":math:`s=` `biased`, or `unbiased`."
    "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix", ":math:`s=` `correlation`, `covariance`, or `svd`."
    "n_components", "integer", ":math:`i=1`", "Number of principal components to compute", ":math:`1 \le i`"
 
@@ -47,7 +46,7 @@ The following options are supported.
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
    "n_trees", "integer", ":math:`i=1`", "set number of features in each tree", ":math:`0 < i`"
-   "n_features_per_tree", "integer", ":math:`i=1`", "set number of features in each tree", ":math:`0 < i`"
+   "n_features_to_select", "integer", ":math:`i=1`", "set number of features in selection for splitting", ":math:`0 < i`"
    "seed", "integer", ":math:`i=-1`", "set random seed for Mersenne Twister (64-bit) PRNG", ":math:`-1 \le i \le 2147483647`"
    "n_obs_per_tree", "integer", ":math:`i=1`", "set number of observations in each tree", ":math:`0 < i`"
    "depth", "integer", ":math:`i=-1`", "set max depth of tree", ":math:`-1 \le i`"
@@ -64,7 +63,7 @@ The following options are supported.
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
    "n_trees", "integer", ":math:`i=1`", "set number of features in each tree", ":math:`0 < i`"
-   "n_features_per_tree", "integer", ":math:`i=1`", "set number of features in each tree", ":math:`0 < i`"
+   "n_features_to_select", "integer", ":math:`i=1`", "set number of features in selection for splitting", ":math:`0 < i`"
    "seed", "integer", ":math:`i=-1`", "set random seed for Mersenne Twister (64-bit) PRNG", ":math:`-1 \le i \le 2147483647`"
    "n_obs_per_tree", "integer", ":math:`i=1`", "set number of observations in each tree", ":math:`0 < i`"
    "depth", "integer", ":math:`i=-1`", "set max depth of tree", ":math:`-1 \le i`"
