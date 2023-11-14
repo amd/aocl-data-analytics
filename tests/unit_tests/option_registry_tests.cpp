@@ -21,18 +21,6 @@
  *
  * ************************************************************************ */
 
-// Testing for the Options and Registry framework
-// Tests:
-// [x] 1. Internal
-// [x] 1.1 Options class
-//         ALL (int, float, bool, string: setby, name(empty), get_name, get_option_t, get(),
-//         set(user/solver/default), print_option to just match string length
-//         Int and Float: test validate(all bound types)
-//         String: options with same entries or empty entry, get(+key)
-// [x] 1.2 Registry class
-//         same name but different type string/numeric
-// [ ] 2. Public: Get/Set for all types
-
 #include "aoclda.h"
 #include "da_handle.hpp"
 #include "options.hpp"
@@ -59,8 +47,8 @@ OptionNumeric<double> opt_double("double option", "Preloaded Double Option", 1.0
                                  da_options::lbound_t::greaterthan, 20.0f,
                                  da_options::ubound_t::lessthan, 16.0f);
 std::shared_ptr<OptionNumeric<double>> oD;
-//OptionNumeric<bool> opt_bool("bool option", "Preloaded bool Option", true);
-//std::shared_ptr<OptionNumeric<bool>> oB;
+OptionNumeric<bool> opt_bool("bool option", "Preloaded bool Option", true);
+std::shared_ptr<OptionNumeric<bool>> oB;
 // String option with categorical values
 OptionString opt_string("string option", "Preloaded Categorical String Option",
                         {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes");
@@ -96,10 +84,10 @@ da_status preload(OptionRegistry &r) {
     if (status != da_status_success)
         return status;
 
-    //oB = std::make_shared<OptionNumeric<bool>>(opt_bool);
-    //status = r.register_opt(oB);
-    //if (status != da_status_success)
-    //    return status;
+    oB = std::make_shared<OptionNumeric<bool>>(opt_bool);
+    status = r.register_opt(oB);
+    if (status != da_status_success)
+        return status;
 
     return status;
 };
@@ -130,7 +118,8 @@ template <typename T> void OpClsNumeric(void) {
                          da_options::ubound_t::lessequal, 10);
     // Call to cover pretty printing
     [[maybe_unused]] string pretty;
-    pretty = opt.print_details(true);
+    pretty = opt.print_details(true) + opt.print_details(false, true) +
+             opt.print_details(false, false);
     bool has_nan = std::numeric_limits<T>::has_quiet_NaN;
     T val = -999;
     opt.get(val);
@@ -143,25 +132,25 @@ template <typename T> void OpClsNumeric(void) {
     std::regex reg_default(s_default, std::regex::grep);
     std::regex reg_solver(s_solver, std::regex::grep);
     std::regex reg_user(s_user, std::regex::grep);
-    std::string det = opt.print_details(false);
+    std::string det = opt.print_details();
     std::smatch m;
     std::regex_search(det, m, reg_default);
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_default.c_str());
 
     EXPECT_EQ(opt.set(1), da_status_success);
     // check print_detail() grep match Set-by: user
-    det = opt.print_details(false);
+    det = opt.print_details();
     std::regex_search(det, m, reg_user);
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_user.c_str());
 
     EXPECT_EQ(opt.set(2, da_options::setby_t::solver), da_status_success);
     // check print_detail() grep match Set-by: solver
-    det = opt.print_details(false);
+    det = opt.print_details();
     std::regex_search(det, m, reg_solver);
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
 
     std::string prn = opt.print_option();
-    EXPECT_EQ(prn.size(), std::string(" placeholder option = 2\n").size());
+    EXPECT_EQ(prn, " placeholder option = 2\n"s);
 
     // lower > upper
     EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 10,
@@ -211,31 +200,70 @@ template <typename T> void OpClsNumeric(void) {
     {
         OptionNumeric<T> pretty_print("Opt", descr, 0, da_options::lbound_t::greaterthan,
                                       10, da_options::ubound_t::lessthan, 5);
-        pretty = pretty_print.print_details(true);
-        pretty = pretty_print.print_details(false);
+        pretty = pretty_print.print_details();
+        pretty = pretty_print.print_details(false, true);
+        pretty = pretty_print.print_details(false, false);
     }
     {
         OptionNumeric<T> pretty_print("Opt", descr, 0, da_options::lbound_t::m_inf, 10,
                                       da_options::ubound_t::p_inf, 0);
-        pretty = pretty_print.print_details(true);
-        pretty = pretty_print.print_details(false);
+        pretty = pretty_print.print_details();
+        pretty = pretty_print.print_details(false, true);
+        pretty = pretty_print.print_details(false, false);
     }
 }
 
-//template <> void OpClsNumeric<bool>(void) {
-// Empty name
-//    EXPECT_THROW(OptionNumeric<bool> opt("    ", "", true), std::invalid_argument);
-//    [[maybe_unused]] std::string pretty;
-//    pretty = opt_bool.print_details(true);
-//    pretty = opt_bool.print_details(false);
-//    pretty = opt_bool.print_option();
-//}
+// Bool specialization
+template <> void OpClsNumeric<bool>(void) {
+    std::string const descr("Preloaded Option");
+    OptionNumeric<bool> opt(" Placeholder    OptiOn    ", descr, true);
+    // Call to cover pretty printing
+    [[maybe_unused]] string pretty;
+    pretty = opt.print_details(true) + opt.print_details(false, true) +
+             opt.print_details(false, false);
+    bool val;
+    opt.get(val);
+    EXPECT_EQ(val, true);
+    // check print_detail() grep match Set-by: default
+    std::string s_default("Set-by: (default");
+    std::string s_user("Set-by: (user");
+    std::string s_solver("Set-by: (solver");
+    std::regex reg_default(s_default, std::regex::grep);
+    std::regex reg_solver(s_solver, std::regex::grep);
+    std::regex reg_user(s_user, std::regex::grep);
+    std::string det = opt.print_details();
+    std::smatch m;
+    std::regex_search(det, m, reg_default);
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_default.c_str());
+
+    EXPECT_EQ(opt.set(false), da_status_success);
+    // check print_detail() grep match Set-by: user
+    det = opt.print_details();
+    std::regex_search(det, m, reg_user);
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_user.c_str());
+
+    EXPECT_EQ(opt.set(true, da_options::setby_t::solver), da_status_success);
+    // check print_detail() grep match Set-by: solver
+    det = opt.print_details();
+    std::regex_search(det, m, reg_solver);
+    EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
+
+    std::string prn = opt.print_option();
+    EXPECT_EQ(prn, " placeholder option = true\n"s);
+
+    {
+        OptionNumeric<bool> pretty_print("Opt", descr, true);
+        pretty = pretty_print.print_details(true);
+        pretty = pretty_print.print_details(false, true);
+        pretty = pretty_print.print_details(false, false);
+    }
+}
 
 TEST(OpOptionInternal, OpClsNumericAll) {
     OpClsNumeric<float>();
     OpClsNumeric<double>();
     OpClsNumeric<da_int>();
-    //OpClsNumeric<bool>();
+    OpClsNumeric<bool>();
 };
 
 TEST(OpOptionInternal, OpClsStringAll) {
@@ -262,26 +290,27 @@ TEST(OpOptionInternal, OpClsStringAll) {
     std::regex reg_default(s_default, std::regex::grep);
     std::regex reg_solver(s_solver, std::regex::grep);
     std::regex reg_user(s_user, std::regex::grep);
-    std::string det = opt_string.print_details(false);
+    std::string det = opt_string.print_details();
     std::smatch m;
     std::regex_search(det, m, reg_default);
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_default.c_str());
 
     EXPECT_EQ(::opt_string.set("maybe"), da_status_success);
     // check print_detail() grep match Set-by: user
-    det = opt_string.print_details(false);
+    det = opt_string.print_details();
     std::regex_search(det, m, reg_user);
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_user.c_str());
 
     EXPECT_EQ(::opt_string.set("no", da_options::setby_t::solver), da_status_success);
     // check print_detail() grep match Set-by: solver
-    det = ::opt_string.print_details(false);
+    det = ::opt_string.print_details(true);
     std::regex_search(det, m, reg_solver);
     EXPECT_STRCASEEQ(std::string(m[0]).c_str(), s_solver.c_str());
     [[maybe_unused]] std::string prn;
     prn = opt_string.print_option();
-    EXPECT_EQ(prn.size(), std::string(" string option = no\n").size());
-    prn = opt_string.print_details(true);
+    EXPECT_EQ(prn, " string option = no\n"s);
+    prn = opt_string.print_details(false);
+    prn = opt_string.print_details(false, false);
 
     EXPECT_NO_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                             {{"yes", 1}, {"yes", 0}, {"yes", 5}}, "yes"));
@@ -320,10 +349,10 @@ TEST(OpRegistryInternal, OpRegALL) {
     status = reg.register_opt(oI);
     EXPECT_EQ(status, da_status_invalid_input);
     // add option (same name but different type)
-    //OptionNumeric<bool> opt_over("integer option", "Preloaded bool Option", true);
-    //std::shared_ptr<OptionNumeric<bool>> over =
-    //    std::make_shared<OptionNumeric<bool>>(opt_over);
-    //status = reg.register_opt(over);
+    OptionNumeric<bool> opt_over("integer option", "Preloaded bool Option", true);
+    std::shared_ptr<OptionNumeric<bool>> over =
+        std::make_shared<OptionNumeric<bool>>(opt_over);
+    status = reg.register_opt(over);
     EXPECT_EQ(status, da_status_invalid_input);
 
     // set with locked registry
@@ -350,7 +379,8 @@ TEST(OpRegistryInternal, OpRegALL) {
     EXPECT_EQ(ret, "new value");
 
     reg.print_details(true);
-    reg.print_details(false);
+    reg.print_details(false, false);
+    reg.print_details(false, true);
     reg.print_options();
 }
 
@@ -431,6 +461,7 @@ TEST(OpRegistryWrappers, getset_int) {
     da_handle_destroy(&handle);
 };
 
+// Public API
 TEST(OpRegistryWrappers, getset_double) {
     da_handle handle;
     OptionRegistry *opts;
@@ -495,6 +526,7 @@ TEST(OpRegistryWrappers, getset_float) {
     da_handle_destroy(&handle);
 };
 
+// No public boolean API yet
 //TEST(OpRegistryWrappers, getset_bool) {
 //    EXPECT_EQ(da_options_set_bool(nullptr, "bool option", true),
 //              da_status_invalid_pointer);

@@ -55,6 +55,8 @@ C++ example programs can be found in the ``examples`` folder of your installatio
 AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
 toolchainsupport@amd.com.
 
+Library Reference Documentation
+-------------------------------
 
 .. toctree::
    :maxdepth: 1
@@ -85,12 +87,21 @@ toolchainsupport@amd.com.
       doc_utilities/utils.rst
 
 Search the Documentation
-========================
+------------------------
 
 * :ref:`genindex`
 * :ref:`search`
 
 References
-==========
+----------
 
 .. bibliography::
+
+Appendices
+----------
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Appendices
+
+    options/all_table.rst

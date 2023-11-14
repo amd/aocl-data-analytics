@@ -30,8 +30,8 @@
 project = 'AOCL-DA'
 copyright = '2023, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
-version = '1.0'
-release = '4.2'
+version = ''
+release = '4.2.1'
 
 
 # -- General configuration ---------------------------------------------------

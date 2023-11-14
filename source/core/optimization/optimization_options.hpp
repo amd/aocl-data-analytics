@@ -40,10 +40,6 @@ template <class T>
 inline da_status register_optimization_options(da_errors::da_error_t &err,
                                                da_options::OptionRegistry &opts) {
     using namespace da_options;
-    T safe_eps = (T)2.0 * std::numeric_limits<T>::epsilon();
-    T safe_tol = std::sqrt(safe_eps);
-    [[maybe_unused]] T max_real = std::numeric_limits<T>::max();
-    da_int imax = std::numeric_limits<da_int>::max();
 
     try {
         // ===========================================================================
@@ -54,32 +50,32 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             OptionNumeric<da_int>("coord skip min",
                                   "Minimum times a coordinate change is smaller than "
                                   "\"coord skip tol\" to start skipping",
-                                  1, da_options::lbound_t::greaterequal, imax - 3,
-                                  da_options::ubound_t::lessequal, 5));
+                                  1, da_options::lbound_t::greaterequal, max_da_int,
+                                  da_options::ubound_t::p_inf, 5));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("coord skip max",
                                   "Initial max times a coordinate can be skipped after "
                                   "this the coordinate is checked",
-                                  4, da_options::lbound_t::greaterequal, imax,
-                                  da_options::ubound_t::lessequal, 8));
+                                  4, da_options::lbound_t::greaterequal, max_da_int,
+                                  da_options::ubound_t::p_inf, 8));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "coord restart",
             "Number of inner iteration to perform before requesting to perform a full "
             "evaluation of the step function",
-            0, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
-            imax));
+            0, da_options::lbound_t::greaterequal, max_da_int,
+            da_options::ubound_t::p_inf, max_da_int, "\\infty"));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "coord iteration limit", "Maximum number of iterations to perform", 1,
-            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
-            imax));
+            da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
+            100000));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "lbfgsb iteration limit", "Maximum number of iterations to perform", 1,
-            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
-            imax));
+            da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
+            10000));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "lbfgsb memory limit",
@@ -90,12 +86,15 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "monitoring frequency",
             "How frequent to call the user-supplied monitor function", 0,
-            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
+            da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
             0));
         opts.register_opt(oi);
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "print level", "set level of verbosity for the solver TODO explain levels", 0,
-            da_options::lbound_t::greaterequal, 5, da_options::ubound_t::lessequal, 1));
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("print level",
+                                  "set level of verbosity for the solver 0 indicates no "
+                                  "output while 5 is a very verbose printing",
+                                  0, da_options::lbound_t::greaterequal, 5,
+                                  da_options::ubound_t::lessequal, 1));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "debug", "set debug level (internal use)", 0,
@@ -105,54 +104,58 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // ===========================================================================
         // REAL OPTIONS
         // ===========================================================================
+        // Tolerance based on sqrt(safe_epsilon)
+        da_options::safe_tol<T> tol;
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("time limit", "maximum time allowed to run", 0.0,
                              da_options::lbound_t::greaterthan, 0,
-                             da_options::ubound_t::p_inf, static_cast<T>(1.0e6)));
+                             da_options::ubound_t::p_inf, static_cast<T>(1.0e6), "10^6"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "infinite bound size", "threshold value to take for +/- infinity", 1000,
             da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(1.0e20)));
+            static_cast<T>(1.0e20), "10^{20}"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "lbfgsb convergence tol",
-            "tolerance of the projected gradient infinity norm to declare convergence",
+            "tolerance of the projected gradient infinity norm to "
+            "declare convergence",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            safe_tol));
+            tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "lbfgsb progress factor",
-            "the iteration stops when (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= "
+            "the iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
             "factr*epsmch"
             " where epsmch is the machine precision. Typical values for type double: "
-            "1.e+12 for"
-            " low accuracy; 1.e+7 for moderate accuracy; 1.e+1 for extremely"
+            "10e12 for"
+            " low accuracy; 10e7 for moderate accuracy; 10 for extremely"
             " high accuracy.",
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(10.0) / safe_tol));
+            tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord convergence tol",
             "tolerance of the projected gradient infinity norm to declare convergence",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            safe_tol));
+            tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord skip tol", "Coordinate skip tolerance", 0.0,
-            da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf, safe_tol));
+            da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
+            tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord progress factor",
-            "the iteration stops when (f^k - f^{k+1})/max{|f^k|,|f^{k+1}|,1} <= "
+            "the iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
             "factr*epsmch"
             " where epsmch is the machine precision. Typical values for type double: "
-            "1.e+12 for"
-            " low accuracy; 1.e+7 for moderate accuracy; 1.e+1 for extremely"
+            "10e12 for"
+            " low accuracy; 10e7 for moderate accuracy; 10 for extremely"
             " high accuracy.",
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(10.0) / safe_tol));
+            tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
         opts.register_opt(oT);
 
         // ===========================================================================

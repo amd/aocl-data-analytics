@@ -39,7 +39,6 @@
 
 template <class T>
 inline da_status register_df_options(da_options::OptionRegistry &opts) {
-    da_int max_int = std::numeric_limits<da_int>::max();
     da_status status = da_status_success;
 
     try {
@@ -57,28 +56,28 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(os);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "depth", "set max depth of tree", -1, lbound_t::greaterequal, max_int,
-            ubound_t::lessequal, -1));
+            "depth", "set max depth of tree", -1, lbound_t::greaterequal, max_da_int,
+            ubound_t::p_inf, -1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "seed", "set random seed for Mersenne Twister (64-bit) PRNG", -1,
-            lbound_t::greaterequal, max_int, ubound_t::lessequal, -1));
+            lbound_t::greaterequal, max_da_int, ubound_t::lessequal, -1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "n_obs_per_tree", "set number of observations in each tree", 0,
-            lbound_t::greaterthan, max_int, ubound_t::lessequal, 1));
+            lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "n_features_per_tree", "set number of features in each tree", 0,
-            lbound_t::greaterthan, max_int, ubound_t::lessequal, 1));
+            lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_trees", "set number of features in each tree", 0, lbound_t::greaterthan,
-            max_int, ubound_t::lessequal, 1));
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("n_trees", "set number of features in each tree", 0,
+                                  lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 
     } catch (std::bad_alloc &) {

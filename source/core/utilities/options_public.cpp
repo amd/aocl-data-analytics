@@ -179,6 +179,22 @@ da_status da_options_get_real_s(da_handle handle, const char *option, float *val
     return status;
 }
 
+da_status da_options_print(da_handle handle) {
+    da_status status;
+
+    if (!handle)
+        return da_status_invalid_pointer;
+
+    da_options::OptionRegistry *opts;
+    status = handle->get_current_opts(&opts);
+    if (status != da_status_success)
+        // invalid pointer or uninitialized handle
+        return status;
+
+    opts->print_details();
+    return da_status_success;
+}
+
 da_status da_datastore_options_set_int(da_datastore store, const char *option,
                                        da_int value) {
     da_status status;
@@ -282,4 +298,12 @@ da_status da_datastore_options_get_real_s(da_datastore store, const char *option
 
     status = store->opts->get(option, *value);
     return status;
+}
+
+da_status da_datastore_options_print(da_datastore store) {
+    if (!store)
+        return da_status_invalid_pointer;
+
+    store->opts->print_details();
+    return da_status_success;
 }

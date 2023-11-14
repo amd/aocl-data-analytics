@@ -113,6 +113,15 @@ da_status da_options_get_real_d(da_handle handle, const char *option, double *va
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
                                 da_int *lvalue);
 
+/**
+ * \brief Print options (key/value) stored inside the \p handle argument.
+ * \param[in] handle the \ref da_handle which stores the options.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success
+ * - \ref da_status_invalid_pointer - the \p handle has not been initialized.
+ **/
+da_status da_options_print(da_handle handle);
+
 /** \{
  * \brief Set an option, to be stored inside the \p store argument.
  * \param[in,out] store the \ref da_datastore which will store the value of the option.
@@ -188,7 +197,7 @@ da_status da_datastore_options_get_real_d(da_datastore store, const char *option
 
 /**
  * \brief Get the current value of an option stored inside the \p store argument.
- * \param[in] handle the \ref da_datastore which stores the options.
+ * \param[in] store the \ref da_datastore which stores the options.
  * \param[in] option the name of the option to get.
  * \param[out] value the value of the option obtained from the \p store.
  * \param[in] lvalue the length of the string \p value.
@@ -202,4 +211,12 @@ da_status da_datastore_options_get_real_d(da_datastore store, const char *option
 da_status da_datastore_options_get_string(da_datastore store, const char *option,
                                           char *value, da_int lvalue);
 
+/**
+ * \brief Print options (key/value) stored inside the \p store argument.
+ * \param[in] store the \ref da_datastore which stores the options.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success
+ * - \ref da_status_invalid_pointer - the \p store has not been initialized.
+ **/
+da_status da_datastore_options_print(da_datastore store);
 #endif //AOCLDA_OPTIONS_H

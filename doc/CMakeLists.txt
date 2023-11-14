@@ -30,6 +30,7 @@ find_program(LATEXMK NAMES latexmk REQUIRED)
 find_program(SED NAMES sed REQUIRED)
 find_program(GREP NAMES grep REQUIRED)
 find_program(SORT NAMES sort REQUIRED)
+find_program(AWK NAMES awk gawk REQUIRED)
 
 # Check for python and the documentation packages: - breathe -
 # sphinxcontrib.bibtex
@@ -115,22 +116,71 @@ else()
   set(SPHINX_TAG "")
 endif()
 
+
+# Target to regenerate ALL registered options in handle (datastore)
+# These are tables stored in a file and added as a chapter (appendix?)
+# in the doc.
+# It requires for the unit test to be build, otherwise it won't build
+# the target.
+# | ${GREP} -v -e ^Running -e \\\[.\\\+\\\]
+file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/process.awk
+     CONTENT
+     "BEGIN {it=0}
+     /^Running/ { next }
+     /\\[=+\\]/ { exit }
+     { if (it==1) { printf \"%3s\" , \"\" } print $0 }
+     /^\\.\\.\\ only:: internal/ { it=1 }")
+
+
+add_custom_target(
+    gen_options_tables
+    COMMAND doc_tests ARGS --gtest_filter=DocOptions*.RST*
+      --gtest_print_time=0 --gtest_brief=1 --gtest_color=no
+    | ${AWK} -f ${CMAKE_CURRENT_BINARY_DIR}/process.awk
+    > ${SPHINX_SOURCE}/options/all_table.rst
+    DEPENDS doc_tests
+    COMMENT "Running unit-test for doc options tables"
+    VERBATIM
+)
+
 # Target building the doxygen XML Also modifies the output directory and the
 # version number in the Doxyfile: 1. replace PROJECT_NAME = .* for the string
 # "version ${AOCLDA_VERSION} (date)" 2. Run doxygen on the sources
 add_custom_target(
   doxygen_xml
+  # Version bump and set the correct output directory
+  # "s/^\\(PROJECT_NUMBER[[:space:]]*=\\).*$/\\1 \"version ${AOCLDA_VERSION} (${BUILD_DATE})\"/"
   COMMAND
     ${SED} -i -e
-    "s/^\\(PROJECT_NUMBER[[:space:]]*=\\).*$/\\1 \"version ${AOCLDA_VERSION} (${BUILD_DATE})\"/"
+    "s/^\\(PROJECT_NUMBER[[:space:]]*=\\).*$/\\1 \"Release ${AOCLDA_VERSION}\"/"
     -e "s+^\\(OUTPUT_DIRECTORY[[:space:]]*=\\).*$+\\1 ${PROJECT_BINARY_DIR}+"
     Doxyfile
-  COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+    # Run doxygen THEN reset the OUTPUT_DIRECTORY
+  COMMAND doxygen ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile &&
+    ${SED} -i -e
+    "s+^\\(OUTPUT_DIRECTORY[[:space:]]*=\\).*$+\\1 auto-generated-by-cmake+"
+    Doxyfile
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   VERBATIM
   SOURCES Doxyfile
-  DEPENDS latexdeps.pdf
   COMMENT "Building doxygen xml files")
+
+# Bump version string in conf.py (Sphinx)
+add_custom_target(
+  conf_py_version_bumping
+  COMMAND
+    ${SED} -i -e
+    "s/^\\(release[[:space:]]*=\\).*$/\\1 \'${AOCLDA_VERSION}\'/"
+    conf.py
+  WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+  VERBATIM
+  COMMENT "[sphinx] conf.py: version ${AOCLDA_VERSION}")
+
+# Add table of options if available
+if (${BUILD_GTEST})
+    message(STATUS "Documentation: new options tables will be generated.")
+    add_dependencies(doxygen_xml gen_options_tables)
+endif()
 
 # Build the html documentation in doc/sphinx/html
 add_custom_target(
@@ -140,7 +190,7 @@ add_custom_target(
     -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
     ${SPHINX_BUILD}/html
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  DEPENDS doxygen_xml
+  DEPENDS doxygen_xml conf_py_version_bumping
   COMMENT "Generating HTML documentation")
 
 # Build a latex documentation in doc/sphinx/latex
@@ -155,8 +205,8 @@ add_custom_target(
   COMMAND
     cd ${SPHINX_BUILD}/latex && make && mv ${SPHINX_BUILD}/latex/aocl-da.pdf
     ${SPHINX_BUILD}/latex/${PDF_DOC_NAME}.pdf
-  DEPENDS doxygen_xml
-  COMMENT "Generating pdf documentation")
+  DEPENDS latexdeps.pdf doxygen_xml conf_py_version_bumping
+  COMMENT "Generating PDF documentation")
 
 # Main target doc, builds both html and pdf
 add_custom_target(doc DEPENDS doc_pdf doc_html)

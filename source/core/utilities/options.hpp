@@ -28,6 +28,7 @@
 
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -80,6 +81,68 @@ using std::string;
 using namespace std::literals::string_literals;
 using std::map;
 using std::shared_ptr;
+
+#undef max // Work-around for windows.h max define
+const da_int max_da_int = std::numeric_limits<da_int>::max();
+
+template <typename T> struct safe_eps {
+    static constexpr T eps = 2 * std::numeric_limits<T>::epsilon();
+    constexpr operator T() const noexcept { return eps; };
+};
+
+template <typename T> struct safe_tol {
+  private:
+    // Method to represent the tolerance in \LaTeX format
+    const std::string sqrt2eps{"\\sqrt{2\\,\\varepsilon}"};
+
+  public:
+    T safe_eps(T num = (T)1, T den = (T)1) {
+        return ((std::sqrt(da_options::safe_eps<T>()) * num) / den);
+    };
+    T safe_inveps(T num = (T)1, T den = (T)1) {
+        return (num / (den * std::sqrt(da_options::safe_eps<T>())));
+    };
+
+    std::string safe_eps_latex(T num = (T)1, T den = (T)1) {
+        size_t nchar;
+        std::string n, d;
+        n.resize(64);
+        d.resize(64);
+        nchar = std::snprintf(n.data(), n.size(), "%g", num);
+        n.resize(nchar);
+        nchar = std::snprintf(d.data(), d.size(), "%g", den);
+        d.resize(nchar);
+        if (num != 1 && den != 1) {
+            return n + "/" + d + this->sqrt2eps;
+        } else if (den != 1) {
+            return this->sqrt2eps + "/" + d;
+        } else if (num != 1) {
+            return n + "\\;" + this->sqrt2eps;
+        } else {
+            return this->sqrt2eps;
+        }
+    };
+
+    std::string safe_inveps_latex(T num = (T)1, T den = (T)1) {
+        size_t nchar;
+        std::string n, d;
+        n.resize(64);
+        d.resize(64);
+        nchar = std::snprintf(n.data(), n.size(), "%g", num);
+        n.resize(nchar);
+        nchar = std::snprintf(d.data(), d.size(), "%g", den);
+        d.resize(nchar);
+        if (num != 1 && den != 1) {
+            return "\\frac{" + n + "}{" + d + "\\;" + this->sqrt2eps + "}";
+        } else if (den != 1) {
+            return "\\frac{1}{" + d + "\\;" + this->sqrt2eps + "}";
+        } else if (num != 1) {
+            return "\\frac{" + n + "}{" + this->sqrt2eps + "}";
+        } else {
+            return this->sqrt2eps;
+        }
+    };
+};
 
 enum lbound_t { m_inf = 0, greaterthan, greaterequal };
 enum ubound_t { p_inf = 0, lessthan, lessequal };
@@ -193,8 +256,15 @@ class OptionBase {
     string desc; // brief description (free text)
     setby_t setby;
     string errmsg = ""; // internal error buffer
+    // prepare the option key/value pair to be printed on screen.
+    // called with option "print options = yes"
     virtual string print_option(void) = 0;
-    virtual string print_details(bool doxygen) = 0;
+    // compose the option details (used for documentation)
+    // screen = true => print it in plain text pretty print
+    // screen = false => used to indicate a file format is requested
+    // => doxygen = true => format is set to Doxygen
+    // => doxygen = false => format is set to ReStructuredText
+    virtual string print_details(bool screen = true, bool doxygen = false) = 0;
 };
 
 template <typename T> class OptionNumeric : public OptionBase {
@@ -202,6 +272,8 @@ template <typename T> class OptionNumeric : public OptionBase {
     T value;
     // default value for option
     T vdefault;
+    // Descriptive string of the vdefault value (optional)
+    string vddesc;
     // lower bound value for option
     T lower;
     // lower bound type (none (-inf), greater than..., greater or equal than...)
@@ -213,7 +285,7 @@ template <typename T> class OptionNumeric : public OptionBase {
 
   public:
     OptionNumeric(string name, string desc, T lower, lbound_t lbound, T upper,
-                  ubound_t ubound, T vdefault) {
+                  ubound_t ubound, T vdefault, string vddesc = "") {
         static_assert(is_same<T, da_int>::value || is_floating_point<T>::value,
                       "Constructor only valid for non boolean numeric type");
         da_status status = set_name(name);
@@ -231,6 +303,7 @@ template <typename T> class OptionNumeric : public OptionBase {
         OptionNumeric::upper = upper;
         OptionNumeric::ubound = ubound;
         OptionNumeric::otype = get_type<T>();
+        OptionNumeric::vddesc = vddesc;
     };
     OptionNumeric(string name, string desc, bool vdefault) {
         static_assert(is_same<T, bool>::value, "Constructor only valid for boolean");
@@ -252,56 +325,105 @@ template <typename T> class OptionNumeric : public OptionBase {
 
     string print_option(void) {
         ostringstream rec;
-        rec << " " << name << " = " << value << endl;
+        rec << " " << name << " = ";
+        if constexpr (std::is_same_v<T, bool>) {
+            rec << std::boolalpha;
+        }
+        rec << value << endl;
         return rec.str();
     }
 
-    string print_details(bool doxygen) {
+    string print_details(bool screen = true, bool doxygen = false) {
         ostringstream rec;
         string tylab = option_tl[get_type<T>()];
         string t = tylab.substr(0, 1);
-        if (doxygen) {
+        if (otype == option_t::opt_bool)
+            rec << std::boolalpha;
+        if (!screen && doxygen) {
             if (otype == option_t::opt_bool) {
                 rec << " * | **" << name << "** | " << tylab << " | \\f$ " << t
-                    << " = \\f$ " << (vdefault ? "True"s : "False"s) << " |" << endl;
+                    << " = \\f$ " << vdefault << " |" << endl;
             } else {
-                rec << " * | **" << name << "** | " << tylab << " | \\f$ " << t << " = "
-                    << vdefault << "\\f$ |" << endl;
+                if (vddesc != "") { // Pretty print vdefault value
+                    rec << " * | **" << name << "** | " << tylab << " | \\f$ " << t
+                        << " = " << vddesc << "\\f$ |" << endl;
+                } else { // no detail, conver default value
+                    rec << " * | **" << name << "** | " << tylab << " | \\f$ " << t
+                        << " = " << vdefault << "\\f$ |" << endl;
+                }
             }
             rec << " * | " << desc << "|||" << endl;
 
             if (lbound == m_inf && ubound == p_inf) {
-                rec << " * | There are no constraints on \\f$i\\f$. |||" << endl;
+                rec << " * | There are no constraints on \\f$" << t << "\\f$. |||"
+                    << endl;
             } else {
                 if (otype == option_t::opt_bool) {
                     rec << " * | "
-                        << "Valid values: 1 (True) and 0 (False).|||" << endl;
+                        << "Valid values: true and false.|||" << endl;
                 } else {
                     rec << " * | "
                         << "Valid values: \\f$";
                     if (lbound == greaterequal) {
                         rec << lower << " \\le ";
                     } else if (lbound == greaterthan) {
-                        rec << lower << " \\lt ";
+                        // rec << lower << " \\lt ";
+                        rec << lower << " < ";
                     }
                     rec << t;
                     if (ubound == lessequal) {
                         rec << " \\le " << upper;
                     } else if (ubound == lessthan) {
-                        rec << " \\lt " << upper;
+                        // rec << " \\lt " << upper;
+                        rec << " < " << upper;
                     }
                     rec << "\\f$. |||" << endl;
                 }
             }
-        } else {
+        } else if (!screen) { // restructured text
+            if (otype == option_t::opt_bool) {
+                rec << "   \"" << name << "\", \"" << tylab << "\", \":math:`" << t
+                    << "=` " << vdefault << "\", \"" << desc << "\", \"";
+            } else {
+                if (vddesc != "") { // Pretty print vdefault value
+                    rec << "   \"" << name << "\", \"" << tylab << "\", \":math:`" << t
+                        << "=" << vddesc << "`\", \"" << desc << "\", \"";
+                } else { // no detail, conver default value
+                    rec << "   \"" << name << "\", \"" << tylab << "\", \":math:`" << t
+                        << "=" << vdefault << "`\", \"" << desc << "\", \"";
+                }
+            }
+
+            if (lbound == m_inf && ubound == p_inf) {
+                rec << "There are no constraints on :math:`" << t << "`." << endl;
+            } else {
+                if (otype == option_t::opt_bool) {
+                    rec << "true, or false.";
+                } else {
+                    rec << ":math:`";
+                    if (lbound == greaterequal) {
+                        rec << lower << " \\le ";
+                    } else if (lbound == greaterthan) {
+                        rec << lower << " < ";
+                    }
+                    rec << t;
+                    if (ubound == lessequal) {
+                        rec << " \\le " << upper;
+                    } else if (ubound == lessthan) {
+                        rec << " < " << upper;
+                    }
+                    rec << "`";
+                }
+                rec << "\"" << endl;
+            }
+        } else { // plain text
             rec << "Begin Option [" << tylab << "]" << endl;
             rec << "   Name: '" << name << "'" << endl;
             if (otype == option_t::opt_bool) {
-                rec << "   Value: " << (value ? "True"s : "False"s)
-                    << "     [default: " << (vdefault ? "True"s : "False"s) << "]"
+                rec << "   Value: " << value << "     [default: " << vdefault << "]"
                     << endl;
                 rec << "   Valid values: ";
-                rec << "1 (True) and 0 (False)" << endl;
+                rec << "true and false" << endl;
             } else {
                 rec << "   Value: " << value << "     [default: " << vdefault << "]"
                     << endl;
@@ -418,9 +540,9 @@ class OptionString : public OptionBase {
         rec << " " << name << " = " << value << endl;
         return rec.str();
     }
-    string print_details(bool doxygen) {
+    string print_details(bool screen = true, bool doxygen = false) {
         ostringstream rec;
-        if (doxygen) {
+        if (!screen && doxygen) {
             rec << " * | **" << name << "** | string | \\f$ s = \\f$ `" << vdefault
                 << "` |" << endl;
             rec << " * | " << desc << "|||" << endl;
@@ -448,8 +570,47 @@ class OptionString : public OptionBase {
                     rec << " |||" << endl;
                 }
             }
-        } else {
-            rec << "Begin Option [String]" << endl;
+        } else if (!screen) { // restructured text
+            rec << "   \"" << name << "\", \"string\", ";
+            if (vdefault != "") {
+                if (vdefault == "\"") {
+                    rec << "\":math:`s=` `~\"`\"";
+                } else if (vdefault == "~") {
+                    rec << "\":math:`s=` `~~`\"";
+                } else if (vdefault == "\\") {
+                    rec << "\":math:`s=` `\\\\`\"";
+                } else {
+                    rec << "\":math:`s=` `" << vdefault << "`\"";
+                }
+            } else {
+                rec << "\"empty\"";
+            }
+            rec << ", \"" << desc << "\", \"";
+            if (labels.size() > 0) {
+                // categorical options
+                {
+                    rec << ":math:`s=` ";
+                    size_t n = labels.size();
+                    for (auto const &it : labels) {
+                        rec << "`" << it.first << "`";
+                        switch (n) {
+                        case 1:
+                            rec << ".";
+                            break;
+                        case 2:
+                            rec << ", or ";
+                            break;
+                        default:
+                            rec << ", ";
+                            break;
+                        }
+                        n--;
+                    }
+                }
+            }
+            rec << "\"" << endl;
+        } else { // plain text
+            rec << "Begin Option [string]" << endl;
             rec << "   Name: '" << name << "'" << endl;
             rec << "   Value: '" << value << "'     [default: '" << vdefault << "']"
                 << endl;
@@ -694,18 +855,23 @@ class OptionRegistry {
         std::cout << "End Options" << std::endl;
     }
 
-    void print_details(bool doxygen) {
+    void print_details(bool screen = true, bool doxygen = false) {
         bool sep = false;
-        if (doxygen) {
+        if (!screen && doxygen) {
             std::cout << " *" << std::endl;
-            std::cout << " * \\section anchor_itsol_options Options" << std::endl;
-            std::cout << " * The iterative solver framework has the following options."
-                      << std::endl;
+            std::cout << " * The following options are supported." << std::endl;
             std::cout << " *" << std::endl;
             std::cout << " * | **Option name** |  Type  | Default value|" << std::endl;
             std::cout << " * |:----------------|:------:|-------------:|" << std::endl;
-        } else {
-            std::cout << "Begin (detailed print of registered options)" << std::endl;
+        } else if (!screen) { // restructured text
+            std::cout << "The following options are supported." << std::endl;
+            std::cout << "\n.. csv-table:: Options table\n   :escape: ~\n";
+            std::cout << "   :header: \"Option name\", \"Type\", \"Default\", "
+                         "\"Description\", \"Constraints\""
+                      << std::endl;
+            std::cout << "   " << std::endl;
+        } else { // plain text
+            std::cout << "Begin (detailed print of options)" << std::endl;
         }
         for (auto const &o : registry) {
             if (sep && doxygen)
@@ -715,23 +881,23 @@ class OptionRegistry {
             switch (otype) {
             case option_t::opt_int:
                 std::cout << std::static_pointer_cast<OptionNumeric<da_int>>(o.second)
-                                 ->print_details(doxygen);
+                                 ->print_details(screen, doxygen);
                 break;
             case option_t::opt_float:
                 std::cout << std::static_pointer_cast<OptionNumeric<float>>(o.second)
-                                 ->print_details(doxygen);
+                                 ->print_details(screen, doxygen);
                 break;
             case option_t::opt_double:
                 std::cout << std::static_pointer_cast<OptionNumeric<double>>(o.second)
-                                 ->print_details(doxygen);
+                                 ->print_details(screen, doxygen);
                 break;
             case option_t::opt_string:
                 std::cout << std::static_pointer_cast<OptionString>(o.second)
-                                 ->print_details(doxygen);
+                                 ->print_details(screen, doxygen);
                 break;
             case option_t::opt_bool:
                 std::cout << std::static_pointer_cast<OptionNumeric<bool>>(o.second)
-                                 ->print_details(doxygen);
+                                 ->print_details(screen, doxygen);
                 break;
             default: // LCOV_EXCL_LINE
                 // LCOV_EXCL_START
@@ -741,9 +907,10 @@ class OptionRegistry {
             }
             sep = true;
         }
-        if (doxygen) {
+        // restuctured text does not required any termination
+        if (!screen && doxygen) {
             std::cout << " *" << std::endl;
-        } else {
+        } else if (screen) {
             std::cout << "End" << std::endl;
         }
     };

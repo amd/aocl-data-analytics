@@ -35,11 +35,9 @@
 template <class T>
 inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
     using namespace da_options;
-    T safe_eps = (T)2 * std::numeric_limits<T>::epsilon();
-    T safe_tol = std::sqrt(safe_eps);
-    T max_real = std::numeric_limits<T>::max();
-    da_int imax = std::numeric_limits<da_int>::max();
-
+    T rmax = std::numeric_limits<T>::max();
+    // Tolerance based on sqrt(safe_epsilon)
+    da_options::safe_tol<T> tol;
     try {
 
         std::shared_ptr<OptionNumeric<da_int>> oi;
@@ -58,8 +56,8 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             "linmod optim iteration limit",
             "Maximum number of iterations to perform in the optimization phase. Valid "
             "only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.",
-            1, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
-            imax));
+            1, da_options::lbound_t::greaterequal, max_da_int,
+            da_options::ubound_t::p_inf, 10000));
         opts.register_opt(oi);
 
         std::shared_ptr<OptionNumeric<T>> oT;
@@ -74,7 +72,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             OptionNumeric<T>("linmod lambda",
                              "penalty coefficient for the regularization terms: lambda( "
                              "(1-alpha) L2 + alpha L1 )",
-                             0.0, da_options::lbound_t::greaterequal, max_real,
+                             0.0, da_options::lbound_t::greaterequal, rmax,
                              da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -82,14 +80,14 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             "tolerance to declare convergence for the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            safe_tol));
+            tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "linmod optim progress factor",
             "factor used to detect convergence of the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(10.0) / safe_tol));
+            tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
         opts.register_opt(oT);
 
         std::shared_ptr<OptionString> os;

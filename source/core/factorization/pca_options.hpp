@@ -40,8 +40,7 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionNumeric<da_int>> oi;
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "n_components", "Number of principal components to compute", 1,
-            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::lessequal,
-            1));
+            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 1));
         opts.register_opt(oi);
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(

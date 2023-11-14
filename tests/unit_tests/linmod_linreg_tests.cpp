@@ -96,5 +96,8 @@ TEST_P(linregPosF, Float) {
     test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts);
 }
 
+// Test public option registry printing
+// this is done in doc_tests.cpp
+
 INSTANTIATE_TEST_SUITE_P(linregPosSuiteD, linregPosD, testing::ValuesIn(linregParamPos));
 INSTANTIATE_TEST_SUITE_P(linregPosSuiteF, linregPosF, testing::ValuesIn(linregParamPos));

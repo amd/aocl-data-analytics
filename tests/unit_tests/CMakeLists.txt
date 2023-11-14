@@ -98,6 +98,8 @@ target_compile_definitions(
 
 add_executable(interval_map interval_map_tests.cpp)
 
+add_executable(doc_tests doc_tests.cpp)
+
 add_executable(printf_debug printf_debug.cpp)
 target_link_libraries(printf_debug aocl-da)
 
@@ -126,6 +128,7 @@ set(GTEST_EXES
   data
   interval_map
   errors_tests
+  doc_tests
   pca_tests
   parallel_test
 )
