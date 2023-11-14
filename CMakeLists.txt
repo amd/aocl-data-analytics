@@ -1,5 +1,5 @@
 # Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -10,7 +10,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -21,7 +21,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 
 
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
@@ -121,12 +121,12 @@ endif()
 # Check we can find AOCL installation
 if(NOT DEFINED ENV{AOCL_ROOT})
   if((DEFINED CMAKE_AOCL_ROOT))
-    set(ENV{AOCL_ROOT} ${CMAKE_AOCL_ROOT}) 
+    set(ENV{AOCL_ROOT} ${CMAKE_AOCL_ROOT})
   else()
-    if((NOT DEFINED BLAS_LIB) OR (NOT DEFINED LAPACK_LIB) OR (NOT DEFINED BLAS_INCLUDE_DIR) OR (NOT DEFINED LAPACK_INCLUDE_DIR))
+    if((NOT DEFINED BLAS_LIB) OR (NOT DEFINED LAPACK_LIB) OR (NOT DEFINED UTILS_LIB) OR (NOT DEFINED BLAS_INCLUDE_DIR) OR (NOT DEFINED LAPACK_INCLUDE_DIR))
       message(
         FATAL_ERROR
-        "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB and BLAS/LAPACK_INCLUDE_DIR."
+        "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR."
       )
     endif()
   endif()
@@ -183,8 +183,11 @@ if(WIN32)
     set(BLAS_NAME "AOCL-LibBlis-Win-dll")
     set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
   endif()
+  set(UTILS_NAME "libaoclutils")
+
   set(BLAS_PATH "$ENV{AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
   set(LAPACK_PATH "$ENV{AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
+  set(UTILS_PATH "$ENV{AOCL_ROOT}/amd-utils/lib")
 
   if (DEFINED BLAS_INCLUDE_DIR)
     include_directories("${BLAS_INCLUDE_DIR}")
@@ -211,6 +214,7 @@ else()
 
   set(BLAS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
   set(LAPACK_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
+  set(UTILS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
 
   if(BUILD_SMP)
     set(BLAS_NAME "blis-mt")
@@ -218,6 +222,7 @@ else()
     set(BLAS_NAME "blis")
   endif()
   set(LAPACK_NAME "flame")
+  set(UTILS_NAME "aoclutils")
 endif()
 
 if (NOT DEFINED BLAS_LIB)
@@ -230,6 +235,13 @@ if (NOT DEFINED LAPACK_LIB)
   find_library(LAPACK name ${LAPACK_NAME} PATHS ${LAPACK_PATH} REQUIRED NO_DEFAULT_PATH)
 else()
   set(LAPACK ${LAPACK_LIB})
+endif()
+
+# Add Utils dependency if any other AOCL library is a dependency
+if (NOT DEFINED UTILS_LIB)
+  find_library(UTILS name ${UTILS_NAME} PATHS ${UTILS_PATH})
+else()
+  set(UTILS "")
 endif()
 
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
@@ -348,7 +360,7 @@ install(FILES License
 )
 install(DIRECTORY tests/examples/
     DESTINATION examples
-    FILES_MATCHING 
+    FILES_MATCHING
     PATTERN "*.cpp"
     PATTERN "*.csv"
 )
@@ -378,6 +390,7 @@ endif()
 message(NOTICE "\nDEPENDENT LIBRARIES")
 message(NOTICE "blas                    : ${BLAS}")
 message(NOTICE "lapack                  : ${LAPACK}")
+message(NOTICE "utils                   : ${UTILS}")
 
 message(NOTICE "\nOPTIONS")
 message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
