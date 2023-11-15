@@ -66,6 +66,11 @@ TYPED_TEST(PCATest, PCAFunctionality) {
             EXPECT_EQ(da_options_set_string(handle, "PCA method", param.method.c_str()),
                       da_status_success);
         }
+        if (param.degrees_of_freedom.size() != 0) {
+            EXPECT_EQ(da_options_set_string(handle, "degrees of freedom",
+                                            param.degrees_of_freedom.c_str()),
+                      da_status_success);
+        }
         if (param.components_required != 0) {
             EXPECT_EQ(
                 da_options_set_int(handle, "n_components", param.components_required),

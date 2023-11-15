@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -42,24 +42,32 @@ template <typename T> class StatisticsUtilitiesTest : public testing::Test {
 };
 
 template <typename T> struct StatsParamType {
-    da_int n;
-    da_int p;
-    da_int ldx;
+    da_int n = 0;
+    da_int p = 0;
+    da_int ldx = 0;
+    da_int dof = 0;
+    da_int mode = 0;
     std::vector<T> x;
     std::vector<T> expected_x_column;
     std::vector<T> column_shift;
     std::vector<T> column_scale;
+    std::vector<T> expected_column_shift;
+    std::vector<T> expected_column_scale;
 
     std::vector<T> expected_x_row;
     std::vector<T> row_shift;
     std::vector<T> row_scale;
+    std::vector<T> expected_row_shift;
+    std::vector<T> expected_row_scale;
 
     std::vector<T> expected_x_overall;
     std::vector<T> overall_shift;
     std::vector<T> overall_scale;
+    std::vector<T> expected_overall_shift;
+    std::vector<T> expected_overall_scale;
 
-    da_status expected_status;
-    T epsilon;
+    da_status expected_status = da_status_success;
+    T epsilon = std::numeric_limits<T>::epsilon();
 };
 
 template <typename T> void Get1by1Data(std::vector<StatsParamType<T>> &params) {
@@ -124,11 +132,11 @@ template <typename T> void GetSingleRowData(std::vector<StatsParamType<T>> &para
     std::vector<double> expected_x_row{0.5, 1, 1.5, 2, 2.5, 3, 3.5};
     param.expected_x_row = convert_vector<double, T>(expected_x_row);
 
-    std::vector<double> overall_shift{0};
+    std::vector<double> overall_shift{1};
     param.overall_shift = convert_vector<double, T>(overall_shift);
-    std::vector<double> overall_scale{0};
+    std::vector<double> overall_scale{1};
     param.overall_scale = convert_vector<double, T>(overall_scale);
-    std::vector<double> expected_x_overall{0, 1, 2, 3, 4, 5, 6};
+    std::vector<double> expected_x_overall{-1, 0, 1, 2, 3, 4, 5};
     param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
 
     param.expected_status = da_status_success;
@@ -425,6 +433,396 @@ void GetNullShiftAndScaleData(std::vector<StatsParamType<T>> &params) {
     params.push_back(param);
 }
 
+template <typename T>
+void GetShiftZeroScaleNonZero(std::vector<StatsParamType<T>> &params) {
+    // Test with shift full of zeros and scale non zero
+    StatsParamType<T> param;
+    param.n = 5;
+    param.p = 4;
+    param.ldx = param.n;
+
+    std::vector<double> x{1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                          11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    param.x = convert_vector<double, T>(x);
+
+    std::vector<double> column_shift{0, 0, 0, 0};
+    param.column_shift = convert_vector<double, T>(column_shift);
+    std::vector<double> column_scale{0.5, 0.0, 1.0, -2.0};
+    param.column_scale = convert_vector<double, T>(column_scale);
+    std::vector<double> expected_x_column{-4, -2, 0, 2, 4, -2, -1,  0, 1,    2,
+                                          -2, -1, 0, 1, 2, 1,  0.5, 0, -0.5, -1.0};
+    param.expected_x_column = convert_vector<double, T>(expected_x_column);
+    std::vector<double> expected_column_shift{3, 8, 13, 18};
+    param.expected_column_shift = convert_vector<double, T>(expected_column_shift);
+    std::vector<double> expected_column_scale{0.5, 0.0, 1.0, -2.0};
+    param.expected_column_scale = convert_vector<double, T>(expected_column_scale);
+
+    std::vector<double> row_shift{0, 0, 0, 0, 0};
+    param.row_shift = convert_vector<double, T>(row_shift);
+    std::vector<double> row_scale{2, 0, 1, 0.5, -1};
+    param.row_scale = convert_vector<double, T>(row_scale);
+    std::vector<double> expected_x_row{-3.75, -7.5, -7.5, -15,  7.5, -1.25, -2.5,
+                                       -2.5,  -5,   2.5,  1.25, 2.5, 2.5,   5,
+                                       -2.5,  3.75, 7.5,  7.5,  15,  -7.5};
+    param.expected_x_row = convert_vector<double, T>(expected_x_row);
+    std::vector<double> expected_row_shift{8.5, 9.5, 10.5, 11.5, 12.5};
+    param.expected_row_shift = convert_vector<double, T>(expected_row_shift);
+    std::vector<double> expected_row_scale{2, 0, 1, 0.5, -1};
+    param.expected_row_scale = convert_vector<double, T>(expected_row_scale);
+
+    std::vector<double> overall_shift{0};
+    param.overall_shift = convert_vector<double, T>(overall_shift);
+    std::vector<double> overall_scale{2};
+    param.overall_scale = convert_vector<double, T>(overall_scale);
+    std::vector<double> expected_x_overall{
+        -4.75, -4.25, -3.75, -3.25, -2.75, -2.25, -1.75, -1.25, -0.75, -0.25,
+        0.25,  0.75,  1.25,  1.75,  2.25,  2.75,  3.25,  3.75,  4.25,  4.75};
+    param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
+    std::vector<double> expected_overall_shift{10.5};
+    param.expected_overall_shift = convert_vector<double, T>(expected_overall_shift);
+    std::vector<double> expected_overall_scale{2};
+    param.expected_overall_scale = convert_vector<double, T>(expected_overall_scale);
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
+template <typename T> void GetShiftZeroScaleNull(std::vector<StatsParamType<T>> &params) {
+    // Test with shift full of zeros and scale null
+    StatsParamType<T> param;
+    param.n = 5;
+    param.p = 4;
+    param.ldx = param.n;
+
+    std::vector<double> x{1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                          11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    param.x = convert_vector<double, T>(x);
+
+    std::vector<double> column_shift{0, 0, 0, 0};
+    param.column_shift = convert_vector<double, T>(column_shift);
+    std::vector<double> expected_x_column{-2, -1, 0,  1,  2, -2, -1, 0,  1,  2, -2, -1, 0,
+                                          1,  2,  -2, -1, 0, 1,  2,  -2, -1, 0, 1,  2};
+    param.expected_x_column = convert_vector<double, T>(expected_x_column);
+    std::vector<double> expected_column_shift{3, 8, 13, 18};
+    param.expected_column_shift = convert_vector<double, T>(expected_column_shift);
+
+    std::vector<double> row_shift{0, 0, 0, 0, 0};
+    param.row_shift = convert_vector<double, T>(row_shift);
+    std::vector<double> expected_x_row{-7.5, -7.5, -7.5, -7.5, -7.5, -2.5, -2.5,
+                                       -2.5, -2.5, -2.5, 2.5,  2.5,  2.5,  2.5,
+                                       2.5,  7.5,  7.5,  7.5,  7.5,  7.5};
+    param.expected_x_row = convert_vector<double, T>(expected_x_row);
+    std::vector<double> expected_row_shift{8.5, 9.5, 10.5, 11.5, 12.5};
+    param.expected_row_shift = convert_vector<double, T>(expected_row_shift);
+
+    std::vector<double> overall_shift{0};
+    param.overall_shift = convert_vector<double, T>(overall_shift);
+    std::vector<double> expected_x_overall{-9.5, -8.5, -7.5, -6.5, -5.5, -4.5, -3.5,
+                                           -2.5, -1.5, -0.5, 0.5,  1.5,  2.5,  3.5,
+                                           4.5,  5.5,  6.5,  7.5,  8.5,  9.5};
+    param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
+    std::vector<double> expected_overall_shift{10.5};
+    param.expected_overall_shift = convert_vector<double, T>(expected_overall_shift);
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
+template <typename T> void GetShiftNullScaleZero(std::vector<StatsParamType<T>> &params) {
+    // Test with shift null and scale zero
+    StatsParamType<T> param;
+    param.n = 5;
+    param.p = 4;
+    param.dof = -1;
+    param.ldx = param.n;
+
+    std::vector<double> x{1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                          11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    param.x = convert_vector<double, T>(x);
+
+    std::vector<double> column_scale{0, 0, 0, 0};
+    param.column_scale = convert_vector<double, T>(column_scale);
+    std::vector<double> expected_x_column{
+        0.7071067811865475, 1.414213562373095,  2.1213203435596424, 2.82842712474619,
+        3.5355339059327373, 4.242640687119285,  4.949747468305833,  5.65685424949238,
+        6.363961030678928,  7.071067811865475,  7.7781745930520225, 8.48528137423857,
+        9.192388155425117,  9.899494936611665,  10.606601717798211, 11.31370849898476,
+        12.020815280171307, 12.727922061357855, 13.435028842544401, 14.14213562373095};
+    param.expected_x_column = convert_vector<double, T>(expected_x_column);
+    std::vector<double> expected_column_scale{1.4142135623730951, 1.4142135623730951,
+                                              1.4142135623730951, 1.4142135623730951};
+    param.expected_column_scale = convert_vector<double, T>(expected_column_scale);
+
+    std::vector<double> row_scale{0, 0, 0, 0, 0};
+    param.row_scale = convert_vector<double, T>(row_scale);
+    std::vector<double> expected_x_row{
+        0.17888543819998318, 0.35777087639996635, 0.5366563145999494, 0.7155417527999327,
+        0.8944271909999159,  1.073312629199899,   1.2521980673998823, 1.4310835055998654,
+        1.6099689437998486,  1.7888543819998317,  1.9677398201998149, 2.146625258399798,
+        2.3255106965997814,  2.5043961347997645,  2.6832815729997477, 2.862167011199731,
+        3.041052449399714,   3.219937887599697,   3.3988233257996803, 3.5777087639996634};
+    param.expected_x_row = convert_vector<double, T>(expected_x_row);
+    std::vector<double> expected_row_scale{5.5901699437494745, 5.5901699437494745,
+                                           5.5901699437494745, 5.5901699437494745,
+                                           5.5901699437494745};
+    param.expected_row_scale = convert_vector<double, T>(expected_row_scale);
+
+    std::vector<double> overall_scale{0};
+    param.overall_scale = convert_vector<double, T>(overall_scale);
+    std::vector<double> expected_x_overall{
+        0.173421993904824,  0.346843987809648,  0.5202659817144719, 0.693687975619296,
+        0.8671099695241199, 1.0405319634289438, 1.2139539573337679, 1.387375951238592,
+        1.560797945143416,  1.7342199390482398, 1.9076419329530638, 2.0810639268578877,
+        2.2544859207627117, 2.4279079146675357, 2.60132990857236,   2.774751902477184,
+        2.948173896382008,  3.121595890286832,  3.295017884191656,  3.4684398780964796};
+    param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
+    std::vector<double> expected_overall_scale{5.766281297335398};
+    param.expected_overall_scale = convert_vector<double, T>(expected_overall_scale);
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
+template <typename T>
+void GetShiftNonZeroScaleZero(std::vector<StatsParamType<T>> &params) {
+    // Test with shift nonzero and scale full of zeros
+    StatsParamType<T> param;
+    param.n = 5;
+    param.p = 4;
+    param.dof = -1;
+    param.ldx = param.n;
+
+    std::vector<double> x{1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                          11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    param.x = convert_vector<double, T>(x);
+
+    std::vector<double> column_shift{3, 8, 13, 18};
+    param.column_shift = convert_vector<double, T>(column_shift);
+    std::vector<double> column_scale{0, 0, 0, 0};
+    param.column_scale = convert_vector<double, T>(column_scale);
+    std::vector<double> expected_x_column{-1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095,
+                                          -1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095,
+                                          -1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095,
+                                          -1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095};
+    param.expected_x_column = convert_vector<double, T>(expected_x_column);
+    std::vector<double> expected_column_scale{1.4142135623730951, 1.4142135623730951,
+                                              1.4142135623730951, 1.4142135623730951};
+    param.expected_column_scale = convert_vector<double, T>(expected_column_scale);
+    std::vector<double> expected_column_shift{3, 8, 13, 18};
+    param.expected_column_shift = convert_vector<double, T>(expected_column_shift);
+    std::vector<double> row_shift{8.5, 9.5, 10.5, 11.5, 12.5};
+    param.row_shift = convert_vector<double, T>(row_shift);
+    std::vector<double> row_scale{0, 0, 0, 0, 0};
+    param.row_scale = convert_vector<double, T>(row_scale);
+    std::vector<double> expected_x_row{
+        -1.3416407864998738, -1.3416407864998738, -1.3416407864998738,
+        -1.3416407864998738, -1.3416407864998738, -0.4472135954999579,
+        -0.4472135954999579, -0.4472135954999579, -0.4472135954999579,
+        -0.4472135954999579, 0.4472135954999579,  0.4472135954999579,
+        0.4472135954999579,  0.4472135954999579,  0.4472135954999579,
+        1.3416407864998738,  1.3416407864998738,  1.3416407864998738,
+        1.3416407864998738,  1.3416407864998738};
+    param.expected_x_row = convert_vector<double, T>(expected_x_row);
+    std::vector<double> expected_row_scale{5.5901699437494745, 5.5901699437494745,
+                                           5.5901699437494745, 5.5901699437494745,
+                                           5.5901699437494745};
+    param.expected_row_scale = convert_vector<double, T>(expected_row_scale);
+    std::vector<double> expected_row_shift{8.5, 9.5, 10.5, 11.5, 12.5};
+    param.expected_row_shift = convert_vector<double, T>(expected_row_shift);
+    std::vector<double> overall_shift{10.5};
+    param.overall_shift = convert_vector<double, T>(overall_shift);
+    std::vector<double> overall_scale{0};
+    param.overall_scale = convert_vector<double, T>(overall_scale);
+    std::vector<double> expected_x_overall{
+        -1.647508942095828,  -1.474086948191004,   -1.30066495428618,
+        -1.1272429603813559, -0.9538209664765319,  -0.780398972571708,
+        -0.6069769786668839, -0.43355498476205995, -0.26013299085723596,
+        -0.086710996952412,  0.086710996952412,    0.26013299085723596,
+        0.43355498476205995, 0.6069769786668839,   0.780398972571708,
+        0.9538209664765319,  1.1272429603813559,   1.30066495428618,
+        1.474086948191004,   1.647508942095828};
+
+    param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
+    std::vector<double> expected_overall_scale{5.766281297335398};
+    param.expected_overall_scale = convert_vector<double, T>(expected_overall_scale);
+    std::vector<double> expected_overall_shift{10.5};
+    param.expected_overall_shift = convert_vector<double, T>(expected_overall_shift);
+    param.expected_status = da_status_success;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
+template <typename T> void GetShiftZeroScaleZero(std::vector<StatsParamType<T>> &params) {
+    // Test with shift full of zeros and scale full of zeros
+    StatsParamType<T> param;
+    param.n = 5;
+    param.p = 4;
+    param.dof = -1;
+    param.ldx = param.n;
+
+    std::vector<double> x{1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                          11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    param.x = convert_vector<double, T>(x);
+
+    std::vector<double> column_shift{0, 0, 0, 0};
+    param.column_shift = convert_vector<double, T>(column_shift);
+    std::vector<double> column_scale{0, 0, 0, 0};
+    param.column_scale = convert_vector<double, T>(column_scale);
+    std::vector<double> expected_x_column{-1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095,
+                                          -1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095,
+                                          -1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095,
+                                          -1.414213562373095,
+                                          -0.7071067811865475,
+                                          0,
+                                          0.7071067811865475,
+                                          1.414213562373095};
+    param.expected_x_column = convert_vector<double, T>(expected_x_column);
+    std::vector<double> expected_column_shift{3, 8, 13, 18};
+    param.expected_column_shift = convert_vector<double, T>(expected_column_shift);
+    std::vector<double> expected_column_scale{1.4142135623730951, 1.4142135623730951,
+                                              1.4142135623730951, 1.4142135623730951};
+    param.expected_column_scale = convert_vector<double, T>(expected_column_scale);
+
+    std::vector<double> row_shift{0, 0, 0, 0, 0};
+    param.row_shift = convert_vector<double, T>(row_shift);
+    std::vector<double> row_scale{0, 0, 0, 0, 0};
+    param.row_scale = convert_vector<double, T>(row_scale);
+    std::vector<double> expected_x_row{
+        -1.3416407864998738, -1.3416407864998738, -1.3416407864998738,
+        -1.3416407864998738, -1.3416407864998738, -0.4472135954999579,
+        -0.4472135954999579, -0.4472135954999579, -0.4472135954999579,
+        -0.4472135954999579, 0.4472135954999579,  0.4472135954999579,
+        0.4472135954999579,  0.4472135954999579,  0.4472135954999579,
+        1.3416407864998738,  1.3416407864998738,  1.3416407864998738,
+        1.3416407864998738,  1.3416407864998738};
+    param.expected_x_row = convert_vector<double, T>(expected_x_row);
+    std::vector<double> expected_row_scale{5.5901699437494745, 5.5901699437494745,
+                                           5.5901699437494745, 5.5901699437494745,
+                                           5.5901699437494745};
+    param.expected_row_scale = convert_vector<double, T>(expected_row_scale);
+    std::vector<double> expected_row_shift{8.5, 9.5, 10.5, 11.5, 12.5};
+    param.expected_row_shift = convert_vector<double, T>(expected_row_shift);
+
+    std::vector<double> overall_shift{0};
+    param.overall_shift = convert_vector<double, T>(overall_shift);
+    std::vector<double> overall_scale{0};
+    param.overall_scale = convert_vector<double, T>(overall_scale);
+    std::vector<double> expected_x_overall{
+        -1.647508942095828,  -1.474086948191004,   -1.30066495428618,
+        -1.1272429603813559, -0.9538209664765319,  -0.780398972571708,
+        -0.6069769786668839, -0.43355498476205995, -0.26013299085723596,
+        -0.086710996952412,  0.086710996952412,    0.26013299085723596,
+        0.43355498476205995, 0.6069769786668839,   0.780398972571708,
+        0.9538209664765319,  1.1272429603813559,   1.30066495428618,
+        1.474086948191004,   1.647508942095828};
+    param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
+    std::vector<double> expected_overall_shift{10.5};
+    param.expected_overall_shift = convert_vector<double, T>(expected_overall_shift);
+    std::vector<double> expected_overall_scale{5.766281297335398};
+    param.expected_overall_scale = convert_vector<double, T>(expected_overall_scale);
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
+template <typename T> void GetModeOne(std::vector<StatsParamType<T>> &params) {
+    // Test with mode = 1
+    StatsParamType<T> param;
+    param.n = 5;
+    param.p = 4;
+    param.dof = -1;
+    param.mode = 1;
+    param.ldx = param.n;
+
+    std::vector<double> x{1,  2,  3,  4,  5,  6,  7,  8,  9,  10,
+                          11, 12, 13, 14, 15, 16, 17, 18, 19, 20};
+    param.x = convert_vector<double, T>(x);
+
+    std::vector<double> column_shift{2, 3, 1, 4};
+    param.column_shift = convert_vector<double, T>(column_shift);
+    std::vector<double> column_scale{2, 10, 1, 3};
+    param.column_scale = convert_vector<double, T>(column_scale);
+    std::vector<double> expected_x_column{4,  6,  8,  10, 12, 63, 73, 83, 93, 103,
+                                          12, 13, 14, 15, 16, 52, 55, 58, 61, 64};
+    param.expected_x_column = convert_vector<double, T>(expected_x_column);
+    std::vector<double> expected_column_shift{2, 3, 1, 4};
+    param.expected_column_shift = convert_vector<double, T>(expected_column_shift);
+    std::vector<double> expected_column_scale{2, 10, 1, 3};
+    param.expected_column_scale = convert_vector<double, T>(expected_column_scale);
+
+    std::vector<double> row_shift{1, 2, 3, 4, 5};
+    param.row_shift = convert_vector<double, T>(row_shift);
+    std::vector<double> row_scale{1, 2, 1, 2, 3};
+    param.row_scale = convert_vector<double, T>(row_scale);
+    std::vector<double> expected_x_row{2,  6,  6,  12, 20, 7,  16, 11, 22, 35,
+                                       12, 26, 16, 32, 50, 17, 36, 21, 42, 65};
+    param.expected_x_row = convert_vector<double, T>(expected_x_row);
+    std::vector<double> expected_row_scale{1, 2, 1, 2, 3};
+    param.expected_row_scale = convert_vector<double, T>(expected_row_scale);
+    std::vector<double> expected_row_shift{1, 2, 3, 4, 5};
+    param.expected_row_shift = convert_vector<double, T>(expected_row_shift);
+
+    std::vector<double> overall_shift{1};
+    param.overall_shift = convert_vector<double, T>(overall_shift);
+    std::vector<double> overall_scale{2};
+    param.overall_scale = convert_vector<double, T>(overall_scale);
+    std::vector<double> expected_x_overall{3,  5,  7,  9,  11, 13, 15, 17, 19, 21,
+                                           23, 25, 27, 29, 31, 33, 35, 37, 39, 41};
+    param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
+    std::vector<double> expected_overall_shift{1};
+    param.expected_overall_shift = convert_vector<double, T>(expected_overall_shift);
+    std::vector<double> expected_overall_scale{2};
+    param.expected_overall_scale = convert_vector<double, T>(expected_overall_scale);
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
 template <typename T> void GetStatsData(std::vector<StatsParamType<T>> &params) {
 
     GetStandardData(params);
@@ -435,6 +833,12 @@ template <typename T> void GetStatsData(std::vector<StatsParamType<T>> &params) 
     GetSingleRowData(params);
     GetSingleColumnData(params);
     Get1by1Data(params);
+    GetShiftZeroScaleNonZero(params);
+    GetShiftZeroScaleNull(params);
+    GetShiftNullScaleZero(params);
+    GetShiftNonZeroScaleZero(params);
+    GetShiftZeroScaleZero(params);
+    GetModeOne(params);
 }
 
 using FloatTypes = ::testing::Types<float, double>;
@@ -468,20 +872,47 @@ TYPED_TEST(StatisticsUtilitiesTest, StatisticsUtilitiesFunctionality) {
             overall_scale = param.overall_scale.data();
 
         EXPECT_EQ(da_standardize(da_axis_col, param.n, param.p, x_column.data(),
-                                 param.ldx, column_shift, column_scale),
+                                 param.ldx, param.dof, param.mode, column_shift,
+                                 column_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_column.data(),
                         x_column.data(), param.epsilon);
         EXPECT_EQ(da_standardize(da_axis_row, param.n, param.p, x_row.data(), param.ldx,
-                                 row_shift, row_scale),
+                                 param.dof, param.mode, row_shift, row_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_row.data(), x_row.data(),
                         param.epsilon);
         EXPECT_EQ(da_standardize(da_axis_all, param.n, param.p, x_overall.data(),
-                                 param.ldx, overall_shift, overall_scale),
+                                 param.ldx, param.dof, param.mode, overall_shift,
+                                 overall_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_overall.data(),
                         x_overall.data(), param.epsilon);
+
+        if (param.expected_column_shift.size() > 0) {
+            EXPECT_ARR_NEAR(param.p, param.expected_column_shift.data(), column_shift,
+                            param.epsilon);
+        }
+        if (param.expected_row_shift.size() > 0) {
+            EXPECT_ARR_NEAR(param.n, param.expected_row_shift.data(), row_shift,
+                            param.epsilon);
+        }
+        if (param.expected_column_scale.size() > 0) {
+            EXPECT_ARR_NEAR(param.p, param.expected_column_scale.data(), column_scale,
+                            param.epsilon);
+        }
+        if (param.expected_row_scale.size() > 0) {
+            EXPECT_ARR_NEAR(param.n, param.expected_row_scale.data(), row_scale,
+                            param.epsilon);
+        }
+        if (param.expected_overall_shift.size() > 0) {
+            EXPECT_ARR_NEAR(1, param.expected_overall_shift.data(), overall_shift,
+                            param.epsilon);
+        }
+        if (param.expected_overall_scale.size() > 0) {
+            EXPECT_ARR_NEAR(1, param.expected_overall_scale.data(), overall_scale,
+                            param.epsilon);
+        }
     }
 }
 
@@ -489,7 +920,7 @@ TYPED_TEST(StatisticsUtilitiesTest, IllegalArgsStatisticsUtilities) {
 
     std::vector<double> x_d{4.7, 1.2, -0.3, 4.5};
     std::vector<TypeParam> x = convert_vector<double, TypeParam>(x_d);
-    da_int n = 2, p = 2, ldx = 2;
+    da_int n = 2, p = 2, ldx = 2, dof = 0, mode = 0;
     std::vector<double> scale_d(2, 0);
     std::vector<TypeParam> scale = convert_vector<double, TypeParam>(scale_d);
     std::vector<double> shift_d(2, 0);
@@ -497,24 +928,31 @@ TYPED_TEST(StatisticsUtilitiesTest, IllegalArgsStatisticsUtilities) {
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    EXPECT_EQ(da_standardize(da_axis_all, n, p, x.data(), ldx_illegal, scale.data(),
-                             shift.data()),
+    EXPECT_EQ(da_standardize(da_axis_all, n, p, x.data(), ldx_illegal, dof, mode,
+                             scale.data(), shift.data()),
               da_status_invalid_leading_dimension);
 
     // Test with illegal p
     da_int p_illegal = 0;
-    EXPECT_EQ(da_standardize(da_axis_all, n, p_illegal, x.data(), ldx, scale.data(),
-                             shift.data()),
+    EXPECT_EQ(da_standardize(da_axis_all, n, p_illegal, x.data(), ldx, dof, mode,
+                             scale.data(), shift.data()),
               da_status_invalid_array_dimension);
 
     // Test with illegal n
     da_int n_illegal = 0;
-    EXPECT_EQ(da_standardize(da_axis_all, n_illegal, p, x.data(), ldx, scale.data(),
-                             shift.data()),
+    EXPECT_EQ(da_standardize(da_axis_all, n_illegal, p, x.data(), ldx, dof, mode,
+                             scale.data(), shift.data()),
               da_status_invalid_array_dimension);
+
+    // Test with illegal mode
+    da_int mode_illegal = -12;
+    EXPECT_EQ(da_standardize(da_axis_all, n, p, x.data(), ldx, dof, mode_illegal,
+                             scale.data(), shift.data()),
+              da_status_invalid_input);
 
     // Test illegal pointers
     TypeParam *x_null = nullptr;
-    EXPECT_EQ(da_standardize(da_axis_all, n, p, x_null, ldx, scale.data(), shift.data()),
+    EXPECT_EQ(da_standardize(da_axis_all, n, p, x_null, ldx, dof, mode, scale.data(),
+                             shift.data()),
               da_status_invalid_pointer);
 }

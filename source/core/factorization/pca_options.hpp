@@ -50,6 +50,12 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
              {"svd", pca_method_svd}},
             "covariance"));
         opts.register_opt(os);
+        os = std::make_shared<OptionString>(
+            OptionString("degrees of freedom",
+                         "Whether to use biased or unbiased estimators for standard "
+                         "deviations and variances",
+                         {{"biased", -1}, {"unbiased", 0}}, "unbiased"));
+        opts.register_opt(os);
 
     } catch (std::bad_alloc &) {
         return da_status_memory_error;

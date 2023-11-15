@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef MOMENT_STATISTICS_HPP
@@ -228,8 +228,8 @@ da_status harmonic_mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx
 
 /* Mean and variance along specified axis */
 template <typename T>
-da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean,
-                   T *var) {
+da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, da_int dof,
+                   T *amean, T *var) {
     if (ldx < n)
         return da_status_invalid_leading_dimension;
     if (n < 1 || p < 1)
@@ -240,8 +240,9 @@ da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
     mean(axis, n, p, x, ldx, amean);
 
     T zero = (T)0.0;
+    da_int scale_factor = dof;
 
-    //FIXME post 4.2 task is to investigate vecotrization of the loops in the mean and variance computations
+    // There is potential vectorization of the loops in the mean and variance computations here
     switch (axis) {
     case da_axis_row:
         std::fill(var, var + n, 0.0);
@@ -252,9 +253,15 @@ da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
             }
         }
 
-        if (p > 1) {
+        if (dof < 0) {
+            scale_factor = p;
+        } else if (dof == 0) {
+            scale_factor = p - 1;
+        }
+
+        if (scale_factor > 1) {
             for (da_int j = 0; j < n; j++)
-                var[j] /= (p - 1);
+                var[j] /= scale_factor;
         }
         break;
 
@@ -264,8 +271,15 @@ da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
             for (da_int j = 0; j < n; j++) {
                 var[i] += (x[j + ldx * i] - amean[i]) * (x[j + ldx * i] - amean[i]);
             }
-            if (n > 1)
-                var[i] /= (n - 1);
+
+            if (dof < 0) {
+                scale_factor = n;
+            } else if (dof == 0) {
+                scale_factor = n - 1;
+            }
+
+            if (scale_factor > 1)
+                var[i] /= scale_factor;
         }
         break;
 
@@ -276,8 +290,16 @@ da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
                 var[0] += (x[j + ldx * i] - amean[0]) * (x[j + ldx * i] - amean[0]);
             }
         }
-        if (n * p > 1)
-            var[0] /= (n * p - 1);
+
+        if (dof < 0) {
+            scale_factor = n * p;
+        } else if (dof == 0) {
+            scale_factor = n * p - 1;
+        }
+
+        if (scale_factor > 1)
+            var[0] /= scale_factor;
+
         break;
     default:
         return da_status_internal_error; // LCOV_EXCL_LINE
@@ -320,8 +342,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
 
         for (da_int j = 0; j < n; j++) {
             skew[j] = (var[j] == zero) ? zero : skew[j] * sqrtp / pow(var[j], (T)1.5);
-            if (p > 1)
-                var[j] /= (p - 1);
+            var[j] /= p;
         }
         break;
     }
@@ -339,8 +360,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
                 skew[i] += tmp2 * tmp;
             }
             skew[i] = (var[i] == zero) ? zero : skew[i] * sqrtn / pow(var[i], (T)1.5);
-            if (n > 1)
-                var[i] /= (n - 1);
+            var[i] /= n;
         }
         break;
     }
@@ -358,8 +378,7 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
         }
         skew[0] =
             (var[0] == zero) ? zero : skew[0] * (T)(sqrt(n * p)) / pow(var[0], (T)1.5);
-        if (n * p > 1)
-            var[0] /= (n * p - 1);
+        var[0] /= n * p;
         break;
     default:
         return da_status_internal_error; // LCOV_EXCL_LINE
@@ -401,8 +420,7 @@ da_status kurtosis(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
 
         for (da_int j = 0; j < n; j++) {
             kurt[j] = (var[j] == zero) ? -three : p * kurt[j] / (var[j] * var[j]) - three;
-            if (p > 1)
-                var[j] /= (p - 1);
+            var[j] /= p;
         }
         break;
 
@@ -418,8 +436,7 @@ da_status kurtosis(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
                 kurt[i] += tmp2 * tmp2;
             }
             kurt[i] = (var[i] == zero) ? -three : n * kurt[i] / (var[i] * var[i]) - three;
-            if (n > 1)
-                var[i] /= (n - 1);
+            var[i] /= n;
         }
         break;
 
@@ -436,8 +453,7 @@ da_status kurtosis(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
             }
         }
         kurt[0] = (var[0] == zero) ? -three : n * p * kurt[0] / (var[0] * var[0]) - three;
-        if (n * p > 1)
-            var[0] /= (n * p - 1);
+        var[0] /= n * p;
         break;
     default:
         return da_status_internal_error; // LCOV_EXCL_LINE

@@ -163,13 +163,13 @@ inline da_status da_geometric_mean(da_axis axis, da_int n, da_int p, float *x, d
 }
 
 inline da_status da_variance(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
-                             double *mean, double *variance) {
-    return da_variance_d(axis, n, p, x, ldx, mean, variance);
+                             da_int dof, double *mean, double *variance) {
+    return da_variance_d(axis, n, p, x, ldx, dof, mean, variance);
 }
 
 inline da_status da_variance(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
-                             float *mean, float *variance) {
-    return da_variance_s(axis, n, p, x, ldx, mean, variance);
+                             da_int dof, float *mean, float *variance) {
+    return da_variance_s(axis, n, p, x, ldx, dof, mean, variance);
 }
 
 inline da_status da_skewness(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
@@ -231,23 +231,23 @@ inline da_status da_five_point_summary(da_axis axis, da_int n, da_int p, float *
 }
 
 inline da_status da_standardize(da_axis axis, da_int n, da_int p, double *x, da_int ldx,
-                                double *shift, double *scale) {
-    return da_standardize_d(axis, n, p, x, ldx, shift, scale);
+                                da_int dof, da_int mode, double *shift, double *scale) {
+    return da_standardize_d(axis, n, p, x, ldx, dof, mode, shift, scale);
 }
 
 inline da_status da_standardize(da_axis axis, da_int n, da_int p, float *x, da_int ldx,
-                                float *shift, float *scale) {
-    return da_standardize_s(axis, n, p, x, ldx, shift, scale);
+                                da_int dof, da_int mode, float *shift, float *scale) {
+    return da_standardize_s(axis, n, p, x, ldx, dof, mode, shift, scale);
 }
 
 inline da_status da_covariance_matrix(da_int n, da_int p, float *x, da_int ldx,
-                                      float *cov, da_int ldcov) {
-    return da_covariance_matrix_s(n, p, x, ldx, cov, ldcov);
+                                      da_int dof, float *cov, da_int ldcov) {
+    return da_covariance_matrix_s(n, p, x, ldx, dof, cov, ldcov);
 }
 
 inline da_status da_covariance_matrix(da_int n, da_int p, double *x, da_int ldx,
-                                      double *cov, da_int ldcov) {
-    return da_covariance_matrix_d(n, p, x, ldx, cov, ldcov);
+                                      da_int dof, double *cov, da_int ldcov) {
+    return da_covariance_matrix_d(n, p, x, ldx, dof, cov, ldcov);
 }
 
 inline da_status da_correlation_matrix(da_int n, da_int p, float *x, da_int ldx,

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -48,7 +48,7 @@ int main() {
     // Problem data
     double X[20]{1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0, 2.0, 8.0,
                  4.0, 6.0, 9.0, 5.0, 4.0, 3.0, 1.0, 1.0, 2.0, 2.0};
-    da_int n_rows = 4, n_cols = 5, ldx = 4, ldcov = 5;
+    da_int n_rows = 4, n_cols = 5, ldx = 4, ldcov = 5, dof = 0, mode = 0;
 
     // Arrays for output data
     double harmonic_mean[5], mean[4], variance[4], kurtosis[4];
@@ -59,36 +59,22 @@ int main() {
     // Arrays for expected outputs
     double harmonic_mean_exp[5]{1.92, 1.92, 3.84, 4.472049689440994, 1.3333333333333333};
     double mean_exp[4]{3.4, 3.8, 3., 3.2};
-    double variance_exp[4]{11.3, 7.7, 1.0, 3.7};
+    double variance_exp[4]{9.04, 6.16, 0.8, 2.96};
     double kurtosis_exp[4]{-0.4210588143159213, -0.9675324675324677, -1.7500000000000002,
                            -1.005478451424398};
     double minimum_exp[1]{1}, lower_hinge_exp[1]{2}, median_exp[1]{3},
         upper_hinge_exp[1]{4}, maximum_exp[1]{9};
-    double cov_exp[25]{1.6666666666666665,
-                       -1.6666666666666665,
-                       1.3333333333333333,
-                       -3.1666666666666665,
-                       0.6666666666666666,
-                       -1.6666666666666665,
-                       1.6666666666666665,
-                       -1.3333333333333333,
-                       3.1666666666666665,
-                       -0.6666666666666666,
-                       1.3333333333333333,
-                       -1.3333333333333333,
-                       6.666666666666666,
-                       -4.333333333333333,
-                       0.0,
-                       -3.1666666666666665,
-                       3.1666666666666665,
-                       -4.333333333333333,
-                       6.916666666666666,
-                       -1.1666666666666665,
-                       0.6666666666666666,
-                       -0.6666666666666666,
-                       0.0,
-                       -1.1666666666666665,
-                       0.3333333333333333};
+    double cov_exp[25]{// clang-format off
+                     1.6666666666666665, -1.6666666666666665,  1.3333333333333333,
+                     -3.1666666666666665,  0.6666666666666666, -1.6666666666666665,
+                     1.6666666666666665, -1.3333333333333333,  3.1666666666666665,
+                     -0.6666666666666666,  1.3333333333333333, -1.3333333333333333,
+                     6.666666666666666,  -4.333333333333333,   0.0,
+                     -3.1666666666666665,  3.1666666666666665 ,-4.333333333333333,
+                     6.916666666666666,  -1.1666666666666665,  0.6666666666666666,
+                     -0.6666666666666666,  0.0,                -1.1666666666666665,
+                     0.3333333333333333 };
+    // clang format on
     double X_exp[20]{-1.1618950038622251, -0.3872983346207417, 0.3872983346207417,
                      1.1618950038622251,  1.1618950038622251,  0.3872983346207417,
                      -0.3872983346207417, -1.1618950038622251, -1.1618950038622251,
@@ -114,12 +100,12 @@ int main() {
                                             maximum) == da_status_success);
 
     // Compute covariance matrix
-    pass = pass && (da_covariance_matrix_d(n_rows, n_cols, X, ldx, cov, ldcov) ==
+    pass = pass && (da_covariance_matrix_d(n_rows, n_cols, X, ldx, dof, cov, ldcov) ==
                     da_status_success);
 
     // Standardize the original data matrix
-    pass = pass && (da_standardize_d(da_axis_col, n_rows, n_cols, X, ldx, dummy, dummy) ==
-                    da_status_success);
+    pass = pass && (da_standardize_d(da_axis_col, n_rows, n_cols, X, ldx, dof, mode,
+                                     dummy, dummy) == da_status_success);
 
     // Check status (we could do this after every function call)
     if (pass) {

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include <limits>
@@ -44,6 +44,7 @@ template <typename T> struct PCAParamType {
 
     da_int components_required = 0;
     std::string method;
+    std::string degrees_of_freedom;
 
     std::vector<T> expected_scores;
     std::vector<T> expected_components;
@@ -147,6 +148,7 @@ template <typename T> void Get5by1Data(std::vector<PCAParamType<T>> &params) {
     param.lda = 5;
     param.components_required = 1;
     param.method = "covariance";
+    param.degrees_of_freedom = "unbiased";
     std::vector<double> expected_scores{2.0, 1.0, 0.0, -1.0, -2.0};
     param.expected_scores = convert_vector<double, T>(expected_scores);
     std::vector<double> expected_u{0.63245553203367599, 0.31622776601683789, 0.0,
@@ -715,6 +717,210 @@ template <typename T> void GetSubarrayData(std::vector<PCAParamType<T>> &params)
     params.push_back(param);
 }
 
+template <typename T> void GetBiasedData(std::vector<PCAParamType<T>> &params) {
+    // Test with biased standard deviation estimators
+    PCAParamType<T> param;
+    param.test_name = "Test with biased standard deviation estimators";
+    param.n = 6;
+    param.p = 9;
+    std::vector<double> A{
+        1.06, 2.,  3.1,  3.,    3.,   0.2, -3.,  3.,   0.3,  2.,  0.27, 2.5,  2.1,  -0.25,
+        0.08, 0.5, 0.15, 9.34,  3.1,  0.1, -9.8, 4.7,  0.86, 3.7, 1.,   0.86, 3.74, -2.9,
+        7.2,  4.1, 2.,   -6.,   4.07, 2.,  4.2,  4.18, 2.,   4.6, 4.1,  5.5,  1.4,  -8.1,
+        3.5,  1.4, 1.25, -1.34, 5.97, 2.1, -1.8, 4.9,  -1.,  2.1, 3.1,  -1.1};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 6;
+    param.components_required = 5;
+    param.method = "covariance";
+    param.degrees_of_freedom = "biased";
+    std::vector<double> expected_scores{
+        1.3009267154927153e+00,  -6.5877230052241789e+00, -4.9809285397160119e+00,
+        -3.5612426175979017e+00, 8.4719195235654121e-01,  1.2981775494688833e+01,
+        -1.3805024563423629e+00, -4.4708351808125579e+00, 9.6493825675264251e+00,
+        -6.4663830059584644e+00, 3.0707218487930961e+00,  -4.0238377320613716e-01,
+        -3.2762216402250757e+00, 5.2165275979890122e+00,  -1.6410981315213631e+00,
+        -4.1062116812116276e+00, 2.7682791641683364e+00,  1.0387246908007142e+00,
+        2.4695323178734241e+00,  -2.1055988235567842e+00, -2.8228074618597740e+00,
+        -3.8644094562644249e-01, 5.7239240030457763e+00,  -2.8786090898762011e+00,
+        3.7817648862879909e+00,  1.2037550625224958e+00,  -1.7354062403349974e-01,
+        -2.6701233382108560e+00, -1.6846024390261165e+00, -4.5725354754001774e-01};
+    param.expected_scores = convert_vector<double, T>(expected_scores);
+    std::vector<double> expected_u{
+        0.08197885180547565,   -0.4151302003020628,  -0.3138768677345451,
+        -0.2244143173590145,   0.053386422683098,    0.8180561109070486,
+        -0.10701566447228755,  -0.34657627403893654, 0.748013944101999,
+        -0.5012698607928714,   0.23804038706952385,  -0.031192531867427452,
+        -0.4025368318978638,   0.6409348094831617,   -0.2016354554848524,
+        -0.5045145361848522,   0.34012788111509884,  0.12762413296930747,
+        0.31961686718746113,   -0.2725151214535824,  -0.3653391660854761,
+        -0.050014751173794614, 0.7408134101472293,   -0.3725612386218375,
+        0.7422732690340185,    0.2362693695249406,   -0.03406202399800373,
+        -0.5240836589720419,   -0.3306486249244244,  -0.08974833066448971};
+    param.expected_u = convert_vector<double, T>(expected_u);
+    std::vector<double> expected_components{
+        -0.13018127893763679,  0.0555292207103647,   -0.029183724285447132,
+        0.08530286540315635,   -0.2803601055672529,  0.001590249940405325,
+        -0.11709514506480873,  0.30369939990408595,  -0.3516982898193114,
+        -0.5672489325972923,   0.4907207154557312,   -0.045311214609932704,
+        -0.003799092237743996, -0.34731075906009634, 0.06812636032930122,
+        0.3343984977339394,    -0.7723725615550512,  -0.10004283763297586,
+        0.46171229284752713,   -0.08265966786479861, 0.18528397866178742,
+        0.4210994868036967,    0.4705556347326492,   0.34559891508413954,
+        -0.08061539539830952,  0.28811606078251584,  0.3702858029266968,
+        -0.5551538609206681,   0.2901007531747837,   -0.566012015390133,
+        -0.6817249186902983,   -0.07073588750344964, -0.24768412253798605,
+        0.21582459928821646,   -0.03664007407703801, 0.10402307019919266,
+        0.16298865444422567,   0.27165823936121647,  0.5161121847794891,
+        0.2798878551432686,    -0.19367614393273275, -0.1964370936029322,
+        0.4817965795096736,    0.1366734331575607,   -0.4261512501260775};
+    param.expected_components = convert_vector<double, T>(expected_components);
+    std::vector<double> expected_vt{
+        -0.13018127893763679,  0.0555292207103647,   -0.029183724285447132,
+        0.08530286540315635,   -0.2803601055672529,  0.001590249940405325,
+        -0.11709514506480873,  0.30369939990408595,  -0.3516982898193114,
+        -0.5672489325972923,   0.4907207154557312,   -0.045311214609932704,
+        -0.003799092237743996, -0.34731075906009634, 0.06812636032930122,
+        0.3343984977339394,    -0.7723725615550512,  -0.10004283763297586,
+        0.46171229284752713,   -0.08265966786479861, 0.18528397866178742,
+        0.4210994868036967,    0.4705556347326492,   0.34559891508413954,
+        -0.08061539539830952,  0.28811606078251584,  0.3702858029266968,
+        -0.5551538609206681,   0.2901007531747837,   -0.566012015390133,
+        -0.6817249186902983,   -0.07073588750344964, -0.24768412253798605,
+        0.21582459928821646,   -0.03664007407703801, 0.10402307019919266,
+        0.16298865444422567,   0.27165823936121647,  0.5161121847794891,
+        0.2798878551432686,    -0.19367614393273275, -0.1964370936029322,
+        0.4817965795096736,    0.1366734331575607,   -0.4261512501260775};
+    param.expected_vt = convert_vector<double, T>(expected_vt);
+    std::vector<double> expected_variance{41.97113866840612, 27.735015455630798,
+                                          11.040380729784895, 9.949901855155721,
+                                          4.326235513244705};
+    param.expected_variance = convert_vector<double, T>(expected_variance);
+    std::vector<double> expected_sigma{15.869052650061903, 12.900003594332244,
+                                       8.138936317401026, 7.726539402017848,
+                                       5.0948418110347875};
+    param.expected_sigma = convert_vector<double, T>(expected_sigma);
+    param.expected_total_variance = (T)95.02267222222224;
+    param.expected_n_components = 5;
+    std::vector<double> expected_rinfo{6.0, 9.0, 5.0};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> X{1.0, 3.0, 0.0, 0.0, 0.0, 2.0, 2.0, 5.5, 1.0,
+                          2.0, 3.0, 0.2, 0.1, 0.8, 6.0, 4.0, 1.0, 0.9,
+                          3.1, 0.0, 0.0, 9.8, 0.7, 4.0, 4.1, 0.1, 2.2};
+    param.X = convert_vector<double, T>(X);
+    param.m = 3;
+    param.ldx = 3;
+    param.ldx_transform = 3;
+    std::vector<double> expected_X_transform{
+        0.06883314625917261, 3.067184077786804,  1.187570713636344,   -0.7293564433902677,
+        -2.8435147124468876, 1.4002843875775814, 0.4948410127545904,  -1.3134710855645326,
+        4.089344441106332,   5.500616391996301,  -1.6234071319427146, 1.4456803905297901,
+        0.33017954870069866, 0.8380569485849144, 0.13563129080749659};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    param.Xinv = convert_vector<double, T>(expected_X_transform);
+    std::vector expected_Xinv_transform{
+        2.3727464809747536,  1.167704861326678,    1.9491100025678718,
+        -1.0410548955121248, 0.8795015790116714,   1.3394734576143197,
+        0.16368327363466295, 4.246551067854854,    1.9975875461887138,
+        3.4925903140035346,  2.977830659903403,    0.0060815050263896,
+        4.146195117872927,   0.4575615602370817,   5.555985870600144,
+        2.6255627330279974,  1.3563351426138448,   0.6747389661282728,
+        2.6405060011039225,  -0.3622556749930357,  -0.031135412980347166,
+        5.100726104247336,   1.0421504520475111,   4.393430813484434,
+        2.0127690616095415,  -0.21397680461528235, 2.6382802438058706};
+    param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.k = 3;
+    param.ldxinv_transform = 3;
+    param.ldxinv = 3;
+
+    param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetBiasedData2(std::vector<PCAParamType<T>> &params) {
+    // Test with biased standard deviation estimators
+    PCAParamType<T> param;
+    param.test_name = "Test with biased standard deviation estimators";
+    param.n = 6;
+    param.p = 9;
+    std::vector<double> A{
+        1.06, 2.,  3.1,  3.,    3.,   0.2, -3.,  3.,   0.3,  2.,  0.27, 2.5,  2.1,  -0.25,
+        0.08, 0.5, 0.15, 9.34,  3.1,  0.1, -9.8, 4.7,  0.86, 3.7, 1.,   0.86, 3.74, -2.9,
+        7.2,  4.1, 2.,   -6.,   4.07, 2.,  4.2,  4.18, 2.,   4.6, 4.1,  5.5,  1.4,  -8.1,
+        3.5,  1.4, 1.25, -1.34, 5.97, 2.1, -1.8, 4.9,  -1.,  2.1, 3.1,  -1.1};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 6;
+    param.components_required = 5;
+    param.method = "correlation";
+    param.degrees_of_freedom = "biased";
+    std::vector<double> expected_components{
+        -0.40635250744475376, 0.31778380450970445,  0.002007932392598666,
+        -0.22816887619160775, 0.44802918080699444,  -0.1204520779874455,
+        -0.4094386167172589,  0.39251376960613765,  -0.5550476718820487,
+        0.1234881546130405,   0.46898925153399174,  -0.2835297198211863,
+        0.011398990234394675, -0.18018307386084714, -0.0016759389359247683,
+        0.13232671321700468,  -0.4124695723116655,  0.0628834959609175,
+        0.5579793691376701,   0.5748019272935684,   0.2532613632920828,
+        0.4142231829844192,   0.4884548821445952,   -0.16603890345156205,
+        -0.05225524952723594, 0.31134786552739774,  0.3175946923662307,
+        -0.2508653193089363,  -0.25976017652692707, 0.6432041265541919,
+        -0.49277276186355445, 0.15537817805692902,  -0.19477713556526488,
+        0.1605971375273296,   -0.01659378302939952, 0.21928772173344097,
+        0.40517336339950466,  0.4348717100470041,   0.40659348730145506,
+        -0.02017359074850547, -0.36182419525776555, -0.14176796556854757,
+        0.5597066381358866,   0.0994995382900446,   0.19103920410625638};
+    param.expected_components = convert_vector<double, T>(expected_components);
+    std::vector<double> expected_variance{3.548146755863272, 2.2968628144014827,
+                                          1.4547763969332148, 1.0703009336692777,
+                                          0.6299130991327534};
+    param.expected_variance = convert_vector<double, T>(expected_variance);
+    std::vector<double> expected_sigma{4.613987487540428, 3.7123007537656343,
+                                       2.9544302972991745, 2.534128173951678,
+                                       1.944088113948676};
+    param.expected_sigma = convert_vector<double, T>(expected_sigma);
+    param.expected_total_variance = (T)9;
+    param.expected_n_components = 5;
+    std::vector<double> expected_rinfo{6.0, 9.0, 5.0};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> X{1.0, 3.0, 0.0, 0.0, 0.0, 2.0, 2.0, 5.5, 1.0,
+                          2.0, 3.0, 0.2, 0.1, 0.8, 6.0, 4.0, 1.0, 0.9,
+                          3.1, 0.0, 0.0, 9.8, 0.7, 4.0, 4.1, 0.1, 2.2};
+    param.X = convert_vector<double, T>(X);
+    param.m = 3;
+    param.ldx = 3;
+    param.ldx_transform = 3;
+    std::vector<double> expected_X_transform{
+        0.6429034123729505,  0.24096546653427056,  0.9486871853283014,
+        0.9054189248061256,  -0.5988370987336112,  -0.10428390914306929,
+        1.465532698605996,   -0.7274897159666929,  1.5313368163487433,
+        2.1538367434798773,  -0.07601632393903783, 0.32738886162785436,
+        0.30451771323422944, 0.4705163595014952,   -0.9257726579998535};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    param.Xinv = convert_vector<double, T>(expected_X_transform);
+    std::vector expected_Xinv_transform{
+        1.7005806627235573,  1.9920763829564059,  1.06089766239757,
+        -1.2220993538396985, 0.9069823728445536,  1.3131685754995583,
+        0.8830498925136328,  2.9564204362327033,  3.452728700709806,
+        6.166545812927968,   2.678985692441437,   0.033154810793458334,
+        5.1195055466382975,  0.5786086289139383,  5.30593097182525,
+        0.8665114197881643,  3.1421116629773262,  -1.1417493195612296,
+        1.0328415859749787,  1.172477641714265,   -1.6724259464188527,
+        6.649512957341614,   0.9251417217892692,  4.344754619764865,
+        2.852325028107134,   0.22012802246620866, 1.988705729024391};
+    param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.k = 3;
+    param.ldxinv_transform = 3;
+    param.ldxinv = 3;
+
+    param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
 template <typename T> void GetPCAData(std::vector<PCAParamType<T>> &params) {
 
     Get1by1Data(params);
@@ -727,4 +933,6 @@ template <typename T> void GetPCAData(std::vector<PCAParamType<T>> &params) {
     GetTallThinData(params);
     GetShortFatData(params);
     GetSubarrayData(params);
+    GetBiasedData(params);
+    GetBiasedData2(params);
 }

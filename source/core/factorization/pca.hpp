@@ -62,6 +62,9 @@ template <typename T> class da_pca : public basic_handle<T> {
     // Number of principal components requested
     da_int npc = 1;
 
+    // Degrees of freedom (bias) when computing variances
+    da_int dof = 0;
+
     // Actual number of principal components found - on output should be the same as npc unless dgesvdx gives unexpected behaviour
     da_int ns = 0;
 
@@ -249,9 +252,12 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
     // Store dimensions of A
     this->n = n;
     this->p = p;
-
-    A_copy.resize(n * p);
-
+    try {
+        A_copy.resize(n * p);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
     // Copy the input matrix into internal matrix buffer
     for (da_int j = 0; j < p; j++) {
         for (da_int i = 0; i < n; i++) {
@@ -298,30 +304,49 @@ template <typename T> da_status da_pca<T>::compute() {
     else
         method = pca_method_svd;
 
-    // Initialize some workspace arrays
-    u.resize(n * npc);
-    //TODO: without the 2 it falls over - potential bug in flame being investigated
-    sigma.resize(2 * std::min(n, p) + 1);
-    vt.resize(npc * p);
-    iwork.resize(12 * std::min(n, p));
+    std::string degrees_of_freedom;
+    da_int div = (n == 1) ? 1 : n - 1;
+    this->opts.get("degrees of freedom", degrees_of_freedom);
+    if (degrees_of_freedom == "biased") {
+        dof = -1;
+        div = n;
+    }
+
+    try {
+        // Initialize some workspace arrays
+        u.resize(n * npc);
+        //TODO: without the 2 it falls over - potential bug in flame being investigated
+        sigma.resize(2 * std::min(n, p) + 1);
+        vt.resize(npc * p);
+        iwork.resize(12 * std::min(n, p));
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     // Depending on the chosen method standardize by column means and possible standard deviations
-    column_means.resize(p);
+    try {
+        column_means.resize(p);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
+    std::fill(column_means.begin(), column_means.end(), 0);
 
     switch (method) {
     case pca_method_cov:
-        da_basic_statistics::mean(da_axis_col, n, p, A_copy.data(), n,
-                                  column_means.data());
-        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n,
+        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n, dof, 0,
                                          column_means.data(), (T *)nullptr);
         break;
     case pca_method_corr:
-        column_sdevs.resize(p);
-        da_basic_statistics::variance(da_axis_col, n, p, A_copy.data(), n,
-                                      column_means.data(), column_sdevs.data());
-        for (da_int i = 0; i < p; i++)
-            column_sdevs[i] = std::sqrt(column_sdevs[i]);
-        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n,
+        try {
+            column_sdevs.resize(p);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error,
+                            "Memory allocation failed."); // LCOV_EXCL_LINE
+        }
+        std::fill(column_sdevs.begin(), column_sdevs.end(), 0);
+        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n, dof, 0,
                                          column_means.data(), column_sdevs.data());
         break;
     default:
@@ -330,7 +355,6 @@ template <typename T> da_status da_pca<T>::compute() {
     }
 
     // Compute and store the total variance of the (standardized) input matrix
-    da_int div = (n == 1) ? 1 : n - 1;
     total_variance = 0.0;
     for (da_int j = 0; j < p; j++) {
         for (da_int i = 0; i < n; i++) {
@@ -369,7 +393,12 @@ template <typename T> da_status da_pca<T>::compute() {
 
     // Allocate the workspace required
     lwork = (da_int)estworkspace[0];
-    work.resize(lwork);
+    try {
+        work.resize(lwork);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     INFO = -1;
 
@@ -407,9 +436,14 @@ template <typename T> da_status da_pca<T>::compute() {
     }
 
     // Allocate space for the results
-    principal_components.resize(ns * p);
-    scores.resize(n * ns);
-    variance.resize(ns);
+    try {
+        principal_components.resize(ns * p);
+        scores.resize(n * ns);
+        variance.resize(ns);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     // Compute Scores matrix, U * Sigma
     for (da_int j = 0; j < ns; j++) {
@@ -478,7 +512,13 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
         return da_error(err, da_status_invalid_pointer, "The array X_transform is null.");
 
     // We need a copy of X to avoid changing the user's data
-    std::vector<T> X_copy(p * m);
+    std::vector<T> X_copy;
+    try {
+        X_copy.resize(p * m);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
     for (da_int j = 0; j < p; j++) {
         for (da_int i = 0; i < m; i++) {
             X_copy[i + j * m] = X[i + ldx * j];
@@ -488,11 +528,11 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
     // Standardize the new data matrix based on the standardization used in the PCA computation
     switch (method) {
     case pca_method_cov:
-        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m,
+        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m, dof, 0,
                                          column_means.data(), (T *)nullptr);
         break;
     case pca_method_corr:
-        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m,
+        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m, dof, 0,
                                          column_means.data(), column_sdevs.data());
         break;
     default:
@@ -556,20 +596,14 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
     // Undo the standardization used in the PCA computation
     switch (method) {
     case pca_method_cov:
-        for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < k; i++) {
-                X_inv_transform[i + ldx_inv_transform * j] += column_means[j];
-            }
-        }
+        da_basic_statistics::standardize(da_axis_col, k, p, X_inv_transform,
+                                         ldx_inv_transform, dof, 1, column_means.data(),
+                                         (T *)nullptr);
         break;
     case pca_method_corr:
-        for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < k; i++) {
-                X_inv_transform[i + ldx_inv_transform * j] =
-                    X_inv_transform[i + ldx_inv_transform * j] * column_sdevs[j] +
-                    column_means[j];
-            }
-        }
+        da_basic_statistics::standardize(da_axis_col, k, p, X_inv_transform,
+                                         ldx_inv_transform, dof, 1, column_means.data(),
+                                         column_sdevs.data());
         break;
     default:
         // No standardization is required

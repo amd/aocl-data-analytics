@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -42,10 +42,11 @@ template <typename T> class MomentStatisticsTest : public testing::Test {
 };
 
 template <typename T> struct MomentsParamType {
-    da_int n;
-    da_int p;
-    da_int ldx;
-    da_int k;
+    da_int n = 0;
+    da_int p = 0;
+    da_int ldx = 0;
+    da_int k = 0;
+    da_int dof = 0;
     std::vector<T> x;
     std::vector<T> expected_column_means;
     std::vector<T> expected_row_means;
@@ -65,6 +66,9 @@ template <typename T> struct MomentsParamType {
     std::vector<T> expected_column_kurtoses;
     std::vector<T> expected_row_kurtoses;
     T expected_overall_kurtosis;
+    std::vector<T> expected_biased_column_variances;
+    std::vector<T> expected_biased_row_variances;
+    T expected_biased_overall_variance;
     std::vector<T> expected_column_moments;
     std::vector<T> expected_row_moments;
     T expected_overall_moment;
@@ -117,6 +121,13 @@ template <typename T> void GetZeroData(std::vector<MomentsParamType<T>> &params)
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-3;
+    std::vector<double> expected_biased_column_variances(param.p, 0);
+    std::vector<double> expected_biased_row_variances(param.n, 0);
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)0;
     std::vector<double> expected_column_moments(param.p, 0);
     std::vector<double> expected_row_moments(param.n, 0);
     param.expected_column_moments = convert_vector<double, T>(expected_column_moments);
@@ -174,6 +185,13 @@ template <typename T> void GetOnesData(std::vector<MomentsParamType<T>> &params)
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-3;
+    std::vector<double> expected_biased_column_variances(param.p, 0);
+    std::vector<double> expected_biased_row_variances(param.n, 0);
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)0;
     std::vector<double> expected_column_moments(param.p, 0);
     std::vector<double> expected_row_moments(param.n, 0);
     param.expected_column_moments = convert_vector<double, T>(expected_column_moments);
@@ -190,6 +208,7 @@ template <typename T> void GetTallThinData(std::vector<MomentsParamType<T>> &par
     MomentsParamType<T> param;
     param.n = 5;
     param.p = 3;
+    param.dof = -1;
     param.ldx = param.n;
     std::vector<double> x{1.8, 2.1,  3.3,  4.9,  5.1,  6.2,  7.2, 8.2,
                           9.9, 10.4, 11.0, 12.6, 13.8, 14.1, 15.7};
@@ -221,15 +240,13 @@ template <typename T> void GetTallThinData(std::vector<MomentsParamType<T>> &par
     param.expected_row_geometric_means =
         convert_vector<double, T>(expected_row_geometric_means);
     param.expected_overall_geometric_mean = (T)7.021813816968474;
-    std::vector<double> expected_column_variances{2.348, 3.1420000000000003,
-                                                  3.0829999999999993};
-    std::vector<double> expected_row_variances{21.173333333333332, 27.57,
-                                               27.60333333333334, 21.21333333333333,
-                                               28.089999999999996};
+    std::vector<double> expected_column_variances{1.8784, 2.5136, 2.4664};
+    std::vector<double> expected_row_variances{14.11555555555555, 18.38, 18.4022222222222,
+                                               14.1422222222222, 18.726666666666666};
     param.expected_column_variances =
         convert_vector<double, T>(expected_column_variances);
     param.expected_row_variances = convert_vector<double, T>(expected_row_variances);
-    param.expected_overall_variance = (T)20.307428571428574;
+    param.expected_overall_variance = (T)18.9536;
     std::vector<double> expected_column_skewnesses{
         0.0673265881163833, -0.0127915008072743, -0.1674052876561382};
     std::vector<double> expected_row_skewnesses{
@@ -247,6 +264,14 @@ template <typename T> void GetTallThinData(std::vector<MomentsParamType<T>> &par
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-1.2255225724617373;
+    std::vector<double> expected_biased_column_variances{1.8784, 2.5136, 2.4664};
+    std::vector<double> expected_biased_row_variances{
+        14.11555555555555, 18.38, 18.4022222222222, 14.1422222222222, 18.726666666666666};
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)18.9536;
     std::vector<double> expected_column_moments{11.171069067519996, 38.06081606528,
                                                 68.94169886271999};
     std::vector<double> expected_row_moments{6336.101916795611, 13978.323597999994,
@@ -266,6 +291,7 @@ template <typename T> void GetShortFatData(std::vector<MomentsParamType<T>> &par
     MomentsParamType<T> param;
     param.n = 3;
     param.p = 5;
+    param.dof = 10;
     param.ldx = param.n;
     std::vector<double> x{1.8,  6.2, 11.0, 2.1,  7.2, 12.6, 3.3, 8.2,
                           13.8, 4.9, 9.9,  14.1, 5.1, 10.4, 15.7};
@@ -297,15 +323,13 @@ template <typename T> void GetShortFatData(std::vector<MomentsParamType<T>> &par
     param.expected_row_geometric_means =
         convert_vector<double, T>(expected_row_geometric_means);
     param.expected_overall_geometric_mean = (T)7.021813816968474;
-    std::vector<double> expected_row_variances{2.348, 3.1420000000000003,
-                                               3.0829999999999993};
-    std::vector<double> expected_column_variances{21.173333333333332, 27.57,
-                                                  27.60333333333334, 21.21333333333333,
-                                                  28.089999999999996};
+    std::vector<double> expected_row_variances{0.9392, 1.2568, 1.2332};
+    std::vector<double> expected_column_variances{
+        4.2346666666666666, 5.514, 5.520666666666667, 4.2426666666666666, 5.618};
     param.expected_column_variances =
         convert_vector<double, T>(expected_column_variances);
     param.expected_row_variances = convert_vector<double, T>(expected_row_variances);
-    param.expected_overall_variance = (T)20.307428571428574;
+    param.expected_overall_variance = (T)28.4304;
     std::vector<double> expected_row_skewnesses{0.0673265881163833, -0.0127915008072743,
                                                 -0.1674052876561382};
     std::vector<double> expected_column_skewnesses{
@@ -323,6 +347,14 @@ template <typename T> void GetShortFatData(std::vector<MomentsParamType<T>> &par
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-1.2255225724617373;
+    std::vector<double> expected_biased_row_variances{1.8784, 2.5136, 2.4664};
+    std::vector<double> expected_biased_column_variances{
+        14.115555555555, 18.38, 18.4022222222, 14.1422222222222, 18.72666666666667};
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)18.9536;
     std::vector<double> expected_row_moments{11.171069067519996, 38.06081606528,
                                              68.94169886271999};
     std::vector<double> expected_column_moments{6336.101916795611, 13978.323597999994,
@@ -400,6 +432,14 @@ template <typename T> void GetSubarrayData(std::vector<MomentsParamType<T>> &par
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-1.2255225724617373;
+    std::vector<double> expected_biased_row_variances{1.8784, 2.5136, 2.4664};
+    std::vector<double> expected_biased_column_variances{
+        14.115555555555, 18.38, 18.4022222222, 14.1422222222222, 18.72666666666667};
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)18.9536;
     std::vector<double> expected_row_moments{11.171069067519996, 38.06081606528,
                                              68.94169886271999};
     std::vector<double> expected_column_moments{6336.101916795611, 13978.323597999994,
@@ -459,6 +499,13 @@ template <typename T> void GetSingleRowData(std::vector<MomentsParamType<T>> &pa
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-1.1991174876238382;
+    std::vector<double> expected_biased_row_variances{5.8264};
+    std::vector<double> expected_biased_column_variances{0, 0, 0, 0, 0};
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)5.8264;
     std::vector<double> expected_row_moments{1423.3050598873851};
     std::vector<double> expected_column_moments{0, 0, 0, 0, 0};
     param.expected_column_moments = convert_vector<double, T>(expected_column_moments);
@@ -515,6 +562,13 @@ template <typename T> void GetSingleColumnData(std::vector<MomentsParamType<T>> 
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-1.1991174876238382;
+    std::vector<double> expected_biased_column_variances{5.8264};
+    std::vector<double> expected_biased_row_variances{0, 0, 0, 0, 0};
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)5.8264;
     std::vector<double> expected_column_moments{1423.3050598873851};
     std::vector<double> expected_row_moments{0, 0, 0, 0, 0};
     param.expected_column_moments = convert_vector<double, T>(expected_column_moments);
@@ -571,6 +625,13 @@ template <typename T> void Get1by1Data(std::vector<MomentsParamType<T>> &params)
     param.expected_column_kurtoses = convert_vector<double, T>(expected_column_kurtoses);
     param.expected_row_kurtoses = convert_vector<double, T>(expected_row_kurtoses);
     param.expected_overall_kurtosis = (T)-3;
+    std::vector<double> expected_biased_column_variances{0};
+    std::vector<double> expected_biased_row_variances{0};
+    param.expected_biased_column_variances =
+        convert_vector<double, T>(expected_biased_column_variances);
+    param.expected_biased_row_variances =
+        convert_vector<double, T>(expected_biased_row_variances);
+    param.expected_biased_overall_variance = (T)0;
     std::vector<double> expected_column_moments{0};
     std::vector<double> expected_row_moments{0};
     param.expected_column_moments = convert_vector<double, T>(expected_column_moments);
@@ -659,21 +720,21 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                     param.epsilon);
 
         EXPECT_EQ(da_variance(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
-                              column_stat.data(), column_stat2.data()),
+                              param.dof, column_stat.data(), column_stat2.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
                         param.epsilon);
         EXPECT_ARR_NEAR(param.p, param.expected_column_variances.data(),
                         column_stat2.data(), param.epsilon);
         EXPECT_EQ(da_variance(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
-                              row_stat.data(), row_stat2.data()),
+                              param.dof, row_stat.data(), row_stat2.data()),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
                         param.epsilon);
         EXPECT_ARR_NEAR(param.n, param.expected_row_variances.data(), row_stat2.data(),
                         param.epsilon);
         EXPECT_EQ(da_variance(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
-                              overall_stat, overall_stat2),
+                              param.dof, overall_stat, overall_stat2),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
         EXPECT_NEAR(param.expected_overall_variance, overall_stat2[0], param.epsilon);
@@ -684,7 +745,7 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
                         param.epsilon);
-        EXPECT_ARR_NEAR(param.p, param.expected_column_variances.data(),
+        EXPECT_ARR_NEAR(param.p, param.expected_biased_column_variances.data(),
                         column_stat2.data(), param.epsilon);
         EXPECT_ARR_NEAR(param.p, param.expected_column_skewnesses.data(),
                         column_stat3.data(), param.epsilon);
@@ -693,15 +754,16 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
                         param.epsilon);
-        EXPECT_ARR_NEAR(param.n, param.expected_row_variances.data(), row_stat2.data(),
-                        param.epsilon);
+        EXPECT_ARR_NEAR(param.n, param.expected_biased_row_variances.data(),
+                        row_stat2.data(), param.epsilon);
         EXPECT_ARR_NEAR(param.n, param.expected_row_skewnesses.data(), row_stat3.data(),
                         param.epsilon);
         EXPECT_EQ(da_skewness(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                               overall_stat, overall_stat2, overall_stat3),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
-        EXPECT_NEAR(param.expected_overall_variance, overall_stat2[0], param.epsilon);
+        EXPECT_NEAR(param.expected_biased_overall_variance, overall_stat2[0],
+                    param.epsilon);
         EXPECT_NEAR(param.expected_overall_skewness, overall_stat3[0], param.epsilon);
 
         EXPECT_EQ(da_kurtosis(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
@@ -710,7 +772,7 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
                         param.epsilon);
-        EXPECT_ARR_NEAR(param.p, param.expected_column_variances.data(),
+        EXPECT_ARR_NEAR(param.p, param.expected_biased_column_variances.data(),
                         column_stat2.data(), param.epsilon);
         EXPECT_ARR_NEAR(param.p, param.expected_column_kurtoses.data(),
                         column_stat3.data(), param.epsilon);
@@ -719,15 +781,16 @@ TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
                         param.epsilon);
-        EXPECT_ARR_NEAR(param.n, param.expected_row_variances.data(), row_stat2.data(),
-                        param.epsilon);
+        EXPECT_ARR_NEAR(param.n, param.expected_biased_row_variances.data(),
+                        row_stat2.data(), param.epsilon);
         EXPECT_ARR_NEAR(param.n, param.expected_row_kurtoses.data(), row_stat3.data(),
                         param.epsilon);
         EXPECT_EQ(da_kurtosis(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
                               overall_stat, overall_stat2, overall_stat3),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
-        EXPECT_NEAR(param.expected_overall_variance, overall_stat2[0], param.epsilon);
+        EXPECT_NEAR(param.expected_biased_overall_variance, overall_stat2[0],
+                    param.epsilon);
         EXPECT_NEAR(param.expected_overall_kurtosis, overall_stat3[0], param.epsilon);
 
         EXPECT_EQ(da_moment(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
@@ -756,7 +819,7 @@ TYPED_TEST(MomentStatisticsTest, IllegalArgsMoments) {
 
     std::vector<double> x_d{4.7, 1.2, -0.3, 4.5};
     std::vector<TypeParam> x = convert_vector<double, TypeParam>(x_d);
-    da_int n = 2, p = 2, ldx = 2, k = 2;
+    da_int n = 2, p = 2, ldx = 2, k = 2, dof = 0;
     std::vector<TypeParam> dummy1(10, 0);
     std::vector<TypeParam> dummy2(10, 0);
     std::vector<TypeParam> dummy3(10, 0);
@@ -775,7 +838,7 @@ TYPED_TEST(MomentStatisticsTest, IllegalArgsMoments) {
               da_status_invalid_leading_dimension);
     EXPECT_EQ(da_geometric_mean(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data()),
               da_status_invalid_leading_dimension);
-    EXPECT_EQ(da_variance(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
+    EXPECT_EQ(da_variance(da_axis_row, n, p, x.data(), ldx_illegal, dof, dummy1.data(),
                           dummy2.data()),
               da_status_invalid_leading_dimension);
     EXPECT_EQ(da_skewness(da_axis_row, n, p, x.data(), ldx_illegal, dummy1.data(),
@@ -796,7 +859,7 @@ TYPED_TEST(MomentStatisticsTest, IllegalArgsMoments) {
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_geometric_mean(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    EXPECT_EQ(da_variance(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_variance(da_axis_row, n, p_illegal, x.data(), ldx, dof, dummy1.data(),
                           dummy2.data()),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_skewness(da_axis_row, n, p_illegal, x.data(), ldx, dummy1.data(),
@@ -817,7 +880,7 @@ TYPED_TEST(MomentStatisticsTest, IllegalArgsMoments) {
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_geometric_mean(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data()),
               da_status_invalid_array_dimension);
-    EXPECT_EQ(da_variance(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
+    EXPECT_EQ(da_variance(da_axis_col, n_illegal, p, x.data(), ldx, dof, dummy1.data(),
                           dummy2.data()),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_skewness(da_axis_col, n_illegal, p, x.data(), ldx, dummy1.data(),
@@ -846,8 +909,9 @@ TYPED_TEST(MomentStatisticsTest, IllegalArgsMoments) {
               da_status_invalid_pointer);
     EXPECT_EQ(da_geometric_mean(da_axis_col, n, p, x_null, ldx, dummy1.data()),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_variance(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data()),
-              da_status_invalid_pointer);
+    EXPECT_EQ(
+        da_variance(da_axis_col, n, p, x_null, ldx, dof, dummy1.data(), dummy2.data()),
+        da_status_invalid_pointer);
     EXPECT_EQ(da_skewness(da_axis_col, n, p, x_null, ldx, dummy1.data(), dummy2.data(),
                           dummy3.data()),
               da_status_invalid_pointer);

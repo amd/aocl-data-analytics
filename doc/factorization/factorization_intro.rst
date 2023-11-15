@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 
@@ -53,7 +53,7 @@ The PCA is closely related to a matrix factorization known as the *singular valu
    A = U\Sigma V^T,
 
 where :math:`A` is a (standardized) data matrix of size :math:`n\_samples \times n\_features`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n\_samples \times n\_features` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n\_samples \times n\_samples` and :math:`n\_features \times n\_features` respectively.
-The nonzero entries of :math:`\Sigma` are known as the *singular values* of :math:`A`. 
+The nonzero entries of :math:`\Sigma` are known as the *singular values* of :math:`A`.
 
 Internally, AOCL-DA computes the PCA via the SVD rather than by eigenvalue decomposition of the covariance/correlation matrix.
 
@@ -96,6 +96,7 @@ The following options can be set using  :cpp:func:`da_options_set_string` or :cp
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
    "PCA method", "string", ":math:`s =` `'covariance'`", "The type of PCA to compute (and, equivalently, the type of standardization applied to :math:`A`)", ":math:`s =` `'covariance'`, `'correlation'`, or `'svd'`"
+   "degrees of freedom", "string", ":math:`s =` `'unbiased'`", "Whether to use biased or unbiased estimators for standard deviations and variances", ":math:`s =` `'biased'`, or `'unbiased'`"
    "n_components", "da_int", ":math:`i =\min(n\_samples, n\_features)`", "The number of principal components (or singular values) to compute", ":math:`1 \le i \le \min(n\_samples,n\_features)`"
 
 If the `PCA method` option is set to `'svd'` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
@@ -109,5 +110,5 @@ See ``pca.cpp`` in the examples folder of your installation for examples of how 
 .. toctree::
     :maxdepth: 1
     :hidden:
-    
+
     factorization_api

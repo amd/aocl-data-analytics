@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -62,13 +62,13 @@ da_status da_harmonic_mean_s(da_axis axis, da_int n_rows, da_int n_cols, const f
 }
 
 da_status da_variance_d(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
-                        da_int ldx, double *mean, double *var) {
-    return da_basic_statistics::variance(axis, n_rows, n_cols, X, ldx, mean, var);
+                        da_int ldx, da_int dof, double *mean, double *var) {
+    return da_basic_statistics::variance(axis, n_rows, n_cols, X, ldx, dof, mean, var);
 }
 
 da_status da_variance_s(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
-                        da_int ldx, float *mean, float *var) {
-    return da_basic_statistics::variance(axis, n_rows, n_cols, X, ldx, mean, var);
+                        da_int ldx, da_int dof, float *mean, float *var) {
+    return da_basic_statistics::variance(axis, n_rows, n_cols, X, ldx, dof, mean, var);
 }
 
 da_status da_skewness_d(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
@@ -137,23 +137,29 @@ da_status da_five_point_summary_s(da_axis axis, da_int n_rows, da_int n_cols,
 
 /* Shift by a constant amount and scale */
 da_status da_standardize_d(da_axis axis, da_int n_rows, da_int n_cols, double *X,
-                           da_int ldx, double *shift, double *scale) {
-    return da_basic_statistics::standardize(axis, n_rows, n_cols, X, ldx, shift, scale);
+                           da_int ldx, da_int dof, da_int mode, double *shift,
+                           double *scale) {
+    return da_basic_statistics::standardize(axis, n_rows, n_cols, X, ldx, dof, mode,
+                                            shift, scale);
 }
 
 da_status da_standardize_s(da_axis axis, da_int n_rows, da_int n_cols, float *X,
-                           da_int ldx, float *shift, float *scale) {
-    return da_basic_statistics::standardize(axis, n_rows, n_cols, X, ldx, shift, scale);
+                           da_int ldx, da_int dof, da_int mode, float *shift,
+                           float *scale) {
+    return da_basic_statistics::standardize(axis, n_rows, n_cols, X, ldx, dof, mode,
+                                            shift, scale);
 }
 
 da_status da_covariance_matrix_d(da_int n_rows, da_int n_cols, const double *X,
-                                 da_int ldx, double *cov, da_int ldcov) {
-    return da_basic_statistics::covariance_matrix(n_rows, n_cols, X, ldx, cov, ldcov);
+                                 da_int ldx, da_int dof, double *cov, da_int ldcov) {
+    return da_basic_statistics::covariance_matrix(n_rows, n_cols, X, ldx, dof, cov,
+                                                  ldcov);
 }
 
 da_status da_covariance_matrix_s(da_int n_rows, da_int n_cols, const float *X, da_int ldx,
-                                 float *cov, da_int ldcov) {
-    return da_basic_statistics::covariance_matrix(n_rows, n_cols, X, ldx, cov, ldcov);
+                                 da_int dof, float *cov, da_int ldcov) {
+    return da_basic_statistics::covariance_matrix(n_rows, n_cols, X, ldx, dof, cov,
+                                                  ldcov);
 }
 
 da_status da_correlation_matrix_d(da_int n_rows, da_int n_cols, const double *X,

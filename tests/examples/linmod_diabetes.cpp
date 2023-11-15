@@ -90,7 +90,6 @@ int main() {
     da_datastore_options_set_string(csv, "CSV comment char", "#");
     da_datastore_options_set_int(csv, "CSV use header row", 1);
     status = da_data_load_from_csv(csv, filename);
-    // FIXME how to get the line that has a problem!
     if (status != da_status_success) {
         da_datastore_print_error_message(csv);
         return 1;
@@ -132,23 +131,19 @@ int main() {
     // estimate mean and variance per each feature
     pass = true;
     std::vector<double> means(n), scale(n);
-    pass = pass && da_mean_d(da_axis_col, m, n, features.data(), m, means.data()) ==
-                       da_status_success;
-    pass = pass && da_standardize_d(da_axis_col, m, n, features.data(), m, means.data(),
-                                    nullptr) == da_status_success;
-    std::vector<double> tmp(n);
-    pass = pass && da_variance_d(da_axis_col, m, n, features.data(), m, tmp.data(),
+    da_int dof = 0, mode = 0;
+    pass = pass && da_variance_d(da_axis_col, m, n, features.data(), m, dof, means.data(),
                                  scale.data()) == da_status_success;
     for (size_t i = 0; i < scale.size(); i++)
         scale[i] = std::sqrt(m * scale[i]); // use variance to scale vector length
-    pass = pass && da_standardize_d(da_axis_col, m, n, features.data(), m, nullptr,
-                                    scale.data()) == da_status_success;
+    pass = pass && da_standardize_d(da_axis_col, m, n, features.data(), m, dof, mode,
+                                    means.data(), scale.data()) == da_status_success;
 
     double rhs_mean;
     pass = pass &&
            da_mean_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean) == da_status_success;
-    pass = pass && da_standardize_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean,
-                                    nullptr) == da_status_success;
+    pass = pass && da_standardize_d(da_axis_col, m, 1, rhs.data(), m, dof, mode,
+                                    &rhs_mean, nullptr) == da_status_success;
     if (!pass) {
         std::cout << "Unexpected error in the data standardization.\n";
         return 1;
