@@ -256,7 +256,7 @@ endif()
 if (NOT DEFINED UTILS_LIB)
   find_library(UTILS name ${UTILS_NAME} PATHS ${UTILS_PATH})
 else()
-  set(UTILS "")
+  set(UTILS ${LAPACK_LIB})
 endif()
 
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
