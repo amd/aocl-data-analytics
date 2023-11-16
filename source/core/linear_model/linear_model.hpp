@@ -257,7 +257,7 @@ da_int stepfun(da_int n, T *x, T *step, da_int k, T *f, void *usrdata, da_int ac
     da_int m = data->m;
     if (action > 0) {
         // Compute A*x = *y (takes care of intercept)
-        eval_feature_matrix(n, x, usrdata);
+        eval_feature_matrix(n, x, data->y, usrdata);
         // Copy vector data->y into data->aux
         for (da_int i = 0; i < m; ++i)
             data->aux[i] = data->y[i];
@@ -361,6 +361,7 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
     switch (mid) {
     case optim::solvers::solver_lbfgsb:
         slv = "lbfgsb";
+        naux = std::max(m * (nclass - 1), 0);
         [[fallthrough]];
 
     case optim::solvers::solver_coord:

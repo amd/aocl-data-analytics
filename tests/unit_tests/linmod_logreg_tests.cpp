@@ -53,6 +53,7 @@ const logregParam logregPosValuesD[] = {
     {"usrdataIntercept", "usrdata", {{"linmod intercept", 1}}, {}, {}, {}},
     {"sep_data_4_4", "sep_classes_4_4", {{"linmod intercept", 1}}, {}, {}, {}},
     {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"linmod intercept", 1}}, {}, {}, {{"linmod lambda", 1.0}}},
+    {"sep_data_big_scale", "sep_classes_big_scale", {{"linmod intercept", 1}}, {}, {}, {{"linmod lambda", 1.0}}},
 };
 const logregParam logregPosValuesF[] = {
     {"multinomialNoIntercept", "multinomial", {}, {}, {}, {}},
