@@ -361,7 +361,7 @@ da_status linear_model<T>::init_opt_method(std::string &method, da_int mid) {
     switch (mid) {
     case optim::solvers::solver_lbfgsb:
         slv = "lbfgsb";
-        naux = std::max(m * (nclass - 1), 0);
+        naux = std::max(m * (nclass - 1), (da_int)0);
         [[fallthrough]];
 
     case optim::solvers::solver_coord:
