@@ -213,7 +213,7 @@ if(WIN32)
     include_directories("$ENV{AOCL_ROOT}/amd-libflame/include/${INT_LIB}")
   endif()
 
-else()
+else() # linux builds
   if(DEFINED ENV{AOCL_ROOT})
     include_directories($ENV{AOCL_ROOT}/include_${INT_LIB})
   endif()
@@ -229,6 +229,10 @@ else()
   set(BLAS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
   set(LAPACK_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
   set(UTILS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
+
+  if (NOT BUILD_SHARED_LIBS)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+  endif()
 
   if(BUILD_SMP)
     set(BLAS_NAME "blis-mt")
