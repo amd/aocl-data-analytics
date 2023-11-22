@@ -187,81 +187,10 @@ if(WIN32)
 
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
-
-  if(BUILD_SMP)
-    set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
-    set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
-  else()
-    set(BLAS_NAME "AOCL-LibBlis-Win-dll")
-    set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
-  endif()
-  set(UTILS_NAME "libaoclutils")
-
-  set(BLAS_PATH "$ENV{AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
-  set(LAPACK_PATH "$ENV{AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
-  set(UTILS_PATH "$ENV{AOCL_ROOT}/amd-utils/lib")
-
-  if(DEFINED BLAS_INCLUDE_DIR)
-    include_directories("${BLAS_INCLUDE_DIR}")
-  else()
-    include_directories("$ENV{AOCL_ROOT}/amd-blis/include/${INT_LIB}")
-  endif()
-
-  if(DEFINED LAPACK_INCLUDE_DIR)
-    include_directories("${LAPACK_INCLUDE_DIR}")
-  else()
-    include_directories("$ENV{AOCL_ROOT}/amd-libflame/include/${INT_LIB}")
-  endif()
-
-else() # linux builds
-  if(DEFINED ENV{AOCL_ROOT})
-    include_directories($ENV{AOCL_ROOT}/include_${INT_LIB})
-  endif()
-
-  if(DEFINED BLAS_INCLUDE_DIR)
-    include_directories(${BLAS_INCLUDE_DIR})
-  endif()
-
-  if(DEFINED LAPACK_INCLUDE_DIR)
-    include_directories(${LAPACK_INCLUDE_DIR})
-  endif()
-
-  set(BLAS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-  set(LAPACK_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-  set(UTILS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-
-  if (NOT BUILD_SHARED_LIBS)
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
-  endif()
-
-  if(BUILD_SMP)
-    set(BLAS_NAME "blis-mt")
-  else()
-    set(BLAS_NAME "blis")
-  endif()
-
-  set(LAPACK_NAME "flame")
-  set(UTILS_NAME "aoclutils")
 endif()
 
-if(NOT DEFINED BLAS_LIB)
-  find_library(BLAS name ${BLAS_NAME} PATHS ${BLAS_PATH} REQUIRED NO_DEFAULT_PATH)
-else()
-  set(BLAS ${BLAS_LIB})
-endif()
-
-if(NOT DEFINED LAPACK_LIB)
-  find_library(LAPACK name ${LAPACK_NAME} PATHS ${LAPACK_PATH} REQUIRED NO_DEFAULT_PATH)
-else()
-  set(LAPACK ${LAPACK_LIB})
-endif()
-
-# Add Utils dependency if any other AOCL library is a dependency
-if (NOT DEFINED UTILS_LIB)
-  find_library(UTILS name ${UTILS_NAME} PATHS ${UTILS_PATH})
-else()
-  set(UTILS ${UTILS_LIB})
-endif()
+# look for linear algebra libraries dependencies
+include(AOCLDependencies)
 
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
 
@@ -390,7 +319,12 @@ install(DIRECTORY tests/examples/
   DESTINATION examples
   FILES_MATCHING
   PATTERN "*.cpp"
+  PATTERN "*tree*" EXCLUDE
   PATTERN "*.csv"
+)
+install(FILES tools/CMakeLists_examples.cmake
+  DESTINATION examples
+  RENAME CMakeLists.txt
 )
 install(FILES tests/examples/README.txt
   DESTINATION examples
