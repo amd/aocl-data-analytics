@@ -3,6 +3,7 @@ The precise paths to your AOCL library installation will depend on your system a
 
 Compiling examples on Linux
 ===========================
+
 INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers.
 
 To compile and link to static AOCL libraries using g++:
@@ -36,6 +37,8 @@ Compiling examples on Windows
 
 INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers.
 
+AOCL-DA requires Fortran runtime linraries for linking, so prior to compiling the examples you will need to source the ifort compiler using e.g. "C:\Program Files (x86)\Intel\oneAPI\setvars.bat".
+
 cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
    \<path to>\aocl-da\lib\<INT_LIB>\aocl-da.lib
    \<path to>\amd-libflame\lib\<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
@@ -44,3 +47,16 @@ cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
 The same command should work with cl replaced by clang-cl and linking statically using /MT
 
 (note that you should ensure the folders containing the libraries to be linked are on your Windows PATH e.g. using set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>)
+
+Compiling using CMake
+=====================
+
+A CMakeLists.txt file is supplied with your installation. You will need to set AOCL_ROOT to point to your AOCL installation.
+On Windows you will also need to source the ifort compiler using e.g. "C:\Program Files (x86)\Intel\oneAPI\setvars.bat".
+
+To configure cmake, you can then use commands similar to:
+
+mkdir build
+cd build
+cmake -G Ninja -DCMAKE_CXX_COMPILER=clang-cl ..
+cmake --build .

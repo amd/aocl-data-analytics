@@ -140,6 +140,21 @@ Windows ``PATH`` environment variable e.g. using ``set PATH=%PATH%;C:\<path_to_B
 Depending on how your system is set up, and which functions you are using, you may also need to
 link to some Fortran runtime libraries such as ``libfifcore-mt.lib``, ``ifconsol.lib``,
 ``libifportmd.lib``, ``libmmd.lib``, ``libirc.lib`` and ``svml_dispmd.lib``.
+The easiest way to do this is to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
+
+Compiling using CMake
+---------------------
+
+A CMakeLists.txt file is supplied in the examples folder of your installation. You will need to set AOCL_ROOT to point to your AOCL installation.
+On Windows you may also need to source the ifort compiler using e.g. "C:\Program Files (x86)\Intel\oneAPI\setvars.bat".
+To configure cmake and compile, you can then use commands similar to:
+
+.. code-block::
+
+    mkdir build
+    cd build
+    cmake -G Ninja -DCMAKE_CXX_COMPILER=clang-cl ..
+    cmake --build .
 
 
 Miscellaneous Topics

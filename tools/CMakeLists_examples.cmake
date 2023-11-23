@@ -72,7 +72,7 @@ find_path(
 # Other AOCL dependencies
 if(WIN32)
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
-  set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
   if(BUILD_SMP)
     set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
     set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
@@ -112,13 +112,7 @@ find_library(UTILS name ${UTILS_NAME} PATHS ${UTILS_PATH})
 # ##############################################################################
 # Fortran runtime dependencies
 enable_language(Fortran)
-if(WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-  find_library(
-    FORTRAN_RUNTIME
-    NAMES libgfortran libgfortran-5
-    HINTS ${MINGW_PATH}
-    DOC "gfortran library")
-else()
+if(NOT WIN32)
   if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     set(FORTRAN_RUNTIME "flang")
   else() # Gnu
