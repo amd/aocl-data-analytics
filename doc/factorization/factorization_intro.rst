@@ -98,9 +98,14 @@ The following options can be set using  :cpp:func:`da_options_set_string` or :cp
    "PCA method", "string", ":math:`s =` `'covariance'`", "The type of PCA to compute (and, equivalently, the type of standardization applied to :math:`A`)", ":math:`s =` `'covariance'`, `'correlation'`, or `'svd'`"
    "degrees of freedom", "string", ":math:`s =` `'unbiased'`", "Whether to use biased or unbiased estimators for standard deviations and variances", ":math:`s =` `'biased'`, or `'unbiased'`"
    "n_components", "da_int", ":math:`i =\min(n\_samples, n\_features)`", "The number of principal components (or singular values) to compute", ":math:`1 \le i \le \min(n\_samples,n\_features)`"
+   "svd solver", "string", ":math:`s =` `'auto'`", "Which LAPACK routine to use for the underlying singular value decomposition", ":math:`s =` `'auto'`, `'gesvdx'`, `'gesvd'`, or `'gesdd'`"
 
 If the `PCA method` option is set to `'svd'` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
 Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
+
+If a full decomposition is required (so that all principal components are found) then `svd solver` should be set to `gesdd`. The LAPACK routines DGESDD or SGESDD (for double and single precision data respectively) will then be used. This choice offers the best performance. Setting `svd solver` to `auto` results in the same behaviour.
+`svd solver` should only be set to `gesvd` (so that the LAPACK routines DGESVD or SGESVD are used) if there is insufficient memory for the workspace requirements of `gesdd`, or if `gesdd` encounters convergence issues.
+If a partial decomposition is required then, depending on your data matrix, `gesvdx` may be faster (so that the LAPACK routines DGESVDX or SGESVDX are used). If `svd solver` is set to `auto`, then these routine will only be used when the number of principal components required is less than 10% of the smallest dimension of your data matrix.
 
 Examples
 ========

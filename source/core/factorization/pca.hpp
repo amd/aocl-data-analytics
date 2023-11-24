@@ -35,6 +35,7 @@
 #include "lapack_templates.hpp"
 #include "options.hpp"
 #include "pca_options.hpp"
+#include "pca_types.hpp"
 #include <iostream>
 #include <string.h>
 
@@ -54,7 +55,10 @@ template <typename T> class da_pca : public basic_handle<T> {
     bool iscomputed = false;
 
     // Correlation or covariance based PCA
-    pca_method method = pca_method_cov;
+    da_int method = pca_method_cov;
+
+    // SVD solver
+    da_int solver = solver_gesdd;
 
     // Sign flip flag for consistency with sklearn results
     bool svd_flip_u_based = true;
@@ -77,7 +81,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     std::vector<T> principal_components;       // Vt
     std::vector<T> column_means, column_sdevs; // Store standardization data
     T total_variance = 0.0;                    // Sum((MeanCentered A [][])**2)
-    da_int n_components = 0;
+    da_int n_components = 0, ldvt = 0, u_size = 0;
     std::vector<T> u, sigma, vt, work, A_copy;
     std::vector<da_int> iwork;
 
@@ -161,8 +165,11 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(npc * p) + ".");
-            for (da_int i = 0; i < npc * p; i++)
-                result[i] = vt[i];
+            for (da_int j = 0; j < p; j++) {
+                for (da_int i = 0; i < npc; i++) {
+                    result[i + npc * j] = vt[i + ldvt * j];
+                }
+            }
             break;
         case da_result::da_pca_variance:
             if (*dim < ns)
@@ -269,7 +276,7 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
     initdone = true;
     iscomputed = false;
 
-    // Now that we have a data matrix we can reregister the n_components option with new constraints
+    // Now that we have a data matrix we can re-register the n_components option with new constraints
     da_int npc, max_npc = std::min(n, p);
     opts.get("n_components", npc);
     reregister_pca_option<T>(opts, max_npc);
@@ -293,16 +300,17 @@ template <typename T> da_status da_pca<T>::compute() {
                         "No data has been passed to the handle. Please call "
                         "da_pca_set_data_s or da_pca_set_data_d.");
 
-    // Read in options and store in class
+    // Read in options and store in class together with associated variables
     this->opts.get("n_components", npc);
+    ns = npc;
     std::string opt_method;
-    this->opts.get("PCA method", opt_method);
-    if (opt_method == "covariance")
-        method = pca_method_cov;
-    else if (opt_method == "correlation")
-        method = pca_method_corr;
-    else
-        method = pca_method_svd;
+
+    this->opts.get("PCA method", opt_method, method);
+
+    std::string svd_routine;
+    this->opts.get("svd solver", svd_routine, solver);
+    if (solver == solver_auto)
+        solver = (npc < std::min(n, p) / 10) ? solver_gesvdx : solver_gesdd;
 
     std::string degrees_of_freedom;
     da_int div = (n == 1) ? 1 : n - 1;
@@ -312,13 +320,30 @@ template <typename T> da_status da_pca<T>::compute() {
         div = n;
     }
 
+    // Initialize some workspace arrays
+    da_int iwork_size = 0, sigma_size = 0;
+    if (solver == solver_gesvdx) {
+        iwork_size = 12 * std::min(n, p);
+        u_size = n * npc;
+        ldvt = npc;
+        sigma_size = 2 * std::min(n, p) + 1; // TODO bug in gesvdx being fixed at 4.2
+    } else if (solver == solver_gesvd) {
+        iwork_size = 0;
+        u_size = n * std::min(n, p);
+        ldvt = std::min(n, p);
+        sigma_size = std::min(n, p);
+    } else if (solver == solver_gesdd) {
+        iwork_size = 8 * std::min(n, p);
+        u_size = n * std::min(n, p);
+        ldvt = std::min(n, p);
+        sigma_size = std::min(n, p);
+    }
+
     try {
-        // Initialize some workspace arrays
-        u.resize(n * npc);
-        //TODO: without the 2 it falls over - potential bug in flame being investigated
-        sigma.resize(2 * std::min(n, p) + 1);
-        vt.resize(npc * p);
-        iwork.resize(12 * std::min(n, p));
+        u.resize(u_size);
+        sigma.resize(sigma_size);
+        vt.resize(ldvt * p);
+        iwork.resize(iwork_size);
     } catch (std::bad_alloc const &) {
         return da_error(err, da_status_memory_error,
                         "Memory allocation failed."); // LCOV_EXCL_LINE
@@ -361,57 +386,131 @@ template <typename T> da_status da_pca<T>::compute() {
             total_variance += A_copy[i + n * j] * A_copy[i + n * j];
         }
     }
-
     total_variance /= div;
 
     // Compute SVD of standardized data matrix
-    char JOBU = 'V';
-    char JOBVT = 'V';
-    char RANGE = 'I';
+
+    // Some variables are common to all the SVD solvers
     da_int INFO = 0;
-    T vl = 0.0;
-    T vu = 0.0;
     T estworkspace[1];
-    da_int iu = npc;
-    da_int il = 1;
-
-    ns = npc;
-
-    // Query gesvdx for optimal work space required
     da_int lwork = -1;
 
-    da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu, &ns,
-               sigma.data(), u.data(), &n, vt.data(), &npc, estworkspace, &lwork,
-               iwork.data(), &INFO);
+    switch (solver) {
+    case solver_gesvdx: {
+        char JOBU = 'V';
+        char JOBVT = 'V';
+        char RANGE = 'I';
+        T vl = 0.0;
+        T vu = 0.0;
+        da_int iu = npc;
+        da_int il = 1;
+
+        // Query gesvdx for optimal work space required
+        da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu,
+                   &ns, sigma.data(), u.data(), &n, vt.data(), &ldvt, estworkspace,
+                   &lwork, iwork.data(), &INFO);
+
+        // Handle SVD Error
+        if (INFO != 0) {
+            return da_error(
+                err, da_status_internal_error,
+                "An internal error occurred while computing the PCA. Please check "
+                "the input data for undefined values.");
+        }
+
+        // Allocate the workspace required
+        lwork = (da_int)estworkspace[0];
+        try {
+            work.resize(lwork);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error,
+                            "Memory allocation failed."); // LCOV_EXCL_LINE
+        }
+
+        INFO = -1;
+
+        /*Call gesvdx*/
+        da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu,
+                   &ns, sigma.data(), u.data(), &n, vt.data(), &ldvt, work.data(), &lwork,
+                   iwork.data(), &INFO);
+        break;
+    }
+
+    case solver_gesvd: {
+        char JOBU = 'S';
+        char JOBVT = 'S';
+
+        // Query gesvd for optimal work space required
+        da::gesvd(&JOBU, &JOBVT, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n,
+                  vt.data(), &ldvt, estworkspace, &lwork, &INFO);
+
+        // Handle SVD Error
+        if (INFO != 0) {
+            return da_error(
+                err, da_status_internal_error,
+                "An internal error occurred while computing the PCA. Please check "
+                "the input data for undefined values.");
+        }
+
+        // Allocate the workspace required
+        lwork = (da_int)estworkspace[0];
+        try {
+            work.resize(lwork);
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+
+        INFO = -1;
+
+        /*Call gesvd*/
+        da::gesvd(&JOBU, &JOBVT, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n,
+                  vt.data(), &ldvt, work.data(), &lwork, &INFO);
+        break;
+    }
+
+    case solver_gesdd: {
+        char JOBZ = 'S';
+
+        // Query gesdd for optimal work space required
+        da::gesdd(&JOBZ, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n, vt.data(),
+                  &ldvt, estworkspace, &lwork, iwork.data(), &INFO);
+
+        // Handle SVD Error
+        if (INFO != 0) {
+            return da_error(
+                err, da_status_internal_error,
+                "An internal error occurred while computing the PCA. Please check "
+                "the input data for undefined values.");
+        }
+
+        // Allocate the workspace required
+        lwork = (da_int)estworkspace[0];
+        try {
+            work.resize(lwork);
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+
+        INFO = -1;
+
+        /*Call gesdd*/
+        da::gesdd(&JOBZ, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n, vt.data(),
+                  &ldvt, work.data(), &lwork, iwork.data(), &INFO);
+        break;
+    }
+    default:
+        return da_error(
+            err, da_status_internal_error,
+            "An internal error occurred while computing the PCA. Please check "
+            "the input data for undefined values.");
+    }
 
     // Handle SVD Error
     if (INFO != 0) {
-        return da_error(err, da_status_internal_error,
-                        "An internal error occured while computing the PCA. Please check "
-                        "for input data for undefined values.");
-    }
-
-    // Allocate the workspace required
-    lwork = (da_int)estworkspace[0];
-    try {
-        work.resize(lwork);
-    } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error,
-                        "Memory allocation failed."); // LCOV_EXCL_LINE
-    }
-
-    INFO = -1;
-
-    /*Call gesvdx*/
-    da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu, &ns,
-               sigma.data(), u.data(), &n, vt.data(), &npc, work.data(), &lwork,
-               iwork.data(), &INFO);
-
-    // Handle SVD Error
-    if (INFO != 0) {
-        return da_error(err, da_status_internal_error,
-                        "An internal error occured while computing the PCA. Please check "
-                        "for input data for undefined values.");
+        return da_error(
+            err, da_status_internal_error,
+            "An internal error occurred while computing the PCA. Please check "
+            "the input data for undefined values.");
     }
 
     // Go through the ns columns of U and find the max absolute value
@@ -430,7 +529,7 @@ template <typename T> da_status da_pca<T>::compute() {
                 u[i + n * j] = -u[i + n * j];
             }
             for (da_int i = 0; i < p; i++) {
-                vt[j + ns * i] = -vt[j + ns * i];
+                vt[j + ldvt * i] = -vt[j + ldvt * i];
             }
         }
     }
@@ -453,14 +552,14 @@ template <typename T> da_status da_pca<T>::compute() {
     }
 
     // Save the principal components
-    // Note careful use of ns vs npc: they should be identical, but this guards against unexpected dgesvdx behaviour
+    // Note careful use of ns vs npc in principal_components: they should be identical, but this guards against unexpected gesvdx behaviour
     for (da_int j = 0; j < p; j++) {
         for (da_int i = 0; i < ns; i++) {
-            principal_components[j * ns + i] = vt[j * npc + i];
+            principal_components[j * ns + i] = vt[j * ldvt + i];
         }
     }
 
-    // Compute variance, (Sigma**2) / (n_samples-1)
+    // Compute variance, proportional to (Sigma**2)
     for (da_int j = 0; j < ns; j++) {
         variance[j] = sigma[j] * sigma[j] / div;
     }

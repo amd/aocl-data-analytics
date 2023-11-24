@@ -25,11 +25,11 @@
 #define PCA_OPTIONS_HPP
 
 #include "options.hpp"
+#include "pca_types.hpp"
+
 #include <limits>
 
 namespace da_pca {
-
-enum pca_method { pca_method_cov = 0, pca_method_corr, pca_method_svd };
 
 template <class T>
 inline da_status register_pca_options(da_options::OptionRegistry &opts) {
@@ -55,6 +55,15 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
                          "Whether to use biased or unbiased estimators for standard "
                          "deviations and variances",
                          {{"biased", -1}, {"unbiased", 0}}, "unbiased"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "svd solver",
+            "Which LAPACK routine to use for the underlying singular value decomposition",
+            {{"auto", solver_auto},
+             {"gesvdx", solver_gesvdx},
+             {"gesvd", solver_gesvd},
+             {"gesdd", solver_gesdd}},
+            "auto"));
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {

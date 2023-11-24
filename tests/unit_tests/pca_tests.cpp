@@ -76,6 +76,11 @@ TYPED_TEST(PCATest, PCAFunctionality) {
                 da_options_set_int(handle, "n_components", param.components_required),
                 da_status_success);
         }
+        if (param.svd_solver.size() != 0) {
+            EXPECT_EQ(
+                da_options_set_string(handle, "svd solver", param.svd_solver.c_str()),
+                da_status_success);
+        }
 
         EXPECT_EQ(da_pca_compute<TypeParam>(handle), param.expected_status);
 
@@ -198,8 +203,8 @@ TYPED_TEST(PCATest, MultipleCalls) {
 
     // Get some data to use
     std::vector<PCAParamType<TypeParam>> params;
-    GetSquareData(params);
-    GetTallThinData(params);
+    GetSquareData1(params);
+    GetTallThinData1(params);
     GetShortFatData(params);
 
     da_handle handle = nullptr;
@@ -216,6 +221,11 @@ TYPED_TEST(PCATest, MultipleCalls) {
         if (param.components_required != 0) {
             EXPECT_EQ(
                 da_options_set_int(handle, "n_components", param.components_required),
+                da_status_success);
+        }
+        if (param.svd_solver.size() != 0) {
+            EXPECT_EQ(
+                da_options_set_string(handle, "svd solver", param.svd_solver.c_str()),
                 da_status_success);
         }
 
@@ -318,7 +328,7 @@ TYPED_TEST(PCATest, ErrorExits) {
 
     // Get some data to use
     std::vector<PCAParamType<TypeParam>> params;
-    GetSquareData(params);
+    GetSquareData1(params);
     TypeParam results_arr[1];
     TypeParam *null_arr = nullptr;
     da_int *null_arr_int = nullptr;
