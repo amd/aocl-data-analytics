@@ -52,6 +52,13 @@ html_theme = 'rocm_docs_theme'
 html_theme_options = {
     "link_main_doc": False,
     "flavor": "local",
-    "repository_provider" : None,
-    "navigation_with_keys" : False,
+    "repository_provider": None,
+    "navigation_with_keys": False,
+    "navigation_depth": 1,
+}
+
+latex_elements = {
+    "preamble": '''
+\\setcounter{tocdepth}{2}
+'''
 }
