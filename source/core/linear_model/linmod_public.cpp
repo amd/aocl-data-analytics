@@ -51,8 +51,8 @@ da_status da_linmod_select_model_s(da_handle handle, linmod_model mod) {
     return handle->linreg_s->select_model(mod);
 }
 
-da_status da_linmod_define_features_d(da_handle handle, da_int m, da_int n, double *A,
-                                      double *b) {
+da_status da_linmod_define_features_d(da_handle handle, da_int nsamples, da_int nfeat,
+                                      double *A, double *b) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_double)
@@ -60,11 +60,11 @@ da_status da_linmod_define_features_d(da_handle handle, da_int m, da_int n, doub
     if (handle->linreg_d == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
-    return handle->linreg_d->define_features(n, m, A, b);
+    return handle->linreg_d->define_features(nfeat, nsamples, A, b);
 }
 
-da_status da_linmod_define_features_s(da_handle handle, da_int m, da_int n, float *A,
-                                      float *b) {
+da_status da_linmod_define_features_s(da_handle handle, da_int nsamples, da_int nfeat,
+                                      float *A, float *b) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_single)
@@ -72,7 +72,7 @@ da_status da_linmod_define_features_s(da_handle handle, da_int m, da_int n, floa
     if (handle->linreg_s == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
-    return handle->linreg_s->define_features(n, m, A, b);
+    return handle->linreg_s->define_features(nfeat, nsamples, A, b);
 }
 
 da_status da_linmod_fit_start_d(da_handle handle, da_int ncoefs, double *coefs) {
@@ -106,8 +106,8 @@ da_status da_linmod_fit_s(da_handle handle) {
     return da_linmod_fit_start_s(handle, 0, nullptr);
 }
 
-da_status da_linmod_evaluate_model_d(da_handle handle, da_int m, da_int n, double *X,
-                                     double *predictions) {
+da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int nfeat,
+                                     double *X, double *predictions) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_double)
@@ -115,11 +115,11 @@ da_status da_linmod_evaluate_model_d(da_handle handle, da_int m, da_int n, doubl
     if (handle->linreg_d == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
-    return handle->linreg_d->evaluate_model(n, m, X, predictions);
+    return handle->linreg_d->evaluate_model(nfeat, nsamples, X, predictions);
 }
 
-da_status da_linmod_evaluate_model_s(da_handle handle, da_int m, da_int n, float *X,
-                                     float *predictions) {
+da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int nfeat,
+                                     float *X, float *predictions) {
     if (!handle)
         return da_status_invalid_pointer;
     if (handle->precision != da_single)
@@ -127,5 +127,5 @@ da_status da_linmod_evaluate_model_s(da_handle handle, da_int m, da_int n, float
     if (handle->linreg_s == nullptr)
         return da_status_invalid_pointer; // LCOV_EXCL_LINE
 
-    return handle->linreg_s->evaluate_model(n, m, X, predictions);
+    return handle->linreg_s->evaluate_model(nfeat, nsamples, X, predictions);
 }

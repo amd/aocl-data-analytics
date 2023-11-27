@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef DRIVERS_HPP
@@ -162,7 +162,7 @@ da_status lbfgsb_work<T>::add_bounds(size_t nvar, const std::vector<T> &l,
  * This is the main entry point for the solver
  * It expects to have lbfgsb_data already initialized and
  * all the rest of input to have been validated. ????
- * 
+ *
  * Requirements: mem: memory size, factr, pgtol, iprint
  */
 template <typename T>
@@ -232,7 +232,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
     da_int n = nvar;
     da_int iprint;
     da_int iter = 0;
-    T *f = &info[optim::info_t::info_objective];
+    T *f = &info[da_optim::info_t::info_objective];
     da_int itask = 2; // 'START'
     bool compute_fg = true;
     da_int lsavei[4], isave[44];
@@ -270,8 +270,8 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
                      &isave[0], &dsave[0]);
         if (itask == 1) { // NEW_X
             iter++;
-            info[optim::info_t::info_iter] = static_cast<T>(iter);
-            info[optim::info_t::info_grad_norm] = dsave[12]; // sbgnrm
+            info[da_optim::info_t::info_iter] = static_cast<T>(iter);
+            info[da_optim::info_t::info_grad_norm] = dsave[12]; // sbgnrm
 
             if (iter > maxit) {
                 itask = 100;

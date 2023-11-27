@@ -27,37 +27,40 @@
 #include "aoclda.h"
 #include <vector>
 
+namespace da_linmod {
 // data for QR factorization used in standard linear least squares
 template <typename T> struct qr_data {
-    // A needs to be copied as lapack's dgeqr modifies the matrix
-    std::vector<T> A, b, tau, work;
+    // X needs to be copied as lapack's dgeqr modifies the matrix
+    std::vector<T> X, y, tau, work;
     da_int lwork = 0;
 
     // Constructors
-    qr_data(da_int m, da_int n, T *Ai, T *bi, bool intercept, da_int ncoef) {
+    qr_data(da_int nsamples, da_int nfeat, const T *Xi, const T *yi, bool intercept,
+            da_int ncoef) {
 
-        // Copy A and b, starting with the first n columns of A
-        A.resize(m * ncoef);
-        for (da_int j = 0; j < n; j++) {
-            for (da_int i = 0; i < m; i++) {
-                A[j * m + i] = Ai[j * m + i];
+        // Copy X and y, starting with the first nfeat columns of X
+        X.resize(nsamples * ncoef);
+        for (da_int j = 0; j < nfeat; j++) {
+            for (da_int i = 0; i < nsamples; i++) {
+                X[j * nsamples + i] = Xi[j * nsamples + i];
             }
         }
-        b.resize(m);
-        for (da_int i = 0; i < m; i++)
-            b[i] = bi[i];
+        y.resize(nsamples);
+        for (da_int i = 0; i < nsamples; i++)
+            y[i] = yi[i];
 
-        // add a column of 1 to A if intercept is required
+        // add a column of 1 to X if intercept is required
         if (intercept) {
-            for (da_int i = 0; i < m; i++)
-                A[n * m + i] = 1.0;
+            for (da_int i = 0; i < nsamples; i++)
+                X[nfeat * nsamples + i] = 1.0;
         }
 
         // work arrays for the LAPACK QR factorization
-        tau.resize(std::min(m, ncoef));
+        tau.resize(std::min(nsamples, ncoef));
         lwork = ncoef;
         work.resize(lwork);
     };
 };
+} // namespace da_linmod
 
 #endif

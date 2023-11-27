@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef CALLBACKS_HPP
@@ -39,7 +39,7 @@
  *  -----------------------------------------
  * Input: n>0, x[n] iterate vector
  * Output val = f(x) if return status is 0, otherwise undefined
- * Must return 0 on successfull eval and nonzero to indicate that function could 
+ * Must return 0 on successfull eval and nonzero to indicate that function could
  * not be evaluated, some solvers don't have recovery capability.
  */
 template <typename T> struct meta_objcb {
@@ -52,8 +52,8 @@ template <typename T> using objfun_t = typename meta_objcb<T>::type;
 /** Objective gradient (function) declaration meta_grdcb
  *  ----------------------------------------------------
  * Input: n>0, x[n] iterate vector, xnew to indicate that a new iterate is being provided and that
- *        objfun(x) was NOT called previously. Some iterative methods by design ALWAYS call objfun(x) 
- *        before objgrd (on the same iterate) an some common computation can be done only once at the 
+ *        objfun(x) was NOT called previously. Some iterative methods by design ALWAYS call objfun(x)
+ *        before objgrd (on the same iterate) an some common computation can be done only once at the
  *        objfun(x) call. The latter call to objgrd would reused the computed values continue with the
  *        gradient calculation. E.g. linear models with constant feature matrix needs to be evaluated
  *        for computing f(x) and f'(x) and when using iterative solvers that evaluate first f(x) then
@@ -61,7 +61,7 @@ template <typename T> using objfun_t = typename meta_objcb<T>::type;
  *        then set xnew = true and this will perform all the necessary calculations to correctly evaluate
  *        the objective gratient.
  * Output val = f'(x) = \nabla f(x) if return status is 0, otherwise val is untouched
- * Must return 0 on successfull eval and nonzero to indicate that function could 
+ * Must return 0 on successfull eval and nonzero to indicate that function could
  * not be evaluated, some solvers don't have recovery capability.
  * Not yet implemented: is *usrdata->fd == true then estimate the gradient using
  * a finite-difference method (forwards, bacbwards, center, cheap, etc).
@@ -79,15 +79,15 @@ template <typename T> using objgrd_t = typename meta_grdcb<T>::type;
  * Input: n>0, x[n] iterate vector, n>k>=0 k-th coord,
  *        usrdata: pointer to user data, and
  *        action: action to take (implementation dependent).
- * Output: *s step to take along the k-th coord, *f objective value at x      
- * Must return 0 on successfull eval and nonzero to indicate that function could 
+ * Output: *s step to take along the k-th coord, *f objective value at x
+ * Must return 0 on successfull eval and nonzero to indicate that function could
  * not be evaluated, some solvers don't have recovery capability.
  */
 template <typename T> struct meta_stepcb {
     static_assert(std::is_floating_point<T>::value,
                   "Step function arguments must be floating point");
     using type = std::function<da_int(da_int n, T *x, T *s, da_int k, T *f, void *usrdata,
-                                      da_int action)>;
+                                      da_int action, T kdiff)>;
 };
 template <typename T> using stepfun_t = typename meta_stepcb<T>::type;
 
@@ -95,7 +95,7 @@ template <typename T> using stepfun_t = typename meta_stepcb<T>::type;
  *  ------------------------------------------------
  * Input: n>0, x[n] iterate vector
  *        val = f(x), info[100] information vector
- * Must return 0 to intidate the solver to continue, otherwise by returning nonzero it 
+ * Must return 0 to intidate the solver to continue, otherwise by returning nonzero it
  * request to interrupt the process and exit.
  */
 template <typename T> struct meta_moncb {

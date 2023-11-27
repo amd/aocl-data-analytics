@@ -342,16 +342,15 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     if (status != da_status_success)
         return status;
 
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-
     // info
-    info.resize(optim::info_number);
+    info.resize(da_optim::info_number);
     std::fill(info.begin(), info.end(), 0);
 
     da_int hdr = 0, fcnt = 0, lowrk = 0, iter = 0, k, action;
-    T *f = &info[optim::info_t::info_objective];
-    T *time = &info[optim::info_t::info_time];
+    T *f = &info[da_optim::info_t::info_objective];
+    T *time = &info[da_optim::info_t::info_time];
     T newxk, inorm;
+    T kdiff = 0.0;
 
     // Convenience pointers
     size_t *cheapk = nullptr;
@@ -380,9 +379,9 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 fcnt++;
             else if (action < 0) {
                 lowrk++;
-                data->aux[data->m] = rw[5]; // kdiff
+                kdiff = rw[5];
             }
-            if (stepfun(n, &x[0], &newxk, k, f, usrdata, action) != 0) {
+            if (stepfun(n, &x[0], &newxk, k, f, usrdata, action, kdiff) != 0) {
                 // This solver does not have recovery, stop
                 // FIXME restore last valid x (and stats?)
                 return da_warn(&err, da_status_optimization_num_difficult,
@@ -489,10 +488,10 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             }
 
             // Copy all metrics to info
-            info[optim::info_t::info_nevalf] = (T)fcnt;
-            info[optim::info_t::info_ncheap] = (T)lowrk;
-            info[optim::info_t::info_inorm] = inorm;
-            info[optim::info_t::info_iter] = (T)iter;
+            info[da_optim::info_t::info_nevalf] = (T)fcnt;
+            info[da_optim::info_t::info_ncheap] = (T)lowrk;
+            info[da_optim::info_t::info_inorm] = inorm;
+            info[da_optim::info_t::info_iter] = (T)iter;
 
             if (itask == STOP)
                 break;
@@ -527,7 +526,6 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             break;
         }
     }
-    data = nullptr;
     return status;
 }
 

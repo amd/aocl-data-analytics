@@ -241,6 +241,13 @@ TEST(linmod, incompatibleOptions) {
     // QR factorization should not be compatible with logistic regression
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
+    // lbfgs  with 1-norm term
+    EXPECT_EQ(da_options_set_string(handle_d, "linmod optim method", "lbfgsb"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle_d, "linmod lambda", 1.0), da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle_d, "linmod alpha", 1.0), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
     da_handle_destroy(&handle_d);
 }
 

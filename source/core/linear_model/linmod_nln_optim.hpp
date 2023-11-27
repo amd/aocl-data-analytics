@@ -24,75 +24,113 @@
 #ifndef LINMOD_NLN_OPTIM_HPP
 #define LINMOD_NLN_OPTIM_HPP
 
+#undef max
+#undef min
+
 #include "aoclda.h"
 #include "da_cblas.hh"
 
-/* Data structure containing all the optimization problem information
- * Intended to be passed along all callbacks
- */
-template <typename T> struct fit_usrdata {
-    /* m: number of samples
-     * nfeatures: number of features
-     */
-    da_int m, nfeatures;
-    /* Feature matrix of size (m x n)*/
-    T *A = nullptr;
+/* Base class of the callback user data to be passed as void pointers
+ * Contain all the basic data to compute */
+template <class T> class usrdata_base {
+  public:
+    da_int nsamples = 0, nfeat = 0;
+    /* Feature matrix of size (nsamples x nfeat)*/
+    const T *X = nullptr;
     /* Responce vector */
-    T *b = nullptr;
-    /* y=A*coef, but can also contain residuals. */
-    T *y = nullptr;
+    const T *y = nullptr;
 
     /* Intercept */
     bool intercept = false;
     /* Additional paremeters that enhance the model
-      Transform on the residuals, loss function and regularization */
+     * Transform on the residuals, loss function and regularization */
     T l1reg = 0.0;
     T l2reg = 0.0;
-    /* T chauchy_d = 0.0; Add Cauchy loss function (and also atan SmoothL1, quantile?, huber) */
 
-    /* linear classification parameters */
-    da_int nclass = 0;
-
-    /* auxiliary elements */
-    // std::vector<T> iaux;
-    std::vector<T> aux;
-
-    /* constructor */
-    fit_usrdata(){};
-    fit_usrdata(T *A, T *b, da_int m, da_int nfeatures, bool intercept, T lambda, T alpha,
-                da_int nclass, [[maybe_unused]] linmod_model mod, da_int naux = 0)
-        : m(m), nfeatures(nfeatures), A(A), b(b), intercept(intercept), nclass(nclass) {
+    usrdata_base(const T *X, const T *y, da_int nsamples, da_int nfeat, bool intercept,
+                 T lambda, T alpha)
+        : nsamples(nsamples), nfeat(nfeat), X(X), y(y), intercept(intercept) {
         l1reg = lambda * alpha;
         l2reg = lambda * ((T)1.0 - alpha) / (T)2.0;
-        aux.resize(naux);
-        // iaux.resize(niaux);
-        y = new T[m];
-    };
-    ~fit_usrdata() { delete[] y; };
+    }
+    virtual ~usrdata_base() {}
 };
 
-/* Evaluate feature matrix and store result in (fir_usrdata) usrdata
- * result is stored in y = Ax (+ o)
- * o is a vector of one added if the intercept variable is defined
- */
-template <typename T> void eval_feature_matrix(da_int n, T *x, T *y, void *usrdata) {
-    fit_usrdata<T> *data;
-    data = (fit_usrdata<T> *)usrdata;
-    da_int m{data->m};
-    T alpha{1}, beta{0};
+/* user data for the nonlinear optimization callbacks of the logistic regression */
+template <class T> class cb_usrdata_logreg : public usrdata_base<T> {
+  public:
+    da_int nclass;
+    /* Add 2 working memory arrays
+     * maxexp[nsamples]: used to store the maximum values of each X_k beta_k (k as class index) for the logsumexp trick
+     * lincomb[nsamples*(nclass-1)]: used to store all the X_k beta_k values
+     */
+    std::vector<T> maxexp, lincomb;
 
-    da_int aux = data->intercept ? 1 : 0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, data->m, n - aux, alpha, data->A, m,
-                        x, 1, beta, y, 1);
-    if (data->intercept) {
-        for (da_int i = 0; i < m; i++)
-            y[i] += x[n - 1];
+    cb_usrdata_logreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
+                      bool intercept, T lambda, T alpha, da_int nclass)
+        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha),
+          nclass(nclass) {
+        maxexp.resize(nsamples);
+        lincomb.resize(nsamples * (nclass - 1));
+    }
+    ~cb_usrdata_logreg() {}
+};
+
+/* user data for the nonlinear optimization callbacks of the lineqr regression */
+template <class T> class cb_usrdata_linreg : public usrdata_base<T> {
+  public:
+    /* Add a working memory arrays
+     * matvec[nsamples]: typically used to compute the matrix vector product X * coef
+     */
+    std::vector<T> matvec;
+
+    cb_usrdata_linreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
+                      bool intercept, T lambda, T alpha)
+        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha) {
+        matvec.resize(nsamples);
+    }
+    ~cb_usrdata_linreg() {}
+};
+
+/* user data for the coordinate descent step function of the linear regression */
+template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
+  public:
+    /* Add two working memory arrays
+     * matvec[nsamples]: typically used to compute the matrix vector product X * coef
+     * aux[nsamples]: auxilliary to hold intermediate results
+     */
+    std::vector<T> matvec, aux;
+
+    stepfun_usrdata_linreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
+                           bool intercept, T lambda, T alpha)
+        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha) {
+        matvec.resize(nsamples);
+        aux.resize(nsamples);
+    }
+    ~stepfun_usrdata_linreg() {}
+};
+
+/* This function evaluates the feature matrix X over the parameter vector x (taking into account the intercept),
+ * it performs the GEMV operation
+ *
+ * v = [X, 1^T] * x
+ */
+template <typename T>
+void eval_feature_matrix(da_int n, T *x, da_int nsamples, const T *X, T *v,
+                         bool intercept) {
+    T alpha = 1.0, beta = 0.0;
+
+    da_int aux = intercept ? 1 : 0;
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, n - aux, alpha, X,
+                        nsamples, x, 1, beta, v, 1);
+    if (intercept) {
+        for (da_int i = 0; i < nsamples; i++)
+            v[i] += x[n - 1];
     }
 }
 
 /* Add regularization, l1 and l2 terms */
-template <typename T> T regfun(void *usrdata, da_int n, T const *x) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
+template <typename T> T regfun(usrdata_base<T> *data, da_int n, T const *x) {
     T l1{data->l1reg};
     T l2{data->l2reg};
     T f1{0}, f2{0};
@@ -116,8 +154,7 @@ template <typename T> T regfun(void *usrdata, da_int n, T const *x) {
 }
 
 /* Add regularization, l1 and l2 term derivatives */
-template <typename T> void reggrd(void *usrdata, da_int n, T const *x, T *grad) {
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
+template <typename T> void reggrd(usrdata_base<T> *data, da_int n, T const *x, T *grad) {
     T l1{data->l1reg};
     T l2{data->l2reg};
 
@@ -150,50 +187,52 @@ template <typename T>
 da_int objfun_logistic([[maybe_unused]] da_int n, T *x, T *f, void *usrdata) {
 
     // All data related to the regression problem is stored in the usrdata pointer
-    // multinomial problem with K (nclass) classes (indexed in [0, K-1]), nfeat features and m samples.
+    // multinomial problem with K (nclass) classes (indexed in [0, K-1]), nfeat features and nsamples samples.
     // x is of size (nfeat+itpt)*(K-1)
     // where itpt is 1 if the intercept is required and 0 otherwise
     // with nmod = (nfeat+itpt), the parameters corresponding to the class k (k in 0,..,K-2)
 
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    T *y = data->y;
-    T *b = data->b;
-    T *auxp = data->aux.data();
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)usrdata;
+    std::vector<T> &maxexp = data->maxexp;
+    std::vector<T> &lincomb = data->lincomb;
+    T *lincomb_ptr = data->lincomb.data();
+    const T *y = data->y;
     da_int nclass = data->nclass;
-    da_int nfeat = data->nfeatures;
-    da_int m = data->m;
+    da_int nfeat = data->nfeat;
+    da_int nsamples = data->nsamples;
     da_int nmod = data->intercept ? nfeat + 1 : nfeat;
 
-    // data->aux is of size m*(nclass-1)
-    // Store in aux[:,k] the Beta_k^T * x for the m samples in the input matrix
-    // Store in y the max of aux for each sample
+    // lincomb is of size nsamples*(nclass-1)
+    // Store in lincomb[:,k] the Beta_k^T * x for the nsamples samples in the input matrix
+    // Store in maxexp the max of lincomb for each sample
     *f = 0;
-    std::fill(y, y + m, 0.);
+    std::fill(maxexp.begin(), maxexp.end(), 0.);
     for (da_int k = 0; k < nclass - 1; k++) {
-        da_int idx = k * m;
-        eval_feature_matrix(nmod, &x[k * nmod], &auxp[k * m], usrdata);
-        for (da_int i = 0; i < m; i++) {
-            if (y[i] < auxp[idx])
-                y[i] = auxp[idx];
-            // Indicator(i, k) * A * x[k*nmod:(k+1)*nmod-1] added to objective
-            if (std::round(b[i]) == k)
-                *f -= auxp[idx];
+        da_int idx = k * nsamples;
+        eval_feature_matrix(nmod, &x[k * nmod], nsamples, data->X,
+                            &lincomb_ptr[k * nsamples], data->intercept);
+        for (da_int i = 0; i < nsamples; i++) {
+            if (maxexp[i] < lincomb[idx])
+                maxexp[i] = lincomb[idx];
+            // Indicator(i, k) * X * x[k*nmod:(k+1)*nmod-1] added to objective
+            if (std::round(y[i]) == k)
+                *f -= lincomb[idx];
             idx += 1;
         }
     }
 
-    // Compute for each sample i ln(1+sum_{k=0}^{K-2} exp(aux[i][k]))
+    // Compute for each sample i ln(1+sum_{k=0}^{K-2} exp(lincomb[i][k]))
     // use logsumexp trick to avoid overflow
-    for (da_int i = 0; i < m; i++) {
-        T val = exp(-y[i]);
+    for (da_int i = 0; i < nsamples; i++) {
+        T val = exp(-maxexp[i]);
         for (da_int k = 0; k < nclass - 1; k++) {
-            val += exp(auxp[k * m + i] - y[i]);
+            val += exp(lincomb[k * nsamples + i] - maxexp[i]);
         }
-        *f += y[i] + log(val);
+        *f += maxexp[i] + log(val);
     }
 
     // Add regularization (exclude intercept)
-    *f += regfun(usrdata, data->nfeatures, x);
+    *f += regfun(data, data->nfeat, x);
 
     return 0;
 }
@@ -202,26 +241,28 @@ template <typename T>
 da_int objgrd_logistic(da_int n, T *x, T *grad, void *usrdata,
                        [[maybe_unused]] da_int xnew) {
 
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    T *y = data->y;
-    T *b = data->b;
-    T *auxp = data->aux.data();
-    da_int m = data->m;
-    T *A = data->A;
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)usrdata;
+    std::vector<T> &maxexp = data->maxexp;
+    const T *y = data->y;
+    std::vector<T> &lincomb = data->lincomb;
+    T *lincomb_ptr = data->lincomb.data();
+    da_int nsamples = data->nsamples;
+    const T *X = data->X;
     da_int idc = data->intercept ? 1 : 0;
     da_int nclass = data->nclass;
-    da_int nmod = data->intercept ? data->nfeatures + 1 : data->nfeatures;
+    da_int nmod = data->intercept ? data->nfeat + 1 : data->nfeat;
 
     if (xnew) {
-        // Store in aux[:,k] the Beta_k^T * x for the m samples in the input matrix
-        // Store in y the max of aux for each sample
-        std::fill(y, y + m, 0.);
+        // Store in lincomb[:,k] the Beta_k^T * x for the nsamples samples in the input matrix
+        // Store in maxexp the max of lincomb for each sample
+        std::fill(maxexp.begin(), maxexp.end(), 0.);
         for (da_int k = 0; k < nclass - 1; k++) {
-            da_int idx = k * m;
-            eval_feature_matrix(nmod, &x[k * nmod], &auxp[k * m], usrdata);
-            for (da_int i = 0; i < m; i++) {
-                if (y[i] < auxp[idx])
-                    y[i] = auxp[idx];
+            da_int idx = k * nsamples;
+            eval_feature_matrix(nmod, &x[k * nmod], nsamples, data->X,
+                                &lincomb_ptr[k * nsamples], data->intercept);
+            for (da_int i = 0; i < nsamples; i++) {
+                if (maxexp[i] < lincomb[idx])
+                    maxexp[i] = lincomb[idx];
                 idx += 1;
             }
         }
@@ -230,22 +271,22 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *usrdata,
     // compute for all samples i and all variables j with k being the class of sample i:
     // A_ij * (indicator(i, k) - prob(x_i=k|Beta))
     std::fill(grad, grad + n, 0);
-    for (da_int i = 0; i < m; i++) {
+    for (da_int i = 0; i < nsamples; i++) {
         // lnsumexp := log(1 + sum_k exp(Beta_k^T * x))
-        T lnsumexp = exp(-y[i]);
+        T lnsumexp = exp(-maxexp[i]);
         for (da_int k = 0; k < nclass - 1; k++) {
-            lnsumexp += exp(auxp[k * m + i] - y[i]);
+            lnsumexp += exp(lincomb[k * nsamples + i] - maxexp[i]);
         }
-        lnsumexp = y[i] + log(lnsumexp);
+        lnsumexp = maxexp[i] + log(lnsumexp);
 
         for (da_int k = 0; k < nclass - 1; k++) {
             // val := exp(Beta_k^T * x) / (1 + sum_j exp(Beta_j^T * x))
-            T val = -exp(auxp[k * m + i] - lnsumexp);
-            if (std::round(b[i]) == k)
+            T val = -exp(lincomb[k * nsamples + i] - lnsumexp);
+            if (std::round(y[i]) == k)
                 // indicator(i, k)
                 val += 1.;
             for (da_int j = 0; j < nmod - idc; j++) {
-                grad[k * nmod + j] -= A[m * j + i] * val;
+                grad[k * nmod + j] -= X[nsamples * j + i] * val;
             }
             if (data->intercept) {
                 grad[(k + 1) * nmod - 1] -= val;
@@ -254,7 +295,7 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *usrdata,
     }
 
     // Add regularization (exclude intercept)
-    reggrd(usrdata, data->nfeatures, x, grad);
+    reggrd(data, data->nfeat, x, grad);
 
     return 0;
 }
@@ -262,27 +303,27 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *usrdata,
 /* Mean square error callbacks */
 template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *usrdata) {
 
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    da_int m = data->m;
-    T *y = data->y;
-    T *b = data->b;
+    cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)usrdata;
+    da_int nsamples = data->nsamples;
+    const T *y = data->y;
+    T *matvec = data->matvec.data();
     *f = 0;
 
-    // Compute y = A*x (+ intercept)
-    eval_feature_matrix(n, x, y, usrdata);
+    // Compute matvec = X*x (+ intercept)
+    eval_feature_matrix(n, x, nsamples, data->X, matvec, data->intercept);
 
-    // y = y - b
+    // matvec = matvec - y
     T alpha = -1.0;
-    da_blas::cblas_axpy(m, alpha, b, 1, y, 1);
+    da_blas::cblas_axpy(nsamples, alpha, y, 1, matvec, 1);
 
-    // sum (A * x (+itct) - b)^2
-    for (da_int i = 0; i < m; i++) {
-        *f += pow(data->y[i], (T)2.0);
+    // sum (X * x (+itct) - y)^2
+    for (da_int i = 0; i < nsamples; i++) {
+        *f += pow(matvec[i], (T)2.0);
     }
 
     // Add regularization (exclude intercept)
     da_int nmod = data->intercept ? n - 1 : n;
-    *f += regfun(usrdata, nmod, x);
+    *f += regfun(data, nmod, x);
 
     return 0;
 }
@@ -290,32 +331,146 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *usrdata) {
 template <typename T>
 da_int objgrd_mse(da_int n, T *x, T *grad, void *usrdata, [[maybe_unused]] da_int xnew) {
 
-    fit_usrdata<T> *data = (fit_usrdata<T> *)usrdata;
-    da_int m = data->m;
-    T *y = data->y;
+    cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)usrdata;
+    da_int nsamples = data->nsamples;
+    T *matvec = data->matvec.data();
 
-    // y = A*x (+ itct)
-    eval_feature_matrix(n, x, y, usrdata);
+    // matvec = X*x (+ itct)
+    eval_feature_matrix(n, x, nsamples, data->X, matvec, data->intercept);
 
-    // y = y - b
+    // matvec = matvec - y
     T alpha = -1.0;
-    da_blas::cblas_axpy(m, alpha, data->b, 1, data->y, 1);
+    da_blas::cblas_axpy(nsamples, alpha, data->y, 1, matvec, 1);
 
     alpha = 2.0;
     T beta = 0.0;
     da_int aux = data->intercept ? 1 : 0;
-    da_blas::cblas_gemv(CblasColMajor, CblasTrans, m, n - aux, alpha, data->A, m, y, 1,
-                        beta, grad, 1);
+    da_blas::cblas_gemv(CblasColMajor, CblasTrans, nsamples, n - aux, alpha, data->X,
+                        nsamples, matvec, 1, beta, grad, 1);
     if (data->intercept) {
         grad[n - 1] = 0;
-        for (da_int i = 0; i < m; i++)
-            grad[n - 1] += alpha * y[i];
+        for (da_int i = 0; i < nsamples; i++)
+            grad[n - 1] += alpha * matvec[i];
     }
 
     // Add regularization (exclude intercept)
     da_int nmod = data->intercept ? n - 1 : n;
-    reggrd(usrdata, nmod, x, grad);
+    reggrd(data, nmod, x, grad);
 
+    return 0;
+}
+
+/* Helper callback to get step for coordinate descent method */
+template <typename T>
+da_int stepfun_linreg(da_int nfeat, T *coef, T *step, da_int k, T *f, void *usrdata,
+                      da_int action, T kdiff) {
+    stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)usrdata;
+    /* Actions regarting feature matrix evaluation
+     * action < 0 means that feature matrix was previously called and that only a low rank
+     *            update is requested and -(action+1) contains the previous k that changed
+     *            kold = -(action+1);
+     * action = 0 means not to evaluate the feature matrix (restore matvec from aux)
+     * action > 0 evaluate the matrix.
+     *
+     * Assumptions:
+     *  * usrdata->X is standardized:
+     *    for each column j = 1:nfeat we have
+     *    zero-mean, and
+     *    sum xij^2 = 1, i=1:nsamples
+     *  * usrdata->aux is of size nsamples
+     */
+
+    da_int nsamples = data->nsamples;
+    if (action > 0) {
+        // Compute X*coef = *y (takes care of intercept)
+        eval_feature_matrix(nfeat, coef, nsamples, data->X, data->matvec.data(),
+                            data->intercept);
+        // Copy vector data->y into data->aux
+        for (da_int i = 0; i < nsamples; ++i)
+            data->aux[i] = data->matvec[i];
+    } else if (action < 0) {
+        /* Low rank update.
+         * Only one single entry of coef[1..nfeat] has changed and we have
+         * the entry and the ammount.
+         * data->matvec = data->aux + kdiff * X[:,kold];
+         */
+        da_int kold = -(action + 1);
+        for (da_int i = 0; i < nsamples; ++i) {
+            data->matvec[i] = data->aux[i] + kdiff * data->X[kold * nsamples + i];
+            // Copy vector data->y into data->aux
+            data->aux[i] = data->matvec[i];
+        }
+        /* Low-rank update validation
+         * eval_feature_matrix(nfeat, coef, usrdata);
+         * for (da_int i = 0; i < nsamples; ++i){
+         *     T d = data->y[i] - data->aux[i];
+         *     if (std::abs(d) > 1e-9) {
+         *         return 99;
+         *     }
+         * }
+         */
+    } else {
+        // Copy vector back from data->aux to data->y
+        for (da_int i = 0; i < nsamples; ++i)
+            data->matvec[i] = data->aux[i];
+    }
+
+    T betak{0};
+    da_int nmod = data->intercept ? nfeat - 1 : nfeat;
+    auto sign = [](T num) {
+        const T absnum = std::abs(num);
+        return (absnum == (T)0 ? (T)0 : num / absnum);
+    };
+    auto soft = [sign](T y, T Gamma) {
+        return (sign(y) * std::max(std::abs(y) - Gamma, (T)0));
+    };
+    T xk;
+    T presidual;
+    if (k < nmod) {
+        // handle model coefficients beta1..betaN
+        if (coef[k] != (T)0) {
+            for (da_int i = 0; i < nsamples; i++) {
+                xk = data->X[k * nsamples + i];
+                presidual = data->y[i] - (data->matvec[i] - xk * coef[k]);
+                betak += presidual * xk;
+            }
+        } else {
+            for (da_int i = 0; i < nsamples; i++) {
+                xk = data->X[k * nsamples + i];
+                presidual = data->y[i] - data->matvec[i];
+                betak += presidual * xk;
+            }
+        }
+    } else {
+        // handle intercept beta0 (last element of coef)
+        if (coef[k] != (T)0) {
+            for (da_int i = 0; i < nsamples; i++) {
+                presidual = data->y[i] - (data->matvec[i] - coef[k]);
+                betak += presidual;
+            }
+        } else {
+            for (da_int i = 0; i < nsamples; i++) {
+                presidual = data->y[i] - data->matvec[i];
+                betak += presidual;
+            }
+        }
+    }
+
+    // y = y - y
+    T alpha = -1.0;
+    da_blas::cblas_axpy(nsamples, alpha, data->y, 1, data->matvec.data(), 1);
+
+    // sum (X * coef (+intercept) - y)^2
+    for (da_int i = 0; i < nsamples; i++) {
+        *f += pow(data->matvec[i], (T)2.0);
+    }
+
+    // Add regularization (exclude intercept)
+    *f += regfun(data, nmod, coef);
+
+    *step = soft(betak, data->l1reg) / ((T)1 + data->l2reg);
+
+    data = nullptr;
     return 0;
 }
 

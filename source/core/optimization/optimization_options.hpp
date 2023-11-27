@@ -25,16 +25,13 @@
 #define OPTIMIZATION_OPTIONS_HPP
 
 #include "da_error.hpp"
+#include "optim_types.hpp"
 #include "options.hpp"
 #include <limits>
 
 // Needed for windows build
 #undef min
 #undef max
-
-namespace optim {
-enum solvers { solver_undefined = 0, solver_lbfgsb = 1, solver_qr = 2, solver_coord = 3 };
-}
 
 template <class T>
 inline da_status register_optimization_options(da_errors::da_error_t &err,
@@ -168,10 +165,10 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         os = std::make_shared<OptionString>(
             OptionString("optim method", "Select optimization solver to use",
-                         {{"lbfgsb", optim::solvers::solver_lbfgsb},
-                          {"lbfgs", optim::solvers::solver_lbfgsb},
-                          {"bfgs", optim::solvers::solver_lbfgsb},
-                          {"coord", optim::solvers::solver_coord}},
+                         {{"lbfgsb", da_optim::solvers::solver_lbfgsb},
+                          {"lbfgs", da_optim::solvers::solver_lbfgsb},
+                          {"bfgs", da_optim::solvers::solver_lbfgsb},
+                          {"coord", da_optim::solvers::solver_coord}},
                          "lbfgsb"));
         opts.register_opt(os);
 

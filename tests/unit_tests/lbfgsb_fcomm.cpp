@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 /* Example on how to call internally the NLP solver(s) */
@@ -62,14 +62,14 @@ da_int objgrd(da_int n [[maybe_unused]], double *x, double *val, void *usrdata,
 
 da_int monit(da_int n, double *x, double *val, double *info,
              void *usrdata [[maybe_unused]]) {
-    if (info[optim::info_t::info_iter] <= 1)
+    if (info[da_optim::info_t::info_iter] <= 1)
         std::cout << "Iter objective gradient x[0] g[n]" << std::endl;
-    std::cout << (size_t)info[optim::info_t::info_iter] << " "
-              << info[optim::info_t::info_objective] << " "
-              << info[optim::info_t::info_grad_norm] << " " << x[0] << " " << val[n - 1]
-              << std::endl;
+    std::cout << (size_t)info[da_optim::info_t::info_iter] << " "
+              << info[da_optim::info_t::info_objective] << " "
+              << info[da_optim::info_t::info_grad_norm] << " " << x[0] << " "
+              << val[n - 1] << std::endl;
 
-    if (info[optim::info_t::info_iter] == 3)
+    if (info[da_optim::info_t::info_iter] == 3)
         return -1;
     return 0;
 }
@@ -86,7 +86,8 @@ int main(void) {
     std::vector<double> xref(2, 1.0);
     da_errors::da_error_t err(da_errors::action_t::DA_ABORT);
 
-    optim::da_optimization<double> *pd = new optim::da_optimization<double>(status, err);
+    da_optim::da_optimization<double> *pd =
+        new da_optim::da_optimization<double>(status, err);
     if (status != da_status_success) {
         pd = nullptr;
         goto abort;

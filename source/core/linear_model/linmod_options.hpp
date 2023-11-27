@@ -24,14 +24,14 @@
 #ifndef LINMOD_OPTIONS_HPP
 #define LINMOD_OPTIONS_HPP
 
-#include "optimization.hpp"
-#include "options.hpp"
+#include "linmod_types.hpp"
 #include <limits>
 
 // Needed for windows build
 #undef min
 #undef max
 
+namespace da_linmod {
 template <class T>
 inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
     using namespace da_options;
@@ -93,10 +93,11 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(
             OptionString("linmod optim method", "Select optimization method to use.",
-                         {{"auto", optim::solvers::solver_undefined},
-                          {"lbfgs", optim::solvers::solver_lbfgsb},
-                          {"qr", optim::solvers::solver_qr},
-                          {"coord", optim::solvers::solver_coord}},
+                         {{"auto", linmod_method::undefined},
+                          {"lbfgs", linmod_method::lbfgsb},
+                          {"lbfgsb", linmod_method::lbfgsb},
+                          {"qr", linmod_method::qr},
+                          {"coord", linmod_method::coord}},
                          "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
@@ -112,5 +113,5 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
 
     return da_status_success;
 }
-
+} // namespace da_linmod
 #endif //LINMOD_OPTIONS_HPP
