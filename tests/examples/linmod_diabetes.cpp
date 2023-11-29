@@ -74,11 +74,11 @@ int main() {
     rhs.resize(m);
     x.resize(n + 1);
     // initial parameter estimates: n + intercept
-    x.assign({0, 0, 700, 200, 100, 80, 170, 0, 300, 0});
+    x.assign({0, 0, 700, 200, 100, 80, 160, 0, 300, 0});
 
     // Reference solution
     std::vector<double> x_ref(n + 1);
-    x_ref.assign({0, -76.0416, 510.9010, 234.9119, 0, 0, -170.8971, 0, 450.2841, 1.2482});
+    x_ref.assign({0, -76.3772, 511.3798, 234.8758, 0, 0, -170.7493, 0, 450.7342, 0.4780});
 
     da_status status;
 
@@ -130,15 +130,10 @@ int main() {
 
     // estimate mean and variance per each feature
     pass = true;
-    std::vector<double> means(n), scale(n);
-    da_int dof = 0, mode = 0;
-    pass = pass && da_variance_d(da_axis_col, m, n, features.data(), m, dof, means.data(),
-                                 scale.data()) == da_status_success;
-    for (size_t i = 0; i < scale.size(); i++)
-        scale[i] = std::sqrt(m * scale[i]); // use variance to scale vector length
+    std::vector<double> means(n, 0), scale(n, 0);
+    da_int dof = 1, mode = 0;
     pass = pass && da_standardize_d(da_axis_col, m, n, features.data(), m, dof, mode,
                                     means.data(), scale.data()) == da_status_success;
-
     double rhs_mean;
     pass = pass &&
            da_mean_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean) == da_status_success;
