@@ -114,8 +114,8 @@ To compile and link to dynamic AOCL libraries using ``clang++``:
             -L /<path to blis>/lib_<INT_LIB> -laocl-da -lflame -lblis-mt
             -lflang -lomp
 
-Note that for dynamic linking you will need to update our ``LD_LIBRARY_PATH`` environment
-variable e.g. export ``LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>``.
+Note that for dynamic linking you will need to update your ``LD_LIBRARY_PATH`` environment
+variable e.g. ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>``.
 
 If you wish to call AOCL-DA from a C code, then you should compile using your C compiler
 (e.g. ``gcc``), but link separately, using a C++ linker (e.g. ``g++``).

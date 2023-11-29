@@ -30,12 +30,11 @@
 AOCL-DA Documentation
 *********************
 
-The AOCL Data Analytics Library is a software library providing optimized building blocks for data analysis.
+The AOCL Data Analytics Library (AOCL-DA) is a software library providing optimized building blocks for data analysis.
 It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
 It is designed with a focus on usability, reliability and performance.
 
-he AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing
-optimized building blocks for data analysis. It is written with a C-compatible
+AOCL-DA is written with a C-compatible
 interface to make it as seamless as possible to integrate with the library from
 whichever programming language you are using. This documentation is also available
 online in the form of web pages.
