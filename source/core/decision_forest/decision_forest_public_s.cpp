@@ -63,7 +63,7 @@ da_status da_df_tree_fit_s(da_handle handle) {
     return handle->dt_s->fit();
 }
 
-da_status da_df_tree_predict_s(da_handle handle, da_int n_obs, float *x,
+da_status da_df_tree_predict_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
                                uint8_t *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
@@ -77,11 +77,11 @@ da_status da_df_tree_predict_s(da_handle handle, da_int n_obs, float *x,
                         "handle was not initialized with "
                         "handle_type=da_handle_decision_tree or handle is invalid.");
 
-    return handle->dt_s->predict(n_obs, x, y_pred);
+    return handle->dt_s->predict(n_obs, x, ldx, y_pred);
 }
 
-da_status da_df_tree_score_s(da_handle handle, da_int n_obs, float *x, uint8_t *y_test,
-                             float *score) {
+da_status da_df_tree_score_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
+                             uint8_t *y_test, float *score) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -94,30 +94,8 @@ da_status da_df_tree_score_s(da_handle handle, da_int n_obs, float *x, uint8_t *
                         "handle was not initialized with "
                         "handle_type=da_handle_decision_tree or handle is invalid.");
 
-    return handle->dt_s->score(n_obs, x, y_test, score);
+    return handle->dt_s->score(n_obs, x, ldx, y_test, score);
 }
-
-// da_status da_df_sample_feature_ind_s(da_handle handle, da_int n) {
-//     if (!handle)
-//         return da_status_invalid_input;
-//     if (handle->precision != da_single)
-//         return da_status_wrong_type;
-//     if (handle->df_s == nullptr)
-//         return da_status_invalid_pointer;
-
-//     return handle->df_s->sample_feature_ind(n);
-// }
-
-// da_status da_df_bootstrap_obs_s(da_handle handle, da_int n_trees, da_int d) {
-//     if (!handle)
-//         return da_status_invalid_input;
-//     if (handle->precision != da_single)
-//         return da_status_wrong_type;
-//     if (handle->df_s == nullptr)
-//         return da_status_invalid_pointer;
-
-//     return handle->df_s->bootstrap_obs(n_trees, d);
-// }
 
 da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_features,
                                     float *x, da_int ldx, uint8_t *y) {
@@ -150,7 +128,8 @@ da_status da_df_fit_s(da_handle handle) {
     return handle->df_s->fit();
 }
 
-da_status da_df_predict_s(da_handle handle, da_int n_obs, float *x, uint8_t *y_pred) {
+da_status da_df_predict_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
+                          uint8_t *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -162,11 +141,11 @@ da_status da_df_predict_s(da_handle handle, da_int n_obs, float *x, uint8_t *y_p
         return da_error(handle->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "handle seems to be corrupt?");        // LCOV_EXCL_LINE
 
-    return handle->df_s->predict(n_obs, x, y_pred);
+    return handle->df_s->predict(n_obs, x, ldx, y_pred);
 }
 
-da_status da_df_score_s(da_handle handle, da_int n_obs, float *x, uint8_t *y_test,
-                        float *score) {
+da_status da_df_score_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
+                        uint8_t *y_test, float *score) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -178,5 +157,5 @@ da_status da_df_score_s(da_handle handle, da_int n_obs, float *x, uint8_t *y_tes
         return da_error(handle->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "handle seems to be corrupt?");        // LCOV_EXCL_LINE
 
-    return handle->df_s->score(n_obs, x, y_test, score);
+    return handle->df_s->score(n_obs, x, ldx, y_test, score);
 }

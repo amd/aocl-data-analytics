@@ -119,22 +119,26 @@ int decision_tree_ex_d(std::string score_criteria) {
     strcat(test_labels_fp, "test_labels");
     strcat(test_labels_fp, ".csv");
 
-    double *x_test = nullptr;
+    double *x_test = nullptr, *x_test_r_major = nullptr;
     uint8_t *y_test = nullptr;
     n_obs = 0;
     d = 0;
     nrows_y = 0;
     ncols_y = 0;
 
-    status = da_read_csv_d(csv_handle, test_features_fp, &x_test, &n_obs, &d, nullptr);
+    status =
+        da_read_csv_d(csv_handle, test_features_fp, &x_test_r_major, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
                                nullptr);
 
+    x_test = new double[n_obs * d];
+    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_test_r_major, d, x_test);
+
     // Make predictions with model and evaluate score
     std::vector<uint8_t> y_pred(n_obs);
-    status = da_df_tree_predict_d(df_handle, n_obs, x_test, y_pred.data());
+    status = da_df_tree_predict_d(df_handle, n_obs, x_test, n_obs, y_pred.data());
     double score = 0.0;
-    status = da_df_tree_score_d(df_handle, n_obs, x_test, y_test, &score);
+    status = da_df_tree_score_d(df_handle, n_obs, x_test, n_obs, y_test, &score);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
@@ -148,7 +152,7 @@ int decision_tree_ex_d(std::string score_criteria) {
             score_exp = 0.93250;
             std::cout << "Expected = " << score_exp << std::endl;
         } else if (score_criteria == "misclassification-error") {
-            score_exp = 0.93500;
+            score_exp = 0.93250;
             std::cout << "Expected = " << score_exp << std::endl;
         }
         // Check result
@@ -163,8 +167,11 @@ int decision_tree_ex_d(std::string score_criteria) {
                   << std::endl;
     }
 
+    if (x_test_r_major)
+        free(x_test_r_major);
+
     if (x_test)
-        free(x_test);
+        delete[] x_test;
 
     if (y_test)
         free(y_test);
@@ -252,22 +259,26 @@ int decision_tree_ex_s(std::string score_criteria) {
     strcat(test_labels_fp, "test_labels");
     strcat(test_labels_fp, ".csv");
 
-    float *x_test = nullptr;
+    float *x_test = nullptr, *x_test_r_major = nullptr;
     uint8_t *y_test = nullptr;
     n_obs = 0;
     d = 0;
     nrows_y = 0;
     ncols_y = 0;
 
-    status = da_read_csv_s(csv_handle, test_features_fp, &x_test, &n_obs, &d, nullptr);
+    status =
+        da_read_csv_s(csv_handle, test_features_fp, &x_test_r_major, &n_obs, &d, nullptr);
     status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
                                nullptr);
 
+    x_test = new float[n_obs * d];
+    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_test_r_major, d, x_test);
+
     // Make predictions with model and evaluate score
     std::vector<uint8_t> y_pred(n_obs);
-    status = da_df_tree_predict_s(df_handle, n_obs, x_test, y_pred.data());
+    status = da_df_tree_predict_s(df_handle, n_obs, x_test, n_obs, y_pred.data());
     float score = 0.0;
-    status = da_df_tree_score_s(df_handle, n_obs, x_test, y_test, &score);
+    status = da_df_tree_score_s(df_handle, n_obs, x_test, n_obs, y_test, &score);
 
     std::cout << "----------------------------------------" << std::endl;
     if (status == da_status_success) {
@@ -281,7 +292,7 @@ int decision_tree_ex_s(std::string score_criteria) {
             score_exp = 0.93250;
             std::cout << "Expected = " << score_exp << std::endl;
         } else if (score_criteria == "misclassification-error") {
-            score_exp = 0.93500;
+            score_exp = 0.93250;
             std::cout << "Expected = " << score_exp << std::endl;
         }
         // Check result
@@ -296,8 +307,11 @@ int decision_tree_ex_s(std::string score_criteria) {
                   << std::endl;
     }
 
+    if (x_test_r_major)
+        free(x_test_r_major);
+
     if (x_test)
-        free(x_test);
+        delete[] x_test;
 
     if (y_test)
         free(y_test);

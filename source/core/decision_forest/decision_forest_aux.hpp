@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef DF_AUX_HPP_
@@ -48,7 +48,8 @@ T no_split_score(uint8_t *y, da_int n, uint8_t &y_pred,
 }
 
 template <typename T>
-void split(uint8_t *y, da_int n, da_int &split_idx, T &min_score,
+void split(T *x, da_int d, da_int col_idx, T diff_thres, uint8_t *y, da_int n,
+           da_int &split_idx, T &min_score,
            std::function<T(T, da_int, T, da_int)> score_fun) {
 
     da_int n_r = n, n_l = 0;
@@ -65,11 +66,15 @@ void split(uint8_t *y, da_int n, da_int &split_idx, T &min_score,
         acc_r -= y[idx - 1];
         acc_l += y[idx - 1];
 
-        T score = score_fun(acc_l, n_l, acc_r, n_r);
+        T x_im1 = x[idx * (d - 1) + col_idx];
+        T x_i = x[idx * d + col_idx];
+        if (std::abs(x_i - x_im1) > diff_thres) {
+            T score = score_fun(acc_l, n_l, acc_r, n_r);
 
-        if (score < min_score) {
-            min_score = score;
-            split_idx = idx;
+            if (score < min_score) {
+                min_score = score;
+                split_idx = idx;
+            }
         }
     }
 }
@@ -92,6 +97,11 @@ template <typename T> int compare_floats(const void *a, const void *b) {
 }
 
 template <typename T>
+bool compare(const feature_label_idx<T> &arg1, const feature_label_idx<T> &arg2) {
+    return arg1.x_value < arg2.x_value;
+}
+
+template <typename T>
 void sort_1d_array(uint8_t *y, da_int n_obs, T *x, da_int n_features, da_int col_idx) {
     std::vector<feature_label_idx<T>> x_y_idx(n_obs);
 
@@ -101,7 +111,8 @@ void sort_1d_array(uint8_t *y, da_int n_obs, T *x, da_int n_features, da_int col
         x_y_idx[i].idx = i;
     }
 
-    qsort(x_y_idx.data(), n_obs, sizeof(x_y_idx[0]), compare_floats<T>);
+    std::sort(x_y_idx.begin(), x_y_idx.end(), compare<T>);
+    // qsort(x_y_idx.data(), n_obs, sizeof(x_y_idx[0]), compare_floats<T>);
 
     for (da_int i = 0; i < n_obs; i++) {
         y[i] = x_y_idx[i].y_value;

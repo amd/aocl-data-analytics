@@ -49,6 +49,7 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
 
         std::shared_ptr<OptionString> os;
         std::shared_ptr<OptionNumeric<da_int>> oi;
+        std::shared_ptr<OptionNumeric<T>> oT;
 
         os = std::make_shared<OptionString>(OptionString(
             "scoring function", "Select scoring function to use",
@@ -79,6 +80,13 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
             OptionNumeric<da_int>("n_trees", "set number of features in each tree", 0,
                                   lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
+
+        T rmax = std::numeric_limits<T>::max();
+        T diff_thres_default = (T)1e-6;
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "diff_thres", "minimum difference in feature value required for splitting",
+            0.0, lbound_t::greaterthan, rmax, ubound_t::p_inf, diff_thres_default));
+        status = opts.register_opt(oT);
 
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
@@ -157,8 +165,8 @@ template <typename T> class decision_tree {
     };
     std::mt19937_64 get_rng() { return this->mt_gen; };
     da_status fit();
-    da_status predict(da_int n_obs, T *x, uint8_t *y_pred);
-    da_status score(da_int n_obs, T *x, uint8_t *y_test, T *score);
+    da_status predict(da_int n_obs, T *x, da_int ldx, uint8_t *y_pred);
+    da_status score(da_int n_obs, T *x, da_int ldx, uint8_t *y_test, T *score);
     std::function<T(T, da_int, T, da_int)> score_fun;
 };
 
@@ -196,8 +204,8 @@ template <typename T> class decision_forest {
     da_status sample_obs_ind(da_int n_obs, da_int n_samples, da_int *obs_ind);
     da_status fit_tree(decision_tree<T> *p_tree);
     da_status fit();
-    da_status predict(da_int n_obs, T *x, uint8_t *y_pred);
-    da_status score(da_int n_obs, T *x, uint8_t *y_test, T *score);
+    da_status predict(da_int n_obs, T *x, da_int ldx, uint8_t *y_pred);
+    da_status score(da_int n_obs, T *x, da_int ldx, uint8_t *y_test, T *score);
 };
 
 // ---------------------------------------------
@@ -255,6 +263,7 @@ template <typename T> da_status decision_tree<T>::fit() {
 #ifdef DA_LOGGING
     opts.print_options();
 #endif
+
     da_status status = da_status_success;
 
     // check that set_training_data has been called
@@ -264,6 +273,9 @@ template <typename T> da_status decision_tree<T>::fit() {
     opts.get("scoring function", scoring_fun_str, this->scoring_fun_id);
     opts.get("depth", this->max_level);
     opts.get("n_features_to_select", this->n_features_to_select);
+
+    T diff_thres;
+    opts.get("diff_thres", diff_thres);
 
     // set mt_gen (internal class data)
     if (seed_val == -1) {
@@ -325,17 +337,19 @@ template <typename T> da_status decision_tree<T>::fit() {
             da_int acc_r_argmax =
                 (da_int)((acc_r > (n_r - acc_r)) ? acc_r : (n_r - acc_r));
 
-            T score = 0.0;
+            da_int score = 0;
             if (acc_l_argmax > 0) {
-                T phat_l_argmax = (T)acc_l_argmax / n_l;
-                score += (1 - phat_l_argmax);
+                // T phat_l_argmax = (T)acc_l_argmax / n_l;
+                // score += (da_int) (n_l * (1 - phat_l_argmax));
+                score += (n_l - acc_l_argmax);
             }
 
             if (acc_r_argmax > 0) {
-                T phat_r_argmax = (T)acc_r_argmax / n_r;
-                score += (1 - phat_r_argmax);
+                // T phat_r_argmax = (T)acc_r_argmax / n_r;
+                // score += (da_int) (n_r * (1 - phat_r_argmax));
+                score += (n_r - acc_r_argmax);
             }
-            return score;
+            return (T)score;
         };
     }
 
@@ -385,7 +399,9 @@ template <typename T> da_status decision_tree<T>::fit() {
                     sort_1d_array(&y[ii], nn, &x[ii * d], d, col_idx);
                     sort_2d_array_by_col(&x[ii * d], nn, d, col_idx);
 
-                    split<T>(&y[ii], nn, split_idx, score, score_fun);
+                    // split<T>(&y[ii], nn, split_idx, score, score_fun);
+                    split<T>(&x[ii * d], d, col_idx, diff_thres, &y[ii], nn, split_idx,
+                             score, score_fun);
 
                     if (score < min_score) {
                         min_score = score;
@@ -465,11 +481,20 @@ template <typename T> da_status decision_tree<T>::fit() {
 }
 
 template <typename T>
-da_status decision_tree<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
+da_status decision_tree<T>::predict(da_int n_obs, T *x_in, da_int ldx, uint8_t *y_pred) {
 
     DA_PRINTF_DEBUG("Inside decision_tree<T>::predict \n");
 
     // [TODO] check fit has been called
+
+    // copy user data (convert order from column-major to row-major)
+    std::vector<T> x(n_obs * this->d);
+    for (da_int j = 0; j < this->d; j++) {
+        for (da_int i = 0; i < n_obs; i++) {
+            // ldx >= n_obs
+            x[j + (i * this->d)] = x_in[i + (j * ldx)];
+        }
+    }
 
     // print parameters in fitted model
     for (da_int node_idx = 0; node_idx < (da_int)model.size(); node_idx++) {
@@ -482,7 +507,7 @@ da_status decision_tree<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
     }
 
     for (da_int i = 0; i < n_obs; i++) {
-        T *xi = x + (i * d);
+        T *xi = x.data() + (i * d);
 
         Node<T> node = model[0];
         while (node.is_leaf == false) {
@@ -501,16 +526,26 @@ da_status decision_tree<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
 }
 
 template <typename T>
-da_status decision_tree<T>::score(da_int n_obs, T *x, uint8_t *y_test, T *p_score) {
+da_status decision_tree<T>::score(da_int n_obs, T *x_in, da_int ldx, uint8_t *y_test,
+                                  T *p_score) {
     DA_PRINTF_DEBUG("Inside decision_tree<T>::score \n");
     DA_PRINTF_DEBUG("model[0].col_idx = %" DA_INT_FMT " \n", model[0].col_idx);
     DA_PRINTF_DEBUG("model[0].x_threshold = %8.4f \n", model[0].x_threshold);
+
+    // copy user data (convert order from column-major to row-major)
+    std::vector<T> x(n_obs * this->d);
+    for (da_int j = 0; j < this->d; j++) {
+        for (da_int i = 0; i < n_obs; i++) {
+            // ldx >= n_obs
+            x[j + (i * this->d)] = x_in[i + (j * ldx)];
+        }
+    }
 
     uint8_t y_pred;
     T score = 0.0;
 
     for (da_int i = 0; i < n_obs; i++) {
-        T *xi = x + (i * d);
+        T *xi = x.data() + (i * d);
 
         Node<T> node = model[0];
         da_int child_idx;
@@ -742,7 +777,7 @@ template <typename T> da_status decision_forest<T>::fit() {
 }
 
 template <typename T>
-da_status decision_forest<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
+da_status decision_forest<T>::predict(da_int n_obs, T *x, da_int ldx, uint8_t *y_pred) {
     da_status status = da_status_success;
 
     da_int n_trees;
@@ -752,7 +787,7 @@ da_status decision_forest<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
     std::vector<da_int> count(n_obs);
     for (da_int k = 0; k < n_trees; k++) {
         std::vector<uint8_t> y_pred_tree(n_obs);
-        status = tree_vec[k].predict(n_obs, x, y_pred_tree.data());
+        status = tree_vec[k].predict(n_obs, x, ldx, y_pred_tree.data());
         for (da_int i = 0; i < n_obs; i++) {
             count[i] += y_pred_tree[i];
         }
@@ -770,7 +805,8 @@ da_status decision_forest<T>::predict(da_int n_obs, T *x, uint8_t *y_pred) {
 }
 
 template <typename T>
-da_status decision_forest<T>::score(da_int n_obs, T *x, uint8_t *y_test, T *p_score) {
+da_status decision_forest<T>::score(da_int n_obs, T *x, da_int ldx, uint8_t *y_test,
+                                    T *p_score) {
     da_status status = da_status_success;
 
     da_int n_trees;
@@ -784,7 +820,7 @@ da_status decision_forest<T>::score(da_int n_obs, T *x, uint8_t *y_test, T *p_sc
     std::vector<da_int> count(n_obs);
     for (da_int k = 0; k < n_trees; k++) {
         std::vector<uint8_t> y_pred_tree(n_obs);
-        status = tree_vec[k].predict(n_obs, x, y_pred_tree.data());
+        status = tree_vec[k].predict(n_obs, x, ldx, y_pred_tree.data());
         for (da_int i = 0; i < n_obs; i++) {
             count[i] += y_pred_tree[i];
         }

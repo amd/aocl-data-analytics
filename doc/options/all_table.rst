@@ -3,8 +3,8 @@ Supported Optional Parameters
 
 In all the following tables, :math:`\varepsilon`, refers to the machine precision for the given floating point data precision.
 
-Options for Linear model
-=========================================
+Options for Linear Model
+==============================================
 
 The following options are supported.
 
@@ -24,7 +24,7 @@ The following options are supported.
 
 
 Options for PCA
-=========================================
+==============================================
 
 The following options are supported.
 
@@ -37,26 +37,11 @@ The following options are supported.
    "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix", ":math:`s=` `correlation`, `covariance`, or `svd`."
    "n_components", "integer", ":math:`i=1`", "Number of principal components to compute", ":math:`1 \le i`"
 
-
-Options for Decision tree
-=========================================
-
-The following options are supported.
-
-.. csv-table:: Options table
-   :escape: ~
-   :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
-   "n_trees", "integer", ":math:`i=1`", "set number of features in each tree", ":math:`0 < i`"
-   "n_features_to_select", "integer", ":math:`i=1`", "set number of features in selection for splitting", ":math:`0 < i`"
-   "seed", "integer", ":math:`i=-1`", "set random seed for Mersenne Twister (64-bit) PRNG", ":math:`-1 \le i \le 2147483647`"
-   "n_obs_per_tree", "integer", ":math:`i=1`", "set number of observations in each tree", ":math:`0 < i`"
-   "depth", "integer", ":math:`i=-1`", "set max depth of tree", ":math:`-1 \le i`"
-   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `gini`, or `misclassification-error`."
+.. _df_options:
 
 
-Options for Decision forest
-=========================================
+Options for Decision Forest
+==============================================
 
 The following options are supported.
 
@@ -64,6 +49,7 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
+   "diff_thres", "real", ":math:`r=1e-06`", "minimum difference in feature value required for splitting", ":math:`0 < r`"
    "n_trees", "integer", ":math:`i=1`", "set number of features in each tree", ":math:`0 < i`"
    "n_features_to_select", "integer", ":math:`i=1`", "set number of features in selection for splitting", ":math:`0 < i`"
    "seed", "integer", ":math:`i=-1`", "set random seed for Mersenne Twister (64-bit) PRNG", ":math:`-1 \le i \le 2147483647`"
