@@ -64,7 +64,8 @@ option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library biuld" OFF)
 
-if(BUILD_SMP)
+if(BUILD_SMP OR UNIX)
+  # On Linux, even serial builds need an OpenMP runtime to enable correct LibFlame linking
   find_package(OpenMP REQUIRED)
   if(WIN32)
     # Use llvm OpenMP lib for most recent functionality
