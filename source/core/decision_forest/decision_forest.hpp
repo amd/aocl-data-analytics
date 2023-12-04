@@ -151,7 +151,7 @@ template <typename T> class decision_tree {
     da_status sample_feature_ind(da_int n_samples, da_int *samples);
     da_status set_rng(std::mt19937_64 mt_gen) {
         da_status status = da_status_success;
-        this->opts.set("seed", 0, da_options::solver);
+        this->opts.set("seed", (da_int)0, da_options::solver);
         this->mt_gen = mt_gen;
         return status;
     };
