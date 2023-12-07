@@ -316,7 +316,7 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
  *        Use @ref da_handle_print_error_message to get more details.
  * - @ref da_status_invalid_pointer - the store was not correctly initialized.
  * - @ref da_status_missing_block - the store contains incomplete row blocks.
- * - @ref da_status_internal_error - an unexpected error occured.
+ * - @ref da_status_internal_error - an unexpected error occurred.
  */
 da_status da_data_extract_column_int(da_datastore store, da_int idx, da_int dim,
                                      da_int *col);
@@ -350,7 +350,7 @@ da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
  *        Use @ref da_handle_print_error_message to get more details.
  * - @ref da_status_invalid_pointer - the store was not correctly initialized.
  * - @ref da_status_missing_block - the store contains incomplete row blocks.
- * - @ref da_status_internal_error - an unexpected error occured.
+ * - @ref da_status_internal_error - an unexpected error occurred.
  */
 da_status da_data_extract_selection_int(da_datastore store, const char *key, da_int *data,
                                         da_int lddata);
@@ -375,7 +375,7 @@ da_status da_data_extract_selection_uint8(da_datastore store, const char *key,
  * - @ref da_status_invalid_input - some of the input data was not correct.
  *        Use @ref da_handle_print_error_message to get more details.
  * - @ref da_status_invalid_pointer - the store was not correctly initialized.
- * - @ref da_status_internal_error - an unexpected error occured.
+ * - @ref da_status_internal_error - an unexpected error occurred.
  */
 da_status da_data_label_column(da_datastore store, const char *label, da_int col_idx);
 /**
@@ -389,7 +389,7 @@ da_status da_data_label_column(da_datastore store, const char *label, da_int col
  * - @ref da_status_invalid_input - some of the input data was not correct.
  *        Use @ref da_handle_print_error_message to get more details.
  * - @ref da_status_invalid_pointer - the store was not correctly initialized.
- * - @ref da_status_internal_error - an unexpected error occured.
+ * - @ref da_status_internal_error - an unexpected error occurred.
  */
 da_status da_data_get_col_idx(da_datastore store, const char *label, da_int *col_idx);
 /**

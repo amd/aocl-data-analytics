@@ -26,6 +26,7 @@
 
 #include "aoclda.h"
 #include "csv_options.hpp"
+#include "csv_types.hpp"
 #include "da_error.hpp"
 #include "options.hpp"
 #include "tokenizer.h"
@@ -35,15 +36,6 @@ namespace da_csv {
 
 da_status da_parser_init(parser_t **parser);
 void da_parser_destroy(parser_t **parser);
-
-enum csv_datatype {
-    csv_auto = 0,
-    csv_float,
-    csv_double,
-    csv_integer,
-    csv_char,
-    csv_boolean
-};
 
 class csv_reader {
   public:
@@ -57,6 +49,8 @@ class csv_reader {
     da_int integers_as_fp;
     da_int first_row_header;
     csv_datatype datatype;
+
+    da_ordering order;
 
     da_errors::da_error_t *err = nullptr;
 
@@ -129,6 +123,9 @@ class csv_reader {
                 }
             }
         }
+
+        opts->get("CSV data storage", sopt, iopt);
+        order = static_cast<da_ordering>(iopt);
 
         opts->get("CSV double quote", iopt);
         parser->doublequote = (int)iopt;

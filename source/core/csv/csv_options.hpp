@@ -24,7 +24,9 @@
 #ifndef CSV_OPTIONS_HPP
 #define CSV_OPTIONS_HPP
 
+#include "csv_types.hpp"
 #include "options.hpp"
+
 #include <limits>
 
 namespace da_csv {
@@ -85,6 +87,12 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
     os = std::make_shared<OptionString>(OptionString(
         "CSV skip rows",
         "A comma- or space-separated list of rows to ignore in CSV files", dummy, "\0"));
+    opts.register_opt(os);
+
+    os = std::make_shared<OptionString>(OptionString(
+        "CSV data storage",
+        "Whether to store data from CSV files in row or column major format",
+        {{"row major", row_major}, {"column major", col_major}}, "column major"));
     opts.register_opt(os);
 
     oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
@@ -149,12 +157,12 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
         "CSV datatype",
         "If a CSV file is known to be of a single datatype, set this option to "
         "disable autodetection and make reading the file quicker",
-        {{"auto", 0},
-         {"float", 1},
-         {"double", 2},
-         {"integer", 3},
-         {"string", 4},
-         {"boolean", 5}},
+        {{"auto", csv_auto},
+         {"float", csv_float},
+         {"double", csv_double},
+         {"integer", csv_integer},
+         {"string", csv_char},
+         {"boolean", csv_boolean}},
         "auto"));
     opts.register_opt(os);
 

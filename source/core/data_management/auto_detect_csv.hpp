@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef AUTO_DETECT_CSV_HPP
@@ -41,15 +41,23 @@ using CSVColumnsType =
     std::vector<std::variant<std::vector<da_int>, std::vector<float>, std::vector<double>,
                              std::vector<uint8_t>, std::vector<char **>>>;
 
-/* Store the individual scalar elements reeturned from parsing the character data into a numeric type */
+/* Store the individual scalar elements returned from parsing the character data into a numeric type */
 using CSVElementType = std::variant<da_int, float, double, uint8_t>;
 
 /* Convert column i of the CSV data to char, when we have already read the first j elements */
 inline void convert_col_to_char(CSVColumnsType &columns, da_int i, da_int j, char **data,
-                                da_int ncols) {
+                                da_int nrows, da_int ncols, da_ordering order) {
     std::vector<char **> char_col;
+
     for (da_int k = 0; k <= j; k++) {
-        char_col.push_back(&data[i + ncols * k]);
+        switch (order) {
+        case row_major:
+            char_col.push_back(&data[i + ncols * k]);
+            break;
+        case col_major:
+            char_col.push_back(&data[k + nrows * i]);
+            break;
+        }
     }
     //replace the ith column with this new vector
     columns[i] = char_col;
@@ -58,7 +66,7 @@ inline void convert_col_to_char(CSVColumnsType &columns, da_int i, da_int j, cha
 /* Add the item elem to the ith column of the data, where j entries have already been dealt with */
 template <class T>
 inline void update_column(T elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int ncols) {
+                          char **data, da_int nrows, da_int ncols, da_ordering order) {
     // T can be da_int, float, double or uint8_t, but char** will have been caught earlier
     // If columns[i] is also of type T then simply push_back
     if (std::vector<T> *T_col = std::get_if<std::vector<T>>(&(columns[i]))) {
@@ -71,13 +79,13 @@ inline void update_column(T elem, CSVColumnsType &columns, da_int i, da_int j,
         columns[i] = T_col;
     } else {
         // Type mismatch so convert the whole column up to char**
-        convert_col_to_char(columns, i, j, data, ncols);
+        convert_col_to_char(columns, i, j, data, nrows, ncols, order);
     }
 }
 
 /* Overload of previous function to deal with da_int data which can be cast to float or double */
 inline void update_column(da_int elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int ncols) {
+                          char **data, da_int nrows, da_int ncols, da_ordering order) {
     if (std::vector<da_int> *int_col = std::get_if<std::vector<da_int>>(&(columns[i]))) {
         // This column already contains da_int data so we only need to push_back
         int_col->push_back(elem);
@@ -89,13 +97,13 @@ inline void update_column(da_int elem, CSVColumnsType &columns, da_int i, da_int
         double_col->push_back((double)elem);
     } else {
         // Type mismatch so convert the whole column to char**
-        convert_col_to_char(columns, i, j, data, ncols);
+        convert_col_to_char(columns, i, j, data, nrows, ncols, order);
     }
 }
 
 /* Overload of previous function to deal with float data */
 inline void update_column(float elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int ncols) {
+                          char **data, da_int nrows, da_int ncols, da_ordering order) {
     if (std::vector<float> *float_col = std::get_if<std::vector<float>>(&(columns[i]))) {
         // This column already contains float data so we only need to push_back
         float_col->push_back(elem);
@@ -110,13 +118,13 @@ inline void update_column(float elem, CSVColumnsType &columns, da_int i, da_int 
         columns[i] = float_col;
     } else {
         // Type mismatch so convert the whole column up to char**
-        convert_col_to_char(columns, i, j, data, ncols);
+        convert_col_to_char(columns, i, j, data, nrows, ncols, order);
     }
 }
 
 /* Overload of previous function to deal with double data */
 inline void update_column(double elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int ncols) {
+                          char **data, da_int nrows, da_int ncols, da_ordering order) {
     if (std::vector<double> *double_col =
             std::get_if<std::vector<double>>(&(columns[i]))) {
         // This column already contains double data so we only need to push_back
@@ -132,7 +140,7 @@ inline void update_column(double elem, CSVColumnsType &columns, da_int i, da_int
         columns[i] = double_col;
     } else {
         // Type mismatch so convert the whole column to char**
-        convert_col_to_char(columns, i, j, data, ncols);
+        convert_col_to_char(columns, i, j, data, nrows, ncols, order);
     }
 }
 
@@ -183,32 +191,44 @@ inline da_status detect_columns(da_csv::csv_reader *csv, CSVColumnsType &columns
         columns.push_back(vec);
     }
 
+    da_int data_index = 0;
+
     for (da_int j = 0; j < nrows; j++) {
 
         for (da_int i = 0; i < ncols; i++) {
 
+            // Index into data array depends on whether we have stored data in row major or column major order
+            switch (csv->order) {
+            case row_major:
+                data_index = i + ncols * j;
+                break;
+            case col_major:
+                data_index = j + nrows * i;
+                break;
+            }
+
             if (std::vector<char **> *char_col =
                     std::get_if<std::vector<char **>>(&(columns[i]))) {
                 // This column already contains char data so we only need to store the pointer to the word
-                char_col->push_back(&data[i + ncols * j]);
+                char_col->push_back(&data[data_index]);
             }
 
             // Call get_number, which recursively calls char_to_num until the appropriate datatype is found
             // If statements needed to account for possible options
             if (csv->integers_as_fp) {
                 if (csv->precision) {
-                    tmp_error = get_number(parser, data[i + ncols * j], output,
-                                           tmp_double, tmp_uint8);
+                    tmp_error = get_number(parser, data[data_index], output, tmp_double,
+                                           tmp_uint8);
                 } else {
-                    tmp_error = get_number(parser, data[i + ncols * j], output, tmp_float,
+                    tmp_error = get_number(parser, data[data_index], output, tmp_float,
                                            tmp_uint8);
                 }
             } else {
                 if (csv->precision) {
-                    tmp_error = get_number(parser, data[i + ncols * j], output, tmp_int,
+                    tmp_error = get_number(parser, data[data_index], output, tmp_int,
                                            tmp_double, tmp_uint8);
                 } else {
-                    tmp_error = get_number(parser, data[i + ncols * j], output, tmp_int,
+                    tmp_error = get_number(parser, data[data_index], output, tmp_int,
                                            tmp_float, tmp_uint8);
                 }
             }
@@ -216,14 +236,15 @@ inline da_status detect_columns(da_csv::csv_reader *csv, CSVColumnsType &columns
             // Append the element to the column if possible
             if (tmp_error == da_status_success) {
                 std::visit(
-                    [&columns, &i, &j, &data, &ncols](const auto &elem) {
-                        update_column(elem, columns, i, j, data, ncols);
+                    [&columns, &i, &j, &data, &nrows, &ncols, &csv](const auto &elem) {
+                        update_column(elem, columns, i, j, data, nrows, ncols,
+                                      csv->order);
                     },
                     output);
 
             } else {
                 // Replace this column with chars
-                convert_col_to_char(columns, i, j, data, ncols);
+                convert_col_to_char(columns, i, j, data, nrows, ncols, csv->order);
             }
         }
     }

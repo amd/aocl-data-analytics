@@ -1462,7 +1462,7 @@ class data_store {
                 return da_error(err, tmp_status,
                                 "Consult error trace for further details");
             }
-            status = concatenate_columns(nrows, ncols, data_f, row_major, copy_data,
+            status = concatenate_columns(nrows, ncols, data_f, csv->order, copy_data,
                                          own_data, C_data);
             // We need to find the block and set copy_data to true so it knows it owns the memory
             block_dense<float> *tmp_bd =
@@ -1487,7 +1487,7 @@ class data_store {
                 return da_error(err, tmp_status,
                                 "Consult error trace for further details");
             }
-            status = concatenate_columns(nrows, ncols, data_d, row_major, copy_data,
+            status = concatenate_columns(nrows, ncols, data_d, csv->order, copy_data,
                                          own_data, C_data);
             if (status != da_status_success)
                 return da_error_trace(err, status, // LCOV_EXCL_LINE
@@ -1515,7 +1515,7 @@ class data_store {
                 return da_error(err, tmp_status,
                                 "Consult error trace for further details");
             }
-            status = concatenate_columns(nrows, ncols, data_int, row_major, copy_data,
+            status = concatenate_columns(nrows, ncols, data_int, csv->order, copy_data,
                                          own_data, C_data);
             if (status != da_status_success)
                 return da_error_trace(err, status,
@@ -1543,7 +1543,7 @@ class data_store {
                 return da_error(err, tmp_status,
                                 "Consult error trace for further details");
             }
-            status = concatenate_columns(nrows, ncols, data_char, row_major, copy_data,
+            status = concatenate_columns(nrows, ncols, data_char, csv->order, copy_data,
                                          own_data, C_data);
             if (status != da_status_success)
                 return da_error_trace(err, status,
@@ -1571,7 +1571,7 @@ class data_store {
                 return da_error(err, tmp_status,
                                 "Consult error trace for further details");
             }
-            status = concatenate_columns(nrows, ncols, data_bool, row_major, copy_data,
+            status = concatenate_columns(nrows, ncols, data_bool, csv->order, copy_data,
                                          own_data, C_data);
             if (status != da_status_success)
                 return da_error_trace(err, status,

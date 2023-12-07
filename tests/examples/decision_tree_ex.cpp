@@ -68,6 +68,7 @@ int decision_tree_ex_d(std::string score_criteria) {
     // Read in training data
     csv_handle = nullptr;
     status = da_datastore_init(&csv_handle);
+    status = da_datastore_options_set_string(csv_handle, "CSV data storage", "row major");
 
     char features_fp[256] = DATA_DIR;
     strcat(features_fp, "/df_data/");
@@ -200,6 +201,7 @@ int decision_tree_ex_s(std::string score_criteria) {
     // Read in training data
     csv_handle = nullptr;
     status = da_datastore_init(&csv_handle);
+    status = da_datastore_options_set_string(csv_handle, "CSV data storage", "row major");
 
     char features_fp[256] = DATA_DIR;
     strcat(features_fp, "/df_data/");

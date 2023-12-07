@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 /* disable some MSVC warnings about strcat */
@@ -71,6 +71,100 @@ template <typename T> T GetExpectedData(CSVParamType<T> *params, da_int i) {
 
 const char *GetExpectedData(CSVParamType<char *> *params, da_int i) {
     return params->expected_char_data[i].c_str();
+}
+
+template <typename T> void GetBasicDataColMajor(CSVParamType<T> *params);
+
+template <> void GetBasicDataColMajor<double>(CSVParamType<double> *params) {
+
+    params->filename = "csv_test_float";
+    params->expected_rows = 3;
+    params->expected_columns = 5;
+    params->expected_data = {1.1, -1,     0.0,     1e3, -3.2, 0.0, 4.1e-3, -4.5e4,
+                             0.0, 0.03e6, -5.6e-7, 0.0, 2,    -10, 4.5e5};
+    params->expected_headings = {"one", "cat two", "three", "FOUR", "Five"};
+    params->expected_status = da_status_success;
+    params->datatype = "double";
+}
+
+template <> void GetBasicDataColMajor<float>(CSVParamType<float> *params) {
+
+    params->filename = "csv_test_float";
+    params->expected_rows = 3;
+    params->expected_columns = 5;
+    std::vector<float> data{1.1, -1,     0.0,     1e3, -3.2, 0.0, 4.1e-3, -4.5e4,
+                            0.0, 0.03e6, -5.6e-7, 0.0, 2,    -10, 4.5e5};
+    params->expected_data = data;
+    std::vector<std::string> headings = {"one", "cat two", "three", "FOUR", "Five"};
+    params->expected_headings = headings;
+    params->expected_status = da_status_success;
+    params->datatype = "float";
+}
+
+template <> void GetBasicDataColMajor<int64_t>(CSVParamType<int64_t> *params) {
+
+    params->filename = "csv_test_int64";
+    params->expected_rows = 3;
+    params->expected_columns = 4;
+    std::vector<int64_t> data{1,
+                              -0,
+                              +345,
+                              5,
+                              -43,
+                              -9223372036854775806,
+                              3,
+                              9223372036854775806,
+                              -9223372036854775806,
+                              0,
+                              9223372036854775806,
+                              67};
+    params->expected_data = data;
+    std::vector<std::string> headings = {"one", "two", "three", "four"};
+    params->expected_headings = headings;
+    params->expected_status = da_status_success;
+    params->datatype = "integer";
+}
+
+template <> void GetBasicDataColMajor<int32_t>(CSVParamType<int32_t> *params) {
+
+    params->filename = "csv_test_int32";
+    params->expected_rows = 3;
+    params->expected_columns = 4;
+    std::vector<int32_t> data{1, -0,  +2147483646, 5, 43,         184,
+                              3, +92, -2147483647, 0, 2147483647, 67};
+    params->expected_data = data;
+    std::vector<std::string> headings = {"one", "two", "three", "four"};
+    params->expected_headings = headings;
+    params->expected_status = da_status_success;
+    params->datatype = "integer";
+}
+
+template <> void GetBasicDataColMajor<char *>(CSVParamType<char *> *params) {
+
+    params->filename = "csv_test_char";
+    params->expected_rows = 3;
+    params->expected_columns = 4;
+    std::vector<std::string> data = {"lorem",       "amet", "sed",   "ipsum",
+                                     "consectetur", "do",   "dolor", "adipiscing",
+                                     "eiusmod",     "sit",  "edit",  "tempor"};
+    params->expected_char_data = data;
+    std::vector<std::string> headings = {"this", "is", "the", "header"};
+    params->expected_headings = headings;
+    params->expected_status = da_status_success;
+    params->datatype = "string";
+}
+
+template <> void GetBasicDataColMajor<uint8_t>(CSVParamType<uint8_t> *params) {
+
+    params->filename = "csv_test_bool";
+    params->expected_rows = 2;
+    params->expected_columns = 4;
+    std::vector<uint8_t> data{1, 1, 1, 0, 1, 0, 1, 0};
+    params->expected_data = data;
+    std::vector<std::string> headings = {"one", "two", "three", "four"};
+    params->expected_headings = headings;
+    params->expected_status = da_status_success;
+    params->datatype = "boolean";
 }
 
 template <typename T> void GetBasicData(CSVParamType<T> *params);
@@ -271,7 +365,7 @@ using DataStoreTypes = ::testing::Types<float, double, da_int, uint8_t, char *>;
 TYPED_TEST_SUITE(CSVTest, CSVTypes);
 TYPED_TEST_SUITE(DataStoreTest, DataStoreTypes);
 
-TYPED_TEST(CSVTest, basic_no_headings) {
+TYPED_TEST(CSVTest, basic_no_headings_row_major) {
 
     CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
     GetBasicData(params);
@@ -286,6 +380,8 @@ TYPED_TEST(CSVTest, basic_no_headings) {
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV thousands", "f"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
               da_status_success);
     TypeParam *a = nullptr;
 
@@ -311,7 +407,50 @@ TYPED_TEST(CSVTest, basic_no_headings) {
     delete params;
 }
 
-TYPED_TEST(DataStoreTest, datastore_no_headings) {
+TYPED_TEST(CSVTest, basic_no_headings_column_major) {
+
+    CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
+    GetBasicDataColMajor(params);
+
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, params->filename.c_str());
+    strcat(filepath, ".csv");
+
+    da_datastore store = nullptr;
+    da_status err = da_datastore_init(&store);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV thousands", "f"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "column major"),
+              da_status_success);
+    TypeParam *a = nullptr;
+
+    da_int nrows = 0, ncols = 0;
+
+    err = da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr);
+
+    EXPECT_EQ(err, params->expected_status);
+
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
+
+    for (da_int i = 0; i < nrows; i++) {
+        for (da_int j = 0; j < ncols; j++) {
+            // Check against the transpose since we have switched to column major in this test
+            EXPECT_EQ_overload(a[j + ncols * i], GetExpectedData(params, j + ncols * i));
+        }
+    }
+
+    da_csv::free_data(&a, nrows * ncols);
+
+    da_datastore_destroy(&store);
+
+    delete params;
+}
+
+TYPED_TEST(DataStoreTest, datastore_no_headings_row_major) {
 
     CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
     GetBasicData(params);
@@ -330,6 +469,8 @@ TYPED_TEST(DataStoreTest, datastore_no_headings) {
         da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
         da_status_success);
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV thousands", "f"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
               da_status_success);
 
     da_int nrows = 0, ncols = 0;
@@ -358,7 +499,56 @@ TYPED_TEST(DataStoreTest, datastore_no_headings) {
     delete params;
 }
 
-TYPED_TEST(CSVTest, basic_headings) {
+TYPED_TEST(DataStoreTest, datastore_no_headings_column_major) {
+
+    CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
+    GetBasicData(params);
+
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, params->filename.c_str());
+    strcat(filepath, ".csv");
+
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+              da_status_success);
+    EXPECT_EQ(
+        da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
+        da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV thousands", "f"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "column major"),
+              da_status_success);
+
+    da_int nrows = 0, ncols = 0;
+
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), params->expected_status);
+
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
+
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
+
+    TypeParam *T = new TypeParam[nrows];
+
+    for (da_int i = 0; i < ncols; i++) {
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        for (da_int j = 0; j < nrows; j++) {
+            EXPECT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
+        }
+    }
+
+    delete[] T;
+    da_datastore_destroy(&store);
+    da_datastore_destroy(&store);
+
+    delete params;
+}
+
+TYPED_TEST(CSVTest, basic_headings_row_major) {
 
     CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
     GetBasicData(params);
@@ -372,8 +562,13 @@ TYPED_TEST(CSVTest, basic_headings) {
 
     da_datastore store = nullptr;
     da_status err = da_datastore_init(&store);
-    da_datastore_options_set_int(store, "CSV skip initial space", 1);
-    da_datastore_options_set_int(store, "CSV use header row", 1);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
+
     TypeParam *a = nullptr;
 
     da_int nrows = 0, ncols = 0;
@@ -404,7 +599,7 @@ TYPED_TEST(CSVTest, basic_headings) {
     delete params;
 }
 
-TYPED_TEST(DataStoreTest, datastore_headings) {
+TYPED_TEST(DataStoreTest, datastore_headings_row_major) {
 
     CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
     GetBasicData(params);
@@ -424,6 +619,68 @@ TYPED_TEST(DataStoreTest, datastore_headings) {
     EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
         da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
+
+    da_int nrows = 0, ncols = 0;
+
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), params->expected_status);
+
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
+
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
+
+    TypeParam *T = new TypeParam[nrows];
+
+    for (da_int i = 0; i < ncols; i++) {
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        for (da_int j = 0; j < nrows; j++) {
+            EXPECT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
+        }
+    }
+
+    delete[] T;
+
+    char **headings = new char *[ncols];
+
+    da_int name_sz = 128;
+    char col_name[128];
+    for (da_int j = 0; j < ncols; j++) {
+        EXPECT_EQ(da_data_get_col_label(store, j, &name_sz, col_name), da_status_success);
+        EXPECT_EQ_overload(col_name, params->expected_headings[j].c_str());
+    }
+
+    da_datastore_destroy(&store);
+    da_datastore_destroy(&store);
+
+    delete params;
+    delete[] headings;
+}
+
+TYPED_TEST(DataStoreTest, datastore_headings_column_major) {
+
+    CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
+    GetBasicData(params);
+
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, params->filename.c_str());
+    strcat(filepath, "_head");
+    strcat(filepath, ".csv");
+
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(
+        da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
+        da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "column major"),
+              da_status_success);
 
     da_int nrows = 0, ncols = 0;
 
@@ -482,6 +739,8 @@ TYPED_TEST(CSVTest, warn_for_missing_data) {
               da_status_success);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
     EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
               params->expected_status);
 
@@ -505,7 +764,7 @@ TYPED_TEST(CSVTest, warn_for_missing_data) {
     delete params;
 }
 
-TYPED_TEST(DataStoreTest, warn_for_missing_data) {
+TYPED_TEST(DataStoreTest, warn_for_missing_data_row_major) {
 
     CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
     GetMissingData(params);
@@ -527,6 +786,62 @@ TYPED_TEST(DataStoreTest, warn_for_missing_data) {
     EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
         da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
+
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), params->expected_status);
+
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
+
+    EXPECT_EQ(nrows, params->expected_rows);
+    EXPECT_EQ(ncols, params->expected_columns);
+
+    TypeParam *T = new TypeParam[nrows];
+
+    for (da_int i = 0; i < ncols; i++) {
+        EXPECT_EQ(da_data_extract_column(store, i, nrows, T), da_status_success);
+        for (da_int j = 0; j < nrows; j++) {
+            if (check_nan(GetExpectedData(params, i + ncols * j))) {
+                EXPECT_TRUE(check_nan(T[j]));
+            } else {
+                EXPECT_EQ_overload(T[j], GetExpectedData(params, i + ncols * j));
+            }
+        }
+    }
+
+    delete[] T;
+
+    da_datastore_destroy(&store);
+    da_datastore_destroy(&store);
+
+    delete params;
+}
+
+TYPED_TEST(DataStoreTest, warn_for_missing_data_column_major) {
+
+    CSVParamType<TypeParam> *params = new CSVParamType<TypeParam>();
+    GetMissingData(params);
+
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, params->filename.c_str());
+    strcat(filepath, ".csv");
+
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
+    da_int nrows = 0, ncols = 0;
+
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV warn for missing data", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+              da_status_success);
+    EXPECT_EQ(
+        da_datastore_options_set_string(store, "CSV datatype", params->datatype.c_str()),
+        da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "column major"),
+              da_status_success);
 
     EXPECT_EQ(da_data_load_from_csv(store, filepath), params->expected_status);
 
@@ -579,6 +894,8 @@ TEST(CSVTest, skip_lines_test1) {
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
               da_status_success);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV row start", 3), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
 
     EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_success);
@@ -618,6 +935,8 @@ TEST(CSVTest, skip_lines_test2) {
 
     // Set options
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip empty lines", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
               da_status_success);
 
     EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
@@ -664,6 +983,8 @@ TEST(CSVTest, options) {
               da_status_success);
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV comment", "}"),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
     EXPECT_EQ(
         da_datastore_options_set_string(store, "CSV scientific notation character", "g"),
         da_status_success);
@@ -695,6 +1016,8 @@ TEST(CSVTest, options) {
     // Now try with a datastore object
 
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
@@ -732,6 +1055,8 @@ TEST(csvtest, incorrect_headings) {
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
     da_datastore_destroy(&store);
@@ -751,6 +1076,8 @@ TEST(csvtest, incorrect_headings2) {
     char **headings = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
               da_status_success);
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
@@ -792,6 +1119,8 @@ TEST(csvtest, error_exits) {
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
 
     EXPECT_EQ(da_read_csv_d(store, filepath, &a_double, &nrows, &ncols, nullptr),
               da_status_parsing_error);
@@ -810,6 +1139,8 @@ TEST(csvtest, error_exits) {
         a_int = nullptr;
     }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
@@ -829,6 +1160,8 @@ TEST(csvtest, error_exits) {
     }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
     EXPECT_EQ(da_read_csv_int(store, filepath, &a_int, &nrows, &ncols, nullptr),
@@ -838,6 +1171,8 @@ TEST(csvtest, error_exits) {
         a_int = nullptr;
     }
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "integer"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
@@ -986,6 +1321,8 @@ TEST(CSVTest, lineterminator) {
 
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV line terminator", "x"),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
     EXPECT_EQ(da_read_csv(store, filepath, &a, &nrows, &ncols, nullptr),
               da_status_success);
 
@@ -1010,6 +1347,8 @@ TEST(CSVTest, lineterminator) {
 
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "double"),
               da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 
     EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
@@ -1033,7 +1372,7 @@ TEST(CSVTest, lineterminator) {
     da_datastore_destroy(&store);
 }
 
-TEST(CSVTest, auto) {
+TEST(CSVTest, auto_row_major) {
 
     char filepath[256] = DATA_DIR;
     strcat(filepath, "csv_data/");
@@ -1045,6 +1384,171 @@ TEST(CSVTest, auto) {
     da_int nrows, ncols, expected_rows = 4, expected_columns = 7;
 
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
+
+    EXPECT_EQ(da_data_print_options(store), da_status_success);
+
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
+
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
+
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
+
+    const char *expected_headings[] = {"a", "b", "c", "d", "e", "f", "g"};
+    da_int c1[] = {1, 2, 3, 4};
+    da_int c2[] = {5, 6, 7, 8};
+    double c3[] = {4.0, 3.5, 4.0, 6.7};
+    double c4[] = {-3.0, -3.0, 3.0, 0.1};
+    float cc1[] = {1.0f, 2.0f, 3.0f, 4.0f};
+    float cc2[] = {5.0f, 6.0f, 7.0f, 8.0f};
+    float cc3[] = {4.0f, 3.5f, 4.0f, 6.7f};
+    float cc4[] = {-3.0f, -3.0f, 3.0f, 0.1f};
+    const char *c6[] = {"1", "-4", "4.1", "false"};
+    const char *c7[] = {"hello", "goodbye", "test", "success"};
+    uint8_t c5[] = {1, 1, 0, 1};
+    da_int Ti[4];
+    double Td[4];
+    float Tf[4];
+    uint8_t Tu[4];
+    char *Tc[4];
+    char col_name[128];
+
+    EXPECT_EQ(da_data_extract_column_int(store, 0, nrows, Ti), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(c1[j], Ti[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_int(store, 1, nrows, Ti), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(c2[j], Ti[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_real_d(store, 2, nrows, Td), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(c3[j], Td[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_real_d(store, 3, nrows, Td), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(c4[j], Td[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_uint8(store, 4, nrows, Tu), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(c5[j], Tu[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_str(store, 5, nrows, Tc), da_status_success);
+    std::cout << Tc[0] << c6[0] << std::endl;
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ_overload(c6[j], Tc[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_str(store, 6, nrows, Tc), da_status_success);
+    std::cout << Tc[0] << c7[0] << std::endl;
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ_overload(c7[j], Tc[j]);
+    }
+
+    for (da_int j = 0; j < ncols; j++) {
+        da_int name_sz = 128;
+        EXPECT_EQ(da_data_get_col_label(store, j, &name_sz, col_name), da_status_success);
+        EXPECT_EQ_overload(col_name, expected_headings[j]);
+    }
+
+    da_datastore_destroy(&store);
+
+    // Repeat with option set for integer data being interpreted as float
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "row major"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV skip initial space", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV integers as floats", 1),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datastore precision", "single"),
+              da_status_success);
+    EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
+
+    EXPECT_EQ(da_data_get_n_rows(store, &nrows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(store, &ncols), da_status_success);
+
+    EXPECT_EQ(nrows, expected_rows);
+    EXPECT_EQ(ncols, expected_columns);
+
+    EXPECT_EQ(da_data_extract_column_real_s(store, 0, nrows, Tf), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(cc1[j], Tf[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_real_s(store, 1, nrows, Tf), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(cc2[j], Tf[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_real_s(store, 2, nrows, Tf), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(cc3[j], Tf[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_real_s(store, 3, nrows, Tf), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(cc4[j], Tf[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_uint8(store, 4, nrows, Tu), da_status_success);
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ(c5[j], Tu[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_str(store, 5, nrows, Tc), da_status_success);
+    std::cout << Tc[0] << c6[0] << std::endl;
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ_overload(c6[j], Tc[j]);
+    }
+
+    EXPECT_EQ(da_data_extract_column_str(store, 6, nrows, Tc), da_status_success);
+    std::cout << Tc[0] << c7[0] << std::endl;
+    for (da_int j = 0; j < nrows; j++) {
+        EXPECT_EQ_overload(c7[j], Tc[j]);
+    }
+
+    da_int label_sz = 64;
+    char col_label[64];
+    for (da_int j = 0; j < ncols; j++) {
+        da_data_get_col_label(store, j, &label_sz, col_label);
+        EXPECT_EQ_overload(col_label, expected_headings[j]);
+    }
+
+    da_datastore_destroy(&store);
+}
+
+TEST(CSVTest, auto_column_major) {
+
+    char filepath[256] = DATA_DIR;
+    strcat(filepath, "csv_data/");
+    strcat(filepath, "csv_test_auto.csv");
+
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
+    da_int nrows, ncols, expected_rows = 4, expected_columns = 7;
+
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV datatype", "auto"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "column major"),
               da_status_success);
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
               da_status_success);
@@ -1136,6 +1640,8 @@ TEST(CSVTest, auto) {
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV integers as floats", 1),
               da_status_success);
     EXPECT_EQ(da_datastore_options_set_string(store, "CSV datastore precision", "single"),
+              da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(store, "CSV data storage", "column major"),
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_success);
 

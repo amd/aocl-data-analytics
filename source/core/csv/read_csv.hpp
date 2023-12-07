@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef READ_CSV_HPP
@@ -121,7 +121,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
     uint64_t lines = parser->lines;
     uint64_t words_len = parser->words_len;
 
-    // Guard against empty csv file
+    // Guard against empty CSV file
     if (lines == 0 || (parser->skip_footer && lines == 1)) {
         *nrows = 0;
         *ncols = 0;
@@ -135,7 +135,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
         words_len -= parser->line_fields[lines];
     }
 
-    //Guard against header-only csv file
+    // Guard against header-only CSV file
     if (lines == (uint64_t)first_line) {
         *nrows = 0;
         *ncols = (da_int)words_len;
@@ -144,7 +144,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
                        "No data was found in the CSV file");
     }
 
-    //The parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
+    // The parser has some hard coded int64 and uint64 values here so care is needed when casting to da_int at the end
     uint64_t fields_per_line = words_len / lines;
     int64_t fields_per_line_signed;
     if (fields_per_line > DA_INT_MAX || lines > DA_INT_MAX) {
@@ -156,7 +156,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
 
     T *data;
     uint64_t n = fields_per_line * (lines - first_line);
-    //Need calloc rather than new as this could be called from C code
+    // Need calloc rather than new as this could be called from C code
     data = (T *)calloc(n, sizeof(T));
 
     if (data == NULL) {
@@ -165,9 +165,10 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
     }
 
     char *p_end = NULL;
+    int64_t data_index = 0;
 
     for (uint64_t i = (uint64_t)first_line; i < lines; i++) {
-        // check for ragged matrix
+        // Check for ragged matrix
         if (parser->line_fields[i] != fields_per_line_signed) {
             std::string buff;
             buff = "In the lines read from the CSV file,";
@@ -182,13 +183,30 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
         for (int64_t j = parser->line_start[i];
              j < (parser->line_start[i] + parser->line_fields[i]); j++) {
 
-            tmp_error = char_to_num(
-                parser, parser->words[j], &p_end,
-                &data[j - (int64_t)first_line * fields_per_line_signed], NULL);
+            // Index into data array depends on whether we want to store row or column major
+            switch (csv->order) {
+            case row_major:
+                data_index = j - parser->line_start[i] +
+                             (i - (int64_t)first_line) * fields_per_line_signed;
+                break;
+            case col_major:
+                data_index =
+                    i - (int64_t)first_line +
+                    (j - parser->line_start[i]) * ((int64_t)lines - (int64_t)first_line);
+                break;
+            default:
+                return da_error(csv->err, da_status_internal_error, // LCOV_EXCL_LINE
+                                "An internal error occurred. This is likely to be due to "
+                                "a memory corruption issue.");
+                break;
+            }
+
+            tmp_error =
+                char_to_num(parser, parser->words[j], &p_end, &data[data_index], NULL);
             if (tmp_error != da_status_success) {
                 std::string buff;
                 if (parser->warn_for_missing_data) {
-                    missing_data(&data[j - (int64_t)first_line * fields_per_line_signed]);
+                    missing_data(&data[data_index]);
                     buff = "Missing data on line " + std::to_string(i) + ", entry " +
                            std::to_string(j);
                     da_warn(csv->err, da_status_missing_data, buff);
