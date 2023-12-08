@@ -108,7 +108,7 @@ exit:
     fclose(fp);
     parser->source = nullptr;
 
-    return status;
+    return status; // Error message already loaded
 }
 
 template <typename T>
@@ -225,7 +225,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
     *nrows = (da_int)lines - first_line;
     *ncols = (da_int)fields_per_line;
     *a = data;
-    return status;
+    return status; // Error message already loaded
 }
 
 inline da_status parse_headings(csv_reader *csv, da_int ncols, char ***headings) {
@@ -269,7 +269,7 @@ inline da_status parse_headings(csv_reader *csv, da_int ncols, char ***headings)
         }
     }
 
-    return status;
+    return status; // Error message already loaded
 }
 
 template <typename T>

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef DA_ERROR_HPP
@@ -70,7 +70,7 @@
  *  or
  *     return da_warn_trace(e, status, msg);
  *
- * with the same meaning as above. The main difference will be that these two macros 
+ * with the same meaning as above. The main difference will be that these two macros
  * stack the errors and the printing method will pretty-print the error-stack and show
  * the error trace.
  *
@@ -102,7 +102,7 @@
  * More details
  * ------------
  *
- * For Debug builds VERBOSE_ERROR is set (by default in CMakeLists.txt) and the 
+ * For Debug builds VERBOSE_ERROR is set (by default in CMakeLists.txt) and the
  * error is printed immediatly as it is registered in the error structure.
  * This as many benefits during development of new functionalities, mainly that
  * the trace build-up can be observed in the console.
@@ -114,7 +114,7 @@
  *
  * It is possible to "record" the error/warning directly, without using the
  * MACRO functions da_error() or da_warn(). By calling the "rec()" method.
- * This method provides full control on the telemetry and texts used to compose 
+ * This method provides full control on the telemetry and texts used to compose
  * the banner.
  * Instead of using da_error(e, status, msg), it is possible to call
  * return e.rec(da_status status, string msg, string det = "",
@@ -122,9 +122,9 @@
  *              severity_type sev = DA_ERROR);
  * Here msg is the same as for MACROS da_error() and da_warn(), while det is a string
  * that contains further details about the error and possible fixes, it is a free
- * form string that if it is not empty then it is printed under a "details:" section 
+ * form string that if it is not empty then it is printed under a "details:" section
  * on its own.  tel is a string to contain the telemetry data, this generally is an
- * abbreviated form of __FILE__, but need not be. ln contains the line number and is 
+ * abbreviated form of __FILE__, but need not be. ln contains the line number and is
  * generally __LINE__.
  * sev is the level of severity use as follow, DA_WARNING is a "error" but for which
  * the returned data is potentially usable, think of returning a suboptimal solution
@@ -200,7 +200,14 @@ class da_error_t {
         return da_status_success;
     }
 
-    da_error_t(enum action_t action) : action(action){};
+    da_error_t(enum action_t action) : action(action) {
+        mesg.reserve(DA_ERROR_STACK_SIZE);
+        details.reserve(DA_ERROR_STACK_SIZE);
+        telem.reserve(DA_ERROR_STACK_SIZE);
+        status.reserve(DA_ERROR_STACK_SIZE);
+        severity.reserve(DA_ERROR_STACK_SIZE);
+    };
+
     // da_error_t(enum action_t action) = action_t::DA_RECORD) : action(action){};
     ~da_error_t(){};
     // Build banner

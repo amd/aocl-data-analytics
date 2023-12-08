@@ -476,29 +476,27 @@ TYPED_TEST(PCATest, BadHandleTests) {
 
     // handle not initialized
     da_handle handle = nullptr;
-    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_handle_not_initialized);
 
     TypeParam A = 1;
-    EXPECT_EQ(da_pca_set_data(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_set_data(handle, 1, 1, &A, 1), da_status_handle_not_initialized);
 
-    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
-
-    EXPECT_EQ(da_pca_transform(handle, 1, 1, &A, 1, &A, 1), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_transform(handle, 1, 1, &A, 1, &A, 1),
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_pca_inverse_transform(handle, 1, 1, &A, 1, &A, 1),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
 
     // incorrect handle type
     EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
 
-    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_handle_type);
 
-    EXPECT_EQ(da_pca_set_data(handle, 1, 1, &A, 1), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_set_data(handle, 1, 1, &A, 1), da_status_invalid_handle_type);
 
-    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_invalid_pointer);
-
-    EXPECT_EQ(da_pca_transform(handle, 1, 1, &A, 1, &A, 1), da_status_invalid_pointer);
+    EXPECT_EQ(da_pca_transform(handle, 1, 1, &A, 1, &A, 1),
+              da_status_invalid_handle_type);
     EXPECT_EQ(da_pca_inverse_transform(handle, 1, 1, &A, 1, &A, 1),
-              da_status_invalid_pointer);
+              da_status_invalid_handle_type);
 
     da_handle_destroy(&handle);
 }

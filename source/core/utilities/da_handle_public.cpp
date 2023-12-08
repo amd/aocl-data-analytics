@@ -36,125 +36,88 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     }
-
     try {
         (*handle)->err = new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
-    } catch (...) {
-        return da_status_internal_error;
+    } catch (std::bad_alloc &) {
+        return da_status_memory_error;
     }
 
     (*handle)->handle_type = handle_type;
-    da_status error = da_status_success;
     (*handle)->precision = da_double;
 
-    switch (handle_type) {
-    case da_handle_uninitialized:
-        error = da_status_success;
-        break;
-    case da_handle_linmod:
-        try {
+    try {
+        switch (handle_type) {
+            break;
+        case da_handle_linmod:
             (*handle)->linreg_d = new da_linmod::linear_model<double>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-        break;
-    case da_handle_pca:
-        try {
+            break;
+        case da_handle_pca:
             (*handle)->pca_d = new da_pca::da_pca<double>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-        break;
-    case da_handle_decision_tree:
-        try {
+            break;
+        case da_handle_decision_tree:
             (*handle)->dt_d = new decision_tree<double>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-    case da_handle_decision_forest:
-        try {
+            break;
+        case da_handle_decision_forest:
             (*handle)->df_d = new decision_forest<double>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
+            break;
+        default:
+            break;
         }
-    default:
-        error = da_status_success;
-        break;
+    } catch (std::bad_alloc &) {
+        return da_error((*handle)->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation error");             // LCOV_EXCL_LINE
     }
-
-    if (!(error == da_status_success)) {
-        da_handle_destroy(handle);
-    }
-
-    return error;
+    return da_status_success;
 }
 
 da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
-    //TODO FIXME: rename error -> status
-    // add da_error(...) to all non-successful sets. Same for _d
     try {
         *handle = new _da_handle;
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     }
-
     try {
         (*handle)->err = new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
-    } catch (...) {
-        return da_status_internal_error;
+    } catch (std::bad_alloc &) {
+        return da_status_memory_error;
     }
 
     (*handle)->handle_type = handle_type;
-    da_status error = da_status_success;
     (*handle)->precision = da_single;
 
-    switch (handle_type) {
-    case da_handle_uninitialized:
-        error = da_status_success;
-        break;
-    case da_handle_linmod:
-        try {
+    try {
+        switch (handle_type) {
+        case da_handle_linmod:
             (*handle)->linreg_s = new da_linmod::linear_model<float>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-        break;
-    case da_handle_pca:
-        try {
+            break;
+        case da_handle_pca:
             (*handle)->pca_s = new da_pca::da_pca<float>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-        break;
-    case da_handle_decision_tree:
-        try {
+            break;
+        case da_handle_decision_tree:
             (*handle)->dt_s = new decision_tree<float>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
-        }
-    case da_handle_decision_forest:
-        try {
+            break;
+        case da_handle_decision_forest:
             (*handle)->df_s = new decision_forest<float>(*(*handle)->err);
-        } catch (std::bad_alloc &) {
-            return da_status_memory_error;
+            break;
+        default:
+            break;
         }
-    default:
-        error = da_status_success;
-        break;
+    } catch (std::bad_alloc &) {
+        return da_error((*handle)->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation error");             // LCOV_EXCL_LINE
     }
-
-    if (!(error == da_status_success)) {
-        da_handle_destroy(handle);
-    }
-
-    return error;
+    return da_status_success;
 }
 
 da_status da_handle_print_error_message(da_handle handle) {
     // check to see if we have a valid handle
     if (handle) {
-        handle->err->print();
-        return da_status_success;
+        if (handle->err) {
+            handle->err->print();
+            return da_status_success;
+        } else {
+            return da_status_internal_error;
+        }
     }
     return da_status_invalid_input;
 }
@@ -197,11 +160,12 @@ void da_handle_destroy(da_handle *handle) {
 da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
                                  double *result) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+        return da_error(handle->err, da_status_wrong_type,
+                        "The handle was initialized with a different precision type than "
+                        "double precision floating point type.");
 
     if (dim == nullptr)
         return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
@@ -226,11 +190,12 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
 da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
                                  float *result) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than float.");
+        return da_error(handle->err, da_status_wrong_type,
+                        "The handle was initialized with a different precision type than "
+                        "single precision floating point type.");
 
     if (dim == nullptr)
         return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
@@ -255,7 +220,8 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
 da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *dim,
                                    da_int *result) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
 
     if (dim == nullptr)
         return da_error(handle->err, da_status_invalid_input, "dim has not been defined");

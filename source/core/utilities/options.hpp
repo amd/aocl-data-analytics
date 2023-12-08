@@ -459,11 +459,11 @@ template <typename T> class OptionNumeric : public OptionBase {
         if (get_option_t() != da_options::option_t::opt_bool) {
             status = validate(lower, lbound, upper, ubound, value, false);
             if (status != da_status_success)
-                return status;
+                return status; // compose error with status+errmsg
         }
         OptionNumeric::value = value;
         OptionNumeric::setby = setby;
-        return status;
+        return status; // compose error with status+errmsg
     };
 };
 

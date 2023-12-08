@@ -41,7 +41,6 @@
 
 /**
  * @brief Handle structure containing input / output data required for functions such as fit and predict
- *
  */
 struct _da_handle {
   public:
@@ -58,6 +57,13 @@ struct _da_handle {
     decision_tree<float> *dt_s = nullptr;
     decision_forest<double> *df_d = nullptr;
     decision_forest<float> *df_s = nullptr;
+
+    // Clear telemetry, for now it only clears the error stack
+    // vector<>.clear() is linear in cost wrt the amount of elements to erase.
+    void clear(void) {
+        if (err)
+            err->clear();
+    };
 
     da_status get_current_opts(da_options::OptionRegistry **opts);
 };

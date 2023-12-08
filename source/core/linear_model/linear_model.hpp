@@ -277,8 +277,7 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
 
     if (status != da_status_success) {
         opt = nullptr;
-        // this->err is already populated
-        return status;
+        return status; // Error message already loaded
     }
     if (opt->add_vars(ncoef) != da_status_success) {
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -491,14 +490,12 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
     status = validate_options(mid);
     if (status != da_status_success) {
-        // this->err already populated
-        return status;
+        return status; // Error message already loaded
     }
     if (method == "auto") {
         status = choose_method();
         if (status != da_status_success) {
-            // this->err already populated
-            return status;
+            return status; // Error message already loaded
         }
     }
     opts.get("linmod optim method", method, mid);
@@ -608,8 +605,7 @@ template <class T> da_status linear_model<T>::fit_linreg_coord() {
     }
     status = init_opt_method(linmod_method::coord);
     if (status != da_status_success) {
-        // this->err already populated
-        return status;
+        return status; // Error message already loaded
     }
     // Add callback
     if (opt->add_stepfun(stepfun_linreg<T>) != da_status_success) {
@@ -627,7 +623,7 @@ template <class T> da_status linear_model<T>::fit_linreg_coord() {
                           "Optimization step failed, rescale problem or request "
                           "different solver.");
 
-    return status;
+    return status; // Error message already loaded
 }
 
 /* fit a linear regression model with the lbfgs method */
@@ -641,8 +637,7 @@ template <class T> da_status linear_model<T>::fit_linreg_lbfgs() {
     }
     status = init_opt_method(linmod_method::lbfgsb);
     if (status != da_status_success) {
-        // this->err already populated
-        return status;
+        return status; // Error message already loaded
     }
     // Add callbacks
     if (opt->add_objfun(objfun_mse<T>) != da_status_success) {
@@ -665,7 +660,7 @@ template <class T> da_status linear_model<T>::fit_linreg_lbfgs() {
                           "Optimization step failed, rescale problem or request "
                           "different solver.");
 
-    return status;
+    return status; // Error message already loaded
 }
 
 /* fit a logistic regression model with the lbfgs method */
@@ -673,8 +668,7 @@ template <class T> da_status linear_model<T>::fit_logreg_lbfgs() {
     da_status status = da_status_success;
     status = init_opt_method(linmod_method::lbfgsb);
     if (status != da_status_success) {
-        // this->err already populated
-        return status;
+        return status; // Error message already loaded
     }
     try {
         udata = new cb_usrdata_logreg<T>(X, y, nsamples, nfeat, intercept, lambda, alpha,
@@ -698,15 +692,11 @@ template <class T> da_status linear_model<T>::fit_logreg_lbfgs() {
     if (status == da_status_success ||
         this->err->get_severity() != da_errors::severity_type::DA_ERROR) {
         // Solver managed to provide a usable solution
-        // Reset status and continue
-        status = this->err->clear();
+        return this->err->clear(); // Clear warning and return
     } else {
         // Hard error, no usable coef, terminate.
-        // this->err already populated
-        return status;
+        return status; // Error message already loaded
     }
-
-    return status;
 }
 
 /* Compute least squares factorization from QR factorization */

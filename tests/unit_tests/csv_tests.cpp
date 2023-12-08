@@ -1095,7 +1095,7 @@ TEST(csvtest, error_exits) {
     // Check for uninitialized handle
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_options_set_int(store, "CSV whitespace delimiter", 1),
-              da_status_invalid_pointer);
+              da_status_store_not_initialized);
     double *a = nullptr;
     float *a_f = nullptr;
     da_int *a_int = nullptr;

@@ -398,9 +398,9 @@ TEST(OpRegistryWrappers, getset_string) {
     EXPECT_EQ(preload(*opts), da_status_success);
     // String categorical
     EXPECT_EQ(da_options_set_string(nullptr, "string option", sv),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_get_string(nullptr, "string option", str, &n),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_set_string(handle, "string option", sv), da_status_success);
     char value[36];
     EXPECT_EQ(da_options_get_string(handle, "string option", value, &n),
@@ -441,9 +441,9 @@ TEST(OpRegistryWrappers, getset_int) {
     EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
     EXPECT_EQ(preload(*opts), da_status_success);
     EXPECT_EQ(da_options_set_int(nullptr, "integer option", value),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_get_int(nullptr, "integer option", &value),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_set_int(handle, "integer option", value), da_status_success);
     EXPECT_EQ(da_options_get_int(handle, "integer option", &value), da_status_success);
     EXPECT_EQ(5, value);
@@ -470,9 +470,9 @@ TEST(OpRegistryWrappers, getset_double) {
     EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
     EXPECT_EQ(preload(*opts), da_status_success);
     EXPECT_EQ(da_options_set_real_d(nullptr, "double option", value),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_get_real_d(nullptr, "double option", &value),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_set_real_d(handle, "double option", value), da_status_success);
     EXPECT_EQ(da_options_get_real_d(handle, "double option", &value), da_status_success);
     EXPECT_EQ(5.0, value);
@@ -502,9 +502,9 @@ TEST(OpRegistryWrappers, getset_float) {
     EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
     EXPECT_EQ(preload(*opts), da_status_success);
     EXPECT_EQ(da_options_set_real_s(nullptr, "float option", value),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_get_real_s(nullptr, "float option", &value),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_options_set_real_s(handle, "float option", value), da_status_success);
     EXPECT_EQ(da_options_get_real_s(handle, "float option", &value), da_status_success);
     EXPECT_EQ(5.0f, value);

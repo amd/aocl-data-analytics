@@ -317,7 +317,7 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
 
     // Unlock solver
     this->locked = false;
-    return status;
+    return status; // Error message already loaded
 }
 
 } // namespace da_optim

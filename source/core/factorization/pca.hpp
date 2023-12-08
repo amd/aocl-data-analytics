@@ -104,8 +104,6 @@ template <typename T> class da_pca : public basic_handle<T> {
                                 T *X_inv_transform, da_int ldx_inv_transform);
 
     da_status get_result(da_result query, da_int *dim, T *result) {
-        da_status status = da_status_success;
-
         // Don't return anything if PCA has not been computed
         if (!iscomputed) {
             return da_warn(err, da_status_no_data,
@@ -222,7 +220,7 @@ template <typename T> class da_pca : public basic_handle<T> {
             return da_warn(err, da_status_unknown_query,
                            "The requested result could not be found.");
         }
-        return status;
+        return da_status_success;
     };
 
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
@@ -236,9 +234,6 @@ template <typename T> class da_pca : public basic_handle<T> {
 /* Store the user's data matrix in preparation for PCA computation */
 template <typename T>
 da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
-
-    da_status status = da_status_success;
-
     // Check for illegal arguments and function calls
     if (n < 1)
         return da_error(err, da_status_invalid_input,
@@ -289,7 +284,7 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
                 " due to the size (" + std::to_string(n) + " x " + std::to_string(p) +
                 ") of the data array.");
 
-    return status;
+    return da_status_success;
 }
 
 /* Compute the PCA */
@@ -681,11 +676,11 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
                 ". Constraint: ldy_inv_transform >= k_samples.");
 
     if (X == nullptr)
-        return da_error(err, da_status_invalid_pointer, "The array Y is null.");
+        return da_error(err, da_status_invalid_pointer, "The array X is null.");
 
     if (X_inv_transform == nullptr)
         return da_error(err, da_status_invalid_pointer,
-                        "The array Y_inv_transform is null.");
+                        "The array X_inv_transform is null.");
 
     // Compute X * VT and store
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X, ldx,

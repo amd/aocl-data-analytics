@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -1286,87 +1286,98 @@ TEST(dataStore, nullStore) {
     double d_block = 1.0;
     float s_block = 1.0;
     uint8_t ui_block = 1;
-    EXPECT_EQ(da_data_hconcat(&store, &store1), da_status_invalid_input);
+    EXPECT_EQ(da_data_hconcat(&store, &store1), da_status_store_not_initialized);
 
     // load cols/rows
     EXPECT_EQ(da_data_load_col_int(store, 1, 1, &int_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_col_str(store, 1, 1, &str_block, row_major),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_col_real_d(store, 1, 1, &d_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_col_real_s(store, 1, 1, &s_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_col_uint8(store, 1, 1, &ui_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_row_int(store, 1, 1, &int_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_row_str(store, 1, 1, &str_block, row_major),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_row_real_d(store, 1, 1, &d_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_row_real_s(store, 1, 1, &s_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_load_row_uint8(store, 1, 1, &ui_block, row_major, false),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
 
     // load CSV
-    EXPECT_EQ(da_data_load_from_csv(store, "path/to/file"), da_status_invalid_input);
+    EXPECT_EQ(da_data_load_from_csv(store, "path/to/file"),
+              da_status_store_not_initialized);
 
     // selection
-    EXPECT_EQ(da_data_select_columns(store, "A", 1, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_select_rows(store, "A", 1, 1), da_status_invalid_input);
-    EXPECT_EQ(da_data_select_non_missing(store, "A", 0), da_status_invalid_input);
-    EXPECT_EQ(da_data_select_slice(store, "A", 1, 1, 1, 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_columns(store, "A", 1, 1), da_status_store_not_initialized);
+    EXPECT_EQ(da_data_select_rows(store, "A", 1, 1), da_status_store_not_initialized);
+    EXPECT_EQ(da_data_select_non_missing(store, "A", 0), da_status_store_not_initialized);
+    EXPECT_EQ(da_data_select_slice(store, "A", 1, 1, 1, 1),
+              da_status_store_not_initialized);
 
     // extract selection
     EXPECT_EQ(da_data_extract_selection_int(store, "A", &int_block, 1),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_extract_selection_real_d(store, "A", &d_block, 1),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_extract_selection_real_s(store, "A", &s_block, 1),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_extract_selection_uint8(store, "A", &uint_block, 1),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
 
     // Extract columns
     EXPECT_EQ(da_data_extract_column_int(store, 0, 1, &int_block),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_extract_column_real_s(store, 0, 1, &s_block),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_extract_column_real_d(store, 0, 1, &d_block),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     EXPECT_EQ(da_data_extract_column_uint8(store, 0, 1, &uint_block),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
     char *cstr_block = nullptr;
     EXPECT_EQ(da_data_extract_column_str(store, 0, 1, &cstr_block),
-              da_status_invalid_input);
+              da_status_store_not_initialized);
 
     // setters/getters
     da_int ielem;
     double delem;
     float selem;
     uint8_t uielem;
-    EXPECT_EQ(da_data_get_n_rows(store, &ielem), da_status_invalid_input);
-    EXPECT_EQ(da_data_get_n_cols(store, &ielem), da_status_invalid_input);
-    EXPECT_EQ(da_data_get_element_int(store, 1, 1, &ielem), da_status_invalid_input);
-    EXPECT_EQ(da_data_get_element_real_d(store, 1, 1, &delem), da_status_invalid_input);
-    EXPECT_EQ(da_data_get_element_real_s(store, 1, 1, &selem), da_status_invalid_input);
-    EXPECT_EQ(da_data_get_element_uint8(store, 1, 1, &uielem), da_status_invalid_input);
-    EXPECT_EQ(da_data_set_element_int(store, 1, 1, ielem), da_status_invalid_input);
-    EXPECT_EQ(da_data_set_element_real_d(store, 1, 1, delem), da_status_invalid_input);
-    EXPECT_EQ(da_data_set_element_real_s(store, 1, 1, selem), da_status_invalid_input);
-    EXPECT_EQ(da_data_set_element_uint8(store, 1, 1, uielem), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_n_rows(store, &ielem), da_status_store_not_initialized);
+    EXPECT_EQ(da_data_get_n_cols(store, &ielem), da_status_store_not_initialized);
+    EXPECT_EQ(da_data_get_element_int(store, 1, 1, &ielem),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_get_element_real_d(store, 1, 1, &delem),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_get_element_real_s(store, 1, 1, &selem),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_get_element_uint8(store, 1, 1, &uielem),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_set_element_int(store, 1, 1, ielem),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_set_element_real_d(store, 1, 1, delem),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_set_element_real_s(store, 1, 1, selem),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_set_element_uint8(store, 1, 1, uielem),
+              da_status_store_not_initialized);
 
     // label
-    EXPECT_EQ(da_data_label_column(store, "A", 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_label_column(store, "A", 1), da_status_store_not_initialized);
     da_int col_idx = 0;
-    EXPECT_EQ(da_data_get_col_idx(store, "A", &col_idx), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_col_idx(store, "A", &col_idx), da_status_store_not_initialized);
     da_int label_sz = 2;
     char label[2] = "A";
-    EXPECT_EQ(da_data_get_col_label(store, 0, &label_sz, label), da_status_invalid_input);
+    EXPECT_EQ(da_data_get_col_label(store, 0, &label_sz, label),
+              da_status_store_not_initialized);
 
-    EXPECT_EQ(da_data_print_options(store), da_status_invalid_input);
+    EXPECT_EQ(da_data_print_options(store), da_status_store_not_initialized);
 }
 
 TEST(dataStore, extractSelPub) {

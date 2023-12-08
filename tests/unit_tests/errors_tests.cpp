@@ -24,7 +24,9 @@
 // Testing the da_error stack framework
 
 #include "aoclda.h"
+#include "da_datastore.hpp"
 #include "da_error.hpp"
+#include "da_handle.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
@@ -138,6 +140,35 @@ TEST(ErrorStack, PublicChecks) {
     EXPECT_EQ(da_datastore_print_error_message(store), da_status_success);
 
     da_handle_destroy(&handle);
+    da_datastore_destroy(&store);
+}
+
+TEST(ErrorStack, HandleReset) {
+    // Check for handle reset at public API entry point
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_type::da_handle_linmod),
+              da_status_success);
+    // Register an error
+    EXPECT_EQ(da_options_set_int(handle, "Invalid Option", 0),
+              da_status_option_not_found);
+    da_handle_print_error_message(handle);
+    EXPECT_NE(handle->err->get_status(), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "Print Level", 1), da_status_success);
+    EXPECT_EQ(handle->err->get_status(), da_status_success);
+    da_handle_destroy(&handle);
+}
+
+TEST(ErrorStack, StoreReset) {
+    // Check for store reset at public API entry point
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+    // Register an error
+    EXPECT_EQ(da_datastore_options_set_int(store, "Invalid Option", 0),
+              da_status_option_not_found);
+    EXPECT_NE(store->err->get_status(), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+              da_status_success);
+    EXPECT_EQ(store->err->get_status(), da_status_success);
     da_datastore_destroy(&store);
 }
 

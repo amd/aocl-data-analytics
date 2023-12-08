@@ -230,7 +230,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 da_errors::da_error_t &err) {
 
     if (!stepfun)
-        return da_error(&err, da_status_invalid_pointer, // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Solver requires a valid pointer to the step function "
                         "call-back.");
     T bigbnd;
@@ -340,7 +340,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     // Check and add bound constraints
     status = bc.add(n, l, u, bigbnd, err);
     if (status != da_status_success)
-        return status;
+        return status; // Error message already loaded
 
     // info
     info.resize(da_optim::info_number);
@@ -526,7 +526,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             break;
         }
     }
-    return status;
+    return status; // Error message already loaded
 }
 
 /* Reset the ledger stored in the work array

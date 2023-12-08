@@ -39,31 +39,33 @@ namespace {
 TEST(linmod, badHandle) {
     da_handle handle = nullptr;
     EXPECT_EQ(da_linmod_select_model<double>(handle, linmod_model_mse),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_linmod_select_model<float>(handle, linmod_model_logistic),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
 
     da_int n = 1, m = 1;
     float *af = 0, *bf = 0;
     double *ad = 0, *bd = 0;
-    EXPECT_EQ(da_linreg_define_features(handle, m, n, af, bf), da_status_invalid_pointer);
-    EXPECT_EQ(da_linreg_define_features(handle, m, n, ad, bd), da_status_invalid_pointer);
+    EXPECT_EQ(da_linreg_define_features(handle, m, n, af, bf),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_linreg_define_features(handle, m, n, ad, bd),
+              da_status_handle_not_initialized);
 
-    EXPECT_EQ(da_linmod_fit_d(handle), da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_fit_s(handle), da_status_invalid_pointer);
+    EXPECT_EQ(da_linmod_fit_d(handle), da_status_handle_not_initialized);
+    EXPECT_EQ(da_linmod_fit_s(handle), da_status_handle_not_initialized);
 
     da_int nc = 1;
     float *xf = 0;
     double *xd = 0;
-    EXPECT_EQ(da_linmod_get_coef(handle, &nc, xf), da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_get_coef(handle, &nc, xd), da_status_invalid_pointer);
+    EXPECT_EQ(da_linmod_get_coef(handle, &nc, xf), da_status_handle_not_initialized);
+    EXPECT_EQ(da_linmod_get_coef(handle, &nc, xd), da_status_handle_not_initialized);
 
     float *predf = 0;
     double *predd = 0;
     EXPECT_EQ(da_linmod_evaluate_model(handle, m, n, xf, predf),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_linmod_evaluate_model(handle, m, n, xd, predd),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
 }
 
 TEST(linmod, wrongType) {
@@ -262,11 +264,11 @@ TEST(linmod, GetResultNegative) {
 
     // handle is null
     EXPECT_EQ(da_handle_get_result_d(nullptr, da_result::da_rinfo, &dim, dv),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_handle_get_result_s(nullptr, da_result::da_rinfo, &dim, sv),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
     EXPECT_EQ(da_handle_get_result_int(nullptr, da_result::da_rinfo, &dim, iv),
-              da_status_invalid_pointer);
+              da_status_handle_not_initialized);
 
     // handle valid but not initialized with any solver
     EXPECT_EQ(da_handle_init_d(&handle_d, da_handle_type::da_handle_uninitialized),

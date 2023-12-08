@@ -33,85 +33,110 @@ da_status da_options_set_int(da_handle handle, const char *option, da_int value)
     da_status status;
 
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
 
     status = opts->set(option, value, da_options::user);
-
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_options_set_string(da_handle handle, const char *option, const char *value) {
     da_status status;
 
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
 
     status = opts->set(option, value, da_options::user);
-
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_options_set_real_s(da_handle handle, const char *option, float value) {
     da_status status;
 
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+
     if (handle->precision != da_single)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "handle was not initialized with single precision floating point type.");
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
 
     status = opts->set(option, value, da_options::user);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_options_set_real_d(da_handle handle, const char *option, double value) {
     da_status status;
 
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+
     if (handle->precision != da_double)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "handle was not initialized with double precision floating point type.");
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
 
     status = opts->set(option, value, da_options::user);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_options_get_int(da_handle handle, const char *option, da_int *value) {
     da_status status;
 
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
 
     status = opts->get(option, *value);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
@@ -119,12 +144,14 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     da_status status;
 
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
+
     std::string svalue;
     status = opts->get(option, svalue);
     // Need to make sure *value is big enough...
@@ -140,58 +167,74 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
         }
         svalue.copy(value, n);
         value[n] = '\0';
+        return da_status_success;
+    } else {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
     }
-    return status;
+}
+
+da_status da_options_get_real_s(da_handle handle, const char *option, float *value) {
+    da_status status;
+
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+
+    if (handle->precision != da_single)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "handle was not initialized with single precision floating point type.");
+
+    da_options::OptionRegistry *opts;
+    status = handle->get_current_opts(&opts);
+    if (status != da_status_success)
+        return status; // Error message already loaded
+
+    status = opts->get(option, *value);
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_options_get_real_d(da_handle handle, const char *option, double *value) {
     da_status status;
 
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+
     if (handle->precision != da_double)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "handle was not initialized with double precision floating point type.");
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
 
     status = opts->get(option, *value);
-    return status;
-}
-da_status da_options_get_real_s(da_handle handle, const char *option, float *value) {
-    da_status status;
-
-    if (!handle)
-        return da_status_invalid_pointer;
-    if (handle->precision != da_single)
-        return da_status_wrong_type;
-
-    da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
-    if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
-
-    status = opts->get(option, *value);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_options_print(da_handle handle) {
-    da_status status;
-
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
 
     da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
+    da_status status = handle->get_current_opts(&opts);
     if (status != da_status_success)
-        // invalid pointer or uninitialized handle
-        return status;
+        return status; // Error message already loaded
 
     opts->print_details();
+    handle->clear(); // clean up handle logs
     return da_status_success;
 }
 
@@ -200,11 +243,15 @@ da_status da_datastore_options_set_int(da_datastore store, const char *option,
     da_status status;
 
     if (!store)
-        return da_status_invalid_pointer;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
-
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_datastore_options_set_string(da_datastore store, const char *option,
@@ -212,11 +259,15 @@ da_status da_datastore_options_set_string(da_datastore store, const char *option
     da_status status;
 
     if (!store)
-        return da_status_invalid_pointer;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
-
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_datastore_options_set_real_s(da_datastore store, const char *option,
@@ -224,10 +275,15 @@ da_status da_datastore_options_set_real_s(da_datastore store, const char *option
     da_status status;
 
     if (!store)
-        return da_status_invalid_pointer;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_datastore_options_set_real_d(da_datastore store, const char *option,
@@ -235,10 +291,15 @@ da_status da_datastore_options_set_real_d(da_datastore store, const char *option
     da_status status;
 
     if (!store)
-        return da_status_invalid_pointer;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_datastore_options_get_int(da_datastore store, const char *option,
@@ -246,19 +307,24 @@ da_status da_datastore_options_get_int(da_datastore store, const char *option,
     da_status status;
 
     if (!store)
-        return da_status_invalid_pointer;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
 
     status = store->opts->get(option, *value);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_datastore_options_get_string(da_datastore store, const char *option,
                                           char *value, da_int *lvalue) {
-
     da_status status;
 
     if (!store)
-        return da_status_invalid_pointer;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
 
     std::string svalue;
     status = store->opts->get(option, svalue);
@@ -275,8 +341,27 @@ da_status da_datastore_options_get_string(da_datastore store, const char *option
         }
         svalue.copy(value, n);
         value[n] = '\0';
+        return da_status_success;
+    } else {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
     }
-    return status;
+}
+
+da_status da_datastore_options_get_real_s(da_datastore store, const char *option,
+                                          float *value) {
+    da_status status;
+
+    if (!store)
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
+
+    status = store->opts->get(option, *value);
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_datastore_options_get_real_d(da_datastore store, const char *option,
@@ -284,26 +369,25 @@ da_status da_datastore_options_get_real_d(da_datastore store, const char *option
     da_status status;
 
     if (!store)
-        return da_status_invalid_pointer;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
 
     status = store->opts->get(option, *value);
-    return status;
-}
-da_status da_datastore_options_get_real_s(da_datastore store, const char *option,
-                                          float *value) {
-    da_status status;
-
-    if (!store)
-        return da_status_invalid_pointer;
-
-    status = store->opts->get(option, *value);
-    return status;
+    if (status != da_status_success) {
+        // Construct error based on status & opts->errmsg string
+        return da_error(store->err, status, store->opts->errmsg);
+    }
+    return da_status_success;
 }
 
 da_status da_datastore_options_print(da_datastore store) {
     if (!store)
-        return da_status_invalid_pointer;
-
-    store->opts->print_details();
-    return da_status_success;
+        return da_status_store_not_initialized;
+    if (store->opts) {
+        store->opts->print_details();
+        store->clear(); // clean up store logs
+        return da_status_success;
+    } else {
+        return da_error(store->err, da_status_internal_error, "store is invalid?");
+    }
 }

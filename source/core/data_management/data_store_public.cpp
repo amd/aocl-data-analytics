@@ -30,46 +30,37 @@
 #include <vector>
 
 da_status da_datastore_init(da_datastore *store) {
-    da_status exit_status = da_status_success;
 
-    // exclude memory checks from coverage
+    // Exclude memory checks from coverage
     // LCOV_EXCL_START
     try {
         *store = new _da_datastore;
-    } catch (std::bad_alloc &) {
-        exit_status = da_status_memory_error;
-    }
-    try {
         (*store)->err = new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     }
     try {
         (*store)->store = new da_data::data_store(*(*store)->err);
-    } catch (std::bad_alloc &) {
-        return da_status_memory_error;
-    }
-    try {
         (*store)->opts = new da_options::OptionRegistry();
-    } catch (std::bad_alloc &) {
-        return da_status_memory_error;
-    }
-    try {
         (*store)->csv_parser = new da_csv::csv_reader(*(*store)->opts, *(*store)->err);
     } catch (std::bad_alloc &) {
-        return da_status_memory_error;
+        return da_error((*store)->err, da_status_memory_error, "Memory allocation error");
     }
     // LCOV_EXCL_STOP
 
-    exit_status = da_csv::register_csv_options(*(*store)->opts);
-
-    return exit_status;
+    da_status status = da_csv::register_csv_options(*(*store)->opts);
+    return status; // Error message already loaded
 }
 
 da_status da_datastore_print_error_message(da_datastore store) {
+    // check to see if we have a valid store
     if (store) {
-        store->err->print();
-        return da_status_success;
+        if (store->err) {
+            store->err->print();
+            return da_status_success;
+        } else {
+            return da_status_internal_error;
+        }
     }
     return da_status_invalid_input;
 }
@@ -94,7 +85,7 @@ void da_datastore_destroy(da_datastore *store) {
 
 da_status da_data_print_options(da_datastore store) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
 
     store->opts->print_options();
 
@@ -102,17 +93,22 @@ da_status da_data_print_options(da_datastore store) {
 }
 
 da_status da_data_hconcat(da_datastore *store1, da_datastore *store2) {
+    da_status status;
     if (!store1 || !store2 || !(*store1) || !(*store2))
-        return da_status_invalid_input;
-    if ((*store1)->store == nullptr || (*store2)->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_status_store_not_initialized;
+    if ((*store1)->store == nullptr || (*store2)->store == nullptr) {
+        da_error((*store1)->err, da_status_internal_error,          // LCOV_EXCL_LINE
+                 "store1 or store2 seems to be invalid?");          // LCOV_EXCL_LINE
+        status = da_error((*store2)->err, da_status_internal_error, // LCOV_EXCL_LINE
+                          "store1 or store2 seems to be invalid?"); // LCOV_EXCL_LINE
+        return status; // Error message already loaded
+    }
 
-    da_status exit_status;
-    exit_status = (*store1)->store->horizontal_concat(*(*store2)->store);
-    if (exit_status == da_status_success) {
+    status = (*store1)->store->horizontal_concat(*(*store2)->store);
+    if (status == da_status_success) {
         da_datastore_destroy(store2);
     }
-    return exit_status;
+    return status; // Error message already loaded
 }
 
 /* ********************************** Load routines ********************************** */
@@ -120,9 +116,11 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2) {
 da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
                                da_int *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
 
@@ -132,9 +130,11 @@ da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
 da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
                                da_int *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
 
@@ -145,11 +145,13 @@ da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
 da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **block, da_ordering order) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     // FIXME
     // The current version  is copying the data TWICE.
@@ -160,9 +162,11 @@ da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
 da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
                                const char **block, da_ordering order) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
 
@@ -176,11 +180,13 @@ da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
 da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
                                   double *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
     return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
@@ -188,11 +194,13 @@ da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_co
 da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
                                   double *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
     return store->store->concatenate_rows(n_rows, n_cols, block, order, cpy);
@@ -201,11 +209,13 @@ da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_co
 da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_cols,
                                   float *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
     return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
@@ -213,11 +223,13 @@ da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_co
 da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_cols,
                                   float *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
     return store->store->concatenate_rows(n_rows, n_cols, block, order, cpy);
@@ -226,11 +238,13 @@ da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_co
 da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_cols,
                                  uint8_t *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
     return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
@@ -238,11 +252,13 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
 da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_cols,
                                  uint8_t *block, da_ordering order, da_int copy_data) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!block)
         return da_error(store->err, da_status_invalid_input, "block has to be defined");
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     bool cpy = copy_data != 0;
     return store->store->concatenate_rows(n_rows, n_cols, block, order, cpy);
@@ -253,9 +269,11 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
 da_status da_data_select_columns(da_datastore store, const char *key, da_int lbound,
                                  da_int ubound) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
@@ -271,9 +289,11 @@ da_status da_data_select_columns(da_datastore store, const char *key, da_int lbo
 da_status da_data_select_rows(da_datastore store, const char *key, da_int lbound,
                               da_int ubound) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
@@ -289,9 +309,11 @@ da_status da_data_select_rows(da_datastore store, const char *key, da_int lbound
 da_status da_data_select_slice(da_datastore store, const char *key, da_int row_lbound,
                                da_int row_ubound, da_int col_lbound, da_int col_ubound) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
@@ -308,9 +330,11 @@ da_status da_data_select_slice(da_datastore store, const char *key, da_int row_l
 da_status da_data_select_non_missing(da_datastore store, const char *key,
                                      uint8_t full_rows) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
 
@@ -330,9 +354,11 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
 da_status da_data_extract_column_int(da_datastore store, da_int idx, da_int dim,
                                      da_int *col) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (col == nullptr)
         return da_error(store->err, da_status_invalid_input, "col has to be defined");
 
@@ -341,9 +367,11 @@ da_status da_data_extract_column_int(da_datastore store, da_int idx, da_int dim,
 da_status da_data_extract_column_real_s(da_datastore store, da_int idx, da_int dim,
                                         float *col) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (col == nullptr)
         return da_error(store->err, da_status_invalid_input, "col has to be defined");
 
@@ -353,9 +381,11 @@ da_status da_data_extract_column_real_s(da_datastore store, da_int idx, da_int d
 da_status da_data_extract_column_real_d(da_datastore store, da_int idx, da_int dim,
                                         double *col) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (col == nullptr)
         return da_error(store->err, da_status_invalid_input, "col has to be defined");
 
@@ -364,9 +394,11 @@ da_status da_data_extract_column_real_d(da_datastore store, da_int idx, da_int d
 da_status da_data_extract_column_uint8(da_datastore store, da_int idx, da_int dim,
                                        uint8_t *col) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (col == nullptr)
         return da_error(store->err, da_status_invalid_input, "col has to be defined");
 
@@ -375,9 +407,11 @@ da_status da_data_extract_column_uint8(da_datastore store, da_int idx, da_int di
 da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
                                      char **col) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (col == nullptr)
         return da_error(store->err, da_status_invalid_input, "col has to be defined");
 
@@ -389,14 +423,16 @@ da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
 da_status da_data_extract_selection_int(da_datastore store, const char *key, da_int *data,
                                         da_int lddata) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
     if (!data)
         return da_error(store->err, da_status_invalid_input, "data has to be defined");
 
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
     return store->store->extract_selection(key, lddata, data);
@@ -404,14 +440,16 @@ da_status da_data_extract_selection_int(da_datastore store, const char *key, da_
 da_status da_data_extract_selection_real_d(da_datastore store, const char *key,
                                            double *data, da_int lddata) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
     if (!data)
         return da_error(store->err, da_status_invalid_input, "data has to be defined");
 
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
     return store->store->extract_selection(key, lddata, data);
@@ -419,14 +457,16 @@ da_status da_data_extract_selection_real_d(da_datastore store, const char *key,
 da_status da_data_extract_selection_real_s(da_datastore store, const char *key,
                                            float *data, da_int lddata) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
     if (!data)
         return da_error(store->err, da_status_invalid_input, "data has to be defined");
 
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
     return store->store->extract_selection(key, lddata, data);
@@ -434,14 +474,16 @@ da_status da_data_extract_selection_real_s(da_datastore store, const char *key,
 da_status da_data_extract_selection_uint8(da_datastore store, const char *key,
                                           uint8_t *data, da_int lddata) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!key)
         return da_error(store->err, da_status_invalid_input, "key has to be defined");
     if (!data)
         return da_error(store->err, da_status_invalid_input, "data has to be defined");
 
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
     return store->store->extract_selection(key, lddata, data);
@@ -451,26 +493,30 @@ da_status da_data_extract_selection_uint8(da_datastore store, const char *key,
 /* *********************************************************************************** */
 da_status da_data_label_column(da_datastore store, const char *label, da_int col_idx) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!label)
         return da_error(store->err, da_status_invalid_input, "label has to be defined");
 
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string label_str(label);
     return store->store->label_column(label_str, col_idx);
 }
 da_status da_data_get_col_idx(da_datastore store, const char *label, da_int *col_idx) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!label)
         return da_error(store->err, da_status_invalid_input, "label has to be defined");
     if (!col_idx)
         return da_error(store->err, da_status_invalid_input, "col_idx has to be defined");
 
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string label_str(label);
     return store->store->get_idx_from_label(label_str, *col_idx);
@@ -478,41 +524,46 @@ da_status da_data_get_col_idx(da_datastore store, const char *label, da_int *col
 da_status da_data_get_col_label(da_datastore store, da_int col_idx, da_int *label_sz,
                                 char *label) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (!label)
         return da_error(store->err, da_status_invalid_input, "label has to be defined");
     if (!label_sz)
         return da_error(store->err, da_status_invalid_input,
                         "label_sz has to be defined");
-
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string label_str;
     da_status status;
     status = store->store->get_col_label(col_idx, label_str);
+    if (status != da_status_success) {
+        return status; // Error message already loaded
+    }
     if (*label_sz < label_str.size() + 1) {
         *label_sz = (da_int)label_str.size() + 1;
-        std::string buff = "label_sz was set to ";
-        buff += std::to_string(*label_sz);
-        buff += " but the output label is of size ";
-        buff += std::to_string(label_str.size() + 1);
+        std::string buff = "label_sz was set to " + std::to_string(*label_sz) +
+                           " but the output label is of size " +
+                           std::to_string(label_str.size() + 1);
         return da_error(store->err, da_status_invalid_input, buff);
     }
     for (da_int i = 0; i < label_str.size(); i++)
         label[i] = label_str[i];
     label[label_str.size()] = '\0';
 
-    return status;
+    return da_status_success;
 }
 /* **************************************** csv ************************************** */
 /* *********************************************************************************** */
 da_status da_data_load_from_csv(da_datastore store, const char *filename) {
 
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     if (filename == nullptr)
         return da_error(store->err, da_status_invalid_input,
@@ -526,9 +577,11 @@ da_status da_data_load_from_csv(da_datastore store, const char *filename) {
 da_status da_data_get_n_rows(da_datastore store, da_int *n_rows) {
 
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (n_rows == nullptr)
         return da_error(store->err, da_status_invalid_input, "n_rows has to be defined");
 
@@ -538,9 +591,11 @@ da_status da_data_get_n_rows(da_datastore store, da_int *n_rows) {
 da_status da_data_get_n_cols(da_datastore store, da_int *n_cols) {
 
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (n_cols == nullptr)
         return da_error(store->err, da_status_invalid_input, "n_cols has to be defined");
 
@@ -549,9 +604,11 @@ da_status da_data_get_n_cols(da_datastore store, da_int *n_cols) {
 }
 da_status da_data_get_element_int(da_datastore store, da_int i, da_int j, da_int *elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (elem == nullptr)
         return da_error(store->err, da_status_invalid_input, "elem has to be defined");
 
@@ -560,9 +617,11 @@ da_status da_data_get_element_int(da_datastore store, da_int i, da_int j, da_int
 da_status da_data_get_element_real_d(da_datastore store, da_int i, da_int j,
                                      double *elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (elem == nullptr)
         return da_error(store->err, da_status_invalid_input, "elem has to be defined");
 
@@ -571,9 +630,11 @@ da_status da_data_get_element_real_d(da_datastore store, da_int i, da_int j,
 da_status da_data_get_element_real_s(da_datastore store, da_int i, da_int j,
                                      float *elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (elem == nullptr)
         return da_error(store->err, da_status_invalid_input, "elem has to be defined");
 
@@ -582,9 +643,11 @@ da_status da_data_get_element_real_s(da_datastore store, da_int i, da_int j,
 da_status da_data_get_element_uint8(da_datastore store, da_int i, da_int j,
                                     uint8_t *elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
     if (elem == nullptr)
         return da_error(store->err, da_status_invalid_input, "elem has to be defined");
 
@@ -592,35 +655,43 @@ da_status da_data_get_element_uint8(da_datastore store, da_int i, da_int j,
 }
 da_status da_data_set_element_int(da_datastore store, da_int i, da_int j, da_int elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     return store->store->set_element(i, j, elem);
 }
 da_status da_data_set_element_real_d(da_datastore store, da_int i, da_int j,
                                      double elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     return store->store->set_element(i, j, elem);
 }
 da_status da_data_set_element_real_s(da_datastore store, da_int i, da_int j, float elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     return store->store->set_element(i, j, elem);
 }
 da_status da_data_set_element_uint8(da_datastore store, da_int i, da_int j,
                                     uint8_t elem) {
     if (!store)
-        return da_status_invalid_input;
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
     if (store->store == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     return store->store->set_element(i, j, elem);
 }

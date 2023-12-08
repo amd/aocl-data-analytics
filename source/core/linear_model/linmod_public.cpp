@@ -31,22 +31,32 @@
 
 da_status da_linmod_select_model_d(da_handle handle, linmod_model mod) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_double)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_d->select_model(mod);
 }
 
 da_status da_linmod_select_model_s(da_handle handle, linmod_model mod) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_single)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_s->select_model(mod);
 }
@@ -54,11 +64,16 @@ da_status da_linmod_select_model_s(da_handle handle, linmod_model mod) {
 da_status da_linmod_define_features_d(da_handle handle, da_int nsamples, da_int nfeat,
                                       double *A, double *b) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_double)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_d->define_features(nfeat, nsamples, A, b);
 }
@@ -66,22 +81,32 @@ da_status da_linmod_define_features_d(da_handle handle, da_int nsamples, da_int 
 da_status da_linmod_define_features_s(da_handle handle, da_int nsamples, da_int nfeat,
                                       float *A, float *b) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_single)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_s->define_features(nfeat, nsamples, A, b);
 }
 
 da_status da_linmod_fit_start_d(da_handle handle, da_int ncoefs, double *coefs) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_double)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_d->fit(ncoefs, coefs);
 }
@@ -93,11 +118,16 @@ da_status da_linmod_fit_d(da_handle handle) {
 
 da_status da_linmod_fit_start_s(da_handle handle, da_int ncoefs, float *coefs) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_single)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_s->fit(ncoefs, coefs);
 }
@@ -109,11 +139,16 @@ da_status da_linmod_fit_s(da_handle handle) {
 da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int nfeat,
                                      double *X, double *predictions) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_double)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
     if (handle->linreg_d == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_d->evaluate_model(nfeat, nsamples, X, predictions);
 }
@@ -121,11 +156,16 @@ da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int n
 da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int nfeat,
                                      float *X, float *predictions) {
     if (!handle)
-        return da_status_invalid_pointer;
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
     if (handle->precision != da_single)
-        return da_status_wrong_type;
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
     if (handle->linreg_s == nullptr)
-        return da_status_invalid_pointer; // LCOV_EXCL_LINE
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_linmod or "
+                        "handle is invalid.");
 
     return handle->linreg_s->evaluate_model(nfeat, nsamples, X, predictions);
 }

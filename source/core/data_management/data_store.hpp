@@ -510,7 +510,6 @@ class data_store {
         da_status status = da_status_success;
         bool found;
         da_int lb, ub, idx_start;
-        bool cleanup = false;
         std::shared_ptr<block_id> new_block = nullptr;
 
         if (n <= 0) {
@@ -518,6 +517,7 @@ class data_store {
             status =
                 this->concatenate_columns(mr, nr, data, order, copy_data, false, C_data);
         } else {
+            bool cleanup = false;
             idx_start = 0;
             if (missing_block)
                 idx_start = idx_start_missing;
@@ -555,7 +555,9 @@ class data_store {
                     break;
                 if (btype != current_block->b->btype || ub > idx_start + nr - 1) {
                     cleanup = true;
-                    status = da_status_invalid_input;
+                    status =
+                        da_error(err, da_status_invalid_input,
+                                 "cannot concatenate row(s), column types do not match.");
                     break;
                 }
                 while (current_block->next != nullptr)
@@ -572,30 +574,28 @@ class data_store {
                     missing_block = false;
                     idx_start_missing = 0;
                 }
-            }
-        }
-
-        if (cleanup) {
-            // error occured, clear the 'next' pointers from the existing blocks
-            ub = idx_start - 1;
-            std::shared_ptr<block_id> current_block;
-            while (ub < idx_start + nr - 1) {
-                auto it = cmap.find(ub + 1);
-                if (it == cmap.end())
-                    break;
-                current_block = it->second;
-                while (current_block->next != nullptr) {
-                    if (current_block->next == new_block)
-                        current_block->next = nullptr;
-                    else
-                        current_block = current_block->next;
+            } else {
+                // error occured, clear the 'next' pointers from the existing blocks
+                ub = idx_start - 1;
+                std::shared_ptr<block_id> current_block;
+                while (ub < idx_start + nr - 1) {
+                    auto it = cmap.find(ub + 1);
+                    if (it == cmap.end())
+                        break;
+                    current_block = it->second;
+                    while (current_block->next != nullptr) {
+                        if (current_block->next == new_block)
+                            current_block->next = nullptr;
+                        else
+                            current_block = current_block->next;
+                    }
+                    ub = it->first.second;
+                    ++it;
                 }
-                ub = it->first.second;
-                ++it;
+                m -= mr;
             }
-            m -= mr;
         }
-        return status;
+        return status; // Error message already loaded
     }
 
     /* concat the current datastore with the store passed on the interface horizontally
@@ -1002,7 +1002,12 @@ class data_store {
 
         // Check ALL the rows
         std::vector<bool> valid_rows;
-        valid_rows.resize(m, true);
+        try {
+            valid_rows.resize(m, true);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");  // LCOV_EXCL_LINE
+        }
 
         // depending on the parameter full_rows, either all the columns are checked
         // for missing data or only the columns in the selection 'key'
