@@ -35,7 +35,7 @@ release = '4.2.1'
 
 
 # -- General configuration ---------------------------------------------------
-extensions = ['sphinxcontrib.bibtex', 'breathe']
+extensions = ['sphinxcontrib.bibtex', 'breathe', 'sphinx_collapse']
 bibtex_bibfiles = ['refs.bib']
 bibtex_reference_style = 'author_year'
 breathe_default_project = 'aocl-da'

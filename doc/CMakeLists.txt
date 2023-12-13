@@ -65,6 +65,16 @@ if(NOT ${EXIT_CODE} EQUAL 0)
       "Python3 package sphinxcontrib.bibtex is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install sphinxcontrib.bibtex"
   )
 endif()
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c "import sphinx_collapse"
+  RESULT_VARIABLE EXIT_CODE
+  OUTPUT_QUIET)
+if(NOT ${EXIT_CODE} EQUAL 0)
+  message(
+    FATAL_ERROR
+      "Python3 package sphinx_collapse is required to build the documentation\n   Use: ${Python3_EXECUTABLE} -m pip install sphinx_collapse"
+  )
+endif()
 
 message(STATUS "Building AOCL-DA documentation version ${AOCLDA_VERSION}")
 

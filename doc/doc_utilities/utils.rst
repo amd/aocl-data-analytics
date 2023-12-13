@@ -58,6 +58,34 @@ This page is for internal use only. The main documentation page can be found :re
 
    The presence of the requirements is checked in the build system.
 
+   It is also possible to add and pretty-print an entire file using
+
+   .. code-block::
+
+      .. literalinclude:: <rel/abs/file.cpp>
+         :language: C++
+         :linenos:
+
+   Most extensions are understood: C, Python, etc.
+
+   If the file is too long or ancillary, then in can be displayed in a collapsed form (html only),
+   for this add the following
+
+   .. code-block::
+
+        .. collapse:: AOCL-DA Sphinx Configuration.
+
+            .. literalinclude:: ../conf.py
+                :language: Python
+                :linenos:
+
+   .. collapse:: AOCL-DA Sphinx Configuration.
+
+      .. literalinclude:: ../conf.py
+          :language: Python
+          :linenos:
+
+
    **How to build documentation via CMake**
 
    Build the doc target: it will build both the html and the pdf documentation
