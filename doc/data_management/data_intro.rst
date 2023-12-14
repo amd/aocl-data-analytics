@@ -136,25 +136,26 @@ Various options can be set to customize the behavior of the data loading functio
 
 .. csv-table:: CSV file reading options
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
+   :escape: ~
 
-   "CSV use header row", "da_int", ":math:`i = 0`", "Whether or not to interpret the first row as a header", ":math:`0 \le i \le 1`"
-   "CSV warn for missing data", "da_int", ":math:`i = 0`", "If set to 0, return error if missing data is encountered; if set to, 1 issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used", ":math:`0 \le i \le 1`"
-   "CSV skip footer", "da_int", ":math:`i = 0`", "Whether or not to ignore the last line when reading a CSV file", ":math:`0 \le i \le 1`"
-   "CSV delimiter", "string", ":math:`s =` `','`", "The delimiter used when reading CSV files",
-   "CSV whitespace delimiter", "da_int", ":math:`i = 0`", "Whether or not to use whitespace as the delimiter when reading CSV files", ":math:`0 \le i \le 1`"
-   "CSV decimal", "string", ":math:`s =` `'.'`", "The character used to denote a decimal point in CSV files",
-   "CSV skip initial space", "da_int", ":math:`i = 0`", "Whether or not to ignore initial spaces in CSV file lines", ":math:`0 \le i \le 1`"
-   "CSV line terminator", "string", ":math:`s =` `''`", "The character used to denote line termination in CSV files (leave this empty to use the default)",
-   "CSV row start", "da_int", ":math:`i = 0`", "Ignore the specified number of lines from the top of the CSV file (note that line numbers in CSV files start at 1)", ":math:`0 \le i \le` INT_MAX"
-   "CSV comment", "string", ":math:`s =` `'#'`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line)",
-   "CSV quote character", "string", ":math:`s =` '|doublequote|'", "The character used to denote quotations in CSV files",
-   "CSV scientific notation character", "string", ":math:`s =` `'e'`", "The character used to denote powers of 10 in floating point values in CSV files",
-   "CSV escape character", "string", ":math:`s =` `'l'`", "The escape character in CSV files",
-   "CSV thousands", "string", ":math:`s =` `''`", "The character used to separate thousands when reading numeric values in CSV files",
-   "CSV skip rows", "string", ":math:`s =` `''`", "A comma- or space-separated list of rows to ignore in CSV files",
-   "CSV data storage", "string", ":math:`s =` `'column major'`", "Whether to store data from CSV files in row or column major format", ":math:`s =` `'row major'`, or `'column major'`"
-   "CSV skip empty lines", "da_int", ":math:`i = 0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file)", ":math:`0 \le i \le 1`"
-   "CSV double quote", "da_int", ":math:`i = 0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character", ":math:`0 \le i \le 1`"
+   "csv use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header", ":math:`0 \le i \le 1`"
+   "csv warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to, 1 issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used", ":math:`0 \le i \le 1`"
+   "csv skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file", ":math:`0 \le i \le 1`"
+   "csv delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
+   "csv whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files", ":math:`0 \le i \le 1`"
+   "csv decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files", ""
+   "csv skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines", ":math:`0 \le i \le 1`"
+   "csv line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default)", ""
+   "csv row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the CSV file (note that line numbers in CSV files start at 1)", ":math:`0 \le i`"
+   "csv comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line)", ""
+   "csv quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files", ""
+   "csv scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files", ""
+   "csv escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files", ""
+   "csv thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files", ""
+   "csv skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files", ""
+   "csv data storage", "string", ":math:`s=` `column major`", "Whether to store data from CSV files in row or column major format", ":math:`s=` `column major`, or `row major`."
+   "csv skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file)", ":math:`0 \le i \le 1`"
+   "csv double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character", ":math:`0 \le i \le 1`"
 
 Note that, with the exception of the ``CSV skip rows`` option, only single characters can be used in the string options above.
 

@@ -197,15 +197,15 @@ Various options can be set to customize the linear models by calling one of thes
 .. csv-table:: Linear models options
    :header: "Option name", "Type", "Default", "Description", "Constraints"
 
-   "linmod optim method", "string", ":math:`s =` `'auto'`", "Select the optimization method to use.", "`s = 'auto', 'coord', 'lbfgs' or 'qr'`"
-   "linmod optim progress factor", "real", ":math:`r = \frac{10}{\sqrt{2\epsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.",  ":math:`0 \le r`"
-   "linmod optim convergence tol", "real", ":math:`r = \sqrt{2\epsilon}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
-   "print options", "string", ":math:`s =` `'no'`", "Print options.", ":math:`s =` `'no'`, or `'yes'`."
-   "linmod lambda", "real", ":math:`r = 0`", "Penalty coefficient for the regularization terms :math:`\lambda ( (1-\alpha ) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r`"
-   "linmod alpha", "real", ":math:`r = 0`", "Coefficient of alpha in the regularization terms :math:`\lambda ( (1-\alpha) \ell_2 + \alpha \ell_1 )`", ":math:`0 \le r \le 1`"
-   "linmod optim iteration limit", "da_int", ":math:`i = \inf`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-   "linmod intercept", "da_int", ":math:`i = 0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
-   "print level", "da_int", ":math:`i = 0`", "Set the level of verbosity for the solver", ":math:`0 \le i \le 5`"
+   "linmod optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `coord`, `lbfgs`, `lbfgsb`, or `qr`."
+   "linmod optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
+   "linmod optim convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
+   "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
+   "linmod lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
+   "linmod alpha", "real", ":math:`r=0`", "coefficient of alpha in the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r \le 1`"
+   "linmod optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
+   "linmod intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
+   "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
 
 
 Further Reading

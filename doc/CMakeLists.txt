@@ -141,7 +141,6 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/process.awk
      { if (it==1) { printf \"%3s\" , \"\" } print $0 }
      /^\\.\\.\\ only:: internal/ { it=1 }")
 
-
 add_custom_target(
     gen_options_tables
     COMMAND doc_tests ARGS --gtest_filter=DocOptions*.RST*
@@ -152,6 +151,20 @@ add_custom_target(
     COMMENT "Running unit-test for doc options tables"
     VERBATIM
 )
+
+# Search all the ReSt files for option tables and update them with the
+# latest database (gen_options_tables)
+file(GLOB_RECURSE REST_FILES
+  "${PROJECT_SOURCE_DIR}/*.rst"
+)
+add_custom_target(
+    update_options_tables
+    WORKING_DIRECTORY ${AOCL-DA_SOURCE_DIR}
+    COMMAND tools/update_options_tables.sh
+    --db=${PROJECT_SOURCE_DIR}/options/all_table.rst ${REST_FILES}
+    COMMENT "Search and update ReSt files doc/*.rst"
+)
+
 
 # Target building the doxygen XML Also modifies the output directory and the
 # version number in the Doxyfile: 1. replace PROJECT_NAME = .* for the string
@@ -173,6 +186,7 @@ add_custom_target(
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   VERBATIM
   SOURCES Doxyfile
+  DEPENDS update_options_tables
   COMMENT "Building doxygen xml files")
 
 # Bump version string in conf.py (Sphinx)
