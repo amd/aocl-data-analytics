@@ -92,8 +92,8 @@ template <> void GetBasicDataColMajor<float>(CSVParamType<float> *params) {
     params->filename = "csv_test_float";
     params->expected_rows = 3;
     params->expected_columns = 5;
-    std::vector<float> data{1.1, -1,     0.0,     1e3, -3.2, 0.0, 4.1e-3, -4.5e4,
-                            0.0, 0.03e6, -5.6e-7, 0.0, 2,    -10, 4.5e5};
+    std::vector<float> data{1.1f, -1.f,    0.0f,     1e3f, -3.2f, 0.0f,  4.1e-3f, -4.5e4f,
+                            0.0f, 0.03e6f, -5.6e-7f, 0.0f, 2.f,   -10.f, 4.5e5f};
     params->expected_data = data;
     std::vector<std::string> headings = {"one", "cat two", "three", "FOUR", "Five"};
     params->expected_headings = headings;
