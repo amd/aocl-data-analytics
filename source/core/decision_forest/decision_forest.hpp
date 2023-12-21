@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -37,69 +37,7 @@
 
 #include "decision_forest_aux.hpp"
 
-template <class T>
-inline da_status register_df_options(da_options::OptionRegistry &opts) {
-    da_status status = da_status_success;
-
-    try {
-        // put following in global namespace for this try{ }
-        // da_options::OptionString, da_options::OptionNumeric,
-        // da_options::lbound_t,     da_options::ubound_t,
-        using namespace da_options;
-
-        std::shared_ptr<OptionString> os;
-        std::shared_ptr<OptionNumeric<da_int>> oi;
-        std::shared_ptr<OptionNumeric<T>> oT;
-
-        os = std::make_shared<OptionString>(OptionString(
-            "scoring function", "Select scoring function to use",
-            {{"gini", 0}, {"cross-entropy", 1}, {"misclassification-error", 2}}, "gini"));
-        status = opts.register_opt(os);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "depth", "set max depth of tree", -1, lbound_t::greaterequal, max_da_int,
-            ubound_t::p_inf, -1));
-        status = opts.register_opt(oi);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "seed", "set random seed for Mersenne Twister (64-bit) PRNG", -1,
-            lbound_t::greaterequal, max_da_int, ubound_t::lessequal, -1));
-        status = opts.register_opt(oi);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_obs_per_tree", "set number of observations in each tree", 0,
-            lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
-        status = opts.register_opt(oi);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_features_to_select", "set number of features in selection for splitting",
-            0, lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
-        status = opts.register_opt(oi);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(
-            OptionNumeric<da_int>("n_trees", "set number of features in each tree", 0,
-                                  lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
-        status = opts.register_opt(oi);
-
-        T rmax = std::numeric_limits<T>::max();
-        T diff_thres_default = (T)1e-6;
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "diff_thres", "minimum difference in feature value required for splitting",
-            0.0, lbound_t::greaterthan, rmax, ubound_t::p_inf, diff_thres_default));
-        status = opts.register_opt(oT);
-
-    } catch (std::bad_alloc &) {
-        return da_status_memory_error; // LCOV_EXCL_LINE
-    } catch (std::invalid_argument &e) {
-        std::cerr << e.what() << std::endl; // LCOV_EXCL_LINE
-        return da_status_internal_error;    // LCOV_EXCL_LINE
-    } catch (...) {                         // LCOV_EXCL_LINE
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
-        return da_status_internal_error; // LCOV_EXCL_LINE
-    }
-
-    return status;
-}
+#include "decision_forest_options.hpp"
 
 template <typename T> struct Node {
     // data required for leaf nodes during prediction
@@ -137,6 +75,7 @@ template <typename T> class decision_tree {
 
     // variables that get set / modified inside fit() from options registry
     da_int seed_val;
+    bool set_rng_state = true;
     da_int scoring_fun_id;
     std::string scoring_fun_str;
     da_int max_level = 0;
@@ -159,7 +98,8 @@ template <typename T> class decision_tree {
     da_status sample_feature_ind(da_int n_samples, da_int *samples);
     da_status set_rng(std::mt19937_64 mt_gen) {
         da_status status = da_status_success;
-        this->opts.set("seed", (da_int)0, da_options::solver);
+        // this->opts.set("seed", 0, da_options::solver);
+        this->set_rng_state = false;
         this->mt_gen = mt_gen;
         return status;
     };
@@ -168,6 +108,7 @@ template <typename T> class decision_tree {
     da_status predict(da_int n_obs, T *x, da_int ldx, uint8_t *y_pred);
     da_status score(da_int n_obs, T *x, da_int ldx, uint8_t *y_test, T *score);
     std::function<T(T, da_int, T, da_int)> score_fun;
+    da_status get_result(da_result query, da_int *dim, T *result);
 };
 
 // ---------------------------------------------
@@ -184,6 +125,7 @@ template <typename T> class decision_forest {
     std::vector<T> x;
     std::vector<uint8_t> y;
 
+    da_int seed_val;
     std::mt19937_64 mt_gen;
 
     std::vector<decision_tree<T>> tree_vec;
@@ -206,6 +148,7 @@ template <typename T> class decision_forest {
     da_status fit();
     da_status predict(da_int n_obs, T *x, da_int ldx, uint8_t *y_pred);
     da_status score(da_int n_obs, T *x, da_int ldx, uint8_t *y_test, T *score);
+    da_status get_result(da_result query, da_int *dim, T *result);
 };
 
 // ---------------------------------------------
@@ -213,35 +156,75 @@ template <typename T> class decision_forest {
 // ---------------------------------------------
 
 template <typename T>
+da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) {
+    da_status status = da_status_success;
+    DA_PRINTF_DEBUG("Inside get_result \n");
+
+    da_int rinfo_size = 3;
+
+    if (result == nullptr || *dim <= 0) {
+        return da_warn(err, da_status_invalid_array_dimension,
+                       "The results array has not been allocated, or an unsuitable "
+                       "dimension has been provided.");
+    }
+
+    switch (query) {
+    case da_result::da_rinfo:
+        if (*dim < rinfo_size)
+            return da_warn(err, da_status_invalid_array_dimension,
+                           "The array is too small. Please provide an array of at "
+                           "least size: " +
+                               std::to_string(rinfo_size) + ".");
+        result[0] = (T)seed_val;
+        result[1] = (T)n_obs;
+        result[2] = (T)d;
+        break;
+    default:
+        return da_warn(err, da_status_unknown_query,
+                       "The requested result could not be found.");
+    }
+    return status;
+}
+
+template <typename T>
 da_status decision_tree<T>::set_training_data(da_int n_obs, da_int n_features, T *x,
                                               da_int ldx, uint8_t *y) {
 
     da_status status = da_status_success;
 
+    if (x == nullptr || y == nullptr)
+        return da_error(this->err, da_status_invalid_input,
+                        "Either x, or y are not valid pointers.");
+
     if (n_obs <= 0 || n_features <= 0) {
         DA_PRINTF_DEBUG("n_obs = %" DA_INT_FMT ", n_features = %" DA_INT_FMT " \n", n_obs,
                         n_features);
-        return da_error(this->err, da_status_invalid_input,
-                        "The values of n_obs and n_features need to be greater than 0");
+        return da_error(
+            this->err, da_status_invalid_input,
+            "n_obs = " + std::to_string(n_obs) +
+                ", n_features = " + std::to_string(n_features) +
+                ", the values of n_obs and n_features need to be greater than 0");
     }
 
     if (ldx < n_obs) {
         DA_PRINTF_DEBUG("ldx = %" DA_INT_FMT ", n_obs = %" DA_INT_FMT " \n", ldx, n_obs);
         return da_error(
             this->err, da_status_invalid_input,
-            "The value of ldx needs to be at least as big as the value of n_obs");
+            "n_obs = " + std::to_string(n_obs) + ", ldx = " + std::to_string(ldx) +
+                ", the value of ldx needs to be at least as big as the value of n_obs");
     }
-
-    if (x == nullptr || y == nullptr)
-        return da_error(this->err, da_status_invalid_input,
-                        "Either x, or y are not valid pointers.");
 
     this->n_obs = n_obs;
     this->d = n_features;
 
     // allocate memory foruser data
-    this->x.resize(n_obs * n_features);
-    this->y.resize(n_obs);
+    try {
+        this->x.resize(n_obs * n_features);
+        this->y.resize(n_obs);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     // copy user data (convert order from column-major to row-major)
     for (da_int j = 0; j < n_features; j++) {
@@ -277,17 +260,24 @@ template <typename T> da_status decision_tree<T>::fit() {
     T diff_thres;
     opts.get("diff_thres", diff_thres);
 
-    // set mt_gen (internal class data)
-    if (seed_val == -1) {
-        std::random_device r;
-        seed_val = r();
-        mt_gen.seed(seed_val);
-    } else if (seed_val > 0) {
-        mt_gen.seed(seed_val);
+    if (this->set_rng_state) {
+        // set mt_gen (internal class data)
+        if (this->seed_val == -1) {
+            std::random_device r;
+            this->seed_val = std::abs((da_int)r());
+            mt_gen.seed(this->seed_val);
+        } else {
+            mt_gen.seed(this->seed_val);
+        }
     }
 
     // initialize feature_ind (subset of indices and order in which features get selected)
-    this->feature_ind.resize(n_features_to_select);
+    try {
+        this->feature_ind.resize(n_features_to_select);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     // for (da_int j = 0; j < d; j++) {
     //     shuff_vec[j] = j;
@@ -359,7 +349,13 @@ template <typename T> da_status decision_tree<T>::fit() {
     }
 
     da_int n_nodes = 1;
-    model.resize(n_nodes);
+    try {
+        model.resize(n_nodes);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
+
     model[0].is_leaf = true;
     model[0].start_idx = 0;
     model[0].n_obs = n_obs;
@@ -572,6 +568,37 @@ da_status decision_tree<T>::score(da_int n_obs, T *x_in, da_int ldx, uint8_t *y_
 // ---------------------------------------------
 
 template <typename T>
+da_status decision_forest<T>::get_result(da_result query, da_int *dim, T *result) {
+    da_status status = da_status_success;
+    DA_PRINTF_DEBUG("Inside get_result \n");
+
+    da_int rinfo_size = 3;
+
+    if (result == nullptr || *dim <= 0) {
+        return da_warn(err, da_status_invalid_array_dimension,
+                       "The results array has not been allocated, or an unsuitable "
+                       "dimension has been provided.");
+    }
+
+    switch (query) {
+    case da_result::da_rinfo:
+        if (*dim < rinfo_size)
+            return da_warn(err, da_status_invalid_array_dimension,
+                           "The array is too small. Please provide an array of at "
+                           "least size: " +
+                               std::to_string(rinfo_size) + ".");
+        result[0] = (T)seed_val;
+        result[1] = (T)n_obs;
+        result[2] = (T)d;
+        break;
+    default:
+        return da_warn(err, da_status_unknown_query,
+                       "The requested result could not be found.");
+    }
+    return status;
+}
+
+template <typename T>
 da_status decision_forest<T>::set_training_data(da_int n_obs, da_int n_features, T *x,
                                                 da_int ldx, uint8_t *y) {
 
@@ -581,12 +608,35 @@ da_status decision_forest<T>::set_training_data(da_int n_obs, da_int n_features,
         return da_error(this->err, da_status_invalid_input,
                         "Either x, or y are not valid pointers.");
 
+    if (n_obs <= 0 || n_features <= 0) {
+        DA_PRINTF_DEBUG("n_obs = %" DA_INT_FMT ", n_features = %" DA_INT_FMT " \n", n_obs,
+                        n_features);
+        return da_error(
+            this->err, da_status_invalid_input,
+            "n_obs = " + std::to_string(n_obs) +
+                ", n_features = " + std::to_string(n_features) +
+                ", the values of n_obs and n_features need to be greater than 0");
+    }
+
+    if (ldx < n_obs) {
+        DA_PRINTF_DEBUG("ldx = %" DA_INT_FMT ", n_obs = %" DA_INT_FMT " \n", ldx, n_obs);
+        return da_error(
+            this->err, da_status_invalid_input,
+            "n_obs = " + std::to_string(n_obs) + ", ldx = " + std::to_string(ldx) +
+                ", the value of ldx needs to be at least as big as the value of n_obs");
+    }
+
     this->n_obs = n_obs;
     this->d = n_features;
 
     // allocate memory foruser data
-    this->x.resize(n_obs * n_features);
-    this->y.resize(n_obs);
+    try {
+        this->x.resize(n_obs * n_features);
+        this->y.resize(n_obs);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     // copy user data
     for (da_int j = 0; j < n_features; j++) {
@@ -612,16 +662,6 @@ da_status decision_tree<T>::sample_feature_ind(da_int n_samples, da_int *samples
     da_status status = da_status_success;
 
     da_int N = this->d; // n_features (set inside set_training_data)
-
-    da_int seed_val;
-    opts.get("seed", seed_val);
-
-    if (seed_val == -1) {
-        std::random_device r;
-        mt_gen.seed(r());
-    } else if (seed_val > 0) {
-        mt_gen.seed(seed_val);
-    }
 
     double top = N - n_samples;
     double Nreal = N;
@@ -764,10 +804,25 @@ template <typename T> da_status decision_forest<T>::fit() {
 
     da_int n_trees;
     opts.get("n_trees", n_trees);
+    opts.get("seed", this->seed_val);
+
+    // set mt_gen (internal class data)
+    if (this->seed_val == -1) {
+        std::random_device r;
+        this->seed_val = std::abs((da_int)r());
+        mt_gen.seed(this->seed_val);
+    } else {
+        mt_gen.seed(this->seed_val);
+    }
 
     // allocate memory for tree objects in tree_vec using
     // decision_tree(da_errors::da_error_t &err) constructor
-    tree_vec.resize(n_trees, decision_tree<T>(*(this->err)));
+    try {
+        tree_vec.resize(n_trees, decision_tree<T>(*(this->err)));
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     for (da_int k = 0; k < n_trees; k++) {
         status = fit_tree(&tree_vec[k]);

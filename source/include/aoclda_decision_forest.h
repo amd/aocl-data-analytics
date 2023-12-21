@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -96,6 +96,10 @@ da_status da_df_tree_set_training_data_s(da_handle handle, da_int n_obs,
  *        You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  * - @ref da_status_internal_error - an unexpected error occurred.
+ *
+ * \post
+ * After succesful execution, \ref da_handle_get_result_d can be queried with the following enum:
+ * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p d.
  */
 da_status da_df_tree_fit_d(da_handle handle);
 /** \} */
@@ -118,6 +122,10 @@ da_status da_df_tree_fit_d(da_handle handle);
  *        You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  * - @ref da_status_internal_error - an unexpected error occurred.
+ *
+ * \post
+ * After succesful execution, \ref da_handle_get_result_s can be queried with the following enum:
+ * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p d.
  */
 da_status da_df_tree_fit_s(da_handle handle);
 /** \} */
@@ -286,6 +294,10 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_fea
  *        You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  * - @ref da_status_internal_error - an unexpected error occurred.
+ *
+ * \post
+ * After succesful execution, \ref da_handle_get_result_d can be queried with the following enum:
+ * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p d.
  */
 da_status da_df_fit_d(da_handle handle);
 /** \} */
@@ -308,6 +320,10 @@ da_status da_df_fit_d(da_handle handle);
  *        You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  * - @ref da_status_internal_error - an unexpected error occurred.
+ *
+ * \post
+ * After succesful execution, \ref da_handle_get_result_s can be queried with the following enum:
+ * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p d.
  */
 da_status da_df_fit_s(da_handle handle);
 /** \} */

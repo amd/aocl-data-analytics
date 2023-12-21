@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
 #
 # Attempt to fix copyright year if not matching the current year.
 # It is assumed that the copyright label should on the top of the files
-# in the form: ' * Copyright (c) 2020-2023' or ' * Copyright (c) 2023'
+# in the form: ' * Copyright (C) 2020-2023' or ' * Copyright (C) 2023'
 
 print_help() {
   echo $0 [file1 [file2 ...]]
@@ -42,12 +42,12 @@ current_year=$(date '+%Y')
 
 for f in "$@"; do
 
-  head -3 "$f" | grep --silent "Copyright (c) \([0-9]\{4\}-\)\?$current_year"
+  head -3 "$f" | grep --silent "Copyright (C) \([0-9]\{4\}-\)\?$current_year"
   if [ "$?" -ne 0 ]; then
-    sed -i "1,3s/Copyright (c) \([0-9]\{4\}\)-\([0-9]\{4\}\) Advanced Micro Devices/Copyright (c) \1-$current_year Advanced Micro Devices/; 1,3s/Copyright (c) \([0-9]\{4\}\) Advanced Micro Devices/Copyright (c) \1-$current_year Advanced Micro Devices/" "$f"
+    sed -i "1,3s/Copyright (C) \([0-9]\{4\}\)-\([0-9]\{4\}\) Advanced Micro Devices/Copyright (C) \1-$current_year Advanced Micro Devices/; 1,3s/Copyright (C) \([0-9]\{4\}\) Advanced Micro Devices/Copyright (C) \1-$current_year Advanced Micro Devices/" "$f"
     # check if fix was successful (it might fail in case that the copyright line
     # doesn't follow the exact pattern)
-    head -3 "$f" | grep --silent "Copyright (c) \([0-9]\{4\}-\)\?$current_year"
+    head -3 "$f" | grep --silent "Copyright (C) \([0-9]\{4\}-\)\?$current_year"
     if [ "$?" -ne 0 ]; then
       echo "$f" WAS NOT fixed
     else

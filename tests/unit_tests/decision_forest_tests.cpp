@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -31,276 +31,299 @@
 
 #include "gtest/gtest.h"
 
+#include "utest_utils.hpp"
+
 template <typename T>
-da_status convert_2d_array_r_major_to_c_major(da_int n_row, da_int n_col, T *a_in,
-                                              da_int lda, T *a_out) {
-    da_status status = da_status_success;
-
-    for (da_int i = 0; i < n_row; i++) {
-        for (da_int j = 0; j < n_col; j++) {
-            // a_in is row major (contiguous over j for fixed i)
-            // a_out is column major (contiguous over i for fixed j)
-            // outer loop is over rows so wthis code should read contiguous block from a_in
-            // and do scattered write to a_out
-            a_out[i + (j * n_row)] = a_in[(i * lda) + j];
-        }
-    }
-
-    return status;
+da_status da_df_set_training_data(da_handle handle, da_int n_obs, da_int n_features, T *x,
+                                  da_int ldx, uint8_t *y);
+template <>
+da_status da_df_set_training_data<double>(da_handle handle, da_int n_obs,
+                                          da_int n_features, double *x, da_int ldx,
+                                          uint8_t *y) {
+    return da_df_set_training_data_d(handle, n_obs, n_features, x, ldx, y);
 }
 
-TEST(decision_forest_s, cpp_api_sample_features) {
+template <>
+da_status da_df_set_training_data<float>(da_handle handle, da_int n_obs,
+                                         da_int n_features, float *x, da_int ldx,
+                                         uint8_t *y) {
+    return da_df_set_training_data_s(handle, n_obs, n_features, x, ldx, y);
+}
 
-    da_datastore csv_handle;
+template <typename T> da_status da_df_fit(da_handle handle);
+
+template <> da_status da_df_fit<float>(da_handle handle) { return da_df_fit_s(handle); }
+
+template <> da_status da_df_fit<double>(da_handle handle) { return da_df_fit_d(handle); }
+
+template <typename T>
+da_status da_df_score(da_handle handle, da_int n_obs, T *x, da_int ldx, uint8_t *y_test,
+                      T *score);
+
+template <>
+da_status da_df_score<double>(da_handle handle, da_int n_obs, double *x, da_int ldx,
+                              uint8_t *y_test, double *score) {
+    return da_df_score_d(handle, n_obs, x, ldx, y_test, score);
+}
+
+template <>
+da_status da_df_score<float>(da_handle handle, da_int n_obs, float *x, da_int ldx,
+                             uint8_t *y_test, float *score) {
+    return da_df_score_s(handle, n_obs, x, ldx, y_test, score);
+}
+
+template <typename T>
+da_status da_df_predict(da_handle handle, da_int n_obs, T *x, da_int ldx,
+                        uint8_t *y_pred);
+
+template <>
+da_status da_df_predict<double>(da_handle handle, da_int n_obs, double *x, da_int ldx,
+                                uint8_t *y_pred) {
+    return da_df_predict_d(handle, n_obs, x, ldx, y_pred);
+}
+
+template <>
+da_status da_df_predict<float>(da_handle handle, da_int n_obs, float *x, da_int ldx,
+                               uint8_t *y_pred) {
+    return da_df_predict_s(handle, n_obs, x, ldx, y_pred);
+}
+
+template <typename T> void test_decision_forest_invalid_input() {
     da_status status;
 
-    // Read in training data
-    csv_handle = nullptr;
-    status = da_datastore_init(&csv_handle);
-
-    char features_fp[256] = DATA_DIR;
-    strcat(features_fp, "df_data/");
-    strcat(features_fp, "training_features");
-    strcat(features_fp, ".csv");
-
-    char labels_fp[256] = DATA_DIR;
-    strcat(labels_fp, "df_data/");
-    strcat(labels_fp, "training_labels");
-    strcat(labels_fp, ".csv");
-
-    float *x_r_major = nullptr, *x = nullptr;
-    uint8_t *y = nullptr;
-    da_int n_obs = 0, d = 0, nrows_y = 0, ncols_y = 0;
-    // read in x (row major)
-    status = da_read_csv_s(csv_handle, features_fp, &x_r_major, &n_obs, &d, nullptr);
-    // read in y
-    status = da_read_csv_uint8(csv_handle, labels_fp, &y, &nrows_y, &ncols_y, nullptr);
-
-    // convert x from row major to column major
-    x = new float[n_obs * d];
-    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_r_major, d, x);
+    std::vector<T> x = {
+        0.0,
+    };
+    std::vector<uint8_t> y = {
+        0,
+    };
+    da_int n_obs = 0, d = 0;
 
     // Initialize the decision forest class and fit model
     da_handle df_handle = nullptr;
-    status = da_handle_init_s(&df_handle, da_handle_decision_forest);
+    status = da_handle_init<T>(&df_handle, da_handle_decision_forest);
+    EXPECT_EQ(status, da_status_success);
 
-    status = da_options_set_int(df_handle, "seed", 988);
-    status = da_options_set_int(df_handle, "n_obs_per_tree", 100);
-    // status = da_options_set_int(df_handle, "n_obs_per_tree", n_obs);
-    status = da_options_set_int(df_handle, "n_features_to_select", 3);
-    //status = da_options_set_int(df_handle, "n_features_to_select", d);
-    status = da_options_set_int(df_handle, "n_trees", 20);
+    // call set_training_data with invalid values
+    T *x_invalid = nullptr;
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x_invalid, n_obs, y.data());
+    EXPECT_EQ(status, da_status_invalid_input);
 
-    // copy x and y into df class members and convert x, y from row major to column major
-    // ldx is leading domension of column-major input
-    // (i.e. stride between columns in 2-d column-major array)
-    status = da_df_set_training_data_s(df_handle, n_obs, d, x, n_obs, y);
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_invalid_input);
 
-    std::cout << "----------------------------------------" << std::endl;
-    if (status == da_status_success) {
-        std::cout << "Setup complete." << std::endl;
-    } else {
-        std::cout << "Something wrong happened during training setup." << std::endl;
-    }
-
-    // status = da_options_set_int(df_handle, "seed", 1201);
-
-    da_df_fit_s(df_handle);
-
-    std::cout << "----------------------------------------" << std::endl;
-    if (status == da_status_success) {
-        std::cout << "Fitting complete." << std::endl;
-    } else {
-        std::cout << "Something wrong happened during fitting." << std::endl;
-    }
-
-    // Read in data for making predictions
-    char test_features_fp[256] = DATA_DIR;
-    strcat(test_features_fp, "/df_data/");
-    strcat(test_features_fp, "test_features");
-    strcat(test_features_fp, ".csv");
-
-    char test_labels_fp[256] = DATA_DIR;
-    strcat(test_labels_fp, "/df_data/");
-    strcat(test_labels_fp, "test_labels");
-    strcat(test_labels_fp, ".csv");
-
-    float *x_test = nullptr, *x_test_r_major = nullptr;
-    uint8_t *y_test = nullptr;
-    n_obs = 0;
-    d = 0;
-    nrows_y = 0;
-    ncols_y = 0;
-
+    n_obs = 1;
+    d = 1;
     status =
-        da_read_csv_s(csv_handle, test_features_fp, &x_test_r_major, &n_obs, &d, nullptr);
-    status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
-                               nullptr);
+        da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs - 1, y.data());
+    EXPECT_EQ(status, da_status_invalid_input);
 
-    x_test = new float[n_obs * d];
-    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_test_r_major, d, x_test);
-
-    // Make predictions with model and evaluate score
-    std::vector<uint8_t> y_pred(n_obs);
-    status = da_df_predict_s(df_handle, n_obs, x_test, n_obs, y_pred.data());
-
-    float score = 0.0;
-    status = da_df_score_s(df_handle, n_obs, x_test, n_obs, y_test, &score);
-
-    if (status == da_status_success) {
-        std::cout << "Scoring complete." << std::endl;
-        std::cout << "Score    = " << score << std::endl;
-    } else {
-        std::cout << "Something wrong happened during prediction setup or scoring."
-                  << std::endl;
-    }
-
-    if (x_test_r_major)
-        free(x_test_r_major);
-
-    if (x_test)
-        delete[] x_test;
-
-    if (y_test)
-        free(y_test);
-
-    if (x)
-        delete[] x;
-
-    if (x_r_major)
-        free(x_r_major);
-
-    if (y)
-        free(y);
-
-    da_datastore_destroy(&csv_handle);
     da_handle_destroy(&df_handle);
 }
 
-TEST(decision_forest_d, cpp_api_sample_features) {
-
-    da_datastore csv_handle;
+template <typename T> void test_decision_forest_get_results() {
     da_status status;
 
-    // Read in training data
-    csv_handle = nullptr;
-    status = da_datastore_init(&csv_handle);
-
-    char features_fp[256] = DATA_DIR;
-    strcat(features_fp, "df_data/");
-    strcat(features_fp, "training_features");
-    strcat(features_fp, ".csv");
-
-    char labels_fp[256] = DATA_DIR;
-    strcat(labels_fp, "df_data/");
-    strcat(labels_fp, "training_labels");
-    strcat(labels_fp, ".csv");
-
-    double *x_r_major = nullptr, *x = nullptr;
-    uint8_t *y = nullptr;
-    da_int n_obs = 0, d = 0, nrows_y = 0, ncols_y = 0;
-    // read in x (row major)
-    status = da_read_csv_d(csv_handle, features_fp, &x_r_major, &n_obs, &d, nullptr);
-    // read in y
-    status = da_read_csv_uint8(csv_handle, labels_fp, &y, &nrows_y, &ncols_y, nullptr);
-
-    // convert x from row major to column major
-    x = new double[n_obs * d];
-    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_r_major, d, x);
+    std::vector<T> x = {
+        0.0,
+    };
+    std::vector<uint8_t> y = {
+        0,
+    };
+    da_int n_obs = 1, d = 1;
 
     // Initialize the decision forest class and fit model
     da_handle df_handle = nullptr;
-    status = da_handle_init_d(&df_handle, da_handle_decision_forest);
+    status = da_handle_init<T>(&df_handle, da_handle_decision_forest);
+    EXPECT_EQ(status, da_status_success);
 
-    status = da_options_set_int(df_handle, "seed", 988);
-    status = da_options_set_int(df_handle, "n_obs_per_tree", 100);
-    // status = da_options_set_int(df_handle, "n_obs_per_tree", n_obs);
-    status = da_options_set_int(df_handle, "n_features_to_select", 3);
-    //status = da_options_set_int(df_handle, "n_features_to_select", d);
-    status = da_options_set_int(df_handle, "n_trees", 20);
+    // run with random seed
+    da_int seed_val = -1;
+    EXPECT_EQ(da_options_set_int(df_handle, "seed", seed_val), da_status_success);
 
-    // copy x and y into df class members and convert x, y from row major to column major
-    // ldx is leading domension of column-major input
-    // (i.e. stride between columns in 2-d column-major array)
-    status = da_df_set_training_data_d(df_handle, n_obs, d, x, n_obs, y);
+    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
+              da_status_success);
 
-    std::cout << "----------------------------------------" << std::endl;
-    if (status == da_status_success) {
-        std::cout << "Setup complete." << std::endl;
-    } else {
-        std::cout << "Something wrong happened during training setup." << std::endl;
-    }
+    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
 
-    // status = da_options_set_int(df_handle, "seed", 1201);
+    da_int rinfo_size = 3;
+    std::vector<T> rinfo(rinfo_size);
+    EXPECT_EQ(
+        da_handle_get_result(df_handle, da_result::da_rinfo, &rinfo_size, rinfo.data()),
+        da_status_success);
 
-    da_df_fit_d(df_handle);
+    std::cout << "seed_val = " << (da_int)rinfo[0] << std::endl;
+    std::cout << "n_obs    = " << (da_int)rinfo[1] << std::endl;
+    std::cout << "d        = " << (da_int)rinfo[2] << std::endl;
 
-    std::cout << "----------------------------------------" << std::endl;
-    if (status == da_status_success) {
-        std::cout << "Fitting complete." << std::endl;
-    } else {
-        std::cout << "Something wrong happened during fitting." << std::endl;
-    }
+    // run with the same seed as before
+    seed_val = (da_int)rinfo[0];
+    EXPECT_EQ(da_options_set_int(df_handle, "seed", seed_val), da_status_success);
 
-    // Read in data for making predictions
-    char test_features_fp[256] = DATA_DIR;
-    strcat(test_features_fp, "/df_data/");
-    strcat(test_features_fp, "test_features");
-    strcat(test_features_fp, ".csv");
+    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
+              da_status_success);
 
-    char test_labels_fp[256] = DATA_DIR;
-    strcat(test_labels_fp, "/df_data/");
-    strcat(test_labels_fp, "test_labels");
-    strcat(test_labels_fp, ".csv");
+    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
 
-    double *x_test = nullptr, *x_test_r_major = nullptr;
-    uint8_t *y_test = nullptr;
-    n_obs = 0;
-    d = 0;
-    nrows_y = 0;
-    ncols_y = 0;
+    EXPECT_EQ(
+        da_handle_get_result(df_handle, da_result::da_rinfo, &rinfo_size, rinfo.data()),
+        da_status_success);
+    EXPECT_EQ((da_int)rinfo[0], seed_val);
+    EXPECT_EQ((da_int)rinfo[1], n_obs);
+    EXPECT_EQ((da_int)rinfo[2], d);
 
-    status =
-        da_read_csv_d(csv_handle, test_features_fp, &x_test_r_major, &n_obs, &d, nullptr);
-    status = da_read_csv_uint8(csv_handle, test_labels_fp, &y_test, &nrows_y, &ncols_y,
-                               nullptr);
-
-    x_test = new double[n_obs * d];
-    status = convert_2d_array_r_major_to_c_major(n_obs, d, x_test_r_major, d, x_test);
-
-    // Make predictions with model and evaluate score
-    std::vector<uint8_t> y_pred(n_obs);
-    status = da_df_predict_d(df_handle, n_obs, x_test, n_obs, y_pred.data());
-
-    double score = 0.0;
-    status = da_df_score_d(df_handle, n_obs, x_test, n_obs, y_test, &score);
-
-    if (status == da_status_success) {
-        std::cout << "Scoring complete." << std::endl;
-        std::cout << "Score    = " << score << std::endl;
-    } else {
-        std::cout << "Something wrong happened during prediction setup or scoring."
-                  << std::endl;
-    }
-
-    if (x_test_r_major)
-        free(x_test_r_major);
-
-    if (x_test)
-        delete[] x_test;
-
-    if (y_test)
-        free(y_test);
-
-    if (x)
-        delete[] x;
-
-    if (x_r_major)
-        free(x_r_major);
-
-    if (y)
-        free(y);
-
-    da_datastore_destroy(&csv_handle);
     da_handle_destroy(&df_handle);
+}
+
+TEST(decision_forest, invalid_input) {
+    test_decision_forest_invalid_input<float>();
+    test_decision_forest_invalid_input<double>();
+}
+
+TEST(decision_forest, get_results) {
+    test_decision_forest_get_results<float>();
+    test_decision_forest_get_results<double>();
+}
+
+template <typename T> void test_decision_forest_bad_handle() {
+    da_status status;
+
+    std::vector<T> x = {
+        0.0,
+    };
+    std::vector<uint8_t> y = {
+        0,
+    };
+    da_int n_obs = 0, d = 0;
+    T score = 0.0;
+
+    // handle not initialized
+    da_handle df_handle = nullptr;
+
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_handle_not_initialized);
+
+    status = da_df_fit<T>(df_handle);
+    EXPECT_EQ(status, da_status_handle_not_initialized);
+
+    status = da_df_predict<T>(df_handle, n_obs, x.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_handle_not_initialized);
+
+    status = da_df_score<T>(df_handle, n_obs, x.data(), n_obs, y.data(), &score);
+    EXPECT_EQ(status, da_status_handle_not_initialized);
+
+    // incorrect handle type
+    EXPECT_EQ(da_handle_init<T>(&df_handle, da_handle_decision_tree), da_status_success);
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_invalid_handle_type);
+
+    status = da_df_fit<T>(df_handle);
+    EXPECT_EQ(status, da_status_invalid_handle_type);
+
+    status = da_df_predict<T>(df_handle, n_obs, x.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_invalid_handle_type);
+
+    status = da_df_score<T>(df_handle, n_obs, x.data(), n_obs, y.data(), &score);
+    EXPECT_EQ(status, da_status_invalid_handle_type);
+
+    da_handle_destroy(&df_handle);
+}
+
+TEST(decision_forest, bad_handle) {
+    test_decision_forest_bad_handle<float>();
+    test_decision_forest_bad_handle<double>();
+}
+
+TEST(decision_forest, incorrect_handle_precision) {
+    da_status status;
+
+    da_handle handle_d = nullptr;
+    da_handle handle_s = nullptr;
+
+    EXPECT_EQ(da_handle_init_d(&handle_d, da_handle_decision_forest), da_status_success);
+    EXPECT_EQ(da_handle_init_s(&handle_s, da_handle_decision_forest), da_status_success);
+
+    std::vector<uint8_t> y = {
+        0,
+    };
+    da_int n_obs = 0, d = 0;
+
+    std::vector<double> x_d = {
+        0.0,
+    };
+    double score_d = 0.0;
+
+    std::vector<float> x_s = {
+        0.0,
+    };
+    float score_s = 0.0;
+
+    // incorrect handle precision
+    status = da_df_set_training_data_s(handle_d, n_obs, d, x_s.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_wrong_type);
+    status = da_df_set_training_data_d(handle_s, n_obs, d, x_d.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_wrong_type);
+
+    status = da_df_fit_s(handle_d);
+    EXPECT_EQ(status, da_status_wrong_type);
+    status = da_df_fit_d(handle_s);
+    EXPECT_EQ(status, da_status_wrong_type);
+
+    status = da_df_predict_s(handle_d, n_obs, x_s.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_wrong_type);
+    status = da_df_predict_d(handle_s, n_obs, x_d.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_wrong_type);
+
+    status = da_df_score_s(handle_d, n_obs, x_s.data(), n_obs, y.data(), &score_s);
+    EXPECT_EQ(status, da_status_wrong_type);
+    status = da_df_score_d(handle_s, n_obs, x_d.data(), n_obs, y.data(), &score_d);
+    EXPECT_EQ(status, da_status_wrong_type);
+
+    da_handle_destroy(&handle_d);
+    da_handle_destroy(&handle_s);
+}
+
+template <typename T> void test_decision_forest_invalid_array_dim() {
+    da_status status;
+
+    std::vector<T> x = {
+        0.0,
+    };
+    std::vector<uint8_t> y = {
+        0,
+    };
+    da_int n_obs = 1, d = 1;
+
+    // Initialize the decision forest class and fit model
+    da_handle df_handle = nullptr;
+    status = da_handle_init<T>(&df_handle, da_handle_decision_forest);
+    EXPECT_EQ(status, da_status_success);
+
+    // run with random seed
+    da_int seed_val = -1;
+    EXPECT_EQ(da_options_set_int(df_handle, "seed", seed_val), da_status_success);
+
+    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
+              da_status_success);
+
+    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
+
+    da_int rinfo_size = 2;
+    std::vector<T> rinfo(rinfo_size);
+    EXPECT_EQ(
+        da_handle_get_result(df_handle, da_result::da_rinfo, &rinfo_size, rinfo.data()),
+        da_status_invalid_array_dimension);
+
+    rinfo_size = 0;
+    rinfo.resize(rinfo_size);
+    EXPECT_EQ(
+        da_handle_get_result(df_handle, da_result::da_rinfo, &rinfo_size, rinfo.data()),
+        da_status_invalid_array_dimension);
+
+    da_handle_destroy(&df_handle);
+}
+
+TEST(decision_forest, invalid_array_dim) {
+    test_decision_forest_invalid_array_dim<float>();
+    test_decision_forest_invalid_array_dim<double>();
 }

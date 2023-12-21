@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -74,13 +74,13 @@ target_compile_definitions(
   linreg
   PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/linear_reg")
 
-add_executable(decision_tree decision_tree_tests.cpp)
+add_executable(decision_tree_tests decision_tree_tests.cpp)
 target_compile_definitions(
-  decision_tree PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+  decision_tree_tests PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
-add_executable(decision_forest decision_forest_tests.cpp)
+add_executable(decision_forest_tests decision_forest_tests.cpp)
 target_compile_definitions(
-  decision_forest PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+  decision_forest_tests PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(option_registry option_registry_tests.cpp)
 
@@ -122,8 +122,8 @@ set(GTEST_EXES
   linmod
   logreg
   linreg
-  decision_forest
-  decision_tree
+  decision_forest_tests
+  decision_tree_tests
   option_registry
   data
   interval_map
