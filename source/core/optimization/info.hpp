@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -33,13 +33,15 @@ using namespace da_optim;
 
 // Elements in the vector info<T> containing information from the solver
 enum info_t {
-    info_objective = 0,
-    info_grad_norm = 1,
-    info_iter = 2,
-    info_time = 3,
-    info_nevalf = 4,
-    info_inorm = 5,
-    info_ncheap = 6,
+    info_objective = 0,  ///< objective to minimize
+    info_grad_norm = 1,  ///< gradient norm of objective
+    info_iter = 2,       ///< number of iterations
+    info_time = 3,       ///< current time
+    info_nevalf = 4,     ///< number of function callback evaluations
+    info_inorm = 5,      ///< infinity norm of a given metric
+    info_inorm_init = 6, ///< infinity norm of of a given metric at the initial iterate
+    info_ncheap =
+        7, ///< number of function callback evaluations requesting "cheap" update
 
     info_number // leave last
 };

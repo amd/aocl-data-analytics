@@ -44,6 +44,10 @@ template <typename T> constexpr const char *prec_name();
 template <> constexpr const char *prec_name<float>() { return "single"; }
 template <> constexpr const char *prec_name<double>() { return "double"; }
 
+template <typename T> constexpr const char *type_opt_name();
+template <> constexpr const char *type_opt_name<float>() { return "float"; }
+template <> constexpr const char *type_opt_name<double>() { return "double"; }
+
 // Helper to define precision to which we expect the results match
 template <typename T> T expected_precision(T scale = (T)1.0);
 template <> double expected_precision<double>(double scale) { return scale * 1.0e-3; }
@@ -53,7 +57,8 @@ template <> float expected_precision<float>(float scale) { return scale * 0.5f; 
 template <typename T>
 void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iopts,
                           std::vector<option_t<std::string>> sopts,
-                          std::vector<option_t<T>> ropts) {
+                          std::vector<option_t<T>> ropts, bool check_coeff,
+                          T check_tol_scale) {
 
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
@@ -84,6 +89,9 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datastore precision",
                                               prec_name<T>()),
               da_status_success);
+    EXPECT_EQ(
+        da_datastore_options_set_string(csv_store, "CSV datatype", type_opt_name<T>()),
+        da_status_success);
     EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
               da_status_success);
 
@@ -142,25 +150,30 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
             da_status_success);
 
         // Check coefficients
-        EXPECT_ARR_NEAR(nc, coef, coef_exp, expected_precision<T>());
+        EXPECT_ARR_NEAR(nc, coef, coef_exp, expected_precision<T>(check_tol_scale));
         delete[] coef;
         free(coef_exp);
+    } else if (check_coeff) {
+        FAIL() << "Check of coefficients was requested but the solution file "
+               << coef_fname << " could not be opened.";
     }
 
-    // Check that rinfo contains the correct values
-    da_int n_rinfo = 100;
-    T rinfo[100];
-    T rinfo_exp[100];
+    // Check that info contains the correct values
+    da_int linfo = 100;
+    T info[100];
+    T info_exp[100];
     for (da_int i = 0; i < 100; i++)
-        rinfo_exp[i] = (T)0.0;
-    rinfo_exp[0] = (T)(ncols - 1);
-    rinfo_exp[1] = (T)nrows;
-    rinfo_exp[2] = intercept ? (T)(ncols - 1) : ncols;
-    rinfo_exp[3] = intercept ? (T)1 : (T)0;
-    EXPECT_EQ(da_options_get(linmod_handle, "alpha", &rinfo_exp[4]), da_status_success);
-    EXPECT_EQ(da_options_get(linmod_handle, "lambda", &rinfo_exp[4]), da_status_success);
-    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &n_rinfo, rinfo),
+        info_exp[i] = (T)0.0;
+    info_exp[0] = (T)(ncols - 1);
+    info_exp[1] = (T)nrows;
+    info_exp[2] = intercept ? (T)(ncols - 1) : ncols;
+    info_exp[3] = intercept ? (T)1 : (T)0;
+    EXPECT_EQ(da_options_get(linmod_handle, "alpha", &info_exp[4]), da_status_success);
+    EXPECT_EQ(da_options_get(linmod_handle, "lambda", &info_exp[5]), da_status_success);
+    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
               da_status_success);
+
+    // TODO compare info
 
     //////////////
     // Free memory

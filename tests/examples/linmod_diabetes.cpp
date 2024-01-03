@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -74,11 +74,13 @@ int main() {
     rhs.resize(m);
     x.resize(n + 1);
     // initial parameter estimates: n + intercept
-    x.assign({0, 0, 700, 200, 100, 80, 160, 0, 300, 0});
+    // x.assign({0, 0, 700, 200, 100, 80, 160, 0, 300, 0});
+    x.assign(m + 1, 0);
 
     // Reference solution
     std::vector<double> x_ref(n + 1);
-    x_ref.assign({0, -76.3772, 511.3798, 234.8758, 0, 0, -170.7493, 0, 450.7342, 0.4780});
+    x_ref.assign({0, -19.4574064435, 4.3253307426, 0.6585289836, 0, 0, -1.6904339251, 0,
+                  19.3039496667, 0});
 
     da_status status;
 
@@ -121,29 +123,6 @@ int main() {
         return 1;
     }
 
-    /* Note: The linear model iterative coordinate solver expects data to be
-     * of the form:
-     * norm(features(:,i)) = 1 for all i.
-     * mean(features(:,1)) = 0 for all i.
-     * mean(rhs) = 0
-     */
-
-    // estimate mean and variance per each feature
-    pass = true;
-    std::vector<double> means(n, 0), scale(n, 0);
-    da_int dof = 1, mode = 0;
-    pass = pass && da_standardize_d(da_axis_col, m, n, features.data(), m, dof, mode,
-                                    means.data(), scale.data()) == da_status_success;
-    double rhs_mean;
-    pass = pass &&
-           da_mean_d(da_axis_col, m, 1, rhs.data(), m, &rhs_mean) == da_status_success;
-    pass = pass && da_standardize_d(da_axis_col, m, 1, rhs.data(), m, dof, mode,
-                                    &rhs_mean, nullptr) == da_status_success;
-    if (!pass) {
-        std::cout << "Unexpected error in the data standardization.\n";
-        return 1;
-    }
-
     // initialize the linear regression
     pass = true;
     da_int nx = 0;
@@ -152,17 +131,11 @@ int main() {
     pass =
         pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
     pass = pass && da_options_set_real_d(handle, "alpha", 1) == da_status_success;
-    pass = pass && da_options_set_real_d(handle, "lambda", 88) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "lambda", 4) == da_status_success;
     pass = pass &&
            da_options_set_string(handle, "print options", "yes") == da_status_success;
     pass = pass && da_options_set_int(handle, "intercept", 0) == da_status_success;
-    pass = pass && da_options_set_int(handle, "print level", 2) == da_status_success;
-    pass = pass &&
-           da_options_set_int(handle, "optim iteration limit", 35) == da_status_success;
-    pass = pass && da_options_set_real_d(handle, "optim convergence tol", 1.0e-5) ==
-                       da_status_success;
-    pass = pass && da_options_set_real_d(handle, "optim progress factor", 1.0) ==
-                       da_status_success;
+    pass = pass && da_options_set_int(handle, "print level", 1) == da_status_success;
     pass = pass && da_linmod_define_features_d(handle, m, n, features.data(),
                                                rhs.data()) == da_status_success;
     if (!pass) {

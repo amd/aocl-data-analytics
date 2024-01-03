@@ -144,7 +144,7 @@ TEST(linmod, invalidInput) {
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, bs), da_status_success);
 
-    // comput regression
+    // compute regression
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_success);
     EXPECT_EQ(da_linmod_fit_s(handle_s), da_status_success);
 

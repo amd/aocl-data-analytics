@@ -110,6 +110,12 @@ target_link_libraries(lbfgsb_rc PRIVATE aocl-da)
 add_executable(lbfgsb_fcomm lbfgsb_fcomm.cpp)
 target_link_libraries(lbfgsb_fcomm PRIVATE aocl-da)
 
+
+add_executable(coord coord_tests.cpp)
+target_compile_definitions(
+  coord
+  PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/linear_reg")
+
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(c_compatibility.c PROPERTIES LANGUAGE C)
 add_executable(c_compatibility_test c_compatibility.c)
@@ -137,6 +143,7 @@ set(GTEST_EXES
   kmeans_tests
   parallel_test
   miscellaneous_tests
+  coord
 )
 
 foreach(target ${GTEST_EXES})

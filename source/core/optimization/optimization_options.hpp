@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -105,8 +105,8 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         da_options::safe_tol<T> tol;
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("time limit", "maximum time allowed to run", 0.0,
-                             da_options::lbound_t::greaterthan, 0,
+            OptionNumeric<T>("time limit", "maximum time allowed to run (in seconds)",
+                             0.0, da_options::lbound_t::greaterthan, 0,
                              da_options::ubound_t::p_inf, static_cast<T>(1.0e6), "10^6"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -139,8 +139,11 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "coord skip tol", "Coordinate skip tolerance", 0.0,
-            da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
+            "coord skip tol",
+            "Coordinate skip tolerance, a given coordinate could be skipped if the "
+            "change between two consecutive iterates is less than tolerance. Any "
+            "negative value disables the skipping scheme",
+            -1.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(

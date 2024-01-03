@@ -29,6 +29,7 @@
 
 #include "aoclda.h"
 #include "da_cblas.hh"
+#include "linmod_types.hpp"
 
 /* Base class of the callback user data to be passed as void pointers
  * Contain all the basic data to compute */
@@ -42,16 +43,28 @@ template <class T> class usrdata_base {
 
     /* Intercept */
     bool intercept = false;
-    /* Additional paremeters that enhance the model
-     * Transform on the residuals, loss function and regularization */
-    T l1reg = 0.0;
-    T l2reg = 0.0;
+
+    /* Additional paremeters that enhance the model */
+
+    /* Regularization */
+    T l1reg = T(0);
+    T l2reg = T(0);
+    /* Pointer to rescaled penalty factors for each coefficient
+     * in the case of standardization these are scale[k]/scale[y], and are
+     *  used in the regularization terms.
+     * See details in the standaridization function
+     * pointer to an array of at least nfeat
+     */
+    const T *xv{nullptr};
+    da_linmod::scaling_t scaling{da_linmod::scaling_t::none};
 
     usrdata_base(const T *X, const T *y, da_int nsamples, da_int nfeat, bool intercept,
-                 T lambda, T alpha)
-        : nsamples(nsamples), nfeat(nfeat), X(X), y(y), intercept(intercept) {
+                 T lambda, T alpha, const T *xv = nullptr,
+                 da_linmod::scaling_t scaling = da_linmod::scaling_t::none)
+        : nsamples(nsamples), nfeat(nfeat), X(X), y(y), intercept(intercept), xv(xv),
+          scaling(scaling) {
         l1reg = lambda * alpha;
-        l2reg = lambda * ((T)1.0 - alpha) / (T)2.0;
+        l2reg = lambda * (T(1) - alpha) / T(2);
     }
     virtual ~usrdata_base() {}
 };
@@ -98,16 +111,18 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
     /* Add two working memory arrays
      * matvec[nsamples]: typically used to compute the matrix vector product X * coef
      * aux[nsamples]: auxilliary to hold intermediate results
+     * FIXME this can be potentially removed
      */
     std::vector<T> matvec, aux;
 
     stepfun_usrdata_linreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                           bool intercept, T lambda, T alpha)
-        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha) {
+                           bool intercept, T lambda, T alpha, const T *xv,
+                           da_linmod::scaling_t scaling)
+        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha, xv, scaling) {
         matvec.resize(nsamples);
         aux.resize(nsamples);
     }
-    ~stepfun_usrdata_linreg() {}
+    ~stepfun_usrdata_linreg() { usrdata_base<T>::xv = nullptr; }
 };
 
 /* This function evaluates the feature matrix X over the parameter vector x (taking into account the intercept),
@@ -131,10 +146,9 @@ void eval_feature_matrix(da_int n, T *x, da_int nsamples, const T *X, T *v,
 
 /* Add regularization, l1 and l2 terms */
 template <typename T> T regfun(usrdata_base<T> *data, da_int n, T const *x) {
-    T l1{data->l1reg};
-    T l2{data->l2reg};
+    const T l1{data->l1reg};
+    const T l2{data->l2reg};
     T f1{0}, f2{0};
-
     if (l1 > 0) {
         // Add LASSO term
         for (da_int i = 0; i < n; i++) {
@@ -142,7 +156,6 @@ template <typename T> T regfun(usrdata_base<T> *data, da_int n, T const *x) {
         }
         f1 *= l1;
     }
-
     if (l2 > 0) {
         // Add Ridge term
         for (da_int i = 0; i < n; i++) {
@@ -155,9 +168,8 @@ template <typename T> T regfun(usrdata_base<T> *data, da_int n, T const *x) {
 
 /* Add regularization, l1 and l2 term derivatives */
 template <typename T> void reggrd(usrdata_base<T> *data, da_int n, T const *x, T *grad) {
-    T l1{data->l1reg};
-    T l2{data->l2reg};
-
+    const T l1{data->l1reg};
+    const T l2{data->l2reg};
     if (l1 > 0) {
         // Add LASSO term
         for (da_int i = 0; i < n; i++) {
@@ -166,7 +178,6 @@ template <typename T> void reggrd(usrdata_base<T> *data, da_int n, T const *x, T
                 grad[i] += x[i] < 0 ? -l1 : l1;
         }
     }
-
     if (l2 > 0) {
         // Add Ridge term
         for (da_int i = 0; i < n; i++) {
@@ -300,7 +311,10 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *udata,
     return 0;
 }
 
-/* Mean square error callbacks */
+/* Mean square error callbacks
+ * The MSE loss objective is
+ * f = 1/2N \sum (MSE)^2 + lambda/2 (1-alpha) L2 + lambda alpha L1
+ */
 template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *udata) {
 
     cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)udata;
@@ -316,10 +330,11 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *udata) {
     T alpha = -1.0;
     da_blas::cblas_axpy(nsamples, alpha, y, 1, matvec, 1);
 
-    // sum (X * x (+itct) - y)^2
+    // sum (X * x (+intr) - y)^2
     for (da_int i = 0; i < nsamples; i++) {
         *f += pow(matvec[i], (T)2.0);
     }
+    *f /= T(2 * nsamples);
 
     // Add regularization (exclude intercept)
     da_int nmod = data->intercept ? n - 1 : n;
@@ -328,6 +343,10 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *udata) {
     return 0;
 }
 
+/* Mean square error callbacks (gradient)
+ * The MSE loss objective gradient is
+ * grad = 1/N \sum d(MSE) + lambda (1-alpha) d(L2) + lambda alpha d(L1)
+ */
 template <typename T>
 da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int xnew) {
 
@@ -342,7 +361,8 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
     T alpha = -1.0;
     da_blas::cblas_axpy(nsamples, alpha, data->y, 1, matvec, 1);
 
-    alpha = 2.0;
+    // alpha = 2.0;
+    alpha = T(1) / T(nsamples);
     T beta = 0.0;
     da_int aux = data->intercept ? 1 : 0;
     da_blas::cblas_gemv(CblasColMajor, CblasTrans, nsamples, n - aux, alpha, data->X,
@@ -360,48 +380,78 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
     return 0;
 }
 
-/* Helper callback to get step for coordinate descent method */
+/* coordinate descent method callback to get updated coefficient coef[k]
+ *
+ * Inputs:
+ *  coef[nfeat] - current iterate
+ *  k - the coordinate to update, see details below
+ *  udata - user data
+ *  action - see below, and
+ *  kdiff - coef[kold] - coef[k] only relevant if action < 0
+ * Output:
+ *  f the current Loss value
+ *  knew the new value for coef[k]
+ *
+ * Actions regarting feature matrix evaluation
+ * action < 0 means that feature matrix was previously called and that only a low rank
+ *            update is requested and -(action+1) contains the previous k that changed
+ *            kold = -(action+1);
+ * action = 0 means not to evaluate the feature matrix (restore matvec from aux)
+ * action > 0 evaluate the matrix.
+ *
+ * Assumptions:
+ *  * udata->X is standardized (scaled):
+ *    for each column j = 1:nfeat we have 1/nsamples sum xij^2 = 1, i=1:nsamples
+ *  * if the model has intercept then udata->X is also centered:
+ *    for each column j = 1:nfeat we have sum xij = 0, i=1:nsamples
+ *  * udata->y is standardized (scaled):
+ *    1/nsamples sum yi^2 = 1 i=1:nsamples
+ *  * udata->aux is of size nsamples
+ *  * udata->xv is of size nfeat+1 and has all the rescale factors
+ *    for the regularization penalties. See standardization function for more
+ *    details.
+ *
+ *  WARNING nfeat CAN include intercept, nmod provides the user coefficient count
+ */
 template <typename T>
-da_int stepfun_linreg(da_int nfeat, T *coef, T *step, da_int k, T *f, void *udata,
+da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udata,
                       da_int action, T kdiff) {
     stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
-    /* Actions regarting feature matrix evaluation
-     * action < 0 means that feature matrix was previously called and that only a low rank
-     *            update is requested and -(action+1) contains the previous k that changed
-     *            kold = -(action+1);
-     * action = 0 means not to evaluate the feature matrix (restore matvec from aux)
-     * action > 0 evaluate the matrix.
-     *
-     * Assumptions:
-     *  * udata->X is standardized:
-     *    for each column j = 1:nfeat we have
-     *    zero-mean, and
-     *    sum xij^2 = 1, i=1:nsamples
-     *  * udata->aux is of size nsamples
-     */
 
+    da_int nmod = data->intercept ? nfeat - 1 : nfeat;
     da_int nsamples = data->nsamples;
+    // TODO FIXME if kdiff == 0 no changes...!
+    action = 1; //// TODO REMOVE
     if (action > 0) {
         // Compute X*coef = *y (takes care of intercept)
         eval_feature_matrix(nfeat, coef, nsamples, data->X, data->matvec.data(),
                             data->intercept);
-        // Copy vector data->y into data->aux
+        // Copy vector *y into data->aux
         for (da_int i = 0; i < nsamples; ++i)
             data->aux[i] = data->matvec[i];
-    } else if (action < 0) {
+    } else if (action < 0 && kdiff != (T)0) {
         /* Low rank update.
-         * Only one single entry of coef[1..nfeat] has changed and we have
-         * the entry and the ammount.
+         * Only one single entry of coef[1..nmod;intercep]=coef[1..nfeat] has
+         * changed and we have the entry and the ammount.
          * data->matvec = data->aux + kdiff * X[:,kold];
          */
         da_int kold = -(action + 1);
-        for (da_int i = 0; i < nsamples; ++i) {
-            data->matvec[i] = data->aux[i] + kdiff * data->X[kold * nsamples + i];
-            // Copy vector data->y into data->aux
-            data->aux[i] = data->matvec[i];
+        if (kold < nmod) {
+            for (da_int i = 0; i < nsamples; ++i) {
+                data->matvec[i] = data->aux[i] + kdiff * data->X[kold * nsamples + i];
+                // Copy vector *y into data->aux
+                data->aux[i] = data->matvec[i];
+            }
+        } else {
+            // change from intercept, X[:,nfeat]=1
+            for (da_int i = 0; i < nsamples; ++i) {
+                data->matvec[i] = data->aux[i] + kdiff;
+                // Copy vector *y into data->aux
+                data->aux[i] = data->matvec[i];
+            }
         }
         /* Low-rank update validation
-         * eval_feature_matrix(nfeat, coef, udata);
+         * eval_feature_matrix(nfeat, coef, udata); (takes care of intercept)
          * for (da_int i = 0; i < nsamples; ++i){
          *     T d = data->y[i] - data->aux[i];
          *     if (std::abs(d) > 1e-9) {
@@ -409,66 +459,72 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *step, da_int k, T *f, void *udat
          *     }
          * }
          */
-    } else {
-        // Copy vector back from data->aux to data->y
+    } else { // FIXME this can be removed if we don't change data->matvec later on
+             // FIXME we can estimate the residuals without having to change ->matvec ???
+        // Copy vector back from data->aux to *y
         for (da_int i = 0; i < nsamples; ++i)
             data->matvec[i] = data->aux[i];
     }
 
-    T betak{0};
-    da_int nmod = data->intercept ? nfeat - 1 : nfeat;
     auto sign = [](T num) {
         const T absnum = std::abs(num);
         return (absnum == (T)0 ? (T)0 : num / absnum);
     };
-    auto soft = [sign](T y, T Gamma) {
-        return (sign(y) * std::max(std::abs(y) - Gamma, (T)0));
+    auto soft = [sign](T z, T Gamma) {
+        return (sign(z) * std::max(std::abs(z) - Gamma, (T)0));
     };
+
     T xk;
-    T presidual;
+    T residual;
+    T betak;
+    T l1, l2;
+    T gk = T(0);
+    bool standardized = data->scaling == da_linmod::scaling_t::standardize;
     if (k < nmod) {
-        // handle model coefficients beta1..betaN
-        if (coef[k] != (T)0) {
-            for (da_int i = 0; i < nsamples; i++) {
-                xk = data->X[k * nsamples + i];
-                presidual = data->y[i] - (data->matvec[i] - xk * coef[k]);
-                betak += presidual * xk;
-            }
-        } else {
-            for (da_int i = 0; i < nsamples; i++) {
-                xk = data->X[k * nsamples + i];
-                presidual = data->y[i] - data->matvec[i];
-                betak += presidual * xk;
-            }
+        // handle model coefficients beta1..betaN=coef[0]..coef[nmod-1]
+        for (da_int i = 0; i < nsamples; ++i) {
+            xk = data->X[k * nsamples + i];
+            residual = data->y[i] - data->matvec[i];
+            // FIXME if all works: save residual in y[i] and remove call to axpy
+            gk += xk * residual;
         }
+        if (standardized) {
+            gk /= T(nsamples);
+        }
+        // betak = gk + coef[k]; // see (8) paper GLM2010
+        betak = gk + coef[k] * data->xv[k]; // <- scale by xv[k]
+        l1 = data->l1reg;                   // lambdahat * alpha
+        // Note that data->l2reg = lambdahat (1-alpha) / 2;
+        l2 = T(2) * data->l2reg; // FIXME precompute!
+
+        betak = soft(betak, l1) / (data->xv[k] + l2);
     } else {
-        // handle intercept beta0 (last element of coef)
-        if (coef[k] != (T)0) {
-            for (da_int i = 0; i < nsamples; i++) {
-                presidual = data->y[i] - (data->matvec[i] - coef[k]);
-                betak += presidual;
-            }
-        } else {
-            for (da_int i = 0; i < nsamples; i++) {
-                presidual = data->y[i] - data->matvec[i];
-                betak += presidual;
-            }
+        // handle intercept beta0 = coef[nmod+1] = coef[nfeat]
+        for (da_int i = 0; i < nsamples; ++i) {
+            residual = data->y[i] - data->matvec[i];
+            gk += residual;
         }
+        gk /= (T)nsamples;
+        betak = gk + coef[k];
     }
+    *knew = betak; // TODO rename to betaknew <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
-    // y = y - y
-    T alpha = -1.0;
-    da_blas::cblas_axpy(nsamples, alpha, data->y, 1, data->matvec.data(), 1);
+    // *y = *y - y  (*y = X*coef and y are the observations)
+    T alpha{-1.0};
+    da_blas::cblas_axpy(nsamples, alpha, data->y, 1, data->matvec.data(),
+                        1); // FIXME this can be done in the FIXME above?
 
-    // sum (X * coef (+intercept) - y)^2
-    for (da_int i = 0; i < nsamples; i++) {
+    // sum (X*coef (+intercept) - y)^2
+    *f = (T)0;
+    for (da_int i = 0; i < nsamples; ++i) {
         *f += pow(data->matvec[i], (T)2.0);
     }
+    *f /= ((T)2 * (T)nsamples);
 
     // Add regularization (exclude intercept)
-    *f += regfun(data, nmod, coef);
-
-    *step = soft(betak, data->l1reg) / ((T)1 + data->l2reg);
+    *f += regfun(
+        data, nmod,
+        coef); // FIXME potentially wrong if l1reg = update needs to consider x scales in standardization
 
     data = nullptr;
     return 0;

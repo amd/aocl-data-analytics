@@ -30,7 +30,12 @@ print_help() {
   echo If no file is given, all staged files are checked.
 }
 
-if [ "$#" -eq 0 ]; then
+if [ "$1" == "--help" -o "$1" == "-h" ] ; then
+  print_help
+  exit 0
+fi
+
+if [ "$#" -eq 0 ] ; then
   print_help
   echo ""
   echo "Working on all staged files"

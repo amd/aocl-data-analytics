@@ -32,46 +32,410 @@
 #include "utest_utils.hpp"
 #include "gtest/gtest.h"
 
-typedef struct {
+typedef struct linregParam_t {
     std::string test_name; // name of the ctest test
     std::string data_name; // name of the files to read in
     std::vector<option_t<da_int>> iopts;
     std::vector<option_t<std::string>> sopts;
     std::vector<option_t<float>> fopts;
     std::vector<option_t<double>> dopts;
+    // check the solution
+    bool check_coeff{true};
+    // scale to pass to expected_precision<T>(T scale=1.0)
+    float check_tol_scale{1.0f};
 } linregParam;
 
 // clang-format off
+/*
+ * Replicate table for intercept=yes|no
+ * Done Solver Regularization Scaling
+ * [D]  QR        NONE        none
+ * [D]  QR        NONE        scale only
+ * [D]  QR        NONE        standardize
+ * [D]  BFGS      NONE        none
+ * [D]  BFGS      NONE        scale only
+ * [D]  BFGS      NONE        standardize
+ * [D]  BFGS      L2          none
+ * [D]  BFGS      L2          scale only
+ * [D]  BFGS      L2          standardize
+ * [ ]  Coord     NONE        none <-------------- NOT TESTED YET
+ * [D]  Coord     NONE        standardization
+ * [D]  Coord     NONE        scale only
+ * [ ]  Coord     L1          none <-------------- NOT TESTED YET
+ * [D]  Coord     L1          standardize
+ * [D]  Coord     L1          scale only
+ * [ ]  Coord     L2          none <-------------- NOT TESTED YET
+ * [D]  Coord     L2          standardize
+ * [D]  Coord     L2          scale only
+ * [ ]  Coord     L1 + L2     none <-------------- NOT TESTED YET
+ * [D]  Coord     L1 + L2     standardize
+ * [D]  Coord     L1 + L2     scale only
+ */
 const linregParam linregParamPos[] = {
+    // 0
     {"trivialNoint",      "trivial", {}, {}, {}, {}},
+    // 1
+    {"trivialNoint",      "trivial", {}, {{"scaling", "standardize"}}, {}, {}},
+    // 2
+    {"trivialNoint",      "trivial", {}, {{"scaling", "scale only"}}, {}, {}},
+    // 3
     {"trivialNointLbfgs", "trivial", {}, {{"optim method", "lbfgs"}}, {}, {}},
+    // 4
+    {"trivialNointLbfgs", "trivial", {}, {{"optim method", "lbfgs"},{"scaling", "standardize"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    // 5
+    {"trivialNointLbfgs", "trivial", {}, {{"optim method", "lbfgs"},{"scaling", "scale only"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    // 6
     {"trivialIntercept",  "trivial", {{"intercept", 1}}, {}, {}, {}},
+    // 7
+    {"trivialIntercept",  "trivial", {{"intercept", 1}}, {{"scaling", "standardize"}}, {}, {}},
+    // 8 QR with intercept and scaling only
+    {"trivialIntercept",  "trivial", {{"intercept", 1}}, {{"scaling", "scale only"}}, {}, {}},
+    // 9
     {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"}}, {}, {}},
-    {"CoordNoReg", "trivialstd", {{"print level", 1}, {"optim iteration limit", 300}},
-                                     {{"optim method", "coord"}},
+    // 10
+    {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "standardize"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    // 11
+    {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "scale only"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    // Data and solution generated using R (glmnet_trivial.R)
+    // 12
+    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 5}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
-    {"CoordL1Reg", "trivialstdl1",   {{"print level", 5}, {"optim iteration limit", 15}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"lambda",5.0},{"alpha",1.0}}
+    // 13
+    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 5}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "coord"}, {"scaling", "standardize"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
                                      },
-    {"CoordL2Reg", "trivialstdl2",   {{"print level", 1}, {"optim iteration limit", 10}},
+    // 14
+    {"CoordL1Reg+1", "triviall1",    {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 150}},
+                                     {{"optim method", "coord"}, {"scaling", "standardize"}},
+                                     {{"lambda",2.f},{"alpha",1.0f}},
+                                     {{"lambda",2.},{"alpha",1.0}}
+                                     },
+    // 15
+    {"CoordL1Reg+0", "triviall1",    {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 150}},
+                                     {{"optim method", "coord"}, {"scaling", "standardize"}},
+                                     {{"lambda",2.f},{"alpha",1.0f}},
+                                     {{"lambda",2.},{"alpha",1.0}}
+                                     },
+    // 16
+    {"CoordL2Reg+1", "triviall2", {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
                                      },
-    {"CoordElastic", "trivialstdl12",{{"print level", 1}, {"optim iteration limit", 20}},
+    // 17
+    {"CoordL2Reg+0", "triviall2", {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 500}},
+                                     {{"optim method", "coord"}},
+                                     {{"lambda",10.0f},{"alpha",0.0f}},
+                                     {{"lambda",10.0},{"alpha",0.0}}
+                                     },
+    // 18
+    {"CoordElastic+1", "trivialelnet",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}},
                                      {{"lambda",12.0f},{"alpha",0.9f}},
                                      {{"lambda",12.0},{"alpha",0.9}}
                                      },
-    {"CoordL1Reg_intrp", "trivialstdl1",   {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 15}},
+    // 19
+    {"CoordElastic+0", "trivialelnet",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"lambda",5.0},{"alpha",1.0}}
+                                     {{"lambda",6.0f},{"alpha",0.9f}},
+                                     {{"lambda",6.0},{"alpha",0.9}},
                                      },
+    // Data and solution generated using R (glmnet_trivial.R) (STANDARDIZED = FALSE, our scaling = "scale only")
+    // 20
+    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 5}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 21
+    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 5}, {"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 22
+    {"CoordL1Reg+1", "triviall1unscl",    {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 150}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",2.f},{"alpha",1.0f}},
+                                     {{"lambda",2.},{"alpha",1.0}}
+                                     },
+    // 23
+    {"CoordL1Reg+0", "triviall1unscl",    {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 500}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",2.f},{"alpha",1.0f}},
+                                     {{"lambda",2.},{"alpha",1.0}}
+                                     },
+    // 24
+    {"CoordL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",10.0f},{"alpha",0.0f}},
+                                     {{"lambda",10.0},{"alpha",0.0}}
+                                     },
+    // 25
+    {"CoordL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 500}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",10.0f},{"alpha",0.0f}},
+                                     {{"lambda",10.0},{"alpha",0.0}}
+                                     },
+    // 26
+    {"CoordElastic+1", "trivialelnetunscl",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",5.0f},{"alpha",0.9f}},
+                                     {{"lambda",5.0},{"alpha",0.9}}
+                                     },
+    // 27
+    {"CoordElastic+0", "trivialelnetunscl",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",6.0f},{"alpha",0.9f}},
+                                     {{"lambda",6.0},{"alpha",0.9}}
+                                     },
+    // Data and solution generated using R (glmnet_driver.R)
+    // 28
+    {"NormTab+0", "glmnet-100x20",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 29
+    {"NormTab+1", "glmnet-100x20",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 30
+    {"NormTab-LASSO+0", "glmnet-100x20l1",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
+                                     },
+    // 31
+    {"NormTab-LASSO+1", "glmnet-100x20l1",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
+                                     },
+    // 32
+    {"NormTab-Ridge+0", "glmnet-100x20l2",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "auto"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     },
+    // 33
+    {"NormTab-Ridge+1", "glmnet-100x20l2",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "auto"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     },
+    // 34
+    {"NormTab-ElNet+0", "glmnet-100x20en",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "auto"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
+                                     },
+    // 35
+    {"NormTab-ElNet+1", "glmnet-100x20en",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "auto"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
+                                     },
+    // 36 - same set of problems 12-19 but scaling="scale only" (standardize=FALSE)
+    {"NormTab+0", "glmnet-100x20unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 37
+    {"NormTab+1", "glmnet-100x20unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 38
+    {"NormTab-LASSO+0", "glmnet-100x20l1unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
+                                     },
+    // 39
+    {"NormTab-LASSO+1", "glmnet-100x20l1unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
+                                     },
+    // 40
+    {"NormTab-Ridge+0", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     },
+    // 41
+    {"NormTab-Ridge+1", "glmnet-100x20l2unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     },
+    // 42
+    {"NormTab-ElNet+0", "glmnet-100x20enunscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
+                                     },
+    // 43
+    {"NormTab-ElNet+1", "glmnet-100x20enunscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
+                                     },
+    // 44 models y ~ X + 0, y ~ X + 1, no-reg OR Ridge, scaling only OR standardize
+    {"LbfgsStdNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardize"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 45
+    {"LbfgsStdNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardize"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 46
+    {"LbfgsStdL2Reg+1", "triviall2", {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardize"}},
+                                     {{"lambda",10.0f},{"alpha",0.0f}},
+                                     {{"lambda",10.0},{"alpha",0.0}}
+                                     },
+    // 47
+    {"LbfgsStdL2Reg+0", "triviall2", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardize"}},
+                                     {{"lambda",10.0f},{"alpha",0.0f}},
+                                     {{"lambda",10.0},{"alpha",0.0}}
+                                     },
+    // 48
+    {"LbfgsSclNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 49
+    {"LbfgsSclNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 10000}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 50
+    {"LbfgsSclL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7},{"lambda",10.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-20},{"lambda",10.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     },
+    // 51
+    {"LbfgsSclL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7},{"lambda",10.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-20},{"lambda",10.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     },
+    // 52
+    {"LbfgsStdNormTab+0", "glmnet-100x20",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-20},{"lambda",0.0},{"alpha",1.0},{"optim progress factor", 10.0}},
+                                     },
+    // 53
+    {"LbfgsStdNormTab+1", "glmnet-100x20",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 54
+    {"LbfgsStdNormTab-Ridge+0", "glmnet-100x20l2",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     },
+    // 55
+    {"LbfgsStdNormTab-Ridge+1", "glmnet-100x20l2",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     },
+    // 56 - same set of problems 12-19 but scaling="scale only" (standardize=FALSE)
+    {"LbfgsSclNormTab+0", "glmnet-100x20unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0},{"optim progress factor", 10.0}},
+                                     },
+    // 57
+    {"LbfgsSclNormTab+1", "glmnet-100x20unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0},{"optim progress factor", 10.0}},
+                                     },
+    // 58
+    {"LbfgsSclNormTab-Ridge+0", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     },
+    // 59
+    {"LbfgsSclNormTab-Ridge+1", "glmnet-100x20l2unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     },
+    // same problems 44-59 solved with QR - selectinh only NOREG
+    // 60 models y ~ X + 0, y ~ X + 1, no-reg, scaling only OR standardize
+    {"QRStdNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "qr"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 61
+    {"QRStdNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "qr"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 62
+    {"QRSclNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+                                     {{"optim method", "qr"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 63
+    {"QRSclNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 10000}},
+                                     {{"optim method", "qr"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
+                                     },
+    // 64
+    {"QRStdNormTab+0", "glmnet-100x20",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "qr"},{"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 65
+    {"QRStdNormTab+1", "glmnet-100x20",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "qr"},{"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 66
+    {"QRSclNormTab+0", "glmnet-100x20unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "qr"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     },
+    // 68
+    {"QRSclNormTab+1", "glmnet-100x20unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "qr"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     }
 };
 // clang-format on
 
@@ -87,13 +451,15 @@ void PrintTo(const linregParam &param, ::std::ostream *os) { *os << param.test_n
 // Positive tests with double type
 TEST_P(linregPosD, Double) {
     const linregParam &param = GetParam();
-    test_linreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts);
+    test_linreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts,
+                                 param.check_coeff, (double)param.check_tol_scale);
 }
 
 // Positive tests with float type
 TEST_P(linregPosF, Float) {
     const linregParam &param = GetParam();
-    test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts);
+    test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts,
+                                param.check_coeff, (double)param.check_tol_scale);
 }
 
 // Test public option registry printing

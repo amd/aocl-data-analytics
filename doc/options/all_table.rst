@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 Supported Optional Parameters
@@ -43,15 +43,16 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for Linear Model.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
    "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
    "alpha", "real", ":math:`r=0`", "coefficient of alpha in the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r \le 1`"
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
+   "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
+   "alpha", "real", ":math:`r=0`", "coefficient of alpha in the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r \le 1`"
+   "optim time limit", "real", ":math:`r=10^6`", "Maximum time limit (in seconds). Solver will exit with a warning after this limit. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`0 < r`"
    "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-   "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `coord`, `lbfgs`, `lbfgsb`, or `qr`."
    "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
-   "optim convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
 
 
@@ -65,7 +66,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for PCA.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition", ":math:`s=` `auto`, `gesdd`, `gesvd`, or `gesvdx`."
    "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances", ":math:`s=` `biased`, or `unbiased`."
    "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix", ":math:`s=` `correlation`, `covariance`, or `svd`."
@@ -82,7 +83,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for k-means.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm", ":math:`s=` `elkan`, `hartigan-wong`, or `lloyd`."
    "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres", ":math:`s=` `k-means++`, `random`, or `supplied`."
    "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance", ":math:`0 < r`"
@@ -102,7 +103,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for Decision tree.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "diff_thres", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 < r`"
    "n_trees", "integer", ":math:`i=1`", "Set number of trees", ":math:`0 < i`"
    "n_features_to_select", "integer", ":math:`i=1`", "Set number of features in selection for splitting", ":math:`0 < i`"
@@ -122,7 +123,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for Decision forest.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "diff_thres", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 < r`"
    "n_trees", "integer", ":math:`i=1`", "Set number of trees", ":math:`0 < i`"
    "n_features_to_select", "integer", ":math:`i=1`", "Set number of features in selection for splitting", ":math:`0 < i`"
@@ -142,7 +143,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for` :cpp:type:`da_datastore`.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "csv integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection", ":math:`0 \le i \le 1`"
    "csv datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection", ":math:`s=` `double`, or `single`."
    "csv use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header", ":math:`0 \le i \le 1`"
@@ -167,18 +168,18 @@ The following options are supported.
 
 
 .. only:: internal
-   
+
    .. _opts_optimizationsolvers:
-   
+
    Optimization Solvers
    ====================
-   
+
    The following options are supported.
-   
+
    .. csv-table:: :strong:`Table of options for optimization solvers.`
       :escape: ~
       :header: "Option name", "Type", "Default", "Description", "Constraints"
-      
+
       "optim method", "string", ":math:`s=` `lbfgsb`", "Select optimization solver to use", ":math:`s=` `bfgs`, `coord`, `lbfgs`, or `lbfgsb`."
       "print options", "string", ":math:`s=` `no`", "Print options list", ":math:`s=` `no`, or `yes`."
       "coord skip tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Coordinate skip tolerance", ":math:`0 < r`"
@@ -195,6 +196,6 @@ The following options are supported.
       "print level", "integer", ":math:`i=1`", "set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
       "coord progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "the iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
       "infinite bound size", "real", ":math:`r=10^{20}`", "threshold value to take for +/- infinity", ":math:`1000 < r`"
-      "time limit", "real", ":math:`r=10^6`", "maximum time allowed to run", ":math:`0 < r`"
+      "time limit", "real", ":math:`r=10^6`", "maximum time allowed to run (in seconds)", ":math:`0 < r`"
       "lbfgsb progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "the iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
-   
+

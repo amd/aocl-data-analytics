@@ -61,6 +61,16 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oi);
 
         std::shared_ptr<OptionNumeric<T>> oT;
+
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "optim time limit",
+            "Maximum time limit (in seconds). Solver will exit with a warning "
+            "after this limit. Valid only for iterative solvers, e.g. L-BFGS-B, "
+            "Coordinate Descent, etc.",
+            0, da_options::lbound_t::greaterthan, rmax, da_options::ubound_t::p_inf,
+            1000000, "10^6"));
+        opts.register_opt(oT);
+
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("alpha",
                              "coefficient of alpha in the regularization terms: lambda( "
@@ -94,16 +104,31 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         os = std::make_shared<OptionString>(
             OptionString("optim method", "Select optimization method to use.",
                          {{"auto", linmod_method::undefined},
+                          {"bfgs", linmod_method::lbfgsb},
                           {"lbfgs", linmod_method::lbfgsb},
                           {"lbfgsb", linmod_method::lbfgsb},
                           {"qr", linmod_method::qr},
-                          {"coord", linmod_method::coord}},
+                          {"coord", linmod_method::coord},
+                          {"svd", linmod_method::svd}},
                          "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
             "print options", "Print options.", {{"no", 0}, {"yes", 2}}, "no"));
         opts.register_opt(os);
-
+        os = std::make_shared<OptionString>(OptionString(
+            "scaling",
+            "Scale or standardize feature matrix and responce vector. Matrix is copied "
+            "and then rescaled. Option key value auto indicates that rescaling type is "
+            "choosen by the solver (this includes also no scaling).",
+            {{"no", scaling_t::none},
+             {"none", scaling_t::none},
+             {"auto", scaling_t::automatic},
+             {"scale", scaling_t::scale_only},
+             {"scale only", scaling_t::scale_only},
+             {"standardize", scaling_t::standardize},
+             {"standardise", scaling_t::standardize}},
+            "auto"));
+        opts.register_opt(os);
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     } catch (...) {                    // LCOV_EXCL_LINE

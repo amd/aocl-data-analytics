@@ -55,8 +55,9 @@ add_library(da_core OBJECT ${DA_CORE_SRC})
 target_include_directories(
   da_core
   PRIVATE include
-         core/drivers/
-         core/optimization/
+         core/drivers
+         core/basic_statistics
+         core/optimization
          core/utilities
          core/csv
          core/linear_model
