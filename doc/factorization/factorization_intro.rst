@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -100,7 +100,7 @@ The following options can be set using  :cpp:func:`da_options_set_string` or :cp
    "n_components", "integer", ":math:`i=1`", "Number of principal components to compute", ":math:`1 \le i`"
    "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition", ":math:`s=` `auto`, `gesdd`, `gesvd`, or `gesvdx`."
 
-If the `PCA method` option is set to `'svd'` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
+If the `pca method` option is set to `svd` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
 Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
 
 If a full decomposition is required (so that all principal components are found) then `svd solver` should be set to `gesdd`. The LAPACK routines DGESDD or SGESDD (for double and single precision data respectively) will then be used. This choice offers the best performance. Setting `svd solver` to `auto` results in the same behaviour.
@@ -110,8 +110,13 @@ If a partial decomposition is required then, depending on your data matrix, `ges
 Examples
 ========
 
-See ``pca.cpp`` in the examples folder of your installation for examples of how to use these functions.
+The code below can be found in ``pca.cpp`` in the ``examples`` folder of your installation.
 
+.. collapse:: PCA Example Code
+
+    .. literalinclude:: ../../tests/examples/pca.cpp
+        :language: C++
+        :linenos:
 .. toctree::
     :maxdepth: 1
     :hidden:

@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,7 +44,7 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oi);
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
-            "PCA method", "Compute PCA based on the covariance or correlation matrix",
+            "pca method", "Compute PCA based on the covariance or correlation matrix",
             {{"covariance", pca_method_cov},
              {"correlation", pca_method_corr},
              {"svd", pca_method_svd}},
