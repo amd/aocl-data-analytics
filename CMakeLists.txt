@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -30,6 +30,16 @@ project(AOCL-DA VERSION 4.2.1)
 set(AOCLDA_VERSION
   "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
 )
+
+# Get timestamp.
+string(TIMESTAMP BUILD_DATE "%Y%m%d")
+# Set version string.
+set(AOCLDA_VERSION_STR
+  "AOCL-DA ${AOCLDA_VERSION} Build ${BUILD_DATE}"
+)
+# Define a C preprocessor macro to communicate the current version so that it
+# can be embedded into the library and queried later.
+set(VERS_DEF -DAOCLDA_VERSION_STRING="${AOCLDA_VERSION_STR}")
 
 # Export Release Information automatically
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

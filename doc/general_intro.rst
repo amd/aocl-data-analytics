@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -199,3 +199,8 @@ Functions in AOCL-DA return :cpp:type:`da_status`, which provides basic informat
 the function call was successful.
 Further information about errors can be obtained by querying :cpp:type:`da_datastore` and
 :cpp:type:`da_handle` types. For further details see the :ref:`error handling<error-handling>` pages.
+
+Version String
+--------------
+
+To get the version string of AOCL-DA call the function ``const char* da_get_version()``.

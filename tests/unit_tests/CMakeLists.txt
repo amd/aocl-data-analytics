@@ -114,8 +114,11 @@ set_source_files_properties(c_compatibility.c PROPERTIES LANGUAGE C)
 add_executable(c_compatibility_test c_compatibility.c)
 set_target_properties(c_compatibility_test PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(c_compatibility_test aocl-da)
-
 # add_test(c_compatibility_test c_compatibility_test)
+
+add_executable(miscellaneous_tests miscellaneous_tests.cpp)
+target_compile_definitions(miscellaneous_tests PRIVATE ${VERS_DEF})
+
 set(GTEST_EXES
   basic_stats
   csv
@@ -131,6 +134,7 @@ set(GTEST_EXES
   doc_tests
   pca_tests
   parallel_test
+  miscellaneous_tests
 )
 
 foreach(target ${GTEST_EXES})

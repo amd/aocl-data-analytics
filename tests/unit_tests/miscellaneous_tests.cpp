@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,35 +25,12 @@
  *
  */
 
-/* This file is a place for miscellaneous utility functions that do not belong with
- * any particular classes and do not fit elsewhere. */
-
 #include "aoclda.h"
+#include "gtest/gtest.h"
+#include <iostream>
 
-#if defined(_OPENMP)
-#include "omp.h"
-#endif
-
-// Check that parallel builds of AOCL-DA work. Once we have further OpenMP functionality, this can probably be removed
-da_status da_parallel_check() {
-#if defined(_OPENMP)
-    da_int max_threads = omp_get_max_threads();
-
-    da_int n_threads = 1;
-
-// We could do anything here really - we just want to check we are linking omp.h correctly
-#pragma omp parallel reduction(max : n_threads) num_threads(max_threads) default(none)
-    { n_threads = omp_get_thread_num() + 1; }
-
-    if (n_threads != max_threads)
-        return da_status_internal_error;
-
-#endif
-
-    return da_status_success;
+TEST(miscellaneous, aocl_da_version_string) {
+    const char *version_string = da_get_version();
+    std::cout << "version_string = " << version_string << std::endl;
+    ASSERT_STREQ(version_string, AOCLDA_VERSION_STRING);
 }
-
-static const char *da_version = AOCLDA_VERSION_STRING;
-
-// Return the version string of AOCL-DA.
-const char *da_get_version() { return da_version; }

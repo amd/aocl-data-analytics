@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -64,6 +64,8 @@ target_include_directories(
   core/decision_forest)
 target_include_directories(da_core
   PRIVATE ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
+# Define the macro that sets the version string
+target_compile_definitions(da_core PRIVATE ${VERS_DEF})
 
 if(WIN32)
   target_link_directories(
