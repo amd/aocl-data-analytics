@@ -28,21 +28,6 @@
 Decision Forest APIs
 **********************
 
-Decision Trees
-===============
-
-.. doxygenfunction:: da_df_tree_set_training_data_d
-.. doxygenfunction:: da_df_tree_set_training_data_s
-.. doxygenfunction:: da_df_tree_fit_d
-.. doxygenfunction:: da_df_tree_fit_s
-.. doxygenfunction:: da_df_tree_predict_d
-.. doxygenfunction:: da_df_tree_predict_s
-.. doxygenfunction:: da_df_tree_score_d
-.. doxygenfunction:: da_df_tree_score_s
-
-Decision Forests
-=================
-
 .. doxygenfunction:: da_df_set_training_data_d
 .. doxygenfunction:: da_df_set_training_data_s
 .. doxygenfunction:: da_df_fit_d

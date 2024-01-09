@@ -27,66 +27,22 @@
 
 #include "aoclda.h"
 
+#include <list>
 #include <random>
 
 #include "gtest/gtest.h"
 
 #include "utest_utils.hpp"
 
-template <typename T>
-da_status da_df_set_training_data(da_handle handle, da_int n_obs, da_int n_features, T *x,
-                                  da_int ldx, uint8_t *y);
-template <>
-da_status da_df_set_training_data<double>(da_handle handle, da_int n_obs,
-                                          da_int n_features, double *x, da_int ldx,
-                                          uint8_t *y) {
-    return da_df_set_training_data_d(handle, n_obs, n_features, x, ldx, y);
-}
+template <typename T> class DecisionForestTest : public testing::Test {
+  public:
+    using List = std::list<T>;
+    static T shared_;
+    T value_;
+};
 
-template <>
-da_status da_df_set_training_data<float>(da_handle handle, da_int n_obs,
-                                         da_int n_features, float *x, da_int ldx,
-                                         uint8_t *y) {
-    return da_df_set_training_data_s(handle, n_obs, n_features, x, ldx, y);
-}
-
-template <typename T> da_status da_df_fit(da_handle handle);
-
-template <> da_status da_df_fit<float>(da_handle handle) { return da_df_fit_s(handle); }
-
-template <> da_status da_df_fit<double>(da_handle handle) { return da_df_fit_d(handle); }
-
-template <typename T>
-da_status da_df_score(da_handle handle, da_int n_obs, T *x, da_int ldx, uint8_t *y_test,
-                      T *score);
-
-template <>
-da_status da_df_score<double>(da_handle handle, da_int n_obs, double *x, da_int ldx,
-                              uint8_t *y_test, double *score) {
-    return da_df_score_d(handle, n_obs, x, ldx, y_test, score);
-}
-
-template <>
-da_status da_df_score<float>(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                             uint8_t *y_test, float *score) {
-    return da_df_score_s(handle, n_obs, x, ldx, y_test, score);
-}
-
-template <typename T>
-da_status da_df_predict(da_handle handle, da_int n_obs, T *x, da_int ldx,
-                        uint8_t *y_pred);
-
-template <>
-da_status da_df_predict<double>(da_handle handle, da_int n_obs, double *x, da_int ldx,
-                                uint8_t *y_pred) {
-    return da_df_predict_d(handle, n_obs, x, ldx, y_pred);
-}
-
-template <>
-da_status da_df_predict<float>(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                               uint8_t *y_pred) {
-    return da_df_predict_s(handle, n_obs, x, ldx, y_pred);
-}
+using FloatTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(DecisionForestTest, FloatTypes);
 
 template <typename T> void test_decision_forest_invalid_input() {
     da_status status;
@@ -175,14 +131,12 @@ template <typename T> void test_decision_forest_get_results() {
     da_handle_destroy(&df_handle);
 }
 
-TEST(decision_forest, invalid_input) {
-    test_decision_forest_invalid_input<float>();
-    test_decision_forest_invalid_input<double>();
+TYPED_TEST(DecisionForestTest, invalid_input) {
+    test_decision_forest_invalid_input<TypeParam>();
 }
 
-TEST(decision_forest, get_results) {
-    test_decision_forest_get_results<float>();
-    test_decision_forest_get_results<double>();
+TYPED_TEST(DecisionForestTest, get_results) {
+    test_decision_forest_get_results<TypeParam>();
 }
 
 template <typename T> void test_decision_forest_bad_handle() {
@@ -206,35 +160,34 @@ template <typename T> void test_decision_forest_bad_handle() {
     status = da_df_fit<T>(df_handle);
     EXPECT_EQ(status, da_status_handle_not_initialized);
 
-    status = da_df_predict<T>(df_handle, n_obs, x.data(), n_obs, y.data());
+    status = da_df_predict<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_handle_not_initialized);
 
-    status = da_df_score<T>(df_handle, n_obs, x.data(), n_obs, y.data(), &score);
+    status = da_df_score<T>(df_handle, n_obs, d, x.data(), n_obs, y.data(), &score);
     EXPECT_EQ(status, da_status_handle_not_initialized);
 
     // incorrect handle type
-    EXPECT_EQ(da_handle_init<T>(&df_handle, da_handle_decision_tree), da_status_success);
+    EXPECT_EQ(da_handle_init<T>(&df_handle, da_handle_linmod), da_status_success);
     status = da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
     status = da_df_fit<T>(df_handle);
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
-    status = da_df_predict<T>(df_handle, n_obs, x.data(), n_obs, y.data());
+    status = da_df_predict<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
-    status = da_df_score<T>(df_handle, n_obs, x.data(), n_obs, y.data(), &score);
+    status = da_df_score<T>(df_handle, n_obs, d, x.data(), n_obs, y.data(), &score);
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
     da_handle_destroy(&df_handle);
 }
 
-TEST(decision_forest, bad_handle) {
-    test_decision_forest_bad_handle<float>();
-    test_decision_forest_bad_handle<double>();
+TYPED_TEST(DecisionForestTest, bad_handle) {
+    test_decision_forest_bad_handle<TypeParam>();
 }
 
-TEST(decision_forest, incorrect_handle_precision) {
+TEST(DecisionForestTest, incorrect_handle_precision) {
     da_status status;
 
     da_handle handle_d = nullptr;
@@ -269,24 +222,24 @@ TEST(decision_forest, incorrect_handle_precision) {
     status = da_df_fit_d(handle_s);
     EXPECT_EQ(status, da_status_wrong_type);
 
-    status = da_df_predict_s(handle_d, n_obs, x_s.data(), n_obs, y.data());
+    status = da_df_predict_s(handle_d, n_obs, d, x_s.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_wrong_type);
-    status = da_df_predict_d(handle_s, n_obs, x_d.data(), n_obs, y.data());
+    status = da_df_predict_d(handle_s, n_obs, d, x_d.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_wrong_type);
 
-    status = da_df_score_s(handle_d, n_obs, x_s.data(), n_obs, y.data(), &score_s);
+    status = da_df_score_s(handle_d, n_obs, d, x_s.data(), n_obs, y.data(), &score_s);
     EXPECT_EQ(status, da_status_wrong_type);
-    status = da_df_score_d(handle_s, n_obs, x_d.data(), n_obs, y.data(), &score_d);
+    status = da_df_score_d(handle_s, n_obs, d, x_d.data(), n_obs, y.data(), &score_d);
     EXPECT_EQ(status, da_status_wrong_type);
 
     da_handle_destroy(&handle_d);
     da_handle_destroy(&handle_s);
 }
 
-template <typename T> void test_decision_forest_invalid_array_dim() {
+TYPED_TEST(DecisionForestTest, test_decision_forest_invalid_array_dim) {
     da_status status;
 
-    std::vector<T> x = {
+    std::vector<TypeParam> x = {
         0.0,
     };
     std::vector<uint8_t> y = {
@@ -296,20 +249,21 @@ template <typename T> void test_decision_forest_invalid_array_dim() {
 
     // Initialize the decision forest class and fit model
     da_handle df_handle = nullptr;
-    status = da_handle_init<T>(&df_handle, da_handle_decision_forest);
+    status = da_handle_init<TypeParam>(&df_handle, da_handle_decision_forest);
     EXPECT_EQ(status, da_status_success);
 
     // run with random seed
     da_int seed_val = -1;
     EXPECT_EQ(da_options_set_int(df_handle, "seed", seed_val), da_status_success);
 
-    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
+    EXPECT_EQ(da_df_set_training_data<TypeParam>(df_handle, n_obs, d, x.data(), n_obs,
+                                                 y.data()),
               da_status_success);
 
-    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
+    EXPECT_EQ(da_df_fit<TypeParam>(df_handle), da_status_success);
 
     da_int rinfo_size = 2;
-    std::vector<T> rinfo(rinfo_size);
+    std::vector<TypeParam> rinfo(rinfo_size);
     EXPECT_EQ(
         da_handle_get_result(df_handle, da_result::da_rinfo, &rinfo_size, rinfo.data()),
         da_status_invalid_array_dimension);
@@ -321,9 +275,4 @@ template <typename T> void test_decision_forest_invalid_array_dim() {
         da_status_invalid_array_dimension);
 
     da_handle_destroy(&df_handle);
-}
-
-TEST(decision_forest, invalid_array_dim) {
-    test_decision_forest_invalid_array_dim<float>();
-    test_decision_forest_invalid_array_dim<double>();
 }

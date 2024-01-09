@@ -25,47 +25,13 @@
  *
  */
 
-#ifndef DA_HANDLE_HPP
-#define DA_HANDLE_HPP
+#ifndef DF_TYPES_HPP
+#define DF_TYPES_HPP
 
-#include <new>
-#include <stdio.h>
-#include <string.h>
+namespace da_df {
 
-#include "aoclda.h"
-#include "csv_reader.hpp"
-#include "da_error.hpp"
-#include "decision_forest.hpp"
-#include "linear_model.hpp"
-#include "pca.hpp"
+enum scoring_fun { gini = 0, cross_entropy, misclassification_error };
 
-/**
- * @brief Handle structure containing input / output data required for functions such as fit and predict
- */
-struct _da_handle {
-  public:
-    da_csv::csv_reader *csv_parser = nullptr;
-    da_linmod::linear_model<double> *linreg_d = nullptr;
-    da_linmod::linear_model<float> *linreg_s = nullptr;
-    da_handle_type handle_type = da_handle_uninitialized;
-    // Pointer to error trace and related methods
-    da_errors::da_error_t *err = nullptr;
-    da_precision precision = da_double;
-    da_pca::da_pca<double> *pca_d = nullptr;
-    da_pca::da_pca<float> *pca_s = nullptr;
-    da_df::decision_tree<double> *dt_d = nullptr;
-    da_df::decision_tree<float> *dt_s = nullptr;
-    da_df::decision_forest<double> *df_d = nullptr;
-    da_df::decision_forest<float> *df_s = nullptr;
+} // namespace da_df
 
-    // Clear telemetry, for now it only clears the error stack
-    // vector<>.clear() is linear in cost wrt the amount of elements to erase.
-    void clear(void) {
-        if (err)
-            err->clear();
-    };
-
-    da_status get_current_opts(da_options::OptionRegistry **opts);
-};
-
-#endif
+#endif // DF_TYPES_HPP

@@ -23,70 +23,12 @@
 
 #include "aoclda.h"
 
+#include <list>
 #include <random>
 
 #include "gtest/gtest.h"
 
 #include "utest_utils.hpp"
-
-template <typename T>
-da_status da_df_tree_set_training_data(da_handle handle, da_int n_obs, da_int n_features,
-                                       T *x, da_int ldx, uint8_t *y);
-template <>
-da_status da_df_tree_set_training_data<double>(da_handle handle, da_int n_obs,
-                                               da_int n_features, double *x, da_int ldx,
-                                               uint8_t *y) {
-    return da_df_tree_set_training_data_d(handle, n_obs, n_features, x, ldx, y);
-}
-
-template <>
-da_status da_df_tree_set_training_data<float>(da_handle handle, da_int n_obs,
-                                              da_int n_features, float *x, da_int ldx,
-                                              uint8_t *y) {
-    return da_df_tree_set_training_data_s(handle, n_obs, n_features, x, ldx, y);
-}
-
-template <typename T> da_status da_df_tree_fit(da_handle handle);
-
-template <> da_status da_df_tree_fit<float>(da_handle handle) {
-    return da_df_tree_fit_s(handle);
-}
-
-template <> da_status da_df_tree_fit<double>(da_handle handle) {
-    return da_df_tree_fit_d(handle);
-}
-
-template <typename T>
-da_status da_df_tree_score(da_handle handle, da_int n_obs, T *x, da_int ldx,
-                           uint8_t *y_test, T *score);
-
-template <>
-da_status da_df_tree_score<double>(da_handle handle, da_int n_obs, double *x, da_int ldx,
-                                   uint8_t *y_test, double *score) {
-    return da_df_tree_score_d(handle, n_obs, x, ldx, y_test, score);
-}
-
-template <>
-da_status da_df_tree_score<float>(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                                  uint8_t *y_test, float *score) {
-    return da_df_tree_score_s(handle, n_obs, x, ldx, y_test, score);
-}
-
-template <typename T>
-da_status da_df_tree_predict(da_handle handle, da_int n_obs, T *x, da_int ldx,
-                             uint8_t *y_pred);
-
-template <>
-da_status da_df_tree_predict<double>(da_handle handle, da_int n_obs, double *x,
-                                     da_int ldx, uint8_t *y_pred) {
-    return da_df_tree_predict_d(handle, n_obs, x, ldx, y_pred);
-}
-
-template <>
-da_status da_df_tree_predict<float>(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                                    uint8_t *y_pred) {
-    return da_df_tree_predict_s(handle, n_obs, x, ldx, y_pred);
-}
 
 template <typename T> struct TestDataType {
     std::vector<T> x_train;
@@ -96,6 +38,16 @@ template <typename T> struct TestDataType {
     da_int n_obs_train, d;
     da_int n_obs_test;
 };
+
+template <typename T> class DecisionTreeTest : public testing::Test {
+  public:
+    using List = std::list<T>;
+    static T shared_;
+    T value_;
+};
+
+using FloatTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(DecisionTreeTest, FloatTypes);
 
 template <typename T> void set_test_data_8x1(TestDataType<T> &data) {
 
@@ -199,18 +151,16 @@ template <typename T> void test_decision_tree_invalid_input() {
 
     // call set_training_data with invalid values
     T *x_invalid = nullptr;
-    status =
-        da_df_tree_set_training_data<T>(df_handle, n_obs, d, x_invalid, n_obs, y.data());
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x_invalid, n_obs, y.data());
     EXPECT_EQ(status, da_status_invalid_input);
 
-    status =
-        da_df_tree_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_invalid_input);
 
     n_obs = 1;
     d = 1;
-    status = da_df_tree_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs - 1,
-                                             y.data());
+    status =
+        da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs - 1, y.data());
     EXPECT_EQ(status, da_status_invalid_input);
 
     da_handle_destroy(&df_handle);
@@ -236,11 +186,10 @@ template <typename T> void test_decision_tree_get_results() {
     da_int seed_val = -1;
     EXPECT_EQ(da_options_set_int(df_handle, "seed", seed_val), da_status_success);
 
-    EXPECT_EQ(
-        da_df_tree_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
-        da_status_success);
+    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
+              da_status_success);
 
-    EXPECT_EQ(da_df_tree_fit<T>(df_handle), da_status_success);
+    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
 
     da_int rinfo_size = 3;
     std::vector<T> rinfo(rinfo_size);
@@ -256,11 +205,10 @@ template <typename T> void test_decision_tree_get_results() {
     seed_val = (da_int)rinfo[0];
     EXPECT_EQ(da_options_set_int(df_handle, "seed", seed_val), da_status_success);
 
-    EXPECT_EQ(
-        da_df_tree_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
-        da_status_success);
+    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
+              da_status_success);
 
-    EXPECT_EQ(da_df_tree_fit<T>(df_handle), da_status_success);
+    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
 
     EXPECT_EQ(
         da_handle_get_result(df_handle, da_result::da_rinfo, &rinfo_size, rinfo.data()),
@@ -299,18 +247,18 @@ void test_decision_tree_correctness(TestDataType<T> &data, std::string score_str
 
     // status = da_options_set_real_s(df_handle, "diff_thres", 1.0);
 
-    // status = da_df_tree_set_training_data_s(df_handle, n_obs_train, d, x_train.data(), n_obs_train, y.data());
-    EXPECT_EQ(da_df_tree_set_training_data<T>(df_handle, n_obs_train, d, x_train.data(),
-                                              n_obs_train, y.data()),
+    // status = da_df_set_training_data_s(df_handle, n_obs_train, d, x_train.data(), n_obs_train, y.data());
+    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs_train, d, x_train.data(),
+                                         n_obs_train, y.data()),
               da_status_success);
 
-    // status = da_df_tree_fit_s(df_handle);
-    EXPECT_EQ(da_df_tree_fit<T>(df_handle), da_status_success);
+    // status = da_df_fit_s(df_handle);
+    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
 
     T score = 0.0;
-    // status = da_df_tree_score_s(df_handle, n_obs_test, x_test.data(), n_obs_test, y_test.data(), &score);
-    EXPECT_EQ(da_df_tree_score<T>(df_handle, n_obs_test, x_test.data(), n_obs_test,
-                                  y_test.data(), &score),
+    // status = da_df_score_s(df_handle, n_obs_test, x_test.data(), n_obs_test, y_test.data(), &score);
+    EXPECT_EQ(da_df_score<T>(df_handle, n_obs_test, d, x_test.data(), n_obs_test,
+                             y_test.data(), &score),
               da_status_success);
 
     std::cout << "score_str = " << score_str << ", score    = " << score << std::endl;
@@ -321,7 +269,7 @@ void test_decision_tree_correctness(TestDataType<T> &data, std::string score_str
     da_handle_destroy(&df_handle);
 }
 
-TEST(decision_tree, correctness0) {
+TYPED_TEST(DecisionTreeTest, correctness0) {
     std::cout << "Test with (8x1) data" << std::endl;
     std::cout << "-----------------------" << std::endl;
 
@@ -329,16 +277,12 @@ TEST(decision_tree, correctness0) {
 
     std::string score_str = "misclassification-error";
     // std::string score_str = "gini";
-    TestDataType<float> data_s;
-    set_test_data_8x1<float>(data_s);
-    test_decision_tree_correctness<float>(data_s, score_str);
-
-    TestDataType<double> data_d;
-    set_test_data_8x1<double>(data_d);
-    test_decision_tree_correctness<double>(data_d, score_str);
+    TestDataType<TypeParam> data;
+    set_test_data_8x1<TypeParam>(data);
+    test_decision_tree_correctness<TypeParam>(data, score_str);
 }
 
-TEST(decision_tree, correctness1) {
+TYPED_TEST(DecisionTreeTest, correctness1) {
     std::cout << "Test with (8x2, unique) data" << std::endl;
     std::cout << "------------------------------" << std::endl;
 
@@ -346,17 +290,13 @@ TEST(decision_tree, correctness1) {
     std::vector<std::string> param_vec = {"gini", "cross-entropy"};
 
     for (auto &score_str : param_vec) {
-        TestDataType<float> data_s;
-        set_test_data_8x2_unique<float>(data_s);
-        test_decision_tree_correctness<float>(data_s, score_str);
-
-        TestDataType<double> data_d;
-        set_test_data_8x2_unique<double>(data_d);
-        test_decision_tree_correctness<double>(data_d, score_str);
+        TestDataType<TypeParam> data_s;
+        set_test_data_8x2_unique<TypeParam>(data_s);
+        test_decision_tree_correctness<TypeParam>(data_s, score_str);
     }
 }
 
-TEST(decision_tree, correctness2) {
+TYPED_TEST(DecisionTreeTest, correctness2) {
     std::cout << "Test with (8x2, non-unique) data" << std::endl;
     std::cout << "------------------------------" << std::endl;
 
@@ -365,25 +305,17 @@ TEST(decision_tree, correctness2) {
 
     for (auto &score_str : param_vec) {
         // training data values are not unique
-        TestDataType<float> data_s;
-        set_test_data_8x2_nonunique<float>(data_s);
-        test_decision_tree_correctness<float>(data_s, score_str);
-
-        TestDataType<double> data_d;
-        set_test_data_8x2_nonunique<double>(data_d);
-        test_decision_tree_correctness<double>(data_d, score_str);
+        TestDataType<TypeParam> data_s;
+        set_test_data_8x2_nonunique<TypeParam>(data_s);
+        test_decision_tree_correctness<TypeParam>(data_s, score_str);
     }
 }
 
-TEST(decision_tree, invalid_input) {
-    test_decision_tree_invalid_input<float>();
-    test_decision_tree_invalid_input<double>();
+TYPED_TEST(DecisionTreeTest, invalid_input) {
+    test_decision_tree_invalid_input<TypeParam>();
 }
 
-TEST(decision_tree, get_results) {
-    test_decision_tree_get_results<float>();
-    test_decision_tree_get_results<double>();
-}
+TYPED_TEST(DecisionTreeTest, get_results) { test_decision_tree_get_results<TypeParam>(); }
 
 template <typename T> void test_decision_tree_bad_handle() {
     da_status status;
@@ -399,43 +331,38 @@ template <typename T> void test_decision_tree_bad_handle() {
 
     // handle not initialized
     da_handle df_handle = nullptr;
-    status =
-        da_df_tree_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_handle_not_initialized);
 
-    status = da_df_tree_fit<T>(df_handle);
+    status = da_df_fit<T>(df_handle);
     EXPECT_EQ(status, da_status_handle_not_initialized);
 
-    status = da_df_tree_predict<T>(df_handle, n_obs, x.data(), n_obs, y.data());
+    status = da_df_predict<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_handle_not_initialized);
 
-    status = da_df_tree_score<T>(df_handle, n_obs, x.data(), n_obs, y.data(), &score);
+    status = da_df_score<T>(df_handle, n_obs, d, x.data(), n_obs, y.data(), &score);
     EXPECT_EQ(status, da_status_handle_not_initialized);
 
     // incorrect handle type
     EXPECT_EQ(da_handle_init<T>(&df_handle, da_handle_linmod), da_status_success);
-    status =
-        da_df_tree_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
+    status = da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
-    status = da_df_tree_fit<T>(df_handle);
+    status = da_df_fit<T>(df_handle);
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
-    status = da_df_tree_predict<T>(df_handle, n_obs, x.data(), n_obs, y.data());
+    status = da_df_predict<T>(df_handle, n_obs, d, x.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
-    status = da_df_tree_score<T>(df_handle, n_obs, x.data(), n_obs, y.data(), &score);
+    status = da_df_score<T>(df_handle, n_obs, d, x.data(), n_obs, y.data(), &score);
     EXPECT_EQ(status, da_status_invalid_handle_type);
 
     da_handle_destroy(&df_handle);
 }
 
-TEST(decision_tree, bad_handle) {
-    test_decision_tree_bad_handle<float>();
-    test_decision_tree_bad_handle<double>();
-}
+TYPED_TEST(DecisionTreeTest, bad_handle) { test_decision_tree_bad_handle<TypeParam>(); }
 
-TEST(decision_tree, incorrect_handle_precision) {
+TEST(DecisionTreeTest, incorrect_handle_precision) {
     da_status status;
 
     da_handle handle_d = nullptr;
@@ -460,26 +387,24 @@ TEST(decision_tree, incorrect_handle_precision) {
     float score_s = 0.0;
 
     // incorrect handle precision
-    status =
-        da_df_tree_set_training_data_s(handle_d, n_obs, d, x_s.data(), n_obs, y.data());
+    status = da_df_set_training_data_s(handle_d, n_obs, d, x_s.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_wrong_type);
-    status =
-        da_df_tree_set_training_data_d(handle_s, n_obs, d, x_d.data(), n_obs, y.data());
+    status = da_df_set_training_data_d(handle_s, n_obs, d, x_d.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_wrong_type);
 
-    status = da_df_tree_fit_s(handle_d);
+    status = da_df_fit_s(handle_d);
     EXPECT_EQ(status, da_status_wrong_type);
-    status = da_df_tree_fit_d(handle_s);
-    EXPECT_EQ(status, da_status_wrong_type);
-
-    status = da_df_tree_predict_s(handle_d, n_obs, x_s.data(), n_obs, y.data());
-    EXPECT_EQ(status, da_status_wrong_type);
-    status = da_df_tree_predict_d(handle_s, n_obs, x_d.data(), n_obs, y.data());
+    status = da_df_fit_d(handle_s);
     EXPECT_EQ(status, da_status_wrong_type);
 
-    status = da_df_tree_score_s(handle_d, n_obs, x_s.data(), n_obs, y.data(), &score_s);
+    status = da_df_predict_s(handle_d, n_obs, d, x_s.data(), n_obs, y.data());
     EXPECT_EQ(status, da_status_wrong_type);
-    status = da_df_tree_score_d(handle_s, n_obs, x_d.data(), n_obs, y.data(), &score_d);
+    status = da_df_predict_d(handle_s, n_obs, d, x_d.data(), n_obs, y.data());
+    EXPECT_EQ(status, da_status_wrong_type);
+
+    status = da_df_score_s(handle_d, n_obs, d, x_s.data(), n_obs, y.data(), &score_s);
+    EXPECT_EQ(status, da_status_wrong_type);
+    status = da_df_score_d(handle_s, n_obs, d, x_d.data(), n_obs, y.data(), &score_d);
     EXPECT_EQ(status, da_status_wrong_type);
 
     da_handle_destroy(&handle_d);
@@ -506,11 +431,10 @@ template <typename T> void test_decision_tree_invalid_array_dim() {
     da_int seed_val = -1;
     EXPECT_EQ(da_options_set_int(df_handle, "seed", seed_val), da_status_success);
 
-    EXPECT_EQ(
-        da_df_tree_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
-        da_status_success);
+    EXPECT_EQ(da_df_set_training_data<T>(df_handle, n_obs, d, x.data(), n_obs, y.data()),
+              da_status_success);
 
-    EXPECT_EQ(da_df_tree_fit<T>(df_handle), da_status_success);
+    EXPECT_EQ(da_df_fit<T>(df_handle), da_status_success);
 
     da_int rinfo_size = 2;
     std::vector<T> rinfo(rinfo_size);
@@ -527,7 +451,6 @@ template <typename T> void test_decision_tree_invalid_array_dim() {
     da_handle_destroy(&df_handle);
 }
 
-TEST(decision_tree, invalid_array_dim) {
-    test_decision_tree_invalid_array_dim<float>();
-    test_decision_tree_invalid_array_dim<double>();
+TYPED_TEST(DecisionTreeTest, invalid_array_dim) {
+    test_decision_tree_invalid_array_dim<TypeParam>();
 }

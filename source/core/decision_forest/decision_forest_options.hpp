@@ -51,7 +51,7 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "seed", "set random seed for Mersenne Twister (64-bit) PRNG", -1,
-            lbound_t::greaterequal, max_da_int, ubound_t::lessequal, -1));
+            lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
@@ -65,7 +65,7 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(
-            OptionNumeric<da_int>("n_trees", "set number of features in each tree", 0,
+            OptionNumeric<da_int>("n_trees", "set number of trees", 0,
                                   lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 

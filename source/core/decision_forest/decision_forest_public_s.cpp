@@ -29,74 +29,6 @@
 #include "da_handle.hpp"
 #include "decision_forest.hpp"
 
-da_status da_df_tree_set_training_data_s(da_handle handle, da_int n_obs,
-                                         da_int n_features, float *x, da_int ldx,
-                                         uint8_t *y) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    if (handle->dt_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_tree or handle is invalid.");
-
-    return handle->dt_s->set_training_data(n_obs, n_features, x, ldx, y);
-}
-
-da_status da_df_tree_fit_s(da_handle handle) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    if (handle->dt_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_tree or handle is invalid.");
-
-    return handle->dt_s->fit();
-}
-
-da_status da_df_tree_predict_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                               uint8_t *y_pred) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    if (handle->dt_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_tree or handle is invalid.");
-
-    return handle->dt_s->predict(n_obs, x, ldx, y_pred);
-}
-
-da_status da_df_tree_score_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                             uint8_t *y_test, float *score) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    if (handle->dt_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_tree or handle is invalid.");
-
-    return handle->dt_s->score(n_obs, x, ldx, y_test, score);
-}
-
 da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_features,
                                     float *x, da_int ldx, uint8_t *y) {
     if (!handle)
@@ -106,12 +38,15 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_fea
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->df_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_forest or handle is invalid.");
+    if (handle->dt_s != nullptr)
+        return handle->dt_s->set_training_data(n_obs, n_features, x, ldx, y);
+    else if (handle->df_s != nullptr)
+        return handle->df_s->set_training_data(n_obs, n_features, x, ldx, y);
 
-    return handle->df_s->set_training_data(n_obs, n_features, x, ldx, y);
+    return da_error(handle->err, da_status_invalid_handle_type,
+                    "handle was not initialized with "
+                    "handle_type=da_handle_decision_tree or "
+                    "handle_type=da_handle_decision_forest");
 }
 
 da_status da_df_fit_s(da_handle handle) {
@@ -122,16 +57,19 @@ da_status da_df_fit_s(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->df_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_forest or handle is invalid.");
+    if (handle->dt_s != nullptr)
+        return handle->dt_s->fit();
+    else if (handle->df_s != nullptr)
+        return handle->df_s->fit();
 
-    return handle->df_s->fit();
+    return da_error(handle->err, da_status_invalid_handle_type,
+                    "handle was not initialized with "
+                    "handle_type=da_handle_decision_tree or "
+                    "handle_type=da_handle_decision_forest");
 }
 
-da_status da_df_predict_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                          uint8_t *y_pred) {
+da_status da_df_predict_s(da_handle handle, da_int n_obs, da_int n_features, float *x,
+                          da_int ldx, uint8_t *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -139,16 +77,19 @@ da_status da_df_predict_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->df_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_forest or handle is invalid.");
+    if (handle->dt_s != nullptr)
+        return handle->dt_s->predict(n_obs, n_features, x, ldx, y_pred);
+    else if (handle->df_s != nullptr)
+        return handle->df_s->predict(n_obs, n_features, x, ldx, y_pred);
 
-    return handle->df_s->predict(n_obs, x, ldx, y_pred);
+    return da_error(handle->err, da_status_invalid_handle_type,
+                    "handle was not initialized with "
+                    "handle_type=da_handle_decision_tree or "
+                    "handle_type=da_handle_decision_forest");
 }
 
-da_status da_df_score_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
-                        uint8_t *y_test, float *score) {
+da_status da_df_score_s(da_handle handle, da_int n_obs, da_int n_features, float *x,
+                        da_int ldx, uint8_t *y_test, float *score) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -156,10 +97,13 @@ da_status da_df_score_s(da_handle handle, da_int n_obs, float *x, da_int ldx,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->df_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with "
-                        "handle_type=da_handle_decision_forest or handle is invalid.");
+    if (handle->dt_s != nullptr)
+        return handle->dt_s->score(n_obs, n_features, x, ldx, y_test, score);
+    else if (handle->df_s != nullptr)
+        return handle->df_s->score(n_obs, n_features, x, ldx, y_test, score);
 
-    return handle->df_s->score(n_obs, x, ldx, y_test, score);
+    return da_error(handle->err, da_status_invalid_handle_type,
+                    "handle was not initialized with "
+                    "handle_type=da_handle_decision_tree or "
+                    "handle_type=da_handle_decision_forest");
 }

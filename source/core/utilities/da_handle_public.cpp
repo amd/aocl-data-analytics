@@ -55,10 +55,10 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             (*handle)->pca_d = new da_pca::da_pca<double>(*(*handle)->err);
             break;
         case da_handle_decision_tree:
-            (*handle)->dt_d = new decision_tree<double>(*(*handle)->err);
+            (*handle)->dt_d = new da_df::decision_tree<double>(*(*handle)->err);
             break;
         case da_handle_decision_forest:
-            (*handle)->df_d = new decision_forest<double>(*(*handle)->err);
+            (*handle)->df_d = new da_df::decision_forest<double>(*(*handle)->err);
             break;
         default:
             break;
@@ -94,10 +94,10 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             (*handle)->pca_s = new da_pca::da_pca<float>(*(*handle)->err);
             break;
         case da_handle_decision_tree:
-            (*handle)->dt_s = new decision_tree<float>(*(*handle)->err);
+            (*handle)->dt_s = new da_df::decision_tree<float>(*(*handle)->err);
             break;
         case da_handle_decision_forest:
-            (*handle)->df_s = new decision_forest<float>(*(*handle)->err);
+            (*handle)->df_s = new da_df::decision_forest<float>(*(*handle)->err);
             break;
         default:
             break;

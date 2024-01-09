@@ -50,9 +50,9 @@ The following options are supported.
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
    "diff_thres", "real", ":math:`r=1e-06`", "minimum difference in feature value required for splitting", ":math:`0 < r`"
-   "n_trees", "integer", ":math:`i=1`", "set number of features in each tree", ":math:`0 < i`"
+   "n_trees", "integer", ":math:`i=1`", "set number of trees", ":math:`0 < i`"
    "n_features_to_select", "integer", ":math:`i=1`", "set number of features in selection for splitting", ":math:`0 < i`"
-   "seed", "integer", ":math:`i=-1`", "set random seed for Mersenne Twister (64-bit) PRNG", ":math:`-1 \le i \le 2147483647`"
+   "seed", "integer", ":math:`i=-1`", "set random seed for Mersenne Twister (64-bit) PRNG", ":math:`-1 \le i`"
    "n_obs_per_tree", "integer", ":math:`i=1`", "set number of observations in each tree", ":math:`0 < i`"
    "depth", "integer", ":math:`i=-1`", "set max depth of tree", ":math:`-1 \le i`"
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `gini`, or `misclassification-error`."

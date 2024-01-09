@@ -39,6 +39,9 @@ second class for node `m` is defined as,
 
    \hat{p}^0_m = \frac{1}{N_m} \sum_{x_i \in R_m} I(y_i = 1)
 
+where :math:`R_m` is the rectangular region corresponding to the :math:`m` th node, :math:`x_i` is a (multi-dimensional)
+observation, :math:`y_i` is a label, and :math:`N_m` is the number of observations in :math:`R_m`.
+
 The node impurity is defined as,
 
 .. math::
@@ -49,13 +52,13 @@ where :math:`Q(\hat{p}^0_m)` is a function that quantifies the error in the clas
 if all observations in :math:`R_m` are in the same class, then :math:`Q(\hat{p}^0_m)=0` and we say that the node is
 pure.
 
-AOCL-DA supports the following choices of :math:`Q(\hat{p}^0_m)`,
+AOCL-DA supports the following choices of :math:`Q(p)`,
 
 .. math::
 
    \mathrm{Misclassification\ error: }   & \ 1 - \max(p, 1-p) \\
    \mathrm{Gini\ index: }                & \ 1 - 2 p (1-p)    \\
-   \mathrm{Cross-entropy\ or\ deviance: } & \ -p \log(p) - (1-p) \log(1-p)
+   \operatorname{Cross-entropy or deviance: } & \ -p \log(p) - (1-p) \log(1-p)
 
 Fitting
 --------
@@ -63,7 +66,7 @@ Fitting
 Decision Tree fitting is done by growing a tree recursively, starting with a single base node.  Each node has a depth
 associated with it, which corresponds to the number of splits required to get to that node from the base node.  If the
 depth of the node is less than the maximum depth and the node is not pure, we minimize the sum of the node impurities
-over each possible split.
+over each possible split,
 
 .. math::
 
@@ -75,6 +78,8 @@ where
 
    \hat{p}^1_m(j,s) &= \sum_{ \{i \ : x_i(j) \leq s \} } I(y_i = 1) \\
    \hat{p}^2_m(j,s) &= \sum_{ \{i \ : x_i(j) > s \} } I(y_i = 1)
+
+and :math:`j` is the feature index, so that :math:`x_i(j)` is the :math:`j` th feature of the :math:`i` th observation.
 
 Then node :math:`m` stops being a terminal node, and two new terminal nodes are created as children of node :math:`m`.
 The domains for the new child nodes are defined by splitting :math:`R_m` into two rectangles using the variable index
@@ -102,24 +107,19 @@ terminal node :math:`m`, and :math:`\hat{p}^0_m > 0.5`, the predicted label is :
 Decision Forest prediction is done by producing an ensemble of Decision Tree predictions and using a majority vote to
 determine the prediction of the Decision Forest.
 
-Typical workflow for Decision Trees and Random Forests
-------------------------------------------------------
+Typical workflow for Decision Random Forests
+---------------------------------------------
 
 The following workflow can be used to fit a Decision Tree or a Decision Forest model and use it make predictions,
 
 1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_decision_tree`` /
    ``da_handle_decision_forest``.
-2. Pass data to the handle using either :cpp:func:`da_df_tree_set_training_data_s` /
-   :cpp:func:`da_df_set_training_data_s` or :cpp:func:`da_df_tree_set_training_data_d` /
-   :cpp:func:`da_df_set_training_data_d`.
+2. Pass data to the handle using either :cpp:func:`da_df_set_training_data_s` or :cpp:func:`da_df_set_training_data_d`.
 3. Set optional parameters, such as maximum depth, using :cpp:func:`da_options_set_int` and
    :cpp:func:`da_options_set_string`  (see :ref:`options section <df_options>`).
-4. Fit the model using :cpp:func:`da_df_tree_fit_s` / :cpp:func:`da_df_fit_s` or :cpp:func:`da_df_tree_fit_d` /
-   :cpp:func:`da_df_fit_d`.
-5. Evaluate prediction accuracy on test data using :cpp:func:`da_df_tree_score_s` / :cpp:func:`da_df_score_s` or
-   :cpp:func:`da_df_tree_score_d` / :cpp:func:`da_df_score_d`.
-6. Make predictions using the fitted model using :cpp:func:`da_df_tree_predict_s` / :cpp:func:`da_df_predict_s` or
-   :cpp:func:`da_df_tree_predict_d` / :cpp:func:`da_df_predict_d`.
+4. Fit the model using :cpp:func:`da_df_fit_s` or :cpp:func:`da_df_fit_d`.
+5. Evaluate prediction accuracy on test data using :cpp:func:`da_df_score_s` or :cpp:func:`da_df_score_d`.
+6. Make predictions using the fitted model using :cpp:func:`da_df_predict_s` or :cpp:func:`da_df_predict_d`.
 
 Options
 -------
@@ -131,20 +131,10 @@ Examples
 
 See ``examples/decision_tree_ex.cpp`` for an example of how to use these functions.
 
-Release 4.2 Status
-------------------
-
-* Decision Tree functionality has a working example - ``tests/examples/decision_tree_ex.cpp``.
-* Decision Tree functionality still needs unit tests (not yet started).
-* Random Sampling primitives have been written for Decision Forest fuctionality -
-  ``tests/unit_tests/decision_forest_tests.cpp``.  Testing of these primitives is in progress (not yet complete).
-* Development of a working Decision Forest example using the Decision Tree functionality and the Random Sampling
-  primitives is in progress (not yet complete).
-
 Further Reading
 ----------------
 
-An introduction to Decision Trees and to Random Forests can be found in Chapters 9, 15 of :cite:t:`hastie`.
+An introduction to Decision Trees and to Random Forests can be found in Chapters 9 and 15 of :cite:t:`hastie`.
 
 .. toctree::
     :maxdepth: 1
