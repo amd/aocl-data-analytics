@@ -9,4 +9,6 @@ tags
 .*.un~
 # Fortran modules
 *.mod
+# Compiled Python
+*.pyc
 

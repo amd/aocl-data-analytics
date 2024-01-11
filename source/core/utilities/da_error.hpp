@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <string.h>
 #include <string>
 #include <vector>
 
@@ -152,11 +153,6 @@ using namespace std;
 
 /** Labels to use when printing the error/warning messages */
 string const sev_labels[3] = {"???", "WARNING", "ERROR"};
-enum severity_type {
-    DA_NOTSET = 0,  // Initial state
-    DA_WARNING = 1, // something happened. Returned data is potentially safe to use
-    DA_ERROR = 2,   // error occurred. Returned data is unsafe
-};
 
 enum action_t {
     DA_RECORD = 0, // compose/print the error/warning
@@ -174,15 +170,15 @@ class da_error_t {
     vector<string> telem;
     // This should indicate if the output of the functionality is
     // usable or not. DA_WARNING -> useable, and DA_ERROR -> not usable.
-    vector<severity_type> severity; // {severity_type::DA_NOTSET};
+    vector<da_severity> severity; // {severity_type::DA_NOTSET};
     // Registered status, by default no error
     vector<da_status> status; // {da_status_success};
     // Action to take when rec() method is called
     action_t action{action_t::DA_RECORD};
 
   public:
-    severity_type get_severity(void) {
-        return severity.empty() ? severity_type::DA_NOTSET : severity.front();
+    da_severity get_severity(void) {
+        return severity.empty() ? DA_NOTSET : severity.front();
     };
     da_status get_status(void) {
         return status.empty() ? da_status_success : status.front();
@@ -190,6 +186,21 @@ class da_error_t {
     string get_mesg(void) { return mesg.empty() ? "" : mesg.front(); };
     string get_details(void) { return details.empty() ? "" : details.front(); };
     string get_telem(void) { return telem.empty() ? "" : telem.front(); };
+
+    da_status get_mesg_char(char **message) {
+        size_t len = mesg.front().length();
+        *message = (char *)(malloc(len + 1));
+        if (*message == NULL) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+        /* Most of the time MSVC compiler can automatically replace CRT functions with _s versions, but not this one */
+#if defined(_MSC_VER)
+        strncpy_s(*message, 1 + len, mesg.front().c_str(), len);
+#else
+        strncpy(*message, mesg.front().c_str(), len);
+#endif
+        return da_status_success;
+    }
 
     da_status clear(void) {
         mesg.clear();
@@ -252,7 +263,7 @@ class da_error_t {
     }
     da_status rec(da_status status, string msg, string det = "",
                   string tel = "<no telemetry provided>", size_t ln = 0,
-                  severity_type sev = DA_ERROR, bool stack = false) {
+                  da_severity sev = DA_ERROR, bool stack = false) {
         if (!stack) {
             this->status.resize(0);
             this->mesg.resize(0);
@@ -306,20 +317,20 @@ constexpr const char *basename(const char *const path) { return &path[strip_path
 
 #define da_error(e, status, msg)                                                         \
     (e)->rec(status, (msg), "", std::string(da_errors::basename(__FILE__)) + ":",        \
-             __LINE__, da_errors::severity_type::DA_ERROR, false)
+             __LINE__, DA_ERROR, false)
 #define da_warn(e, status, msg)                                                          \
     (e)->rec(status, (msg), "",                                                          \
              std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
-             da_errors::severity_type::DA_WARNING, false)
+             DA_WARNING, false)
 
 #define da_error_trace(e, status, msg)                                                   \
     (e)->rec(status, (msg), "",                                                          \
              std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
-             da_errors::severity_type::DA_ERROR, true)
+             DA_ERROR, true)
 #define da_warn_trace(e, status, msg)                                                    \
     (e)->rec(status, (msg), "",                                                          \
              std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
-             da_errors::severity_type::DA_WARNING, true)
+             DA_WARNING, true)
 
 } // namespace da_errors
 #endif

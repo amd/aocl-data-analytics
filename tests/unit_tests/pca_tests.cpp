@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -430,22 +430,28 @@ TYPED_TEST(PCATest, ErrorExits) {
     dim = 1;
     EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &dim, results_arr),
               da_status_invalid_array_dimension);
+    EXPECT_EQ(dim, params[0].n * params[0].components_required);
     dim = 1;
     EXPECT_EQ(da_handle_get_result(handle, da_pca_scores, &dim, results_arr),
               da_status_invalid_array_dimension);
+    EXPECT_EQ(dim, params[0].n * params[0].components_required);
     dim = 1;
     EXPECT_EQ(da_handle_get_result(handle, da_pca_variance, &dim, results_arr),
               da_status_invalid_array_dimension);
+    EXPECT_EQ(dim, params[0].components_required);
     dim = 1;
     EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &dim, results_arr),
               da_status_invalid_array_dimension);
+    EXPECT_EQ(dim, params[0].p * params[0].components_required);
     dim = 1;
     EXPECT_EQ(da_handle_get_result(handle, da_pca_sigma, &dim, results_arr),
               da_status_invalid_array_dimension);
+    EXPECT_EQ(dim, params[0].components_required);
     dim = 1;
     EXPECT_EQ(
         da_handle_get_result(handle, da_pca_principal_components, &dim, results_arr),
         da_status_invalid_array_dimension);
+    EXPECT_EQ(dim, params[0].n * params[0].components_required);
 
     // da_handle_results error exits for columns means and column sdevs
     EXPECT_EQ(da_options_set_string(handle, "PCA method", "svd"), da_status_success);

@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -184,15 +184,15 @@ template <typename T> void reggrd(usrdata_base<T> *data, da_int n, T const *x, T
  * and its gradient as defined in Elements of Statistical Learning (Hastie & all)
  */
 template <typename T>
-da_int objfun_logistic([[maybe_unused]] da_int n, T *x, T *f, void *usrdata) {
+da_int objfun_logistic([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
 
-    // All data related to the regression problem is stored in the usrdata pointer
+    // All data related to the regression problem is stored in the udata pointer
     // multinomial problem with K (nclass) classes (indexed in [0, K-1]), nfeat features and nsamples samples.
     // x is of size (nfeat+itpt)*(K-1)
     // where itpt is 1 if the intercept is required and 0 otherwise
     // with nmod = (nfeat+itpt), the parameters corresponding to the class k (k in 0,..,K-2)
 
-    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)usrdata;
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)udata;
     std::vector<T> &maxexp = data->maxexp;
     std::vector<T> &lincomb = data->lincomb;
     T *lincomb_ptr = data->lincomb.data();
@@ -238,10 +238,10 @@ da_int objfun_logistic([[maybe_unused]] da_int n, T *x, T *f, void *usrdata) {
 }
 
 template <typename T>
-da_int objgrd_logistic(da_int n, T *x, T *grad, void *usrdata,
+da_int objgrd_logistic(da_int n, T *x, T *grad, void *udata,
                        [[maybe_unused]] da_int xnew) {
 
-    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)usrdata;
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)udata;
     std::vector<T> &maxexp = data->maxexp;
     const T *y = data->y;
     std::vector<T> &lincomb = data->lincomb;
@@ -301,9 +301,9 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *usrdata,
 }
 
 /* Mean square error callbacks */
-template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *usrdata) {
+template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *udata) {
 
-    cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)usrdata;
+    cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)udata;
     da_int nsamples = data->nsamples;
     const T *y = data->y;
     T *matvec = data->matvec.data();
@@ -329,9 +329,9 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *usrdata) {
 }
 
 template <typename T>
-da_int objgrd_mse(da_int n, T *x, T *grad, void *usrdata, [[maybe_unused]] da_int xnew) {
+da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int xnew) {
 
-    cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)usrdata;
+    cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)udata;
     da_int nsamples = data->nsamples;
     T *matvec = data->matvec.data();
 
@@ -362,9 +362,9 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *usrdata, [[maybe_unused]] da_in
 
 /* Helper callback to get step for coordinate descent method */
 template <typename T>
-da_int stepfun_linreg(da_int nfeat, T *coef, T *step, da_int k, T *f, void *usrdata,
+da_int stepfun_linreg(da_int nfeat, T *coef, T *step, da_int k, T *f, void *udata,
                       da_int action, T kdiff) {
-    stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)usrdata;
+    stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
     /* Actions regarting feature matrix evaluation
      * action < 0 means that feature matrix was previously called and that only a low rank
      *            update is requested and -(action+1) contains the previous k that changed
@@ -373,11 +373,11 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *step, da_int k, T *f, void *usrd
      * action > 0 evaluate the matrix.
      *
      * Assumptions:
-     *  * usrdata->X is standardized:
+     *  * udata->X is standardized:
      *    for each column j = 1:nfeat we have
      *    zero-mean, and
      *    sum xij^2 = 1, i=1:nsamples
-     *  * usrdata->aux is of size nsamples
+     *  * udata->aux is of size nsamples
      */
 
     da_int nsamples = data->nsamples;
@@ -401,7 +401,7 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *step, da_int k, T *f, void *usrd
             data->aux[i] = data->matvec[i];
         }
         /* Low-rank update validation
-         * eval_feature_matrix(nfeat, coef, usrdata);
+         * eval_feature_matrix(nfeat, coef, udata);
          * for (da_int i = 0; i < nsamples; ++i){
          *     T d = data->y[i] - data->aux[i];
          *     if (std::abs(d) > 1e-9) {

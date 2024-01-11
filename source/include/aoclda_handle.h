@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef AOCLDA_HANDLE
@@ -63,7 +63,7 @@ typedef enum da_handle_type_ {
  * @brief
  * @rst
  * The main handle object.
- * 
+ *
  * For more info on the handle structure see the :ref:`higher-level handle description <intro_handle>`.
  * @endrst
  */
@@ -71,7 +71,7 @@ typedef struct _da_handle *da_handle;
 
 /** \{
  * @brief Initialize a \ref da_handle with default values.
- * 
+ *
  * Set up a \ref da_handle to be used with a specific chapter.
  * This function must be called before calling any functions that require a
  * valid handle.
@@ -117,6 +117,10 @@ da_status da_handle_print_error_message(da_handle handle);
  * @return void.
  */
 void da_handle_destroy(da_handle *handle);
+
+/* The following routines are undocumented and are used internally to help the Python interfaces */
+da_status da_handle_get_error_message(da_handle handle, char **message);
+da_status da_handle_get_error_severity(da_handle handle, da_severity *severity);
 
 #ifdef __cplusplus
 }

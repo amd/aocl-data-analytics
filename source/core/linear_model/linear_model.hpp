@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -614,8 +614,7 @@ template <class T> da_status linear_model<T>::fit_linreg_coord() {
                         "function pointer.");
     }
     status = opt->solve(coef, udata);
-    if (status == da_status_success ||
-        this->err->get_severity() != da_errors::severity_type::DA_ERROR)
+    if (status == da_status_success || this->err->get_severity() != DA_ERROR)
         // either success or warning with usable solution, continue
         status = this->err->clear();
     else
@@ -651,8 +650,7 @@ template <class T> da_status linear_model<T>::fit_linreg_lbfgs() {
                         "gradient function pointer.");
     }
     status = opt->solve(coef, udata);
-    if (status == da_status_success ||
-        this->err->get_severity() != da_errors::severity_type::DA_ERROR)
+    if (status == da_status_success || this->err->get_severity() != DA_ERROR)
         // either success or warning with usable solution, continue
         status = this->err->clear();
     else
@@ -689,8 +687,7 @@ template <class T> da_status linear_model<T>::fit_logreg_lbfgs() {
                         "gradient function pointer.");
     }
     status = opt->solve(coef, udata);
-    if (status == da_status_success ||
-        this->err->get_severity() != da_errors::severity_type::DA_ERROR) {
+    if (status == da_status_success || this->err->get_severity() != DA_ERROR) {
         // Solver managed to provide a usable solution
         return this->err->clear(); // Clear warning and return
     } else {

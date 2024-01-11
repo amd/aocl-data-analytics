@@ -37,8 +37,8 @@ AOCL-DA installation directory.
 
 AOCL-DA has a C-compatible interface, which has been chosen to make it as seamless as
 possible to integrate with the library from whichever programming language you are using.
-Future releases of the library will introduce further language-specific interfaces,
-such as a Python interface.
+In addition, a :ref:`Python API<chapter_python_intro>` exists for the algorithmic functions, and :ref:`C++ overloads<cpp_overloads>` are available.
+All interfaces call the same underlying code base.
 
 Library Workflow
 ================
@@ -145,8 +145,8 @@ The easiest way to do this is to source the ifort compiler using e.g. ``C:\Progr
 Compiling using CMake
 ---------------------
 
-A CMakeLists.txt file is supplied in the examples folder of your installation. You will need to set AOCL_ROOT to point to your AOCL installation.
-On Windows you may also need to source the ifort compiler using e.g. "C:\Program Files (x86)\Intel\oneAPI\setvars.bat".
+A CMakeLists.txt file is supplied in the examples folder of your installation. You will need to set ``AOCL_ROOT`` to point to your AOCL installation.
+On Windows you may also need to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
 To configure cmake and compile, you can then use commands similar to:
 
 .. code-block::
@@ -204,3 +204,18 @@ Version String
 --------------
 
 To get the version string of AOCL-DA call the function ``const char* da_get_version()``.
+
+
+.. _cpp_overloads:
+
+C++ overloads
+--------------
+
+To facilitate calling AOCL-DA from C++, a set of overloaded functions has been made available.
+These are identical to the C interface, except that none of the functions have ``_s`` and ``_d`` appended onto their names.
+Your C++ compiler will instead call the correct function based on the floating point precision you are using.
+
+For some functions, overloading is not possible (for example, functions such as :cpp:func:`da_handle_init_s` and :cpp:func:`da_handle_init_d` do not use ``double`` or ``float`` arguments).
+In these cases, templated functions are available (e.g. ``da_handle_init<T>``, where ``T`` can be ``double`` or ``float``).
+
+For a complete list of available C++ functions, see ``aoclda_cpp_overloads.hpp`` in the include folder of your installation.

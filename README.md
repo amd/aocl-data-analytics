@@ -1,43 +1,43 @@
 # AOCL Data Analytics Library
 
-The AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing 
-optimized building blocks for data analysis. It is written with a `C`-compatible 
-interface to make it as seamless as possible to integrate with the library from 
-whichever programming language you are using. For further details on the library 
+The AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing
+optimized building blocks for data analysis. It is written with a `C`-compatible
+interface to make it as seamless as possible to integrate with the library from
+whichever programming language you are using. For further details on the library
 contents, please refer to the online help or PDF user guide.
 
 The intended workflow for using the library is as follows:
 
  - load data from memory by reading CSV files or using the in-built da_datastore object
- 
+
  - preprocess the data by removing missing values, standardizing, and selecting certain subsets of the data, before extracting contiguous arrays of data from the da_datastore objects
-  
+
  -  data processing (e.g. principal component analysis, linear model fitting, etc.)
 
 
 C++ example programs can be found in the `examples` folder of your installation.
 
 
-AOCL-DA is developed and maintained by [AMD](https://www.amd.com/). For support or queries, you can email us on 
+AOCL-DA is developed and maintained by [AMD](https://www.amd.com/). For support or queries, you can email us on
 [toolchainsupport@amd.com](toolchainsupport@amd.com).
 
 
 # Building the library
 
-AOCL-DA is built with CMake, with supported compilers GNU and AOCC on Linux and MSVC (with ifort) on MS Windows. 
+AOCL-DA is built with CMake, with supported compilers GNU and AOCC on Linux and MSVC (with ifort) on MS Windows.
 
-AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be dependent on other AOCL libraries (such as Sparse). 
+AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be dependent on other AOCL libraries (such as Sparse).
 
-## Building on Linux 
+## Building on Linux
 
-1. You will need to have AOCL-BLAS and AOCL-LAPACK installed somewhere 
+1. You will need to have AOCL-BLAS and AOCL-LAPACK installed somewhere
 
-2. Make sure you have set the environment variable `$AOCL_ROOT` to where the AOCL libraries are 
+2. Make sure you have set the environment variable `$AOCL_ROOT` to where the AOCL libraries are
    installed e.g. `/home/username/amd/aocl/4.0`
 
-3. In your checkout create a directory called build and navigate to it 
+3. In your checkout create a directory called build and navigate to it
 
-4. Type `cmake ..`` along with any (or none) of the following options depending on the build that is desired: 
+4. Type `cmake ..`` along with any (or none) of the following options depending on the build that is desired:
 
    * `-DMEMSAN=On` for memory sanitization
 
@@ -45,17 +45,17 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
    * `-DVALGRIND=On` for valgrind use
 
-   * `-DBUILD_ILP64=On` for 64-bit integer build 
+   * `-DBUILD_ILP64=On` for 64-bit integer build
 
-   * `-DCMAKE_BUILD_TYPE=Debug` or `Release` 
+   * `-DCMAKE_BUILD_TYPE=Debug` or `Release`
 
-   * `-DCOVERAGE=On` to build code coverage report 
+   * `-DCOVERAGE=On` to build code coverage report
 
    * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are `On` by default
 
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
 
-   * `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats)
+   * `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats). Note that to build the Python documentation the PYTHONPATH environment variable must be set to aocl-da/python_interface/python_package
 
    * `-DINTERNAL_DOC=On` to build the internal documentation alongside the main one
 
@@ -70,12 +70,12 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
    * `-DCMAKE_INSTALL_PREFIX=<install path>`. Path where to install the library (using the build target `install` of step 5)
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
-  
+
    **Note** that not all the options available in `Release` build mode
 
 5. Type `cmake --build . --target all` (or `--target doc`, to build the documentation)
 
-6. Run the tests or examples using ctest e.g. `ctest -V –R` followed by a string to find a particular set of tests 
+6. Run the tests or examples using ctest e.g. `ctest -V –R` followed by a string to find a particular set of tests
 
 ## Building on MS Windows using the MSVC toolchain
 
@@ -87,13 +87,13 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
 1. In your checkout create a directory called build
 
-2. Open a Developer Powershell for VS2022 window and navigate to the build directory 
+2. Open a Developer Powershell for VS2022 window and navigate to the build directory
 
 3. Type `cmd.exe "/K" '"C:\Program Files (x86)\Intel\oneAPI\setvars.bat" && powershell'` to load the Intel compiler environment variables (if your compiler is installed elsewhere then you will need to edit this command accordingly). Note that you can also do this in a Developer Command Prompt, in which case simply use the command `"C:\Program Files (x86)\Intel\oneAPI\setvars.bat"`
 
-4. Type `cmake ..` along with any (or none) of the following options depending on the build that is desired: 
+4. Type `cmake ..` along with any (or none) of the following options depending on the build that is desired:
 
-   * `-DBUILD_ILP64=On` for 64-bit integer build 
+   * `-DBUILD_ILP64=On` for 64-bit integer build
 
    * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are on by default
 
@@ -107,11 +107,11 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
     **Note** that not all the options available in Linux are available in Windows
 
-5. Either: 
+5. Either:
 
-* Open Visual Studio and load the `AOCL-DA.sln` file then build Debug or Release builds using the GUI, or 
+* Open Visual Studio and load the `AOCL-DA.sln` file then build Debug or Release builds using the GUI, or
 
-* In your powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate) 
+* In your powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate)
 
 8. Depending on whether BLAS/LAPACK libraries are on your `PATH`, the compiled executables may only work if the BLAS and LAPACK dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll` and `AOCL-LibFlame-Win-MT-dll.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
 
@@ -146,9 +146,9 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
 3. In your checkout create a directory called build.
 
-4. Open a standard Windows command prompt, navigate to build and type `cmake -G Ninja -DCMAKE_C_COMPILER=gcc` (or `clang`) `-DCMAKE_CXX_COMPILER=g++` (or `clang++`) `..` along with any (or none) of the following options depending on the build that is desired: 
+4. Open a standard Windows command prompt, navigate to build and type `cmake -G Ninja -DCMAKE_C_COMPILER=gcc` (or `clang`) `-DCMAKE_CXX_COMPILER=g++` (or `clang++`) `..` along with any (or none) of the following options depending on the build that is desired:
 
-    * `-DBUILD_ILP64=On` for 64-bit integer build 
+    * `-DBUILD_ILP64=On` for 64-bit integer build
 
     * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are on by default
 

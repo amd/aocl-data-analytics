@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -87,4 +87,11 @@ typedef enum da_status_ {
         600, ///< The store is missing a block, the requested operation cannot be performed
     da_status_full_extraction, ///< No selection was defined, the full store is being extracted
 } da_status;
+
+typedef enum da_severity_ {
+    DA_NOTSET = 0,  // Initial state
+    DA_WARNING = 1, // something happened. Returned data is potentially safe to use
+    DA_ERROR = 2,   // error occurred. Returned data is unsafe
+} da_severity;
+
 #endif

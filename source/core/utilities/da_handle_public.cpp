@@ -254,3 +254,20 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
                     "The handle does not have any results to export. Have you "
                     "initialized the handle and performed any calculation?");
 }
+
+da_status da_handle_get_error_message(da_handle handle, char **message) {
+    // check to see if we have a valid handle
+    if (handle) {
+        return handle->err->get_mesg_char(message);
+    }
+    return da_status_invalid_input;
+}
+
+da_status da_handle_get_error_severity(da_handle handle, da_severity *severity) {
+    // check to see if we have a valid handle
+    if (handle) {
+        *severity = handle->err->get_severity();
+        return da_status_success;
+    }
+    return da_status_invalid_input;
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -46,9 +46,9 @@ TEST(linmod, badHandle) {
     da_int n = 1, m = 1;
     float *af = 0, *bf = 0;
     double *ad = 0, *bd = 0;
-    EXPECT_EQ(da_linreg_define_features(handle, m, n, af, bf),
+    EXPECT_EQ(da_linmod_define_features(handle, m, n, af, bf),
               da_status_handle_not_initialized);
-    EXPECT_EQ(da_linreg_define_features(handle, m, n, ad, bd),
+    EXPECT_EQ(da_linmod_define_features(handle, m, n, ad, bd),
               da_status_handle_not_initialized);
 
     EXPECT_EQ(da_linmod_fit_d(handle), da_status_handle_not_initialized);
@@ -83,8 +83,8 @@ TEST(linmod, wrongType) {
     da_int n = 1, m = 1;
     float *af = 0, *bf = 0;
     double *ad = 0, *bd = 0;
-    EXPECT_EQ(da_linreg_define_features(handle_d, m, n, af, bf), da_status_wrong_type);
-    EXPECT_EQ(da_linreg_define_features(handle_s, m, n, ad, bd), da_status_wrong_type);
+    EXPECT_EQ(da_linmod_define_features(handle_d, m, n, af, bf), da_status_wrong_type);
+    EXPECT_EQ(da_linmod_define_features(handle_s, m, n, ad, bd), da_status_wrong_type);
 
     EXPECT_EQ(da_linmod_fit_d(handle_s), da_status_wrong_type);
     EXPECT_EQ(da_linmod_fit_s(handle_d), da_status_wrong_type);

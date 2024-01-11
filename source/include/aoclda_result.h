@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef AOCLDA_RESULT
@@ -55,14 +55,14 @@ typedef enum da_result_ {
     da_pca_scores = 201, ///< Matrix of scores computed by the PCA API.
     da_pca_variance, ///< The variance explained by each component computed by the PCA API.
     da_pca_principal_components, ///< Matrix of principal components computed by the PCA API.
-    da_pca_total_variance, ///< The toal variance of the data matrix supplied to the PCA API.
+    da_pca_total_variance, ///< The total variance of the data matrix supplied to the PCA API.
     da_pca_column_means, ///< Column means of the data matrix supplied to the PCA API.
     da_pca_column_sdevs, ///< Column standard deviations of the data matrix supplied to the PCA API.
     da_pca_u, ///< The matrix @f$U@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     da_pca_sigma, ///< The nonzero diagonal entries of @f$\Sigma@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     da_pca_vt, ///< The matrix @f$V^T@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     // Nonlinear Optimization 301..400
-    // Random Forrests 401..500
+    // Random Forests 401..500
     // ...
 } da_result;
 
@@ -81,7 +81,7 @@ typedef enum da_result_ {
  * - \ref da_status_success - the operation completed successfully.
  * - \ref da_status_unknown_query - the \p query
  *         is either not available or not found in the \p handle.
- *         This can happen if you try an extract a result before performing the operation (for example, 
+ *         This can happen if you try an extract a result before performing the operation (for example,
  *         extracting the coefficient of a linear regression before actually performing a
  *         sucessful fit), or if the handle is of the wrong type (for example, a handle
  *         initialized for linear models cannot contain results about a principal component analysis).
@@ -114,7 +114,7 @@ da_status da_handle_get_result_s(const da_handle handle, da_result query, da_int
  * - \ref da_status_success - the operation completed successfully.
  * - \ref da_status_unknown_query - the \p query
  *         is either not available or not found in the \p handle.
- *         This can happen if you try an extract a result before performing the operation (for example, 
+ *         This can happen if you try an extract a result before performing the operation (for example,
  *         extracting the coefficient of a linear regression before actually performing a
  *         sucessful fit), or if the handle is of the wrong type (for example, a handle
  *         initialized for linear models cannot contain results about a principal component analysis).

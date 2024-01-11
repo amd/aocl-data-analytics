@@ -7,6 +7,7 @@ tags
 '.*\.csv'
 'test/data/.*'
 'example/data/.*'
+'README\.md'
 '.*/README'
 '.*/README.md'
 '.*/README[-]?.*\.txt'

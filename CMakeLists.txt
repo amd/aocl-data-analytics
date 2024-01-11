@@ -73,6 +73,7 @@ option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library biuld" OFF)
+option(BUILD_PYTHON "Python bindings" OFF)
 
 if(BUILD_SMP OR UNIX)
   # On Linux, even serial builds need an OpenMP runtime to enable correct LibFlame linking
@@ -317,6 +318,10 @@ endif()
 
 add_subdirectory(tests)
 
+if (BUILD_PYTHON)
+  add_subdirectory(python_interface)
+endif()
+
 # Install examples and README files
 install(FILES README-Release.txt
   DESTINATION ${CMAKE_INSTALL_PREFIX}
@@ -392,6 +397,8 @@ message(NOTICE "Building docs           : ${BUILD_DOC}")
 if(INTERNAL_DOC)
   message(NOTICE "Build internal docs     : ${INTERNAL_DOC}")
 endif()
+
+message(NOTICE "Building Python bindings:  ${BUILD_PYTHON}")
 
 message(NOTICE "\nTARGETS")
 message(NOTICE "Build the EXAMPLE programs   : ${BUILD_EXAMPLES}")

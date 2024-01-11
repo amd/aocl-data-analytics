@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -121,48 +121,58 @@ template <typename T> class da_pca : public basic_handle<T> {
 
         switch (query) {
         case da_result::da_rinfo:
-            if (*dim < rinfo_size)
+            if (*dim < rinfo_size) {
+                *dim = rinfo_size;
                 return da_warn(err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(rinfo_size) + ".");
+            }
             result[0] = (T)n;
             result[1] = (T)p;
             result[2] = (T)ns;
             break;
         case da_result::da_pca_scores:
-            if (*dim < n * ns)
+            if (*dim < n * ns) {
+                *dim = n * ns;
                 return da_warn(err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(n * ns) + ".");
+            }
             for (da_int i = 0; i < n * ns; i++)
                 result[i] = scores[i];
             break;
         case da_result::da_pca_u:
-            if (*dim < n * ns)
+            if (*dim < n * ns) {
+                *dim = n * ns;
                 return da_warn(err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(n * ns) + ".");
+            }
             for (da_int i = 0; i < n * ns; i++)
                 result[i] = u[i];
             break;
         case da_result::da_pca_principal_components:
-            if (*dim < ns * p)
+            if (*dim < ns * p) {
+                *dim = ns * p;
                 return da_warn(err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(ns * p) + ".");
+            }
             for (da_int i = 0; i < ns * p; i++)
                 result[i] = principal_components[i];
             break;
         case da_result::da_pca_vt:
-            if (*dim < npc * p)
+            if (*dim < npc * p) {
+                *dim = npc * p;
                 return da_warn(err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(npc * p) + ".");
+            }
             for (da_int j = 0; j < p; j++) {
                 for (da_int i = 0; i < npc; i++) {
                     result[i + npc * j] = vt[i + ldvt * j];
@@ -170,20 +180,24 @@ template <typename T> class da_pca : public basic_handle<T> {
             }
             break;
         case da_result::da_pca_variance:
-            if (*dim < ns)
+            if (*dim < ns) {
+                *dim = ns;
                 return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(ns) + ".");
+            }
             for (da_int i = 0; i < ns; i++)
                 result[i] = variance[i];
             break;
         case da_result::da_pca_sigma:
-            if (*dim < ns)
+            if (*dim < ns) {
+                *dim = ns;
                 return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(ns) + ".");
+            }
             for (da_int i = 0; i < ns; i++)
                 result[i] = sigma[i];
             break;
@@ -192,11 +206,13 @@ template <typename T> class da_pca : public basic_handle<T> {
                 return da_warn(err, da_status_unknown_query,
                                "Column means are only computed if the 'PCA method' "
                                "option is set to 'covariance' or 'correlation'.");
-            if (*dim < p)
+            if (*dim < p) {
+                *dim = p;
                 return da_warn(err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(p) + ".");
+            }
             for (da_int i = 0; i < p; i++)
                 result[i] = column_means[i];
             break;
@@ -205,11 +221,13 @@ template <typename T> class da_pca : public basic_handle<T> {
                 return da_warn(err, da_status_unknown_query,
                                "Standard deviations are only computed if the 'PCA "
                                "method' option is set to 'correlation'.");
-            if (*dim < p)
+            if (*dim < p) {
+                *dim = p;
                 return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(p) + ".");
+            }
             for (da_int i = 0; i < p; i++)
                 result[i] = column_sdevs[i];
             break;

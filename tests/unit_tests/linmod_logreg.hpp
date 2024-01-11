@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -127,11 +127,11 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     ///////////////////
     EXPECT_EQ(da_linmod_select_model<T>(linmod_handle, linmod_model_logistic),
               da_status_success);
-    EXPECT_EQ(da_linreg_define_features(linmod_handle, nrows, ncols - 1, A, b),
+    EXPECT_EQ(da_linmod_define_features(linmod_handle, nrows, ncols - 1, A, b),
               da_status_success);
 
     // compute regression
-    EXPECT_EQ(da_linreg_fit<T>(linmod_handle), da_status_success);
+    EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
 
     ////////////////////
     // Check the results

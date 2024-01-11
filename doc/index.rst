@@ -77,6 +77,12 @@ Library Reference Documentation
    linear_models/linmod_intro
    trees_forests/df_intro
 
+.. toctree::
+   :maxdepth: 1
+   :caption: AOCL-DA for Python
+
+   python/python_intro
+
 .. only:: internal
 
    .. toctree::
