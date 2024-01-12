@@ -1,5 +1,5 @@
 # Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -10,7 +10,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -21,7 +21,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 
 
 # Build Python bindings using pybind11
@@ -69,13 +69,14 @@ install(
 # TODO Add fortran runtimes?
 
 if (NOT WIN32)
+  find_program(PATCHELF name patchelf REQUIRED)
   # Change the runpath of aocl-da to $ORIGIN, making it look for its dependencies in its own directory
   # $ORIGIN is evaluated at runtime by the interpreter
-  install(CODE "execute_process(COMMAND patchelf --set-rpath \$ORIGIN install/python_package/aoclda/libaocl-da.so)")
+  install(CODE "execute_process(COMMAND ${PATCHELF} --set-rpath \$ORIGIN ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/libaocl-da.so)")
 endif()
 
 # Build the Python bindings
 add_subdirectory(python_package)
 
 # create the wheel after instalation
-install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel install/python_package/ --no-deps --wheel-dir install/python_package)")
+install(CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel ${CMAKE_INSTALL_PREFIX}/python_package/ --no-deps --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package)")
