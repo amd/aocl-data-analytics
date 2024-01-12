@@ -166,7 +166,7 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
 6. Depending on your particular environment variables, the compiled executables may only work if the BLAS and LAPACK dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll` and `AOCL-LibFlame-Win-MT-dll.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
 
-7. Use ctest in your powershell/command prompt window to run the tests
+7. Use `ctest` in your command prompt window to run the tests
 
 ## Building the Python interfaces
 
