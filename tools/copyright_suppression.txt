@@ -8,6 +8,7 @@ tags
 'test/data/.*'
 'example/data/.*'
 'README\.md'
+'README-Release\.txt'
 '.*/README'
 '.*/README.md'
 '.*/README[-]?.*\.txt'

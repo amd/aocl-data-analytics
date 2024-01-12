@@ -65,13 +65,15 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
    * `-DDA_LOGGING=On` to enable debug printing
 
+   * `-DBUILD_PYTHON=On` to build the Python interfaces
+
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` to specify a location for AOCL libraries. This has precedence over the environment variable `$AOCL_ROOT`
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>`. Path where to install the library (using the build target `install` of step 5)
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
-   **Note** that not all the options available in `Release` build mode
+   **Note** that not all the options are available in `Release` build mode
 
 5. Type `cmake --build . --target all` (or `--target doc`, to build the documentation)
 
@@ -166,3 +168,10 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
 7. Use ctest in your powershell/command prompt window to run the tests
 
+## Building the Python interfaces
+
+To build the Python interfaces, use `-DBUILD_PYTHON=On` (note that this will only work with shared library builds). You will need PyBind11, which can be installed using `pip install pybind11`. On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the location of you pybind11 installation, e.g.  `C:\path\to\your\python-environment\site-packages\pybind11\share\cmake\pybind11`.
+
+By default, cmake will compile the bindings but will not install them. If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.
+
+When using the bindings on Windows, the Intel Fortran runtime must be available. This can be done by setting the environment variable `INTEL_FCOMPILER`.
