@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -111,9 +111,9 @@ template <> void GetBasicDataColMajor<int64_t>(CSVParamType<int64_t> *params) {
                               +345,
                               5,
                               -43,
-                              -9223372036854775806,
+                              -9223372036854775807,
                               3,
-                              9223372036854775806,
+                              9223372036854775807,
                               -9223372036854775806,
                               0,
                               9223372036854775806,

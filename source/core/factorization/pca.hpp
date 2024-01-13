@@ -440,7 +440,7 @@ template <typename T> da_status da_pca<T>::compute() {
                             "Memory allocation failed."); // LCOV_EXCL_LINE
         }
 
-        INFO = -1;
+        INFO = 0;
 
         /*Call gesvdx*/
         da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu,
@@ -473,7 +473,7 @@ template <typename T> da_status da_pca<T>::compute() {
             return da_status_memory_error; // LCOV_EXCL_LINE
         }
 
-        INFO = -1;
+        INFO = 0;
 
         /*Call gesvd*/
         da::gesvd(&JOBU, &JOBVT, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n,
@@ -504,7 +504,7 @@ template <typename T> da_status da_pca<T>::compute() {
             return da_status_memory_error; // LCOV_EXCL_LINE
         }
 
-        INFO = -1;
+        INFO = 0;
 
         /*Call gesdd*/
         da::gesdd(&JOBZ, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n, vt.data(),
