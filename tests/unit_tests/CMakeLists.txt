@@ -43,40 +43,41 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 include_directories(
   ${CMAKE_SOURCE_DIR}/source/include
+  ${CMAKE_SOURCE_DIR}/source/core/basic_statistics  
+  ${CMAKE_SOURCE_DIR}/source/core/clustering
   ${CMAKE_SOURCE_DIR}/source/core/csv
-  ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
-  ${CMAKE_SOURCE_DIR}/source/core/linear_model
-  ${CMAKE_SOURCE_DIR}/source/core/factorization
-  ${CMAKE_SOURCE_DIR}/source/core/optimization
-  ${CMAKE_SOURCE_DIR}/source/core/drivers
-  ${CMAKE_SOURCE_DIR}/source/core/utilities
   ${CMAKE_SOURCE_DIR}/source/core/data_management
   ${CMAKE_SOURCE_DIR}/source/core/decision_forest
+  ${CMAKE_SOURCE_DIR}/source/core/drivers
+  ${CMAKE_SOURCE_DIR}/source/core/factorization
+  ${CMAKE_SOURCE_DIR}/source/core/linear_model
+  ${CMAKE_SOURCE_DIR}/source/core/optimization
+  ${CMAKE_SOURCE_DIR}/source/core/utilities
   ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 
 add_executable(basic_stats basic_statistics_tests.cpp)
 
 add_executable(csv csv_tests.cpp)
 target_compile_definitions(
-  csv PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+  csv PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(linmod linmod_tests.cpp)
 target_compile_definitions(
-  linmod PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
+  linmod PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data")
 
 add_executable(logreg linmod_logreg_tests.cpp)
 target_compile_definitions(
   logreg
-  PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/logistic")
+  PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/logistic")
 
 add_executable(linreg linmod_linreg_tests.cpp)
 target_compile_definitions(
   linreg
-  PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/linear_reg")
+  PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/linmod_data/linear_reg")
 
 add_executable(decision_tree_tests decision_tree_tests.cpp)
 target_compile_definitions(
-  decision_tree_tests PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+  decision_tree_tests PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(option_registry option_registry_tests.cpp)
 
@@ -88,30 +89,30 @@ add_executable(kmeans_tests kmeans_tests.cpp)
 
 add_executable(pca_tests pca_tests.cpp)
 target_compile_definitions(
-  pca PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/factorization_data/")
+  pca PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/factorization_data/")
 
 add_executable(data data_tests.cpp)
 target_compile_definitions(
-  data PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+  data PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
 add_executable(interval_map interval_map_tests.cpp)
 
 add_executable(doc_tests doc_tests.cpp)
 
 add_executable(printf_debug printf_debug.cpp)
-target_link_libraries(printf_debug aocl-da)
+target_link_libraries(printf_debug PRIVATE aocl-da)
 
 add_executable(lbfgsb_rc lbfgsb_rc.cpp)
-target_link_libraries(lbfgsb_rc aocl-da)
+target_link_libraries(lbfgsb_rc PRIVATE aocl-da)
 
 add_executable(lbfgsb_fcomm lbfgsb_fcomm.cpp)
-target_link_libraries(lbfgsb_fcomm aocl-da)
+target_link_libraries(lbfgsb_fcomm PRIVATE aocl-da)
 
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(c_compatibility.c PROPERTIES LANGUAGE C)
 add_executable(c_compatibility_test c_compatibility.c)
 set_target_properties(c_compatibility_test PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(c_compatibility_test aocl-da)
+target_link_libraries(c_compatibility_test PRIVATE aocl-da)
 # add_test(c_compatibility_test c_compatibility_test)
 
 add_executable(miscellaneous_tests miscellaneous_tests.cpp)
@@ -136,15 +137,18 @@ set(GTEST_EXES
 )
 
 foreach(target ${GTEST_EXES})
-  target_link_libraries(${target} aocl-da gtest_main gmock_main)
-
-  if(WIN32)
-    target_link_libraries(${target} "$ENV{LIBIFCORE}")
+  target_link_libraries(${target} PRIVATE aocl-da gtest_main gmock_main)
+  if(BUILD_SMP OR UNIX)
+    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
   endif()
+  target_link_directories(${target} PRIVATE ${IFORT_LIBS})
+  target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
+  # Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an empty string.
+  # This is what AOCL-DA users will need to do explicitly to get the correct symbols, otherwise
+  # they will get linking errors or aborts.
+  target_compile_definitions(${target} PRIVATE ${AOCLDA_ILP64})
 endforeach()
 
-# For Windows shared library builds copying some relevant DLLs into the
-# unit_tests bin folder enables ctest to run without needing to update PATH
 if(WIN32 AND BUILD_SHARED_LIBS)
   foreach(GTEST_EXE ${GTEST_EXES})
     add_custom_command(
@@ -170,6 +174,15 @@ set(INDEP_TESTS c_compatibility_test printf_debug lbfgsb_rc lbfgsb_fcomm)
 
 foreach(ITEST ${INDEP_TESTS})
   add_test(${ITEST} ${ITEST})
+  if(BUILD_SMP OR UNIX)
+    target_link_libraries(${ITEST} PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+  # Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an empty string.
+  # This is what AOCL-DA users will need to do explicitly to get the correct symbols, otherwise
+  # they will get linking errors or aborts.
+  target_compile_definitions(${ITEST} PRIVATE ${AOCLDA_ILP64})
+  target_link_directories(${ITEST} PRIVATE ${IFORT_LIBS})
+  target_link_libraries(${ITEST} PRIVATE ${FORTRAN_RUNTIME})
 endforeach()
 
 # Add all executables to the coverage test

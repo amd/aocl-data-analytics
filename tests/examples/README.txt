@@ -4,7 +4,7 @@ The precise paths to your AOCL library installation will depend on your system a
 Compiling examples on Linux
 ===========================
 
-INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers.
+INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers. If ILP64 libraries are used, the macro AOCLDA_ILP64 needs to be defined, so update the examples below appropriately.
 
 To compile and link to static AOCL libraries using g++:
 
@@ -35,7 +35,7 @@ clang++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
 Compiling examples on Windows
 =============================
 
-INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers.
+INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers. If ILP64 libraries are used, the macro AOCLDA_ILP64 needs to be defined, so update the examples below appropriately.
 
 AOCL-DA requires Fortran runtime libraries for linking, so prior to compiling the examples you will need to source the ifort compiler using e.g. "C:\Program Files (x86)\Intel\oneAPI\setvars.bat".
 

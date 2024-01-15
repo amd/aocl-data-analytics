@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -24,29 +24,43 @@
 
 # Check we can find AOCL or custom blas/lapack installation
 function(linalg_libs)
-  if(NOT DEFINED ENV{AOCL_ROOT})
-    if((DEFINED CMAKE_AOCL_ROOT))
-      set(ENV{AOCL_ROOT} ${CMAKE_AOCL_ROOT})
-    else()
-      if((NOT DEFINED BLAS_LIB)
-         OR (NOT DEFINED LAPACK_LIB)
-         OR (NOT DEFINED UTILS_LIB)
-         OR (NOT DEFINED BLAS_INCLUDE_DIR)
-         OR (NOT DEFINED LAPACK_INCLUDE_DIR))
-        message(
-          FATAL_ERROR
-            "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS_LIB/LAPACK_LIB/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR."
-        )
-      endif()
-      set(BLAS ${BLAS_LIB} PARENT_SCOPE)
-      set(LAPACK ${LAPACK_LIB} PARENT_SCOPE)
-      set(UTILS ${UTILS_LIB} PARENT_SCOPE)
-      include_directories(${LAPACK_INCLUDE_DIR})
-      include_directories(${BLAS_INCLUDE_DIR})
-      return()
+  # Set paths to BLAS/LAPACK/UTILS if CMAKE_AOCL_ROOT was set but *_INCLUDE_DIR and *_LIB
+  # were not set. This means that if they were set, they override the location of CMAKE_AOCL_ROOT.
+  if(WIN32)
+    if(BLAS_INCLUDE_DIR STREQUAL "")
+      set(BLAS_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/amd-blis/include/${INT_LIB})
+    endif()
+    if(LAPACK_INCLUDE_DIR STREQUAL "")
+      set(LAPACK_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/amd-libflame/include/${INT_LIB})
+    endif()
+    if(BLAS_LIB STREQUAL "")
+      set(BLAS_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-blis/lib/${INT_LIB})
+    endif()
+    if(LAPACK_LIB STREQUAL "")
+      set(LAPACK_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-libflame/lib/${INT_LIB})
+    endif()
+    if(UTILS_LIB STREQUAL "")
+      set(UTILS_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-utils/lib)
+    endif()
+  else()
+    if(BLAS_INCLUDE_DIR STREQUAL "")
+      set(BLAS_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
+    endif()
+    if(LAPACK_INCLUDE_DIR STREQUAL "")
+      set(LAPACK_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
+    endif()
+    if(BLAS_LIB STREQUAL "")
+      set(BLAS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+    endif()
+    if(LAPACK_LIB STREQUAL "")
+      set(LAPACK_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+    endif()
+    if(UTILS_LIB STREQUAL "")
+      set(UTILS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
   endif()
 
+  # Set names of the libraries we search for
   if(WIN32)
     set(CMAKE_FIND_LIBRARY_PREFIXES "")
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
@@ -58,47 +72,54 @@ function(linalg_libs)
       set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
     endif()
     set(UTILS_NAME "libaoclutils")
-
-    set(BLAS_PATH "$ENV{AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
-    set(LAPACK_PATH "$ENV{AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
-    set(UTILS_PATH "$ENV{AOCL_ROOT}/amd-utils/lib")
-
-    include_directories("$ENV{AOCL_ROOT}/amd-blis/include/${INT_LIB}")
-    include_directories("$ENV{AOCL_ROOT}/amd-libflame/include/${INT_LIB}")
-
   else(WIN32) # linux
-
-    include_directories($ENV{AOCL_ROOT}/include_${INT_LIB})
-
-    set(BLAS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-    set(LAPACK_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-    set(UTILS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-
+    set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
     if(NOT BUILD_SHARED_LIBS)
       set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+    else()
+      set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
     endif()
-
     if(BUILD_SMP)
       set(BLAS_NAME "blis-mt")
     else()
       set(BLAS_NAME "blis")
     endif()
-
     set(LAPACK_NAME "flame")
     set(UTILS_NAME "aoclutils")
   endif()
 
-  find_library(
-    BLAS name ${BLAS_NAME}
-    PATHS ${BLAS_PATH} REQUIRED
-    NO_DEFAULT_PATH)
+  if(BLAS_LIB STREQUAL "")
+    find_library(
+      BLAS name ${BLAS_NAME}
+      PATHS ${BLAS_LIB_DIR} REQUIRED
+      NO_DEFAULT_PATH)
+  else()
+    set(BLAS ${BLAS_LIB} PARENT_SCOPE)
+  endif()
 
-  find_library(
-    LAPACK name ${LAPACK_NAME}
-    PATHS ${LAPACK_PATH} REQUIRED
-    NO_DEFAULT_PATH)
+  if(LAPACK_LIB STREQUAL "")
+    find_library(
+      LAPACK name ${LAPACK_NAME}
+      PATHS ${LAPACK_LIB_DIR} REQUIRED
+      NO_DEFAULT_PATH)
+  else()
+    set(LAPACK ${LAPACK_LIB} PARENT_SCOPE)
+  endif()
 
-  find_library(UTILS name ${UTILS_NAME} PATHS ${UTILS_PATH})
+  if(UTILS_LIB STREQUAL "")
+    find_library(
+      UTILS name ${UTILS_NAME}
+      PATHS ${UTILS_LIB_DIR} REQUIRED
+      NO_DEFAULT_PATH)
+  else()
+    set(UTILS ${UTILS_LIB} PARENT_SCOPE)
+  endif()
+
+  include_directories(${LAPACK_INCLUDE_DIR})
+  include_directories(${BLAS_INCLUDE_DIR})
+  
+  set(BLAS_INCLUDE_DIR ${BLAS_INCLUDE_DIR} PARENT_SCOPE)
+  set(LAPACK_INCLUDE_DIR ${LAPACK_INCLUDE_DIR} PARENT_SCOPE)
 endfunction(linalg_libs)
 
 # reset all libs

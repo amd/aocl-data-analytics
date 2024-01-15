@@ -67,7 +67,7 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
    * `-DBUILD_PYTHON=On` to build the Python interfaces
 
-   * `-DCMAKE_AOCL_ROOT=<path to AOCL>` to specify a location for AOCL libraries. This has precedence over the environment variable `$AOCL_ROOT`
+   * `-DCMAKE_AOCL_ROOT=<path to AOCL>` to specify a location for AOCL libraries. It is set to the environment variable `$AOCL_ROOT` by default
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>`. Path where to install the library (using the build target `install` of step 5)
 
@@ -106,6 +106,8 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+
+   * `-DOpenMP_libomp_LIBRARY=<path to prefered OpenMP library>` to link a specific OpenMP library.
 
     **Note** that not all the options available in Linux are available in Windows
 

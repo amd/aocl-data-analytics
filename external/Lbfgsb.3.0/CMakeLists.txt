@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -25,6 +25,10 @@
 
 enable_language(Fortran)
 
+# If in the future OpenMP_Fortran is required, we need to find OpenMP again
+# sot that now that Fortran was enabled, it can find the Fortran runtimes.
+#find_package(OpenMP REQUIRED)
+
 if(NOT WIN32)
     set(CMAKE_Fortran_FLAGS -cpp -Wno-unused-parameter)
 else()
@@ -43,40 +47,13 @@ if(BUILD_ILP64)
     endif()
 endif()
 
-if(BUILD_SMP)
-    if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-        if(WIN32)
-            list(APPEND CMAKE_Fortran_FLAGS /Qopenmp)
-        else()
-            list(APPEND CMAKE_Fortran_FLAGS -qopenmp)
-        endif()
-    elseif(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
-        list(APPEND CMAKE_Fortran_FLAGS -fopenmp)
-    endif()
-endif()
-
-if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    link_libraries("-lflang")
-endif()
-
 if(WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
     find_library(LIBGFORTRAN NAMES libgfortran libgfortran-5 HINTS ${MINGW_PATH} DOC "gfortran library")
 endif()
 
 list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
 
-set(LBFGSB_SRC ../lbfgsb_mod.F90 ../linpack.F90 ../timer.F90 ../lbfgsb.F90)
-
-# Build the double version
-add_subdirectory(double_cmake)
-
-# build the single version
-add_subdirectory(single_cmake)
-
-# Suppress warnings
-if(NOT WIN32)
-    include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_external.cmake)
-endif()
+set(LBFGSB_SRC lbfgsb_mod.F90 linpack.F90 timer.F90 lbfgsb.F90)
 
 message(
     NOTICE
@@ -87,3 +64,40 @@ message(
     NOTICE
     "Fortran Compiler flags  : ${CMAKE_Fortran_FLAGS}"
 )
+
+# Writing a function that will be used to generate the required object
+# libraries for the required precisions.
+function(generate_lbfgsb_targets precision)
+    # Construct the name of the object library
+    set(lbfgsb_prec "lbfgsb")
+    if(${precision} STREQUAL "s")
+        set(lbfgsb_prec "${lbfgsb_prec}_s")
+        set(local_defs "-DSINGLE_PREC")
+    endif()
+    add_library(${lbfgsb_prec} OBJECT ${LBFGSB_SRC} ${precision}working_precision.F90)
+    # Add macro SINGLE_PREC for single precision, it's empty string for double
+    target_compile_definitions(${lbfgsb_prec} PRIVATE ${local_defs})
+    if(WIN32)
+        if (CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+            target_link_directories(${lbfgsb_prec} PRIVATE "${IFORT_LIBS}")
+        else()
+            set_target_properties(${lbfgsb_prec} PROPERTIES PREFIX "")
+            target_link_libraries(${lbfgsb_prec} PRIVATE ${LIBGFORTRAN})
+        endif()
+    endif()
+    target_link_libraries(${lbfgsb_prec} PRIVATE ${BLAS})
+    target_include_directories(${lbfgsb_prec} PRIVATE ${BLAS_INCLUDE_DIR})
+    # Sets -fPIC flag
+    if(BUILD_SHARED_LIBS)
+        set_target_properties(${lbfgsb_prec} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
+    # Suppress warnings
+    if(NOT WIN32)
+        include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_external.cmake)
+    endif()
+endfunction()
+
+# Generate single-precision lbfgsb_s library
+generate_lbfgsb_targets("s")
+# Generate double-precision lbfgsb library
+generate_lbfgsb_targets("d")

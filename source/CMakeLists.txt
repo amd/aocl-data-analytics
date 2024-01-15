@@ -52,10 +52,10 @@ set(DA_CORE_SRC
     ${DA_MISC})
 
 add_library(da_core OBJECT ${DA_CORE_SRC})
-target_include_directories(da_core PUBLIC include)
 target_include_directories(
   da_core
-  PUBLIC core/drivers/
+  PRIVATE include
+         core/drivers/
          core/optimization/
          core/utilities
          core/csv
@@ -63,20 +63,17 @@ target_include_directories(
          core/data_management
          core/factorization
          core/clustering
-         core/decision_forest)
-target_include_directories(da_core
-  PRIVATE ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
-# Define the macro that sets the version string
-target_compile_definitions(da_core PRIVATE ${VERS_DEF})
+         core/decision_forest
+         ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
 
-if(WIN32)
-  target_link_directories(
-    da_core PUBLIC
-    "${CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/double_cmake/${CMAKE_BUILD_TYPE}"
-    "${CMAKE_BINARY_DIR}/external/Lbfgsb.3.0/single_cmake/${CMAKE_BUILD_TYPE}")
+# Add definitions that depend on the CMake configuration.
+target_compile_definitions(da_core PRIVATE ${AOCLDA_DEFS})
+# Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an empty string.
+target_compile_definitions(da_core PRIVATE ${AOCLDA_ILP64})
+# Sets -fPIC flag
+if(BUILD_SHARED_LIBS)
+  set_target_properties(da_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
-
-target_link_libraries(da_core lbfgsb lbfgsb_s ${LAPACK} ${BLAS})
 
 if(NOT WIN32)
   include(Suppressions_core)
@@ -85,12 +82,12 @@ endif()
 # Create combined library from da_core and Fortran libraries
 add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
                     $<TARGET_OBJECTS:lbfgsb_s>)
-target_link_libraries(aocl-da PUBLIC da_core lbfgsb lbfgsb_s ${LAPACK} ${BLAS}
-                                     ${UTILS})
-
-if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND BUILD_SMP)
-  target_link_libraries(aocl-da PUBLIC da_core lbfgsb lbfgsb_s ${LAPACK} ${BLAS}
-                                       ${UTILS} PRIVATE OpenMP::OpenMP_CXX)
+target_link_libraries(aocl-da PRIVATE ${LAPACK} ${BLAS} ${UTILS})
+target_link_directories(aocl-da PRIVATE ${IFORT_LIBS})
+target_include_directories(aocl-da PRIVATE ${BLAS_INCLUDE_DIR} ${LAPACK_INCLUDE_DIR})
+# Sets -fPIC flag
+if(BUILD_SHARED_LIBS)
+  set_target_properties(aocl-da PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
 # Installation commands

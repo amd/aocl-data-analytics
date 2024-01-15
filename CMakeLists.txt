@@ -41,6 +41,9 @@ set(AOCLDA_VERSION_STR
 # can be embedded into the library and queried later.
 set(VERS_DEF -DAOCLDA_VERSION_STRING="${AOCLDA_VERSION_STR}")
 
+# Add version string in the variable that holds all definitions required to build da_core.
+list(APPEND AOCLDA_DEFS ${VERS_DEF})
+
 # Export Release Information automatically
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -53,8 +56,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE
     "Debug"
     CACHE STRING "Choose the type of build" FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "" "Debug" "Release")
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "" "Debug" "Release" "RelWithDebInfo")
 endif()
+
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -65,27 +69,33 @@ option(BUILD_EXAMPLES "Build the example programs" ON)
 option(BUILD_GTEST "Build Gtest unit-tests" ON)
 option(COVERAGE "Builds coverage of Gtests and examples (Debug/GCC)" OFF)
 option(BUILD_ILP64 "ILP64 Support" OFF)
-option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
-option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
-option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
+# Windows options only
+if(WIN32)
+  # Setting path to OpenMP runtime.
+  set(OpenMP_libomp_LIBRARY "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib" CACHE STRING "openmp library path")
+else()# Linux options only
+  option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
+  option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
+  option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
+endif()
 option(BUILD_DOC "Build HTML documentation" OFF)
 option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
-option(BUILD_SHARED_LIBS "Shared library biuld" OFF)
+option(BUILD_SHARED_LIBS "Shared library build" OFF)
 option(BUILD_PYTHON "Python bindings" OFF)
+# Set paths to AOCLUTILS, BLAS and LAPACK installations.
+set(CMAKE_AOCL_ROOT $ENV{AOCL_ROOT} CACHE STRING "AOCL_ROOT directory to be used to find BLAS/LAPACK/AOCLUTILS libraries")
+# Override the above path using the variables below.
+set(BLAS_INCLUDE_DIR "" CACHE STRING "Path to BLAS include directory")
+set(LAPACK_INCLUDE_DIR "" CACHE STRING "Path to LAPACK include directory")
+set(BLAS_LIB "" CACHE STRING "Path to BLAS library")
+set(LAPACK_LIB "" CACHE STRING "Path to LAPACK library")
+set(UTILS_LIB "" CACHE STRING "Path to AOCL-UTILS library")
 
 if(BUILD_SMP OR UNIX)
   # On Linux, even serial builds need an OpenMP runtime to enable correct LibFlame linking
   find_package(OpenMP REQUIRED)
-  if((NOT WIN32) OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  else()
-	# Use llvm OpenMP lib on MSVC for most recent functionality
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /openmp:llvm")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp:llvm")
-  endif()
 endif()
 
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
@@ -116,7 +126,7 @@ endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
   # Be verbose about da_error trace on Debug builds
-  add_compile_definitions(VERBOSE_ERROR)
+  list(APPEND AOCLDA_DEFS -DVERBOSE_ERROR)
 endif()
 
 if(DA_LOGGING)
@@ -126,14 +136,15 @@ endif()
 # modules directory for easy include
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-if(NOT BUILD_ILP64)
-  set(INT_LIB "LP64")
-else()
+if(BUILD_ILP64)
   set(INT_LIB "ILP64")
-  add_definitions(-DAOCLDA_ILP64)
+  set(AOCLDA_ILP64 -DAOCLDA_ILP64)
+else()
+  set(INT_LIB "LP64")
 endif()
 
 # Check for CL compatibility layer of clang
+cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
 if(COMPILER_BASENAME MATCHES
   "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
   set(CLANG_OPTIONS_STYLE "MSVC")
@@ -142,17 +153,17 @@ else()
 endif()
 
 # Check we can find AOCL installation
-if(NOT DEFINED ENV{AOCL_ROOT})
-  if((DEFINED CMAKE_AOCL_ROOT))
-    set(ENV{AOCL_ROOT} ${CMAKE_AOCL_ROOT})
-  else()
-    if((NOT DEFINED BLAS_LIB) OR (NOT DEFINED LAPACK_LIB) OR (NOT DEFINED UTILS_LIB) OR (NOT DEFINED BLAS_INCLUDE_DIR) OR (NOT DEFINED LAPACK_INCLUDE_DIR))
-      message(
-        FATAL_ERROR
-        "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR."
-      )
-    endif()
-  endif()
+if(CMAKE_AOCL_ROOT STREQUAL "" AND
+  (BLAS_INCLUDE_DIR STREQUAL "" OR
+  LAPACK_INCLUDE_DIR STREQUAL "" OR
+  BLAS_LIB STREQUAL "" OR
+  LAPACK_LIB STREQUAL "" OR
+  UTILS_LIB STREQUAL "")
+  )
+  message(
+    FATAL_ERROR
+    "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR."
+  )
 endif()
 
 if(WIN32)
@@ -170,18 +181,9 @@ if(WIN32)
 
   # Clang-cl or MSVC require ifort for the fortran compilation
   if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    if(NOT DEFINED ENV{INTEL_FCOMPILER})
-      message(
-        FATAL_ERROR
-        "Environment variable \$INTEL_FCOMPILER not found."
-      )
-    endif()
-
-    file(TO_CMAKE_PATH $ENV{INTEL_FCOMPILER} IFORT_PATH)
-    set(CMAKE_Fortran_COMPILER "${IFORT_PATH}/bin/intel64/ifort.exe")
-    set(ENV{IFORT_LIBS} "${IFORT_PATH}/compiler/lib/intel64_win")
-    set(ENV{LIBIFCORE}
-      "$<IF:$<CONFIG:Debug>,$ENV{IFORT_LIBS}/libifcoremdd.lib,$ENV{IFORT_LIBS}/libifcoremd.lib>"
+    set(IFORT_LIBS "$ENV{LIB}" CACHE STRING "Setting path to Intel Fortran runtime libraries on Windows")
+    set(FORTRAN_RUNTIME
+      "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>"
     )
     add_compile_definitions(WIN_IFORT_NAME_MANGLING)
   else()
@@ -198,12 +200,18 @@ if(WIN32)
 
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
+else()
+  if(NOT WIN32)
+    if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+      set(FORTRAN_RUNTIME "flang")
+    else() # Gnu
+      set(FORTRAN_RUNTIME "gfortran")
+    endif()
+  endif()
 endif()
 
 # look for linear algebra libraries dependencies
 include(AOCLDependencies)
-
-cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
   OR(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
@@ -248,10 +256,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON
       "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
-  endif()
-
-  if(BUILD_SHARED_LIBS)
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-fPIC")
   endif()
 
   if(VECTORIZATION_REPORTS)

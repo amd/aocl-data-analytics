@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -31,12 +31,15 @@ project(aocl-da_examples LANGUAGES CXX)
 option(BUILD_ILP64 "ILP64 support" OFF)
 option(BUILD_SMP "Enable Shared Memory parallelism" ON)
 
-if(NOT DEFINED ENV{AOCL_ROOT})
-  message(FATAL_ERROR "environment variable AOCL_ROOT needs to be defined")
+# Set paths to AOCLUTILS, BLAS and LAPACK installations.
+set(CMAKE_AOCL_ROOT $ENV{AOCL_ROOT} CACHE STRING "AOCL_ROOT directory to be used to find BLAS/LAPACK/AOCLUTILS libraries")
+if(CMAKE_AOCL_ROOT STREQUAL "")
+  message(FATAL_ERROR "CMAKE_AOCL_ROOT is empty. Either set environment variable AOCL_ROOT or set -DCMAKE_AOCL_ROOT=<path_to_AOCL_libs>.")
 endif()
 
 if(BUILD_ILP64)
   set(INT_LIB "ILP64")
+  set(AOCLDA_ILP64 -DAOCLDA_ILP64)
 else()
   set(INT_LIB "LP64")
 endif()
@@ -44,29 +47,22 @@ endif()
 # ##############################################################################
 # Location of the DA installation. Either set AOCLDA_ROOT specifically or
 # inherit AOCL_ROOT where DA artifacts would be as part of AOCL installation
-if(DEFINED ENV{AOCLDA_ROOT})
-  set(CMAKE_AOCLDA_ROOT $ENV{AOCLDA_ROOT})
-else()
-  message(WARNING "AOCLDA_ROOT was not set. will search for it in main AOCL_ROOT directory.")
-  set(CMAKE_AOCLDA_ROOT $ENV{AOCL_ROOT})
-endif()
-
-if(BUILD_ILP64)
-  set(ILP_DIR "ILP64")
-else()
-  set(ILP_DIR "LP64")
+set(CMAKE_AOCLDA_ROOT $ENV{AOCLDA_ROOT} CACHE STRING "AOCLDA_ROOT directory to be used to find DA artifacts")
+if(CMAKE_AOCLDA_ROOT STREQUAL "")
+  message(WARNING "AOCLDA_ROOT was not set. Will search for it in main CMAKE_AOCL_ROOT directory.")
+  set(CMAKE_AOCLDA_ROOT ${CMAKE_AOCL_ROOT})
 endif()
 
 find_library(
-  AOCL-DA
+  AOCL_DA
   HINTS ${CMAKE_AOCLDA_ROOT} ${CMAKE_AOCLDA_ROOT}/da ${CMAKE_AOCLDA_ROOT}/amd-da
   NAMES aocl-da
-  PATH_SUFFIXES "lib/${ILP_DIR}" "lib_${ILP_DIR}" "lib" REQUIRED)
+  PATH_SUFFIXES "lib/${INT_LIB}" "lib_${INT_LIB}" "lib" REQUIRED)
 find_path(
   DA_INCLUDE_DIR
   NAMES "aoclda.h"
   HINTS ${CMAKE_AOCLDA_ROOT} ${CMAKE_AOCLDA_ROOT}/da ${CMAKE_AOCLDA_ROOT}/amd-da
-  PATH_SUFFIXES "include/${ILP_DIR}" "include_${ILP_DIR}" "include" REQUIRED)
+  PATH_SUFFIXES "include/${INT_LIB}" "include_${INT_LIB}" "include" REQUIRED)
 
 # ##############################################################################
 # Other AOCL dependencies
@@ -81,13 +77,11 @@ if(WIN32)
     set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
   endif()
   set(UTILS_NAME "libaoclutils")
-  set(BLAS_PATH "$ENV{AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
-  set(LAPACK_PATH "$ENV{AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
-  set(UTILS_PATH "$ENV{AOCL_ROOT}/amd-utils/lib")
+
+  set(BLAS_PATH "${CMAKE_AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
+  set(LAPACK_PATH "${CMAKE_AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
+  set(UTILS_PATH "${CMAKE_AOCL_ROOT}/amd-utils/lib")
 else() # Linux
-  set(BLAS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-  set(LAPACK_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
-  set(UTILS_PATH $ENV{AOCL_ROOT}/lib_${INT_LIB})
   if(BUILD_SMP)
     set(BLAS_NAME "blis-mt")
   else()
@@ -95,6 +89,10 @@ else() # Linux
   endif()
   set(LAPACK_NAME "flame")
   set(UTILS_NAME "aoclutils")
+
+  set(BLAS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+  set(LAPACK_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+  set(UTILS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
 endif()
 
 find_library(
@@ -132,17 +130,19 @@ foreach(ex_source ${DA_EX})
     continue()
   endif()
   add_executable(${ex_target} ${ex_source})
-  target_include_directories(${ex_target} PUBLIC ${DA_INCLUDE_DIR})
-  target_link_libraries(${ex_target} ${AOCL-DA} ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME})
+  target_include_directories(${ex_target} PRIVATE ${DA_INCLUDE_DIR})
+  target_link_libraries(${ex_target} PRIVATE ${AOCL_DA} ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME})
+  target_compile_definitions(${ex_target} PRIVATE ${AOCLDA_ILP64})
+
   message(NOTICE "   ${ex_target}")
   # target_compile_options(${ex_name} PUBLIC ${COMPILER_OPTIONS})
 endforeach()
 message("")
 
 message(NOTICE "Dependent libraries")
-message(NOTICE "   AOCL-DA               : ${AOCL-DA}")
-message(NOTICE "   BLIS                  : ${BLAS}")
-message(NOTICE "   Flame                 : ${LAPACK}")
+message(NOTICE "   AOCL-DA               : ${AOCL_DA}")
+message(NOTICE "   AOCL-BLAS             : ${BLAS}")
+message(NOTICE "   AOCL-LAPACK           : ${LAPACK}")
 message(NOTICE "   AOCL-utils            : ${UTILS}")
 message(NOTICE "\nOptions")
 message(NOTICE "   Building for ILP64    : ${BUILD_ILP64}")

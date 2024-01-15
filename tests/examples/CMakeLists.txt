@@ -32,24 +32,24 @@ add_executable(reglinear_model reglinear_model.cpp)
 
 add_executable(linmod_diabetes linmod_diabetes.cpp)
 target_compile_definitions(
-  linmod_diabetes PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  linmod_diabetes PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(datastore datastore.cpp)
 target_compile_definitions(
-  datastore PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  datastore PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(decision_tree decision_tree.cpp)
 
 target_compile_definitions(
-  decision_tree PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
+  decision_tree PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 
 add_executable(decision_forest decision_forest.cpp)
 
 target_compile_definitions(
-  decision_forest PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
+  decision_forest PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
 
 add_executable(pca pca.cpp)
-target_link_libraries(pca aocl-da)
+target_link_libraries(pca PRIVATE aocl-da)
 
 add_executable(pca_cancer pca_cancer.cpp)
 target_link_libraries(pca_cancer aocl-da)
@@ -57,7 +57,7 @@ target_compile_definitions(
   pca_cancer PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(kmeans kmeans.cpp)
-target_link_libraries(kmeans aocl-da)
+target_link_libraries(kmeans PRIVATE aocl-da)
 
 set(EXAMPLE_EXES
   reglinear_model
@@ -72,7 +72,16 @@ set(EXAMPLE_EXES
   decision_forest)
 
 foreach(target ${EXAMPLE_EXES})
-  target_link_libraries(${target} aocl-da)
+  target_link_libraries(${target} PRIVATE aocl-da)
+  if(BUILD_SMP OR UNIX)
+    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+  # Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an empty string.
+  # This is what AOCL-DA users will need to do explicitly to get the correct symbols, otherwise
+  # they will get linking errors or aborts.
+  target_compile_definitions(${target} PRIVATE ${AOCLDA_ILP64})
+  target_link_directories(${target} PRIVATE ${IFORT_LIBS})
+  target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
 endforeach()
 
 # For Windows shared library builds copying some relevant DLLs into the examples bin folder enables ctest to run without needing to update PATH

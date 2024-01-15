@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -26,7 +26,7 @@
 
 # lbfgsb
 set_source_files_properties(
-  lbfgsb.F90 linpack.F90 DIRECTORY double_cmake single_cmake
+  lbfgsb.F90 linpack.F90
   PROPERTIES
     COMPILE_FLAGS
     "-Wno-unused-variable -Wno-compare-reals -Wno-unused-dummy-argument -Wno-maybe-uninitialized")
