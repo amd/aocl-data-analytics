@@ -23,32 +23,61 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+from aoclda.factorization import PCA
+import aoclda as da
+#from sklearn.decomposition import PCA as sklearnPCA
+import numpy as np
 
-import os
-from setuptools import setup, find_packages
-from wheel.bdist_wheel import bdist_wheel
+import time, sys
 
-# Create a specific bdist_wheel to signal to setup.py that the wheel is not pure python
-class spec_bdist_wheel(bdist_wheel):
-    def finalize_options(self):
-        bdist_wheel.finalize_options(self)
-        self.root_is_pure = False
 
-# List of all dependent libraries that were copied in the python_package install
-lib_extensions = ['.so', '.dll', '.lib', '.pyd']
-dep_libs = []
-for lib in os.listdir('aoclda'):
-    if any([ext for ext in lib_extensions if ext in lib]):
-        dep_libs.append(lib)
+def test_pca():
 
-setup(
-    name="aoclda",
-    #ext_modules=[CMakeExtension('aoclda._aoclda')],
-    cmdclass={'bdist_wheel': spec_bdist_wheel},
-    long_description="AOCL-DA Python Interfaces",
-    version="4.2",
-    packages=find_packages(),
-    include_package_data=True,
-    package_data={'aoclda': dep_libs},
-    install_requires=['numpy', 'wheel'],
-)
+    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]])
+
+    pca = PCA(n_components=3)
+    pca.fit(a)
+    print(pca.principal_components)
+    print(pca.u)
+    print(pca.variance)
+    print(pca.total_variance)
+
+    print(pca.__doc__)
+    #help(pca)
+
+    # Check we look to have got the right answer
+    print(np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a))
+
+    # Now try a single precision PCA
+    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]], dtype=np.float32)
+    pca = PCA(n_components=3, precision=da.single)
+    pca.fit(a)
+    print(np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a))
+
+    n = 100
+
+    a = np.random.rand(n, n)
+
+    t0 = time.time()
+    pca = PCA(n_components=n)
+    try:
+        pca.fit(a)
+    except:
+        sys.exit(1)
+    t1 = time.time()
+
+    print(t1-t0)
+
+    #t0 = time.time()
+    #sk_pca = sklearnPCA(n_components=n)
+    #sk_pca.fit(a)
+    #t1 = time.time()
+
+    #print(t1-t0)
+
+    # Check we can create an exception
+    #b = np.array([[3,22],[1,1]])
+    #pca.transform(b)
+
+if __name__ == "__main__":
+    test_pca()

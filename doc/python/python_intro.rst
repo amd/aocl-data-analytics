@@ -41,6 +41,39 @@ To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.
 The wheel, ``aoclda-*.whl``, will install the necessary libraries and dependencies.
 However, on Windows a Fortran runtime library ``libifcore-mt.lib`` is also required, so you will need to install the Intel Fortran compiler and set the environment variable ``INTEL_FCOMPILER`` to point to its installation directory.
 
+Python Examples
+===============
+
+The AOCL-DA Python API comes with numerous example scripts, which are installed when you invoke ``pip install aoclda-*.whl``.
+To locate these examples, the following commands can be used in your Python interpreter:
+
+.. code-block::
+
+    >>> from aoclda.examples import info
+    >>> info.examples_path()
+    >>> info.examples_list()
+
+Alternatively, from your command prompt, you can call ``aocl.examples.info`` as a module to obtain the same information:
+
+.. code-block::
+
+   python -m aoclda.examples.info
+
+The examples can then be run as standard Python scripts from the command prompt, for example:
+
+.. code-block::
+
+   python path/to/examples/pca_ex.py
+
+You can also inspect and run the examples from a Python interpreter, for example:
+
+.. code-block::
+
+    >>> from aoclda.examples import pca_ex
+    >>> import inspect
+    >>> print(''.join(inspect.getsourcelines(pca_ex)[0]))
+    >>> pca_ex.test_pca()
+
 .. toctree::
     :maxdepth: 1
     :hidden:

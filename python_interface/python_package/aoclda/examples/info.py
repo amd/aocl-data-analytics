@@ -23,58 +23,31 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-from aoclda.factorization import PCA
-import aoclda as da
-#from sklearn.decomposition import PCA as sklearnPCA
-import numpy as np
+import os, glob
 
-import time
+def examples_path():
+    """
+    Returns the absolute path to the location of the examples
+    """
 
+    this_dir = os.path.dirname(os.path.abspath(__file__))
 
-def test_pca():
+    return this_dir
 
-    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]])
-
-    pca = PCA(n_components=3)
-    pca.fit(a)
-    print(pca.principal_components)
-    print(pca.u)
-    print(pca.variance)
-    print(pca.total_variance)
-
-    print(pca.__doc__)
-    #help(pca)
-
-    # Check we look to have got the right answer
-    print(np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a))
-
-    # Now try a single precision PCA
-    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]], dtype=np.float32)
-    pca = PCA(n_components=3, precision=da.single)
-    pca.fit(a)
-    print(np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a))
-
-    n = 100
-
-    a = np.random.rand(n, n)
-
-    t0 = time.time()
-    pca = PCA(n_components=n)
-    pca.fit(a)
-    t1 = time.time()
-
-    print(t1-t0)
-
-    #t0 = time.time()
-    #sk_pca = sklearnPCA(n_components=n)
-    #sk_pca.fit(a)
-    #t1 = time.time()
-
-    #print(t1-t0)
-
-    # Check we can create an exception
-    #b = np.array([[3,22],[1,1]])
-    #pca.transform(b)
+def examples_list():
+    """
+    Returns a list of the examples bundled with your AOCL-DA Python installation
+    """
+    this_dir = os.path.dirname(os.path.abspath(__file__))
+    path = this_dir + r'/*.py'
+    files = glob.glob(path)
+    return [os.path.basename(x) for x in files]
 
 if __name__ == "__main__":
-    test_pca()
+    print("\n")
+    print("Path to AOCL-DA example Python scripts:\n")
+    print(examples_path())
+    print("\n")
+    print("The following example files are available:\n")
+    print("\n".join([x for x in examples_list()]))
+    print("\n")

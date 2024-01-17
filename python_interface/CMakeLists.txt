@@ -57,7 +57,6 @@ endif()
 
 set(CMAKE_INSTALL_MODE COPY)
 install(DIRECTORY python_package/aoclda DESTINATION python_package)
-install(DIRECTORY python_package/py_examples DESTINATION python_package)
 install(FILES python_package/setup.py DESTINATION python_package)
 install(FILES ${DEP_LIBS}
         DESTINATION python_package/aoclda)

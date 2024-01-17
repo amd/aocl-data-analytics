@@ -22,33 +22,3 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-
-
-import os
-from setuptools import setup, find_packages
-from wheel.bdist_wheel import bdist_wheel
-
-# Create a specific bdist_wheel to signal to setup.py that the wheel is not pure python
-class spec_bdist_wheel(bdist_wheel):
-    def finalize_options(self):
-        bdist_wheel.finalize_options(self)
-        self.root_is_pure = False
-
-# List of all dependent libraries that were copied in the python_package install
-lib_extensions = ['.so', '.dll', '.lib', '.pyd']
-dep_libs = []
-for lib in os.listdir('aoclda'):
-    if any([ext for ext in lib_extensions if ext in lib]):
-        dep_libs.append(lib)
-
-setup(
-    name="aoclda",
-    #ext_modules=[CMakeExtension('aoclda._aoclda')],
-    cmdclass={'bdist_wheel': spec_bdist_wheel},
-    long_description="AOCL-DA Python Interfaces",
-    version="4.2",
-    packages=find_packages(),
-    include_package_data=True,
-    package_data={'aoclda': dep_libs},
-    install_requires=['numpy', 'wheel'],
-)

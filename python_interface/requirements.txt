@@ -2,4 +2,3 @@ pybind11
 numpy
 wheel
 pytest
-scikit-learn

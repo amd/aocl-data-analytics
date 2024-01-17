@@ -23,9 +23,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-
-# For this to work, need to export PYTHONPATH=/path/to/install/python/aoclda
-
 import os
 
 if os.name == 'nt':
