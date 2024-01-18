@@ -23,15 +23,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+"""
+Principal component analysis example Python script
+"""
+
+import sys
+import numpy as np
 from aoclda.factorization import PCA
 import aoclda as da
-#from sklearn.decomposition import PCA as sklearnPCA
-import numpy as np
-
-import time, sys
-
 
 def test_pca():
+    """
+    Principal component analysis example
+    """
 
     a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]])
 
@@ -43,7 +47,7 @@ def test_pca():
     print(pca.total_variance)
 
     print(pca.__doc__)
-    #help(pca)
+    # help(pca)
 
     # Check we look to have got the right answer
     print(np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a))
@@ -58,26 +62,11 @@ def test_pca():
 
     a = np.random.rand(n, n)
 
-    t0 = time.time()
     pca = PCA(n_components=n)
     try:
         pca.fit(a)
-    except:
+    except RuntimeError:
         sys.exit(1)
-    t1 = time.time()
-
-    print(t1-t0)
-
-    #t0 = time.time()
-    #sk_pca = sklearnPCA(n_components=n)
-    #sk_pca.fit(a)
-    #t1 = time.time()
-
-    #print(t1-t0)
-
-    # Check we can create an exception
-    #b = np.array([[3,22],[1,1]])
-    #pca.transform(b)
 
 if __name__ == "__main__":
     test_pca()

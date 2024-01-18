@@ -1,0 +1,5 @@
+[MASTER]
+ignored-modules=_aoclda
+
+[REPORTS]
+fail-under=9

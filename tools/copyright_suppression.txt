@@ -31,4 +31,5 @@ source/core/csv/char_to_num.hpp
 'external/Lbfgsb\.3\.0/linpack.F90'
 'external/Lbfgsb\.3\.0/timer.F90'
 'python_interface/requirements\.txt'
+'python_interface/.pylintrc'
 
