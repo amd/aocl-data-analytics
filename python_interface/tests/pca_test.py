@@ -23,29 +23,117 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+"""
+Principal component analysis Python test script
+"""
 
-from aoclda.factorization import PCA
-import aoclda as da
 import numpy as np
 import pytest
+from aoclda.factorization import PCA
+import aoclda as da
 
-# Run these tests by typing 'python -m pytest' in the command prompt or 'pytohn -m pytest -rA' to print out stuff in the tests
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [
     (da.double, np.float64), (da.single, np.float32),
 ])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_pca_functionality(da_precision, numpy_precision, numpy_order):
+    """
+    Test the functionality of the Python wrapper
+    """
 
-def test_pca_double(da_precision, numpy_precision):
+    a = np.array([[1, 2, 3], [2, 5, 4], [3, 6, 1]],
+                 dtype=numpy_precision, order=numpy_order)
+    x = np.array([[1, 1, 4], [3, 2, 3], [0, 2, 3], [1, 0, 1]],
+                 dtype=numpy_precision, order=numpy_order)
 
-    a = np.array([[1,2,3],[0.2,5,4.1],[3,6,1]], dtype=numpy_precision)
-
-    pca = PCA(n_components=3, precision = da_precision)
+    pca = PCA(n_components=2, precision=da_precision)
     pca.fit(a)
 
-    # Check we look to have got the right answer
-    norm = np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a)
-    tol =  np.finfo(numpy_precision).eps * 1000
+    expected_components = np.array([[0.4082482904638631,  0.816496580927726, -0.408248290463863],
+                                   [0.,  0.447213595499958,  0.8944271909999159]])
 
-    print("data type: {}, norm: {}, tol: {} ".format(numpy_precision, norm, tol))
+    expected_explained_variance = np.array(
+        [5.999999999999999, 1.6666666666666665])
+    expected_mean = np.array([2., 4.333333333333333, 2.6666666666666665])
+    expected_singular_values = np.array(
+        [3.4641016151377544, 1.8257418583505536])
+    expected_u = np.array([[-7.0710678118654724e-01, -4.0824829046386296e-01],
+                           [3.7336028004349413e-17, 8.1649658092772626e-01],
+                           [7.0710678118654746e-01, -4.0824829046386302e-01]])
+    expected_scores = np.array([[-2.4494897427831770e+00, -7.4535599249992979e-01],
+                                [1.2933579491269523e-16,  1.4907119849998600e+00],
+                                [2.4494897427831779e+00, -7.4535599249992990e-01]])
+    expected_transform = np.array([[0.5, 1.2000000000000002, 3.8999999999999995],
+                                   [1.3333333333333335, 2.6666666666666665,
+                                    2.6666666666666665],
+                                   [0.8333333333333333, 1.6666666666666665,
+                                    3.1666666666666665],
+                                   [0.6666666666666665, 0.13333333333333286,
+                                    0.9333333333333333]])
 
+    # Check we have the right answer, note use of abs to allow for different normalization
+    tol = np.finfo(numpy_precision).eps * 1000
+
+    norm = np.linalg.norm(
+        np.abs(pca.principal_components) - np.abs(expected_components))
     assert norm < tol
+
+    norm = np.linalg.norm(pca.column_means - expected_mean)
+    assert norm < tol
+
+    norm = np.linalg.norm(pca.sigma - expected_singular_values)
+    assert norm < tol
+
+    norm = np.linalg.norm(pca.variance - expected_explained_variance)
+    assert norm < tol
+
+    # Final singular value is 10^-33 so we are OK ignoring it for this test
+    assert np.abs(np.sum(expected_explained_variance) -
+                  pca.total_variance[0]) < tol
+
+    norm = np.linalg.norm(np.abs(pca.vt) - np.abs(expected_components))
+    assert norm < tol
+
+    norm = np.linalg.norm(np.abs(pca.u) - np.abs(expected_u))
+    assert norm < tol
+
+    norm = np.linalg.norm(np.abs(pca.scores) - np.abs(expected_scores))
+    assert norm < tol
+
+    norm = np.linalg.norm(pca.inverse_transform(
+        pca.transform(x)) - expected_transform)
+    assert norm < tol
+
+    # Simple test to check we can also get column_sdevs
+    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
+                 dtype=numpy_precision, order=numpy_order)
+
+    pca = PCA(n_components=3, precision=da_precision, method="correlation")
+    pca.fit(a)
+    norm = np.linalg.norm(pca.column_sdevs - np.array([1., 1., 1.]))
+    assert norm < tol
+
+
+@pytest.mark.parametrize("da_precision, numpy_precision", [
+    (da.double, np.float64), (da.single, np.float32),
+])
+def test_pca_error_exits(da_precision, numpy_precision):
+    """
+    Test error exits in the Python wrapper
+    """
+    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision)
+
+    with pytest.raises(RuntimeError):
+        pca = PCA(n_components=3, precision=da_precision, method="corelation")
+
+    pca = PCA(n_components=10, precision=da_precision, method="correlation")
+    with pytest.warns(RuntimeWarning):
+        pca.fit(a)
+
+    b = np.array([1])
+    with pytest.raises(RuntimeError):
+        pca.transform(b)
+
+    with pytest.raises(RuntimeError):
+        pca.inverse_transform(b)

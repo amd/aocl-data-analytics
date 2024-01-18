@@ -1,5 +1,5 @@
 # Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -10,7 +10,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -21,162 +21,181 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 
+"""
+aoclda.factorization module
+"""
 
 from ._aoclda.factorization import pybind_PCA
 
 class PCA(pybind_PCA):
     """
-    This is the PCA class. It does PCA things.
+    Principal component analysis (PCA).
 
-    Parameters:
-    -----------
+    The PCA linearly transforms a set of correlated feature vectors (the columns of the data matrix)
+    into a new uncorrelated coordinate system.
+    The new coordinates (which are known as the principal components) are chosen such that the first
+    coordinate accounts for the greatest variance in the data, the second coordinate accounts for
+    the second greatest variance, etc.
 
-    n_components : int, default=1
-        Number of components to keep.
+    Prior to computing the PCA the data matrix is typically standardized by shifting each column so
+    that it has a mean of zero. It can then be shown that the principal components are the
+    eigenvalues of the covariance matrix corresponding to the mean-centered data matrix.
 
-    bias : {'unbiased', 'biased'}, default='unbiased'
-        Whether to use unbiased or biased standard deviations
+    If the features of the data matrix vary greatly in magnitude, then in addition to mean-centering
+    it can be useful to normalize each column by its standard deviation. In this case the principal
+    components are the eigenvalues of the correlation matrix corresponding to the mean-centered data
+    matrix.
 
-    method : {'covariance', 'correlation', 'svd'}, default='covariance'
-        Whether to compute PCA based on covariance, correlation or SVD
+    The PCA is closely related to a matrix factorization known as the *singular value decomposition*
+    (or SVD),
 
-    solver : {'auto', 'gesdd', 'gesvd', 'gesvdx'}, default='auto'
-        Which LAPACK solver to use
+    .. math::
 
-    precision : {aoclda.single, aoclda.double}, default aoclda.double
-        Double or single precision
+       A = U\Sigma V^T,
+
+    where :math:`A` is a (standardized) data matrix of size
+    ``n_samples`` :math:`\\times` ``n_features``, :math:`\Sigma` is a non-negative diagonal matrix
+    of size ``n_samples`` :math:`\\times` ``n_features`` and :math:`U` and :math:`V` are orthogonal
+    matrices of size ``n_samples`` :math:`\\times` ``n_samples`` and ``n_features`` :math:`\\times`
+    ``n_features`` respectively. The nonzero entries of :math:`\Sigma` are known as the
+    *singular values* of :math:`A`.
+
+    Internally, AOCL-DA computes the PCA via the SVD (with :math:`\Sigma` and :math:`V` truncated
+    according to the number of principal components requested) rather than by eigenvalue
+    decomposition of the covariance/correlation matrix.
+
+    Args:
+        n_components (int, optional): Number of components to keep. Default=1.
+
+        bias (str, optional): Whether to use unbiased or biased estimators for standard deviations
+            and variances. It can take the values 'unbiased' or 'biased' (default: 'unbiased').
+
+        method (str, optional): The method used to compute the PCA. Default = 'covariance'.
+
+            - If ``method = 'covariance'`` then the columns are mean-centered so the PCA is based on
+              the covariance matrix.
+
+            - If ``method = 'correlation'`` then the columns are mean-centered and scaled by the
+              standard deviation so the PCA is based on the correlation matrix.
+
+            - If ``method = 'svd'`` then no normalization occurs so the PCA reduces to the singular
+              value decomposition.
+
+        solver (str, optional): Which LAPACK solver to use to compute the underlying singular value
+            decomposition, allowed values: 'auto', 'gesdd', 'gesvd', 'gesvdx'. Default='auto'.
+            If ``solver = 'auto'`` then ``gesdd`` will be used unless the number of components
+            requested is less than 10% of the smallest dimension of your data matrix, in which case
+            ``gesvdx`` is used.
 
 
-    Attributes:
-    -----------
-
-    principal_components : ndarray of shape (n_components, n_features)
-        Principal axes in feature space, representing the directions of
-        maximum variance in the data. Equivalently, the right singular
-        vectors of the centered input data, parallel to its eigenvectors.
-        The components are sorted by decreasing ``variance``.
-
-    scores : ndarray of shape (n_components, n_features)
-        Principal component scores.
-
-    variance : ndarray of shape (n_components,)
-        The amount of variance explained by each of the selected components.
-
-    total_variance : ndarray of shape
-        Amount of variance explained by each of the selected components.
-
-    u : ndarray of shape
-        U from the SVD
-
-    vt : ndarray of shape
-        VT from the SVD
-
-    sigma : ndarray of shape
-        Sigma from the SVD
-
-    column_means : ndarray of shape
-        Column means
-
-    column_sdevs : ndarray of shape
-        Column standard deviations
-
-    Methods:
-    ---------
-    :meth:`~PCA.fit`
-    :meth:`~PCA.transform`
-    :meth:`~PCA.inverse_transform`
+        precision (aoclda.precision, optional): Whether to initialize the PCA object in double or
+            single precision. It can take the values ``aoclda.single`` or ``aoclda.double``.
+            Default = ``aoclda.double``.
 
     """
     @property
     def principal_components(self):
+        """numpy.ndarray of shape (n_components, n_features): Principal axes in feature space,
+            representing the directions of maximum variance in the data. Equivalently, the right
+            singular vectors of the normalized input data, parallel to its eigenvectors. The
+            components are sorted by decreasing ``variance``."""
         return self.get_principal_components()
 
     @property
     def scores(self):
+        """numpy.ndarray of shape (n_samples, n_components): The principal component scores,
+            :math:`U\Sigma`."""
         return self.get_scores()
 
     @property
     def variance(self):
+        """numpy.ndarray of shape (n_components, ): The amount of variance explained by each of the
+            selected components."""
         return self.get_variance()
 
     @property
     def total_variance(self):
+        """numpy.ndarray of shape (1, ): The total amount of variance within the dataset."""
         return self.get_total_variance()
 
     @property
     def u(self):
+        """nupmy.ndarray of shape (n_samples, n_samples): The matrix :math:`U` from the SVD."""
         return self.get_u()
 
     @property
     def sigma(self):
+        """numpy.ndarray of shape (n_components,): The diagonal values of :math:`\Sigma` from the
+            SVD."""
         return self.get_sigma()
 
     @property
     def vt(self):
+        """numpy.ndarray of shape (n_components, n_features): The matrix :math:`V^T` from the
+            SVD."""
         return self.get_vt()
 
     @property
     def column_means(self):
+        """numpy.ndarray of shape (n_features, ): The column means of the data matrix.
+            These are computed if ``method = 'correlation'`` or ``method = 'correlation'``."""
         return self.get_column_means()
 
     @property
     def column_sdevs(self):
+        """numpy.ndarray of shape (n_features, ): The column standard deviations of the data matrix.
+            These are only computed if ``method = 'correlation'``"""
         return self.get_column_sdevs()
 
     def fit(self, A):
         """
-        Fits a PCA
+        Computes the principal component analysis on the supplied data matrix.
 
-        Parameters:
-        -----------
-
-        A : ndarray of shape
-            Array to use
+        Args:
+            A (numpy.ndarray): The data matrix with which to compute the PCA. It has shape
+              (n_components, n_features).
 
         Returns:
-        --------
-
-        self: object
-            Returns the instance itself
+            self (object): Returns the instance itself.
         """
         return self.pybind_fit(A)
 
     def transform(self, X):
         """
-        PCA transform
+        Transform a data matrix into new feature space.
 
-        Parameters:
-        -----------
+        Transforms a data matrix ``X`` from the original coordinate system into the new coordinates
+        previously computed by ``pca.fit``.
+        The transformation is computed by applying any standardization used on the original data
+        matrix to ``X``, then projecting ``X`` into the previously computed principal components.
 
-        X : ndarray of shape
-            Array to use
+        Args:
+            X (numpy.ndarray): The data matrix to be transformed. It has shape
+              (m_samples, m_features). Note that ``m_features`` must match ``n_features``,
+              the number of features in the data matrix originally supplied to ``pca.fit``.
 
         Returns:
-        --------
-
-        X_transform: ndarray of shape
-            The transformed X
-
-
+            numpy.ndarray of shape (m_samples, n_components): The transformed matrix.
         """
         return self.pybind_transform(X)
 
     def inverse_transform(self, Y):
         """
-        PCA inverse transform
+        Transform a data matrix into the original coordinate space.
 
-        Parameters:
-        -----------
+        Transforms a data matrix ``Y`` in the new feature space back into the original coordinate
+        space used by the matrix which was supplied to ``pca.fit``. The transformation is computed
+        by projecting ``Y`` into the original coordinate space, then inverting any standardization
+        used on the original data matrix.
 
-        Y : ndarray of shape
-            Array to use
+        Args:
+            Y (numpy.ndarray): The data matrix to be transformed. It has shape
+              (k_samples, k_features). Note that ``k_features`` must match ``n_components``,
+              the number of principal components computed by ``pca.fit``.
 
         Returns:
-        --------
-
-        Y_inverse_transform: ndarray of shape
-            The inverse transformed Y
+            numpy.ndarray of shape (k_samples, n_features): The transformed matrix.
         """
         return self.pybind_inverse_transform(Y)

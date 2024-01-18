@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -112,7 +112,7 @@ class pyda_handle {
             throw py::error_already_set();
         }
         else
-            print_error_message();
+            PyErr_WarnEx(PyExc_RuntimeWarning, message, 1);
 
         free(message);
     }
@@ -214,7 +214,7 @@ class pca : public pyda_handle {
             precision = da_single;
         }
         da_status status;
-        status = da_options_set_int(handle, "n_components", 1);
+        status = da_options_set_int(handle, "n_components", n_components);
         exception_check(status);
         status = da_options_set_string(handle, "PCA method", method.c_str());
         exception_check(status);
@@ -253,7 +253,6 @@ class pca : public pyda_handle {
 
         status = da_pca_transform(handle, m_samples, m_features, X.data(), ldx,
                                   X_transform.mutable_data(), ldx_transform);
-        std::cout << status << std::endl;
         exception_check(status);
         return X_transform;
     }

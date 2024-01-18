@@ -3,3 +3,6 @@ ignored-modules=_aoclda
 
 [REPORTS]
 fail-under=9
+
+[MESSAGES CONTROL]
+disable=W1401,C0103

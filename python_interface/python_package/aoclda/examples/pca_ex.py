@@ -30,43 +30,64 @@ Principal component analysis example Python script
 import sys
 import numpy as np
 from aoclda.factorization import PCA
-import aoclda as da
 
-def test_pca():
+def pca_example():
     """
     Principal component analysis example
     """
 
-    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]])
+    # Define data arrays
+    a = np.array([[2., 2., 3., 2., 4.],
+                  [2., 5., 4., 8., 3.],
+                  [3., 2., 4., 4., 1.],
+                  [4., 8., 3., 6., 4.],
+                  [4., 3., 2., 9., 2.],
+                  [3., 2., 1., 5., 2.]])
 
-    pca = PCA(n_components=3)
-    pca.fit(a)
-    print(pca.principal_components)
-    print(pca.u)
-    print(pca.variance)
-    print(pca.total_variance)
+    x = np.array([[7., 4., 2., 9., 3.],
+                  [3., 2., 5., 6., 4.],
+                  [3., 3., 2., 4., 1.]])
 
-    print(pca.__doc__)
-    # help(pca)
-
-    # Check we look to have got the right answer
-    print(np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a))
-
-    # Now try a single precision PCA
-    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]], dtype=np.float32)
-    pca = PCA(n_components=3, precision=da.single)
-    pca.fit(a)
-    print(np.linalg.norm(pca.inverse_transform(pca.transform(a)) - a))
-
-    n = 100
-
-    a = np.random.rand(n, n)
-
-    pca = PCA(n_components=n)
+    print("\nPrincipal component analysis for a 6x5 data matrix\n")
     try:
+        pca = PCA(n_components=3)
         pca.fit(a)
+        x_transform = pca.transform(x)
     except RuntimeError:
         sys.exit(1)
 
+    # Print results
+    print("\nPrincipal components of a:\n")
+    print(pca.principal_components)
+    print("\nx_transform:\n")
+    print(x_transform)
+
+    # Check against expected results
+    expected_components = np.array([[-0.14907884486130418, -0.6612054163818867,
+                                     -0.031706610956396264, -0.7289116905829763,
+                                     -0.09091387966203135],
+                                    [-0.07220367025708045,  0.623738867070505,
+                                     0.20952521660694667, -0.6138062400926413,
+                                     0.4302063910917139],
+                                    [-0.38718653977350936, -0.06907631947413592,
+                                     0.8854125206703791,  0.1296593407398653,
+                                     -0.21106437194645863]])
+
+    expected_x_transform = np.array([[-3.250305270939447, -2.1581247424555086, -1.9477723543266676],
+                                     [0.6691223004872521, -0.21658703437771865,
+                                         1.7953216115607247],
+                                     [1.833601737126601, -0.2844305102179128, -0.5561178355649032]])
+
+    norm_components = np.linalg.norm(pca.principal_components - expected_components)
+    norm_x_transform = np.linalg.norm(x_transform - expected_x_transform)
+
+    tol = 1.0e-12
+
+    if norm_components > tol or norm_x_transform > tol:
+        print("\nSolution is not within expected tolerance\n")
+        sys.exit(1)
+
+    print("\nPCA successfully computed\n")
+
 if __name__ == "__main__":
-    test_pca()
+    pca_example()

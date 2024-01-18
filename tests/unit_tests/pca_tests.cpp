@@ -363,6 +363,8 @@ TYPED_TEST(PCATest, ErrorExits) {
     EXPECT_EQ(da_handle_get_result_int(handle, da_rinfo, &dim, results_arr_int),
               da_status_unknown_query);
 
+    EXPECT_EQ(da_options_set_int(handle, "n_components", params[0].components_required),
+              da_status_success);
     EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
                               params[0].lda),
               da_status_success);

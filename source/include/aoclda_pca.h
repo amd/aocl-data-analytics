@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,12 +38,12 @@ extern "C" {
 
 /** \{
  * \brief Pass a data matrix to the \ref da_handle object in preparation for computing the PCA.
- * 
+ *
  * A copy of the data matrix is stored internally, to avoid overwriting the user's data during the computation.
  * @rst
  * After calling this function you may use the option setting APIs to set :ref:`options <pca_options>`.
  * @endrst
- * 
+ *
  * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init_d with type \ref da_handle_pca.
  * \param[in] n_samples the number of rows of the data matrix, \p A. Constraint: \p n_samples @f$\ge@f$ 1.
  * \param[in] n_features the number of columns of the data matrix, \p A. Constraint: \p n_features @f$\ge@f$ 1.
@@ -61,12 +61,12 @@ da_status da_pca_set_data_d(da_handle handle, da_int n_samples, da_int n_feature
 
 /** \{
  * \brief Pass a data matrix to the \ref da_handle object in preparation for computing the PCA.
- * 
+ *
  * A copy of the data matrix is stored internally, to avoid overwriting the user's data during the computation.
  * @rst
  * After calling this function you may use the option setting APIs to set :ref:`options <pca_options>`.
  * @endrst
- * 
+ *
  * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init_s
  * with type \ref da_handle_pca.
  * \param[in] n_samples the number of rows of the data matrix, \p A. Constraint: \p n_samples @f$\ge@f$ 1.
@@ -87,8 +87,8 @@ da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_feature
  * \brief Compute PCA
  *
  * Computes a principal component analysis on the data matrix previously passed into the handle using \ref da_pca_set_data_d.
- * 
- * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init_d 
+ *
+ * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init_d
  *  with type \ref da_handle_pca and with data passed in via \ref da_pca_set_data_d.
   * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -96,7 +96,7 @@ da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_feature
  * - \ref da_status_invalid_pointer - the handle has not been initialized.
  * - \ref da_status_no_data - \ref da_pca_set_data_d has not been called prior to this function call.
  * - \ref da_status_internal_error - this can occur if your data contains undefined values.
- * 
+ *
  * \post
  * After succesful execution, \ref da_handle_get_result_d can be queried with the following enums:
  * - \p da_pca_principal_components - return an array of size \p n_components @f$\times@f$ \p n_features containing the principal components in column major format in descreasing order of explained variance.
@@ -117,7 +117,7 @@ da_status da_pca_compute_d(da_handle handle);
  * \brief Compute PCA
  *
  * Computes a principal component analysis on the data matrix previously passed into the handle using \ref da_pca_set_data_s.
- * 
+ *
  * \param[in,out] handle a \ref da_handle object, initialized using \ref da_handle_init_s
  *  with type \ref da_handle_pca and with data passed in via \ref da_pca_set_data_s.
   * \return \ref da_status. The function returns:
@@ -126,7 +126,7 @@ da_status da_pca_compute_d(da_handle handle);
  * - \ref da_status_invalid_pointer - the handle has not been initialized.
  * - \ref da_status_no_data - \ref da_pca_set_data_d has not been called prior to this function call.
  * - \ref da_status_internal_error - this can occur if your data contains undefined values.
- * 
+ *
  * \post
  * After succesful execution, \ref da_handle_get_result_s can be queried with the following enums:
  * - \p da_pca_principal_components - return an array of size \p n_components @f$\times@f$ \p n_features containing the principal components in column major format in descreasing order of explained variance.
@@ -148,13 +148,13 @@ da_status da_pca_compute_s(da_handle handle);
  *
  * Transforms a data matrix \p X from the original coordinate system into the new coordinates previously computed in \ref da_pca_compute_d.
  * The transformation is computed by applying any standardization used on the original data matrix to \p X, then projecting \p X into the previously computed principal components.
- * 
+ *
  * \param[in,out] handle a \ref da_handle object, with a PCA previously computed via \ref da_pca_compute_d.
  * \param[in] m_samples the number of rows of the data matrix, \p X. Constraint: \p m_samples @f$\ge@f$ 1.
  * \param[in] m_features the number of columns of the data matrix, \p X. Constraint: \p m_features @f$=@f$ \p n_features, the number of features in the data matrix originally supplied to \ref da_pca_set_data_d.
  * \param[in] X the \p m_samples @f$\times@f$ \p m_features data matrix, in column major format.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p m_samples.
- * \param[in] X_transform an array of size at least \p m_samples @f$\times@f$ \p n_components, in which the transformed data will be stored (in column major format).
+ * \param[out] X_transform an array of size at least \p m_samples @f$\times@f$ \p n_components, in which the transformed data will be stored (in column major format).
  * \param[in] ldx_transform the leading dimension of \p X_transform. Constraint: \p ldx_transform @f$\ge@f$ \p m_samples.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -162,7 +162,7 @@ da_status da_pca_compute_s(da_handle handle);
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or one of the arrays is null.
  * - \ref da_status_no_data - the PCA has not been computed prior to this function call.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
- * 
+ *
  */
 da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_features,
                              const double *X, da_int ldx, double *X_transform,
@@ -174,13 +174,13 @@ da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_featur
  *
  * Transforms a data matrix \p X from the original coordinate system into the new coordinates previously computed in \ref da_pca_compute_s.
  * The transformation is computed by applying any standardization used on the original data matrix to \p X, then projecting \p X into the previously computed principal components.
- * 
+ *
  * \param[in,out] handle a \ref da_handle object, with a PCA previously computed via \ref da_pca_compute_s.
  * \param[in] m_samples the number of rows of the data matrix, \p X. Constraint: \p m_samples @f$\ge@f$ 1.
  * \param[in] m_features the number of columns of the data matrix, \p X. Constraint: \p m_features @f$=@f$ \p n_features, the number of features in the data matrix originally supplied to \ref da_pca_set_data_s.
  * \param[in] X the \p m_samples @f$\times@f$ \p m_features data matrix, in column major format.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p m_samples.
- * \param[in] X_transform an array of size at least \p m_samples @f$\times@f$ \p n_components, in which the transformed data will be stored (in column major format).
+ * \param[out] X_transform an array of size at least \p m_samples @f$\times@f$ \p n_components, in which the transformed data will be stored (in column major format).
  * \param[in] ldx_transform the leading dimension of \p X_transform. Constraint: \p ldx_transform @f$\ge@f$ \p m_samples.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -188,7 +188,7 @@ da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_featur
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or one of the arrays is null.
  * - \ref da_status_no_data - the PCA has not been computed prior to this function call.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
- * 
+ *
  */
 da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_features,
                              const float *X, da_int ldx, float *X_transform,
@@ -196,17 +196,17 @@ da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_featur
 /** \} */
 
 /** \{
- * \brief Transform a data matrix into the orginal coordinate space
+ * \brief Transform a data matrix into the original coordinate space
  *
  * Transforms a data matrix  \p Y in the new feature space back into the original coordinate space used by the matrix which was supplied to \ref da_pca_set_data_d.
  * The transformation is computed by projecting \p Y into the original coordinate space, then inverting any standardization used on the original data matrix.
- * 
+ *
  * \param[in,out] handle a \ref da_handle object, with a PCA previously computed via \ref da_pca_compute_d.
  * \param[in] k_samples the number of rows of the data matrix, \p Y. Constraint: \p k_samples @f$\ge@f$ 1.
  * \param[in] k_features the number of columns of the data matrix, \p Y. Constraint: \p k_features @f$=@f$ \p n_components, the number of PCA components computed by \ref da_pca_compute_d.
  * \param[in] Y the \p k_samples @f$\times@f$ \p k_features data matrix, in column major format.
  * \param[in] ldy the leading dimension of the data matrix. Constraint: \p ldy @f$\ge@f$ \p k_samples.
- * \param[in] Y_inv_transform an array of size at least \p k_samples @f$\times@f$ \p n_features, in which the transformed data will be stored (in column major format).
+ * \param[out] Y_inv_transform an array of size at least \p k_samples @f$\times@f$ \p n_features, in which the transformed data will be stored (in column major format).
  * \param[in] ldy_inv_transform the leading dimension of \p Y_inv_transform. Constraint: \p ldy_inv_transform @f$\ge@f$ \p k_samples.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -214,7 +214,7 @@ da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_featur
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or one of the arrays is null.
  * - \ref da_status_no_data - the PCA has not been computed prior to this function call.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
- * 
+ *
  */
 da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples,
                                      da_int k_features, const double *Y, da_int ldy,
@@ -222,17 +222,17 @@ da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples,
 /** \} */
 
 /** \{
- * \brief Transform a data matrix into the orginal coordinate space
+ * \brief Transform a data matrix into the original coordinate space
  *
  * Transforms a data matrix  \p Y in the new feature space back into the original coordinate space used by the matrix which was supplied to \ref da_pca_set_data_s.
  * The transformation is computed by projecting \p Y into the original coordinate space, then inverting any standardization used on the original data matrix.
- * 
+ *
  * \param[in,out] handle a \ref da_handle object, with a PCA previously computed via \ref da_pca_compute_s.
  * \param[in] k_samples the number of rows of the data matrix, \p Y. Constraint: \p k_samples @f$\ge@f$ 1.
  * \param[in] k_features the number of columns of the data matrix, \p Y. Constraint: \p k_features @f$=@f$ \p n_components, the number of PCA components computed by \ref da_pca_compute_s.
  * \param[in] Y the \p k_samples @f$\times@f$ \p k_features data matrix, in column major format.
  * \param[in] ldy the leading dimension of the data matrix. Constraint: \p ldy @f$\ge@f$ \p k_samples.
- * \param[in] Y_inv_transform an array of size at least \p k_samples @f$\times@f$ \p n_features, in which the transformed data will be stored (in column major format).
+ * \param[out] Y_inv_transform an array of size at least \p k_samples @f$\times@f$ \p n_features, in which the transformed data will be stored (in column major format).
  * \param[in] ldy_inv_transform the leading dimension of \p Y_inv_transform. Constraint: \p ldy_inv_transform @f$\ge@f$ \p k_samples.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -240,7 +240,7 @@ da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples,
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or one of the arrays is null.
  * - \ref da_status_no_data - the PCA has not been computed prior to this function call.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
- * 
+ *
  */
 da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples,
                                      da_int k_features, const float *Y, da_int ldy,

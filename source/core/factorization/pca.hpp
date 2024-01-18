@@ -292,7 +292,10 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
     // Now that we have a data matrix we can re-register the n_components option with new constraints
     da_int npc, max_npc = std::min(n, p);
     opts.get("n_components", npc);
+
     reregister_pca_option<T>(opts, max_npc);
+
+    opts.set("n_components", std::min(npc, max_npc));
 
     if (npc > max_npc)
         return da_warn(
@@ -315,6 +318,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
     // Read in options and store in class together with associated variables
     this->opts.get("n_components", npc);
+
     ns = npc;
     std::string opt_method;
 
