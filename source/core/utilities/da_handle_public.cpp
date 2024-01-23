@@ -248,6 +248,14 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
         return handle->pca_d->get_result(query, dim, result);
     else if (handle->pca_s != nullptr)
         return handle->pca_s->get_result(query, dim, result);
+    else if (handle->dt_d != nullptr)
+        return handle->dt_d->get_result(query, dim, result);
+    else if (handle->dt_s != nullptr)
+        return handle->dt_s->get_result(query, dim, result);
+    else if (handle->df_d != nullptr)
+        return handle->df_d->get_result(query, dim, result);
+    else if (handle->df_s != nullptr)
+        return handle->df_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,

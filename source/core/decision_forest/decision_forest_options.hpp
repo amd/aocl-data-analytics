@@ -50,8 +50,12 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "seed", "set random seed for Mersenne Twister (64-bit) PRNG", -1,
-            lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
+            "seed",
+            "Set random seed for Mersenne Twister (64-bit) PRNG.  If "
+            "the value is -1, the std::random_device function is used to generate a "
+            "seed, otherwise "
+            "the input value is used as a seed.",
+            -1, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(

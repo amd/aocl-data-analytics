@@ -78,10 +78,6 @@ add_executable(decision_tree_tests decision_tree_tests.cpp)
 target_compile_definitions(
   decision_tree_tests PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
-add_executable(decision_forest_tests decision_forest_tests.cpp)
-target_compile_definitions(
-  decision_forest_tests PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
-
 add_executable(option_registry option_registry_tests.cpp)
 
 add_executable(errors_tests errors_tests.cpp)
@@ -125,7 +121,6 @@ set(GTEST_EXES
   linmod
   logreg
   linreg
-  decision_forest_tests
   decision_tree_tests
   option_registry
   data

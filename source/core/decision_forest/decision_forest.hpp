@@ -36,7 +36,7 @@
 #include "da_error.hpp"
 #include "options.hpp"
 
-#include "decision_forest_aux.hpp"
+// #include "decision_forest_aux.hpp"
 
 #include "decision_forest_options.hpp"
 
@@ -100,7 +100,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
         register_df_options<T>(opts);
     }
 
-    da_status set_training_data(da_int n_obs, da_int n_features, T *x, da_int ldx,
+    da_status set_training_data(da_int n_obs, da_int n_features, const T *x, da_int ldx,
                                 uint8_t *y);
     da_status sample_feature_ind(da_int n_samples, da_int *samples);
     da_status set_rng(std::mt19937_64 mt_gen) {
@@ -112,9 +112,10 @@ template <typename T> class decision_tree : public basic_handle<T> {
     };
     std::mt19937_64 get_rng() { return this->mt_gen; };
     da_status fit();
-    da_status predict(da_int n_obs, da_int n_features, T *x, da_int ldx, uint8_t *y_pred);
-    da_status score(da_int n_obs, da_int n_features, T *x, da_int ldx, uint8_t *y_test,
-                    T *score);
+    da_status predict(da_int n_obs, da_int n_features, const T *x, da_int ldx,
+                      uint8_t *y_pred);
+    da_status score(da_int n_obs, da_int n_features, const T *x, da_int ldx,
+                    uint8_t *y_test, T *score);
     std::function<T(T, da_int, T, da_int)> score_fun;
     da_status get_result(da_result query, da_int *dim, T *result);
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
@@ -123,6 +124,9 @@ template <typename T> class decision_tree : public basic_handle<T> {
         return da_warn(err, da_status_unknown_query,
                        "There are no integer results available for this API.");
     };
+    da_status sort_1d_array(uint8_t *y, da_int n_obs, T *x, da_int n_features,
+                            da_int col_idx);
+    da_status sort_2d_array_by_col(T *x, da_int m, da_int ldx, da_int col_idx);
 };
 
 // ---------------------------------------------
@@ -157,7 +161,7 @@ template <typename T> class decision_forest : public basic_handle<T> {
         register_df_options<T>(opts);
     }
 
-    da_status set_training_data(da_int n_obs, da_int n_features, T *x, da_int ldx,
+    da_status set_training_data(da_int n_obs, da_int n_features, const T *x, da_int ldx,
                                 uint8_t *y);
 
     da_status sample_feature_ind(da_int n_features, da_int n_samples,
@@ -165,9 +169,10 @@ template <typename T> class decision_forest : public basic_handle<T> {
     da_status sample_obs_ind(da_int n_obs, da_int n_samples, da_int *obs_ind);
     da_status fit_tree(decision_tree<T> *p_tree);
     da_status fit();
-    da_status predict(da_int n_obs, da_int n_features, T *x, da_int ldx, uint8_t *y_pred);
-    da_status score(da_int n_obs, da_int n_features, T *x, da_int ldx, uint8_t *y_test,
-                    T *score);
+    da_status predict(da_int n_obs, da_int n_features, const T *x, da_int ldx,
+                      uint8_t *y_pred);
+    da_status score(da_int n_obs, da_int n_features, const T *x, da_int ldx,
+                    uint8_t *y_test, T *score);
     da_status get_result(da_result query, da_int *dim, T *result);
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
                          [[maybe_unused]] da_int *result) {
@@ -180,6 +185,152 @@ template <typename T> class decision_forest : public basic_handle<T> {
 // ---------------------------------------------
 // member functions for decision_tree class
 // ---------------------------------------------
+
+template <typename T>
+T no_split_score(uint8_t *y, da_int n, uint8_t &y_pred,
+                 std::function<T(T, da_int, T, da_int)> score_fun) {
+    float acc_r = 0.0;
+
+    for (da_int idx = 0; idx < n; idx++) {
+        acc_r += y[idx];
+    }
+
+    if (acc_r > (n / 2)) {
+        y_pred = 1;
+    } else {
+        y_pred = 0;
+    }
+
+    T score = score_fun((da_int)0, (da_int)0, acc_r, n);
+    return score;
+}
+
+template <typename T>
+void split(T *x, da_int d, da_int col_idx, T diff_thres, uint8_t *y, da_int n,
+           da_int &split_idx, T &min_score,
+           std::function<T(T, da_int, T, da_int)> score_fun) {
+
+    da_int n_r = n, n_l = 0;
+    T acc_r = 0.0, acc_l = 0.0;
+
+    for (da_int idx = 0; idx < n; idx++) {
+        acc_r += y[idx];
+    }
+
+    for (da_int idx = 1; idx < n; idx++) {
+        n_r = n - idx;
+        n_l = idx;
+
+        acc_r -= y[idx - 1];
+        acc_l += y[idx - 1];
+
+        T x_im1 = x[idx * (d - 1) + col_idx];
+        T x_i = x[idx * d + col_idx];
+        if (std::abs(x_i - x_im1) > diff_thres) {
+            T score = score_fun(acc_l, n_l, acc_r, n_r);
+
+            if (score < min_score) {
+                min_score = score;
+                split_idx = idx;
+            }
+        }
+    }
+}
+
+template <typename T> struct feature_label_idx {
+    T x_value;
+    uint8_t y_value;
+    da_int idx;
+};
+
+template <typename T> int compare_floats(const void *a, const void *b) {
+    feature_label_idx<T> arg1 = *(const feature_label_idx<T> *)a;
+    feature_label_idx<T> arg2 = *(const feature_label_idx<T> *)b;
+
+    if (arg1.x_value < arg2.x_value)
+        return -1;
+    if (arg1.x_value > arg2.x_value)
+        return 1;
+    return 0;
+}
+
+template <typename T>
+bool compare(const feature_label_idx<T> &arg1, const feature_label_idx<T> &arg2) {
+    return arg1.x_value < arg2.x_value;
+}
+
+template <typename T>
+da_status decision_tree<T>::sort_1d_array(uint8_t *y, da_int n_obs, T *x,
+                                          da_int n_features, da_int col_idx) {
+    da_status status = da_status_success;
+    std::vector<feature_label_idx<T>> x_y_idx(n_obs);
+    try {
+        x_y_idx.resize(n_obs);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+
+    for (da_int i = 0; i < n_obs; i++) {
+        x_y_idx[i].x_value = x[i * n_features + col_idx];
+        x_y_idx[i].y_value = y[i];
+        x_y_idx[i].idx = i;
+    }
+
+    std::sort(x_y_idx.begin(), x_y_idx.end(), compare<T>);
+    // qsort(x_y_idx.data(), n_obs, sizeof(x_y_idx[0]), compare_floats<T>);
+
+    for (da_int i = 0; i < n_obs; i++) {
+        y[i] = x_y_idx[i].y_value;
+    }
+    return status;
+}
+
+/**
+ * @brief
+ *
+ * @param x
+ * @param ldx number of columns in array
+ * @param m number of rows in array
+ */
+template <typename T>
+da_status decision_tree<T>::sort_2d_array_by_col(T *x, da_int m, da_int ldx,
+                                                 da_int col_idx) {
+    da_status status = da_status_success;
+    std::vector<std::vector<T>> x_vec;
+    try {
+        x_vec.resize(m);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+
+    for (da_int i = 0; i < m; i++) {
+        // x_vec[i] should contain ith row of x
+        for (da_int j = 0; j < ldx; j++) {
+            try {
+                x_vec[i].resize(ldx);
+            } catch (std::bad_alloc const &) {
+                return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                                "Memory allocation failed.");
+            }
+            x_vec[i][j] = x[i * ldx + j];
+        }
+    }
+
+    auto cmp_lambda = [col_idx](const std::vector<T> &a, const std::vector<T> &b) {
+        return a.at(col_idx) < b.at(col_idx);
+    };
+
+    std::sort(x_vec.begin(), x_vec.end(), cmp_lambda);
+
+    for (da_int i = 0; i < m; i++) {
+        for (da_int j = 0; j < ldx; j++) {
+            x[i * ldx + j] = x_vec[i][j];
+        }
+    }
+    return status;
+}
 
 template <typename T>
 da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) {
@@ -215,7 +366,7 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
 }
 
 template <typename T>
-da_status decision_tree<T>::set_training_data(da_int n_obs, da_int n_features, T *x,
+da_status decision_tree<T>::set_training_data(da_int n_obs, da_int n_features, const T *x,
                                               da_int ldx, uint8_t *y) {
 
     da_status status = da_status_success;
@@ -291,6 +442,14 @@ template <typename T> da_status decision_tree<T>::fit() {
     opts.get("scoring function", scoring_fun_str, this->scoring_fun_id);
     opts.get("depth", this->max_level);
     opts.get("n_features_to_select", this->n_features_to_select);
+
+    if (this->d < this->n_features_to_select)
+        return da_error(
+            this->err, da_status_invalid_input,
+            "n_features = " + std::to_string(this->d) +
+                ", n_features_to_select = " + std::to_string(this->n_features_to_select) +
+                ", the value of n_features needs to be at least as big as the value of "
+                "n_features_to_select");
 
     T diff_thres;
     opts.get("diff_thres", diff_thres);
@@ -508,8 +667,8 @@ template <typename T> da_status decision_tree<T>::fit() {
 }
 
 template <typename T>
-da_status decision_tree<T>::predict(da_int n_obs, da_int n_features, T *x_in, da_int ldx,
-                                    uint8_t *y_pred) {
+da_status decision_tree<T>::predict(da_int n_obs, da_int n_features, const T *x_in,
+                                    da_int ldx, uint8_t *y_pred) {
     DA_PRINTF_DEBUG("Inside decision_tree<T>::predict \n");
 
     if (!model_trained) {
@@ -580,8 +739,8 @@ da_status decision_tree<T>::predict(da_int n_obs, da_int n_features, T *x_in, da
 }
 
 template <typename T>
-da_status decision_tree<T>::score(da_int n_obs, da_int n_features, T *x_in, da_int ldx,
-                                  uint8_t *y_test, T *p_score) {
+da_status decision_tree<T>::score(da_int n_obs, da_int n_features, const T *x_in,
+                                  da_int ldx, uint8_t *y_test, T *p_score) {
     DA_PRINTF_DEBUG("Inside decision_tree<T>::score \n");
     DA_PRINTF_DEBUG("model[0].col_idx = %" DA_INT_FMT " \n", model[0].col_idx);
     DA_PRINTF_DEBUG("model[0].x_threshold = %8.4f \n", model[0].x_threshold);
@@ -694,8 +853,8 @@ da_status decision_forest<T>::get_result(da_result query, da_int *dim, T *result
 }
 
 template <typename T>
-da_status decision_forest<T>::set_training_data(da_int n_obs, da_int n_features, T *x,
-                                                da_int ldx, uint8_t *y) {
+da_status decision_forest<T>::set_training_data(da_int n_obs, da_int n_features,
+                                                const T *x, da_int ldx, uint8_t *y) {
 
     da_status status = da_status_success;
 
@@ -762,17 +921,17 @@ da_status decision_tree<T>::sample_feature_ind(da_int n_samples, da_int *samples
 
     da_int N = this->d; // n_features (set inside set_training_data)
 
-    double top = N - n_samples;
-    double Nreal = N;
+    T top = N - n_samples;
+    T Nreal = N;
     da_int idx0 = -1;
     std::vector<da_int> subsample(n_samples);
 
     da_int i = 0;
     da_int n = n_samples;
-    double v, quot;
+    T v, quot;
     da_int S;
 
-    auto uniform_real_dist = std::uniform_real_distribution<double>(0.0, 1.0);
+    auto uniform_real_dist = std::uniform_real_distribution<T>(0.0, 1.0);
 
     while (n >= 2) {
         // sample v using Mersenne Twiser
@@ -938,8 +1097,8 @@ template <typename T> da_status decision_forest<T>::fit() {
 }
 
 template <typename T>
-da_status decision_forest<T>::predict(da_int n_obs, da_int n_features, T *x, da_int ldx,
-                                      uint8_t *y_pred) {
+da_status decision_forest<T>::predict(da_int n_obs, da_int n_features, const T *x,
+                                      da_int ldx, uint8_t *y_pred) {
     da_status status = da_status_success;
 
     if (!model_trained) {
@@ -975,9 +1134,22 @@ da_status decision_forest<T>::predict(da_int n_obs, da_int n_features, T *x, da_
     opts.get("n_trees", n_trees);
 
     // predict class using majority vote over trees in ensemble
-    std::vector<da_int> count(n_obs);
+    std::vector<da_int> count;
+    try {
+        count.resize(n_obs);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+
     for (da_int k = 0; k < n_trees; k++) {
-        std::vector<uint8_t> y_pred_tree(n_obs);
+        std::vector<uint8_t> y_pred_tree;
+        try {
+            y_pred_tree.resize(n_obs);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
         status = tree_vec[k].predict(n_obs, n_features, x, ldx, y_pred_tree.data());
         for (da_int i = 0; i < n_obs; i++) {
             count[i] += y_pred_tree[i];
@@ -985,7 +1157,7 @@ da_status decision_forest<T>::predict(da_int n_obs, da_int n_features, T *x, da_
     }
 
     for (da_int i = 0; i < n_obs; i++) {
-        if (2 * count[i] >= n_trees) {
+        if (count[i] >= (n_trees / 2)) {
             y_pred[i] = 1;
         } else {
             y_pred[i] = 0;
@@ -996,8 +1168,8 @@ da_status decision_forest<T>::predict(da_int n_obs, da_int n_features, T *x, da_
 }
 
 template <typename T>
-da_status decision_forest<T>::score(da_int n_obs, da_int n_features, T *x, da_int ldx,
-                                    uint8_t *y_test, T *p_score) {
+da_status decision_forest<T>::score(da_int n_obs, da_int n_features, const T *x,
+                                    da_int ldx, uint8_t *y_test, T *p_score) {
     da_status status = da_status_success;
 
     da_int n_trees;
@@ -1037,9 +1209,21 @@ da_status decision_forest<T>::score(da_int n_obs, da_int n_features, T *x, da_in
     }
 
     // evaluate prediction counts across trees
-    std::vector<da_int> count(n_obs);
+    std::vector<da_int> count;
+    try {
+        count.resize(n_obs);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
     for (da_int k = 0; k < n_trees; k++) {
-        std::vector<uint8_t> y_pred_tree(n_obs);
+        std::vector<uint8_t> y_pred_tree;
+        try {
+            y_pred_tree.resize(n_obs);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
         status = tree_vec[k].predict(n_obs, n_features, x, ldx, y_pred_tree.data());
         for (da_int i = 0; i < n_obs; i++) {
             count[i] += y_pred_tree[i];
@@ -1050,7 +1234,7 @@ da_status decision_forest<T>::score(da_int n_obs, da_int n_features, T *x, da_in
     uint8_t y_pred;
     T score = 0.0;
     for (da_int i = 0; i < n_obs; i++) {
-        if (2 * count[i] > n_trees) {
+        if (count[i] > (n_trees / 2)) {
             y_pred = 1;
         } else {
             y_pred = 0;

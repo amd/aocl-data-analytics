@@ -46,7 +46,7 @@
  * @param n_obs number of observations in x
  * @param n_features number of features in x
  * @param x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
- * @param ldx leading dimension of x.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
+ * @param ldx leading dimension of \p x.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param y 1d array containing n_obs labels
  * @return @ref da_status.  The function returns:
  * - @ref da_status_success - the operation was successfully completed.
@@ -68,7 +68,7 @@ da_status da_df_set_training_data_d(da_handle handle, da_int n_obs, da_int n_fea
  * @param n_obs number of observations in x
  * @param n_features number of features in x
  * @param x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
- * @param ldx leading dimension of x.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
+ * @param ldx leading dimension of \p x.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param y 1d array containing n_obs labels
  * @return @ref da_status.  The function returns:
  * - @ref da_status_success - the operation was successfully completed.
@@ -101,7 +101,7 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_fea
  *
  * \post
  * After succesful execution, \ref da_handle_get_result_d can be queried with the following enum:
- * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p d.
+ * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p n_features.
  */
 da_status da_df_fit_d(da_handle handle);
 /** \} */
@@ -127,7 +127,7 @@ da_status da_df_fit_d(da_handle handle);
  *
  * \post
  * After succesful execution, \ref da_handle_get_result_s can be queried with the following enum:
- * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p d.
+ * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p n_features.
  */
 da_status da_df_fit_s(da_handle handle);
 /** \} */
@@ -138,12 +138,14 @@ da_status da_df_fit_s(da_handle handle);
  * After a model has been fit using @ref da_df_fit_d, it can be used to generate predicted labels on new data. This
  * function returns the decision forest predictions in the array @p y_pred.
  *
- * For each data point i, y_pred[i] will contain the label of the most likely class according to the decision forest,
- * x[i + j*n_obs] should contain the feature j for observation i
+ * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_pred[i]}@f$ will contain the label of the most likely class
+ * according to the decision forest,
+ * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_obs - number of observations in x
- * @param[in] x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[out] y_pred - predicted class labels
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
@@ -152,8 +154,8 @@ da_status da_df_fit_s(da_handle handle);
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
  */
-da_status da_df_predict_d(da_handle handle, da_int n_obs, da_int n_features, double *x,
-                          da_int ldx, uint8_t *y_pred);
+da_status da_df_predict_d(da_handle handle, da_int n_obs, da_int n_features,
+                          double *x_test, da_int ldx, uint8_t *y_pred);
 /** \} */
 
 /** \{
@@ -162,12 +164,14 @@ da_status da_df_predict_d(da_handle handle, da_int n_obs, da_int n_features, dou
  * After a model has been fit using @ref da_df_fit_s, it can be used to generate predicted labels on new data.
  * This function returns the decision forest predictions in the array @p y_pred.
  *
- * For each data point i, y_pred[i] will contain the label of the most likely class according to the decision forest,
- * x[i + j*n_obs] should contain the feature j for observation i
+ * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_pred[i]}@f$ will contain the label of the most likely class
+ * according to the decision forest,
+ * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_obs - number of observations in x
- * @param[in] x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[out] y_pred - predicted class labels
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
@@ -176,8 +180,8 @@ da_status da_df_predict_d(da_handle handle, da_int n_obs, da_int n_features, dou
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
  */
-da_status da_df_predict_s(da_handle handle, da_int n_obs, da_int n_features, float *x,
-                          da_int ldx, uint8_t *y_pred);
+da_status da_df_predict_s(da_handle handle, da_int n_obs, da_int n_features,
+                          float *x_test, da_int ldx, uint8_t *y_pred);
 /** \} */
 
 /** \{
@@ -186,12 +190,13 @@ da_status da_df_predict_s(da_handle handle, da_int n_obs, da_int n_features, flo
  *
  * To be used after a model has been fit using @ref da_df_fit_d.
  *
- * For each data point i, y_test[i] will contain the actual label,
- * x[i + j*n_obs] should contain the feature j for observation i
+ * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_test[i]} @f$ will contain the actual label,
+ * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_obs - number of observations in x
- * @param[in] x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[in] y_test - actual class labels
  * @param[out] score - proportion of observations where predicted label matches actual label
  * @return da_status
@@ -203,7 +208,7 @@ da_status da_df_predict_s(da_handle handle, da_int n_obs, da_int n_features, flo
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
  */
-da_status da_df_score_d(da_handle handle, da_int n_obs, da_int n_features, double *x,
+da_status da_df_score_d(da_handle handle, da_int n_obs, da_int n_features, double *x_test,
                         da_int ldx, uint8_t *y_test, double *score);
 /** \} */
 
@@ -213,12 +218,13 @@ da_status da_df_score_d(da_handle handle, da_int n_obs, da_int n_features, doubl
  *
  * To be used after a model has been fit using @ref da_df_fit_s.
  *
- * For each data point i, y_test[i] will contain the actual label,
- * x[i + j*n_obs] should contain the feature j for observation i
+ * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_test[i]} @f$ will contain the actual label,
+ * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_obs - number of observations in x
- * @param[in] x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[in] y_test - actual class labels
  * @param[out] score - proportion of observations where predicted label matches actual label
  * @return da_status
@@ -230,7 +236,7 @@ da_status da_df_score_d(da_handle handle, da_int n_obs, da_int n_features, doubl
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
  */
-da_status da_df_score_s(da_handle handle, da_int n_obs, da_int n_features, float *x,
+da_status da_df_score_s(da_handle handle, da_int n_obs, da_int n_features, float *x_test,
                         da_int ldx, uint8_t *y_test, float *score);
 /** \} */
 
