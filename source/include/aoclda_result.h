@@ -51,7 +51,7 @@ typedef enum da_result_ {
     // Linear models 101..200
     da_linmod_coeff =
         101, ///< Optimal fitted coefficients produced by the last call to a linear regression solver.
-    // PCA 201..300
+    // Factorization 201..300
     da_pca_scores = 201, ///< Matrix of scores computed by the PCA API.
     da_pca_variance, ///< The variance explained by each component computed by the PCA API.
     da_pca_principal_components, ///< Matrix of principal components computed by the PCA API.
@@ -63,6 +63,10 @@ typedef enum da_result_ {
     da_pca_vt, ///< The matrix @f$V^T@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     // Nonlinear Optimization 301..400
     // Random Forests 401..500
+    // Clustering 501...600
+    da_kmeans_cluster_centres =
+        501, ///< Matrix of cluster centres computed in *k*-means clustering.
+    da_kmeans_labels, ///< Labels of samples in the data matrix used to compute *k*-means clustering.
     // ...
 } da_result;
 

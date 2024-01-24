@@ -54,6 +54,9 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         case da_handle_pca:
             (*handle)->pca_d = new da_pca::da_pca<double>(*(*handle)->err);
             break;
+        case da_handle_kmeans:
+            (*handle)->kmeans_d = new da_kmeans::da_kmeans<double>(*(*handle)->err);
+            break;
         case da_handle_decision_tree:
             (*handle)->dt_d = new da_df::decision_tree<double>(*(*handle)->err);
             break;
@@ -92,6 +95,9 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             break;
         case da_handle_pca:
             (*handle)->pca_s = new da_pca::da_pca<float>(*(*handle)->err);
+            break;
+        case da_handle_kmeans:
+            (*handle)->kmeans_s = new da_kmeans::da_kmeans<float>(*(*handle)->err);
             break;
         case da_handle_decision_tree:
             (*handle)->dt_s = new da_df::decision_tree<float>(*(*handle)->err);
@@ -137,6 +143,10 @@ void da_handle_destroy(da_handle *handle) {
                 delete (*handle)->pca_d;
             if ((*handle)->pca_s)
                 delete (*handle)->pca_s;
+            if ((*handle)->kmeans_d)
+                delete (*handle)->kmeans_d;
+            if ((*handle)->kmeans_s)
+                delete (*handle)->kmeans_s;
             if ((*handle)->dt_d)
                 delete (*handle)->dt_d;
             if ((*handle)->dt_s)
@@ -180,6 +190,8 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
         return handle->linreg_d->get_result(query, dim, result);
     else if (handle->pca_d != nullptr)
         return handle->pca_d->get_result(query, dim, result);
+    else if (handle->kmeans_d != nullptr)
+        return handle->kmeans_d->get_result(query, dim, result);
     else if (handle->dt_d != nullptr)
         return handle->dt_d->get_result(query, dim, result);
     else if (handle->df_d != nullptr)
@@ -214,6 +226,8 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
         return handle->linreg_s->get_result(query, dim, result);
     else if (handle->pca_s != nullptr)
         return handle->pca_s->get_result(query, dim, result);
+    else if (handle->kmeans_s != nullptr)
+        return handle->kmeans_s->get_result(query, dim, result);
     else if (handle->dt_s != nullptr)
         return handle->dt_s->get_result(query, dim, result);
     else if (handle->df_s != nullptr)
@@ -256,6 +270,10 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
         return handle->df_d->get_result(query, dim, result);
     else if (handle->df_s != nullptr)
         return handle->df_s->get_result(query, dim, result);
+    else if (handle->kmeans_d != nullptr)
+        return handle->kmeans_d->get_result(query, dim, result);
+    else if (handle->kmeans_s != nullptr)
+        return handle->kmeans_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,

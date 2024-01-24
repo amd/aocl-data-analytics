@@ -687,8 +687,8 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
     if (ldx < k)
         return da_error(err, da_status_invalid_input,
                         "The function was called with k_samples = " + std::to_string(k) +
-                            " and ldx = " + std::to_string(ldx) +
-                            ". Constraint: ldx >= k_samples.");
+                            " and ldy = " + std::to_string(ldx) +
+                            ". Constraint: ldy >= k_samples.");
 
     if (ldx_inv_transform < k)
         return da_error(
@@ -698,11 +698,11 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
                 ". Constraint: ldy_inv_transform >= k_samples.");
 
     if (X == nullptr)
-        return da_error(err, da_status_invalid_pointer, "The array X is null.");
+        return da_error(err, da_status_invalid_pointer, "The array Y is null.");
 
     if (X_inv_transform == nullptr)
         return da_error(err, da_status_invalid_pointer,
-                        "The array X_inv_transform is null.");
+                        "The array Y_inv_transform is null.");
 
     // Compute X * VT and store
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X, ldx,

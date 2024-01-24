@@ -58,6 +58,8 @@ typedef enum da_status_ {
     da_status_unknown_query,    ///< The result queried cannot be found in the handle
     da_status_incorrect_output, ///< Wrong output
     da_status_no_data,          ///< No data was found
+    da_status_maxit,            ///< Iteration limit reached without converging
+    da_status_maxtime,          ///< Time limit reached without converging
 
     // CSV errors 100-199
     da_status_file_reading_error = 100, ///< An error occurred when reading a CSV file
@@ -79,8 +81,6 @@ typedef enum da_status_ {
     da_status_optimization_num_difficult, ///< Numerical difficulties encountered during the optimization process
     da_status_optimization_infeasible, ///< The problem is infeasible, the bounds describe an empty domain
     da_status_optimization_empty_space, ///< No variables are defined in the problem
-    da_status_optimization_maxit,       ///< Iteration limit reached without converging
-    da_status_optimization_maxtime,     ///< Time limit reached without converging
 
     // datastores 600-699
     da_status_missing_block =

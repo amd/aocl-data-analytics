@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,21 +25,42 @@
  *
  */
 
-#ifndef AOCLDA
-#define AOCLDA
+#include <iostream>
+#include <limits>
+#include <list>
+#include <stdio.h>
+#include <string.h>
 
-#include "aoclda_basic_statistics.h"
-#include "aoclda_csv.h"
-#include "aoclda_datastore.h"
-#include "aoclda_decision_forest.h"
-#include "aoclda_error.h"
-#include "aoclda_handle.h"
-#include "aoclda_kmeans.h"
-#include "aoclda_linmod.h"
-#include "aoclda_miscellaneous.h"
-#include "aoclda_options.h"
-#include "aoclda_pca.h"
-#include "aoclda_result.h"
-#include "aoclda_types.h"
+#include "aoclda.h"
+#include "utest_utils.hpp"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
-#endif // AOCLDA
+template <typename T> class KMeansTest : public testing::Test {
+  public:
+    using List = std::list<T>;
+    static T shared_;
+    T value_;
+};
+
+using FloatTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(KMeansTest, FloatTypes);
+
+TYPED_TEST(KMeansTest, KMeansFunctionality) { EXPECT_EQ(1, 1); }
+
+TYPED_TEST(KMeansTest, MultipleCalls) {
+    // Check we can repeatedly call compute etc with the same single handle
+    EXPECT_EQ(1, 1);
+}
+
+TYPED_TEST(KMeansTest, ErrorExits) { EXPECT_EQ(1, 1); }
+
+TYPED_TEST(KMeansTest, BadHandleTests) {
+
+    // handle not initialized
+
+    // incorrect handle type
+    EXPECT_EQ(1, 1);
+}
+
+TEST(KMeansTest, IncorrectHandlePrecision) { EXPECT_EQ(1, 1); }

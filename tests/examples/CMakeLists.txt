@@ -51,12 +51,16 @@ target_compile_definitions(
 add_executable(pca pca.cpp)
 target_link_libraries(pca aocl-da)
 
+add_executable(kmeans kmeans.cpp)
+target_link_libraries(kmeans aocl-da)
+
 set(EXAMPLE_EXES
   reglinear_model
   linear_model
   linmod_diabetes
   basic_statistics
   pca
+  kmeans
   datastore
   decision_tree
   decision_forest)

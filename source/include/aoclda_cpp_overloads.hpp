@@ -299,14 +299,14 @@ inline da_status da_data_extract_selection(da_datastore store, const char *key, 
 }
 
 /* PCA overloaded functions */
-inline da_status da_pca_set_data(da_handle handle, da_int n, da_int p, const double *A,
-                                 da_int lda) {
-    return da_pca_set_data_d(handle, n, p, A, lda);
+inline da_status da_pca_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                 const double *A, da_int lda) {
+    return da_pca_set_data_d(handle, n_samples, n_features, A, lda);
 }
 
-inline da_status da_pca_set_data(da_handle handle, da_int n, da_int p, const float *A,
-                                 da_int lda) {
-    return da_pca_set_data_s(handle, n, p, A, lda);
+inline da_status da_pca_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                 const float *A, da_int lda) {
+    return da_pca_set_data_s(handle, n_samples, n_features, A, lda);
 }
 
 template <class T> inline da_status da_pca_compute(da_handle handle);
@@ -319,30 +319,79 @@ template <> inline da_status da_pca_compute<float>(da_handle handle) {
     return da_pca_compute_s(handle);
 }
 
-inline da_status da_pca_transform(da_handle handle, da_int m, da_int p, const double *X,
-                                  da_int ldx, double *X_transform, da_int ldx_transform) {
-    return da_pca_transform_d(handle, m, p, X, ldx, X_transform, ldx_transform);
+inline da_status da_pca_transform(da_handle handle, da_int m_samples, da_int m_features,
+                                  const double *X, da_int ldx, double *X_transform,
+                                  da_int ldx_transform) {
+    return da_pca_transform_d(handle, m_samples, m_features, X, ldx, X_transform,
+                              ldx_transform);
 }
 
-inline da_status da_pca_transform(da_handle handle, da_int m, da_int p, const float *X,
-                                  da_int ldx, float *X_transform, da_int ldx_transform) {
-    return da_pca_transform_s(handle, m, p, X, ldx, X_transform, ldx_transform);
+inline da_status da_pca_transform(da_handle handle, da_int m_samples, da_int m_features,
+                                  const float *X, da_int ldx, float *X_transform,
+                                  da_int ldx_transform) {
+    return da_pca_transform_s(handle, m_samples, m_features, X, ldx, X_transform,
+                              ldx_transform);
 }
 
-inline da_status da_pca_inverse_transform(da_handle handle, da_int m, da_int r,
-                                          const double *X, da_int ldx,
-                                          double *Xinv_transform,
-                                          da_int ldxinv_transform) {
-    return da_pca_inverse_transform_d(handle, m, r, X, ldx, Xinv_transform,
-                                      ldxinv_transform);
+inline da_status da_pca_inverse_transform(da_handle handle, da_int k_samples,
+                                          da_int k_features, const double *Y, da_int ldy,
+                                          double *Y_inv_transform,
+                                          da_int ldy_inv_transform) {
+    return da_pca_inverse_transform_d(handle, k_samples, k_features, Y, ldy,
+                                      Y_inv_transform, ldy_inv_transform);
 }
 
-inline da_status da_pca_inverse_transform(da_handle handle, da_int m, da_int r,
-                                          const float *X, da_int ldx,
-                                          float *Xinv_transform,
-                                          da_int ldxinv_transform) {
-    return da_pca_inverse_transform_s(handle, m, r, X, ldx, Xinv_transform,
-                                      ldxinv_transform);
+inline da_status da_pca_inverse_transform(da_handle handle, da_int k_samples,
+                                          da_int k_features, const float *Y, da_int ldy,
+                                          float *Y_inv_transform,
+                                          da_int ldy_inv_transform) {
+    return da_pca_inverse_transform_s(handle, k_samples, k_features, Y, ldy,
+                                      Y_inv_transform, ldy_inv_transform);
+}
+
+/* k-means overloaded functions */
+inline da_status da_kmeans_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                    const double *A, da_int lda) {
+    return da_kmeans_set_data_d(handle, n_samples, n_features, A, lda);
+}
+
+inline da_status da_kmeans_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                    const float *A, da_int lda) {
+    return da_kmeans_set_data_s(handle, n_samples, n_features, A, lda);
+}
+
+template <class T> inline da_status da_kmeans_compute(da_handle handle);
+
+template <> inline da_status da_kmeans_compute<double>(da_handle handle) {
+    return da_kmeans_compute_d(handle);
+}
+
+template <> inline da_status da_kmeans_compute<float>(da_handle handle) {
+    return da_kmeans_compute_s(handle);
+}
+
+inline da_status da_kmeans_transform(da_handle handle, da_int m_samples,
+                                     da_int m_features, const double *X, da_int ldx,
+                                     double *X_transform, da_int ldx_transform) {
+    return da_kmeans_transform_d(handle, m_samples, m_features, X, ldx, X_transform,
+                                 ldx_transform);
+}
+
+inline da_status da_kmeans_transform(da_handle handle, da_int m_samples,
+                                     da_int m_features, const float *X, da_int ldx,
+                                     float *X_transform, da_int ldx_transform) {
+    return da_kmeans_transform_s(handle, m_samples, m_features, X, ldx, X_transform,
+                                 ldx_transform);
+}
+
+inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_features,
+                                   const double *Y, da_int ldy, da_int *Y_predict) {
+    return da_kmeans_predict_d(handle, k_samples, k_features, Y, ldy, Y_predict);
+}
+
+inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_features,
+                                   const float *Y, da_int ldy, da_int *Y_predict) {
+    return da_kmeans_predict_s(handle, k_samples, k_features, Y, ldy, Y_predict);
 }
 
 /* Decision Forest overloaded functions */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -396,11 +396,11 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
             "Limited memory ammount must be zero or more. Recommended limit is 11");
         break;
     case 100: // This is external to LBFGSB: max it
-        return da_warn(&err, da_status_optimization_maxit,
+        return da_warn(&err, da_status_maxit,
                        "Iteration limit reached without converging to set tolerance");
         break;
     case 101: // This is external to LBFGSB: max time limit
-        return da_warn(&err, da_status_optimization_maxtime,
+        return da_warn(&err, da_status_maxtime,
                        "Time limit reached without converging to set tolerance");
         break;
     case 120: // This is external to LBFGSB: Objective function callback return status != 0

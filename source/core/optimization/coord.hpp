@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -498,7 +498,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
 
             if (iter >= maxit) {
                 return da_warn(
-                    &err, da_status_optimization_maxit,
+                    &err, da_status_maxit,
                     "Iteration limit reached without converging to set tolerance.");
             }
 
@@ -517,7 +517,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 if (*time > maxtime) {
                     // run out of time
                     return da_warn(
-                        &err, da_status_optimization_maxtime,
+                        &err, da_status_maxtime,
                         "Time limit reached without converging to set tolerance.");
                 }
             }

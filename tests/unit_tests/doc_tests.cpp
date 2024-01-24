@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -43,7 +43,9 @@ namespace {
 // Handle type and descriptive names
 // Add new ones here
 const static std::map<da_handle_type, std::string> htypes{
-    {da_handle_pca, "PCA"}, {da_handle_linmod, "Linear Model"},
+    {da_handle_pca, "PCA"},
+    {da_handle_linmod, "Linear Model"},
+    {da_handle_kmeans, "k-means"},
     //    {da_handle_decision_tree, "Decision tree"},
     //    {da_handle_decision_forest, "Decision forest"}
 };

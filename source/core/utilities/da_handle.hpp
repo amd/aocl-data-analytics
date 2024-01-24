@@ -36,6 +36,7 @@
 #include "csv_reader.hpp"
 #include "da_error.hpp"
 #include "decision_forest.hpp"
+#include "kmeans.hpp"
 #include "linear_model.hpp"
 #include "pca.hpp"
 
@@ -53,6 +54,8 @@ struct _da_handle {
     da_precision precision = da_double;
     da_pca::da_pca<double> *pca_d = nullptr;
     da_pca::da_pca<float> *pca_s = nullptr;
+    da_kmeans::da_kmeans<double> *kmeans_d = nullptr;
+    da_kmeans::da_kmeans<float> *kmeans_s = nullptr;
     da_df::decision_tree<double> *dt_d = nullptr;
     da_df::decision_tree<float> *dt_s = nullptr;
     da_df::decision_forest<double> *df_d = nullptr;

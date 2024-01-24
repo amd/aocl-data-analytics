@@ -73,6 +73,7 @@ Library Reference Documentation
    :caption: Algorithms
 
    basic_statistics/basic_stats_intro
+   clustering/clustering_intro
    factorization/factorization_intro
    linear_models/linmod_intro
    trees_forests/df_intro

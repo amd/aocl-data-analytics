@@ -84,6 +84,8 @@ add_executable(errors_tests errors_tests.cpp)
 
 add_executable(parallel_test parallel_test.cpp)
 
+add_executable(kmeans_tests kmeans_tests.cpp)
+
 add_executable(pca_tests pca_tests.cpp)
 target_compile_definitions(
   pca PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/factorization_data/")
@@ -128,6 +130,7 @@ set(GTEST_EXES
   errors_tests
   doc_tests
   pca_tests
+  kmeans_tests
   parallel_test
   miscellaneous_tests
 )

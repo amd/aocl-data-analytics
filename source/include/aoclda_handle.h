@@ -54,6 +54,9 @@ typedef enum da_handle_type_ {
     da_handle_pca, ///< @rst
                    ///< the handle is to be used with functions for computing the :ref:`principal component analysis <PCA_intro>`.
                    ///< @endrst
+    da_handle_kmeans, ///< @rst
+                      ///< the handle is to be used with functions for computing :ref:`k-means clustering <kmeans_intro>`.
+                      ///< @endrst
     da_handle_decision_tree, ///< the handle is to be used with functions from the decision trees (not yet implemented).
     da_handle_decision_forest ///< the handle is to be used with functions from the decision forests chapter (not yet implemented).
 } da_handle_type;

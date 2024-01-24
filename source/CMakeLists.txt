@@ -25,6 +25,7 @@
 set(LINMOD_SRC core/linear_model/linmod_public.cpp)
 set(BASIC_STATISTICS_SRC core/basic_statistics/basic_statistics_public.cpp)
 set(DA_FACTORIZATION core/factorization/pca_public.cpp)
+set(DA_CLUSTERING core/clustering/kmeans_public.cpp)
 set(DA_DECISION_FOREST core/decision_forest/decision_forest_public_d.cpp
                        core/decision_forest/decision_forest_public_s.cpp)
 
@@ -46,6 +47,7 @@ set(DA_CORE_SRC
     ${DA_OPTIONS}
     ${DA_DATA}
     ${DA_FACTORIZATION}
+    ${DA_CLUSTERING}
     ${DA_DECISION_FOREST}
     ${DA_MISC})
 
@@ -60,6 +62,7 @@ target_include_directories(
          core/linear_model
          core/data_management
          core/factorization
+         core/clustering
          core/decision_forest)
 target_include_directories(da_core
   PRIVATE ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
