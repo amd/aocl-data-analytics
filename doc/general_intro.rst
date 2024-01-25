@@ -167,7 +167,8 @@ Data Types in AOCL-DA
 
 AOCL-DA uses the ``da_int`` integer type throughout the library.
 For the 32-bit integer library (``LP64``) this is defined to be a 32-bit signed integer.
-For the 64-bit integer library (``ILP64``, compiled with ``-DUSE_ILP64``) this is defined to be a 64-bit signed integer.
+For the 64-bit integer library (``ILP64``, compiled with the CMake flag ``-DBUILD_ILP64=On``) this is defined to be a 64-bit signed integer.
+When compiling your own code to use the 64-bit integer library, you must ensure that the ``AOCLDA_ILP64`` build variable is set.
 
 .. _da_real_prec:
 
