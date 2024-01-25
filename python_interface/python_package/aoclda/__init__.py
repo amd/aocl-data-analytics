@@ -23,14 +23,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
+# pylint: disable = missing-module-docstring wrong-import-position
 import os
-
 if os.name == 'nt':
     INTEL_FCOMPILER = os.environ['INTEL_FCOMPILER']
     os.add_dll_directory(INTEL_FCOMPILER + r'\redist\intel64_win\compiler')
-
 import numpy as np
-
 from ._aoclda import single, double
 from .basic_stats import *
 from .factorization import *

@@ -22,6 +22,53 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = missing-module-docstring, unused-import
 
-from ._aoclda.basic_stats import axis, mean
+"""
+PCA tests, check output of skpatch versus sklearn
+"""
+
+# pylint: disable = import-outside-toplevel, reimported, no-member
+
+import numpy as np
+from aoclda.sklearn import skpatch, undo_skpatch
+import pytest
+
+def test_pca():
+    """
+    Basic 3 x 2 problem
+    """
+    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]])
+
+    # patch and import scikit-learn
+    skpatch()
+    from sklearn.decomposition import PCA
+    pca_da = PCA(n_components=3)
+    pca_da.fit(a)
+    assert pca_da.aocl is True
+
+    # unpatch and solve the same problem with sklearn
+    undo_skpatch()
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=3)
+    pca.fit(a)
+    assert not hasattr(pca, 'aocl')
+
+    # Check results
+    da_components = pca_da.components_
+    components = pca.components_
+    assert da_components == pytest.approx(components, 1.0e-08)
+    da_mean = pca_da.mean_
+    mean = pca.mean_
+    assert da_mean == pytest.approx(mean, 1.0e-08)
+    da_singval = pca_da.singular_values_
+    singval = pca.singular_values_
+    assert da_singval == pytest.approx(singval, 1.0e-08)
+
+    # print the results if pytest is invoked with the -rA option
+    print("Components")
+    print("    aoclda: \n", da_components)
+    print("   sklearn: \n", components)
+
+
+if __name__ == "__main__":
+    test_pca()

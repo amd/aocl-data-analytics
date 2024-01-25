@@ -22,6 +22,10 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = missing-module-docstring, unused-import
 
-from ._aoclda.basic_stats import axis, mean
+
+# pylint: disable = missing-module-docstring
+
+from .patch_sklearn import skpatch, undo_skpatch
+
+__all__ = ["skpatch", "undo_skpatch"]

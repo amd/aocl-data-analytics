@@ -118,10 +118,6 @@ class pyda_handle {
     }
 };
 
-/* First attempt at a handle interfaces
- * Notes: This is using the C interfaces but it could be easier directly with C++.
- * Should we create C++ interfaces as a byproduct of Python?
- */
 class linmod : public pyda_handle {
     //da_handle handle = nullptr;
     da_precision precision = da_double;
@@ -145,13 +141,31 @@ class linmod : public pyda_handle {
     ~linmod() { da_handle_destroy(&handle); }
 
     template <typename T>
-    void fit(py::array_t<T, py::array::f_style> X, py::array_t<T> y) {
+    void fit(py::array_t<T, py::array::f_style> X, py::array_t<T> y, T reg_lambda = 0.0,
+             T reg_alpha = 0.0) {
+        // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
+        // TODO Should it be a separate function call like in C with the "define_features" function
+
         da_status status;
-        // TODO checks on intput?
         da_int n_samples = X.shape()[0], n_feat = X.shape()[1];
         status = da_linmod_define_features(handle, n_samples, n_feat, X.mutable_data(),
                                            y.mutable_data());
         exception_check(status); // throw an exception if status is not success
+
+        // Set the real optional parameters
+        if (precision == da_double) {
+            status = da_options_set_real_d(handle, "linmod lambda", reg_lambda);
+            std::cout << "STATUS " << status << std::endl;
+            exception_check(status);
+            status = da_options_set_real_d(handle, "linmod alpha", reg_alpha);
+            std::cout << "STATUS " << status << std::endl;
+            exception_check(status);
+        } else {
+            status = da_options_set_real_d(handle, "linmod lambda", reg_lambda);
+            exception_check(status);
+            status = da_options_set_real_d(handle, "linmod alpha", reg_alpha);
+            exception_check(status);
+        }
 
         if (precision == da_double)
             status = da_linmod_fit<double>(handle);
@@ -160,6 +174,7 @@ class linmod : public pyda_handle {
 
         exception_check(status);
     }
+
     auto get_coef() {
         da_status status;
         da_int dim = -1;
@@ -424,8 +439,10 @@ PYBIND11_MODULE(_aoclda, m) {
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
         .def(py::init<linmod_model_, bool, da_precision &>(), "mod"_a,
              py::arg("intercept") = false, py::arg("precision") = da_double)
-        .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a)
-        .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a)
+        .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
+             py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0)
+        .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
+             py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0)
         .def("get_coef", &linmod::get_coef);
 
     /**********************************/

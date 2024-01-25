@@ -5,4 +5,4 @@ ignored-modules=_aoclda
 fail-under=9
 
 [MESSAGES CONTROL]
-disable=W1401,C0103
+disable=anomalous-backslash-in-string, invalid-name, too-many-instance-attributes, too-many-arguments
