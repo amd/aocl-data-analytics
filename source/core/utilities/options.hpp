@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -855,7 +855,8 @@ class OptionRegistry {
         std::cout << "End Options" << std::endl;
     }
 
-    void print_details(bool screen = true, bool doxygen = false) {
+    void print_details(bool screen = true, bool doxygen = false,
+                       const std::string caption = "Options table") {
         bool sep = false;
         if (!screen && doxygen) {
             std::cout << " *" << std::endl;
@@ -865,7 +866,7 @@ class OptionRegistry {
             std::cout << " * |:----------------|:------:|-------------:|" << std::endl;
         } else if (!screen) { // restructured text
             std::cout << "The following options are supported." << std::endl;
-            std::cout << "\n.. csv-table:: Options table\n   :escape: ~\n";
+            std::cout << "\n.. csv-table:: " << caption << "\n   :escape: ~\n";
             std::cout << "   :header: \"Option name\", \"Type\", \"Default\", "
                          "\"Description\", \"Constraints\""
                       << std::endl;

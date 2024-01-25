@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -117,7 +117,7 @@ The following workflow can be used to fit a decision tree or a decision forest m
    ``da_handle_decision_forest``.
 2. Pass data to the handle using either :cpp:func:`da_df_set_training_data_s` or :cpp:func:`da_df_set_training_data_d`.
 3. Set optional parameters, such as maximum depth, using :cpp:func:`da_options_set_int` and
-   :cpp:func:`da_options_set_string`  (see :ref:`options section <df_options>`).
+   :cpp:func:`da_options_set_string`  (see :ref:`options section <opts_decisiontree>`).
 4. Fit the model using :cpp:func:`da_df_fit_s` or :cpp:func:`da_df_fit_d`.
 5. Evaluate prediction accuracy on test data using :cpp:func:`da_df_score_s` or :cpp:func:`da_df_score_d`.
 6. Make predictions using the fitted model using :cpp:func:`da_df_predict_s` or :cpp:func:`da_df_predict_d`.
@@ -125,7 +125,7 @@ The following workflow can be used to fit a decision tree or a decision forest m
 Options
 -------
 
-For details of optional parameters see the :ref:`options section <df_options>`.
+For details of optional parameters see the :ref:`options section <opts_decisiontree>`.
 
 Examples
 --------

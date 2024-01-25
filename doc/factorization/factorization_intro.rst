@@ -92,6 +92,7 @@ Options
 
 The following options can be set using  :cpp:func:`da_options_set_string` or :cpp:func:`da_options_set_int`:
 
+.. update options using table _opts_pca
 .. csv-table:: PCA options
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 

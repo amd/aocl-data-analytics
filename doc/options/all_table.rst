@@ -1,14 +1,43 @@
+..
+    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    
+    Redistribution and use in source and binary forms, with or without modification,
+    are permitted provided that the following conditions are met:
+    1. Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright notice,
+       this list of conditions and the following disclaimer in the documentation
+       and/or other materials provided with the distribution.
+    3. Neither the name of the copyright holder nor the names of its contributors
+       may be used to endorse or promote products derived from this software without
+       specific prior written permission.
+    
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+    ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+    IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+    INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+    OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+    WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+    
+
+
 Supported Optional Parameters
 **************************************
 
 In all the following tables, :math:`\varepsilon`, refers to the machine precision for the given floating point data precision.
 
-Options for Linear Model
+.. _opts_linearmodel:
+
+Linear Model
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: Options table
+.. csv-table:: :strong:`Table of options for Linear Model.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -23,12 +52,14 @@ The following options are supported.
    "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
 
 
-Options for PCA
+.. _opts_pca:
+
+PCA
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: Options table
+.. csv-table:: :strong:`Table of options for PCA.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -38,12 +69,14 @@ The following options are supported.
    "n_components", "integer", ":math:`i=1`", "Number of principal components to compute", ":math:`1 \le i`"
 
 
-Options for k-means
+.. _opts_k-means:
+
+k-means
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: Options table
+.. csv-table:: :strong:`Table of options for k-means.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -55,15 +88,15 @@ The following options are supported.
    "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres)", ":math:`1 \le i`"
    "n_clusters", "integer", ":math:`i=1`", "Number of clusters required", ":math:`1 \le i`"
 
-.. _df_options:
 
+.. _opts_decisiontree:
 
-Options for Decision Forest
+Decision tree
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: Options table
+.. csv-table:: :strong:`Table of options for Decision tree.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -76,12 +109,34 @@ The following options are supported.
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `gini`, or `misclassification-error`."
 
 
-Options for datastore
+.. _opts_decisionforest:
+
+Decision forest
+==============================================
+
+The following options are supported.
+
+.. csv-table:: :strong:`Table of options for Decision forest.`
+   :escape: ~
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   
+   "diff_thres", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 < r`"
+   "n_trees", "integer", ":math:`i=1`", "Set number of trees", ":math:`0 < i`"
+   "n_features_to_select", "integer", ":math:`i=1`", "Set number of features in selection for splitting", ":math:`0 < i`"
+   "seed", "integer", ":math:`i=-1`", "Set random seed for Mersenne Twister (64-bit) PRNG.  If the value is -1, the std::random_device function is used to generate a seed, otherwise the input value is used as a seed.", ":math:`-1 \le i`"
+   "n_obs_per_tree", "integer", ":math:`i=1`", "Set number of observations in each tree", ":math:`0 < i`"
+   "depth", "integer", ":math:`i=-1`", "Set max depth of tree.  If the value is -1, the tree does t have a maximum depth", ":math:`-1 \le i`"
+   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `gini`, or `misclassification-error`."
+
+
+.. _opts_datastore:
+
+Datastore handle :cpp:type:`da_datastore`
 =============================================
 
 The following options are supported.
 
-.. csv-table:: Options table
+.. csv-table:: :strong:`Table of options for` :cpp:type:`da_datastore`.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -110,12 +165,14 @@ The following options are supported.
 
 .. only:: internal
    
+   .. _opts_optimizationsolvers:
+   
    Optimization Solvers
    ====================
    
    The following options are supported.
    
-   .. csv-table:: Options table
+   .. csv-table:: :strong:`Table of options for optimization solvers.`
       :escape: ~
       :header: "Option name", "Type", "Default", "Description", "Constraints"
       

@@ -1,5 +1,5 @@
 # ##############################################################################
-# Copyright (c) 2023 Advanced Micro Devices, Inc.
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -139,7 +139,7 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/process.awk
      /^Running/ { next }
      /\\[=+\\]/ { exit }
      { if (it==1) { printf \"%3s\" , \"\" } print $0 }
-     /^\\.\\.\\ only:: internal/ { it=1 }")
+     /^\\.\\.\\sonly:: internal/ { it=1 }")
 
 add_custom_target(
     gen_options_tables
@@ -147,6 +147,7 @@ add_custom_target(
       --gtest_print_time=0 --gtest_brief=1 --gtest_color=no
     | ${AWK} -f ${CMAKE_CURRENT_BINARY_DIR}/process.awk
     > ${SPHINX_SOURCE}/options/all_table.rst
+    COMMAND ${CMAKE_SOURCE_DIR}/tools/insert_license_info.py ${SPHINX_SOURCE}/options/all_table.rst
     DEPENDS doc_tests
     COMMENT "Running unit-test for doc options tables"
     VERBATIM
@@ -157,6 +158,7 @@ add_custom_target(
 file(GLOB_RECURSE REST_FILES
   "${PROJECT_SOURCE_DIR}/*.rst"
 )
+## A note of caution: this targer breaks when jobs>1
 add_custom_target(
     update_options_tables
     WORKING_DIRECTORY ${AOCL-DA_SOURCE_DIR}

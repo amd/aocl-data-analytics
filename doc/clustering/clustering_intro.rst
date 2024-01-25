@@ -74,6 +74,8 @@ The following options can be set using  :cpp:func:`da_options_set_string` or :cp
 
 The following options are supported.
 
+.. update options using table _opts_k-means
+
 .. csv-table:: k-means options
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 

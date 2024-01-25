@@ -103,7 +103,7 @@ da_status da_handle_get_result_s(const da_handle handle, da_result query, da_int
                                  float *result);
 /** \} */
 
-/** \{
+/**
  * @brief Get results stored in a \ref da_handle
  *
  * Some solvers will store relevant data in the handle. These functions provide a means to extract it.

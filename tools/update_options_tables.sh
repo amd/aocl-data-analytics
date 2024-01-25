@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,15 @@
 # --db=file MUST be the first argument
 # The script is not very robust and relies on the ReSt to be tidy
 
+TOOLS=$(dirname "$0")
+FINDTBL="${TOOLS}/findtbl.sh"
+
+if [ ! -x "$FINDTBL" ] ; then
+  echo "Error: auxiliary script findtbl.sh not found in ${TOOLS}..."
+  exit 1
+fi
+
+
 if [[ "$1" =~ --db=.* ]] ; then
   # update location
   DB="${1#--db=}"
@@ -44,6 +53,17 @@ DBBASE="`basename $DB`"
 if [ $# -lt 1 ] ; then
   echo Error: no files to process?
   exit 2
+fi
+
+if [ -t ] ; then
+    # interactive terminal
+    COLERR="\033[31m\033[1m"
+    COLWAR="\033[33m\033[1m"
+    COLRES="\033[0m"
+else
+    COLERR=""
+    COLWAR=""
+    COLRES=""
 fi
 
 for f in $* ; do
@@ -64,15 +84,35 @@ for f in $* ; do
 
   echo processing "$f"...
 
-# awk -v DB="$DB" -- '
-awk -i inplace -v DB="$DB" -- '
+INPLACE="-i inplace"
+awk $INPLACE -v DB="$DB" -v C="$COLERR" -v W="$COLWAR" -v R="$COLRES" -v findtbl="$FINDTBL" -- '
 BEGIN {
         intable = 0
         firstblank = 0
+        warn = 0
+        tabletag = "UNKNOWN"
+        ln = 0
+}
+
+{ ln++ }
+
+/^[[:blank:]]*.. update options using table.*$/ {
+        if (match($6, "_[[:alpha:]]+_[[:alpha:]]+") > 0){
+           tabletag = $6
+        } else {
+            tabletag = "UNKNOWN"
+        }
 }
 
 tolower($0) ~ /^[[:blank:]]*:header: "option name", "type", "default", "description", "constraints"/ {
         # print("found table")
+        if (tabletag == "UNKNOWN") {
+            print C "ERROR: table does not specify which tabletag to use!" R > "/dev/stderr"
+            print C "       make sure the comment right above the table specifies" R > "/dev/stderr"
+            print C "       from which table in the database (all_table.rst) to use" R > "/dev/stderr"
+            print C "       for an example, see Internal Help > Documentation Utilities > Section Adding an Options Table" R > "/dev/stderr"
+            print C "\n       Try adding a tag banner above the .. csv: line close to " ln "." R > "/dev/stderr"
+        }
         # remember the indentation
         match($0, "^[[:blank:]]*")
         space = substr($0, 0, RLENGTH)
@@ -88,12 +128,13 @@ tolower($0) ~ /^[[:blank:]]*:header: "option name", "type", "default", "descript
                 # table end, reset flags
                 intable = 0
                 firstblank = 0
-        # print("2nd blank")
+                tabletag = "UNKNOWN"
+                # print("2nd blank")
         }
         if (intable == 1 && firstblank == 0) {
                 # options starts
                 firstblank = 1
-        # print("1st blank")
+                # print("1st blank")
         }
         print
         next
@@ -104,15 +145,26 @@ tolower($0) ~ /^[[:blank:]]*:header: "option name", "type", "default", "descript
                 old = $0
                 split($0, tok, "\"")
                 name = tok[2]
-                query = "grep -m 1 -i \"" name "\" " DB
+
+                # query = "grep -m 1 -i  \"\\\\\\\""name"\\\\\\\"\"" " " DB
+                query = findtbl " \""name"\" \""tabletag"\" " DB
+                # print W "about to call query=" query R > "/dev/stderr"
                 if ((query | getline new) != 1) {
-                        print "Error: option:", name, "could not be queried?"
-                        exit 2
+                        err = "ERROR: option \"" name "\" not found in database DB"
+                        print C err R > "/dev/stderr"
+                        found = match(old, "^[[:blank:]]*\"NOT FOUND~")
+                        if (found == 0){
+                            sub("^[[:blank:]]*", "", old)
+                            new = "\"NOT FOUND~" old
+                        } else {
+                            new = old
+                        }
+                        warn++
                 }
                 close(query)
                 # Use target indentation
                 sub("^[[:blank:]]*", space, new)
-                print (new)
+                print new
         } else {
                 print
         }

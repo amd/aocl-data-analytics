@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -134,6 +134,8 @@ Various options can be set to customize the behavior of the data loading functio
 
 .. _csv_options:
 
+.. update options using table _opts_datastore
+
 .. csv-table:: CSV file reading options
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
    :escape: ~
@@ -162,11 +164,14 @@ Note that, with the exception of the ``CSV skip rows`` option, only single chara
 Examples
 ========
 
-**Reading CSV**
+Reading CSV
+-----------
 
 Various files in the examples folder of your installation demonstrate the use of the CSV reading functions (e.g. ``linear_model.cpp``).
 
-**:cpp:type:`da_datastore`**
+Usage of :cpp:type:`da_datastore`
+---------------------------------
+
 
 The source files ``datastore.cpp`` and ``linmod_diabetes.cpp`` showcase loading, selecting and using data with a :cpp:type:`da_datastore` handle.
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -36,7 +36,11 @@
 #include "options.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <cctype>
 #include <iostream>
+#include <regex>
+#include <string>
 
 namespace {
 
@@ -46,9 +50,8 @@ const static std::map<da_handle_type, std::string> htypes{
     {da_handle_pca, "PCA"},
     {da_handle_linmod, "Linear Model"},
     {da_handle_kmeans, "k-means"},
-    //    {da_handle_decision_tree, "Decision tree"},
-    //    {da_handle_decision_forest, "Decision forest"}
-};
+    {da_handle_decision_tree, "Decision tree"},
+    {da_handle_decision_forest, "Decision forest"}};
 
 void options_print(da_handle_type htype) {
     da_handle handle = nullptr;
@@ -62,13 +65,13 @@ void options_print(da_handle_type htype) {
     da_handle_destroy(&handle);
 }
 
-void options_print_rst(da_handle_type htype) {
+void options_print_rst(da_handle_type htype, const std::string caption) {
     da_handle handle = nullptr;
     EXPECT_EQ(da_handle_init_d(&handle, htype), da_status_success);
     da_options::OptionRegistry *opts;
     EXPECT_EQ(handle->get_current_opts(&opts), da_status_success);
     // ReStructuredText
-    opts->print_details(false, false);
+    opts->print_details(false, false, caption);
     da_handle_destroy(&handle);
 }
 
@@ -81,6 +84,18 @@ TEST(DocOptions, handle) {
     }
 }
 
+std::string cleanstring(std::string s) {
+    std::string str{"UNKNOWN"};
+    const std::regex ltrim("^[[:space:]]+");
+    const std::regex rtrim("[[:space:]]+$");
+    const std::regex rm("[[:space:]]+");
+    str = std::regex_replace(s, ltrim, std::string(""));
+    str = std::regex_replace(str, rtrim, std::string(""));
+    str = std::regex_replace(str, rm, std::string(""));
+    transform(str.begin(), str.end(), str.begin(), ::tolower);
+    return str;
+}
+
 // Used to generate doc, name *must* start with ``RST``
 TEST(DocOptions, RST_handle) {
     std::cout << "Supported Optional Parameters\n"
@@ -88,19 +103,16 @@ TEST(DocOptions, RST_handle) {
     std::cout << "In all the following tables, :math:`\\varepsilon`, refers to "
                  "the machine precision for the given floating point data "
                  "precision.\n";
+    std::string str;
     for (auto htype : htypes) {
-        std::cout << "\nOptions for " << htype.second << std::endl;
+        str = cleanstring(htype.second);
+        std::cout << "\n.. _opts_" << str << ":" << std::endl;
+        std::cout << "\n" << htype.second << std::endl;
         std::cout << "==============================================\n" << std::endl;
-        options_print_rst(htype.first);
+        options_print_rst(htype.first,
+                          ":strong:`Table of options for " + htype.second + ".`");
         std::cout << std::endl;
     }
-
-    std::cout << ".. _df_options:" << std::endl;
-    std::cout << std::endl;
-    std::cout << "\nOptions for Decision Forest" << std::endl;
-    std::cout << "==============================================\n" << std::endl;
-    options_print_rst(da_handle_decision_forest);
-    std::cout << std::endl;
 }
 
 TEST(DocOptions, store) {
@@ -120,9 +132,11 @@ TEST(DocOptions, RST_store) {
     da_datastore store = nullptr;
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
     // ReStructuredText (restore std::out)
-    std::cout << "\nOptions for datastore" << std::endl;
+    std::cout << "\n.. _opts_datastore:" << std::endl;
+    std::cout << "\nDatastore handle :cpp:type:`da_datastore`" << std::endl;
     std::cout << "=============================================\n" << std::endl;
-    store->opts->print_details(false, false);
+    store->opts->print_details(
+        false, false, ":strong:`Table of options for` :cpp:type:`da_datastore`.");
     std::cout << std::endl;
     da_datastore_destroy(&store);
 }
@@ -131,6 +145,7 @@ TEST(DocOptions, RST_store) {
 TEST(DocOptionsInternal, RST_optim) {
     // ReStructuredText (restore std::out)
     std::cout << "\n.. only:: internal\n"
+              << "\n.. _opts_optimizationsolvers:\n"
               << "\nOptimization Solvers\n"
               << "====================\n"
               << std::endl;
@@ -138,7 +153,8 @@ TEST(DocOptionsInternal, RST_optim) {
     da_errors::da_error_t err(da_errors::action_t::DA_THROW);
     EXPECT_EQ(register_optimization_options<double>(err, opt), da_status_success);
     // ReStructuredText
-    opt.print_details(false, false);
+    opt.print_details(false, false,
+                      ":strong:`Table of options for optimization solvers.`");
     std::cout << std::endl;
 }
 
