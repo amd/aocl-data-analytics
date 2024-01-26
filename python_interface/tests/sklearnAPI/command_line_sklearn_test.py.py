@@ -1,5 +1,5 @@
 # Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-#
+# 
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -10,7 +10,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-#
+# 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -21,45 +21,25 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-#
+# 
 
 
-# pylint: disable = missing-module-docstring, import-outside-toplevel
+"""
+Check that the python -m aoclda.sklearn dummy.py calls work
+as expected
+"""
 
-import sys
-from .patch_sklearn import skpatch, undo_skpatch
-
-__all__ = ["skpatch", "undo_skpatch"]
+import subprocess
 
 
-def main():
-    '''
-    Load the scikit-learn patch then execute the user's script
-    '''
+def test_command_line():
+    """
+    Command line test
+    """
+    command1 = ["python", "-m", "aoclda.sklearn", "dummy.py"]
+    result1 = subprocess.run(command1, check=True)
+    assert result1.returncode == 0
 
-    import argparse
-    import runpy
-
-    parser = argparse.ArgumentParser(
-        description="AOCL-DA Extension for Scikit-learn")
-
-    parser.add_argument(
-        "-m", action="store_true", dest="is_module")
-    parser.add_argument("name", help="Your Python script or module name")
-    parser.add_argument("args", nargs=argparse.REMAINDER,
-                        help="Command line arguments for your Python script")
-
-    args = parser.parse_args()
-
-    # Call patch to replace Scikit-learn symbols with AOCL-DA
-    skpatch()
-
-    sys.argv = [args.name] + args.args
-
-    if args.is_module:
-        runpy.run_module(args.name, run_name="__main__")
-    else:
-        runpy.run_path(args.name, run_name="__main__")
-
-if __name__ == "__main__":
-    sys.exit(main())
+    command2 = ["python", "-m", "aoclda.sklearn", "-m", "dummy"]
+    result2 = subprocess.run(command2, check=True)
+    assert result2.returncode == 0

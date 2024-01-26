@@ -71,11 +71,10 @@ TYPED_TEST(PCATest, PCAFunctionality) {
                                             param.degrees_of_freedom.c_str()),
                       da_status_success);
         }
-        if (param.components_required != 0) {
-            EXPECT_EQ(
-                da_options_set_int(handle, "n_components", param.components_required),
-                da_status_success);
-        }
+
+        EXPECT_EQ(da_options_set_int(handle, "n_components", param.components_required),
+                  da_status_success);
+
         if (param.svd_solver.size() != 0) {
             EXPECT_EQ(
                 da_options_set_string(handle, "svd solver", param.svd_solver.c_str()),

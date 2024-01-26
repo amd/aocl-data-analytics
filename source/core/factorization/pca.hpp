@@ -319,6 +319,11 @@ template <typename T> da_status da_pca<T>::compute() {
     // Read in options and store in class together with associated variables
     this->opts.get("n_components", npc);
 
+    // If n_components was set to 0 it means find all the components
+    if (npc == 0) {
+        npc = std::min(n, p);
+    }
+
     ns = npc;
     std::string opt_method;
 

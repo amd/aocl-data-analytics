@@ -99,6 +99,7 @@ da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_feature
  *
  * \post
  * After succesful execution, \ref da_handle_get_result_d can be queried with the following enums:
+ * - \p da_rinfo - return an array of size 3 containing \p n_samples, \p n_features and \p n_components, the number of principal components found.
  * - \p da_pca_principal_components - return an array of size \p n_components @f$\times@f$ \p n_features containing the principal components in column major format in descreasing order of explained variance.
  * - \p da_pca_scores - return an array of size \p n_samples @f$\times@f$ \p n_components containing the scores in column major format.
  * - \p da_pca_variance - return an array of size \p n_components containing the amount of variance explained by each principal component.
@@ -108,7 +109,6 @@ da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_feature
  * - \p da_pca_vt - return an array of size \p n_components @f$\times@f$ \p n_features containing the matrix @f$ V^T @f$ from the SVD of the standardized data matrix in column major format.
  * - \p da_pca_column_means - return an array of size \p n_features containing the column means of the data matrix (note this is only available if the option <i> PCA method</i> was set to \a covariance or \a correlation).
  * - \p da_pca_column_sdevs - return an array of size \p n_features containing the column standard deviations (with \p n_samples @f$\ - 1 @f$ degrees of freedom) of the data matrix (note this is only available if the option <i>PCA method</i> was set to \a correlation).
- * - \p da_rinfo - return an array of size 3 containing \p n_samples, \p n_features and \p n_components.
  */
 da_status da_pca_compute_d(da_handle handle);
 /** \} */
@@ -129,6 +129,7 @@ da_status da_pca_compute_d(da_handle handle);
  *
  * \post
  * After succesful execution, \ref da_handle_get_result_s can be queried with the following enums:
+  * - \p da_rinfo - return an array of size 3 containing \p n_samples, \p n_features and \p n_components, the number of principal components found.
  * - \p da_pca_principal_components - return an array of size \p n_components @f$\times@f$ \p n_features containing the principal components in column major format in descreasing order of explained variance.
  * - \p da_pca_scores - return an array of size \p n_samples @f$\times@f$ \p n_components containing the scores in column major format.
  * - \p da_pca_variance - return an array of size \p n_components containing the amount of variance explained by each principal component.
@@ -138,7 +139,6 @@ da_status da_pca_compute_d(da_handle handle);
  * - \p da_pca_vt - return an array of size \p n_components @f$\times@f$ \p n_features containing the matrix @f$ V^T @f$ from the SVD of the standardized data matrix in column major format.
  * - \p da_pca_column_means - return an array of size \p n_features containing the column means of the data matrix (note this is only available if the option <i> PCA method</i> was set to \a covariance or \a correlation).
  * - \p da_pca_column_sdevs - return an array of size \p n_features containing the column standard deviations (with \p n_samples @f$\ - 1 @f$ degrees of freedom) of the data matrix (note this is only available if the option <i>PCA method</i> was set to \a correlation).
- * - \p da_rinfo - return an array of size 3 containing \p n_samples, \p n_features and \p n_components.
  */
 da_status da_pca_compute_s(da_handle handle);
 /** \} */

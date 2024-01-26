@@ -29,6 +29,7 @@ Patching scikit learn decomposition: PCA
 """
 # pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
 
+import warnings
 from sklearn.decomposition import PCA as PCA_sklearn
 from aoclda.factorization import PCA as PCA_da
 import aoclda as da
@@ -55,13 +56,71 @@ class PCA(PCA_sklearn):
         self.power_iteration_normalizer = power_iteration_normalizer
         self.random_state = random_state
 
+        # Check for unsupported attributes
+        if n_components is None:
+            n_components = 0
+        elif n_components < 1:
+            raise ValueError("n_components must be a positive integer")
+
+        if copy is False:
+            raise ValueError("copy must be set to True or None")
+
+        if whiten is True:
+            raise ValueError("whiten must be set to False or None")
+
+        if svd_solver in ('arpack', 'randomized'):
+            raise ValueError("svd_solver must be set to auto, full or None")
+
+        if (tol != 0.0 or iterated_power != 'auto' or n_oversamples != 10 or
+                power_iteration_normalizer != 'auto' or random_state is not None):
+            warnings.warn(
+                "The parameters tol, iterated_power, n_oversamples, power_iteration_normalizer and"
+                "random state are not supported and have been ignored.", category=RuntimeWarning)
+
         # new internal attributes
         self.aocl = True
-        self.pca = PCA_da(n_components=3, method="covariance",
+        self.pca = PCA_da(n_components, method="covariance",
                           solver=self.svd_solver, precision=da.double, bias='unbiased')
 
     def fit(self, X, y=None):
         self.pca.fit(X)
+
+    def transform(self, X):
+        return self.pca.transform(X)
+
+    def inverse_transform(self, X):
+        return self.pca.inverse_transform(X)
+
+    def fit_transform(self, X):
+        self.pca.fit(X)
+        return self.scores
+
+    def get_covariance(self, *args):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_feature_names_out(self, input_features=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_metadata_routing(self, *args):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_params(self, deep=True):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_precision(self, *args):
+        raise RuntimeError("This feature is not implemented")
+
+    def score(self, X, y=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def score_samples(self, X):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_output(self, *, transform=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_params(self, *, transform=None):
+        raise RuntimeError("This feature is not implemented")
 
     # Match all attributes from sklearn
     # return None if not yet written
@@ -75,7 +134,7 @@ class PCA(PCA_sklearn):
 
     @property
     def explained_variance_ratio_(self):
-        print("NOT IMPLEMENTED!")
+        print("This attribute is not implemented")
         return None
 
     @property
@@ -88,27 +147,27 @@ class PCA(PCA_sklearn):
 
     @property
     def n_components_(self):
-        print("NOT IMPLEMENTED!")
+        print("This attribute is not implemented")
         return None
 
     @property
     def n_samples_(self):
-        print("NOT IMPLEMENTED!")
+        print("This attribute is not implemented")
         return None
 
     @property
     def noise_variance_(self):
-        print("NOT IMPLEMENTED!")
+        print("This attribute is not implemented")
         return None
 
     @property
     def n_features_in_(self):
-        print("NOT IMPLEMENTED!")
+        print("This attribute is not implemented")
         return None
 
     @property
     def feature_names_in_(self):
-        print("NOT IMPLEMENTED!")
+        print("This attribute is not implemented")
         return None
 
     # AOCL-DA attributes not yet matched with an sklearn attribute
