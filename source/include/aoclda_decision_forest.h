@@ -37,17 +37,17 @@
  */
 
 /** \{
- * @brief Pass a 2-d feature matrix containing double precision data and a 1d label array to the \ref da_handle object
+ * @brief Pass a 2d feature matrix containing double precision data and a 1d label array to the \ref da_handle object
  * in preparation for fitting a decision forest.
  *
  * A copy of the training data is stored internally, to avoid overwriting the user's data during computation.
  *
  * @param handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
- * @param n_obs number of observations in x
- * @param n_features number of features in x
+ * @param n_obs number of observations in \p x
+ * @param n_features number of features in \p x
  * @param x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
  * @param ldx leading dimension of \p x.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
- * @param y 1d array containing n_obs labels
+ * @param y 1d array containing \p n_obs labels
  * @return @ref da_status.  The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
@@ -59,17 +59,17 @@ da_status da_df_set_training_data_d(da_handle handle, da_int n_obs, da_int n_fea
 /** \} */
 
 /** \{
- * @brief Pass a 2-d feature matrix containing single precision data and a 1d label array to the \ref da_handle object
+ * @brief Pass a 2d feature matrix containing single precision data and a 1d label array to the \ref da_handle object
  * in preparation for fitting a decision forest.
  *
  * A copy of the training data is stored internally, to avoid overwriting the user's data during computation.
  *
  * @param handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
- * @param n_obs number of observations in x
- * @param n_features number of features in x
+ * @param n_obs number of observations in \p x
+ * @param n_features number of features in \p x
  * @param x array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
  * @param ldx leading dimension of \p x.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
- * @param y 1d array containing n_obs labels
+ * @param y 1d array containing \p n_obs labels
  * @return @ref da_status.  The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
@@ -85,23 +85,25 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_fea
  *
  * Compute the decision forest parameters given the data passed by \ref da_df_set_training_data_d.
  * @rst
- * Note that you can customize the model before using the fit function through the use of optional parameters,
- * see :ref:`this section <df_options>` for a list of avaliable options.
+ * Note that you can customize the model before using the fit function through the use of optional parameters, see
+ * :ref:`this section <df_options>` for a list of avaliable options.
  * @endrst
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
- * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
+ * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
+ *   initialization.
  * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
  * - @ref da_status_incompatible_options - some of the options set are incompatible with the model defined in \p handle.
  *        You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  * - @ref da_status_internal_error - an unexpected error occurred.
  *
- * \post
- * After succesful execution, \ref da_handle_get_result_d can be queried with the following enum:
- * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p n_features.
+ * \post After succesful execution, \ref da_handle_get_result_d can be queried with the following enum:
+ * - \p da_rinfo - return an array of size 3 containing \p seed, \p n_obs and \p n_features.  If the \p seed option was
+ *   set to a value @f$\ge 0@f$, this value is returned by \ref da_handle_get_result_d.  Otherwise the value of the
+ *   internally generated seed is returned.
  */
 da_status da_df_fit_d(da_handle handle);
 /** \} */
@@ -138,20 +140,22 @@ da_status da_df_fit_s(da_handle handle);
  * After a model has been fit using @ref da_df_fit_d, it can be used to generate predicted labels on new data. This
  * function returns the decision forest predictions in the array @p y_pred.
  *
- * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_pred[i]}@f$ will contain the label of the most likely class
- * according to the decision forest,
- * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
+ * Element @f$\texttt{i}@f$ of @p y_pred will contain the label of the most likely class according to the decision
+ * forest.  Element @f$\texttt{[i + j*ldx]}@f$ of @p x contains feature @f$\texttt{j} @f$ for observation
+ * @f$\texttt{i}@f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
- * @param[in] n_obs - number of observations in x
+ * @param[in] n_obs - number of observations in \p x_test
  * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
  * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[out] y_pred - predicted class labels
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
- * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
+ * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
+ *   initialization.
  * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
- * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
+ * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
+ *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
  */
 da_status da_df_predict_d(da_handle handle, da_int n_obs, da_int n_features,
@@ -159,17 +163,17 @@ da_status da_df_predict_d(da_handle handle, da_int n_obs, da_int n_features,
 /** \} */
 
 /** \{
- * @brief Generate labels using fitted decision forest on a new set of data @p x.
+ * @brief Generate labels using fitted decision forest on a new set of data @p x_test.
  *
  * After a model has been fit using @ref da_df_fit_s, it can be used to generate predicted labels on new data.
  * This function returns the decision forest predictions in the array @p y_pred.
  *
- * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_pred[i]}@f$ will contain the label of the most likely class
- * according to the decision forest,
- * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
+ * Element @f$\texttt{i}@f$ of @p y_pred will contain the label of the most likely class according to the decision
+ * forest.  Element @f$\texttt{[i + j*ldx]}@f$ of @p x_test contains feature @f$\texttt{j} @f$ for observation
+ * @f$\texttt{i}@f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
- * @param[in] n_obs - number of observations in x
+ * @param[in] n_obs - number of observations in \p x_test
  * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
  * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[out] y_pred - predicted class labels
@@ -186,15 +190,16 @@ da_status da_df_predict_s(da_handle handle, da_int n_obs, da_int n_features,
 
 /** \{
  * @brief Calculate score (prediction accuracy) by comparing predicted labels and actual labels on a new set
- * of data @p x.
+ * of data @p x_test.
  *
  * To be used after a model has been fit using @ref da_df_fit_d.
  *
- * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_test[i]} @f$ will contain the actual label,
- * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
+ * Element @f$\texttt{i}@f$ of @p y_test contains the actual label.  Element @f$\texttt{[i + j*ldx]}@f$ of @p x_test
+ * contains feature @f$\texttt{j} @f$ for observation
+ * @f$\texttt{i}@f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
- * @param[in] n_obs - number of observations in x
+ * @param[in] n_obs - number of observations in \p x_test
  * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
  * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[in] y_test - actual class labels
@@ -214,15 +219,16 @@ da_status da_df_score_d(da_handle handle, da_int n_obs, da_int n_features, doubl
 
 /** \{
  * @brief Calculate score (prediction accuracy) by comparing predicted labels and actual labels on a new set
- * of data @p x.
+ * of data @p x_test.
  *
  * To be used after a model has been fit using @ref da_df_fit_s.
  *
- * For each data point @f$\texttt{i} @f$, @f$\texttt{y\_test[i]} @f$ will contain the actual label,
- * @f$\texttt{x[i + j*ldx]} @f$ should contain the feature @f$\texttt{j} @f$ for observation @f$\texttt{i} @f$.
+ * Element @f$\texttt{i}@f$ of @p y_test contains the actual label.  Element @f$\texttt{[i + j*ldx]}@f$ of @p x_test
+ * contains feature @f$\texttt{j} @f$ for observation
+ * @f$\texttt{i}@f$.
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
- * @param[in] n_obs - number of observations in x
+ * @param[in] n_obs - number of observations in \p x_test
  * @param[in] x_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
  * @param[in] ldx leading dimension of \p x_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param[in] y_test - actual class labels

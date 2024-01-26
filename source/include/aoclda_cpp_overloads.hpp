@@ -396,57 +396,44 @@ inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_
 
 /* Decision Forest overloaded functions */
 
-template <typename T>
-da_status da_df_set_training_data(da_handle handle, da_int n_obs, da_int n_features, T *x,
-                                  da_int ldx, uint8_t *y);
-template <>
-da_status da_df_set_training_data<double>(da_handle handle, da_int n_obs,
-                                          da_int n_features, double *x, da_int ldx,
-                                          uint8_t *y) {
+inline da_status da_df_set_training_data(da_handle handle, da_int n_obs,
+                                         da_int n_features, double *x, da_int ldx,
+                                         uint8_t *y) {
     return da_df_set_training_data_d(handle, n_obs, n_features, x, ldx, y);
 }
 
-template <>
-da_status da_df_set_training_data<float>(da_handle handle, da_int n_obs,
+inline da_status da_df_set_training_data(da_handle handle, da_int n_obs,
                                          da_int n_features, float *x, da_int ldx,
                                          uint8_t *y) {
     return da_df_set_training_data_s(handle, n_obs, n_features, x, ldx, y);
 }
 
-template <typename T> da_status da_df_fit(da_handle handle);
+template <typename T> inline da_status da_df_fit(da_handle handle);
 
-template <> da_status da_df_fit<float>(da_handle handle) { return da_df_fit_s(handle); }
+template <> inline da_status da_df_fit<float>(da_handle handle) {
+    return da_df_fit_s(handle);
+}
 
-template <> da_status da_df_fit<double>(da_handle handle) { return da_df_fit_d(handle); }
+template <> inline da_status da_df_fit<double>(da_handle handle) {
+    return da_df_fit_d(handle);
+}
 
-template <typename T>
-da_status da_df_score(da_handle handle, da_int n_obs, da_int n_features, T *x, da_int ldx,
-                      uint8_t *y_test, T *score);
-
-template <>
-da_status da_df_score<double>(da_handle handle, da_int n_obs, da_int n_features,
-                              double *x, da_int ldx, uint8_t *y_test, double *score) {
+inline da_status da_df_score(da_handle handle, da_int n_obs, da_int n_features, double *x,
+                             da_int ldx, uint8_t *y_test, double *score) {
     return da_df_score_d(handle, n_obs, n_features, x, ldx, y_test, score);
 }
 
-template <>
-da_status da_df_score<float>(da_handle handle, da_int n_obs, da_int n_features, float *x,
+inline da_status da_df_score(da_handle handle, da_int n_obs, da_int n_features, float *x,
                              da_int ldx, uint8_t *y_test, float *score) {
     return da_df_score_s(handle, n_obs, n_features, x, ldx, y_test, score);
 }
 
-template <typename T>
-da_status da_df_predict(da_handle handle, da_int n_obs, da_int n_features, T *x,
-                        da_int ldx, uint8_t *y_pred);
-
-template <>
-da_status da_df_predict<double>(da_handle handle, da_int n_obs, da_int n_features,
-                                double *x, da_int ldx, uint8_t *y_pred) {
+inline da_status da_df_predict(da_handle handle, da_int n_obs, da_int n_features,
+                               double *x, da_int ldx, uint8_t *y_pred) {
     return da_df_predict_d(handle, n_obs, n_features, x, ldx, y_pred);
 }
 
-template <>
-da_status da_df_predict<float>(da_handle handle, da_int n_obs, da_int n_features,
+inline da_status da_df_predict(da_handle handle, da_int n_obs, da_int n_features,
                                float *x, da_int ldx, uint8_t *y_pred) {
     return da_df_predict_s(handle, n_obs, n_features, x, ldx, y_pred);
 }

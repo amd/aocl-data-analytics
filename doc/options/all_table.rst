@@ -67,12 +67,12 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "diff_thres", "real", ":math:`r=1e-06`", "minimum difference in feature value required for splitting", ":math:`0 < r`"
-   "n_trees", "integer", ":math:`i=1`", "set number of trees", ":math:`0 < i`"
-   "n_features_to_select", "integer", ":math:`i=1`", "set number of features in selection for splitting", ":math:`0 < i`"
+   "diff_thres", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 < r`"
+   "n_trees", "integer", ":math:`i=1`", "Set number of trees", ":math:`0 < i`"
+   "n_features_to_select", "integer", ":math:`i=1`", "Set number of features in selection for splitting", ":math:`0 < i`"
    "seed", "integer", ":math:`i=-1`", "Set random seed for Mersenne Twister (64-bit) PRNG.  If the value is -1, the std::random_device function is used to generate a seed, otherwise the input value is used as a seed.", ":math:`-1 \le i`"
-   "n_obs_per_tree", "integer", ":math:`i=1`", "set number of observations in each tree", ":math:`0 < i`"
-   "depth", "integer", ":math:`i=-1`", "set max depth of tree", ":math:`-1 \le i`"
+   "n_obs_per_tree", "integer", ":math:`i=1`", "Set number of observations in each tree", ":math:`0 < i`"
+   "depth", "integer", ":math:`i=-1`", "Set max depth of tree.  If the value is -1, the tree does t have a maximum depth", ":math:`-1 \le i`"
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `gini`, or `misclassification-error`."
 
 

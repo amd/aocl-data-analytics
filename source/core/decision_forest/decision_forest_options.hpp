@@ -45,8 +45,10 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(os);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "depth", "set max depth of tree", -1, lbound_t::greaterequal, max_da_int,
-            ubound_t::p_inf, -1));
+            "depth",
+            "Set max depth of tree.  If "
+            "the value is -1, the tree does t have a maximum depth",
+            -1, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
@@ -59,24 +61,24 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_obs_per_tree", "set number of observations in each tree", 0,
+            "n_obs_per_tree", "Set number of observations in each tree", 0,
             lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_features_to_select", "set number of features in selection for splitting",
+            "n_features_to_select", "Set number of features in selection for splitting",
             0, lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(
-            OptionNumeric<da_int>("n_trees", "set number of trees", 0,
+            OptionNumeric<da_int>("n_trees", "Set number of trees", 0,
                                   lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
         status = opts.register_opt(oi);
 
         T rmax = std::numeric_limits<T>::max();
         T diff_thres_default = (T)1e-6;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "diff_thres", "minimum difference in feature value required for splitting",
+            "diff_thres", "Minimum difference in feature value required for splitting",
             0.0, lbound_t::greaterthan, rmax, ubound_t::p_inf, diff_thres_default));
         status = opts.register_opt(oT);
 
