@@ -502,12 +502,12 @@ TYPED_TEST(DecisionTreeTest, invalid_array_dim) {
 
         rinfo_size = 3;
         rinfo.resize(rinfo_size);
-        EXPECT_EQ(da_handle_get_result(df_handle, da_result::da_linmod_coeff, &rinfo_size,
+        EXPECT_EQ(da_handle_get_result(df_handle, da_result::da_linmod_coef, &rinfo_size,
                                        rinfo.data()),
                   da_status_unknown_query);
 
         std::vector<da_int> iinfo(rinfo_size);
-        EXPECT_EQ(da_handle_get_result(df_handle, da_result::da_linmod_coeff, &rinfo_size,
+        EXPECT_EQ(da_handle_get_result(df_handle, da_result::da_linmod_coef, &rinfo_size,
                                        iinfo.data()),
                   da_status_unknown_query);
 

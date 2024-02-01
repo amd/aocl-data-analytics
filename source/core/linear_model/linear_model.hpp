@@ -120,7 +120,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status qr_lsq();
 
     /* Dispatcher methods
-     * choose_method: if "linmod optim method" is set to auto, choose automatically how
+     * choose_method: if "optim method" is set to auto, choose automatically how
      *                to compute the model
      * validate_options: check that the options chosen by the user are compatible
      */
@@ -193,7 +193,7 @@ da_status linear_model<T>::get_result(da_result query, da_int *dim, T *result) {
         return da_status_success;
         break;
 
-    case da_result::da_linmod_coeff:
+    case da_result::da_linmod_coef:
         return this->get_coef(*dim, result);
         break;
 
@@ -319,7 +319,7 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
                         "<optim method> option.");
     }
     // Pass convergence parameters
-    if (this->opts.get("linmod optim iteration limit", maxit) != da_status_success) {
+    if (this->opts.get("optim iteration limit", maxit) != da_status_success) {
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly <linmod optim iteration limit> option not "
                         "found in the linear model "
@@ -332,7 +332,7 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
                         "<" +
                             optstr + "> option.");
     }
-    if (this->opts.get("linmod optim convergence tol", tol) != da_status_success) {
+    if (this->opts.get("optim convergence tol", tol) != da_status_success) {
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly <linmod optim convergence tol> option not "
                         "found in the linear model option registry.");
@@ -344,7 +344,7 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
             "Unexpectedly linear model provided an invalid value to the <" + optstr +
                 "> option.");
     }
-    if (this->opts.get("linmod optim progress factor", factr) != da_status_success) {
+    if (this->opts.get("optim progress factor", factr) != da_status_success) {
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly <linmod optim progress factor> option not "
                         "found in the linear model option registry.");
@@ -482,10 +482,10 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     if (prn != 0)
         opts.print_options();
 
-    opts.get("linmod intercept", intercept_int);
-    opts.get("linmod alpha", this->alpha);
-    opts.get("linmod lambda", this->lambda);
-    opts.get("linmod optim method", method, mid);
+    opts.get("intercept", intercept_int);
+    opts.get("alpha", this->alpha);
+    opts.get("lambda", this->lambda);
+    opts.get("optim method", method, mid);
     this->intercept = (bool)intercept_int;
 
     status = validate_options(mid);
@@ -498,7 +498,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             return status; // Error message already loaded
         }
     }
-    opts.get("linmod optim method", method, mid);
+    opts.get("optim method", method, mid);
 
     bool copycoefs = false;
     switch (mod) {
@@ -771,24 +771,24 @@ template <typename T> da_status linear_model<T>::choose_method() {
     case (linmod_model_mse):
         if (lambda == (T)0)
             // QR direct method
-            opts.set("linmod optim method", "qr", da_options::solver);
+            opts.set("optim method", "qr", da_options::solver);
         else if (alpha == (T)0)
             // L-BFGS-B handles L2 regularization
-            opts.set("linmod optim method", "lbfgs", da_options::solver);
+            opts.set("optim method", "lbfgs", da_options::solver);
         else
             // Coordinate Descent for L1 [and L2 combined: Elastic Net]
-            opts.set("linmod optim method", "coord", da_options::solver);
+            opts.set("optim method", "coord", da_options::solver);
         break;
     case (linmod_model_logistic):
         // Here we choose L-BFGS-B over Coordinate Descent
         if (alpha == (T)0)
             // L-BFGS-B handles L2 regularization
-            opts.set("linmod optim method", "lbfgs", da_options::solver);
+            opts.set("optim method", "lbfgs", da_options::solver);
         else
             // Coordinate Descent for L1 [and L2 combined: Elastic Net]
-            // opts.set("linmod optim method", "coord", da_options::solver);
+            // opts.set("optim method", "coord", da_options::solver);
             // TODO FIXME Enable this once coord+logistic is implemented
-            // --> uncomment opts.set("linmod optim method", "coord", da_options::solver);
+            // --> uncomment opts.set("optim method", "coord", da_options::solver);
             return da_error(this->err, da_status_not_implemented, // LCOV_EXCL_LINE
                             "Not yet implemented");
         break;

@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 .. _intro_handle:
@@ -32,13 +32,13 @@ Building and Solving Models
 
 Most of the computational functions in AOCL-DA use a :cpp:type:`da_handle` as their first argument. This serves several purposes.
 
-- It is used to store internal data which can be passed between the different APIs (for example, :cpp:func:`da_pca_compute_d` computes the principal components of a data matrix, which can be passed via the handle to :cpp:func:`da_pca_transform_d`).
+- It is used to store internal data which can be passed between the different APIs (for example, :ref:`da_pca_compute_? <da_pca_compute>` computes the principal components of a data matrix, which can be passed via the handle to :ref:`da_pca_transform_? <da_pca_transform>`).
 - It stores :ref:`error information <error_api>` which may be useful if a function call does not complete as expected.
 - It can be used to set additional :ref:`options <option_setting>` for customizing computations.
 
 Using the AOCL-DA computational functions involves the following steps.
 
-1. Initialize a :cpp:type:`da_handle` using :cpp:func:`da_handle_init_d` (for double precision data) or :cpp:func:`da_handle_init_s` (for single precision data) and specify the :cpp:type:`da_handle_type`.
+1. Initialize a :cpp:type:`da_handle` using :ref:`da_handle_init_? <da_handle_init>` and specify the :cpp:type:`da_handle_type`.
 2. Pass data into the :cpp:type:`da_handle`. The exact API for doing this will depend on the computation you wish to perform and will be detailed in the relevant chapter of this documentation.
 3. Set any additional options for the computation. All algorithms in AOCL-DA use the same :ref:`option setting APIs <api_handle_options>`, but the exact choice of options will depend on the algorithm.
 4. Perform the computation.
@@ -52,5 +52,5 @@ Further details on the APIs for creating/destroying handles, setting options, er
 .. toctree::
     :maxdepth: 1
     :hidden:
-    
+
     handle_api

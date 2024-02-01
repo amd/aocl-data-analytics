@@ -136,7 +136,7 @@ class linmod : public pyda_handle {
         exception_check(status);
         // Set optional parameters
         if (intercept)
-            da_options_set_int(handle, "linmod intercept", 1);
+            da_options_set_int(handle, "intercept", 1);
     }
     ~linmod() { da_handle_destroy(&handle); }
 
@@ -154,14 +154,16 @@ class linmod : public pyda_handle {
 
         // Set the real optional parameters
         if (precision == da_double) {
-            status = da_options_set_real_d(handle, "linmod lambda", reg_lambda);
+            status = da_options_set_real_d(handle, "lambda", reg_lambda);
+            std::cout << "STATUS " << status << std::endl;
             exception_check(status);
-            status = da_options_set_real_d(handle, "linmod alpha", reg_alpha);
+            status = da_options_set_real_d(handle, "alpha", reg_alpha);
+            std::cout << "STATUS " << status << std::endl;
             exception_check(status);
         } else {
-            status = da_options_set_real_s(handle, "linmod lambda", reg_lambda);
+            status = da_options_set_real_d(handle, "lambda", reg_lambda);
             exception_check(status);
-            status = da_options_set_real_s(handle, "linmod alpha", reg_alpha);
+            status = da_options_set_real_d(handle, "alpha", reg_alpha);
             exception_check(status);
         }
 
@@ -179,7 +181,7 @@ class linmod : public pyda_handle {
         if (precision == da_single) {
             float result_s = 1;
             // First call to get dim right
-            status = da_handle_get_result(handle, da_linmod_coeff, &dim, &result_s);
+            status = da_handle_get_result(handle, da_linmod_coef, &dim, &result_s);
             if (status != da_status_invalid_array_dimension)
                 status_to_exception(status);
 
@@ -188,14 +190,14 @@ class linmod : public pyda_handle {
             size_t strides[1]{sizeof(float)};
             auto coef = py::array_t<float>(shape, strides);
             status =
-                da_handle_get_result(handle, da_linmod_coeff, &dim, coef.mutable_data());
+                da_handle_get_result(handle, da_linmod_coef, &dim, coef.mutable_data());
             exception_check(status);
             py::array ret = py::reinterpret_borrow<py::array>(coef);
             return ret;
         } else {
             double result_d = 1;
             // First call to get dim right
-            status = da_handle_get_result(handle, da_linmod_coeff, &dim, &result_d);
+            status = da_handle_get_result(handle, da_linmod_coef, &dim, &result_d);
             if (status != da_status_invalid_array_dimension)
                 exception_check(status);
 
@@ -204,7 +206,7 @@ class linmod : public pyda_handle {
             size_t strides[1]{sizeof(double)};
             auto coef = py::array_t<double>(shape, strides);
             status =
-                da_handle_get_result(handle, da_linmod_coeff, &dim, coef.mutable_data());
+                da_handle_get_result(handle, da_linmod_coef, &dim, coef.mutable_data());
             exception_check(status);
             py::array ret = py::reinterpret_borrow<py::array>(coef);
             return ret;

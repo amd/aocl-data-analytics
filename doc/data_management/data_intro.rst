@@ -91,7 +91,7 @@ Loading data into a :cpp:type:`da_datastore`
 
 Loading data into a :cpp:type:`da_datastore` can be done by adding blocks from different sources. A typical example would be to load data from a file and add columns that were allocated dynamically in your program. This can be achieved by calling :cpp:func:`da_data_load_from_csv` and :cpp:func:`da_data_load_col_int` consecutively for example.
 
-When calling any of the ``da_data_load_*`` functions on a :cpp:type:`da_datastore` that is not empty, certain constraints must be
+When calling any of the :ref:`da_data_load_row_? <da_data_load_row>` or :ref:`da_data_load_col_? <da_data_load_col>` functions on a :cpp:type:`da_datastore` that is not empty, certain constraints must be
 respected:
 
 - While adding columns, the number of rows in the block to be added must match the current number of rows present in the :cpp:type:`da_datastore` (:cpp:func:`da_data_get_num_rows` can be used to query the dimension).
@@ -119,8 +119,8 @@ The :cpp:type:`da_datastore` structure uses *selections* to select and or extrac
 
 Once the data is fully loaded, one may want to extract it into dense blocks of contiguous memory suitable for the various algorithms of AOCL-DA. There are two ways to :ref:`extract data<api_data_extraction>` from a :cpp:type:`da_datastore`:
 
-- Extract a specific column with one of the ``da_data_extract_column_*`` functions.
-- Extract a selection with a given label by calling one of the ``da_data_extract_selection_*`` functions.
+- Extract a specific column with one of the :ref:`da_data_extract_column_? <da_data_extract_column>` functions.
+- Extract a selection with a given label by calling one of the :ref:`da_data_extract_selection_? <da_data_extract_selection>` functions.
 
 All extracted data will be given in column-major format that will be accepted by the rest of the algorithms
 in the library.
@@ -140,26 +140,26 @@ Various options can be set to customize the behavior of the data loading functio
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
    :escape: ~
 
-   "csv use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header", ":math:`0 \le i \le 1`"
-   "csv warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to, 1 issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used", ":math:`0 \le i \le 1`"
-   "csv skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file", ":math:`0 \le i \le 1`"
-   "csv delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
-   "csv whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files", ":math:`0 \le i \le 1`"
-   "csv decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files", ""
-   "csv skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines", ":math:`0 \le i \le 1`"
-   "csv line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default)", ""
-   "csv row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the CSV file (note that line numbers in CSV files start at 1)", ":math:`0 \le i`"
-   "csv comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line)", ""
-   "csv quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files", ""
-   "csv scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files", ""
-   "csv escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files", ""
-   "csv thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files", ""
-   "csv skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files", ""
-   "csv data storage", "string", ":math:`s=` `column major`", "Whether to store data from CSV files in row or column major format", ":math:`s=` `column major`, or `row major`."
-   "csv skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file)", ":math:`0 \le i \le 1`"
-   "csv double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character", ":math:`0 \le i \le 1`"
+   "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header", ":math:`0 \le i \le 1`"
+   "warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to, 1 issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used", ":math:`0 \le i \le 1`"
+   "skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file", ":math:`0 \le i \le 1`"
+   "delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
+   "whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files", ":math:`0 \le i \le 1`"
+   "decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files", ""
+   "skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines", ":math:`0 \le i \le 1`"
+   "line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default)", ""
+   "row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1)", ":math:`0 \le i`"
+   "comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line)", ""
+   "quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files", ""
+   "scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files", ""
+   "escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files", ""
+   "thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files", ""
+   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file)", ":math:`0 \le i \le 1`"
+   "data storage", "string", ":math:`s=` `column major`", "Whether to store data from CSV files in row or column major format", ":math:`s=` `column major`, or `row major`."
+   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file)", ":math:`0 \le i \le 1`"
+   "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character", ":math:`0 \le i \le 1`"
 
-Note that, with the exception of the ``CSV skip rows`` option, only single characters can be used in the string options above.
+Note that, with the exception of the `skip rows` option, only single characters can be used in the string options above.
 
 Examples
 ========

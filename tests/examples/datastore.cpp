@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -80,7 +80,7 @@ int main() {
         std::cout << "Regression computed successfully!" << std::endl;
         da_int nx = 2;
         std::vector<double> x(2);
-        da_handle_get_result_d(handle, da_result::da_linmod_coeff, &nx, x.data());
+        da_handle_get_result_d(handle, da_result::da_linmod_coef, &nx, x.data());
         std::cout << "Coefficients: " << x[0] << " " << x[1] << std::endl;
         std::cout << "(Expected   : " << 0.199256 << " " << 0.130354 << ")" << std::endl;
     } else

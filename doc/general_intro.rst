@@ -176,6 +176,8 @@ Algorithmic routines operating on floating-point data are typically available in
 single and double precision.
 Routines expecting single precision data have ``_s`` appended onto their names.
 Routines expecting double precision data have ``_d`` appended onto their names.
+Some routines (such as option setting routines) may expect other data types, and will have ``_int``or ``_string``` appended onto their names accordingly.
+In this documentation we frequently use ``_?`` at the end of routine names to indicate a suite of routines that differ only in the expected data type.
 
 Array Storage
 -------------
@@ -213,7 +215,7 @@ C++ overloads
 --------------
 
 To facilitate calling AOCL-DA from C++, a set of overloaded functions has been made available.
-These are identical to the C interface, except that none of the functions have ``_s`` and ``_d`` appended onto their names.
+These are identical to the C interface, except that none of the functions have data type indicators such as ``_s`` or ``_d`` appended onto their names.
 Your C++ compiler will instead call the correct function based on the floating point precision you are using.
 
 For some functions, overloading is not possible (for example, functions such as :cpp:func:`da_handle_init_s` and :cpp:func:`da_handle_init_d` do not use ``double`` or ``float`` arguments).

@@ -150,19 +150,19 @@ TEST(linmod, invalidInput) {
 
     // get coefficients
     nx = -1;
-    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coeff, &nx, xd),
+    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coef, &nx, xd),
               da_status_invalid_array_dimension);
     nx = -1;
-    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coeff, &nx, xs),
+    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coef, &nx, xs),
               da_status_invalid_array_dimension);
     nx = 2;
-    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coeff, &nx, nullptr),
+    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coef, &nx, nullptr),
               da_status_invalid_input);
-    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coeff, &nx, xd),
+    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coef, &nx, xd),
               da_status_success);
-    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coeff, &nx, nullptr),
+    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coef, &nx, nullptr),
               da_status_invalid_input);
-    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coeff, &nx, xs),
+    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coef, &nx, xs),
               da_status_success);
 
     // evaluate models
@@ -209,9 +209,9 @@ TEST(linmod, modOutOfDate) {
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, bs), da_status_success);
 
     // Model was not yet fitted or out-of-date request of coefficients
-    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coeff, &nx, xd),
+    EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coef, &nx, xd),
               da_status_unknown_query);
-    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coeff, &nx, xs),
+    EXPECT_EQ(da_handle_get_result_s(handle_s, da_result::da_linmod_coef, &nx, xs),
               da_status_unknown_query);
 
     // Out of date request of model
@@ -235,8 +235,7 @@ TEST(linmod, incompatibleOptions) {
 
     EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, n, m, Ad, bd), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle_d, "linmod optim method", "QR"),
-              da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "QR"), da_status_success);
     EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_logistic),
               da_status_success);
 
@@ -244,10 +243,10 @@ TEST(linmod, incompatibleOptions) {
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
     // lbfgs  with 1-norm term
-    EXPECT_EQ(da_options_set_string(handle_d, "linmod optim method", "lbfgsb"),
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "lbfgsb"),
               da_status_success);
-    EXPECT_EQ(da_options_set_real_d(handle_d, "linmod lambda", 1.0), da_status_success);
-    EXPECT_EQ(da_options_set_real_d(handle_d, "linmod alpha", 1.0), da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", 1.0), da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle_d, "alpha", 1.0), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
     da_handle_destroy(&handle_d);

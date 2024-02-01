@@ -57,12 +57,12 @@ Typical workflow for *k*-means clustering
 The standard way of using *k*-means clustering in AOCL-DA  is as follows.
 
 1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_kmeans``.
-2. Pass data to the handle using either :cpp:func:`da_kmeans_set_data_s` or :cpp:func:`da_kmeans_set_data_d`.
-3. Set the number of clusters required and other options using :cpp:func:`da_options_set_int` and :cpp:func:`da_options_set_string` (see :ref:`below <kmeans_options>`).
-4. Optionally set the initial centres using :cpp:func:`da_kmeans_set_init_centres_s` or :cpp:func:`da_kmeans_set_init_centres_d`.
-5. Compute the *k*-means clusters using :cpp:func:`da_kmeans_compute_s` or :cpp:func:`da_kmeans_compute_d`.
-6. Perform further computations as required, using :cpp:func:`da_kmeans_transform_s`, :cpp:func:`da_kmeans_transform_d`, :cpp:func:`da_kmeans_predict_s`, or :cpp:func:`da_kmeans_predict_d`.
-7. Extract results using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`.
+2. Pass data to the handle using either :ref:`da_kmeans_set_data_? <da_kmeans_set_data>`.
+3. Set the number of clusters required and other options using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <kmeans_options>`).
+4. Optionally set the initial centres using :ref:`da_kmeans_set_init_centres_? <da_kmeans_set_init_centres>`.
+5. Compute the *k*-means clusters using :ref:`da_kmeans_compute_? <da_kmeans_compute>`.
+6. Perform further computations as required, using :ref:`da_kmeans_transform_? <da_kmeans_transform>` or :ref:`da_kmeans_predict_? <da_kmeans_predict>`.
+7. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
 
 
 .. _kmeans_options:
@@ -70,7 +70,7 @@ The standard way of using *k*-means clustering in AOCL-DA  is as follows.
 Options
 -------
 
-The following options can be set using  :cpp:func:`da_options_set_string` or :cpp:func:`da_options_set_int`:
+The following options can be set using :ref:`da_options_set_? <da_options_set>`:
 
 The following options are supported.
 
@@ -93,7 +93,7 @@ Examples
 
 The code below can be found in ``kmeans.cpp`` in the ``examples`` folder of your installation.
 
-.. collapse:: *k*-means Example Code
+.. collapse:: k-means Example Code
 
     .. literalinclude:: ../../tests/examples/kmeans.cpp
         :language: C++

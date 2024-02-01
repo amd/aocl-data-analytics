@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,12 +48,12 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "linmod intercept", "Add intercept variable to the model", 0,
+            "intercept", "Add intercept variable to the model", 0,
             da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "linmod optim iteration limit",
+            "optim iteration limit",
             "Maximum number of iterations to perform in the optimization phase. Valid "
             "only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.",
             1, da_options::lbound_t::greaterequal, max_da_int,
@@ -62,28 +62,28 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
 
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("linmod alpha",
+            OptionNumeric<T>("alpha",
                              "coefficient of alpha in the regularization terms: lambda( "
                              "(1-alpha) L2 + alpha L1 )",
                              0.0, da_options::lbound_t::greaterequal, 1.0,
                              da_options::ubound_t::lessequal, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("linmod lambda",
+            OptionNumeric<T>("lambda",
                              "penalty coefficient for the regularization terms: lambda( "
                              "(1-alpha) L2 + alpha L1 )",
                              0.0, da_options::lbound_t::greaterequal, rmax,
                              da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "linmod optim convergence tol",
+            "optim convergence tol",
             "tolerance to declare convergence for the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "linmod optim progress factor",
+            "optim progress factor",
             "factor used to detect convergence of the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
@@ -92,7 +92,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
 
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(
-            OptionString("linmod optim method", "Select optimization method to use.",
+            OptionString("optim method", "Select optimization method to use.",
                          {{"auto", linmod_method::undefined},
                           {"lbfgs", linmod_method::lbfgsb},
                           {"lbfgsb", linmod_method::lbfgsb},

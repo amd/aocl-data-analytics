@@ -138,22 +138,20 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
         EXPECT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
                   da_status_success);
     for (auto &op : ropts)
-        EXPECT_EQ(da_options_set_real(linmod_handle, op.name.c_str(), op.value),
+        EXPECT_EQ(da_options_set(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
     for (auto &op : iopts)
         EXPECT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
 
     da_int intercept_int;
-    EXPECT_EQ(da_options_get_int(linmod_handle, "linmod intercept", &intercept_int),
+    EXPECT_EQ(da_options_get_int(linmod_handle, "intercept", &intercept_int),
               da_status_success);
     bool intercept = (bool)intercept_int;
 
     T alpha = 0, lambda = 0;
-    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod alpha", alpha),
-              da_status_success);
-    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod lambda", lambda),
-              da_status_success);
+    EXPECT_EQ(da_options_set(linmod_handle, "alpha", alpha), da_status_success);
+    EXPECT_EQ(da_options_set(linmod_handle, "lambda", lambda), da_status_success);
 
     // get problem data and expected results
     // DATA_DIR is defined in the build system, it should point to the tests/data/linmod_data
@@ -200,7 +198,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     EXPECT_EQ(da_linmod_define_features(linmod_handle, n, m, a, b), da_status_success);
 
     // This should be options
-    EXPECT_EQ(da_options_set_int(linmod_handle, "linmod intercept", intercept),
+    EXPECT_EQ(da_options_set_int(linmod_handle, "intercept", intercept),
               da_status_success);
 
     EXPECT_EQ(da_options_set_string(linmod_handle, "print options", "yes"),
@@ -223,19 +221,19 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     da_int ncc = 0; // query the correct size
     if constexpr (std::is_same_v<T, double>) {
         EXPECT_EQ(
-            da_handle_get_result_d(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_handle_get_result_d(linmod_handle, da_result::da_linmod_coef, &ncc, coef),
             da_status_invalid_array_dimension);
         EXPECT_EQ(
-            da_handle_get_result_d(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_handle_get_result_d(linmod_handle, da_result::da_linmod_coef, &ncc, coef),
             da_status_success);
         EXPECT_EQ(da_handle_get_result_d(linmod_handle, da_result::da_rinfo, &dim, rinfo),
                   da_status_success);
     } else {
         EXPECT_EQ(
-            da_handle_get_result_s(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_handle_get_result_s(linmod_handle, da_result::da_linmod_coef, &ncc, coef),
             da_status_invalid_array_dimension);
         EXPECT_EQ(
-            da_handle_get_result_s(linmod_handle, da_result::da_linmod_coeff, &ncc, coef),
+            da_handle_get_result_s(linmod_handle, da_result::da_linmod_coef, &ncc, coef),
             da_status_success);
         EXPECT_EQ(da_handle_get_result_s(linmod_handle, da_result::da_rinfo, &dim, rinfo),
                   da_status_success);

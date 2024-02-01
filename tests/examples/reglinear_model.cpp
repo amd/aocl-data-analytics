@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -65,11 +65,11 @@ int main(void) {
     }
     da_linmod_select_model_d(handle, linmod_model_mse);
     da_linmod_define_features_d(handle, m, n, Al, bl);
-    da_options_set_int(handle, "linmod intercept", 0);
-    da_options_set_real_d(handle, "linmod alpha", 0.0);
-    da_options_set_real_d(handle, "linmod lambda", 10.0);
+    da_options_set_int(handle, "intercept", 0);
+    da_options_set_real_d(handle, "alpha", 0.0);
+    da_options_set_real_d(handle, "lambda", 10.0);
     da_options_set_string(handle, "print options", "yes");
-    da_options_set_string(handle, "linmod optim method", "lbfgs");
+    da_options_set_string(handle, "optim method", "lbfgs");
 
     int exit_code = 0;
 
@@ -77,8 +77,7 @@ int main(void) {
     status = da_linmod_fit_d(handle);
     if (status == da_status_success) {
         std::cout << "Regression computed successfully" << std::endl;
-        if (da_handle_get_result_d(handle, da_linmod_coeff, &nx, x) !=
-            da_status_success) {
+        if (da_handle_get_result_d(handle, da_linmod_coef, &nx, x) != da_status_success) {
             da_handle_print_error_message(handle);
             da_handle_destroy(&handle);
             return 1;

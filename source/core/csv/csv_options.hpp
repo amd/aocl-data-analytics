@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -111,7 +111,7 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
     oi = std::make_shared<OptionNumeric<da_int>>(
         OptionNumeric<da_int>("CSV row start",
                               "Ignore the specified number of lines from the top of the "
-                              "CSV file (note that line numbers in CSV files start at 1)",
+                              "file (note that line numbers in CSV files start at 1)",
                               0, da_options::lbound_t::greaterequal, DA_INT_MAX,
                               da_options::ubound_t::p_inf, 0));
     opts.register_opt(oi);

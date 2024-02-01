@@ -1111,7 +1111,7 @@ TEST(csvtest, error_exits) {
               da_status_store_not_initialized);
     EXPECT_EQ(da_read_csv_uint8(store, filepath, &a_uint8, &nrows, &ncols, nullptr),
               da_status_store_not_initialized);
-    EXPECT_EQ(da_read_csv_char(store, filepath, &a_char, &nrows, &ncols, nullptr),
+    EXPECT_EQ(da_read_csv_string(store, filepath, &a_char, &nrows, &ncols, nullptr),
               da_status_store_not_initialized);
 
     // Check for various error exits

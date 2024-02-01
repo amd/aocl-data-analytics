@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 Basic statistics APIs
@@ -32,27 +32,76 @@ Basic statistics APIs
 .. doxygenenum:: da_axis_
 .. doxygentypedef:: da_quantile_type
 .. doxygenenum:: da_quantile_type_
-.. doxygenfunction:: da_mean_d
+
+.. _da_mean:
+
 .. doxygenfunction:: da_mean_s
-.. doxygenfunction:: da_geometric_mean_d
+   :outline:
+.. doxygenfunction:: da_mean_d
+
+.. _da_geometric_mean:
+
+
 .. doxygenfunction:: da_geometric_mean_s
-.. doxygenfunction:: da_harmonic_mean_d
+   :outline:
+.. doxygenfunction:: da_geometric_mean_d
+
+.. _da_harmonic_mean:
+
 .. doxygenfunction:: da_harmonic_mean_s
-.. doxygenfunction:: da_variance_d
+   :outline:
+.. doxygenfunction:: da_harmonic_mean_d
+
+.. _da_variance:
+
 .. doxygenfunction:: da_variance_s
-.. doxygenfunction:: da_skewness_d
+   :outline:
+.. doxygenfunction:: da_variance_d
+
+.. _da_skewness:
+
 .. doxygenfunction:: da_skewness_s
-.. doxygenfunction:: da_kurtosis_d
+   :outline:
+.. doxygenfunction:: da_skewness_d
+
+.. _da_kurtosis:
+
 .. doxygenfunction:: da_kurtosis_s
-.. doxygenfunction:: da_moment_d
+   :outline:
+.. doxygenfunction:: da_kurtosis_d
+
+.. _da_moment:
+
 .. doxygenfunction:: da_moment_s
-.. doxygenfunction:: da_quantile_d
+   :outline:
+.. doxygenfunction:: da_moment_d
+
+.. _da_quantile:
+
 .. doxygenfunction:: da_quantile_s
-.. doxygenfunction:: da_five_point_summary_d
+   :outline:
+.. doxygenfunction:: da_quantile_d
+
+.. _da_five_point_summary:
+
 .. doxygenfunction:: da_five_point_summary_s
-.. doxygenfunction:: da_standardize_d
+   :outline:
+.. doxygenfunction:: da_five_point_summary_d
+
+.. _da_standardize:
+
 .. doxygenfunction:: da_standardize_s
-.. doxygenfunction:: da_covariance_matrix_d
+   :outline:
+.. doxygenfunction:: da_standardize_d
+
+.. _da_covariance_matrix:
+
 .. doxygenfunction:: da_covariance_matrix_s
-.. doxygenfunction:: da_correlation_matrix_d
+   :outline:
+.. doxygenfunction:: da_covariance_matrix_d
+
+.. _da_correlation:
+
 .. doxygenfunction:: da_correlation_matrix_s
+   :outline:
+.. doxygenfunction:: da_correlation_matrix_d

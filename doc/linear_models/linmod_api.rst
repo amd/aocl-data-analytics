@@ -30,13 +30,33 @@ Linear models APIs
 
 .. doxygentypedef:: linmod_model
 .. doxygenenum:: linmod_model_
-.. doxygenfunction:: da_linmod_select_model_d
+
+.. _da_linmod_select_model:
+
 .. doxygenfunction:: da_linmod_select_model_s
-.. doxygenfunction:: da_linmod_define_features_d
+   :outline:
+.. doxygenfunction:: da_linmod_select_model_d
+
+.. _da_linmod_define_features:
+
 .. doxygenfunction:: da_linmod_define_features_s
-.. doxygenfunction:: da_linmod_fit_d
+   :outline:
+.. doxygenfunction:: da_linmod_define_features_d
+
+.. _da_linmod_fit:
+
 .. doxygenfunction:: da_linmod_fit_s
-.. doxygenfunction:: da_linmod_fit_start_d
+   :outline:
+.. doxygenfunction:: da_linmod_fit_d
+
+.. _da_linmod_fit_start:
+
 .. doxygenfunction:: da_linmod_fit_start_s
-.. doxygenfunction:: da_linmod_evaluate_model_d
+   :outline:
+.. doxygenfunction:: da_linmod_fit_start_d
+
+.. _da_linmod_evaluate_model:
+
 .. doxygenfunction:: da_linmod_evaluate_model_s
+   :outline:
+.. doxygenfunction:: da_linmod_evaluate_model_d

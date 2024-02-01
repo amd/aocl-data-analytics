@@ -106,8 +106,8 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
  * - \ref da_status_parsing_error - use \ref da_datastore_print_error_message to obtain further information.
  * - \ref da_status_missing_data - use \ref da_datastore_print_error_message to obtain further information.
  */
-da_status da_read_csv_char(da_datastore store, const char *filename, char ***A,
-                           da_int *n_rows, da_int *n_cols, char ***headings);
+da_status da_read_csv_string(da_datastore store, const char *filename, char ***A,
+                             da_int *n_rows, da_int *n_cols, char ***headings);
 /** \} */
 
 #ifdef __cplusplus

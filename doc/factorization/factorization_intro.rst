@@ -52,7 +52,7 @@ The PCA is closely related to a matrix factorization known as the *singular valu
 .. math::
    A = U\Sigma V^T,
 
-where :math:`A` is a (standardized) data matrix of size :math:`n\_samples \times n\_features`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n\_samples \times n\_features` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n\_samples \times n\_samples` and :math:`n\_features \times n\_features` respectively.
+where :math:`A` is a (standardized) data matrix of size :math:`n_{\text{samples}} \times n_{\text{features}}`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n_{\text{samples}} \times n_{\text{features}}` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n_{\text{samples}} \times n_{\text{samples}}` and  :math:`n_{\text{features}} \times n_{\text{features}}` respectively.
 The nonzero entries of :math:`\Sigma` are known as the *singular values* of :math:`A`.
 
 Internally, AOCL-DA computes the PCA via the SVD (with :math:`\Sigma` and :math:`V` truncated according to the number of principal components requested) rather than by eigenvalue decomposition of the covariance/correlation matrix.
@@ -78,11 +78,11 @@ Typical workflow for PCA
 The standard way of computing the principal component analysis using AOCL-DA  is as follows.
 
 1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_pca``.
-2. Pass data to the handle using either :cpp:func:`da_pca_set_data_s` or :cpp:func:`da_pca_set_data_d`.
-3. Set the number of principal components required and the type of PCA using :cpp:func:`da_options_set_int` and :cpp:func:`da_options_set_string` (see :ref:`below <pca_options>`).
-4. Compute the PCA using :cpp:func:`da_pca_compute_s` or :cpp:func:`da_pca_compute_d`.
-5. Perform further transformations as required, using :cpp:func:`da_pca_transform_s`, :cpp:func:`da_pca_transform_d`, :cpp:func:`da_pca_inverse_transform_s`, or :cpp:func:`da_pca_inverse_transform_d`.
-6. Extract results using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`.
+2. Pass data to the handle using :ref:`da_pca_set_data_? <da_pca_set_data>`.
+3. Set the number of principal components required and the type of PCA using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <pca_options>`).
+4. Compute the PCA using :ref:`da_pca_compute_? <da_pca_compute>`.
+5. Perform further transformations as required, using :ref:`da_pca_transform_? <da_pca_transform>` or :ref:`da_pca_inverse_transform_? <da_pca_inverse_transform>`.
+6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
 
 
 .. _pca_options:
@@ -90,7 +90,7 @@ The standard way of computing the principal component analysis using AOCL-DA  is
 Options
 -------
 
-The following options can be set using  :cpp:func:`da_options_set_string` or :cpp:func:`da_options_set_int`:
+The following options can be set using :ref:`da_options_set_? <da_options_set>`:
 
 .. update options using table _opts_pca
 .. csv-table:: PCA options

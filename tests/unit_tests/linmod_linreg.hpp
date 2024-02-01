@@ -62,7 +62,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         EXPECT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
                   da_status_success);
     for (auto &op : ropts)
-        EXPECT_EQ(da_options_set_real(linmod_handle, op.name.c_str(), op.value),
+        EXPECT_EQ(da_options_set(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
     for (auto &op : iopts)
         EXPECT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
@@ -71,7 +71,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
               da_status_success);
 
     da_int intercept_int;
-    EXPECT_EQ(da_options_get_int(linmod_handle, "linmod intercept", &intercept_int),
+    EXPECT_EQ(da_options_get_int(linmod_handle, "intercept", &intercept_int),
               da_status_success);
     bool intercept = (bool)intercept_int;
 
@@ -102,9 +102,9 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     T *A = nullptr, *b = nullptr;
     A = new T[(ncols - 1) * nrows];
     b = new T[nrows];
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", nrows, A),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nrows),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", nrows, b),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nrows),
               da_status_success);
 
     ///////////////////
@@ -138,7 +138,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // read the computed coefficients
         T *coef = new T[nc];
         EXPECT_EQ(
-            da_handle_get_result(linmod_handle, da_result::da_linmod_coeff, &nc, coef),
+            da_handle_get_result(linmod_handle, da_result::da_linmod_coef, &nc, coef),
             da_status_success);
 
         // Check coefficients
@@ -157,10 +157,8 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     rinfo_exp[1] = (T)nrows;
     rinfo_exp[2] = intercept ? (T)(ncols - 1) : ncols;
     rinfo_exp[3] = intercept ? (T)1 : (T)0;
-    EXPECT_EQ(da_options_get_real(linmod_handle, "linmod alpha", &rinfo_exp[4]),
-              da_status_success);
-    EXPECT_EQ(da_options_get_real(linmod_handle, "linmod lambda", &rinfo_exp[4]),
-              da_status_success);
+    EXPECT_EQ(da_options_get(linmod_handle, "alpha", &rinfo_exp[4]), da_status_success);
+    EXPECT_EQ(da_options_get(linmod_handle, "lambda", &rinfo_exp[4]), da_status_success);
     EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &n_rinfo, rinfo),
               da_status_success);
 

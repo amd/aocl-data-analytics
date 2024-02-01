@@ -207,9 +207,9 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  .. csv-table:: @ref da_datastore file reading options
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
-   "csv integers as floats", "da_int", ":math:`i = 0`", "Whether or not to interpret integers as floating point numbers when using autodetection", ":math:`0 \le i \le 1`"
-   "csv datastore precision", "string", ":math:`s =` `'double'`", "The precision used when reading floating point numbers using autodetection", ":math:`s =` `'double'`, or `'single'`"
-   "csv datatype", "string", ":math:`s =` `'auto'`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker", ":math:`s =` `'auto'`, `'boolean'`, `'double'`, `'float'`, `'integer'`, or `'string'`"
+   "CSV integers as floats", "da_int", ":math:`i = 0`", "Whether or not to interpret integers as floating point numbers when using autodetection", ":math:`0 \le i \le 1`"
+   "CSV datastore precision", "string", ":math:`s =` `'double'`", "The precision used when reading floating point numbers using autodetection", ":math:`s =` `'double'`, or `'single'`"
+   "CSV datatype", "string", ":math:`s =` `'auto'`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker", ":math:`s =` `'auto'`, `'boolean'`, `'double'`, `'float'`, `'integer'`, or `'string'`"
 \endrst
  *
  * @param[in,out] store a @ref _da_datastore object, initialized using @ref da_datastore_init.

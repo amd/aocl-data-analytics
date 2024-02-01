@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -29,10 +29,17 @@ Creating and destroying handles
 .. doxygentypedef:: da_handle
 .. doxygentypedef:: da_handle_type
 .. doxygenenum:: da_handle_type_
+
+.. _da_handle_init:
+
+da_handle_init\_?()
+--------------------
 .. doxygenfunction:: da_handle_init_d
+   :outline:
 .. doxygenfunction:: da_handle_init_s
+
 .. doxygenfunction:: da_handle_destroy
 
-Note that the :cpp:type:`da_handle` functionality also includes :ref:`option setting <api_handle_options>`, 
-:ref:`result extraction <extracting-results>` and :ref:`error handling <handle_error_api>` 
+Note that the :cpp:type:`da_handle` functionality also includes :ref:`option setting <api_handle_options>`,
+:ref:`result extraction <extracting-results>` and :ref:`error handling <handle_error_api>`
 capabilities, which are described separately.

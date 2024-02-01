@@ -31,13 +31,32 @@ Clustering APIs
 *k*-means Clustering
 ========================================
 
+.. _da_kmeans_set_data:
+
 .. doxygenfunction:: da_kmeans_set_data_s
+   :outline:
 .. doxygenfunction:: da_kmeans_set_data_d
+
+.. _da_kmeans_set_init_centres:
+
 .. doxygenfunction:: da_kmeans_set_init_centres_s
+   :outline:
 .. doxygenfunction:: da_kmeans_set_init_centres_d
+
+.. _da_kmeans_compute:
+
 .. doxygenfunction:: da_kmeans_compute_s
+   :outline:
 .. doxygenfunction:: da_kmeans_compute_d
+
+.. _da_kmeans_transform:
+
 .. doxygenfunction:: da_kmeans_transform_s
+   :outline:
 .. doxygenfunction:: da_kmeans_transform_d
+
+.. _da_kmeans_predict:
+
 .. doxygenfunction:: da_kmeans_predict_s
+   :outline:
 .. doxygenfunction:: da_kmeans_predict_d

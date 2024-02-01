@@ -39,7 +39,7 @@ The general form of a linear model fitting problem is as follows:
 
     \min_{\beta}\left[ C_{\theta}\left( y, g^{-1}(\ \beta \, \phi(X)\ ) \right) \right],
 
-where :math:`X` is an array of :math:`n_{\text{samples}}` observations with :math:`n_{\text{feat}}` features, :math:`y` is an array of :math:`n_{\text{samples}}` responses
+where :math:`X` is an array of :math:`n_{\text{samples}}` observations with :math:`n_{\text{features}}` features, :math:`y` is an array of :math:`n_{\text{samples}}` responses
 / labels, :math:`\phi` is a set of (possibly nonlinear) basis functions, :math:`\beta` is a set of weights /
 coefficients, :math:`g^{-1}` is a (possibly nonlinear) activation / link function, and :math:`C_{\theta}` is a cost /
 error function, which may depend on a set of (fixed) hyperparameters, :math:`\theta`.
@@ -137,34 +137,34 @@ penalty term to the cost function.
 Fitting Methods
 ===============
 
-Different methods are available to compute the models. The method is chosen automatically by default but can be set manually using the optional parameter ``linmod optim method`` (see the :ref:`options section <linmod_options>`).
+Different methods are available to compute the models. The method is chosen automatically by default but can be set manually using the optional parameter `optim method` (see the :ref:`options section <linmod_options>`).
 
 **Direct solvers**
 
-* QR (``linmod optim method = QR``). The standard MSE linear regression model can be computed using the QR factorization of the data matrix if no regularization term is required.
+* QR (`optim method`` = `QR`). The standard MSE linear regression model can be computed using the QR factorization of the data matrix if no regularization term is required.
 
 .. math::
 
    X = QR,
 
-where :math:`Q` is an :math:`n_{\text{samples}} \times n_{\text{feat}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\text{feat}}\times n_{\text{feat}}` triangular matrix.
+where :math:`Q` is a :math:`n_{\text{samples}} \times n_{\text{features}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\text{feat}}\times n_{\text{feat}}` triangular matrix.
 
 **Iterative solvers**
 
-* L-BFGS-B (``linmod optim method = lbfgs``) is a solver aimed at minimizing smooth nonlinear functions (:cite:t:`lbfgsb`). It can be used to compute both MSE and logistic models with or without :math:`\ell_2` regularization. It is not suitable when an :math:`\ell_1` regularization term is required.
+* L-BFGS-B (`optim method`` = `lbfgs`) is a solver aimed at minimizing smooth nonlinear functions (:cite:t:`lbfgsb`). It can be used to compute both MSE and logistic models with or without :math:`\ell_2` regularization. It is not suitable when an :math:`\ell_1` regularization term is required.
 
-* Coordinate Descent (``linmod optim method = coord``) is a solver aimed at minimizing nonlinear functions.
+* Coordinate Descent (`optim method`` = `coord`) is a solver aimed at minimizing nonlinear functions.
   It is particularly suitable for linear models with an :math:`\ell_1` regularization term and even Elastic Nets (:cite:t:`coord_elastic`).
 
 
 Available outputs
 =================
 
-Once a model is computed, some elements can be retrieved using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`:
+Once a model is computed, some elements can be retrieved using :ref:`da_handle_get_result_? <da_handle_get_result>`:
 
-* coefficients (:cpp:enumerator:`da_linmod_coeff`): The optimal coefficients of the fitted model
+* coefficients (:cpp:enumerator:`da_linmod_coef`): The optimal coefficients of the fitted model
 * rinfo[100] (:cpp:enumerator:`da_linmod_rinfo`): a set of values of interest
-   * rinfo[0]: :math:`n_{feat}`, the number of features in the model.
+   * rinfo[0]: :math:`n_{features}`, the number of features in the model.
    * rinfo[1]: :math:`n_{samples}`, the number of samples the model has been trained on.
    * rinfo[2]: :math:`n_{coef}`, the number of model coefficients.
    * rinfo[3]: intercept, 1 if an intercept term is present in the model, 0 otherwise.
@@ -179,11 +179,11 @@ Typical workflow for linear models
 The standard way of computing a linear model using AOCL-DA is as follows.
 
 1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
-2. Pass data to the handle using either :cpp:func:`da_linmod_define_features_s` or :cpp:func:`da_linmod_define_features_d`.
-3. Customize the model using :cpp:func:`da_options_set_int`, :cpp:func:`da_options_set_real_d`, :cpp:func:`da_options_set_real_s` and :cpp:func:`da_options_set_string` (see :ref:`below <linmod_options>` for a list of the available options).
-4. Compute the linear mdoel using :cpp:func:`da_linmod_fit_d` or :cpp:func:`da_linmod_fit_s`.
-5. Evaluate the model on new data using :cpp:func:`da_linmod_evaluate_model_d` or :cpp:func:`da_linmod_evaluate_model_s`
-6. Extract results using :cpp:func:`da_handle_get_result_d` or :cpp:func:`da_handle_get_result_s`.
+2. Pass data to the handle using either :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
+3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
+4. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
+5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
+6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
 
 
 .. _linmod_options:
@@ -198,14 +198,14 @@ Various options can be set to customize the linear models by calling one of thes
 .. csv-table:: Linear models options
    :header: "Option name", "Type", "Default", "Description", "Constraints"
 
-   "linmod optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `coord`, `lbfgs`, `lbfgsb`, or `qr`."
-   "linmod optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
-   "linmod optim convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
+   "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `coord`, `lbfgs`, `lbfgsb`, or `qr`."
+   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
+   "optim convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
-   "linmod lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
-   "linmod alpha", "real", ":math:`r=0`", "coefficient of alpha in the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r \le 1`"
-   "linmod optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-   "linmod intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
+   "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
+   "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
+   "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
+   "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
    "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
 
 

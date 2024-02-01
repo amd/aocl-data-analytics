@@ -417,7 +417,7 @@ TYPED_TEST(PCATest, ErrorExits) {
               da_status_invalid_input);
     EXPECT_EQ(da_handle_get_result_int(handle, da_rinfo, null_arr_int, null_arr_int),
               da_status_invalid_input);
-    EXPECT_EQ(da_handle_get_result_int(handle, da_linmod_coeff, &dim, results_arr_int),
+    EXPECT_EQ(da_handle_get_result_int(handle, da_linmod_coef, &dim, results_arr_int),
               da_status_unknown_query);
     dim = 0;
     EXPECT_EQ(da_handle_get_result_int(handle, da_rinfo, &dim, results_arr_int),

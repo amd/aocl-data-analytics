@@ -115,12 +115,11 @@ The following workflow can be used to fit a decision tree or a decision forest m
 
 1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_decision_tree`` /
    ``da_handle_decision_forest``.
-2. Pass data to the handle using either :cpp:func:`da_df_set_training_data_s` or :cpp:func:`da_df_set_training_data_d`.
-3. Set optional parameters, such as maximum depth, using :cpp:func:`da_options_set_int` and
-   :cpp:func:`da_options_set_string`  (see :ref:`options section <opts_decisiontree>`).
-4. Fit the model using :cpp:func:`da_df_fit_s` or :cpp:func:`da_df_fit_d`.
-5. Evaluate prediction accuracy on test data using :cpp:func:`da_df_score_s` or :cpp:func:`da_df_score_d`.
-6. Make predictions using the fitted model using :cpp:func:`da_df_predict_s` or :cpp:func:`da_df_predict_d`.
+2. Pass data to the handle using :ref:`da_df_set_training_data_? <da_df_set_training_data>`.
+3. Set optional parameters, such as maximum depth, using :ref:`da_options_set_? <da_options_set>`  (see :ref:`options section <df_options>`).
+4. Fit the model using :ref:`da_df_fit_? <da_df_fit>`.
+5. Evaluate prediction accuracy on test data using :ref:`da_df_score_? <da_df_score>`.
+6. Make predictions using the fitted model using :ref:`da_df_predict_? <da_df_predict>`.
 
 Options
 -------

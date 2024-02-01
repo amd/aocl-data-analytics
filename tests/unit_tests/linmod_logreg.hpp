@@ -67,7 +67,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         EXPECT_EQ(da_options_set_string(linmod_handle, op.name.c_str(), op.value.c_str()),
                   da_status_success);
     for (auto &op : ropts)
-        EXPECT_EQ(da_options_set_real(linmod_handle, op.name.c_str(), op.value),
+        EXPECT_EQ(da_options_set(linmod_handle, op.name.c_str(), op.value),
                   da_status_success);
     for (auto &op : iopts)
         EXPECT_EQ(da_options_set_int(linmod_handle, op.name.c_str(), op.value),
@@ -76,16 +76,14 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
               da_status_success);
 
     da_int intercept_int;
-    EXPECT_EQ(da_options_get_int(linmod_handle, "linmod intercept", &intercept_int),
+    EXPECT_EQ(da_options_get_int(linmod_handle, "intercept", &intercept_int),
               da_status_success);
     bool intercept = (bool)intercept_int;
 
     // No regularisation
     T alpha = 0, lambda = 0;
-    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod alpha", alpha),
-              da_status_success);
-    EXPECT_EQ(da_options_set_real(linmod_handle, "linmod lambda", lambda),
-              da_status_success);
+    EXPECT_EQ(da_options_set(linmod_handle, "alpha", alpha), da_status_success);
+    EXPECT_EQ(da_options_set(linmod_handle, "lambda", lambda), da_status_success);
 
     ///////////////
     // Get the data
@@ -117,9 +115,9 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     T *A = nullptr, *b = nullptr;
     A = new T[(ncols - 1) * nrows];
     b = new T[nrows];
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", nrows, A),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nrows),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", nrows, b),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nrows),
               da_status_success);
 
     ///////////////////
@@ -153,7 +151,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // read the computed coefficients
         T *coef = new T[nc];
         EXPECT_EQ(
-            da_handle_get_result(linmod_handle, da_result::da_linmod_coeff, &nc, coef),
+            da_handle_get_result(linmod_handle, da_result::da_linmod_coef, &nc, coef),
             da_status_success);
 
         // Check coefficients
@@ -191,9 +189,9 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // Extract the selections
         T *A_test = new T[(ncols_test - 1) * nrows_test];
         T *b_test = new T[nrows_test];
-        EXPECT_EQ(da_data_extract_selection(test_store, "features", nrows_test, A_test),
+        EXPECT_EQ(da_data_extract_selection(test_store, "features", A_test, nrows_test),
                   da_status_success);
-        EXPECT_EQ(da_data_extract_selection(test_store, "response", nrows_test, b_test),
+        EXPECT_EQ(da_data_extract_selection(test_store, "response", b_test, nrows_test),
                   da_status_success);
 
         // Check that the model evaluates the classes correctly

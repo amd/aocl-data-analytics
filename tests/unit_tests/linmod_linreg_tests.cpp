@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -44,33 +44,33 @@ typedef struct {
 // clang-format off
 const linregParam linregParamPos[] = {
     {"trivialNoint",      "trivial", {}, {}, {}, {}},
-    {"trivialNointLbfgs", "trivial", {}, {{"linmod optim method", "lbfgs"}}, {}, {}},
-    {"trivialIntercept",  "trivial", {{"linmod intercept", 1}}, {}, {}, {}},
-    {"trivialILbfgs",     "trivial", {{"linmod intercept", 1}}, {{"linmod optim method", "lbfgs"}}, {}, {}},
-    {"CoordNoReg", "trivialstd", {{"print level", 1}, {"linmod optim iteration limit", 300}},
-                                     {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",0.0f},{"linmod alpha",0.5f}},
-                                     {{"linmod lambda",0.0},{"linmod alpha",0.5}}
+    {"trivialNointLbfgs", "trivial", {}, {{"optim method", "lbfgs"}}, {}, {}},
+    {"trivialIntercept",  "trivial", {{"intercept", 1}}, {}, {}, {}},
+    {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"}}, {}, {}},
+    {"CoordNoReg", "trivialstd", {{"print level", 1}, {"optim iteration limit", 300}},
+                                     {{"optim method", "coord"}},
+                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0},{"alpha",0.5}}
                                      },
-    {"CoordL1Reg", "trivialstdl1",   {{"print level", 5}, {"linmod optim iteration limit", 15}},
-                                     {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}},
-                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}}
+    {"CoordL1Reg", "trivialstdl1",   {{"print level", 5}, {"optim iteration limit", 15}},
+                                     {{"optim method", "coord"}},
+                                     {{"lambda",5.0f},{"alpha",1.0f}},
+                                     {{"lambda",5.0},{"alpha",1.0}}
                                      },
-    {"CoordL2Reg", "trivialstdl2",   {{"print level", 1}, {"linmod optim iteration limit", 10}},
-                                     {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",10.0f},{"linmod alpha",0.0f}},
-                                     {{"linmod lambda",10.0},{"linmod alpha",0.0}}
+    {"CoordL2Reg", "trivialstdl2",   {{"print level", 1}, {"optim iteration limit", 10}},
+                                     {{"optim method", "coord"}},
+                                     {{"lambda",10.0f},{"alpha",0.0f}},
+                                     {{"lambda",10.0},{"alpha",0.0}}
                                      },
-    {"CoordElastic", "trivialstdl12",{{"print level", 1}, {"linmod optim iteration limit", 20}},
-                                     {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",12.0f},{"linmod alpha",0.9f}},
-                                     {{"linmod lambda",12.0},{"linmod alpha",0.9}}
+    {"CoordElastic", "trivialstdl12",{{"print level", 1}, {"optim iteration limit", 20}},
+                                     {{"optim method", "coord"}},
+                                     {{"lambda",12.0f},{"alpha",0.9f}},
+                                     {{"lambda",12.0},{"alpha",0.9}}
                                      },
-    {"CoordL1Reg_intrp", "trivialstdl1",   {{"linmod intercept", 1},{"print level", 1}, {"linmod optim iteration limit", 15}},
-                                     {{"linmod optim method", "coord"}},
-                                     {{"linmod lambda",5.0f},{"linmod alpha",1.0f}},
-                                     {{"linmod lambda",5.0},{"linmod alpha",1.0}}
+    {"CoordL1Reg_intrp", "trivialstdl1",   {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 15}},
+                                     {{"optim method", "coord"}},
+                                     {{"lambda",5.0f},{"alpha",1.0f}},
+                                     {{"lambda",5.0},{"alpha",1.0}}
                                      },
 };
 // clang-format on

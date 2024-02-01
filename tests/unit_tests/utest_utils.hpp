@@ -59,10 +59,10 @@ std::vector<T_out> convert_vector(const std::vector<T_in> &input) {
 }
 
 inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, double *x) {
-    return da_handle_get_result_d(handle, da_result::da_linmod_coeff, nc, x);
+    return da_handle_get_result_d(handle, da_result::da_linmod_coef, nc, x);
 }
 inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, float *x) {
-    return da_handle_get_result_s(handle, da_result::da_linmod_coeff, nc, x);
+    return da_handle_get_result_s(handle, da_result::da_linmod_coef, nc, x);
 }
 
 #endif

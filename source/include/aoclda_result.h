@@ -49,7 +49,7 @@ typedef enum da_result_ {
     da_rinfo =
         1, ///< General information array, containing a variety of metrics. See each solver's documentation for further information, since each solver stores different information in this array.
     // Linear models 101..200
-    da_linmod_coeff =
+    da_linmod_coef =
         101, ///< Optimal fitted coefficients produced by the last call to a linear regression solver.
     // Factorization 201..300
     da_pca_scores = 201, ///< Matrix of scores computed by the PCA API.
@@ -77,7 +77,7 @@ typedef enum da_result_ {
  * To check the available data stored by a given API check its associated documentation.
  *
  * @param handle a valid handle used to call any of the solvers.
- * @param query the data of interest, see \ref da_result. If the result is not avaible or not found in the \p handle then the function returns \ref da_status_unknown_query.
+ * @param query the data of interest, see \ref da_result. If the result is not available or not found in the \p handle then the function returns \ref da_status_unknown_query.
  * @param dim the size of the array \p result. If \p dim is too small, then on exit it will be overwritten with the correct size and the function will return \ref da_status_invalid_array_dimension.
  * @param result location of the array in which to store the data.
  *
@@ -87,7 +87,7 @@ typedef enum da_result_ {
  *         is either not available or not found in the \p handle.
  *         This can happen if you try an extract a result before performing the operation (for example,
  *         extracting the coefficient of a linear regression before actually performing a
- *         sucessful fit), or if the handle is of the wrong type (for example, a handle
+ *         successful fit), or if the handle is of the wrong type (for example, a handle
  *         initialized for linear models cannot contain results about a principal component analysis).
  * - \ref da_status_wrong_type - the floating point precision used to initialize the
  *         \p handle does not match the precision of \p result.
@@ -101,34 +101,10 @@ da_status da_handle_get_result_d(const da_handle handle, da_result query, da_int
 
 da_status da_handle_get_result_s(const da_handle handle, da_result query, da_int *dim,
                                  float *result);
-/** \} */
 
-/**
- * @brief Get results stored in a \ref da_handle
- *
- * Some solvers will store relevant data in the handle. These functions provide a means to extract it.
- * To check the available data stored by a given API check its associated documentation.
- *
- * @param handle a valid handle used to call any of the solvers.
- * @param query  the data of interest, see \ref da_result. If the result is not avaible or not found in the \p handle then the function returns \ref da_status_unknown_query.
- * @param dim the size of the array \p result. If \p dim is too small, then on exit it will be overwritten with the correct size and the function will return \ref da_status_invalid_array_dimension.
- * @param result location of the array in which to store the data.
- *
- * @return \ref da_status. The function returns:
- * - \ref da_status_success - the operation completed successfully.
- * - \ref da_status_unknown_query - the \p query
- *         is either not available or not found in the \p handle.
- *         This can happen if you try an extract a result before performing the operation (for example,
- *         extracting the coefficient of a linear regression before actually performing a
- *         sucessful fit), or if the handle is of the wrong type (for example, a handle
- *         initialized for linear models cannot contain results about a principal component analysis).
- *- \ref da_status_handle_not_initialized - the \p handle has not been initialized or is corrupted.
- * - \ref da_status_invalid_array_dimension - the size \p dim of the \p result
- *         array is too small. After the call \p dim contains the correct size.
- * - \ref da_status_invalid_pointer - the pointer to \p handle is invalid.
- */
 da_status da_handle_get_result_int(const da_handle handle, da_result query, da_int *dim,
                                    da_int *result);
+/** \} */
 
 #ifdef __cplusplus
 }

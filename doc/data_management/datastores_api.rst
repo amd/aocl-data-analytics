@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,10 +22,10 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
 
 
-Data Stores APIs
+
+Datastore APIs
 ****************
 
 .. _datastore_api:
@@ -50,15 +50,30 @@ Load Data into a Datastore
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfunction:: da_data_load_from_csv
 .. doxygenfunction:: da_data_hconcat
+
+
+.. _da_data_load_row:
+
 .. doxygenfunction:: da_data_load_row_int
+   :outline:
 .. doxygenfunction:: da_data_load_row_str
-.. doxygenfunction:: da_data_load_row_real_d
+   :outline:
 .. doxygenfunction:: da_data_load_row_real_s
+   :outline:
+.. doxygenfunction:: da_data_load_row_real_d
+   :outline:
 .. doxygenfunction:: da_data_load_row_uint8
+
+.. _da_data_load_col:
+
 .. doxygenfunction:: da_data_load_col_int
+   :outline:
 .. doxygenfunction:: da_data_load_col_str
+   :outline:
 .. doxygenfunction:: da_data_load_col_real_d
+   :outline:
 .. doxygenfunction:: da_data_load_col_real_s
+   :outline:
 .. doxygenfunction:: da_data_load_col_uint8
 
 
@@ -77,14 +92,26 @@ Data Selection
 Data Extraction
 ^^^^^^^^^^^^^^^
 
+.. _da_data_extract_selection:
+
 .. doxygenfunction:: da_data_extract_selection_int
-.. doxygenfunction:: da_data_extract_selection_real_d
+   :outline:
 .. doxygenfunction:: da_data_extract_selection_real_s
+   :outline:
+.. doxygenfunction:: da_data_extract_selection_real_d
+   :outline:
 .. doxygenfunction:: da_data_extract_selection_uint8
+
+.. _da_data_extract_column:
+
 .. doxygenfunction:: da_data_extract_column_int
+   :outline:
 .. doxygenfunction:: da_data_extract_column_real_s
+   :outline:
 .. doxygenfunction:: da_data_extract_column_real_d
+   :outline:
 .. doxygenfunction:: da_data_extract_column_uint8
+   :outline:
 .. doxygenfunction:: da_data_extract_column_str
 
 .. _api_column_header:
@@ -99,24 +126,40 @@ Column Headers
 
 .. _api_data_edition:
 
-Data Edition
+Data Editing
 ^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_get_n_rows
 .. doxygenfunction:: da_data_get_n_cols
+
+.. _da_data_get_element:
+
 .. doxygenfunction:: da_data_get_element_int
+   :outline:
 .. doxygenfunction:: da_data_get_element_real_d
+   :outline:
 .. doxygenfunction:: da_data_get_element_real_s
+   :outline:
 .. doxygenfunction:: da_data_get_element_uint8
+
+.. _da_data_set_element:
+
 .. doxygenfunction:: da_data_set_element_int
+   :outline:
 .. doxygenfunction:: da_data_set_element_real_d
+   :outline:
 .. doxygenfunction:: da_data_set_element_real_s
+   :outline:
 .. doxygenfunction:: da_data_set_element_uint8
 
 .. _api_data_miscellaneous:
 
 Miscellaneous
 ^^^^^^^^^^^^^
-The :cpp:type:`da_datastore` functionality also includes 
-:ref:`option setting <api_datastore_options>` and 
+
+The :cpp:type:`da_datastore` functionality also includes
+:ref:`option setting <api_datastore_options>` and
 :ref:`error handling <datastore_error_api>` capabilities.
+
+.. doxygentypedef:: da_ordering
+.. doxygenenum:: da_ordering_

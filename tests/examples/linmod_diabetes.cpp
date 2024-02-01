@@ -151,18 +151,17 @@ int main() {
     pass = pass && da_handle_init_d(&handle, da_handle_linmod) == da_status_success;
     pass =
         pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
-    pass = pass && da_options_set_real_d(handle, "linmod alpha", 1) == da_status_success;
-    pass =
-        pass && da_options_set_real_d(handle, "linmod lambda", 88) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "alpha", 1) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "lambda", 88) == da_status_success;
     pass = pass &&
            da_options_set_string(handle, "print options", "yes") == da_status_success;
-    pass = pass && da_options_set_int(handle, "linmod intercept", 0) == da_status_success;
+    pass = pass && da_options_set_int(handle, "intercept", 0) == da_status_success;
     pass = pass && da_options_set_int(handle, "print level", 2) == da_status_success;
-    pass = pass && da_options_set_int(handle, "linmod optim iteration limit", 35) ==
+    pass = pass &&
+           da_options_set_int(handle, "optim iteration limit", 35) == da_status_success;
+    pass = pass && da_options_set_real_d(handle, "optim convergence tol", 1.0e-5) ==
                        da_status_success;
-    pass = pass && da_options_set_real_d(handle, "linmod optim convergence tol",
-                                         1.0e-5) == da_status_success;
-    pass = pass && da_options_set_real_d(handle, "linmod optim progress factor", 1.0) ==
+    pass = pass && da_options_set_real_d(handle, "optim progress factor", 1.0) ==
                        da_status_success;
     pass = pass && da_linmod_define_features_d(handle, m, n, features.data(),
                                                rhs.data()) == da_status_success;
@@ -178,9 +177,9 @@ int main() {
     if (status == da_status_success) {
         std::cout << "Regression computed" << std::endl;
         // Query the amount of coefficient in the model (n+intercept)
-        da_handle_get_result_d(handle, da_linmod_coeff, &nx, x.data());
+        da_handle_get_result_d(handle, da_linmod_coef, &nx, x.data());
         x.resize(nx);
-        da_handle_get_result_d(handle, da_linmod_coeff, &nx, x.data());
+        da_handle_get_result_d(handle, da_linmod_coef, &nx, x.data());
         std::cout << "Coefficients: " << std::endl;
         std::cout.precision(3);
 
