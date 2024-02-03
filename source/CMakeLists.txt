@@ -88,6 +88,11 @@ add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
 target_link_libraries(aocl-da PUBLIC da_core lbfgsb lbfgsb_s ${LAPACK} ${BLAS}
                                      ${UTILS})
 
+if(WIN32 AND CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND BUILD_SMP)
+  target_link_libraries(aocl-da PUBLIC da_core lbfgsb lbfgsb_s ${LAPACK} ${BLAS}
+                                       ${UTILS} PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
 # Installation commands
 install(
   TARGETS aocl-da
