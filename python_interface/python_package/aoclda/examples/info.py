@@ -23,7 +23,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-import os, glob
+"""
+AOCL-DA information utilities
+"""
+
+import os
+import glob
+
 
 def examples_path():
     """
@@ -34,6 +40,7 @@ def examples_path():
 
     return this_dir
 
+
 def examples_list():
     """
     Returns a list of the examples bundled with your AOCL-DA Python installation
@@ -43,11 +50,12 @@ def examples_list():
     files = glob.glob(path)
     return [os.path.basename(x) for x in files]
 
+
 if __name__ == "__main__":
     print("\n")
     print("Path to AOCL-DA example Python scripts:\n")
     print(examples_path())
     print("\n")
     print("The following example files are available:\n")
-    print("\n".join([x for x in examples_list()]))
+    print("\n".join(examples_list()))
     print("\n")

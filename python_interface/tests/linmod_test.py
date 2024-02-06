@@ -22,11 +22,38 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# pylint: disable = missing-module-docstring
 
-# pylint: disable = missing-module-docstring wrong-import-position
-import os
-if os.name == 'nt':
-    INTEL_FCOMPILER = os.environ['INTEL_FCOMPILER']
-    os.add_dll_directory(INTEL_FCOMPILER + r'\redist\intel64_win\compiler')
 import numpy as np
-from ._aoclda import single, double
+import pytest
+from aoclda.linear_model import linmod, linmod_model
+import aoclda as da
+
+@pytest.mark.parametrize("da_precision, numpy_precision", [
+    (da.double, np.float64), (da.single, np.float32),
+])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_linear_regression(da_precision, numpy_precision, numpy_order):
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]],
+                 dtype=numpy_precision, order=numpy_order)
+    y = np.array([3., 6.5, 10., 12., 13., 19.], dtype=numpy_precision)
+    tol = np.sqrt(np.finfo(numpy_precision).eps)
+
+    # compute linear regression without intercept
+    lmod = linmod(linmod_model.mse, precision=da_precision)
+    lmod.fit(X, y)
+
+    # check expected results
+    expected_coef = np.array([2.45, 0.35], dtype=numpy_precision)
+    norm = np.linalg.norm(np.abs(lmod.coef) - np.abs(expected_coef))
+    assert norm < tol
+
+    # same test with intercept
+    lmod = linmod(linmod_model.mse, precision=da_precision, intercept=True)
+    lmod.fit(X, y)
+
+    # check expected results
+    expected_coef = np.array(
+        [2.35, 0.35, 0.43333333333333535], dtype=numpy_precision)
+    norm = np.linalg.norm(np.abs(lmod.coef) - np.abs(expected_coef))
+    assert norm < tol

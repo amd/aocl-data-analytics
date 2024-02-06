@@ -27,20 +27,46 @@
 
 from ._aoclda.linear_model import pybind_linmod, linmod_model
 
+
 class linmod(pybind_linmod):
     """
-    Linear models. ADD DOC here
+    Linear models.
+
+    Args:
+
+        linmod_model (aoclda.linear_model.linmod_model): Which linear model to compute.
+            Can take the value 'mse' (mean squared error) or 'logistic'.
+
+        intercept (bool, optional): Controls whether to add an intercept variable to the model.
+            Default=False.
+
+        precision (aoclda.precision, optional): Whether to compute the linear model in double or
+            single precision. It can take the values ``aoclda.single`` or ``aoclda.double``.
+            Default = ``aoclda.double``.
     """
 
     def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0):
         """
-        Compute the model defined on data X, y
+        Computes the chosen linear model on the feature matrix X and response vector y
+
+        Args:
+            X (numpy.ndarray): The feature matrix on which to compute the model.
+                Its shape is (n_samples, n_features).
+
+            y (numpy.ndarray): The response vector. Its shape is (n_samples).
+
+            reg_lambda (float, optional): :math:`lambda`, the magnitude of the regularization term.
+                Default=0.0.
+
+            reg_alpha (float, optional): :math:`alpha`, the share of the :math:`\ell_1` term in the
+                regularization.
         """
-        return self.pybind_fit(X, y, reg_lambda=reg_lambda, reg_alpha=reg_alpha)
+        self.pybind_fit(X, y, reg_lambda=reg_lambda, reg_alpha=reg_alpha)
 
     @property
     def coef(self):
         """
-        output coefficients
+        numpy.ndarray: contains the output coefficients of the model. If an intercept variable was
+            required, it corresponds to the last element.
         """
         return self.get_coef()

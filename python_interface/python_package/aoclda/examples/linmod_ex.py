@@ -22,51 +22,33 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# pylint: disable = invalid-name
 
-# """
-# To make pylint happy
-# """
+"""
+Linear regression example Python script
+"""
 
-# from aoclda.linear_model import linmod, linmod_model
-# import aoclda as da
-# import numpy as np
+import sys
+from aoclda.linear_model import linmod, linmod_model
+import numpy as np
 
-# if __name__ == "__main__":
 
-#     np.set_printoptions(precision=117)
+def linmod_example():
+    """
+    Linear regression with an intercept variable
+    """
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]])
+    y = np.array([3., 6.5, 10., 12., 13., 19.])
+    try:
+        lmod = linmod(linmod_model.mse, intercept=True)
+        lmod.fit(X, y)
+    except RuntimeError:
+        sys.exit(1)
 
-#     # Small standard linra regression
-#     lmod = linmod(linmod_model.mse)
-#     X = np.array([[1, 1], [2, 3], [3, 5], [4, 1], [5, 1]], dtype=np.float64)
-#     y = np.array([1, 1, 1, 1, 1], dtype=np.float64)
-#     lmod.fit(X, y)
-#     coef = lmod.get_coef()
-#     print(f"data type: {coef.dtype}")
-#     print(f"coefficients: [{coef[0]}, {coef[1]}]")
-#     print('expected    : [0.199256, 0.130354]')
+    coef = lmod.coef
+    print(f"coefficients: [{coef[0]:.3f}, {coef[1]:.3f}, {coef[2]:.3f}]")
+    print('expected    : [2.350, 0.350, 0.433]')
 
-#     # The same test in single precision
-#     lmod_s = linmod(linmod_model.mse, precision=da.single)
-#     Xs = np.array([[1, 1], [2, 3], [3, 5], [4, 1], [5, 1]], dtype=np.float32)
-#     ys = np.array([1, 1, 1, 1, 1], dtype=np.float32)
-#     lmod_s.fit(Xs, ys)
-#     coef_s = lmod_s.get_coef()
-#     print(f"data type: {coef_s.dtype}")
-#     print(f"coefficients: [{coef_s[0]}, {coef_s[1]}]")
-#     print('expected    : [0.199256, 0.130354]')
 
-#     # another test with intercept defined
-#     lmod2 = linmod(linmod_model.mse, intercept=True)
-#     lmod2.fit(X, y)
-#     coef = lmod2.get_coef()
-#     print("coefficients: ", end='')
-#     for c in coef:
-#         print(f"{c}  ", end='')
-#     print()
-
-#     # test invalid input in define model
-#     lmod_inv = linmod(linmod_model.mse)
-#     try:
-#         coef = lmod_inv.get_coef()  # coef not available
-#     except RuntimeError:
-#         lmod_inv.print_error_message()
+if __name__ == "__main__":
+    linmod_example()

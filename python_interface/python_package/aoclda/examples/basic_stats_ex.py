@@ -1,5 +1,5 @@
 # Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -10,7 +10,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -21,15 +21,22 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 
+"""
+Basic statistics xeample python script
+"""
 
 from aoclda.basic_stats import axis, mean
 import numpy as np
 
-if __name__ == "__main__":
+
+def basic_stats_example():
+    """
+    Compute the mean of the rows and columns of a data matrix
+    """
     np.set_printoptions(precision=117)
-    a = np.array([[1.1,2.213,3.3], [4,5.013,6]], dtype=np.float32)
+    a = np.array([[1.1, 2.213, 3.3], [4, 5.013, 6]], dtype=np.float32)
     mean_all = mean(axis.all, a)
     print(mean_all)
     mean_col = mean(axis.col, a)
@@ -37,10 +44,14 @@ if __name__ == "__main__":
     mean_row = mean(axis.row, a)
     print(mean_row)
 
-    b = np.array([[1.1,2.213,3.3], [4,5.013,6]], dtype=np.float64)
+    b = np.array([[1.1, 2.213, 3.3], [4, 5.013, 6]], dtype=np.float64)
     mean_all = mean(axis.all, b)
     print(mean_all)
     mean_col = mean(axis.col, b)
     print(mean_col)
     mean_row = mean(axis.row, b)
     print(mean_row)
+
+
+if __name__ == "__main__":
+    basic_stats_example()
