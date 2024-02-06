@@ -4,11 +4,19 @@
    ...
    obj:*blis*
 }
+
 {
    ignore_blis
    Memcheck:Leak
    ...
    obj:*blis*
+}
+
+{
+   ignore_blis
+   Memcheck:Leak
+   ...
+   fun:*blis*
 }
 
 {
