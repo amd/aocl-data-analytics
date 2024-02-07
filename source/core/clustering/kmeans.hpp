@@ -53,6 +53,9 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     // Set true when initialization is complete
     bool initdone = false;
 
+    // Set true if set_init_centres is called
+    bool centres_supplied = false;
+
     // Set true when k-means is computed successfully
     bool iscomputed = false;
 
@@ -77,17 +80,18 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     // Convergence tolerance
     T tol = 1.0;
 
-    // Random seed
+    // Random number generation
     da_int seed = 0;
+    std::mt19937_64 mt_gen;
 
     // Pointer to error trace
     da_errors::da_error_t *err = nullptr;
 
-    // Arrays used by the SVD, and to store results
+    // Arrays used internally, and to store results
     std::vector<da_int> labels;     // labels
     std::vector<T> cluster_centres; // cluster centres
     T inertia = 0.0;                // Inertia
-    std::vector<T> A_copy, C_copy;
+    std::vector<T> A_copy, init_centres, max_vals, min_vals;
 
   public:
     da_options::OptionRegistry opts;
@@ -102,6 +106,12 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_status set_init_centres(const T *C, da_int ldc);
 
     da_status compute();
+
+    //void initialize_centres();
+
+    //void initialize_rng();
+
+    //da_status compute_max_min_vals();
 
     da_status transform(da_int m_samples, da_int m_features, const T *X, da_int ldx,
                         T *X_transform, da_int ldx_transform);
@@ -194,7 +204,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     };
 };
 
-/* Store the user's data matrix in preparation for PCA computation */
+/* Store the user's data matrix in preparation for k-means computation */
 template <typename T>
 da_status da_kmeans<T>::set_data(da_int n_samples, da_int n_features, const T *A,
                                  da_int lda) {
@@ -245,11 +255,19 @@ da_status da_kmeans<T>::set_data(da_int n_samples, da_int n_features, const T *A
     opts.set("n_clusters", std::min(temp_clusters, n_samples));
 
     if (temp_clusters > n_samples)
-        return da_warn(
-            err, da_status_incompatible_options,
-            "The requested number of principal components has been decreased from " +
-                std::to_string(temp_clusters) + " to " + std::to_string(n_samples) +
-                " due to the size of the data array.");
+        return da_warn(err, da_status_incompatible_options,
+                       "The requested number of clusters has been decreased from " +
+                           std::to_string(temp_clusters) + " to " +
+                           std::to_string(n_samples) +
+                           " due to the size of the data array.");
+
+    // Allocate memory for the initial cluster centres
+    try {
+        init_centres.resize(n_clusters * n_features);
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error,
+                        "Memory allocation failed."); // LCOV_EXCL_LINE
+    }
 
     return da_status_success;
 }
@@ -267,21 +285,18 @@ template <typename T> da_status da_kmeans<T>::set_init_centres(const T *C, da_in
         return da_error(
             err, da_status_invalid_input,
             "The function was called ldc = " + std::to_string(ldc) +
-                " and n_clustersis currently set to = " + std::to_string(n_clusters) +
+                " and n_clusters is currently set to = " + std::to_string(n_clusters) +
                 ". Constraint: ldc >= n_clusters.");
 
-    try {
-        C_copy.resize(n_clusters * n_features);
-    } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error,
-                        "Memory allocation failed."); // LCOV_EXCL_LINE
-    }
     // Copy the input matrix into internal matrix buffer
     for (da_int j = 0; j < n_features; j++) {
         for (da_int i = 0; i < n_clusters; i++) {
-            C_copy[i + j * n_clusters] = C[i + ldc * j];
+            init_centres[i + j * n_clusters] = C[i + ldc * j];
         }
     }
+
+    // Record that centres have been set
+    centres_supplied = true;
 
     return da_status_success;
 }
@@ -289,20 +304,44 @@ template <typename T> da_status da_kmeans<T>::set_init_centres(const T *C, da_in
 /* Compute the k-means clusters */
 template <typename T> da_status da_kmeans<T>::compute() {
 
+    da_status status = da_status_success;
+
     if (initdone == false)
         return da_error(err, da_status_no_data,
                         "No data has been passed to the handle. Please call "
                         "da_kmeans_set_data_s or da_kmeans_set_data_d.");
 
-    // Read in options and store in class together with associated variables
+    // Read in options and store in class
     this->opts.get("n_clusters", n_clusters);
 
     std::string opt_method;
-
     this->opts.get("initialization method", opt_method, init_method);
 
     std::string opt_alg;
     this->opts.get("algorithm", opt_alg, algorithm);
+
+    this->opts.get("n_init", n_init);
+
+    this->opts.get("max_iter", max_iter);
+
+    this->opts.get("convergence tolerance", tol);
+
+    this->opts.get("seed", seed);
+
+    // Check for conflicting options
+    if (n_init > 1 && init_method == supplied) {
+        std::string buff = "n_init was set to " + std::to_string(n_init) +
+                           " but the initialization method was set to 'supplied'. The "
+                           "k-means algorithm will only be run once.";
+        n_init = 1;
+        da_warn(err, da_status_incompatible_options, buff);
+    }
+
+    if (init_method == supplied && centres_supplied == false) {
+        return da_error(err, da_status_no_data,
+                        "The initialization method was set to 'supplied' but no initial "
+                        "centres have been provided.");
+    }
 
     // Initialize some workspace arrays
     try {
@@ -313,10 +352,81 @@ template <typename T> da_status da_kmeans<T>::compute() {
                         "Memory allocation failed."); // LCOV_EXCL_LINE
     }
 
+    // If needed, initialize random number generation
+    //da_kmeans<T>::initialize_rng();
+
+    // If needed compute max and min values for each column
+
+    //status = da_kmeans<T>::compute_max_min_vals();
+    //if (status != da_status_success) {
+    //     return da_status;
+    //}
+    // Run k-means algorithm n_init times and select the run with the best inertia
+
+    //for (da_int run = 0; run < n_init; run++) {
+
+    // Initialize the centres if needed
+    //da_kmeans<T>::initialize_centres();
+
+    // Perform k-means
+
+    // Check if it's the best run yet
+    //}
+
     iscomputed = true;
 
+    return status;
+}
+
+/* Initialize the centres, if needed, for the start of k-means computation*/
+//template <typename T> void da_kmeans<T>::initialize_centres() {
+//switch (init_method) {
+//case random_centres:
+//std::generate();
+// CARRY ON FROM HERE
+//  break;
+//case kmeanspp:
+//  break;
+// default:
+//}
+//}
+
+/* Initialize the random number generator, if needed */
+/*
+template <typename T> void da_kmeans<T>::initialize_rng() {
+    if (init_method != supplied) {
+        if (seed == -1) {
+            std::random_device r;
+            seed = std::abs((da_int)r());
+        }
+        mt_gen.seed(seed);
+    }
+}
+*/
+
+/* Allocate and populate arrays of max and min values for each column, but only if needed*/
+/*
+template <typename T> da_status da_kmeans<T>::compute_max_min_vals() {
+    if (init_method != supplied) {
+
+        try {
+            max_vals.resize(n_features);
+            min_vals.resize(n_features);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error,
+                            "Memory allocation failed."); // LCOV_EXCL_LINE
+        }
+
+        for (da_int i = 0; i < n_features; i++) {
+            max_vals[i] = std::max_element(A_copy.begin() + i * n_samples,
+                                           A_copy.begin() + (i + 1) * n_samples);
+            min_vals[i] = std::min_element(A_copy.begin() + i * n_samples,
+                                           A_copy.begin() + (i + 1) * n_samples);
+        }
+    }
     return da_status_success;
 }
+*/
 
 template <typename T>
 da_status da_kmeans<T>::transform(da_int m_samples, da_int m_features, const T *X,
