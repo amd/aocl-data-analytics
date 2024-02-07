@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -87,7 +87,7 @@ int main() {
     const char filename[](DATA_DIR "/diabetes.csv");
     da_datastore_init(&csv);
     da_datastore_options_set_int(csv, "CSV whitespace delimiter", 1);
-    da_datastore_options_set_string(csv, "CSV comment char", "#");
+    da_datastore_options_set_string(csv, "CSV comment", "#");
     da_datastore_options_set_int(csv, "CSV use header row", 1);
     status = da_data_load_from_csv(csv, filename);
     if (status != da_status_success) {
