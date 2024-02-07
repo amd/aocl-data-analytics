@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -30,27 +30,35 @@ Factorization APIs
 
 Principal component analysis and the SVD
 ========================================
+.. tab-set::
 
-.. _da_pca_set_data:
+   .. tab-item:: Python
 
-.. doxygenfunction:: da_pca_set_data_s
-   :outline:
-.. doxygenfunction:: da_pca_set_data_d
+      .. autoclass:: aoclda.factorization.PCA(n_components=1, bias='unbiased', method='covariance', solver='auto', precision=aoclda.double)
+         :members:
 
-.. _da_pca_compute:
+   .. tab-item:: C
 
-.. doxygenfunction:: da_pca_compute_s
-   :outline:
-.. doxygenfunction:: da_pca_compute_d
+      .. _da_pca_set_data:
 
-.. _da_pca_transform:
+      .. doxygenfunction:: da_pca_set_data_s
+         :outline:
+      .. doxygenfunction:: da_pca_set_data_d
 
-.. doxygenfunction:: da_pca_transform_s
-   :outline:
-.. doxygenfunction:: da_pca_transform_d
+      .. _da_pca_compute:
 
-.. _da_pca_inverse_transform:
+      .. doxygenfunction:: da_pca_compute_s
+         :outline:
+      .. doxygenfunction:: da_pca_compute_d
 
-.. doxygenfunction:: da_pca_inverse_transform_s
-   :outline:
-.. doxygenfunction:: da_pca_inverse_transform_d
+      .. _da_pca_transform:
+
+      .. doxygenfunction:: da_pca_transform_s
+         :outline:
+      .. doxygenfunction:: da_pca_transform_d
+
+      .. _da_pca_inverse_transform:
+
+      .. doxygenfunction:: da_pca_inverse_transform_s
+         :outline:
+      .. doxygenfunction:: da_pca_inverse_transform_d

@@ -77,47 +77,84 @@ Typical workflow for PCA
 ------------------------
 The standard way of computing the principal component analysis using AOCL-DA  is as follows.
 
-1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_pca``.
-2. Pass data to the handle using :ref:`da_pca_set_data_? <da_pca_set_data>`.
-3. Set the number of principal components required and the type of PCA using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <pca_options>`).
-4. Compute the PCA using :ref:`da_pca_compute_? <da_pca_compute>`.
-5. Perform further transformations as required, using :ref:`da_pca_transform_? <da_pca_transform>` or :ref:`da_pca_inverse_transform_? <da_pca_inverse_transform>`.
-6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
+.. tab-set::
 
+   .. tab-item:: Python
+      :sync: Python
+
+      1. Initialize a :func:`aoclda.factorization.PCA` object with options set in the class constructor.
+      2. Compute the PCA for your data matrix using :func:`aoclda.factorization.PCA.fit`.
+      3. Perform further transformations in necessary using :func:`aoclda.factorization.PCA.transform` or :func:`aoclda.factorization.PCA.inverse_transform`.
+      4. Extract results from the :func:`aoclda.factorization.PCA` object via its class attributes.
+
+   .. tab-item:: C
+      :sync: C
+
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_pca``.
+      2. Pass data to the handle using :ref:`da_pca_set_data_? <da_pca_set_data>`.
+      3. Set the number of principal components required and the type of PCA using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <pca_options>`).
+      4. Compute the PCA using :ref:`da_pca_compute_? <da_pca_compute>`.
+      5. Perform further transformations as required, using :ref:`da_pca_transform_? <da_pca_transform>` or :ref:`da_pca_inverse_transform_? <da_pca_inverse_transform>`.
+      6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
 
 .. _pca_options:
 
 Options
 -------
 
-The following options can be set using :ref:`da_options_set_? <da_options_set>`:
+.. tab-set::
 
-.. update options using table _opts_pca
-.. csv-table:: PCA options
-   :header: "Option Name", "Type", "Default", "Description", "Constraints"
+   .. tab-item:: Python
+      :sync: Python
 
-   "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix", ":math:`s=` `correlation`, `covariance`, or `svd`."
-   "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances", ":math:`s=` `biased`, or `unbiased`."
-   "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`"
-   "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition", ":math:`s=` `auto`, `gesdd`, `gesvd`, or `gesvdx`."
+      The available Python options are detailed in the :func:`aoclda.factorization.PCA` class constructor.
 
-If the `pca method` option is set to `svd` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
-Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
+   .. tab-item:: C
+      :sync: C
 
-If a full decomposition is required (so that all principal components are found) then `svd solver` should be set to `gesdd`. The LAPACK routines DGESDD or SGESDD (for double and single precision data respectively) will then be used. This choice offers the best performance. Setting `svd solver` to `auto` results in the same behaviour.
-`svd solver` should only be set to `gesvd` (so that the LAPACK routines DGESVD or SGESVD are used) if there is insufficient memory for the workspace requirements of `gesdd`, or if `gesdd` encounters convergence issues.
-If a partial decomposition is required then, depending on your data matrix, `gesvdx` may be faster (so that the LAPACK routines DGESVDX or SGESVDX are used). If `svd solver` is set to `auto`, then these routine will only be used when the number of principal components required is less than 10% of the smallest dimension of your data matrix.
+      The following options can be set using :ref:`da_options_set_? <da_options_set>`:
+
+      .. csv-table:: PCA options
+         :header: "Option Name", "Type", "Default", "Description", "Constraints"
+
+         "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix", ":math:`s=` `correlation`, `covariance`, or `svd`."
+         "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances", ":math:`s=` `biased`, or `unbiased`."
+         "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`"
+         "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition", ":math:`s=` `auto`, `gesdd`, `gesvd`, or `gesvdx`."
+
+      If the `pca method` option is set to `svd` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
+      Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
+
+      If a full decomposition is required (so that all principal components are found) then `svd solver` should be set to `gesdd`. The LAPACK routines DGESDD or SGESDD (for double and single precision data respectively) will then be used. This choice offers the best performance. Setting `svd solver` to `auto` results in the same behaviour.
+      `svd solver` should only be set to `gesvd` (so that the LAPACK routines DGESVD or SGESVD are used) if there is insufficient memory for the workspace requirements of `gesdd`, or if `gesdd` encounters convergence issues.
+      If a partial decomposition is required then, depending on your data matrix, `gesvdx` may be faster (so that the LAPACK routines DGESVDX or SGESVDX are used). If `svd solver` is set to `auto`, then these routine will only be used when the number of principal components required is less than 10% of the smallest dimension of your data matrix.
 
 Examples
 ========
 
-The code below can be found in ``pca.cpp`` in the ``examples`` folder of your installation.
+.. tab-set::
 
-.. collapse:: PCA Example Code
+   .. tab-item:: Python
+      :sync: Python
 
-    .. literalinclude:: ../../tests/examples/pca.cpp
-        :language: C++
-        :linenos:
+      The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+      .. collapse:: PCA Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/pca_ex.py
+              :language: Python
+              :linenos:
+
+   .. tab-item:: C
+      :sync: C
+
+      The code below can be found in ``pca.cpp`` in the ``examples`` folder of your installation.
+
+      .. collapse:: PCA Example
+
+          .. literalinclude:: ../../tests/examples/pca.cpp
+              :language: C++
+              :linenos:
 .. toctree::
     :maxdepth: 1
     :hidden:

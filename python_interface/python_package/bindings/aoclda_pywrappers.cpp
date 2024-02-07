@@ -155,15 +155,13 @@ class linmod : public pyda_handle {
         // Set the real optional parameters
         if (precision == da_double) {
             status = da_options_set_real_d(handle, "lambda", reg_lambda);
-            std::cout << "STATUS " << status << std::endl;
             exception_check(status);
             status = da_options_set_real_d(handle, "alpha", reg_alpha);
-            std::cout << "STATUS " << status << std::endl;
             exception_check(status);
         } else {
-            status = da_options_set_real_d(handle, "lambda", reg_lambda);
+            status = da_options_set_real_s(handle, "lambda", reg_lambda);
             exception_check(status);
-            status = da_options_set_real_d(handle, "alpha", reg_alpha);
+            status = da_options_set_real_s(handle, "alpha", reg_alpha);
             exception_check(status);
         }
 

@@ -27,6 +27,8 @@
 # Configuration file for the Sphinx documentation builder.
 
 # -- Project information -----------------------------------------------------
+import sys
+import os
 project = 'AOCL-DA'
 copyright = '2023, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
@@ -34,14 +36,13 @@ version = ''
 release = '4.2.1'
 
 # -- Get doc working for Python ----------------------------------------------
-import os
-import sys
 # Add to PYTHONPATH
 sys.path.insert(0, os.path.relpath('../python_interface/'))
 autodoc_mock_imports = ['aoclda._aoclda', 'numpy']
 
 # -- General configuration ---------------------------------------------------
-extensions = ['sphinxcontrib.bibtex', 'breathe', 'sphinx.ext.napoleon', 'sphinx.ext.autodoc', 'sphinx_collapse']
+extensions = ['sphinxcontrib.bibtex', 'breathe', 'sphinx.ext.napoleon',
+              'sphinx.ext.autodoc', 'sphinx_collapse', 'sphinx_design']
 bibtex_bibfiles = ['refs.bib']
 bibtex_reference_style = 'author_year'
 breathe_default_project = 'aocl-da'
@@ -54,8 +55,8 @@ templates_path = ['_template']
 
 # -- MathJax config ----------------------------------------------------------
 mathjax3_config = {
-    'chtml' : {
-        'mtextInheritFont' : 'true',
+    'chtml': {
+        'mtextInheritFont': 'true',
     }
 }
 

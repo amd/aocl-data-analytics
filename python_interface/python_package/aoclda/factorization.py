@@ -33,38 +33,7 @@ class PCA(pybind_PCA):
     """
     Principal component analysis (PCA).
 
-    The PCA linearly transforms a set of correlated feature vectors (the columns of the data matrix)
-    into a new uncorrelated coordinate system.
-    The new coordinates (which are known as the principal components) are chosen such that the first
-    coordinate accounts for the greatest variance in the data, the second coordinate accounts for
-    the second greatest variance, etc.
-
-    Prior to computing the PCA the data matrix is typically standardized by shifting each column so
-    that it has a mean of zero. It can then be shown that the principal components are the
-    eigenvalues of the covariance matrix corresponding to the mean-centered data matrix.
-
-    If the features of the data matrix vary greatly in magnitude, then in addition to mean-centering
-    it can be useful to normalize each column by its standard deviation. In this case the principal
-    components are the eigenvalues of the correlation matrix corresponding to the mean-centered data
-    matrix.
-
-    The PCA is closely related to a matrix factorization known as the *singular value decomposition*
-    (or SVD),
-
-    .. math::
-
-       A = U\Sigma V^T,
-
-    where :math:`A` is a (standardized) data matrix of size
-    ``n_samples`` :math:`\\times` ``n_features``, :math:`\Sigma` is a non-negative diagonal matrix
-    of size ``n_samples`` :math:`\\times` ``n_features`` and :math:`U` and :math:`V` are orthogonal
-    matrices of size ``n_samples`` :math:`\\times` ``n_samples`` and ``n_features`` :math:`\\times`
-    ``n_features`` respectively. The nonzero entries of :math:`\Sigma` are known as the
-    *singular values* of :math:`A`.
-
-    Internally, AOCL-DA computes the PCA via the SVD (with :math:`\Sigma` and :math:`V` truncated
-    according to the number of principal components requested) rather than by eigenvalue
-    decomposition of the covariance/correlation matrix.
+    Find all or some of the principal components of a data matrix.
 
     Args:
         n_components (int, optional): Number of components to keep. Default=1.
