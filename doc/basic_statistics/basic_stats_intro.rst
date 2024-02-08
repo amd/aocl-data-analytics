@@ -39,30 +39,51 @@ Choosing an axis
 ------------------
 
 Most statistical quantities can be computed by column, by row or for the data matrix overall.
-This is specified using the :cpp:type:`da_axis` enum.
 
-The :cpp:type:`da_axis` enum can take the following values:
+.. tab-set::
 
-- ``da_axis_col`` - statistical quantities will be computed for each column of the data matrix
+   .. tab-item:: Python
+      :sync: Python
 
-- ``da_axis_row`` - statistical quantities will be computed for each row of the data matrix
+      NOT YET IMPLEMENTED
 
-- ``da_axis_all`` - statistical quantities will be computed for the whole data matrix
+   .. tab-item:: C
+      :sync: C
 
-For example, if the routine :cpp:func:`da_mean_s` is called with the :cpp:type:`da_axis` argument set
-to :cpp:enumerator:`da_axis_col`, then ``n_cols`` means will be computed, one for each column. If the
-:cpp:type:`da_axis` argument is set to ``da_axis_all``, then a single mean will be computed.
+      This is specified using the :cpp:type:`da_axis` enum.
+
+      The :cpp:type:`da_axis` enum can take the following values:
+
+      - ``da_axis_col`` - statistical quantities will be computed for each column of the data matrix
+
+      - ``da_axis_row`` - statistical quantities will be computed for each row of the data matrix
+
+      - ``da_axis_all`` - statistical quantities will be computed for the whole data matrix
+
+      For example, if the routine :cpp:func:`da_mean_s` is called with the :cpp:type:`da_axis` argument set
+      to :cpp:enumerator:`da_axis_col`, then ``n_cols`` means will be computed, one for each column. If the
+      :cpp:type:`da_axis` argument is set to ``da_axis_all``, then a single mean will be computed.
 
 Examples
 --------
 
-The code below can be found in ``basic_statistics.cpp`` in the ``examples`` folder of your installation.
+.. tab-set::
 
-.. collapse:: Basic Statistics Example Code
+   .. tab-item:: Python
+      :sync: Python
 
-    .. literalinclude:: ../../tests/examples/basic_statistics.cpp
-        :language: C++
-        :linenos:
+      The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+   .. tab-item:: C
+      :sync: C
+
+      The code below can be found in ``basic_statistics.cpp`` in the ``examples`` folder of your installation.
+
+      .. collapse:: Basic Statistics Example Code
+
+         .. literalinclude:: ../../tests/examples/basic_statistics.cpp
+            :language: C++
+            :linenos:
 
 .. toctree::
     :maxdepth: 1

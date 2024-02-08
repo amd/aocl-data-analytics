@@ -157,6 +157,7 @@ Examples
           .. literalinclude:: ../../tests/examples/pca.cpp
               :language: C++
               :linenos:
+
 .. toctree::
     :maxdepth: 1
     :hidden:

@@ -25,25 +25,24 @@
 
 
 
-.. _chapter_gen_intro:
+.. _C_intro:
 
 Introduction
 ************
 
-This section contains instructions for writing code that calls AOCL-DA and for building
+This section contains instructions for writing code that calls AOCL-DA using the C APIs and for building
 applications that link to the library.
 Numerous example programs are also provided in the ``examples`` folder within your
 AOCL-DA installation directory.
 
-AOCL-DA has a C-compatible interface, which has been chosen to make it as seamless as
+The C interface has been designed to make it as seamless as
 possible to integrate with the library from whichever programming language you are using.
-In addition, a :ref:`Python API<chapter_python_intro>` exists for the algorithmic functions, and :ref:`C++ overloads<cpp_overloads>` are available.
-All interfaces call the same underlying code base.
+In addition, a header file containing :ref:`C++ overloads<cpp_overloads>` is available for C++ users who wish to abstract away the floating-point data type.
 
 Library Workflow
 ================
 
-The intended workflow for using the AOCL-DA library is as follows:
+The intended workflow for using the AOCL-DA C APIs is as follows:
 
 1. **Load data from memory.** Data can be obtained from various sources:
 
@@ -75,7 +74,7 @@ Linking your Application to AOCL-DA
 
 Linking on Linux
 ------------------
-These instructions assume your application is written in C++, but AOCL-DA has been
+These instructions assume your application is written in C++, but the AOCL-DA C APIs have been
 designed to make calling from other languages as straightforward as possible.
 In the example compilation commands below, ``INT_LIB`` is either ``LP64`` or
 ``ILP64`` for 32 and 64 bit integers respectively.
@@ -128,19 +127,20 @@ for 32 and 64 bit integers respectively.
 
 .. code-block::
 
-    cl <example_name>.cpp /I \<path to aocl-da headers>\include_<INT_LIB> /EHsc /MD
-       \<path to aocl-da>\lib_<INT_LIB>\aocl-da.lib
-       \<path to libflame>\lib_<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
-       \<path to blis>\lib_<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
+    cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
+       \<path to aocl-da>\lib\<INT_LIB>\aocl-da.lib
+       \<path to libflame>\lib\<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
+       \<path to blis>\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
 
 The same command should work with ``cl`` replaced by ``clang-cl`` and linking statically using ``/MT``.
 
-**Note** that you should ensure the folders containing the libraries to be linked are on your
-Windows ``PATH`` environment variable e.g. using ``set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>``.
-Depending on how your system is set up, and which functions you are using, you may also need to
-link to some Fortran runtime libraries such as ``libfifcore-mt.lib``, ``ifconsol.lib``,
-``libifportmd.lib``, ``libmmd.lib``, ``libirc.lib`` and ``svml_dispmd.lib``.
-The easiest way to do this is to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
+.. note::
+   You should ensure the folders containing the libraries to be linked are on your
+   Windows ``PATH`` environment variable e.g. using ``set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>``.
+   Depending on how your system is set up, and which functions you are using, you may also need to
+   link to some Fortran runtime libraries such as ``libfifcore-mt.lib``, ``ifconsol.lib``,
+   ``libifportmd.lib``, ``libmmd.lib``, ``libirc.lib`` and ``svml_dispmd.lib``.
+   The easiest way to do this is to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
 
 Compiling using CMake
 ---------------------
@@ -221,4 +221,10 @@ Your C++ compiler will instead call the correct function based on the floating p
 For some functions, overloading is not possible (for example, functions such as :cpp:func:`da_handle_init_s` and :cpp:func:`da_handle_init_d` do not use ``double`` or ``float`` arguments).
 In these cases, templated functions are available (e.g. ``da_handle_init<T>``, where ``T`` can be ``double`` or ``float``).
 
-For a complete list of available C++ functions, see ``aoclda_cpp_overloads.hpp`` in the include folder of your installation.
+The complete list of available C++ functions is found in ``aoclda_cpp_overloads.hpp`` in the include folder of your installation (and reproduced below).
+
+.. collapse:: AOCL-DA C++ overloads
+
+    .. literalinclude:: ../source/include/aoclda_cpp_overloads.hpp
+      :language: C++
+      :linenos:

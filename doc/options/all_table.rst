@@ -26,7 +26,10 @@
 
 
 Supported Optional Parameters
-**************************************
+******************************
+
+.. note::
+   This page lists optional parameters for **C APIs** only.
 
 In all the following tables, :math:`\varepsilon`, refers to the machine precision for the given floating point data precision.
 

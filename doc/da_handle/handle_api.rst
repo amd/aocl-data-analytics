@@ -32,8 +32,6 @@ Creating and destroying handles
 
 .. _da_handle_init:
 
-da_handle_init\_?()
---------------------
 .. doxygenfunction:: da_handle_init_d
    :outline:
 .. doxygenfunction:: da_handle_init_s

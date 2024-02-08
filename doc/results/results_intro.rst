@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 .. _extracting-results:
@@ -30,7 +30,7 @@
 Extracting Results
 ******************
 
-In order to simplify APIs, the results of computations are stored within the :cpp:type:`da_handle`.
+In order to simplify AOCL-DA C APIs, the results of computations are stored within the :cpp:type:`da_handle`.
 Results can be extracted from handles using :cpp:func:`da_handle_get_result_d`, :cpp:func:`da_handle_get_result_s` and :cpp:func:`da_handle_get_result_int`, depending on the datatype of the required result.
 Each of these routines takes four arguments:
 
@@ -47,5 +47,5 @@ If the array supplied is too small, then the error ``da_status_invalid_array_dim
 .. toctree::
     :maxdepth: 1
     :hidden:
-    
+
     results_api

@@ -99,7 +99,9 @@ std::string cleanstring(std::string s) {
 // Used to generate doc, name *must* start with ``RST``
 TEST(DocOptions, RST_handle) {
     std::cout << "Supported Optional Parameters\n"
-              << "**************************************\n\n";
+              << "******************************\n\n";
+    std::cout << ".. note::\n";
+    std::cout << "   This page lists optional parameters for **C APIs** only.\n\n";
     std::cout << "In all the following tables, :math:`\\varepsilon`, refers to "
                  "the machine precision for the given floating point data "
                  "precision.\n";

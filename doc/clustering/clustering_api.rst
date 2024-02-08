@@ -31,32 +31,40 @@ Clustering APIs
 *k*-means Clustering
 ========================================
 
-.. _da_kmeans_set_data:
+.. tab-set::
 
-.. doxygenfunction:: da_kmeans_set_data_s
-   :outline:
-.. doxygenfunction:: da_kmeans_set_data_d
+   .. tab-item:: Python
 
-.. _da_kmeans_set_init_centres:
+      Not yet implemented
 
-.. doxygenfunction:: da_kmeans_set_init_centres_s
-   :outline:
-.. doxygenfunction:: da_kmeans_set_init_centres_d
+   .. tab-item:: C
 
-.. _da_kmeans_compute:
+      .. _da_kmeans_set_data:
 
-.. doxygenfunction:: da_kmeans_compute_s
-   :outline:
-.. doxygenfunction:: da_kmeans_compute_d
+      .. doxygenfunction:: da_kmeans_set_data_s
+         :outline:
+      .. doxygenfunction:: da_kmeans_set_data_d
 
-.. _da_kmeans_transform:
+      .. _da_kmeans_set_init_centres:
 
-.. doxygenfunction:: da_kmeans_transform_s
-   :outline:
-.. doxygenfunction:: da_kmeans_transform_d
+      .. doxygenfunction:: da_kmeans_set_init_centres_s
+         :outline:
+      .. doxygenfunction:: da_kmeans_set_init_centres_d
 
-.. _da_kmeans_predict:
+      .. _da_kmeans_compute:
 
-.. doxygenfunction:: da_kmeans_predict_s
-   :outline:
-.. doxygenfunction:: da_kmeans_predict_d
+      .. doxygenfunction:: da_kmeans_compute_s
+         :outline:
+      .. doxygenfunction:: da_kmeans_compute_d
+
+      .. _da_kmeans_transform:
+
+      .. doxygenfunction:: da_kmeans_transform_s
+         :outline:
+      .. doxygenfunction:: da_kmeans_transform_d
+
+      .. _da_kmeans_predict:
+
+      .. doxygenfunction:: da_kmeans_predict_s
+         :outline:
+      .. doxygenfunction:: da_kmeans_predict_d

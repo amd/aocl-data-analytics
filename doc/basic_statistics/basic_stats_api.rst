@@ -28,80 +28,87 @@
 Basic statistics APIs
 *********************
 
-.. doxygentypedef:: da_axis
-.. doxygenenum:: da_axis_
-.. doxygentypedef:: da_quantile_type
-.. doxygenenum:: da_quantile_type_
+.. tab-set::
 
-.. _da_mean:
+   .. tab-item:: Python
 
-.. doxygenfunction:: da_mean_s
-   :outline:
-.. doxygenfunction:: da_mean_d
+      Not yet implemented
 
-.. _da_geometric_mean:
+   .. tab-item:: C
 
+      .. doxygentypedef:: da_axis
+      .. doxygenenum:: da_axis_
+      .. doxygentypedef:: da_quantile_type
+      .. doxygenenum:: da_quantile_type_
 
-.. doxygenfunction:: da_geometric_mean_s
-   :outline:
-.. doxygenfunction:: da_geometric_mean_d
+      .. _da_mean:
 
-.. _da_harmonic_mean:
+      .. doxygenfunction:: da_mean_s
+         :outline:
+      .. doxygenfunction:: da_mean_d
 
-.. doxygenfunction:: da_harmonic_mean_s
-   :outline:
-.. doxygenfunction:: da_harmonic_mean_d
+      .. _da_geometric_mean:
 
-.. _da_variance:
+      .. doxygenfunction:: da_geometric_mean_s
+         :outline:
+      .. doxygenfunction:: da_geometric_mean_d
 
-.. doxygenfunction:: da_variance_s
-   :outline:
-.. doxygenfunction:: da_variance_d
+      .. _da_harmonic_mean:
 
-.. _da_skewness:
+      .. doxygenfunction:: da_harmonic_mean_s
+         :outline:
+      .. doxygenfunction:: da_harmonic_mean_d
 
-.. doxygenfunction:: da_skewness_s
-   :outline:
-.. doxygenfunction:: da_skewness_d
+      .. _da_variance:
 
-.. _da_kurtosis:
+      .. doxygenfunction:: da_variance_s
+         :outline:
+      .. doxygenfunction:: da_variance_d
 
-.. doxygenfunction:: da_kurtosis_s
-   :outline:
-.. doxygenfunction:: da_kurtosis_d
+      .. _da_skewness:
 
-.. _da_moment:
+      .. doxygenfunction:: da_skewness_s
+         :outline:
+      .. doxygenfunction:: da_skewness_d
 
-.. doxygenfunction:: da_moment_s
-   :outline:
-.. doxygenfunction:: da_moment_d
+      .. _da_kurtosis:
 
-.. _da_quantile:
+      .. doxygenfunction:: da_kurtosis_s
+         :outline:
+      .. doxygenfunction:: da_kurtosis_d
 
-.. doxygenfunction:: da_quantile_s
-   :outline:
-.. doxygenfunction:: da_quantile_d
+      .. _da_moment:
 
-.. _da_five_point_summary:
+      .. doxygenfunction:: da_moment_s
+         :outline:
+      .. doxygenfunction:: da_moment_d
 
-.. doxygenfunction:: da_five_point_summary_s
-   :outline:
-.. doxygenfunction:: da_five_point_summary_d
+      .. _da_quantile:
 
-.. _da_standardize:
+      .. doxygenfunction:: da_quantile_s
+         :outline:
+      .. doxygenfunction:: da_quantile_d
 
-.. doxygenfunction:: da_standardize_s
-   :outline:
-.. doxygenfunction:: da_standardize_d
+      .. _da_five_point_summary:
 
-.. _da_covariance_matrix:
+      .. doxygenfunction:: da_five_point_summary_s
+         :outline:
+      .. doxygenfunction:: da_five_point_summary_d
 
-.. doxygenfunction:: da_covariance_matrix_s
-   :outline:
-.. doxygenfunction:: da_covariance_matrix_d
+      .. _da_standardize:
 
-.. _da_correlation:
+      .. doxygenfunction:: da_standardize_s
+         :outline:
+      .. doxygenfunction:: da_standardize_d
 
-.. doxygenfunction:: da_correlation_matrix_s
-   :outline:
-.. doxygenfunction:: da_correlation_matrix_d
+      .. _da_covariance_matrix:
+
+      .. doxygenfunction:: da_covariance_matrix_s
+         :outline:
+      .. doxygenfunction:: da_covariance_matrix_d
+
+      .. _da_correlation:
+
+      .. doxygenfunction:: da_correlation_matrix_s
+         :outline:
+      .. doxygenfunction:: da_correlation_matrix_d

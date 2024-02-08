@@ -30,7 +30,7 @@
 Building and Solving Models
 ***************************
 
-Most of the computational functions in AOCL-DA use a :cpp:type:`da_handle` as their first argument. This serves several purposes.
+Most of the computational functions in the AOCL-DA C API use a :cpp:type:`da_handle` as their first argument. This serves several purposes.
 
 - It is used to store internal data which can be passed between the different APIs (for example, :ref:`da_pca_compute_? <da_pca_compute>` computes the principal components of a data matrix, which can be passed via the handle to :ref:`da_pca_transform_? <da_pca_transform>`).
 - It stores :ref:`error information <error_api>` which may be useful if a function call does not complete as expected.

@@ -28,7 +28,7 @@
 Documentation Utilities
 ***********************
 
-This page is for internal use only. The main documentation page can be found :ref:`here <chapter_gen_intro>`.
+This page is for internal use only. The main documentation page can be found :ref:`here <C_intro>`.
 
 .. only:: internal
 
@@ -139,7 +139,7 @@ This page is for internal use only. The main documentation page can be found :re
    .. code-block::
 
        * @rst
-       * write your rst code here such as references: `link to chapter introduction <chapter_gen_intro>`_
+       * write your rst code here such as references: `link to chapter introduction <C_intro>`_
        * @rst
 
    Note that the leading asterisk is mandatory for this command to work. See ``aoclda-handle.h`` for an example.

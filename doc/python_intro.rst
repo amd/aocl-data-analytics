@@ -30,7 +30,7 @@
 Introduction
 *******************
 
-A Python API exists for the algorithmic functions in AOCL-DA.
+This section contains general instructions for calling AOCL-DA using the Python APIs.
 
 Installation
 =============
@@ -81,53 +81,3 @@ You can also inspect and run the examples from a Python interpreter, for example
     >>> import inspect
     >>> print(''.join(inspect.getsourcelines(pca_ex)[0]))
     >>> pca_ex.test_pca()
-
-The AOCL-DA Extension for Scikit-learn
-=======================================
-
-In addition to the Python API, AOCL-DA offers an extension to enable existing users of Scikit-learn
-to extract better performance while making minimal changes to their code.
-
-To use the extension, you must *patch* your existing code to replace the Scikit-learn symbols with
-AOCL-DA symbols. This can be done by inserting the following lines prior to your Scikit-learn import
-statement.
-
-.. code-block::
-
-   from aoclda.sklearn import skpatch, undo_skpatch
-   skpatch()
-
-You can switch back to standard Scikit-learn using
-
-.. code-block::
-
-   undo_skpatch()
-
-Alternatively, you may wish to use the ``aoclda.sklearn`` module from the command line, without
-making any changes to your own code:
-
-.. code-block::
-
-   python -m aoclda.sklearn your_python_script.py
-   python -m aoclda.sklearn -m your_python_module
-
-The following Scikit-learn classes are currently available in the AOCL-DA extension.
-
-.. list-table:: AOCL-DA Extension for Scikit-learn
-   :header-rows: 1
-
-   * - Scikit-learn class
-     - Notes
-   * - ``sklearn.dcomposition.PCA``
-     - ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes only
-
-Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after
-patching, you attempt to call class member functions which have not been implemented by AOCL-DA,
-then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
-you use the Python APIs described on the subsequent pages of this manual.
-
-.. toctree::
-    :maxdepth: 1
-    :hidden:
-
-    factorization_api

@@ -56,7 +56,7 @@ class LinearRegression(LinearRegression_sklearn):
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
-            raise ValueError("sample_weight are not supported yet")
+            raise ValueError("sample_weight is not supported")
         self.lmod.fit(X, y)
 
     @property
@@ -68,12 +68,12 @@ class LinearRegression(LinearRegression_sklearn):
 
     @property
     def rank_(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
     def singular_(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
@@ -122,7 +122,7 @@ class Ridge(Ridge_sklearn):
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
-            raise ValueError("sample_weight are not supported yet")
+            raise ValueError("sample_weight is not supported")
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=0.0)
 
     @property
@@ -134,17 +134,17 @@ class Ridge(Ridge_sklearn):
 
     @property
     def n_iter_(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
     def n_features_in_(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
     def feature_names_in(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
@@ -188,7 +188,7 @@ class Lasso(Lasso_sklearn):
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
-            raise ValueError("sample_weight are not supported yet")
+            raise ValueError("sample_weight is not supported")
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=1.0)
 
     @property
@@ -200,17 +200,17 @@ class Lasso(Lasso_sklearn):
 
     @property
     def n_iter_(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
     def n_features_in_(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
     def feature_names_in(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None
 
     @property
@@ -222,5 +222,5 @@ class Lasso(Lasso_sklearn):
 
     @property
     def dual_gap_(self):
-        print("NOT IMPLEMENTED!")
+        print("This feature is not implemented")
         return None

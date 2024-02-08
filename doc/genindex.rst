@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -22,50 +22,3 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-
-
-
-Linear models APIs
-******************
-
-.. tab-set::
-
-   .. tab-item:: Python
-
-      .. autoclass:: aoclda.linear_model.linmod(aoclda.linear_model.linmod_model, intercept='False', precision=aoclda.double)
-         :members:
-
-   .. tab-item:: C
-
-      .. doxygentypedef:: linmod_model
-      .. doxygenenum:: linmod_model_
-
-      .. _da_linmod_select_model:
-
-      .. doxygenfunction:: da_linmod_select_model_s
-         :outline:
-      .. doxygenfunction:: da_linmod_select_model_d
-
-      .. _da_linmod_define_features:
-
-      .. doxygenfunction:: da_linmod_define_features_s
-         :outline:
-      .. doxygenfunction:: da_linmod_define_features_d
-
-      .. _da_linmod_fit:
-
-      .. doxygenfunction:: da_linmod_fit_s
-         :outline:
-      .. doxygenfunction:: da_linmod_fit_d
-
-      .. _da_linmod_fit_start:
-
-      .. doxygenfunction:: da_linmod_fit_start_s
-         :outline:
-      .. doxygenfunction:: da_linmod_fit_start_d
-
-      .. _da_linmod_evaluate_model:
-
-      .. doxygenfunction:: da_linmod_evaluate_model_s
-         :outline:
-      .. doxygenfunction:: da_linmod_evaluate_model_d

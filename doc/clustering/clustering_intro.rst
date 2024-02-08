@@ -54,15 +54,29 @@ After the PCA has been computed, two post-processing operations may be of intere
 
 Typical workflow for *k*-means clustering
 -----------------------------------------
+
 The standard way of using *k*-means clustering in AOCL-DA  is as follows.
 
-1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_kmeans``.
-2. Pass data to the handle using either :ref:`da_kmeans_set_data_? <da_kmeans_set_data>`.
-3. Set the number of clusters required and other options using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <kmeans_options>`).
-4. Optionally set the initial centres using :ref:`da_kmeans_set_init_centres_? <da_kmeans_set_init_centres>`.
-5. Compute the *k*-means clusters using :ref:`da_kmeans_compute_? <da_kmeans_compute>`.
-6. Perform further computations as required, using :ref:`da_kmeans_transform_? <da_kmeans_transform>` or :ref:`da_kmeans_predict_? <da_kmeans_predict>`.
-7. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      1. Initialize a NOT YET IMPLEMENTED object with options set in the class constructor.
+      2. Compute the *k*-means clusters using NOT YET IMPLEMENTED.
+      3. Perform further transformations or predictions.
+      4. Extract results from the NOT YET IMPLEMENTED object via its class attributes.
+
+   .. tab-item:: C
+      :sync: C
+
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_kmeans``.
+      2. Pass data to the handle using either :ref:`da_kmeans_set_data_? <da_kmeans_set_data>`.
+      3. Set the number of clusters required and other options using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <kmeans_options>`).
+      4. Optionally set the initial centres using :ref:`da_kmeans_set_init_centres_? <da_kmeans_set_init_centres>`.
+      5. Compute the *k*-means clusters using :ref:`da_kmeans_compute_? <da_kmeans_compute>`.
+      6. Perform further computations as required, using :ref:`da_kmeans_transform_? <da_kmeans_transform>` or :ref:`da_kmeans_predict_? <da_kmeans_predict>`.
+      7. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
 
 
 .. _kmeans_options:
@@ -70,34 +84,53 @@ The standard way of using *k*-means clustering in AOCL-DA  is as follows.
 Options
 -------
 
-The following options can be set using :ref:`da_options_set_? <da_options_set>`:
+.. tab-set::
 
-The following options are supported.
+   .. tab-item:: Python
+      :sync: Python
 
-.. update options using table _opts_k-means
+      The available Python options are detailed in the NOT YET IMPLEMENTED class constructor.
 
-.. csv-table:: k-means options
-   :header: "Option Name", "Type", "Default", "Description", "Constraints"
+   .. tab-item:: C
+      :sync: C
 
-   "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance", ":math:`0 < r`"
-   "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm", ":math:`s=` `elkan`, `hartigan-wong`, or `lloyd`."
-   "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres", ":math:`s=` `k-means++`, `random`, or `supplied`."
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results", ":math:`-1 \le i`"
-   "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations", ":math:`1 \le i`"
-   "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres)", ":math:`1 \le i`"
-   "n_clusters", "integer", ":math:`i=1`", "Number of clusters required", ":math:`1 \le i`"
+      The following options can be set using :ref:`da_options_set_? <da_options_set>`:
+
+      .. update options using table _opts_k-means
+
+      .. csv-table:: k-means options
+         :header: "Option Name", "Type", "Default", "Description", "Constraints"
+
+         "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance", ":math:`0 < r`"
+         "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm", ":math:`s=` `elkan`, `hartigan-wong`, or `lloyd`."
+         "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres", ":math:`s=` `k-means++`, `random`, or `supplied`."
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results", ":math:`-1 \le i`"
+         "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations", ":math:`1 \le i`"
+         "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres)", ":math:`1 \le i`"
+         "n_clusters", "integer", ":math:`i=1`", "Number of clusters required", ":math:`1 \le i`"
 
 
 Examples
 ========
 
-The code below can be found in ``kmeans.cpp`` in the ``examples`` folder of your installation.
+.. tab-set::
 
-.. collapse:: k-means Example Code
+   .. tab-item:: Python
+      :sync: Python
 
-    .. literalinclude:: ../../tests/examples/kmeans.cpp
-        :language: C++
-        :linenos:
+      The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+   .. tab-item:: C
+      :sync: C
+
+      The code below can be found in ``kmeans.cpp`` in the ``examples`` folder of your installation.
+
+      .. collapse:: k-means Example Code
+
+         .. literalinclude:: ../../tests/examples/kmeans.cpp
+            :language: C++
+            :linenos:
+
 .. toctree::
     :maxdepth: 1
     :hidden:

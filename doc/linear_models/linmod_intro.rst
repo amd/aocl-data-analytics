@@ -141,7 +141,7 @@ Different methods are available to compute the models. The method is chosen auto
 
 **Direct solvers**
 
-* QR (`optim method`` = `QR`). The standard MSE linear regression model can be computed using the QR factorization of the data matrix if no regularization term is required.
+* QR: the standard MSE linear regression model can be computed using the QR factorization of the data matrix if no regularization term is required.
 
 .. math::
 
@@ -151,26 +151,10 @@ where :math:`Q` is a :math:`n_{\text{samples}} \times n_{\text{features}}` matri
 
 **Iterative solvers**
 
-* L-BFGS-B (`optim method`` = `lbfgs`) is a solver aimed at minimizing smooth nonlinear functions (:cite:t:`lbfgsb`). It can be used to compute both MSE and logistic models with or without :math:`\ell_2` regularization. It is not suitable when an :math:`\ell_1` regularization term is required.
+* L-BFGS-B: a solver aimed at minimizing smooth nonlinear functions (:cite:t:`lbfgsb`). It can be used to compute both MSE and logistic models with or without :math:`\ell_2` regularization. It is not suitable when an :math:`\ell_1` regularization term is required.
 
-* Coordinate Descent (`optim method`` = `coord`) is a solver aimed at minimizing nonlinear functions.
+* Coordinate descent: a solver aimed at minimizing nonlinear functions.
   It is particularly suitable for linear models with an :math:`\ell_1` regularization term and even Elastic Nets (:cite:t:`coord_elastic`).
-
-
-Available outputs
-=================
-
-Once a model is computed, some elements can be retrieved using :ref:`da_handle_get_result_? <da_handle_get_result>`:
-
-* coefficients (:cpp:enumerator:`da_linmod_coef`): The optimal coefficients of the fitted model
-* rinfo[100] (:cpp:enumerator:`da_linmod_rinfo`): a set of values of interest
-   * rinfo[0]: :math:`n_{features}`, the number of features in the model.
-   * rinfo[1]: :math:`n_{samples}`, the number of samples the model has been trained on.
-   * rinfo[2]: :math:`n_{coef}`, the number of model coefficients.
-   * rinfo[3]: intercept, 1 if an intercept term is present in the model, 0 otherwise.
-   * rinfo[4]: :math:`\alpha`, share of the :math:`\ell_1` term in the regularization.
-   * rinfo[5]: :math:`\lambda`, the magnitude of the regularization term.
-   * rinfo[6-99]: reserved for future use.
 
 
 Typical workflow for linear models
@@ -178,12 +162,35 @@ Typical workflow for linear models
 
 The standard way of computing a linear model using AOCL-DA is as follows.
 
-1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
-2. Pass data to the handle using either :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
-3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
-4. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
-5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
-6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      1. Initialize a :func:`aoclda.linear_model.linmod` object with options set in the class constructor.
+      2. Fit the linear model for your data using :func:`aoclda.linear_model.linmod.fit`.
+      3. Extract results from the :func:`aoclda.linear_model.linmod` object via its class attributes.
+
+   .. tab-item:: C
+      :sync: C
+
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
+      2. Pass data to the handle using either :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
+      3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
+      4. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
+      5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
+      6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`. The following results are available:
+
+         * coefficients (:cpp:enumerator:`da_linmod_coef`): the optimal coefficients of the fitted model
+
+         * rinfo[100] (:cpp:enumerator:`da_linmod_rinfo`): a set of values of interest
+            * rinfo[0]: :math:`n_{features}`, the number of features in the model.
+            * rinfo[1]: :math:`n_{samples}`, the number of samples the model has been trained on.
+            * rinfo[2]: :math:`n_{coef}`, the number of model coefficients.
+            * rinfo[3]: intercept, 1 if an intercept term is present in the model, 0 otherwise.
+            * rinfo[4]: :math:`\alpha`, share of the :math:`\ell_1` term in the regularization.
+            * rinfo[5]: :math:`\lambda`, the magnitude of the regularization term.
+            * rinfo[6-99]: reserved for future use.
 
 
 .. _linmod_options:
@@ -191,22 +198,60 @@ The standard way of computing a linear model using AOCL-DA is as follows.
 Linear Model Options
 ====================
 
-Various options can be set to customize the linear models by calling one of these
-:ref:`functions <api_handle_options>`. The following table details the available options, where :math:`\epsilon` represents the machine precision.
+.. tab-set::
 
-.. update options using table _opts_linearmodel
-.. csv-table:: Linear models options
-   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   .. tab-item:: Python
+      :sync: Python
 
-   "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `coord`, `lbfgs`, `lbfgsb`, or `qr`."
-   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
-   "optim convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
-   "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
-   "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
-   "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
-   "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-   "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
-   "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
+      The available Python options are detailed in the :func:`aoclda.linear_model.linmod` class constructor.
+
+   .. tab-item:: C
+      :sync: C
+
+      Various options can be set to customize the linear models by calling one of these
+      :ref:`functions <api_handle_options>`. The following table details the available options, where :math:`\epsilon` represents the machine precision.
+
+      .. update options using table _opts_linearmodel
+
+      .. csv-table:: Linear models options
+         :header: "Option name", "Type", "Default", "Description", "Constraints"
+
+         "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `coord`, `lbfgs`, `lbfgsb`, or `qr`."
+         "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
+         "optim convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
+         "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
+         "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha) L2 + alpha L1 )", ":math:`0 \le r`"
+         "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
+         "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
+         "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
+
+Examples
+========
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+      .. collapse:: Linear Model Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/linmod_ex.py
+              :language: Python
+              :linenos:
+
+   .. tab-item:: C
+      :sync: C
+
+      The code below can be found in ``linear_model.cpp`` in the ``examples`` folder of your installation.
+
+      .. collapse:: Linear Model Example
+
+          .. literalinclude:: ../../tests/examples/pca.cpp
+              :language: C++
+              :linenos:
+
 
 
 Further Reading

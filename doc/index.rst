@@ -34,22 +34,17 @@ The AOCL Data Analytics Library (AOCL-DA) is a software library providing optimi
 It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
 It is designed with a focus on usability, reliability and performance.
 
-AOCL-DA is written with a C-compatible
-interface to make it as seamless as possible to integrate with the library from
-whichever programming language you are using. This documentation is also available
-online in the form of web pages.
+AOCL-DA is written with both C-compatible and Python interfaces to make it as seamless as possible to integrate with the library from
+whichever programming language you are using. Both sets of interfaces call the same underlying optimized code base.
 
-The intended workflow for using the library is as follows:
+This documentation is available online in the form of web pages, or as a pdf file. It consists of three main sections:
 
- - load data from memory by reading CSV files or using the in-built da_datastore object
+* **AOCL-DA for C**: contains instructions for calling and using the C APIs.
+* **AOCL-DA for Python**: contains instructions for calling and using the Python APIs.
+* **Algorithms**: details the specific computational algorithms available in AOCL-DA, which have both C and Python APIs.
 
- - preprocess the data by removing missing values, standardizing, and selecting certain subsets of the data, before extracting contiguous arrays of data from the da_datastore objects
-
- -  data processing (e.g. principal component analysis, linear model fitting, etc.)
-
-
-C++ example programs can be found in the ``examples`` folder of your installation.
-
+Your installation is also packaged with a set of
+C++ or Python example programs.
 
 AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
 toolchainsupport@amd.com.
@@ -59,9 +54,16 @@ Library Reference Documentation
 
 .. toctree::
    :maxdepth: 1
-   :caption: AOCL Data Analytics Library
+   :caption: AOCL-DA for Python
 
-   general_intro
+   python_intro
+   sklearn
+
+.. toctree::
+   :maxdepth: 1
+   :caption: AOCL-DA for C
+
+   C_intro
    data_management/data_intro
    da_handle/handle_intro
    options/option_intro
@@ -78,36 +80,19 @@ Library Reference Documentation
    linear_models/linmod_intro
    trees_forests/df_intro
 
-.. toctree::
-   :maxdepth: 1
-   :caption: AOCL-DA for Python
-
-   python/python_intro
-
 .. only:: internal
 
    .. toctree::
       :maxdepth: 1
       :caption: Internal help
 
-      doc_utilities/utils.rst
-
-Search the Documentation
-------------------------
-
-* :ref:`genindex`
-* :ref:`search`
-
-References
-----------
-
-.. bibliography::
-
-Appendices
-----------
+      doc_utilities/utils
 
 .. toctree::
     :maxdepth: 1
     :caption: Appendices
 
-    options/all_table.rst
+    options/all_table
+    bibliography
+    genindex
+    search

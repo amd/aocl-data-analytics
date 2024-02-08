@@ -33,7 +33,7 @@ Data Management
 Introduction
 ============
 
-AOCL-DA provides a suite of functions designed to allow loading and manipulating data in a straightforward
+The AOCL-DA C API contains a suite of functions designed to allow loading and manipulating data in a straightforward
 manner before calling the algorithms of the library. All functions in this suite use the :cpp:type:`da_datastore` structure to store and manipulate data.
 
 There are two ways to load data in the library:
@@ -54,7 +54,7 @@ Loading data from hard memory to dense arrays
 CSV files
 ---------
 
-AOCL-DA contains routines for reading data of a single type from a CSV (comma separated values) file into an array. In addition, a
+The AOCL-DA C API contains routines for reading data of a single type from a CSV (comma separated values) file into an array. In addition, a
 character array of column headings can optionally be read.
 
 The routines take a :cpp:type:`da_datastore` structure as their first argument, which must be initialized prior
@@ -172,10 +172,19 @@ Various files in the examples folder of your installation demonstrate the use of
 Usage of :cpp:type:`da_datastore`
 ---------------------------------
 
-
 The source files ``datastore.cpp`` and ``linmod_diabetes.cpp`` showcase loading, selecting and using data with a :cpp:type:`da_datastore` handle.
 
+.. collapse:: Datastore Example Code
 
+   .. literalinclude:: ../../tests/examples/datastore.cpp
+      :language: C++
+      :linenos:
+
+.. collapse:: linmod_diabetes Example code
+
+   .. literalinclude:: ../../tests/examples/linmod_diabetes.cpp
+      :language: C++
+      :linenos:
 ..
     Link to the APIs
 

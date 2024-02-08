@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -28,7 +28,7 @@
 Setting Options
 ***************
 
-Most APIs in AOCL-DA often rely on a large number of parameters, which can all influence the internal behaviour of the functions.
+The C APIs in AOCL-DA often rely on a large number of parameters, which can all influence the internal behaviour of the functions.
 For example, when reading in a CSV file the specific characters used to denote comments, decimal points, scientific notation, quotes and delimiters can all be specified.
 
 Rather than forcing users to supply all such parameters through the API signature, the defaults are automatically stored.
@@ -38,12 +38,12 @@ The :cpp:type:`da_handle` and :cpp:type:`da_datastore` structs can both be used 
 This should be done after the :cpp:type:`da_handle` or :cpp:type:`da_datastore` has been initialized, but prior to calling any computational routines.
 
 The available options depend on the particular computation being performed, and are detailed in the specific APIs you are using, but all options have a string name and are set or queried using the functions described in :ref:`Options APIs for da_handle <api_handle_options>` and :ref:`Options APIs for da_datastore <api_datastore_options>`.
-The APIs are all very similar and differ only in the type of the final parameter (which contains the value of the option itself), which may be a string, integer, double or float. 
+The APIs are all very similar and differ only in the type of the final parameter (which contains the value of the option itself), which may be a string, integer, double or float.
 
 .. toctree::
     :maxdepth: 1
     :hidden:
-    
+
     option_handle_api
     option_datastore_api
 
