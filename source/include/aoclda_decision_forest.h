@@ -67,7 +67,7 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_fea
  * @rst
  * Compute the decision forest parameters given the data passed by :ref:`da_df_set_training_data_? <da_df_set_training_data>`.
  * Note that you can customize the model before using the fit function through the use of optional parameters,
- * see :ref:`this section <df_options>` for a list of available options.
+ * see :ref:`this section <opts_decisionforest>` for a list of available options.
  * @endrst
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
@@ -83,7 +83,7 @@ da_status da_df_set_training_data_s(da_handle handle, da_int n_obs, da_int n_fea
  *
  * \post
  * @rst
- * After succesful execution, :ref:`da_handle_get_result_? <da_handle_get_result>` can be queried with the following enum:
+ * After successful execution, :ref:`da_handle_get_result_? <da_handle_get_result>` can be queried with the following enum:
  * @endrst
  * - \p da_rinfo - return an array of size 3 containing \p seed_val, \p n_obs and \p n_features.
  */

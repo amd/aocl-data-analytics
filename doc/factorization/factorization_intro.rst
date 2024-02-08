@@ -114,6 +114,8 @@ Options
 
       The following options can be set using :ref:`da_options_set_? <da_options_set>`:
 
+      .. update options using table _opts_pca
+
       .. csv-table:: PCA options
          :header: "Option Name", "Type", "Default", "Description", "Constraints"
 

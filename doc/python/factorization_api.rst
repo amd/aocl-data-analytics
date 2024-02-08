@@ -31,15 +31,3 @@ Factorization APIs
 Principal component analysis
 -----------------------------
 
-.. autoclass:: aoclda.factorization.PCA(n_components=1, bias='unbiased', method='covariance', solver='auto', precision=aoclda.double)
-    :members:
-
-
-Example
-=======
-
-.. collapse:: PCA Example
-
-    .. literalinclude:: ../../python_interface/python_package/aoclda/examples/pca_ex.py
-        :language: Python
-        :linenos:
