@@ -51,6 +51,11 @@ target_compile_definitions(
 add_executable(pca pca.cpp)
 target_link_libraries(pca aocl-da)
 
+add_executable(pca_cancer pca_cancer.cpp)
+target_link_libraries(pca_cancer aocl-da)
+target_compile_definitions(
+  pca_cancer PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+
 add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans aocl-da)
 
@@ -60,6 +65,7 @@ set(EXAMPLE_EXES
   linmod_diabetes
   basic_statistics
   pca
+  pca_cancer
   kmeans
   datastore
   decision_tree

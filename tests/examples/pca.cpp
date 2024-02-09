@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -26,6 +26,7 @@
  */
 
 #include "aoclda.h"
+#include <iomanip>
 #include <iostream>
 
 /* Basic PCA example
@@ -96,9 +97,14 @@ int main() {
         std::cout << "PCA computed successfully" << std::endl << std::endl;
 
         std::cout << "Principal components:" << std::endl;
+        for (da_int j = 0; j < n_components; j++) {
+            std::cout << std::left << " PC " << std::setw(6) << j + 1;
+        }
+        std::cout << std::endl;
         for (da_int j = 0; j < n_features; j++) {
             for (da_int i = 0; i < n_components; i++) {
-                std::cout << principal_components[n_components * i + j] << "  ";
+                std::cout << std::right << std::setw(8)
+                          << principal_components[n_components * i + j] << "  ";
             }
             std::cout << std::endl;
         }
