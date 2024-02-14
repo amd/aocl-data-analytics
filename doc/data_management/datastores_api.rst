@@ -86,6 +86,8 @@ Data Selection
 .. doxygenfunction:: da_data_select_rows
 .. doxygenfunction:: da_data_select_slice
 .. doxygenfunction:: da_data_select_non_missing
+.. doxygenfunction:: da_data_select_remove_columns
+.. doxygenfunction:: da_data_select_remove_rows
 
 .. _api_data_extraction:
 

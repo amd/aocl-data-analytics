@@ -284,7 +284,7 @@ da_status da_data_select_slice(da_datastore store, const char *key, da_int row_l
  * If @p key had a previously empty row selection, all rows are checked for missing elements.
  *
  * @param[inout] store the main data structure.
- * @param[in] key the label of the selection
+ * @param[in] key the label of the selection.
  * @param[in] full_rows serves as a boolean variable indicating if only the columns already
  * in the selection key are to be checked for missing data.
  * @return @ref da_status. The function returns:
@@ -295,6 +295,49 @@ da_status da_data_select_slice(da_datastore store, const char *key, da_int row_l
  */
 da_status da_data_select_non_missing(da_datastore store, const char *key,
                                      uint8_t full_rows);
+
+/**
+ * @brief Remove the columns indexed by the values between @p lbound and @p ubound from an existing
+ * selection.
+ * Column indices are zero-based, meaning the index of the first column is 0 and the index of
+ * the last one is n_rows-1.
+ *
+ * A warning @ref da_status_invalid_input is returned if @p key does not designate a valid
+ * selection.
+ *
+ * @param store the main data structure.
+ * @param key the label of the selection.
+ * @param lbound lower bound of the column indices to select.
+ * @param ubound upper bound of the column indices to select.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success The operation was successful.
+ * - @ref da_status_invalid_input - some of the input data was not correct.
+ *        Use @ref da_handle_print_error_message to get more details.
+ * - @ref da_status_invalid_pointer - the store was not correctly initialized.
+ */
+da_status da_data_select_remove_columns(da_datastore store, const char *key,
+                                        da_int lbound, da_int ubound);
+/**
+ * @brief Remove the rows indexed by the values between @p lbound and @p ubound from an existing
+ * selection.
+ * Row indices are zero-based, meaning the index of the first row is 0 and the index of
+ * the last one is n_rows-1.
+ *
+ * A warning @ref da_status_invalid_input is returned if @p key does not designate a valid
+ * selection.
+ *
+ * @param store the main data structure.
+ * @param key the label of the selection.
+ * @param lbound lower bound of the row indices to select.
+ * @param ubound upper bound of the row indices to select.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success The operation was successful.
+ * - @ref da_status_invalid_input - some of the input data was not correct.
+ *        Use @ref da_handle_print_error_message to get more details.
+ * - @ref da_status_invalid_pointer - the store was not correctly initialized.
+ */
+da_status da_data_select_remove_rows(da_datastore store, const char *key, da_int lbound,
+                                     da_int ubound);
 
 /* ********************************** extract columns ******************************** */
 /* *********************************************************************************** */

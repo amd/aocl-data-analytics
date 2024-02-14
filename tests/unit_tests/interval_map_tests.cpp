@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "aoclda.h"
@@ -33,10 +33,9 @@
 #include <iostream>
 #include <string>
 
-using namespace da_interval_map;
+using namespace da_interval;
 
 TEST(intervalMap, invalidInput) {
-    using namespace da_interval_map;
     interval_map<double> imap;
     da_int lb, ub;
     double d;
@@ -67,8 +66,8 @@ TEST(intervalMap, invalidInput) {
     EXPECT_EQ(ub, 2);
     auto it = imap.find(1);
     EXPECT_EQ(it->second, 1.0);
-    EXPECT_EQ(it->first.first, 0);
-    EXPECT_EQ(it->first.second, 2);
+    EXPECT_EQ(it->first.lower, 0);
+    EXPECT_EQ(it->first.upper, 2);
 
     // overlapping intervals
     EXPECT_EQ(imap.insert(interval{1, 3}, 1.0), da_status_invalid_input);
@@ -84,7 +83,6 @@ TEST(intervalMap, invalidInput) {
 
 TEST(intervalMap, positive) {
 
-    using namespace da_interval_map;
     interval_map<char> imap;
     char c;
     da_int lb, ub;
@@ -124,7 +122,6 @@ TEST(intervalMap, positive) {
 }
 
 TEST(intervalMap, erase) {
-    using namespace da_interval_map;
     interval_map<char> imap;
 
     // insert intervals
@@ -194,16 +191,16 @@ TEST(intervalMap, iterator) {
     EXPECT_EQ(i, 4);
 }
 
-TEST(interval, intersection) {
+TEST(interval, intersect) {
     interval i1 = {1, 3}, i2 = {2, 4};
-    interval res = intersection(i1, i2);
-    EXPECT_EQ(res.first, 2);
-    EXPECT_EQ(res.second, 3);
-    res = intersection(i2, i1);
-    EXPECT_EQ(res.first, 2);
-    EXPECT_EQ(res.second, 3);
+    interval res = i1.intersect(i2);
+    EXPECT_EQ(res.lower, 2);
+    EXPECT_EQ(res.upper, 3);
+    res = i2.intersect(i1);
+    EXPECT_EQ(res.lower, 2);
+    EXPECT_EQ(res.upper, 3);
     i1 = {-1, -3};
-    res = intersection(i1, i2);
-    EXPECT_EQ(res.first, 2);
-    EXPECT_EQ(res.second, -3);
+    res = i1.intersect(i2);
+    EXPECT_EQ(res.lower, 2);
+    EXPECT_EQ(res.upper, -3);
 }

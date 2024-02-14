@@ -310,7 +310,7 @@ TEST(block, copySlice) {
     block_dense<da_int> b1(m, n, bl_col.data(), err, col_major);
 
     // load the data from the middle of the block
-    std::pair<da_int, da_int> cols, rows;
+    interval cols, rows;
     cols = {1, 2};
     rows = {1, 3};
     islice.resize(6);
@@ -416,7 +416,7 @@ TEST(block, copySliceInvalid) {
     bl_col = {1, 2, 3, 4, 5, 1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 6, 7, 8, 9, 10};
     block_dense<da_int> b1(m, n, bl_col.data(), err, col_major);
 
-    std::pair<da_int, da_int> cols, rows;
+    interval cols, rows;
     cols = {-1, 2};
     rows = {1, 3};
     islice.resize(30);
@@ -971,8 +971,8 @@ TEST(dataStore, extractSlice) {
     EXPECT_EQ(ds.concatenate_columns(m, n, bl2.data(), order), da_status_success);
 
     // Extract the first columns into a slice
-    std::pair<da_int, da_int> col_int(0, 1), row_int(0, m - 1);
-    ld = row_int.second - row_int.first + 1;
+    interval col_int(0, 1), row_int(0, m - 1);
+    ld = row_int.upper - row_int.lower + 1;
     std::vector<da_int> islice(m * 2);
     ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     std::vector<da_int> expected_slice = {1, 3, 5, 7, 9, 2, 4, 6, 8, 10};
@@ -989,16 +989,16 @@ TEST(dataStore, extractSlice) {
     EXPECT_ARR_EQ(5, islice, expected_slice, 1, 1, first_idx + ld, 0);
 
     // columns spread on 2 blocks
-    col_int.second = 2;
-    ld = row_int.second - row_int.first + 1;
+    col_int.upper = 2;
+    ld = row_int.upper - row_int.lower + 1;
     islice.resize(3 * m);
     ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {1, 3, 5, 7, 9, 2, 4, 6, 8, 10, 1, 3, 5, 7, 9};
     EXPECT_ARR_EQ(15, islice, expected_slice, 1, 1, 0, 0);
 
     // same datastore, partial rows
-    row_int.second = 2;
-    ld = row_int.second - row_int.first + 1;
+    row_int.upper = 2;
+    ld = row_int.upper - row_int.lower + 1;
     ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {1, 3, 5, 2, 4, 6, 1, 3, 5};
     EXPECT_ARR_EQ(9, islice, expected_slice, 1, 1, 0, 0);
@@ -1011,7 +1011,7 @@ TEST(dataStore, extractSlice) {
     col_int = {0, 2};
     islice.resize(21);
     std::fill(islice.begin(), islice.end(), 0);
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     ds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {1, 3, 5, 7, 9, 2, 3, 2, 4, 6, 8, 10, 4, 5, 1, 3, 5, 7, 9, 6, 7};
     EXPECT_ARR_EQ(21, islice, expected_slice, 1, 1, 0, 0);
@@ -1028,7 +1028,7 @@ TEST(dataStore, extractSlice) {
     std::fill(islice.begin(), islice.end(), 0);
     row_int = {2, 5};
     col_int = {1, 2};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     hds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {6, 8, 11, 22, 3, 4, 12, 23};
     EXPECT_ARR_EQ(8, islice, expected_slice, 1, 1, 0, 0);
@@ -1046,7 +1046,7 @@ TEST(dataStore, extractSlice) {
     std::fill(islice.begin(), islice.end(), 0);
     row_int = {4, 4};
     col_int = {0, 3};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     hds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {10, 11, 12, 13};
     EXPECT_ARR_EQ(4, islice, expected_slice, 1, 1, 0, 0);
@@ -1055,7 +1055,7 @@ TEST(dataStore, extractSlice) {
     std::fill(islice.begin(), islice.end(), 0);
     row_int = {4, 5};
     col_int = {1, 3};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     hds.extract_slice(row_int, col_int, ld, 0, islice.data());
     expected_slice = {11, 22, 12, 23, 13, 24};
     EXPECT_ARR_EQ(6, islice, expected_slice, 1, 1, 0, 0);
@@ -1065,7 +1065,7 @@ TEST(dataStore, extractSlice) {
     fslice.resize(5);
     row_int = {1, 5};
     col_int = {5, 5};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     hds.extract_slice(row_int, col_int, ld, 0, fslice.data());
     std::vector<float> fexpected_slice = {6.5, 7.5, 8.5, 9.5};
     EXPECT_ARR_EQ(4, fslice, fexpected_slice, 1, 1, 0, 0);
@@ -1088,7 +1088,7 @@ TEST(dataStore, exSliceInvalid) {
               da_status_invalid_input);
     row_int = {0, 1};
     col_int = {10, 5};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     col_int = {-1, 2};
@@ -1102,27 +1102,27 @@ TEST(dataStore, exSliceInvalid) {
               da_status_invalid_input);
     col_int = {0, 1};
     row_int = {-1, 2};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     row_int = {1, 6};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     row_int = {7, 10};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
 
     // wrong type expected
     col_int = {4, 5};
     row_int = {0, 2};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
     col_int = {0, 5};
     row_int = {0, 2};
-    ld = row_int.second - row_int.first + 1;
+    ld = row_int.upper - row_int.lower + 1;
     EXPECT_EQ(hds.extract_slice(row_int, col_int, ld, 0, islice.data()),
               da_status_invalid_input);
 
@@ -1146,6 +1146,9 @@ TEST(datastore, nullArguments) {
     EXPECT_EQ(da_data_select_rows(store, nullptr, 0, 0), da_status_invalid_input);
     EXPECT_EQ(da_data_select_slice(store, nullptr, 0, 0, 0, 0), da_status_invalid_input);
     EXPECT_EQ(da_data_select_non_missing(store, nullptr, 0), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_remove_columns(store, nullptr, 0, 0),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_remove_rows(store, nullptr, 0, 0), da_status_invalid_input);
 
     // Extract columns
     EXPECT_EQ(da_data_extract_column_int(store, 0, 0, nullptr), da_status_invalid_input);
@@ -1276,6 +1279,22 @@ TEST(dataStore, extractSelection) {
     EXPECT_EQ(ds.extract_selection("rowsel", ld, islice.data()), da_status_success);
     expected_slice = {1, 3, 7, 9, 2, 2, 4, 8, 10, 4, 1, 3, 7, 9, 6, 2, 4, 8, 10, 8};
     EXPECT_ARR_EQ(20, islice, expected_slice, 1, 1, 0, 0);
+
+    // remove [1, 4] from the last row selection
+    EXPECT_EQ(ds.remove_rows_from_selection("rowsel", {1, 4}), da_status_success);
+    ld = 2;
+    EXPECT_EQ(ds.extract_selection("rowsel", ld, islice.data()), da_status_success);
+    expected_slice = {1, 2, 2, 4, 1, 6, 2, 8};
+    EXPECT_ARR_EQ(8, islice, expected_slice, 1, 1, 0, 0);
+
+    // New column selection, remove some columns in multiple calls
+    EXPECT_EQ(ds.select_columns("colsel", {0, 3}), da_status_success);
+    EXPECT_EQ(ds.remove_columns_from_selection("colsel", {1, 1}), da_status_success);
+    EXPECT_EQ(ds.remove_columns_from_selection("colsel", {0, 2}), da_status_success);
+    ld = 7;
+    EXPECT_EQ(ds.extract_selection("colsel", ld, islice.data()), da_status_success);
+    expected_slice = {2, 4, 6, 8, 10, 8, 9};
+    EXPECT_ARR_EQ(7, islice, expected_slice, 1, 1, 0, 0);
 }
 
 TEST(dataStore, nullStore) {
@@ -1319,6 +1338,10 @@ TEST(dataStore, nullStore) {
     EXPECT_EQ(da_data_select_rows(store, "A", 1, 1), da_status_store_not_initialized);
     EXPECT_EQ(da_data_select_non_missing(store, "A", 0), da_status_store_not_initialized);
     EXPECT_EQ(da_data_select_slice(store, "A", 1, 1, 1, 1),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_select_remove_rows(store, "A", 1, 1),
+              da_status_store_not_initialized);
+    EXPECT_EQ(da_data_select_remove_columns(store, "A", 1, 1),
               da_status_store_not_initialized);
 
     // extract selection
@@ -1644,6 +1667,8 @@ TEST(datastore, incompleteStore) {
     EXPECT_EQ(da_data_select_rows(store, "key", 0, 1), da_status_missing_block);
     EXPECT_EQ(da_data_select_slice(store, "key", 0, 1, 0, 1), da_status_missing_block);
     EXPECT_EQ(da_data_select_non_missing(store, "key", 0), da_status_missing_block);
+    EXPECT_EQ(da_data_select_remove_columns(store, "key", 0, 1), da_status_missing_block);
+    EXPECT_EQ(da_data_select_remove_rows(store, "key", 0, 1), da_status_missing_block);
 
     // extract column
     EXPECT_EQ(da_data_extract_column_int(store, 1, 1, &idummy), da_status_missing_block);
@@ -1678,13 +1703,49 @@ TEST(datastore, selectInvalid) {
     get_heterogeneous_data_store_pub(store, m, n, idata, fdata, sdata);
     EXPECT_EQ(da_data_select_columns(store, "Valid cols", 0, 0), da_status_success);
 
-    // Selections
+    // Selections: Wrong name
     EXPECT_EQ(da_data_select_rows(store, "dainternal_A", 0, 0), da_status_invalid_input);
     EXPECT_EQ(da_data_select_columns(store, "dainternal_A", 0, 0),
               da_status_invalid_input);
     EXPECT_EQ(da_data_select_slice(store, "dainternal_A", 0, 0, 0, 0),
               da_status_invalid_input);
     EXPECT_EQ(da_data_select_non_missing(store, "dainternal_A", 0),
+              da_status_invalid_input);
+
+    // Selections: Wrong intervals
+    EXPECT_EQ(da_data_select_rows(store, "Valid", 0, 0), da_status_success);
+    EXPECT_EQ(da_data_select_rows(store, "Valid", -1, 2), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_rows(store, "Valid", 2, 2000), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_rows(store, "Valid", 3, 2), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_columns(store, "Valid", 0, 0), da_status_success);
+    EXPECT_EQ(da_data_select_columns(store, "Valid", -1, 2), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_columns(store, "Valid", 2, 2000), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_columns(store, "Valid", 3, 2), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "Valid", -1, 2, 1, 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "Valid", 2, 2000, 1, 1),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "Valid", 3, 2, 1, 1), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "Valid", 1, 1, -1, 2), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "Valid", 1, 1, 2, 2000),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_slice(store, "Valid", 1, 1, 3, 2), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_columns(store, "Valid", 0, 6), da_status_success);
+    EXPECT_EQ(da_data_select_remove_columns(store, "Valid", -1, 2),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_remove_columns(store, "Valid", 2, 2000),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_remove_columns(store, "Valid", 3, 2),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_rows(store, "Valid", 0, 5), da_status_success);
+    EXPECT_EQ(da_data_select_remove_rows(store, "Valid", -1, 2), da_status_invalid_input);
+    EXPECT_EQ(da_data_select_remove_rows(store, "Valid", 2, 2000),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_remove_rows(store, "Valid", 3, 2), da_status_invalid_input);
+
+    // Remove from selection: non existing selction
+    EXPECT_EQ(da_data_select_remove_columns(store, "Invalid", 0, 0),
+              da_status_invalid_input);
+    EXPECT_EQ(da_data_select_remove_rows(store, "Invalid", 0, 0),
               da_status_invalid_input);
 
     // Extraction

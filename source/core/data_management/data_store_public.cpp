@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -59,7 +59,7 @@ da_status da_datastore_print_error_message(da_datastore store) {
             store->err->print();
             return da_status_success;
         } else {
-            return da_status_internal_error;
+            return da_status_internal_error; // LCOV_EXCL_LINE
         }
     }
     return da_status_invalid_input;
@@ -97,11 +97,13 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2) {
     if (!store1 || !store2 || !(*store1) || !(*store2))
         return da_status_store_not_initialized;
     if ((*store1)->store == nullptr || (*store2)->store == nullptr) {
-        da_error((*store1)->err, da_status_internal_error,          // LCOV_EXCL_LINE
-                 "store1 or store2 seems to be invalid?");          // LCOV_EXCL_LINE
-        status = da_error((*store2)->err, da_status_internal_error, // LCOV_EXCL_LINE
-                          "store1 or store2 seems to be invalid?"); // LCOV_EXCL_LINE
+        // LCOV_EXCL_START
+        da_error((*store1)->err, da_status_internal_error,
+                 "store1 or store2 seems to be invalid?");
+        status = da_error((*store2)->err, da_status_internal_error,
+                          "store1 or store2 seems to be invalid?");
         return status; // Error message already loaded
+        // LCOV_EXCL_STOP
     }
 
     status = (*store1)->store->horizontal_concat(*(*store2)->store);
@@ -347,6 +349,36 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
     }
 
     return store->store->select_non_missing(key_str, fr);
+}
+da_status da_data_select_remove_columns(da_datastore store, const char *key,
+                                        da_int lbound, da_int ubound) {
+    if (!store)
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
+
+    if (store->store == nullptr)
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");        // LCOV_EXCL_LINE
+    if (!key)
+        return da_warn(store->err, da_status_invalid_input, "key has to be defined");
+
+    std::string key_str(key);
+    return store->store->remove_columns_from_selection(key_str, {lbound, ubound});
+}
+da_status da_data_select_remove_rows(da_datastore store, const char *key, da_int lbound,
+                                     da_int ubound) {
+    if (!store)
+        return da_status_store_not_initialized;
+    store->clear(); // clean up store logs
+
+    if (store->store == nullptr)
+        return da_error(store->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "store seems to be invalid?");
+    if (!key)
+        return da_warn(store->err, da_status_invalid_input, "key has to be defined");
+
+    std::string key_str(key);
+    return store->store->remove_rows_from_selection(key_str, {lbound, ubound});
 }
 
 /* ********************************** extract columns ******************************** */

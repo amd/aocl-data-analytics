@@ -34,7 +34,7 @@ set(CSV core/csv/tokenizer.c core/csv/read_csv_public.cpp)
 set(DA_HANDLE core/utilities/da_handle.cpp core/utilities/da_handle_public.cpp)
 set(DA_OPTIONS core/utilities/options_public.cpp)
 set(DA_DATA
-    core/data_management/interval_map.cpp
+    core/data_management/interval_set.cpp
     core/data_management/data_store_public.cpp
     core/data_management/data_store.cpp)
 set(DA_MISC core/utilities/miscellaneous.cpp)

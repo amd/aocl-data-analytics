@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,30 +22,23 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #include "data_store.hpp"
 
-using namespace da_data;
+namespace da_data {
 
-bool da_data::validate_interval(interval p, da_int max_val) {
-    if (p.first > p.second)
-        return false;
-    if (p.first < 0 || p.second >= max_val)
-        return false;
-    return true;
-}
-
-bool da_data::check_internal_string(std::string &key) {
+bool check_internal_string(std::string &key) {
     if (key.find(DA_STRINTERNAL, 0) != std::string::npos)
         return false;
     return true;
 }
 
 template <>
-da_status da_data::data_store::concatenate_cols_csv<char **>(
-    da_int mc, da_int nc, char ***data, da_ordering order, bool copy_data, bool C_data) {
+da_status data_store::concatenate_cols_csv<char **>(da_int mc, da_int nc, char ***data,
+                                                    da_ordering order, bool copy_data,
+                                                    bool C_data) {
     char **deref_data = *data;
     free(data);
     data = nullptr;
@@ -55,7 +48,7 @@ da_status da_data::data_store::concatenate_cols_csv<char **>(
 }
 
 template <>
-da_status da_data::data_store::raw_ptr_from_csv_columns<char **>(
+da_status data_store::raw_ptr_from_csv_columns<char **>(
     [[maybe_unused]] da_csv::csv_reader *csv, da_auto_detect::CSVColumnsType &columns,
     da_int start_column, da_int end_column, da_int nrows, char ****bl, bool &C_data) {
 
@@ -92,3 +85,4 @@ da_status da_data::data_store::raw_ptr_from_csv_columns<char **>(
     C_data = true;
     return da_status_success;
 }
+} // namespace da_data

@@ -97,6 +97,8 @@ target_compile_definitions(
 
 add_executable(interval_map interval_map_tests.cpp)
 
+add_executable(interval_set interval_set_tests.cpp)
+
 add_executable(doc_tests doc_tests.cpp)
 
 add_executable(printf_debug printf_debug.cpp)
@@ -128,6 +130,7 @@ set(GTEST_EXES
   option_registry
   data
   interval_map
+  interval_set
   errors_tests
   doc_tests
   pca_tests
