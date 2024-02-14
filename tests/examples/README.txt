@@ -37,7 +37,7 @@ Compiling examples on Windows
 
 INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers.
 
-AOCL-DA requires Fortran runtime linraries for linking, so prior to compiling the examples you will need to source the ifort compiler using e.g. "C:\Program Files (x86)\Intel\oneAPI\setvars.bat".
+AOCL-DA requires Fortran runtime libraries for linking, so prior to compiling the examples you will need to source the ifort compiler using e.g. "C:\Program Files (x86)\Intel\oneAPI\setvars.bat".
 
 cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
    \<path to>\aocl-da\lib\<INT_LIB>\aocl-da.lib
