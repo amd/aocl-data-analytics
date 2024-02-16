@@ -1,26 +1,25 @@
 # Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software without
-# specific prior written permission.
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met: 1.
+# Redistributions of source code must retain the above copyright notice, this
+# list of conditions and the following disclaimer. 2. Redistributions in binary
+# form must reproduce the above copyright notice, this list of conditions and
+# the following disclaimer in the documentation and/or other materials provided
+# with the distribution. 3. Neither the name of the copyright holder nor the
+# names of its contributors may be used to endorse or promote products derived
+# from this software without specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
-# INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-# BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
-# OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-# POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
 cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
@@ -28,20 +27,19 @@ cmake_minimum_required(VERSION 3.20 FATAL_ERROR)
 project(AOCL-DA VERSION 4.2.1)
 
 set(AOCLDA_VERSION
-  "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
+    "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
 )
 
 # Get timestamp.
 string(TIMESTAMP BUILD_DATE "%Y%m%d")
 # Set version string.
-set(AOCLDA_VERSION_STR
-  "AOCL-DA ${AOCLDA_VERSION} Build ${BUILD_DATE}"
-)
+set(AOCLDA_VERSION_STR "AOCL-DA ${AOCLDA_VERSION} Build ${BUILD_DATE}")
 # Define a C preprocessor macro to communicate the current version so that it
 # can be embedded into the library and queried later.
 set(VERS_DEF -DAOCLDA_VERSION_STRING="${AOCLDA_VERSION_STR}")
 
-# Add version string in the variable that holds all definitions required to build da_core.
+# Add version string in the variable that holds all definitions required to
+# build da_core.
 list(APPEND AOCLDA_DEFS ${VERS_DEF})
 
 # Export Release Information automatically
@@ -54,11 +52,11 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "Setting build type to 'Debug' as none was specified")
   set(CMAKE_BUILD_TYPE
-    "Debug"
-    CACHE STRING "Choose the type of build" FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "" "Debug" "Release" "RelWithDebInfo")
+      "Debug"
+      CACHE STRING "Choose the type of build" FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "" "Debug" "Release"
+                                               "RelWithDebInfo")
 endif()
-
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -72,8 +70,10 @@ option(BUILD_ILP64 "ILP64 Support" OFF)
 # Windows options only
 if(WIN32)
   # Setting path to OpenMP runtime.
-  set(OpenMP_libomp_LIBRARY "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib" CACHE STRING "openmp library path")
-else()# Linux options only
+  set(OpenMP_libomp_LIBRARY
+      "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib/libomp.lib"
+      CACHE STRING "openmp library path")
+else() # Linux options only
   option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
   option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
   option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
@@ -85,16 +85,31 @@ option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
 option(BUILD_PYTHON "Python bindings" OFF)
 # Set paths to AOCLUTILS, BLAS and LAPACK installations.
-set(CMAKE_AOCL_ROOT $ENV{AOCL_ROOT} CACHE STRING "AOCL_ROOT directory to be used to find BLAS/LAPACK/AOCLUTILS libraries")
+set(CMAKE_AOCL_ROOT
+    $ENV{AOCL_ROOT}
+    CACHE
+      STRING
+      "AOCL_ROOT directory to be used to find BLAS/LAPACK/AOCLUTILS libraries")
 # Override the above path using the variables below.
-set(BLAS_INCLUDE_DIR "" CACHE STRING "Path to BLAS include directory")
-set(LAPACK_INCLUDE_DIR "" CACHE STRING "Path to LAPACK include directory")
-set(BLAS_LIB "" CACHE STRING "Path to BLAS library")
-set(LAPACK_LIB "" CACHE STRING "Path to LAPACK library")
-set(UTILS_LIB "" CACHE STRING "Path to AOCL-UTILS library")
+set(BLAS_INCLUDE_DIR
+    ""
+    CACHE STRING "Path to BLAS include directory")
+set(LAPACK_INCLUDE_DIR
+    ""
+    CACHE STRING "Path to LAPACK include directory")
+set(BLAS_LIB
+    ""
+    CACHE STRING "Path to BLAS library")
+set(LAPACK_LIB
+    ""
+    CACHE STRING "Path to LAPACK library")
+set(UTILS_LIB
+    ""
+    CACHE STRING "Path to AOCL-UTILS library")
 
 if(BUILD_SMP OR UNIX)
-  # On Linux, even serial builds need an OpenMP runtime to enable correct LibFlame linking
+  # On Linux, even serial builds need an OpenMP runtime to enable correct
+  # LibFlame linking
   find_package(OpenMP REQUIRED)
 endif()
 
@@ -117,9 +132,9 @@ endif()
 
 # Coverage is only valid with GNU/Linux GCC Debug builds
 if(COVERAGE
-  AND(NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU"
-  OR NOT ${CMAKE_BUILD_TYPE} MATCHES "Debug"
-  OR NOT UNIX))
+   AND (NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU"
+        OR NOT ${CMAKE_BUILD_TYPE} MATCHES "Debug"
+        OR NOT UNIX))
   message(WARNING "Coverage is only supported for  GNU/Linux GCC Debug build")
   set(COVERAGE OFF)
 endif()
@@ -146,32 +161,38 @@ endif()
 # Check for CL compatibility layer of clang
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
 if(COMPILER_BASENAME MATCHES
-  "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
+   "^(.+-)?(clang-cl)(-[0-9]+(\\.[0-9]+)*)?(-[^.]+)?(\\.exe)?$")
   set(CLANG_OPTIONS_STYLE "MSVC")
 else()
   set(CLANG_OPTIONS_STYLE "GNU")
 endif()
 
 # Check we can find AOCL installation
-if(CMAKE_AOCL_ROOT STREQUAL "" AND
-  (BLAS_INCLUDE_DIR STREQUAL "" OR
-  LAPACK_INCLUDE_DIR STREQUAL "" OR
-  BLAS_LIB STREQUAL "" OR
-  LAPACK_LIB STREQUAL "" OR
-  UTILS_LIB STREQUAL "")
-  )
+if(CMAKE_AOCL_ROOT STREQUAL ""
+   AND (BLAS_INCLUDE_DIR STREQUAL ""
+        OR LAPACK_INCLUDE_DIR STREQUAL ""
+        OR BLAS_LIB STREQUAL ""
+        OR LAPACK_LIB STREQUAL ""
+        OR UTILS_LIB STREQUAL ""
+       ))
   message(
     FATAL_ERROR
-    "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR."
+      "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR."
   )
 endif()
 
 if(WIN32)
-  # MSVC has warnings about deprecated CRT functions; these definitions overload them automatically with _s versions
-  add_compile_definitions(_CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1 _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1 _SILENCE_CXX20_CISO646_REMOVED_WARNING=1)
+  # MSVC has warnings about deprecated CRT functions; these definitions overload
+  # them automatically with _s versions
+  add_compile_definitions(
+    _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
+    _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
+    _SILENCE_CXX20_CISO646_REMOVED_WARNING=1)
 
-  # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime libraries
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL "MSVC")
+  # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime
+  # libraries
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
+                                                "MSVC")
     if(BUILD_SHARED_LIBS)
       set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
     else()
@@ -180,18 +201,29 @@ if(WIN32)
   endif()
 
   # Clang-cl or MSVC require ifort for the fortran compilation
-  if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    set(IFORT_LIBS "$ENV{LIB}" CACHE STRING "Setting path to Intel Fortran runtime libraries on Windows")
-    set(FORTRAN_RUNTIME
-      "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>"
-    )
-    add_compile_definitions(WIN_IFORT_NAME_MANGLING)
+  if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL
+                                            "MSVC")
+    if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+      if(NOT DEFINED ENV{FLANG_COMPILER})
+        message(FATAL_ERROR "Environment variable \$FLANG_COMPILER not found.")
+      endif()
+
+      file(TO_CMAKE_PATH $ENV{FLANG_COMPILER} FLANG_PATH)
+      set(CMAKE_Fortran_COMPILER "${FLANG_PATH}/bin/flang.exe")
+      set(FLANG_LIBS "${FLANG_PATH}/lib")
+      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib")
+    else()
+      set(IFORT_LIBS
+          "$ENV{LIB}"
+          CACHE STRING
+                "Setting path to Intel Fortran runtime libraries on Windows")
+      set(FORTRAN_RUNTIME
+          "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>")
+      add_compile_definitions(WIN_IFORT_NAME_MANGLING)
+    endif()
   else()
     if(NOT DEFINED ENV{MINGW_BIN})
-      message(
-        FATAL_ERROR
-        "Environment variable \$MINGW_BIN not found."
-      )
+      message(FATAL_ERROR "Environment variable \$MINGW_BIN not found.")
     endif()
 
     file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
@@ -214,13 +246,23 @@ endif()
 include(AOCLDependencies)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
-  OR(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
-  STREQUAL "MSVC"))
+   OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
+                                                  "MSVC"))
   # MSVC and clang-cl compiler flags
-  set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX2")
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-O2")
+    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-Od")
+    set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
+  else()
+    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX2")
+    set(COMPILER_FLAGS_RELEASE
+        "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;/fp:fast")
+    set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
+    set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
+  endif()
   set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
 
-  if(USE_AVX512)
+  if(USE_AVX512 AND (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang"))
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX512")
   endif()
 
@@ -228,21 +270,21 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
     set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/Qvec-report:2")
   endif()
 
-  set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;/fp:fast")
-  set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
-  set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
-
   if($ENV{USERNAME} MATCHES "aoclwinuser")
     set(CMAKE_VS_MSBUILD_COMMAND
-      "${CMAKE_VS_MSBUILD_COMMAND} /nodereuse:false /maxcpucount:1")
+        "${CMAKE_VS_MSBUILD_COMMAND} /nodereuse:false /maxcpucount:1")
   endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
-  OR(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
-  STREQUAL "GNU"))
+       OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
+                                                      STREQUAL "GNU"))
   # GNU style compiler flags
   set(COMPILER_FLAGS_COMMON
-    "${COMPILER_FLAS_COMMON};-mtune=native;-mavx2;-mfma;-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
+      "${COMPILER_FLAS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
   )
+  if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    set(COMPILER_FLAGS_COMMON
+        "${COMPILER_FLAS_COMMON};-mtune=native;-mavx2;-mfma;")
+  endif()
 
   # Release flags
   set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-O2;")
@@ -255,14 +297,17 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
 
   if(USE_AVX512)
     set(COMPILER_FLAGS_COMMON
-      "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
+        "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
   endif()
 
   if(VECTORIZATION_REPORTS)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-      set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize")
+      set(COMPILER_FLAGS_COMMON
+          "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize"
+      )
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-      set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-fopt-info-vec-all=vectorization.txt")
+      set(COMPILER_FLAGS_COMMON
+          "${COMPILER_FLAGS_COMMON};-fopt-info-vec-all=vectorization.txt")
     endif()
   endif()
 endif()
@@ -294,7 +339,10 @@ if(BUILD_DOC)
 endif()
 
 if(NOT BUILD_DOC AND INTERNAL_DOC)
-  message(WARNING "Turning off internal documentation since docs are not being built, set BUILD_DOC=On to enable also internal documentation")
+  message(
+    WARNING
+      "Turning off internal documentation since docs are not being built, set BUILD_DOC=On to enable also internal documentation"
+  )
   set(INTERNAL_DOC Off)
 endif()
 
@@ -307,9 +355,11 @@ add_subdirectory(source)
 # Put all custom configuration BEFORE including "CTest"
 if(VALGRIND)
   set(MEMORYCHECK_COMMAND_OPTIONS
-    "--track-origins=yes --leak-check=full -s --show-leak-kinds=all --gen-suppressions=all")
+      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all --gen-suppressions=all"
+  )
   set(MEMORYCHECK_TYPE "valgrind")
-  set(MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  set(MEMORYCHECK_SUPPRESSIONS_FILE
+      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
 endif()
 
 # build example and unit test programs
@@ -317,37 +367,34 @@ include(CTest)
 
 # Suppression list file needs to be defined AFTER including ctest
 if(VALGRIND)
-  set(MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  set(MEMORYCHECK_SUPPRESSIONS_FILE
+      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
 endif()
 
 add_subdirectory(tests)
 
-if (BUILD_PYTHON)
+if(BUILD_PYTHON)
   add_subdirectory(python_interface)
 endif()
 
 # Install examples and README files
-install(FILES README-Release.txt
+install(
+  FILES README-Release.txt
   DESTINATION ${CMAKE_INSTALL_PREFIX}
-  RENAME README.txt
-)
-install(FILES License
-  DESTINATION ${CMAKE_INSTALL_PREFIX}
-)
-install(DIRECTORY tests/examples/
+  RENAME README.txt)
+install(FILES License DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(
+  DIRECTORY tests/examples/
   DESTINATION examples
   FILES_MATCHING
   PATTERN "*.cpp"
   PATTERN "*tree*" EXCLUDE
-  PATTERN "*.csv"
-)
-install(FILES tools/CMakeLists_examples.cmake
+  PATTERN "*.csv")
+install(
+  FILES tools/CMakeLists_examples.cmake
   DESTINATION examples
-  RENAME CMakeLists.txt
-)
-install(FILES tests/examples/README.txt
-  DESTINATION examples
-)
+  RENAME CMakeLists.txt)
+install(FILES tests/examples/README.txt DESTINATION examples)
 
 # Convenience Banner, print relevent info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
@@ -389,10 +436,8 @@ if(${VALGRIND})
     NOTICE
     "         Valgrind flags : ${MEMORYCHECK_COMMAND_OPTIONS}. Use with `ctest -T MemCheck`"
   )
-  message(
-    NOTICE
-    "         Valgrind suppression: ${MEMORYCHECK_SUPPRESSIONS_FILE}"
-  )
+  message(NOTICE
+          "         Valgrind suppression: ${MEMORYCHECK_SUPPRESSIONS_FILE}")
 endif()
 
 message(NOTICE "Building with Coverage  : ${COVERAGE}")

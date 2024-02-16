@@ -43,7 +43,7 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 include_directories(
   ${CMAKE_SOURCE_DIR}/source/include
-  ${CMAKE_SOURCE_DIR}/source/core/basic_statistics  
+  ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
   ${CMAKE_SOURCE_DIR}/source/core/clustering
   ${CMAKE_SOURCE_DIR}/source/core/csv
   ${CMAKE_SOURCE_DIR}/source/core/data_management
@@ -142,6 +142,7 @@ foreach(target ${GTEST_EXES})
     target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
   endif()
   target_link_directories(${target} PRIVATE ${IFORT_LIBS})
+  target_link_directories(${target} PRIVATE ${FLANG_LIBS})
   target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
   # Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an empty string.
   # This is what AOCL-DA users will need to do explicitly to get the correct symbols, otherwise

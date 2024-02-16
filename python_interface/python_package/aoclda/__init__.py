@@ -25,8 +25,11 @@
 
 # pylint: disable = missing-module-docstring wrong-import-position
 import os
-if os.name == 'nt':
-    INTEL_FCOMPILER = os.environ['INTEL_FCOMPILER']
+
+# If this is an ifort Windows build then pick up the ifort runtime
+INTEL_FCOMPILER = os.environ.get('INTEL_FCOMPILER','')
+if os.path.exists(INTEL_FCOMPILER + r'\redist\intel64_win\compiler'):
     os.add_dll_directory(INTEL_FCOMPILER + r'\redist\intel64_win\compiler')
+
 import numpy as np
 from ._aoclda import single, double

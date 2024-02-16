@@ -75,6 +75,10 @@ if(BUILD_SHARED_LIBS)
   set_target_properties(da_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 endif()
 
+if(WIN32 AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+  link_libraries("flang")
+endif()
+
 if(NOT WIN32)
   include(Suppressions_core)
 endif()
@@ -84,6 +88,7 @@ add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
                     $<TARGET_OBJECTS:lbfgsb_s>)
 target_link_libraries(aocl-da PRIVATE ${LAPACK} ${BLAS} ${UTILS})
 target_link_directories(aocl-da PRIVATE ${IFORT_LIBS})
+target_link_directories(aocl-da PRIVATE ${FLANG_LIBS})
 target_include_directories(aocl-da PRIVATE ${BLAS_INCLUDE_DIR} ${LAPACK_INCLUDE_DIR})
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)

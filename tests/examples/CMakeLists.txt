@@ -81,6 +81,7 @@ foreach(target ${EXAMPLE_EXES})
   # they will get linking errors or aborts.
   target_compile_definitions(${target} PRIVATE ${AOCLDA_ILP64})
   target_link_directories(${target} PRIVATE ${IFORT_LIBS})
+  target_link_directories(${target} PRIVATE ${FLANG_LIBS})
   target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
 endforeach()
 
