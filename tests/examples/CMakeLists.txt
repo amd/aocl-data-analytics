@@ -52,9 +52,9 @@ add_executable(pca pca.cpp)
 target_link_libraries(pca PRIVATE aocl-da)
 
 add_executable(pca_cancer pca_cancer.cpp)
-target_link_libraries(pca_cancer aocl-da)
+target_link_libraries(pca_cancer PRIVATE aocl-da)
 target_compile_definitions(
-  pca_cancer PUBLIC DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  pca_cancer PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans PRIVATE aocl-da)
