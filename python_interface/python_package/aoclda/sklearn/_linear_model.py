@@ -32,7 +32,7 @@ Patching scikit learn linear models: LinearRegression, Ridge, Lasso
 from sklearn.linear_model import LinearRegression as LinearRegression_sklearn
 from sklearn.linear_model import Ridge as Ridge_sklearn
 from sklearn.linear_model import Lasso as Lasso_sklearn
-from aoclda.linear_model import linmod as linmod_da, linmod_model
+from aoclda.linear_model import linmod as linmod_da
 
 
 class LinearRegression(LinearRegression_sklearn):
@@ -52,7 +52,7 @@ class LinearRegression(LinearRegression_sklearn):
         # New attributes used internally
         self.aocl = True
         self.intercept_val = None
-        self.lmod = linmod_da(linmod_model.mse, intercept=fit_intercept)
+        self.lmod = linmod_da("mse", intercept=fit_intercept)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
@@ -118,7 +118,7 @@ class Ridge(Ridge_sklearn):
                 "Constraints on the coefficients are not supported")
 
         # Initialize aoclda object
-        self.lmod = linmod_da(linmod_model.mse, intercept=fit_intercept)
+        self.lmod = linmod_da("mse", intercept=fit_intercept)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
@@ -184,7 +184,7 @@ class Lasso(Lasso_sklearn):
         self.intercept_val = None
 
         # Initialize aoclda object
-        self.lmod = linmod_da(linmod_model.mse, intercept=fit_intercept)
+        self.lmod = linmod_da("mse", intercept=fit_intercept)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:

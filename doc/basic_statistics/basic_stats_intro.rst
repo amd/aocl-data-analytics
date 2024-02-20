@@ -45,7 +45,19 @@ Most statistical quantities can be computed by column, by row or for the data ma
    .. tab-item:: Python
       :sync: Python
 
-      NOT YET IMPLEMENTED
+      This is specified using the :py:attr:`axis` function parameter.
+
+      The ``axis`` parameter can take the following values:
+
+      - ``'col'`` - statistical quantities will be computed for each column of the data matrix
+
+      - ``'row'`` - statistical quantities will be computed for each row of the data matrix
+
+      - ``'all'`` - statistical quantities will be computed for the whole data matrix
+
+      For example, if the function :py:func:`mean` is called with the :py:attr:`axis` argument set
+      to ``col``, then ``n_cols`` means will be computed, one for each column. If the
+      :py:attr:`axis` argument is set to ``all``, then a single mean will be computed.
 
    .. tab-item:: C
       :sync: C
@@ -73,6 +85,12 @@ Examples
       :sync: Python
 
       The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+      .. collapse:: Basic Statistics Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/basic_stats_ex.py
+              :language: Python
+              :linenos:
 
    .. tab-item:: C
       :sync: C

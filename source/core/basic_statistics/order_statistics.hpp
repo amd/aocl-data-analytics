@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -379,10 +379,18 @@ da_status five_point_summary(da_axis axis, da_int n, da_int p, const T *x, da_in
                                      (std::max)(h_upper_floor - h_median_ceil - 1, izero),
                                      dim1, two_d, upper_hinge[i]);
         } else {
-            status = indexed_partial_sort(
-                &x[i * spacing], length - h_median_ceil - 1, stride,
-                &xindex[(std::min)(h_median_ceil + 1, length - 1)],
-                (std::max)(h_upper_floor - h_median_ceil - 1, izero), dim1, two_d, tmp1);
+            if (h_median_ceil == h_upper_floor) {
+                status =
+                    indexed_partial_sort(&x[i * spacing], length - h_median_ceil, stride,
+                                         &xindex[(std::min)(h_median_ceil, length - 1)],
+                                         izero, dim1, two_d, tmp1);
+            } else {
+                status = indexed_partial_sort(
+                    &x[i * spacing], length - h_median_ceil - 1, stride,
+                    &xindex[(std::min)(h_median_ceil + 1, length - 1)],
+                    (std::max)(h_upper_floor - h_median_ceil - 1, izero), dim1, two_d,
+                    tmp1);
+            }
             // h_upper_ceil = h_upper_floor+1 so just find the minimum value of the upper part of the array now
             status =
                 indexed_partial_sort(&x[i * spacing], length - h_upper_floor - 1, stride,

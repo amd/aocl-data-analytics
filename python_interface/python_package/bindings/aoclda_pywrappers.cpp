@@ -28,8 +28,10 @@
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
 #include <iostream>
+#include <optional>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <stdexcept>
 
 namespace py = pybind11;
@@ -49,6 +51,7 @@ void status_to_exception(da_status status) {
     case (da_status_invalid_array_dimension):
         throw std::length_error("One of the input arrays was too small.");
     case (da_status_invalid_input):
+    case (da_status_negative_data):
         throw std::invalid_argument(
             "One of the options passed to the function had an invalid value.");
     default:
@@ -59,36 +62,500 @@ void status_to_exception(da_status status) {
     }
 }
 
+/* Helper function to avoid redundancy
+ * Determine the size of output array based on the axis
+ */
 template <typename T>
-py::array_t<T> py_da_mean(da_axis axis, py::array_t<T, py::array::f_style> X) {
-    da_status status;
-    da_int m = X.shape()[0], n = X.shape()[1];
-
-    size_t mean_sz;
-    switch (axis) {
+void get_size(std::string axis, da_axis &axis_enum, py::array_t<T, py::array::f_style> &X,
+              size_t &size, da_int &m, da_int &n) {
+    if (axis == "col") {
+        axis_enum = da_axis_col;
+    } else if (axis == "row") {
+        axis_enum = da_axis_row;
+    } else if (axis == "all") {
+        axis_enum = da_axis_all;
+    } else {
+        throw std::invalid_argument(
+            "Given axis does not exist. Available choices are: 'col', 'row', 'all'.");
+    }
+    if (X.ndim() > 2) {
+        throw std::length_error(
+            "Function does not accept arrays with more than 2 dimensions.");
+    }
+    // If we are dealing with 1D array the shape attribute is stored as (n_samples, )
+    // so accessing X.shape()[1] is causing errors when 1D array is passed
+    if (X.ndim() == 1) {
+        n = X.shape()[0];
+        m = 1;
+        // If user provided 1D array then calculating for example mean over all elements
+        // would mean calculation over that one row of data.
+        if (axis_enum == da_axis_all) {
+            axis_enum = da_axis_row;
+        }
+    } else {
+        m = X.shape()[0], n = X.shape()[1];
+    }
+    switch (axis_enum) {
     case (da_axis_all):
-        mean_sz = 1;
+        size = 1;
         break;
 
     case (da_axis_col):
-        mean_sz = n;
+        size = n;
         break;
 
     case (da_axis_row):
-        mean_sz = m;
+        size = m;
         break;
     }
+}
+
+template <typename T>
+py::array_t<T> py_da_mean(py::array_t<T, py::array::f_style> X,
+                          std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t mean_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, mean_sz, m, n);
 
     // Create the output mean array as a numpy array
     size_t shape[1]{mean_sz};
     size_t strides[1]{sizeof(T)};
     auto mean = py::array_t<T>(shape, strides);
 
-    status = da_mean(axis, m, n, X.data(), m, mean.mutable_data());
+    status = da_mean(axis_enum, m, n, X.data(), m, mean.mutable_data());
 
     status_to_exception(status);
 
     return mean;
+}
+
+template <typename T>
+py::array_t<T> py_da_harmonic_mean(py::array_t<T, py::array::f_style> X,
+                                   std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t harmonic_mean_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, harmonic_mean_sz, m, n);
+
+    // Create the output mean array as a numpy array
+    size_t shape[1]{harmonic_mean_sz};
+    size_t strides[1]{sizeof(T)};
+    auto harmonic_mean = py::array_t<T>(shape, strides);
+
+    status = da_harmonic_mean(axis_enum, m, n, X.data(), m, harmonic_mean.mutable_data());
+
+    status_to_exception(status);
+
+    return harmonic_mean;
+}
+
+template <typename T>
+py::array_t<T> py_da_geometric_mean(py::array_t<T, py::array::f_style> X,
+                                    std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t geometric_mean_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, geometric_mean_sz, m, n);
+
+    // Create the output mean array as a numpy array
+    size_t shape[1]{geometric_mean_sz};
+    size_t strides[1]{sizeof(T)};
+    auto geometric_mean = py::array_t<T>(shape, strides);
+
+    status =
+        da_geometric_mean(axis_enum, m, n, X.data(), m, geometric_mean.mutable_data());
+
+    status_to_exception(status);
+
+    return geometric_mean;
+}
+
+template <typename T>
+py::array_t<T> py_da_variance(py::array_t<T, py::array::f_style> X, da_int dof = 0,
+                              std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t variance_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, variance_sz, m, n);
+
+    // Create the output variance array as a numpy array
+    size_t shape[1]{variance_sz};
+    size_t strides[1]{sizeof(T)};
+    auto mean = py::array_t<T>(shape, strides);
+    auto variance = py::array_t<T>(shape, strides);
+
+    status = da_variance(axis_enum, m, n, X.data(), m, dof, mean.mutable_data(),
+                         variance.mutable_data());
+
+    status_to_exception(status);
+
+    return variance;
+}
+
+template <typename T>
+py::array_t<T> py_da_skewness(py::array_t<T, py::array::f_style> X,
+                              std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t skewness_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, skewness_sz, m, n);
+
+    // Create the output skewness array as a numpy array as well as other arrays to store auxilary output
+    size_t shape[1]{skewness_sz};
+    size_t strides[1]{sizeof(T)};
+    auto mean = py::array_t<T>(shape, strides);
+    auto variance = py::array_t<T>(shape, strides);
+    auto skewness = py::array_t<T>(shape, strides);
+
+    status = da_skewness(axis_enum, m, n, X.data(), m, mean.mutable_data(),
+                         variance.mutable_data(), skewness.mutable_data());
+
+    status_to_exception(status);
+
+    return skewness;
+}
+
+template <typename T>
+py::array_t<T> py_da_kurtosis(py::array_t<T, py::array::f_style> X,
+                              std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t kurtosis_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, kurtosis_sz, m, n);
+
+    // Create the output kurtosis array as a numpy array as well as other arrays to store auxilary output
+    size_t shape[1]{kurtosis_sz};
+    size_t strides[1]{sizeof(T)};
+    auto mean = py::array_t<T>(shape, strides);
+    auto variance = py::array_t<T>(shape, strides);
+    auto kurtosis = py::array_t<T>(shape, strides);
+
+    status = da_kurtosis(axis_enum, m, n, X.data(), m, mean.mutable_data(),
+                         variance.mutable_data(), kurtosis.mutable_data());
+
+    status_to_exception(status);
+
+    return kurtosis;
+}
+
+template <typename T>
+py::array_t<T> py_da_moment(py::array_t<T, py::array::f_style> X, da_int k,
+                            std::optional<py::array_t<T, py::array::f_style>> mean,
+                            std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t moment_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, moment_sz, m, n);
+
+    // Create the output moment array as a numpy array
+    size_t shape[1]{moment_sz};
+    size_t strides[1]{sizeof(T)};
+    auto moment = py::array_t<T>(shape, strides);
+
+    // Check if user provided precalculated mean
+    if (mean.has_value()) {
+        // Check if provided means have correct size
+        if ((size_t)mean->shape()[0] != moment_sz || mean->ndim() != 1) {
+            throw std::length_error("The size of mean array does not match data size.");
+        }
+        status = da_moment(axis_enum, m, n, X.data(), m, k, 1, mean->mutable_data(),
+                           moment.mutable_data());
+    } else {
+        auto mean_aux = py::array_t<T>(shape, strides);
+        status = da_moment(axis_enum, m, n, X.data(), m, k, 0, mean_aux.mutable_data(),
+                           moment.mutable_data());
+    }
+
+    status_to_exception(status);
+
+    return moment;
+}
+
+template <typename T>
+py::array_t<T> py_da_quantile(py::array_t<T, py::array::f_style> X, T q,
+                              std::string method = "linear", std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t quantile_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, quantile_sz, m, n);
+
+    // Create the output quantile array as a numpy array
+    size_t shape[1]{quantile_sz};
+    size_t strides[1]{sizeof(T)};
+    auto quantiles = py::array_t<T>(shape, strides);
+
+    if (method == "inverted_cdf") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_1);
+    } else if (method == "averaged_inverted_cdf") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_2);
+    } else if (method == "closest_observation") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_3);
+    } else if (method == "interpolated_inverted_cdf") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_4);
+    } else if (method == "hazen") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_5);
+    } else if (method == "weibull") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_6);
+    } else if (method == "linear") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_7);
+    } else if (method == "median_unbiased") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_8);
+    } else if (method == "normal_unbiased") {
+        status = da_quantile(axis_enum, m, n, X.data(), m, q, quantiles.mutable_data(),
+                             da_quantile_type_9);
+    } else {
+        throw std::invalid_argument("Provided method does not exist.");
+    }
+
+    status_to_exception(status);
+
+    return quantiles;
+}
+
+template <typename T>
+std::tuple<py::array_t<T>, py::array_t<T>, py::array_t<T>, py::array_t<T>, py::array_t<T>>
+py_da_five_point_summary(py::array_t<T, py::array::f_style> X, std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t fps_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, fps_sz, m, n);
+
+    // Create the output arrays to store five point summary as a numpy array
+    size_t shape[1]{fps_sz};
+    size_t strides[1]{sizeof(T)};
+    auto min = py::array_t<T>(shape, strides);
+    auto lq = py::array_t<T>(shape, strides);
+    auto med = py::array_t<T>(shape, strides);
+    auto uq = py::array_t<T>(shape, strides);
+    auto max = py::array_t<T>(shape, strides);
+
+    status = da_five_point_summary(axis_enum, m, n, X.data(), m, min.mutable_data(),
+                                   lq.mutable_data(), med.mutable_data(),
+                                   uq.mutable_data(), max.mutable_data());
+
+    status_to_exception(status);
+
+    return std::make_tuple(min, lq, med, uq, max);
+}
+
+template <typename T>
+py::array_t<T> py_da_standardize(py::array_t<T, py::array::f_style> X,
+                                 std::optional<py::array_t<T, py::array::f_style>> shift,
+                                 std::optional<py::array_t<T, py::array::f_style>> scale,
+                                 da_int dof = 0, bool reverse = false,
+                                 bool inplace = false, std::string axis = "col") {
+    da_status status;
+    da_int m, n;
+    size_t standardize_sz;
+    da_axis axis_enum;
+
+    get_size(axis, axis_enum, X, standardize_sz, m, n);
+
+    // Create parameters for potential copy_X of original numpy array
+    size_t shape[2]{(size_t)m, (size_t)n};
+    size_t strides[2]{sizeof(T), sizeof(T) * m};
+    T *dummy = nullptr;
+
+    if (shift.has_value() && scale.has_value()) {
+        if ((size_t)shift->shape()[0] != standardize_sz ||
+            (size_t)scale->shape()[0] != standardize_sz) {
+            throw std::length_error(
+                "The size of shift or scale array does not match the expected size.");
+        }
+        if (reverse) {
+            if (inplace) {
+                status = da_standardize(axis_enum, m, n, X.mutable_data(), m, dof, 1,
+                                        shift->mutable_data(), scale->mutable_data());
+                status_to_exception(status);
+                return X;
+            } else {
+                py::array_t<T, py::array::f_style> copy_X(shape, strides);
+                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                status = da_standardize(axis_enum, m, n, copy_X.mutable_data(), m, dof, 1,
+                                        shift->mutable_data(), scale->mutable_data());
+                status_to_exception(status);
+                return copy_X;
+            }
+        } else {
+            if (inplace) {
+                status = da_standardize(axis_enum, m, n, X.mutable_data(), m, dof, 0,
+                                        shift->mutable_data(), scale->mutable_data());
+                status_to_exception(status);
+                return X;
+            } else {
+                py::array_t<T, py::array::f_style> copy_X(shape, strides);
+                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                status = da_standardize(axis_enum, m, n, copy_X.mutable_data(), m, dof, 0,
+                                        shift->mutable_data(), scale->mutable_data());
+                status_to_exception(status);
+                return copy_X;
+            }
+        }
+    } else if (shift.has_value()) {
+        if ((size_t)shift->shape()[0] != standardize_sz) {
+            throw std::length_error(
+                "The size of shift array does not match the expected size.");
+        }
+        if (reverse) {
+            if (inplace) {
+                status = da_standardize(axis_enum, m, n, X.mutable_data(), m, dof, 1,
+                                        shift->mutable_data(), dummy);
+                status_to_exception(status);
+                return X;
+            } else {
+                py::array_t<T, py::array::f_style> copy_X(shape, strides);
+                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                status = da_standardize(axis_enum, m, n, copy_X.mutable_data(), m, dof, 1,
+                                        shift->mutable_data(), dummy);
+                status_to_exception(status);
+                return copy_X;
+            }
+        } else {
+            if (inplace) {
+                status = da_standardize(axis_enum, m, n, X.mutable_data(), m, dof, 0,
+                                        shift->mutable_data(), dummy);
+                status_to_exception(status);
+                return X;
+            } else {
+                py::array_t<T, py::array::f_style> copy_X(shape, strides);
+                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                status = da_standardize(axis_enum, m, n, copy_X.mutable_data(), m, dof, 0,
+                                        shift->mutable_data(), dummy);
+                status_to_exception(status);
+                return copy_X;
+            }
+        }
+    } else if (scale.has_value()) {
+        if ((size_t)scale->shape()[0] != standardize_sz) {
+            throw std::length_error(
+                "The size of scale array does not match the expected size.");
+        }
+        if (reverse) {
+            if (inplace) {
+                status = da_standardize(axis_enum, m, n, X.mutable_data(), m, dof, 1,
+                                        dummy, scale->mutable_data());
+                status_to_exception(status);
+                return X;
+            } else {
+                py::array_t<T, py::array::f_style> copy_X(shape, strides);
+                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                status = da_standardize(axis_enum, m, n, copy_X.mutable_data(), m, dof, 1,
+                                        dummy, scale->mutable_data());
+                status_to_exception(status);
+                return copy_X;
+            }
+        } else {
+            if (inplace) {
+                status = da_standardize(axis_enum, m, n, X.mutable_data(), m, dof, 0,
+                                        dummy, scale->mutable_data());
+                status_to_exception(status);
+                return X;
+            } else {
+                py::array_t<T, py::array::f_style> copy_X(shape, strides);
+                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                status = da_standardize(axis_enum, m, n, copy_X.mutable_data(), m, dof, 0,
+                                        dummy, scale->mutable_data());
+                status_to_exception(status);
+                return copy_X;
+            }
+        }
+    } else {
+        if (reverse) {
+            throw std::invalid_argument(
+                "Reverse standardization only works with supplied both shift and scale.");
+        } else {
+            if (inplace) {
+                status = da_standardize(axis_enum, m, n, X.mutable_data(), m, dof, 0,
+                                        dummy, dummy);
+                status_to_exception(status);
+                return X;
+            } else {
+                py::array_t<T, py::array::f_style> copy_X(shape, strides);
+                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                status = da_standardize(axis_enum, m, n, copy_X.mutable_data(), m, dof, 0,
+                                        dummy, dummy);
+                status_to_exception(status);
+                return copy_X;
+            }
+        }
+    }
+}
+
+template <typename T>
+py::array_t<T> py_da_covariance(py::array_t<T, py::array::f_style> X, da_int dof = 0) {
+    da_status status;
+    da_int m, n;
+
+    // Guard for 1D arrays passed
+    if (X.ndim() == 1) {
+        n = X.shape()[0];
+        m = 1;
+    } else {
+        m = X.shape()[0], n = X.shape()[1];
+    }
+
+    // Create the output covariance array as a numpy array
+    size_t shape[2]{(size_t)n, (size_t)n};
+    size_t strides[2]{sizeof(T), sizeof(T) * n};
+    py::array_t<T, py::array::f_style> cov(shape, strides);
+
+    status = da_covariance_matrix(m, n, X.data(), m, dof, cov.mutable_data(), n);
+
+    status_to_exception(status);
+
+    return cov;
+}
+
+template <typename T>
+py::array_t<T> py_da_correlation(py::array_t<T, py::array::f_style> X) {
+    da_status status;
+    da_int m, n;
+
+    // Guard for 1D arrays passed
+    if (X.ndim() == 1) {
+        n = X.shape()[0];
+        m = 1;
+    } else {
+        m = X.shape()[0], n = X.shape()[1];
+    }
+
+    // Create the output correlation array as a numpy array
+    size_t shape[2]{(size_t)n, (size_t)n};
+    size_t strides[2]{sizeof(T), sizeof(T) * n};
+    py::array_t<T, py::array::f_style> corr(shape, strides);
+
+    status = da_correlation_matrix(m, n, X.data(), m, corr.mutable_data(), n);
+
+    status_to_exception(status);
+
+    return corr;
 }
 
 class pyda_handle {
@@ -110,8 +577,7 @@ class pyda_handle {
         if (severity == DA_ERROR) {
             PyErr_SetString(PyExc_RuntimeError, message);
             throw py::error_already_set();
-        }
-        else
+        } else
             PyErr_WarnEx(PyExc_RuntimeWarning, message, 1);
 
         free(message);
@@ -123,14 +589,22 @@ class linmod : public pyda_handle {
     da_precision precision = da_double;
 
   public:
-    linmod(linmod_model mod, bool intercept = false, da_precision prec = da_double) {
+    linmod(std::string mod, bool intercept = false, std::string prec = "double") {
         da_status status;
-        if (prec == da_double) {
-            da_handle_init<double>(&handle, da_handle_linmod);
-            status = da_linmod_select_model<double>(handle, mod);
+        linmod_model mod_enum;
+        if (mod == "mse") {
+            mod_enum = linmod_model_mse;
+        } else if (mod == "logistic") {
+            mod_enum = linmod_model_logistic;
         } else {
+            mod_enum = linmod_model_undefined;
+        }
+        if (prec == "double") {
+            da_handle_init<double>(&handle, da_handle_linmod);
+            status = da_linmod_select_model<double>(handle, mod_enum);
+        } else if (prec == "single") {
             da_handle_init<float>(&handle, da_handle_linmod);
-            status = da_linmod_select_model<float>(handle, mod);
+            status = da_linmod_select_model<float>(handle, mod_enum);
             precision = da_single;
         }
         exception_check(status);
@@ -219,10 +693,10 @@ class pca : public pyda_handle {
   public:
     pca(da_int n_components = 1, std::string bias = "unbiased",
         std::string method = "covariance", std::string solver = "gesdd",
-        da_precision prec = da_double) {
-        if (prec == da_double)
+        std::string prec = "double") {
+        if (prec == "double")
             da_handle_init<double>(&handle, da_handle_pca);
-        else {
+        else if (prec == "single") {
             da_handle_init<float>(&handle, da_handle_pca);
             precision = da_single;
         }
@@ -399,24 +873,51 @@ class pca : public pyda_handle {
 PYBIND11_MODULE(_aoclda, m) {
     m.doc() = "Python wrappers for the AOCL-DA library";
 
-    /* Higher level types */
-    py::enum_<da_precision>(m, "precision")
-        .value("single", da_single)
-        .value("double", da_double)
-        .export_values();
-
     /**********************************/
     /*         Basic statistics       */
     /**********************************/
     auto m_stats = m.def_submodule("basic_stats", "Basic statistics.");
-    /* enum types */
-    py::enum_<da_axis_>(m_stats, "axis")
-        .value("col", da_axis::da_axis_col)
-        .value("row", da_axis::da_axis_row)
-        .value("all", da_axis::da_axis_all)
-        .export_values();
-    m_stats.def("mean", &py_da_mean<float>);
-    m_stats.def("mean", &py_da_mean<double>);
+    m_stats.def("pybind_mean", &py_da_mean<float>, "X"_a, "axis"_a = "col");
+    m_stats.def("pybind_mean", &py_da_mean<double>, "X"_a, "axis"_a = "col");
+    m_stats.def("pybind_harmonic_mean", &py_da_harmonic_mean<float>, "X"_a,
+                "axis"_a = "col");
+    m_stats.def("pybind_harmonic_mean", &py_da_harmonic_mean<double>, "X"_a,
+                "axis"_a = "col");
+    m_stats.def("pybind_geometric_mean", &py_da_geometric_mean<float>, "X"_a,
+                "axis"_a = "col");
+    m_stats.def("pybind_geometric_mean", &py_da_geometric_mean<double>, "X"_a,
+                "axis"_a = "col");
+    m_stats.def("pybind_variance", &py_da_variance<float>, "X"_a, "dof"_a = 0,
+                "axis"_a = "col");
+    m_stats.def("pybind_variance", &py_da_variance<double>, "X"_a, "dof"_a = 0,
+                "axis"_a = "col");
+    m_stats.def("pybind_skewness", &py_da_skewness<float>, "X"_a, "axis"_a = "col");
+    m_stats.def("pybind_skewness", &py_da_skewness<double>, "X"_a, "axis"_a = "col");
+    m_stats.def("pybind_kurtosis", &py_da_kurtosis<float>, "X"_a, "axis"_a = "col");
+    m_stats.def("pybind_kurtosis", &py_da_kurtosis<double>, "X"_a, "axis"_a = "col");
+    m_stats.def("pybind_moment", &py_da_moment<float>, "X"_a, "k"_a,
+                "mean"_a = py::none(), "axis"_a = "col");
+    m_stats.def("pybind_moment", &py_da_moment<double>, "X"_a, "k"_a,
+                "mean"_a = py::none(), "axis"_a = "col");
+    m_stats.def("pybind_quantile", &py_da_quantile<float>, "X"_a, "q"_a,
+                "method"_a = "linear", "axis"_a = "col");
+    m_stats.def("pybind_quantile", &py_da_quantile<double>, "X"_a, "q"_a,
+                "method"_a = "linear", "axis"_a = "col");
+    m_stats.def("pybind_five_point_summary", &py_da_five_point_summary<float>, "X"_a,
+                "axis"_a = "col");
+    m_stats.def("pybind_five_point_summary", &py_da_five_point_summary<double>, "X"_a,
+                "axis"_a = "col");
+    m_stats.def("pybind_standardize", &py_da_standardize<float>, "X"_a,
+                "shift"_a = py::none(), "scale"_a = py::none(), "dof"_a = 0,
+                "reverse"_a = false, "inplace"_a = false, "axis"_a = "col");
+    m_stats.def("pybind_standardize", &py_da_standardize<double>, "X"_a,
+                "shift"_a = py::none(), "scale"_a = py::none(), "dof"_a = 0,
+                "reverse"_a = false, "inplace"_a = false, "axis"_a = "col");
+    m_stats.def("pybind_covariance_matrix", &py_da_covariance<float>, "X"_a, "dof"_a = 0);
+    m_stats.def("pybind_covariance_matrix", &py_da_covariance<double>, "X"_a,
+                "dof"_a = 0);
+    m_stats.def("pybind_correlation_matrix", &py_da_correlation<float>);
+    m_stats.def("pybind_correlation_matrix", &py_da_correlation<double>);
 
     /**********************************/
     /*          Main handle           */
@@ -429,14 +930,9 @@ PYBIND11_MODULE(_aoclda, m) {
     /*         Linear Models          */
     /**********************************/
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
-    /* enum */
-    py::enum_<linmod_model_>(m_linmod, "linmod_model")
-        .value("mse", linmod_model::linmod_model_mse)
-        .value("logistic", linmod_model::linmod_model_logistic)
-        .export_values();
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
-        .def(py::init<linmod_model_, bool, da_precision &>(), "mod"_a,
-             py::arg("intercept") = false, py::arg("precision") = da_double)
+        .def(py::init<std::string, bool, std::string &>(), "mod"_a,
+             py::arg("intercept") = false, py::arg("precision") = "double")
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0)
         .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
@@ -448,10 +944,10 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_factorization = m.def_submodule("factorization", "Matrix factorizations.");
     py::class_<pca, pyda_handle>(m_factorization, "pybind_PCA")
-        .def(py::init<da_int, std::string, std::string, std::string, da_precision &>(),
+        .def(py::init<da_int, std::string, std::string, std::string, std::string &>(),
              py::arg("n_components") = 1, py::arg("bias") = "unbiased",
              py::arg("method") = "covariance", py::arg("solver") = "gesdd",
-             py::arg("precision") = da_double)
+             py::arg("precision") = "double")
         .def("pybind_fit", &pca::fit<float>, "Fit the principal component analysis",
              "A"_a)
         .def("pybind_fit", &pca::fit<double>, "Fit the principal component analysis",

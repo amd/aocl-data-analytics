@@ -80,7 +80,7 @@ class PCA(PCA_sklearn):
         # new internal attributes
         self.aocl = True
         self.pca = PCA_da(n_components, method="covariance",
-                          solver=self.svd_solver, precision=da.double, bias='unbiased')
+                          solver=self.svd_solver, precision="double", bias='unbiased')
 
     def fit(self, X, y=None):
         self.pca.fit(X)

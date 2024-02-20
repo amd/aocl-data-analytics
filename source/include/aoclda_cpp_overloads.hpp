@@ -119,86 +119,86 @@ inline da_status da_mean(da_axis axis, da_int n_rows, da_int n_cols, const float
     return da_mean_s(axis, n_rows, n_cols, X, ldx, mean);
 }
 
-inline da_status da_harmonic_mean(da_axis axis, da_int n_rows, da_int n_cols, double *X,
-                                  da_int ldx, double *harmonic_mean) {
+inline da_status da_harmonic_mean(da_axis axis, da_int n_rows, da_int n_cols,
+                                  const double *X, da_int ldx, double *harmonic_mean) {
     return da_harmonic_mean_d(axis, n_rows, n_cols, X, ldx, harmonic_mean);
 }
 
-inline da_status da_harmonic_mean(da_axis axis, da_int n_rows, da_int n_cols, float *X,
-                                  da_int ldx, float *harmonic_mean) {
+inline da_status da_harmonic_mean(da_axis axis, da_int n_rows, da_int n_cols,
+                                  const float *X, da_int ldx, float *harmonic_mean) {
     return da_harmonic_mean_s(axis, n_rows, n_cols, X, ldx, harmonic_mean);
 }
 
-inline da_status da_geometric_mean(da_axis axis, da_int n_rows, da_int n_cols, double *X,
-                                   da_int ldx, double *geometric_mean) {
+inline da_status da_geometric_mean(da_axis axis, da_int n_rows, da_int n_cols,
+                                   const double *X, da_int ldx, double *geometric_mean) {
     return da_geometric_mean_d(axis, n_rows, n_cols, X, ldx, geometric_mean);
 }
 
-inline da_status da_geometric_mean(da_axis axis, da_int n_rows, da_int n_cols, float *X,
-                                   da_int ldx, float *geometric_mean) {
+inline da_status da_geometric_mean(da_axis axis, da_int n_rows, da_int n_cols,
+                                   const float *X, da_int ldx, float *geometric_mean) {
     return da_geometric_mean_s(axis, n_rows, n_cols, X, ldx, geometric_mean);
 }
 
-inline da_status da_variance(da_axis axis, da_int n_rows, da_int n_cols, double *X,
+inline da_status da_variance(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
                              da_int ldx, da_int dof, double *mean, double *variance) {
     return da_variance_d(axis, n_rows, n_cols, X, ldx, dof, mean, variance);
 }
 
-inline da_status da_variance(da_axis axis, da_int n_rows, da_int n_cols, float *X,
+inline da_status da_variance(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
                              da_int ldx, da_int dof, float *mean, float *variance) {
     return da_variance_s(axis, n_rows, n_cols, X, ldx, dof, mean, variance);
 }
 
-inline da_status da_skewness(da_axis axis, da_int n_rows, da_int n_cols, double *X,
+inline da_status da_skewness(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
                              da_int ldx, double *mean, double *variance,
                              double *skewness) {
     return da_skewness_d(axis, n_rows, n_cols, X, ldx, mean, variance, skewness);
 }
 
-inline da_status da_skewness(da_axis axis, da_int n_rows, da_int n_cols, float *X,
+inline da_status da_skewness(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
                              da_int ldx, float *mean, float *variance, float *skewness) {
     return da_skewness_s(axis, n_rows, n_cols, X, ldx, mean, variance, skewness);
 }
 
-inline da_status da_kurtosis(da_axis axis, da_int n_rows, da_int n_cols, double *X,
+inline da_status da_kurtosis(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
                              da_int ldx, double *mean, double *variance,
                              double *kurtosis) {
     return da_kurtosis_d(axis, n_rows, n_cols, X, ldx, mean, variance, kurtosis);
 }
 
-inline da_status da_kurtosis(da_axis axis, da_int n_rows, da_int n_cols, float *X,
+inline da_status da_kurtosis(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
                              da_int ldx, float *mean, float *variance, float *kurtosis) {
     return da_kurtosis_s(axis, n_rows, n_cols, X, ldx, mean, variance, kurtosis);
 }
 
-inline da_status da_moment(da_axis axis, da_int n_rows, da_int n_cols, double *X,
+inline da_status da_moment(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
                            da_int ldx, da_int k, da_int use_precomputed_mean,
                            double *mean, double *moment) {
     return da_moment_d(axis, n_rows, n_cols, X, ldx, k, use_precomputed_mean, mean,
                        moment);
 }
 
-inline da_status da_moment(da_axis axis, da_int n_rows, da_int n_cols, float *X,
+inline da_status da_moment(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
                            da_int ldx, da_int k, da_int use_precomputed_mean, float *mean,
                            float *moment) {
     return da_moment_s(axis, n_rows, n_cols, X, ldx, k, use_precomputed_mean, mean,
                        moment);
 }
 
-inline da_status da_quantile(da_axis axis, da_int n_rows, da_int n_cols, double *X,
+inline da_status da_quantile(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
                              da_int ldx, double q, double *quantile,
                              da_quantile_type quantile_type) {
     return da_quantile_d(axis, n_rows, n_cols, X, ldx, q, quantile, quantile_type);
 }
 
-inline da_status da_quantile(da_axis axis, da_int n_rows, da_int n_cols, float *X,
+inline da_status da_quantile(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
                              da_int ldx, float q, float *quantile,
                              da_quantile_type quantile_type) {
     return da_quantile_s(axis, n_rows, n_cols, X, ldx, q, quantile, quantile_type);
 }
 
 inline da_status da_five_point_summary(da_axis axis, da_int n_rows, da_int n_cols,
-                                       double *X, da_int ldx, double *minimum,
+                                       const double *X, da_int ldx, double *minimum,
                                        double *lower_hinge, double *median,
                                        double *upper_hinge, double *maximum) {
     return da_five_point_summary_d(axis, n_rows, n_cols, X, ldx, minimum, lower_hinge,
@@ -206,7 +206,7 @@ inline da_status da_five_point_summary(da_axis axis, da_int n_rows, da_int n_col
 }
 
 inline da_status da_five_point_summary(da_axis axis, da_int n_rows, da_int n_cols,
-                                       float *X, da_int ldx, float *minimum,
+                                       const float *X, da_int ldx, float *minimum,
                                        float *lower_hinge, float *median,
                                        float *upper_hinge, float *maximum) {
     return da_five_point_summary_s(axis, n_rows, n_cols, X, ldx, minimum, lower_hinge,
@@ -225,22 +225,22 @@ inline da_status da_standardize(da_axis axis, da_int n_rows, da_int n_cols, floa
     return da_standardize_s(axis, n_rows, n_cols, X, ldx, dof, mode, shift, scale);
 }
 
-inline da_status da_covariance_matrix(da_int n_rows, da_int n_cols, float *X, da_int ldx,
-                                      da_int dof, float *cov, da_int ldcov) {
+inline da_status da_covariance_matrix(da_int n_rows, da_int n_cols, const float *X,
+                                      da_int ldx, da_int dof, float *cov, da_int ldcov) {
     return da_covariance_matrix_s(n_rows, n_cols, X, ldx, dof, cov, ldcov);
 }
 
-inline da_status da_covariance_matrix(da_int n_rows, da_int n_cols, double *X, da_int ldx,
-                                      da_int dof, double *cov, da_int ldcov) {
+inline da_status da_covariance_matrix(da_int n_rows, da_int n_cols, const double *X,
+                                      da_int ldx, da_int dof, double *cov, da_int ldcov) {
     return da_covariance_matrix_d(n_rows, n_cols, X, ldx, dof, cov, ldcov);
 }
 
-inline da_status da_correlation_matrix(da_int n_rows, da_int n_cols, float *X, da_int ldx,
-                                       float *corr, da_int ldcorr) {
+inline da_status da_correlation_matrix(da_int n_rows, da_int n_cols, const float *X,
+                                       da_int ldx, float *corr, da_int ldcorr) {
     return da_correlation_matrix_s(n_rows, n_cols, X, ldx, corr, ldcorr);
 }
 
-inline da_status da_correlation_matrix(da_int n_rows, da_int n_cols, double *X,
+inline da_status da_correlation_matrix(da_int n_rows, da_int n_cols, const double *X,
                                        da_int ldx, double *corr, da_int ldcorr) {
     return da_correlation_matrix_d(n_rows, n_cols, X, ldx, corr, ldcorr);
 }

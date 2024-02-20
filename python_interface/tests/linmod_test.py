@@ -26,11 +26,11 @@
 
 import numpy as np
 import pytest
-from aoclda.linear_model import linmod, linmod_model
+from aoclda.linear_model import linmod
 import aoclda as da
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [
-    (da.double, np.float64), (da.single, np.float32),
+    ("double", np.float64), ("single", np.float32),
 ])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
 def test_linear_regression(da_precision, numpy_precision, numpy_order):
@@ -40,7 +40,7 @@ def test_linear_regression(da_precision, numpy_precision, numpy_order):
     tol = np.sqrt(np.finfo(numpy_precision).eps)
 
     # compute linear regression without intercept
-    lmod = linmod(linmod_model.mse, precision=da_precision)
+    lmod = linmod("mse", precision=da_precision)
     lmod.fit(X, y)
 
     # check expected results
@@ -49,7 +49,7 @@ def test_linear_regression(da_precision, numpy_precision, numpy_order):
     assert norm < tol
 
     # same test with intercept
-    lmod = linmod(linmod_model.mse, precision=da_precision, intercept=True)
+    lmod = linmod("mse", precision=da_precision, intercept=True)
     lmod.fit(X, y)
 
     # check expected results

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -65,12 +65,12 @@ typedef enum da_quantile_type_ {
     da_quantile_type_1, ///< @f$h=n \times q@f$; return @f$\texttt{x[i]}@f$, where @f$i = \lceil h \rceil@f$.
     da_quantile_type_2, ///< @f$h=n \times q+0.5@f$; return @f$(\texttt{x[i]}+\texttt{x[j]})/2@f$, where @f$i = \lceil h-1/2\rceil@f$ and @f$j = \lfloor h+1/2\rfloor@f$.
     da_quantile_type_3, ///< @f$h=n \times q-0.5@f$; return @f$\texttt{x[i]}@f$, where @f$i@f$ is the nearest integer to @f$h@f$.
-    da_quantile_type_4, ///< @f$h=n \times q@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[k]})@f$, where @f$i@f$ is the nearest integer to @f$h@f$, @f$j = \lceil h \rceil@f$ and @f$k = \lfloor h\rfloor@f$.
-    da_quantile_type_5, ///< @f$h=n \times q+0.5@f$; return @f$\texttt{x[i]} + (h-\lfloor h\rfloor)(\texttt{x[j]}-\texttt{x[k]})@f$, where @f$i@f$ is the nearest integer to @f$h@f$, @f$j = \lceil h \rceil@f$, @f$k = \lfloor h\rfloor@f$.
-    da_quantile_type_6, ///< @f$h=(n+1) \times q@f$; return @f$\texttt{x[i]} + (h-\lfloor h\rfloor)(\texttt{x[j]}-\texttt{x[k]})@f$, where @f$i@f$ is the nearest integer to @f$h@f$, @f$j = \lceil h \rceil@f$, @f$k = \lfloor h\rfloor@f$.
-    da_quantile_type_7, ///< @f$h=(n-1) \times q+1@f$; return @f$\texttt{x[i]} + (h-\lfloor h\rfloor)(\texttt{x[j]}-\texttt{x[k]})@f$, where @f$i@f$ is the nearest integer to @f$h@f$, @f$j = \lceil h \rceil@f$, @f$k = \lfloor h\rfloor@f$.
-    da_quantile_type_8, ///< @f$h=(n+1/3) \times q + 1/3@f$; return @f$\texttt{x[i]} + (h-\lfloor h\rfloor)(\texttt{x[j]}-\texttt{x[k]})@f$, where @f$i@f$ is the nearest integer to @f$h@f$, @f$j = \lceil h \rceil@f$, @f$k = \lfloor h\rfloor@f$.
-    da_quantile_type_9, ///< @f$h=(n+1/4) \times q + 3/8@f$; return @f$\texttt{x[i]} + (h-\lfloor h\rfloor)(\texttt{x[j]}-\texttt{x[k]})@f$, where @f$i@f$ is the nearest integer to @f$h@f$, @f$j = \lceil h \rceil@f$, @f$k = \lfloor h\rfloor@f$.
+    da_quantile_type_4, ///< @f$h=n \times q@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
+    da_quantile_type_5, ///< @f$h=n \times q+0.5@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
+    da_quantile_type_6, ///< @f$h=(n+1) \times q@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
+    da_quantile_type_7, ///< @f$h=(n-1) \times q+1@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
+    da_quantile_type_8, ///< @f$h=(n+1/3) \times q + 1/3@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
+    da_quantile_type_9, ///< @f$h=(n+1/4) \times q + 3/8@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
 } da_quantile_type;
 
 /** \{
@@ -235,7 +235,7 @@ da_status da_skewness_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
  * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n.  If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \param[out] variance the array which will hold the computed variances. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
- * \param[out] kurtosis the array which will hold the computed skewnesses. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
+ * \param[out] kurtosis the array which will hold the computed kurtoses. If \p axis = \ref da_axis_col the array must be at least of size p. If \p axis = \ref da_axis_row the array must be at least of size n. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
@@ -249,7 +249,7 @@ da_status da_kurtosis_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
 /** \} */
 
 /** \{
- * \brief Central moment a data matrix.
+ * \brief Central moment of a data matrix.
  *
  * For a dataset  @f$\{x_1, \dots, x_n\}@f$, the <i>k</i>th central moment, @f$m_k@f$, is defined as
  * \f[
@@ -315,7 +315,7 @@ da_status da_quantile_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
 /** \{
  * \brief Summary statistics of a data matrix.
  *
- * Computes the maximum/minumum, median and upper/lower hinges of a data array along the specified axis.
+ * Computes the maximum, minimum, median and upper/lower hinges of a data array along the specified axis.
  *
  * \param[in] axis a \ref da_axis enumerated type, specifying whether statistics are computed by row, by column, or overall.
  * \param[in] n_rows the number of rows in the data matrix. Constraint: \p n_rows @f$\ge 1@f$.
@@ -392,7 +392,7 @@ da_status da_standardize_s(da_axis axis, da_int n_rows, da_int n_cols, float *X,
  *
  * For a dataset  @f$X = [\textbf{x}_1, \dots, \textbf{x}_{n_{\text{cols}}}]^T@f$ with column means @f$\{\bar{x}_1, \dots, \bar{x}_{n_{\text{cols}}}\}@f$, the @f$(i, j)@f$ element of the covariance matrix is given by the covariance between @f$\textbf{x}_i@f$ and @f$\textbf{x}_j@f$:
  * \f[
- * \text{cov}(i,j) = \frac{1}{\text{dof}}(\textbf{x}_i.-\bar{x}_i).(\textbf{x}_j.-\bar{x}_j),
+ * \text{cov}(i,j) = \frac{1}{\text{dof}}(\textbf{x}_i-\bar{x}_i)\cdot(\textbf{x}_j-\bar{x}_j),
  * \f]
  * where dof is the number of <em>degrees of freedom</em>.
  * Setting  @f$\text{dof} = n_{\text{cols}} @f$ gives the sample covariances, whereas setting @f$\text{dof} = n_{\text{cols}} -1 @f$ gives unbiased estimates of the population covariances. The argument \p dof is used to specify the number of degrees of freedom.

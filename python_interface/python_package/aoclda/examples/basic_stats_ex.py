@@ -22,36 +22,49 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-
 """
-Basic statistics xeample python script
+Basic statistics example python script
 """
 
-from aoclda.basic_stats import axis, mean
+from aoclda.basic_stats import harmonic_mean, mean, variance, quantile, covariance_matrix, standardize
 import numpy as np
+import sys
 
 
 def basic_stats_example():
     """
-    Compute the mean of the rows and columns of a data matrix
+    Basic statistics examples
     """
-    np.set_printoptions(precision=117)
-    a = np.array([[1.1, 2.213, 3.3], [4, 5.013, 6]], dtype=np.float32)
-    mean_all = mean(axis.all, a)
-    print(mean_all)
-    mean_col = mean(axis.col, a)
-    print(mean_col)
-    mean_row = mean(axis.row, a)
-    print(mean_row)
+    a = np.array([[1.1, 2.213, 3.3], [4, 5.013, 6]],
+                 dtype=np.float32,
+                 order='F')
+    print("Dataset:\n")
+    print(a)
 
-    b = np.array([[1.1, 2.213, 3.3], [4, 5.013, 6]], dtype=np.float64)
-    mean_all = mean(axis.all, b)
-    print(mean_all)
-    mean_col = mean(axis.col, b)
-    print(mean_col)
-    mean_row = mean(axis.row, b)
-    print(mean_row)
+    means = mean(a, axis="row")
+    print(f"\nRow means: {means}")
+
+    harmonic_means = harmonic_mean(a, axis="col")
+    print(f"\nColumn harmonic means: {harmonic_means}")
+
+    var = variance(a, axis="all")
+    print(f"\nOverall data variance: {var}")
+
+    medians = quantile(a, 0.5, axis="row")
+    print(f"\nRow medians: {medians}")
+
+    covar = covariance_matrix(a)
+    print(f"\nCovariance matrix:\n{covar}")
+
+    standardized = standardize(a)
+    print(f"\nStandardized matrix:\n{standardized}")
+
+    print("\nBasic statistics calculations succesful")
+    print("---------------------------")
 
 
 if __name__ == "__main__":
-    basic_stats_example()
+    try:
+        basic_stats_example()
+    except RuntimeError:
+        sys.exit(1)

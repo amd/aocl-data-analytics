@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -101,7 +101,7 @@ da_status cov_corr_matrix(da_int n, da_int p, const T *x, da_int ldx, da_int dof
                 mat[j * ldmat + i] /= scale_factor;
             }
         }
-    } else {
+    } else if (compute_corr) {
         // Correlation matrix should have diagonals equal to 1 precisely
         for (da_int i = 0; i < p; i++) {
             mat[i * ldmat + i] = 1.0;

@@ -59,9 +59,9 @@ class PCA(pybind_PCA):
             ``gesvdx`` is used.
 
 
-        precision (aoclda.precision, optional): Whether to initialize the PCA object in double or
-            single precision. It can take the values ``aoclda.single`` or ``aoclda.double``.
-            Default = ``aoclda.double``.
+        precision (str, optional): Whether to initialize the PCA object in double or
+            single precision. It can take the values ``single`` or ``double``.
+            Default = ``double``.
 
     """
     @property

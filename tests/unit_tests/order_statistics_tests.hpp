@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -490,9 +490,9 @@ template <typename T> void GetTallThinData1(std::vector<OrderParamType<T>> &para
                                             -7.4, -9.1, -4.7, -9.5, 0.8,  1.2,
                                             -7.4, -2.1, -7.4, -5.9, -7.4, -2.6};
     param.expected_row_minima = convert_vector<double, T>(expected_row_minima);
-    std::vector<double> expected_row_upper_hinges{8.1, 9.9, 7.4, 9.5, 4.6, 5.1,
-                                                  8.,  9.4, 8.2, 3.1, 8.4, 4.1,
-                                                  8.,  5.,  8.,  6.5, 8.3, 9.1};
+    std::vector<double> expected_row_upper_hinges{
+        7.425, 8.75,  7.35, 8.425, 3.875, 4.7,   7.15,  7.55,  8.05,
+        2.725, 7.325, 3.95, 5.35,  4.625, 4.975, 4.875, 6.225, 8.075};
     param.expected_row_upper_hinges =
         convert_vector<double, T>(expected_row_upper_hinges);
     std::vector<double> expected_row_lower_hinges{
@@ -562,9 +562,9 @@ template <typename T> void GetTallThinData2(std::vector<OrderParamType<T>> &para
                                             -7.4, -29.1, -4.7, -10.5, 0.8,  1.2,
                                             -7.4, -2.1,  -7.4, -5.9,  -7.4, -2.6};
     param.expected_row_minima = convert_vector<double, T>(expected_row_minima);
-    std::vector<double> expected_row_upper_hinges{8.1, 9.9, 7.4, 9.5, 4.6, 5.1,
-                                                  8.,  9.4, 8.2, 3.1, 8.4, 4.1,
-                                                  8.,  5.,  8.,  6.5, 8.3, 9.1};
+    std::vector<double> expected_row_upper_hinges{
+        7.425, 8.75,  7.35, 8.425, 3.875, 4.7,   7.15,  7.55,  8.05,
+        2.725, 7.325, 3.95, 5.35,  4.625, 4.975, 4.875, 6.225, 8.075};
     param.expected_row_upper_hinges =
         convert_vector<double, T>(expected_row_upper_hinges);
     std::vector<double> expected_row_lower_hinges{
@@ -634,9 +634,9 @@ template <typename T> void GetTallThinData3(std::vector<OrderParamType<T>> &para
                                             -7.4, -9.1, -4.7, -11.5, 0.8,  1.2,
                                             -7.4, -2.1, -7.4, -5.9,  -7.4, -2.6};
     param.expected_row_minima = convert_vector<double, T>(expected_row_minima);
-    std::vector<double> expected_row_upper_hinges{8.1, 10.9, 7.4, 9.5, 4.6, 5.1,
-                                                  8.,  9.4,  8.2, 3.1, 8.4, 4.1,
-                                                  8.,  5.,   8.,  6.5, 8.3, 9.1};
+    std::vector<double> expected_row_upper_hinges{
+        7.425, 9.5,   7.35, 8.425, 3.875, 4.7,   7.15,  7.55,  8.05,
+        2.725, 7.325, 3.95, 5.35,  4.625, 4.975, 4.875, 6.225, 8.075};
     param.expected_row_upper_hinges =
         convert_vector<double, T>(expected_row_upper_hinges);
     std::vector<double> expected_row_lower_hinges{

@@ -25,7 +25,7 @@
 
 # pylint: disable = missing-module-docstring, unused-import
 
-from ._aoclda.linear_model import pybind_linmod, linmod_model
+from ._aoclda.linear_model import pybind_linmod
 
 
 class linmod(pybind_linmod):
@@ -34,15 +34,18 @@ class linmod(pybind_linmod):
 
     Args:
 
-        linmod_model (aoclda.linear_model.linmod_model): Which linear model to compute.
-            Can take the value 'mse' (mean squared error) or 'logistic'.
+        linmod_model (str): Which linear model to compute.
+
+            - If ``linmod_model=mse`` then :math:`L_2` norm linear regression is calculated.
+
+            - If ``linmod_model=logistic`` then logistic regression is calculated.
 
         intercept (bool, optional): Controls whether to add an intercept variable to the model.
             Default=False.
 
-        precision (aoclda.precision, optional): Whether to compute the linear model in double or
-            single precision. It can take the values ``aoclda.single`` or ``aoclda.double``.
-            Default = ``aoclda.double``.
+        precision (str, optional): Whether to compute the linear model in double or
+            single precision. It can take the values ``single`` or ``double``.
+            Default = ``double``.
     """
 
     def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0):

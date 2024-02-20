@@ -33,4 +33,3 @@ if os.path.exists(FORTRAN_RUNTIME):
     os.add_dll_directory(FORTRAN_RUNTIME)
 
 import numpy as np
-from ._aoclda import single, double

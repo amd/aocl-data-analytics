@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -32,7 +32,7 @@ Linear models APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.linear_model.linmod(aoclda.linear_model.linmod_model, intercept='False', precision=aoclda.double)
+      .. autoclass:: aoclda.linear_model.linmod(linmod_model, intercept='False', precision="double")
          :members:
 
    .. tab-item:: C

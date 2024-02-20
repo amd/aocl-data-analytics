@@ -34,7 +34,7 @@ import aoclda as da
 
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [
-    (da.double, np.float64), (da.single, np.float32),
+    ("double", np.float64), ("single", np.float32),
 ])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
 def test_pca_functionality(da_precision, numpy_precision, numpy_order):
@@ -116,7 +116,7 @@ def test_pca_functionality(da_precision, numpy_precision, numpy_order):
 
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [
-    (da.double, np.float64), (da.single, np.float32),
+    ("double", np.float64), ("single", np.float32),
 ])
 def test_pca_error_exits(da_precision, numpy_precision):
     """

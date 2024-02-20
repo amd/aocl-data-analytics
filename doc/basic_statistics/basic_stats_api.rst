@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -32,7 +32,18 @@ Basic statistics APIs
 
    .. tab-item:: Python
 
-      Not yet implemented
+      .. autofunction:: aoclda.basic_stats.mean(X, axis="col")
+      .. autofunction:: aoclda.basic_stats.harmonic_mean(X, axis="col")
+      .. autofunction:: aoclda.basic_stats.geometric_mean(X, axis="col")
+      .. autofunction:: aoclda.basic_stats.variance(X, dof=0, axis="col")
+      .. autofunction:: aoclda.basic_stats.skewness(X, axis="col")
+      .. autofunction:: aoclda.basic_stats.kurtosis(X, axis="col")
+      .. autofunction:: aoclda.basic_stats.moment(X, k, mean=None, axis="col")
+      .. autofunction:: aoclda.basic_stats.quantile(X, q, method="linear", axis="col")
+      .. autofunction:: aoclda.basic_stats.five_point_summary(X, axis="col")
+      .. autofunction:: aoclda.basic_stats.standardize(X, shift=None, scale=None, dof=0, reverse=False, inplace=False, axis="col")
+      .. autofunction:: aoclda.basic_stats.covariance_matrix(X, dof=0)
+      .. autofunction:: aoclda.basic_stats.correlation_matrix(X)
 
    .. tab-item:: C
 
