@@ -25,7 +25,6 @@
 #define LINMOD_NLN_OPTIM_HPP
 
 #undef max
-#undef min
 
 #include "aoclda.h"
 #include "da_cblas.hh"

@@ -1,5 +1,5 @@
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-# 
+# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -10,7 +10,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -21,7 +21,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 
 
 find_program(LCOV lcov REQUIRED)
@@ -52,7 +52,7 @@ add_custom_target(
   COMMAND CLICOLOR=0 ctest --timeout 20 --output-junit Testing/Temporary/LastTest_JUnit.xml || true
   # Use LCOV to circumvent Jenkins error
   COMMAND ${LCOV} --rc lcov_branch_coverage=1 -d . -c -o ${COV_DIR}/coverage.info --gcov-tool ${GCOV_PATH}
-  COMMAND ${LCOV} --rc lcov_branch_coverage=1 --gcov-tool ${GCOV_PATH} --remove ${COV_DIR}/coverage.info -o ${COV_DIR}/coverage_filtered.info '/usr/*' '/*/_deps/*'
+  COMMAND ${LCOV} --rc lcov_branch_coverage=1 --gcov-tool ${GCOV_PATH} --remove ${COV_DIR}/coverage.info -o ${COV_DIR}/coverage_filtered.info '/usr/*' '/*/_deps/*' '/*/external/*/*.F90' '/*/external/*/*.f90'
   COMMAND ${GENHTML} --branch-coverage  ${COV_DIR}/coverage_filtered.info --output ${COV_DIR}/html --title "AOCL-DA Code Coverage Report" --legend
   WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
 )

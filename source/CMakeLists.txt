@@ -28,8 +28,8 @@ set(DA_FACTORIZATION core/factorization/pca_public.cpp)
 set(DA_CLUSTERING core/clustering/kmeans_public.cpp)
 set(DA_DECISION_FOREST core/decision_forest/decision_forest_public_d.cpp
                        core/decision_forest/decision_forest_public_s.cpp)
+set(NLLS_SRC core/nlls/nlls_public.cpp)
 
-# set(DRIVERS core/drivers/lbfgsb_driver.cpp)
 set(CSV core/csv/tokenizer.c core/csv/read_csv_public.cpp)
 set(DA_HANDLE core/utilities/da_handle.cpp core/utilities/da_handle_public.cpp)
 set(DA_OPTIONS core/utilities/options_public.cpp)
@@ -49,6 +49,7 @@ set(DA_CORE_SRC
     ${DA_FACTORIZATION}
     ${DA_CLUSTERING}
     ${DA_DECISION_FOREST}
+    ${NLLS_SRC}
     ${DA_MISC})
 
 add_library(da_core OBJECT ${DA_CORE_SRC})
@@ -65,7 +66,11 @@ target_include_directories(
           core/factorization
           core/clustering
           core/decision_forest
-          ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
+          core/nlls
+          ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
+          ${CMAKE_SOURCE_DIR}/external/RALFit
+          ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
+          )
 
 # Add definitions that depend on the CMake configuration.
 target_compile_definitions(da_core PRIVATE ${AOCLDA_DEFS})
@@ -102,7 +107,7 @@ endif()
 
 # Create combined library from da_core and Fortran libraries
 add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
-                    $<TARGET_OBJECTS:lbfgsb_s>)
+                    $<TARGET_OBJECTS:lbfgsb_s> $<TARGET_OBJECTS:ral_nlls_object>)
 target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS}
                                       ${FORTRAN_RUNTIME})
 

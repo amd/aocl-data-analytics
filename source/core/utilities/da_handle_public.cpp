@@ -44,6 +44,7 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
 
     (*handle)->handle_type = handle_type;
     (*handle)->precision = da_double;
+    da_status status = da_status_success;
 
     try {
         switch (handle_type) {
@@ -62,6 +63,13 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             break;
         case da_handle_decision_forest:
             (*handle)->df_d = new da_df::decision_forest<double>(*(*handle)->err);
+            break;
+        case da_handle_nlls:
+            (*handle)->nlls_d = new da_nlls::nlls<double>(*(*handle)->err, status);
+            if (status != da_status_success) {
+                (*handle)->nlls_d = nullptr;
+                return status; // err already filled (FIXME do other handles also)
+            }
             break;
         default:
             break;
@@ -87,6 +95,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
 
     (*handle)->handle_type = handle_type;
     (*handle)->precision = da_single;
+    da_status status = da_status_success;
 
     try {
         switch (handle_type) {
@@ -104,6 +113,13 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             break;
         case da_handle_decision_forest:
             (*handle)->df_s = new da_df::decision_forest<float>(*(*handle)->err);
+            break;
+        case da_handle_nlls:
+            (*handle)->nlls_s = new da_nlls::nlls<float>(*(*handle)->err, status);
+            if (status != da_status_success) {
+                (*handle)->nlls_s = nullptr;
+                return status; // err already filled (FIXME do other handles also)
+            }
             break;
         default:
             break;
@@ -155,6 +171,10 @@ void da_handle_destroy(da_handle *handle) {
                 delete (*handle)->df_d;
             if ((*handle)->df_s)
                 delete (*handle)->df_s;
+            if ((*handle)->nlls_d)
+                delete (*handle)->nlls_d;
+            if ((*handle)->nlls_s)
+                delete (*handle)->nlls_s;
             if ((*handle)->err)
                 delete (*handle)->err;
         }
@@ -196,6 +216,8 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
         return handle->dt_d->get_result(query, dim, result);
     else if (handle->df_d != nullptr)
         return handle->df_d->get_result(query, dim, result);
+    if (handle->nlls_d != nullptr)
+        return handle->nlls_d->get_result(query, dim, result);
 
     // handle was not initialized with
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -232,6 +254,8 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
         return handle->dt_s->get_result(query, dim, result);
     else if (handle->df_s != nullptr)
         return handle->df_s->get_result(query, dim, result);
+    else if (handle->nlls_s != nullptr)
+        return handle->nlls_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -274,6 +298,10 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
         return handle->kmeans_d->get_result(query, dim, result);
     else if (handle->kmeans_s != nullptr)
         return handle->kmeans_s->get_result(query, dim, result);
+    if (handle->nlls_d != nullptr)
+        return handle->nlls_d->get_result(query, dim, result);
+    else if (handle->nlls_s != nullptr)
+        return handle->nlls_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,

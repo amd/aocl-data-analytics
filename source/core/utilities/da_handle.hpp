@@ -38,6 +38,7 @@
 #include "decision_forest.hpp"
 #include "kmeans.hpp"
 #include "linear_model.hpp"
+#include "nlls.hpp"
 #include "pca.hpp"
 
 /**
@@ -62,6 +63,8 @@ struct _da_handle {
     da_df::decision_tree<float> *dt_s = nullptr;
     da_df::decision_forest<double> *df_d = nullptr;
     da_df::decision_forest<float> *df_s = nullptr;
+    da_nlls::nlls<double> *nlls_d = nullptr;
+    da_nlls::nlls<float> *nlls_s = nullptr;
 
     // Clear telemetry, for now it only clears the error stack
     // vector<>.clear() is linear in cost wrt the amount of elements to erase.

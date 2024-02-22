@@ -36,10 +36,6 @@
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * \brief Defines which linear model is computed
  **/
@@ -182,9 +178,5 @@ da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int n
                                      float *X, float *predictions, float *observations,
                                      float *loss);
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

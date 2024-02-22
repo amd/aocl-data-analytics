@@ -32,10 +32,6 @@
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * \file
  */
@@ -584,7 +580,4 @@ da_status da_data_set_element_real_s(da_datastore store, da_int i, da_int j, flo
 da_status da_data_set_element_uint8(da_datastore store, da_int i, da_int j, uint8_t elem);
 /** \} */
 
-#ifdef __cplusplus
-}
-#endif
 #endif

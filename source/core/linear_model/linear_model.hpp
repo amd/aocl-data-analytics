@@ -51,12 +51,9 @@
 #include <utility>
 #include <vector>
 
-#undef min
-#undef max
-
 /* Linear Models
  *
- * Solve the problem   minimize   f(x) = \sum_{i=0}^{nres-1} \Xi ( \psi(yi, \phi(xi;t)) ) + eta(xi)
+ * Solve the problem   minimize   f(x) = 1/2n_samples\sum_{i=0}^{nsamples-1} \Xi ( \psi(yi, \phi(xi;t)) ) + eta(xi)
  *                   x \in R^nvar
  * where
  *  * \Xi() is the loss function
@@ -155,7 +152,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     linear_model(da_errors::da_error_t &err) {
         // assumes that err is valid
         this->err = &err;
-        register_linmod_options<T>(opts);
+        register_linmod_options<T>(opts); // FIXME verify return status!
     }
     ~linear_model();
 

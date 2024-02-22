@@ -24,6 +24,9 @@
 
 include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
+
+add_executable(nlls nlls.cpp)
+
 add_executable(basic_statistics basic_statistics.cpp)
 
 add_executable(linear_model linear_model.cpp)
@@ -60,6 +63,7 @@ add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans PRIVATE aocl-da)
 
 set(EXAMPLE_EXES
+  nlls
   reglinear_model
   linear_model
   linmod_diabetes
@@ -110,3 +114,4 @@ if(COVERAGE)
     list(APPEND COV_EXECUTABLES "${CMAKE_CURRENT_BINARY_DIR}/${EX_NAME}")
   endforeach()
 endif()
+

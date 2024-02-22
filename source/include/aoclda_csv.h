@@ -34,10 +34,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * \file
  */
@@ -109,9 +105,5 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
 da_status da_read_csv_string(da_datastore store, const char *filename, char ***A,
                              da_int *n_rows, da_int *n_cols, char ***headings);
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

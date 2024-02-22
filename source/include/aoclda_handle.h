@@ -33,10 +33,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * \file
  */
@@ -58,7 +54,10 @@ typedef enum da_handle_type_ {
                       ///< the handle is to be used with functions for computing :ref:`k-means clustering <kmeans_intro>`.
                       ///< @endrst
     da_handle_decision_tree, ///< the handle is to be used with functions from the decision trees (not yet implemented).
-    da_handle_decision_forest ///< the handle is to be used with functions from the decision forests chapter (not yet implemented).
+    da_handle_decision_forest, ///< the handle is to be used with functions from the decision forests chapter (not yet implemented).
+    da_handle_nlls , ///< @rst
+                     ///< the handle is to be used with functions from the :ref:`nonlinear data fitting chapter <chapter_nlls>`.
+                     ///< @endrst
 } da_handle_type;
 // clang-format on
 
@@ -123,9 +122,5 @@ void da_handle_destroy(da_handle *handle);
 /* The following routines are undocumented and are used internally to help the Python interfaces */
 da_status da_handle_get_error_message(da_handle handle, char **message);
 da_status da_handle_get_error_severity(da_handle handle, da_severity *severity);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

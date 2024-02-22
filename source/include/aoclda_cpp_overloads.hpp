@@ -489,4 +489,46 @@ inline da_status da_df_predict(da_handle handle, da_int n_obs, da_int n_features
     return da_df_predict_s(handle, n_obs, n_features, X_test, ldx_test, y_pred);
 }
 
+inline da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int nres,
+                                          da_resfun_t_d *resfun, da_resgrd_t_d *resgrd,
+                                          da_reshes_t_d *reshes, da_reshp_t_d *reshp) {
+    return da_nlls_define_residuals_d(handle, n_coef, nres, resfun, resgrd, *reshes,
+                                      *reshp);
+}
+
+inline da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int nres,
+                                          da_resfun_t_s *resfun, da_resgrd_t_s *resgrd,
+                                          da_reshes_t_s *reshes, da_reshp_t_s *reshp) {
+    return da_nlls_define_residuals_s(handle, n_coef, nres, resfun, resgrd, reshes,
+                                      reshp);
+}
+
+inline da_status da_nlls_define_bounds(da_handle handle, da_int n_coef, double *lower,
+                                       double *upper) {
+    return da_nlls_define_bounds_d(handle, n_coef, lower, upper);
+}
+
+inline da_status da_nlls_define_bounds(da_handle handle, da_int n_coef, float *lower,
+                                       float *upper) {
+    return da_nlls_define_bounds_s(handle, n_coef, lower, upper);
+}
+
+inline da_status da_nlls_define_weights(da_handle handle, da_int n_coef,
+                                        double *weights) {
+    return da_nlls_define_weights_d(handle, n_coef, weights);
+}
+
+inline da_status da_nlls_define_weights(da_handle handle, da_int n_coef, float *weights) {
+    return da_nlls_define_weights_s(handle, n_coef, weights);
+}
+
+inline da_status da_nlls_fit(da_handle handle, da_int n_coef, double *coef, void *udata) {
+    return da_nlls_fit_d(handle, n_coef, coef, udata);
+}
+
+inline da_status da_nlls_fit(da_handle hasdle, da_int n_coefs, float *coefs,
+                             void *udata) {
+    return da_nlls_fit_s(hasdle, n_coefs, coefs, udata);
+}
+
 #endif // AOCLDA_CPP_OVERLOADS

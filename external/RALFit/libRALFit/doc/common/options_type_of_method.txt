@@ -1,0 +1,8 @@
+.. list-table::
+	 
+    * - 1 
+      - Trust-region method.
+    * - 2 
+      - Regularization.
+
+See :ref:`subproblem-solves` for details.

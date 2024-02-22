@@ -28,10 +28,6 @@
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * \file
  */
@@ -153,9 +149,5 @@ da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples,
                                      da_int k_features, const float *Y, da_int ldy,
                                      float *Y_inv_transform, da_int ldy_inv_transform);
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

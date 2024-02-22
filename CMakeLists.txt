@@ -368,6 +368,7 @@ endif()
 
 # compile external packages
 add_subdirectory(external/Lbfgsb.3.0)
+add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
 
 # compile data analytics core library
 add_subdirectory(source)

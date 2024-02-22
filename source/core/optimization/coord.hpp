@@ -41,8 +41,6 @@
 #include <limits>
 #include <vector>
 
-#undef max
-#undef min
 #define HDRCNT 30 // how frequent to print iteration banner
 
 // LCOV_EXCL_START

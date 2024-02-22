@@ -29,14 +29,18 @@
 #include "options.hpp"
 #include <limits>
 
-// Needed for windows build
-#undef min
-#undef max
+namespace da_optimization_options {
+enum storage_scheme { fortran = 1, c = 2 };
+enum regularization { quadratic = 2, cubic = 3 };
+} // namespace da_optimization_options
 
 template <class T>
 inline da_status register_optimization_options(da_errors::da_error_t &err,
                                                da_options::OptionRegistry &opts) {
     using namespace da_options;
+    using namespace da_optimization_options;
+
+    const T rmax = std::numeric_limits<T>::max();
 
     try {
         // ===========================================================================
@@ -99,6 +103,12 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             da_options::lbound_t::greaterequal, 3, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "ralfit iteration limit", "Maximum number of iterations to perform.", 1,
+            da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
+            100));
+        opts.register_opt(oi);
+
         // ===========================================================================
         // REAL OPTIONS
         // ===========================================================================
@@ -159,6 +169,58 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
         opts.register_opt(oT);
 
+        oT = std::make_shared<OptionNumeric<T>>(
+            OptionNumeric<T>("ralfit convergence abs tol fun",
+                             "absolute tolerance to declare convergence for the "
+                             "iterative optimization step. See "
+                             "details in optimization solver documentation.",
+                             0.0, da_options::lbound_t::greaterthan, 1.0,
+                             da_options::ubound_t::lessthan, 1.0e-8, "10^{-8}"));
+        opts.register_opt(oT);
+
+        oT = std::make_shared<OptionNumeric<T>>(
+            OptionNumeric<T>("ralfit convergence rel tol fun",
+                             "relative tolerance to declare convergence for the "
+                             "iterative optimization step. See "
+                             "details in optimization solver documentation.",
+                             0.0, da_options::lbound_t::greaterthan, 1.0,
+                             da_options::ubound_t::lessthan, 1.0e-8, "10^{-8}"));
+        opts.register_opt(oT);
+
+        oT = std::make_shared<OptionNumeric<T>>(
+            OptionNumeric<T>("ralfit convergence abs tol grd",
+                             "absolute tolerance on the gradient norm to declare "
+                             "convergence for the iterative optimization step. See "
+                             "details in optimization solver documentation.",
+                             0.0, da_options::lbound_t::greaterthan, 1.0,
+                             da_options::ubound_t::lessthan, 1.0e-5, "10^{-5}"));
+        opts.register_opt(oT);
+
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence rel tol grd",
+            "relative tolerance on the gradient norm to declare convergence for the "
+            "iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            1.0e-8, "10^{-8}"));
+        opts.register_opt(oT);
+
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence step size",
+            "absolute tolerance over the step size to declare "
+            "convergence for the iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            tol.mcheps(1, 2), tol.mcheps_latex(1, 2)));
+        opts.register_opt(oT);
+
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "regularization term",
+            "Value for the regularization term. A value of 0 disables regularization.",
+            0.0, da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,
+            0.0));
+        opts.register_opt(oT);
+
         // ===========================================================================
         // STRING OPTIONS
         // ===========================================================================
@@ -172,8 +234,55 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
                          {{"lbfgsb", da_optim::solvers::solver_lbfgsb},
                           {"lbfgs", da_optim::solvers::solver_lbfgsb},
                           {"bfgs", da_optim::solvers::solver_lbfgsb},
-                          {"coord", da_optim::solvers::solver_coord}},
+                          {"coord", da_optim::solvers::solver_coord},
+                          {"ralfit", da_optim::solvers::solver_ralfit}},
                          "lbfgsb"));
+        opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString("ralfit model",
+                                                         "NLLS model to solve.",
+                                                         {{"gauss-newton", 1},
+                                                          {"quasi-newton", 2},
+                                                          {"hybrid", 3},
+                                                          {"tensor-newton", 4}},
+                                                         "hybrid"));
+        opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString("ralfit nlls method",
+                                                         "NLLS solver to use.",
+                                                         {{"powell-dogleg", 1},
+                                                          {"aint", 2},
+                                                          {"more-sorensen", 3},
+                                                          {"linear solver", 3},
+                                                          {"galahad", 4}},
+                                                         "galahad"));
+        opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString(
+            "ralfit globalization method",
+            "Globalization method to use. This parameter makes use of the regularization "
+            "term and power option values.",
+            {{"trust-region", 1}, {"tr", 1}, {"regularization", 2}, {"reg", 2}},
+            "trust-region"));
+        opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString(
+            "storage scheme",
+            "Define the storage scheme used to store multi-dimensional arrays (Jacobian "
+            "matrix, "
+            "etc).",
+            {{"fortran", storage_scheme::fortran},
+             {"f", storage_scheme::fortran},
+             {"column-major", storage_scheme::fortran},
+             {"c", storage_scheme::c},
+             {"row-major", storage_scheme::c}},
+            "c"));
+        opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString(
+            "regularization power", "Value for the regularization power term.",
+            {{"quadratic", regularization::quadratic}, {"cubic", regularization::cubic}},
+            "quadratic"));
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {

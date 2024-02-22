@@ -52,8 +52,12 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/source/core/factorization
   ${CMAKE_SOURCE_DIR}/source/core/linear_model
   ${CMAKE_SOURCE_DIR}/source/core/optimization
+  ${CMAKE_SOURCE_DIR}/source/core/nlls
   ${CMAKE_SOURCE_DIR}/source/core/utilities
-  ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0/)
+  ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
+  ${CMAKE_SOURCE_DIR}/external/RALFit
+  ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
+  )
 
 add_executable(basic_stats basic_statistics_tests.cpp)
 
@@ -86,6 +90,8 @@ add_executable(errors_tests errors_tests.cpp)
 add_executable(parallel_test parallel_test.cpp)
 
 add_executable(kmeans_tests kmeans_tests.cpp)
+
+add_executable(nlls_tests nlls_tests.cpp)
 
 add_executable(pca_tests pca_tests.cpp)
 target_compile_definitions(
@@ -123,7 +129,6 @@ set_source_files_properties(c_compatibility.c PROPERTIES LANGUAGE C)
 add_executable(c_compatibility_test c_compatibility.c)
 set_target_properties(c_compatibility_test PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(c_compatibility_test PRIVATE aocl-da)
-# add_test(c_compatibility_test c_compatibility_test)
 
 add_executable(miscellaneous_tests miscellaneous_tests.cpp)
 target_compile_definitions(miscellaneous_tests PRIVATE ${VERS_DEF})
@@ -147,6 +152,7 @@ set(GTEST_EXES
   parallel_test
   miscellaneous_tests
   coord
+  nlls_tests
 )
 
 foreach(target ${GTEST_EXES})

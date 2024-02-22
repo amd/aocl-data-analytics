@@ -34,10 +34,12 @@
 #include "info.hpp"
 #include "lbfgsb_driver.hpp"
 #include "optimization_options.hpp"
+#include "ralfit_driver.hpp"
 #include <algorithm>
 #include <cmath>
 #include <functional>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #if defined(_WIN32)
@@ -53,20 +55,31 @@ template <typename T> class da_optimization {
     // Lock for solver
     bool locked = false;
 
-    // Number of variable
+    // Number of variables
     da_int nvar = 0;
+    // Number of residuals
+    da_int nres = 0;
 
     // Which type constraints are defined (only bound constraint are allowed for now)
     std::bitset<8> constraint_types{0};
-
     // Bound constraints (allocated only if constraint_types[cons_bound] is set)
     std::vector<T> l, u;
+    // Alternatively, if user provided data, store location
+    T *l_usrptr{nullptr};
+    T *u_usrptr{nullptr};
+    // pointer to weights
+    T *w_usrptr{nullptr};
+    da_int lw_usrptr{0};
 
     // Pointers to callbacks
     objfun_t<T> objfun = nullptr;
     objgrd_t<T> objgrd = nullptr;
     stepfun_t<T> stepfun = nullptr;
     monit_t<T> monit = nullptr;
+    resfun_t<T> resfun = nullptr;
+    resgrd_t<T> resgrd = nullptr;
+    reshes_t<T> reshes = nullptr;
+    reshp_t<T> reshp = nullptr;
 
     // Last iterate information
     // Objective function value
@@ -85,19 +98,24 @@ template <typename T> class da_optimization {
 
     da_optimization(da_status &status, da_errors::da_error_t &err);
     ~da_optimization();
+
     // Build model to solve
     da_status add_vars(da_int nvar);
+    da_status add_res(da_int nres);
     da_status add_bound_cons(std::vector<T> &l, std::vector<T> &u);
+    da_status add_bound_cons(da_int nvar, T *l, T *u);
+    da_status add_weights(da_int lw, T *w);
     da_status add_objfun(objfun_t<T> usrfun);
     da_status add_objgrd(objgrd_t<T> usrgrd);
     da_status add_stepfun(stepfun_t<T> usrstep);
     da_status add_monit(monit_t<T> monit);
+    da_status add_resfun(resfun_t<T> resfun);
+    da_status add_resgrd(resgrd_t<T> resgrd);
+    da_status add_reshes(reshes_t<T> reshes);
+    da_status add_reshp(reshp_t<T> reshp);
 
     // Solver interfaces (only lbfgsb for now)
     da_status solve(std::vector<T> &x, void *usrdata);
-
-    // Retrieve data from solver
-    da_status get_info(da_int linfo, T *info);
 
     // Update info
     da_status set_info(da_int idx, const T value) {
@@ -107,19 +125,28 @@ template <typename T> class da_optimization {
         }
         return da_error(err, da_status_internal_error, "info index out-of-bounds?");
     }
+
+    // Retrieve data from solver
+    da_status get_info(da_int &dim, T info[]);
 };
 
-template <typename T> da_status da_optimization<T>::get_info(da_int linfo, T *info) {
-    // copy-out of elements in da_optimization
-    const da_int size = this->info.size();
-    if (linfo < size) {
-        return da_error(this->err, da_status_operation_failed,
-                        "Destination array, info, must be at least of size: " +
-                            std::to_string(size) + ".");
+template <typename T> da_status da_optimization<T>::get_info(da_int &dim, T info[]) {
+    // blind copy-out of elements in da_optimization
+    const da_int ilen{(da_int)this->info.size()};
+    const da_int mlen{std::max(ilen, da_int(100))};
+    if (dim < mlen) {
+        dim = mlen;
+        return da_warn(
+            this->err, da_status_operation_failed,
+            "Failed to copy info array, make sure info is of length at least " +
+                std::to_string(mlen));
     }
-    for (da_int i = 0; i < size; ++i) {
+    da_int i;
+    for (i = 0; i < ilen; ++i)
         info[i] = this->info[i];
-    }
+    for (; i < mlen; ++i)
+        info[i] = T(0);
+
     return da_status_success;
 };
 
@@ -150,7 +177,18 @@ template <typename T> da_status da_optimization<T>::add_vars(da_int nvar) {
     return da_status_success;
 }
 
-// Add bound constraints to the problem
+// Add equation or residual number to the problem
+template <typename T> da_status da_optimization<T>::add_res(da_int nres) {
+    if (nres <= 0) {
+        return da_error(this->err, da_status_invalid_input,
+                        "Number of residuals must be positive, set nres > 0");
+    }
+
+    this->nres = nres;
+    return da_status_success;
+}
+
+// Add bound constraints to the problem (copy into opt handle)
 template <typename T>
 da_status da_optimization<T>::add_bound_cons(std::vector<T> &l, std::vector<T> &u) {
 
@@ -193,6 +231,38 @@ da_status da_optimization<T>::add_bound_cons(std::vector<T> &l, std::vector<T> &
     return da_status_success;
 }
 
+// Add bound constraints to the problem (get ponter to user data)
+template <typename T>
+da_status da_optimization<T>::add_bound_cons(da_int nvar, T *l, T *u) {
+    if (nvar == 0) {
+        this->l_usrptr = nullptr;
+        this->u_usrptr = nullptr;
+    } else if (this->nvar == nvar) {
+        this->l_usrptr = l;
+        this->u_usrptr = u;
+    } else {
+        return da_error(this->err, da_status_invalid_input,
+                        "Invalid size of nvar, it must match zero or the number of "
+                        "variables defined: " +
+                            std::to_string(this->nvar) + ".");
+    }
+    return da_status_success;
+}
+
+// Add vector of weights to the problem (get ponter to user data)
+template <typename T> da_status da_optimization<T>::add_weights(da_int lw, T *w) {
+    if (lw == 0)
+        this->w_usrptr = nullptr;
+    else if (lw == this->nres)
+        this->w_usrptr = w;
+    else
+        return da_error(this->err, da_status_invalid_input,
+                        "Invalid size of lw, it must match zero or the "
+                        "number of residuals defined: " +
+                            std::to_string(this->nres) + ".");
+    return da_status_success;
+}
+
 template <typename T> da_status da_optimization<T>::add_objfun(objfun_t<T> usrfun) {
     if (!usrfun) {
         return da_status_invalid_pointer;
@@ -222,6 +292,35 @@ template <typename T> da_status da_optimization<T>::add_monit(monit_t<T> monit) 
         return da_status_invalid_pointer;
     }
     this->monit = monit;
+    return da_status_success;
+}
+
+template <typename T> da_status da_optimization<T>::add_resfun(resfun_t<T> resfun) {
+    if (!resfun) {
+        return da_status_invalid_pointer;
+    }
+    this->resfun = resfun;
+    return da_status_success;
+}
+
+template <typename T> da_status da_optimization<T>::add_resgrd(resgrd_t<T> resgrd) {
+    if (resgrd)
+        this->resgrd = resgrd;
+
+    return da_status_success;
+}
+
+template <typename T> da_status da_optimization<T>::add_reshes(reshes_t<T> reshes) {
+    if (reshes)
+        this->reshes = reshes;
+
+    return da_status_success;
+}
+
+template <typename T> da_status da_optimization<T>::add_reshp(reshp_t<T> reshp) {
+    if (reshp)
+        this->reshp = reshp;
+
     return da_status_success;
 }
 
@@ -306,6 +405,20 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
             opts.print_options();
         status = coord::coord(this->opts, this->nvar, x, this->l, this->u, this->info,
                               this->stepfun, this->monit, usrdata, *this->err);
+        break;
+    case solver_ralfit:
+        if (prnlvl > 0) {
+            std::cout << "------------------------------------------------------\n"
+                      << "    AOCL-DA NLP Solver for Nonlinear Least-Squares    \n"
+                      << "------------------------------------------------------\n";
+        }
+        if (prn == "yes")
+            opts.print_options();
+
+        status = ralfit::ralfit_driver(this->opts, this->nvar, this->nres, x.data(),
+                                       this->resfun, this->resgrd, this->reshes,
+                                       this->reshp, this->l_usrptr, this->u_usrptr,
+                                       this->w_usrptr, usrdata, this->info, *this->err);
         break;
     case solver_undefined:
         status = da_error(

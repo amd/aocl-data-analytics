@@ -32,13 +32,13 @@
 
 namespace da_linmod {
 enum linmod_method {
-    undefined = 0,
+    undefined = da_optim::solvers::solver_undefined,
     lbfgsb = da_optim::solvers::solver_lbfgsb,
     coord = da_optim::solvers::solver_coord,
-    svd = da_optim::solvers::solver_svd,
-    cholesky = da_optim::solvers::solver_cholesky,
-    cg = da_optim::solvers::solver_cg,
-    qr = da_optim::solvers::solver_qr
+    svd = 30,
+    cholesky = 31,
+    cg = 32,
+    qr = 33
 };
 // static struct see if a method is iterative
 struct linmod_method_type {

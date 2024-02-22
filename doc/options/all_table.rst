@@ -25,13 +25,15 @@
     
 
 
+.. AUTO GENERATED. Do not hand edit this file! (see doc_test.cpp)
+
 Supported Optional Parameters
 ******************************
 
 .. note::
    This page lists optional parameters for **C APIs** only.
 
-In all the following tables, :math:`\varepsilon`, refers to the machine precision for the given floating point data precision.
+In all the following tables, :math:`\varepsilon`, refers to a *safe* machine precision (twice the actual machine precion) for the given floating point data type.
 
 .. _opts_linearmodel:
 
@@ -184,22 +186,34 @@ The following options are supported.
       :escape: ~
       :header: "Option name", "Type", "Default", "Description", "Constraints"
       
-      "optim method", "string", ":math:`s=` `lbfgsb`", "Select optimization solver to use", ":math:`s=` `bfgs`, `coord`, `lbfgs`, or `lbfgsb`."
-      "print options", "string", ":math:`s=` `no`", "Print options list", ":math:`s=` `no`, or `yes`."
-      "coord skip tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme", ":math:`-1 \le r`"
-      "coord convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
-      "coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than "coord skip tol" to start skipping", ":math:`2 \le i`"
-      "coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked", ":math:`10 \le i`"
-      "coord restart", "integer", ":math:`i=\infty`", "Number of inner inner iterations to perform before requesting to perform a full evaluation of the step function", ":math:`0 \le i`"
-      "coord iteration limit", "integer", ":math:`i=100000`", "Maximum number of iterations to perform", ":math:`1 \le i`"
-      "lbfgsb iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform", ":math:`1 \le i`"
-      "lbfgsb convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
-      "lbfgsb memory limit", "integer", ":math:`i=11`", "Number of vectors to use for approximating the Hessian", ":math:`1 \le i \le 1000`"
-      "debug", "integer", ":math:`i=0`", "set debug level (internal use)", ":math:`0 \le i \le 3`"
-      "monitoring frequency", "integer", ":math:`i=0`", "How frequent to call the user-supplied monitor function", ":math:`0 \le i`"
-      "print level", "integer", ":math:`i=1`", "set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
-      "coord progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "the iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
+      "regularization power", "string", ":math:`s=` `quadratic`", "Value for the regularization power term.", ":math:`s=` `cubic`, or `quadratic`."
       "infinite bound size", "real", ":math:`r=10^{20}`", "threshold value to take for +/- infinity", ":math:`1000 < r`"
-      "time limit", "real", ":math:`r=10^6`", "maximum time allowed to run (in seconds)", ":math:`0 < r`"
+      "coord progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "the iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
+      "print level", "integer", ":math:`i=1`", "set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
+      "monitoring frequency", "integer", ":math:`i=0`", "How frequent to call the user-supplied monitor function", ":math:`0 \le i`"
+      "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`"
+      "lbfgsb memory limit", "integer", ":math:`i=11`", "Number of vectors to use for approximating the Hessian", ":math:`1 \le i \le 1000`"
+      "lbfgsb convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
+      "lbfgsb iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform", ":math:`1 \le i`"
+      "coord iteration limit", "integer", ":math:`i=100000`", "Maximum number of iterations to perform", ":math:`1 \le i`"
       "lbfgsb progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "the iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
+      "coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than "coord skip tol" to start skipping", ":math:`2 \le i`"
+      "debug", "integer", ":math:`i=0`", "set debug level (internal use)", ":math:`0 \le i \le 3`"
+      "regularization term", "real", ":math:`r=0`", "Value for the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`"
+      "time limit", "real", ":math:`r=10^6`", "maximum time allowed to run (in seconds)", ":math:`0 < r`"
+      "coord convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
+      "ralfit convergence rel tol fun", "real", ":math:`r=10^{-8}`", "relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "coord skip tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme", ":math:`-1 \le r`"
+      "ralfit convergence abs tol grd", "real", ":math:`r=10^{-5}`", "absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked", ":math:`10 \le i`"
+      "ralfit convergence rel tol grd", "real", ":math:`r=10^{-8}`", "relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "ralfit nlls method", "string", ":math:`s=` `galahad`", "NLLS solver to use.", ":math:`s=` `aint`, `galahad`, `linear solver`, `more-sorensen`, or `powell-dogleg`."
+      "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "coord restart", "integer", ":math:`i=\infty`", "Number of inner inner iterations to perform before requesting to perform a full evaluation of the step function", ":math:`0 \le i`"
+      "optim method", "string", ":math:`s=` `lbfgsb`", "Select optimization solver to use", ":math:`s=` `bfgs`, `coord`, `lbfgs`, `lbfgsb`, or `ralfit`."
+      "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`."
+      "ralfit convergence abs tol fun", "real", ":math:`r=10^{-8}`", "absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "print options", "string", ":math:`s=` `no`", "Print options list", ":math:`s=` `no`, or `yes`."
+      "ralfit globalization method", "string", ":math:`s=` `trust-region`", "Globalization method to use. This parameter makes use of the regularization term and power option values.", ":math:`s=` `reg`, `regularization`, `tr`, or `trust-region`."
+      "storage scheme", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
    

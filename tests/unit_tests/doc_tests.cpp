@@ -98,13 +98,14 @@ std::string cleanstring(std::string s) {
 
 // Used to generate doc, name *must* start with ``RST``
 TEST(DocOptions, RST_handle) {
+    std::cout << ".. AUTO GENERATED. Do not hand edit this file! (see doc_test.cpp)\n\n";
     std::cout << "Supported Optional Parameters\n"
               << "******************************\n\n";
     std::cout << ".. note::\n";
     std::cout << "   This page lists optional parameters for **C APIs** only.\n\n";
     std::cout << "In all the following tables, :math:`\\varepsilon`, refers to "
-                 "the machine precision for the given floating point data "
-                 "precision.\n";
+                 "a *safe* machine precision (twice the actual machine precion) "
+                 "for the given floating point data type.\n";
     std::string str;
     for (auto htype : htypes) {
         str = cleanstring(htype.second);

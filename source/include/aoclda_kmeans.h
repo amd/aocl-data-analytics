@@ -28,10 +28,6 @@
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * \file
  */
@@ -177,9 +173,5 @@ da_status da_kmeans_predict_d(da_handle handle, da_int k_samples, da_int k_featu
 da_status da_kmeans_predict_s(da_handle handle, da_int k_samples, da_int k_features,
                               const float *Y, da_int ldy, da_int *Y_labels);
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

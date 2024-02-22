@@ -28,6 +28,10 @@
 #ifndef AOCLDA
 #define AOCLDA
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "aoclda_basic_statistics.h"
 #include "aoclda_csv.h"
 #include "aoclda_datastore.h"
@@ -37,9 +41,14 @@
 #include "aoclda_kmeans.h"
 #include "aoclda_linmod.h"
 #include "aoclda_miscellaneous.h"
+#include "aoclda_nlls.h"
 #include "aoclda_options.h"
 #include "aoclda_pca.h"
 #include "aoclda_result.h"
 #include "aoclda_types.h"
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // AOCLDA

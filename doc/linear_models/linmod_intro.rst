@@ -246,7 +246,7 @@ columns of the predictor matrix :math:`X`.
 .. _tbl_scaling_types:
 
 .. csv-table:: Linear model data scaling types
-    :header: *scaling* value , model intercept, :math:`m_Y`, :math:`s_Y`, :math:`\\hat Y`, :math:`m_{X_j}`, :math:`s_{X_j}`, :math:`\\hat X_j`
+    :header: *scaling* value , model intercept, :math:`m_Y`, :math:`s_Y`, :math:`\hat Y`, :math:`m_{X_j}`, :math:`s_{X_j}`, :math:`\hat X_j`
 
     :code:`none`       , yes/no,:math:`0`,    :math:`1`,                                                            :math:`Y`,                                           :math:`0`,        :math:`1`,           :math:`X_j`
     :code:`centering`  , yes,   :math:`\mu_Y`,:math:`1`,                                                            :math:`Y - \mu_Y`,                                   :math:`\mu_{X_j}`,:math:`1`,           :math:`X_j - \mu_{X_j}`
@@ -261,15 +261,15 @@ columns of the predictor matrix :math:`X`.
     This is the complete table, containing the scaling factors used in the step function for Coordinate Descent (:math:`\eta`).
 
     .. csv-table:: Linear model data scaling types (full version)
-        :header: *scaling* value , model intercept, :math:`m_Y`, :math:`s_Y`, :math:`\\hat Y`, :math:`m_{X_j}`, :math:`s_{X_j}`, :math:`x_v(j) =\\eta_j`, :math:`\\hat X_j`
+        :header: *scaling* value , model intercept, :math:`m_Y`, :math:`s_Y`, :math:`\hat Y`, :math:`m_{X_j}`, :math:`s_{X_j}`, :math:`x_v(j) =\eta_j`, :math:`\hat X_j`
 
         :code:`none`       , yes/no,:math:`0`,    :math:`1`,                                                                 :math:`Y`,                                                   :math:`0`,        :math:`1`,                                                                       :math:`1`,                                                                           :math:`X_j`
-        :code:`centering`  , yes,   :math:`\mu_Y`,:math:`1`,                                                                 :math:`Y - \mu_Y`,                                           :math:`\mu_{X_j}`, :math:`1`,                                                                       :math:`1`,                                                                           :math:`X_j - \mu_{X_j}`
+        :code:`centering`  , yes,   :math:`\mu_Y`,:math:`1`,                                                                 :math:`Y - \mu_Y`,                                           :math:`\mu_{X_j}`,:math:`1`,                                                                       :math:`1`,                                                                           :math:`X_j - \mu_{X_j}`
         :code:`centering`  , no,    :math:`0`,    :math:`1`,                                                                 :math:`Y`,                                                   :math:`0`,        :math:`1`,                                                                       :math:`1`,                                                                           :math:`X_j`
-        :code:`scale only` , yes,   :math:`\mu_Y`,:math:`\sigma_Y`,  :math:`\frac{\frac{1}{\sqrt{N}}(Y-\mu_Y)}{\sigma_Y}`,        :math:`\mu_{X_j}`,                                            :math:`1`,        :math:`\sigma^2_{X_j}=\left\|{\frac{1}{\sqrt{N}} \big(X_j-\mu_{X_j}\big)}\right\|^2`,:math:`\frac{1}{\sqrt{N}}(X_j-\mu_{X_j})`
-        :code:`scale only` , no,    :math:`0`,    :math:`\left\|\frac{1}{\sqrt{N}} Y\right\|`,                                           :math:`\frac{Y}{\|Y\|}`,                                     :math:`0`,        :math:`1`, :math:`\frac{1}{N}X_j^TX_j`,             :math:`\frac{1}{\sqrt{N}} X_j`
-        :code:`standardize`, yes,   :math:`\mu_Y`,:math:`\sigma_Y=\left\|\frac{1}{\sqrt{N}} \big(Y-\mu_Y\big)\right\|`,      :math:`\frac{\frac{1}{\sqrt{N}}(Y-\mu_Y)}{\sigma_Y}`,             :math:`\mu_{X_j}`, :math:`\sigma_{X_j}=\left\|{\frac{1}{\sqrt{N}} \big(X_j-\mu_{X_j}\big)}\right\|`,:math:`1`,:math:`\frac{\frac{1}{\sqrt{N}} (X_j-\mu_{X_j})}{s_{X_j}}`
-        :code:`standardize`, no ,   :math:`0`,    :math:`\left\|\frac{1}{\sqrt{N}} Y\right\|`,     :math:`\frac{\frac{1}{\sqrt{N}} Y}{s_Y}= \frac{Y}{\|Y\|}`,   :math:`0`,        :math:`\sigma_{X_j}`, :math:`\frac{\frac{1}{N} X_j^TX_j}{\sigma^2_{X_j}}`,                       :math:`\frac{\frac{1}{\sqrt{N}} X_j}{s_{X_j}}`
+        :code:`scale only` , yes,   :math:`\mu_Y`,:math:`\sigma_Y`,  :math:`\frac{\frac{1}{\sqrt{N}}(Y-\mu_Y)}{\sigma_Y}`,   :math:`\mu_{X_j}`,                                           :math:`1`,        :math:`\sigma^2_{X_j}=\left\|{\frac{1}{\sqrt{N}} \big(X_j-\mu_{X_j}\big)}\right\|^2`,:math:`\frac{1}{\sqrt{N}}(X_j-\mu_{X_j})`
+        :code:`scale only` , no,    :math:`0`,    :math:`\left\|\frac{1}{\sqrt{N}} Y\right\|`,                               :math:`\frac{Y}{\|Y\|}`,                                     :math:`0`,        :math:`1`, :math:`\frac{1}{N}X_j^TX_j`,                                          :math:`\frac{1}{\sqrt{N}} X_j`
+        :code:`standardize`, yes,   :math:`\mu_Y`,:math:`\sigma_Y=\left\|\frac{1}{\sqrt{N}} \big(Y-\mu_Y\big)\right\|`,      :math:`\frac{\frac{1}{\sqrt{N}}(Y-\mu_Y)}{\sigma_Y}`,        :math:`\mu_{X_j}`,:math:`\sigma_{X_j}=\left\|{\frac{1}{\sqrt{N}} \big(X_j-\mu_{X_j}\big)}\right\|`,:math:`1`,:math:`\frac{\frac{1}{\sqrt{N}} (X_j-\mu_{X_j})}{s_{X_j}}`
+        :code:`standardize`, no ,   :math:`0`,    :math:`\left\|\frac{1}{\sqrt{N}} Y\right\|`,     :math:`\frac{\frac{1}{\sqrt{N}} Y}{s_Y}= \frac{Y}{\|Y\|}`,   :math:`0`,                :math:`\sigma_{X_j}`, :math:`\frac{\frac{1}{N} X_j^TX_j}{\sigma^2_{X_j}}`,                        :math:`\frac{\frac{1}{\sqrt{N}} X_j}{s_{X_j}}`
 
 .. note::
 

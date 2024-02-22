@@ -25,11 +25,8 @@
 #define LINMOD_OPTIONS_HPP
 
 #include "linmod_types.hpp"
+#include "options.hpp"
 #include <limits>
-
-// Needed for windows build
-#undef min
-#undef max
 
 namespace da_linmod {
 template <class T>

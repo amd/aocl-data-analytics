@@ -40,7 +40,12 @@ enum info_t {
     info_nevalf = 4,     ///< number of function callback evaluations
     info_inorm = 5,      ///< infinity norm of a given metric
     info_inorm_init = 6, ///< infinity norm of of a given metric at the initial iterate
-    info_ncheap = 7,     ///< number of cheap function callback evaluations
+    info_ncheap =
+        7, ///< number of function callback evaluations requesting "cheap" update
+    info_nevalg = 8,         ///< number of gradient callback evaluations
+    info_nevalh = 9,         ///< number of Hessian callback evaluations
+    info_nevalhp = 10,       ///< number of Hessian-vector callback evaluations
+    info_scl_grad_norm = 11, ///< scaled gradient norm of objective
 
     info_number // leave last
 };

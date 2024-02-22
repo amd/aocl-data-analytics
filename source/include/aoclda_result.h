@@ -32,10 +32,6 @@
 #include "aoclda_handle.h"
 #include "aoclda_types.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /**
  * \file
  */
@@ -105,9 +101,5 @@ da_status da_handle_get_result_s(const da_handle handle, da_result query, da_int
 da_status da_handle_get_result_int(const da_handle handle, da_result query, da_int *dim,
                                    da_int *result);
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -104,5 +104,40 @@ template <typename T> struct meta_moncb {
     using type = std::function<da_int(da_int n, T *x, T *val, T *info, void *usrdata)>;
 };
 template <typename T> using monit_t = typename meta_moncb<T>::type;
+
+/* residual callbacks
+ * signatures match with the public typedef da_res*_t_*
+ */
+/* nonlinear residual function */
+template <typename T> struct meta_resfuncb {
+    static_assert(std::is_floating_point<T>::value,
+                  "Residual function arguments must be floating point");
+    using type = std::function<da_int(da_int, da_int, void *, T const *, T *)>;
+};
+template <typename T> using resfun_t = typename meta_resfuncb<T>::type;
+
+/* nonlinear residual gradient (Jacobian) function */
+template <typename T> struct meta_resgrdcb {
+    static_assert(std::is_floating_point<T>::value,
+                  "Residual function arguments must be floating point");
+    using type = std::function<da_int(da_int, da_int, void *, T const *, T *)>;
+};
+template <typename T> using resgrd_t = typename meta_resgrdcb<T>::type;
+
+/* nonlinear residual Hessian function */
+template <typename T> struct meta_reshescb {
+    static_assert(std::is_floating_point<T>::value,
+                  "Residual function arguments must be floating point");
+    using type = std::function<da_int(da_int, da_int, void *, T const *, T const *, T *)>;
+};
+template <typename T> using reshes_t = typename meta_reshescb<T>::type;
+
+/* nonlinear residual Hessian function */
+template <typename T> struct meta_reshpcb {
+    static_assert(std::is_floating_point<T>::value,
+                  "Residual function arguments must be floating point");
+    using type = std::function<da_int(da_int, da_int, const T *, const T *, T *, void *)>;
+};
+template <typename T> using reshp_t = typename meta_reshpcb<T>::type;
 
 #endif

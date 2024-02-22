@@ -39,6 +39,10 @@
 #include <type_traits>
 #include <unordered_map>
 
+// Remove windows macros
+#undef min
+#undef max
+
 /*
  * Current status TODO
  * ===================
@@ -82,7 +86,6 @@ using namespace std::literals::string_literals;
 using std::map;
 using std::shared_ptr;
 
-#undef max // Work-around for windows.h max define
 const da_int max_da_int = std::numeric_limits<da_int>::max();
 
 template <typename T> struct safe_eps {
@@ -94,13 +97,37 @@ template <typename T> struct safe_tol {
   private:
     // Method to represent the tolerance in \LaTeX format
     const std::string sqrt2eps{"\\sqrt{2\\,\\varepsilon}"};
+    const std::string varepsilon{"\\varepsilon"};
 
   public:
+    T mcheps(T num = (T)1, T den = (T)1) {
+        return ((da_options::safe_eps<T>() * num) / den);
+    };
     T safe_eps(T num = (T)1, T den = (T)1) {
         return ((std::sqrt(da_options::safe_eps<T>()) * num) / den);
     };
     T safe_inveps(T num = (T)1, T den = (T)1) {
         return (num / (den * std::sqrt(da_options::safe_eps<T>())));
+    };
+
+    std::string mcheps_latex(T num = (T)1, T den = (T)1) {
+        size_t nchar;
+        std::string n, d;
+        n.resize(64);
+        d.resize(64);
+        nchar = std::snprintf(n.data(), n.size(), "%g", num);
+        n.resize(nchar);
+        nchar = std::snprintf(d.data(), d.size(), "%g", den);
+        d.resize(nchar);
+        if (num != 1 && den != 1) {
+            return n + "/" + d + this->varepsilon;
+        } else if (den != 1) {
+            return this->varepsilon + "/" + d;
+        } else if (num != 1) {
+            return n + "\\;" + this->varepsilon;
+        } else {
+            return this->varepsilon;
+        }
     };
 
     std::string safe_eps_latex(T num = (T)1, T den = (T)1) {
@@ -164,7 +191,7 @@ template <> struct get_type<bool*>       { constexpr operator option_t() const n
 // clang-format on
 
 struct OptionUtils {
-    void prep_str(string &str) {
+    static void prep_str(string &str) {
         const std::regex ltrim("^[[:space:]]+");
         const std::regex rtrim("[[:space:]]+$");
         const std::regex squeeze("[[:space:]]+");
@@ -181,8 +208,7 @@ class OptionBase {
 
     da_status set_name(string &str) {
         name = str;
-        OptionUtils util;
-        util.prep_str(name);
+        OptionUtils::prep_str(name);
         if (name == "") {
             errmsg = "Invalid name (string reduced to zero-length).";
             return da_status_option_invalid_value;
@@ -480,12 +506,11 @@ class OptionString : public OptionBase {
         string label, label_vdefault;
         bool defok = false;
         da_status status = set_name(name);
-        OptionUtils util;
         if (status != da_status_success)
             throw std::invalid_argument(errmsg);
 
         label_vdefault = vdefault;
-        util.prep_str(label_vdefault);
+        OptionUtils::prep_str(label_vdefault);
         if (vdefault != label_vdefault) {
             errmsg = "Option '" + name +
                      "': Default string option changed after processing, replace '" +
@@ -504,7 +529,7 @@ class OptionString : public OptionBase {
 
             for (const auto &entry : labels) {
                 label = entry.first;
-                util.prep_str(label);
+                OptionUtils::prep_str(label);
                 if (label == "") {
                     errmsg = "Option '" + name +
                              "': Invalid option value (string reduced to zero-length).";
@@ -640,8 +665,7 @@ class OptionString : public OptionBase {
     }
     da_status set(string value, setby_t setby = setby_t::user) {
         string val(value);
-        OptionUtils util;
-        util.prep_str(val);
+        OptionUtils::prep_str(val);
 
         if (labels.size() != 0) {
             // Deal with categorical data slightly differently from freeform string options
@@ -712,8 +736,7 @@ class OptionRegistry {
             return da_status_option_locked;
         }
         string oname = name;
-        OptionUtils util;
-        util.prep_str(oname);
+        OptionUtils::prep_str(oname);
         auto search = registry.find(oname);
         if (search == registry.end()) {
             errmsg = "Option '" + oname + "' not found in the option registry";
@@ -746,8 +769,7 @@ class OptionRegistry {
      */
     template <typename U> da_status get(string name, U &value) {
         string oname = name;
-        OptionUtils util;
-        util.prep_str(oname);
+        OptionUtils::prep_str(oname);
         auto search = registry.find(oname);
         if (search == registry.end()) {
             errmsg = "Option '" + oname + "' not found in the option registry";
@@ -780,8 +802,7 @@ class OptionRegistry {
     // Auxiliary function to get value of a string option.
     da_status get(string name, string &value) {
         string oname = name;
-        OptionUtils util;
-        util.prep_str(oname);
+        OptionUtils::prep_str(oname);
         auto search = registry.find(oname);
         if (search == registry.end()) {
             errmsg = "Option '" + oname + "' not found in the option registry";
@@ -801,8 +822,7 @@ class OptionRegistry {
     // Auxiliary function to get value and id from a categorical/string option
     da_status get(string name, string &value, da_int &id) {
         string oname = name;
-        OptionUtils util;
-        util.prep_str(oname);
+        OptionUtils::prep_str(oname);
         auto search = registry.find(oname);
         if (search == registry.end()) {
             errmsg = "Option '" + oname + "' not found in the option registry";

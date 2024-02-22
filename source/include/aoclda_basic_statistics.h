@@ -30,9 +30,6 @@
 
 #include "aoclda_error.h"
 #include "aoclda_types.h"
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * \file
@@ -447,9 +444,5 @@ da_status da_correlation_matrix_d(da_int n_rows, da_int n_cols, const double *X,
 da_status da_correlation_matrix_s(da_int n_rows, da_int n_cols, const float *X,
                                   da_int ldx, float *corr, da_int ldcorr);
 /** \} */
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
