@@ -185,6 +185,7 @@ if(CMAKE_AOCL_ROOT STREQUAL ""
   )
 endif()
 
+enable_language(Fortran)
 if(WIN32)
   # MSVC has warnings about deprecated CRT functions; these definitions overload
   # them automatically with _s versions

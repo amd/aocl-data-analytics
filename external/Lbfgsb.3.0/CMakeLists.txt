@@ -22,8 +22,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-enable_language(Fortran)
-
 # If in the future OpenMP_Fortran is required, we need to find OpenMP again sot
 # that now that Fortran was enabled, it can find the Fortran runtimes.
 # find_package(OpenMP REQUIRED)
