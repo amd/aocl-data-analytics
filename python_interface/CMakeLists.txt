@@ -79,6 +79,7 @@ if(WIN32 AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
           DESTINATION python_package/aoclda)
   install(FILES "$ENV{FLANG_COMPILER}/bin/libomp.dll"
           DESTINATION python_package/aoclda)
+  # TODO add clang omp?
 endif()
 
 if(NOT WIN32)

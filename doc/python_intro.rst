@@ -39,7 +39,7 @@ Your AOCL-DA package comes bundled with Python wheel, ``aoclda-*.whl``, where ``
 To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.whl``.
 
 The wheel, ``aoclda-*.whl``, will install the necessary libraries and dependencies.
-However, on Windows a Fortran runtime library ``libifcore-mt.lib`` is also required, so you will need to install the Intel Fortran compiler and set the environment variable ``INTEL_FCOMPILER`` to point to its installation directory.
+However, on Windows a Fortran runtime library ``libifcore-mt.lib`` is also required, so you will need to install the Intel Fortran compiler and set the environment variable ``FORTRAN_RUNTIME`` to point to the directory containing the corresponding DLL.
 
 NumPy Arrays
 =============

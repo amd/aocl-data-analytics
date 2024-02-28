@@ -89,11 +89,11 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
 1. In your checkout create a directory called build
 
-2. Open a Developer Powershell for VS2022 window and navigate to the build directory
+2. Open a Developer command prompt for VS2022 and navigate to the build directory
 
-3. Type `cmd.exe "/K" '"C:\Program Files (x86)\Intel\oneAPI\setvars.bat" && powershell'` to load the Intel compiler environment variables (if your compiler is installed elsewhere then you will need to edit this command accordingly). Note that you can also do this in a Developer Command Prompt, in which case simply use the command `"C:\Program Files (x86)\Intel\oneAPI\setvars.bat"`
+3. Type `"C:\Program Files (x86)\Intel\oneAPI\setvars.bat"` to load the Intel compiler environment variables (if your compiler is installed elsewhere then you will need to edit this command accordingly).
 
-4. Type `cmake ..` along with any (or none) of the following options depending on the build that is desired:
+4. Type `cmake .. -DCMAKE_Fortran_COMPILER=ifort` along with any (or none) of the following options depending on the build that is desired:
 
    * `-DBUILD_ILP64=On` for 64-bit integer build
 
@@ -107,15 +107,17 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
-   * `-DOpenMP_libomp_LIBRARY=<path to prefered OpenMP library>` to link a specific OpenMP library.
+   * `-DOpenMP_libomp_LIBRARY=<path to preferred OpenMP library>` to link a specific OpenMP library.
 
-    **Note** that not all the options available in Linux are available in Windows
+    **Note** that not all the options available in Linux are available in Windows.
+
+    **Note** if you don't specify the Fortran compiler, Windows may default to ifx, which can cause linking issues.
 
 5. Either:
 
 * Open Visual Studio and load the `AOCL-DA.sln` file then build Debug or Release builds using the GUI, or
 
-* In your powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate)
+* In your powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate or use `cmake --build .`)
 
 8. Depending on whether BLAS/LAPACK libraries are on your `PATH`, the compiled executables may only work if the BLAS and LAPACK dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll` and `AOCL-LibFlame-Win-MT-dll.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
 
@@ -125,10 +127,19 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
     ```
     set INCLUDE=%INCLUDE%;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\ucrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\winrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.22621.0\cppwinrt
     ```
+For further troubleshooting, you can also try updating LIB:
 
-11. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following command:
+   ```
+   set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64
+   ```
+
+11. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following commands:
     ```
-    cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl ..
+    cmake -T ClangCL -DCMAKE_Fortran_COMPILER=ifort
+    ```
+to use Visual Studio's build system, or
+    ```
+    cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_Fortran_COMPILER=ifort ..
     (optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja. You can also specify an install directory, using -DCMAKE_INSTALL_PREFIX, and build with ninja install. Depending on your system, you may also need to contact IT to enable registry editing on your machine.
     ```
 
@@ -176,4 +187,4 @@ To build the Python interfaces, use `-DBUILD_PYTHON=On` (note that this will onl
 
 By default, cmake will compile the bindings but will not install them. If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.
 
-When using the bindings on Windows, the Intel Fortran runtime must be available. This can be done by setting the environment variable `INTEL_FCOMPILER`.
+When using the bindings on Windows with MSVC/Clang and ifort, the Intel Fortran runtime must also be available. This can be done by setting the environment variable `FORTRAN_RUNTIME` to the location of the DLL. Alternatively,. you can also build using AOCC on Windows. This is somewhat involved though; see the corresponding Jenkins build for full details.

@@ -42,9 +42,9 @@ AOCL-DA requires Fortran runtime libraries for linking, so prior to compiling th
 cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
    \<path to>\aocl-da\lib\<INT_LIB>\aocl-da.lib
    \<path to>\amd-libflame\lib\<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
-   \<path to>\amd-blis\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
+   \<path to>\amd-blis\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib /openmp:llvm
 
-The same command should work with cl replaced by clang-cl and linking statically using /MT
+The same command should work with cl replaced by clang-cl (in whcih case simply use /openmp) and linking statically using /MT
 
 (note that you should ensure the folders containing the libraries to be linked are on your Windows PATH e.g. using set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>)
 

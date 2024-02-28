@@ -130,16 +130,15 @@ for 32 and 64 bit integers respectively.
     cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
        \<path to aocl-da>\lib\<INT_LIB>\aocl-da.lib
        \<path to libflame>\lib\<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
-       \<path to blis>\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
+       \<path to blis>\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib /openmp:llvm
 
-The same command should work with ``cl`` replaced by ``clang-cl`` and linking statically using ``/MT``.
+The same command should work with ``cl`` replaced by ``clang-cl`` (in which case, simply use ``/openmp``) and linking statically using ``/MT``.
 
 .. note::
    You should ensure the folders containing the libraries to be linked are on your
    Windows ``PATH`` environment variable e.g. using ``set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>``.
    Depending on how your system is set up, and which functions you are using, you may also need to
-   link to some Fortran runtime libraries such as ``libfifcore-mt.lib``, ``ifconsol.lib``,
-   ``libifportmd.lib``, ``libmmd.lib``, ``libirc.lib`` and ``svml_dispmd.lib``.
+   link to some Fortran runtime libraries such as ``libfifcore-mt.lib``.
    The easiest way to do this is to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
 
 Compiling using CMake

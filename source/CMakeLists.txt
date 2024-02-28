@@ -86,10 +86,8 @@ endif()
 # Create combined library from da_core and Fortran libraries
 add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
                     $<TARGET_OBJECTS:lbfgsb_s>)
-target_link_libraries(aocl-da PRIVATE ${LAPACK} ${BLAS} ${UTILS})
-if (NOT WIN32)
-  target_link_libraries(aocl-da PRIVATE ${FORTRAN_RUNTIME})
-endif()
+target_link_libraries(aocl-da PRIVATE ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME})
+
 target_link_directories(aocl-da PRIVATE ${IFORT_LIBS})
 target_link_directories(aocl-da PRIVATE ${FLANG_LIBS})
 target_include_directories(aocl-da PRIVATE ${BLAS_INCLUDE_DIR} ${LAPACK_INCLUDE_DIR})

@@ -27,9 +27,10 @@
 import os
 
 # If this is an ifort Windows build then pick up the ifort runtime
-INTEL_FCOMPILER = os.environ.get('INTEL_FCOMPILER','')
-if os.path.exists(INTEL_FCOMPILER + r'\redist\intel64_win\compiler'):
-    os.add_dll_directory(INTEL_FCOMPILER + r'\redist\intel64_win\compiler')
+FORTRAN_RUNTIME = os.environ.get('FORTRAN_RUNTIME','')
+
+if os.path.exists(FORTRAN_RUNTIME):
+    os.add_dll_directory(FORTRAN_RUNTIME)
 
 import numpy as np
 from ._aoclda import single, double
