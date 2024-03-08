@@ -25,7 +25,7 @@
 
 
 
-Linear models APIs
+Linear Model APIs
 ******************
 
 .. tab-set::

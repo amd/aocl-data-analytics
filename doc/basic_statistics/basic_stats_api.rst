@@ -25,7 +25,7 @@
 
 
 
-Basic statistics APIs
+Basic Statistics APIs
 *********************
 
 .. tab-set::
