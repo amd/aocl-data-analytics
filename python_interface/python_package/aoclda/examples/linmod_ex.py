@@ -29,7 +29,7 @@ Linear regression example Python script
 """
 
 import sys
-from aoclda.linear_model import linmod, linmod_model
+from aoclda.linear_model import linmod
 import numpy as np
 
 
@@ -39,11 +39,8 @@ def linmod_example():
     """
     X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]])
     y = np.array([3., 6.5, 10., 12., 13., 19.])
-    try:
-        lmod = linmod(linmod_model.mse, intercept=True)
-        lmod.fit(X, y)
-    except RuntimeError:
-        sys.exit(1)
+    lmod = linmod("mse", intercept=True)
+    lmod.fit(X, y)
 
     coef = lmod.coef
     print(f"coefficients: [{coef[0]:.3f}, {coef[1]:.3f}, {coef[2]:.3f}]")
@@ -51,4 +48,7 @@ def linmod_example():
 
 
 if __name__ == "__main__":
-    linmod_example()
+    try:
+        linmod_example()
+    except RuntimeError:
+        sys.exit(1)

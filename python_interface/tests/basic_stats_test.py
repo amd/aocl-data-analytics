@@ -27,6 +27,7 @@
 Basic statistics Python test script
 """
 
+import warnings
 import numpy as np
 import pytest
 import aoclda.basic_stats as da_stats
@@ -409,6 +410,7 @@ def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
     """
     Testing functionality of standardization function
     """
+    warnings.filterwarnings("ignore",module="sklearn")
     X = get_data2D["data"]
     tol = get_data2D["tol"]
 
