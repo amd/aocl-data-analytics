@@ -192,16 +192,16 @@ def test_moment_functionality_2D(get_data2D, da_axis, np_axis, shift):
     tol = get_data2D["tol"] * 2e6
 
     # Compute moments
-    da_moment = da_stats.moment(X, 8, axis=da_axis)
+    da_moment = da_stats.moment(X, 3, axis=da_axis)
     da_moment_with_precomputed_mean = da_stats.moment(X,
-                                                      8,
+                                                      3,
                                                       mean=shift,
                                                       axis=da_axis)
 
     # check expected results
-    ex_moment = moment(X, 8, axis=np_axis)
+    ex_moment = moment(X, 3, axis=np_axis)
     ex_moment_with_precomputed_mean = get_expected_moments_precomputed_mean(
-        X, 8, mean=shift, axis=da_axis)
+        X, 3, mean=shift, axis=da_axis)
 
     error = np.max(np.abs(da_moment - ex_moment))
     assert error < tol
