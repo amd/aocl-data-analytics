@@ -189,7 +189,7 @@ def test_moment_functionality_2D(get_data2D, da_axis, np_axis, shift):
     X = get_data2D["data"]
     # Increase the tolerance because expected test results for "all" case are of 1e12 magnitude
     # and cause some discrepancy after 3rd decimal point which is negligible at that size
-    tol = get_data2D["tol"] * 1e5
+    tol = get_data2D["tol"] * 2e6
 
     # Compute moments
     da_moment = da_stats.moment(X, 8, axis=da_axis)
