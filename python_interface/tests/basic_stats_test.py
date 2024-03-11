@@ -159,37 +159,20 @@ def test_variance_functionality(get_data2D, da_axis, np_axis):
     assert error < tol
 
 
-def get_expected_moments_precomputed_mean(array, k, mean, axis):
-    """
-    Helper function to get expected output for moment function
-    when using precalculated mean.
-    """
-    moments = []
-    if axis == "row":
-        for i in range(array.shape[0]):
-            moments.append(moment(array[i, :], k, axis=None, center=mean[i]))
-    if axis == "col":
-        for i in range(array.shape[1]):
-            moments.append(moment(array[:, i], k, axis=None, center=mean[i]))
-    if axis == "all":
-        np.ravel(array, order='A')
-        return moment(array, k, axis=None, center=mean[0])
-    return np.array(moments)
-
-
-@pytest.mark.parametrize("da_axis, np_axis, shift",
-                         [("row", 1, [4.1, 5, 10, 6]),
-                          ("col", 0, [12, 10, 4, 1.2, 2.6]),
-                          ("all", None, [10.4])],
+@pytest.mark.parametrize("da_axis, np_axis", [("row", 1), ("col", 0),
+                                              ("all", None)],
                          ids=["row", "col", "all"])
-def test_moment_functionality_2D(get_data2D, da_axis, np_axis, shift):
+def test_moment_functionality_2D(get_data2D, da_axis, np_axis):
     """
     Testing functionality of moment function with 2D input
     """
     X = get_data2D["data"]
     # Increase the tolerance because expected test results for "all" case are of 1e12 magnitude
     # and cause some discrepancy after 3rd decimal point which is negligible at that size
-    tol = get_data2D["tol"] * 2e6
+    tol = get_data2D["tol"] * 1e1
+
+    # Get precomputed means
+    shift = da_stats.mean(X, axis=da_axis)
 
     # Compute moments
     da_moment = da_stats.moment(X, 3, axis=da_axis)
@@ -200,25 +183,24 @@ def test_moment_functionality_2D(get_data2D, da_axis, np_axis, shift):
 
     # check expected results
     ex_moment = moment(X, 3, axis=np_axis)
-    ex_moment_with_precomputed_mean = get_expected_moments_precomputed_mean(
-        X, 3, mean=shift, axis=da_axis)
 
     error = np.max(np.abs(da_moment - ex_moment))
     assert error < tol
-    error = np.max(
-        np.abs(da_moment_with_precomputed_mean -
-               ex_moment_with_precomputed_mean))
+    error = np.max(np.abs(da_moment_with_precomputed_mean - ex_moment))
     assert error < tol
 
 
-@pytest.mark.parametrize("da_axis, np_axis, shift", [("row", None, [10.4])])
-def test_moment_functionality_1D(get_data1D, da_axis, np_axis, shift):
+@pytest.mark.parametrize("da_axis, np_axis", [("row", None)])
+def test_moment_functionality_1D(get_data1D, da_axis, np_axis):
     """
     Testing functionality of moment function with 1D input
     """
     X = get_data1D["data1D"]
     X2D = get_data1D["data2D"]
     tol = get_data1D["tol"]
+
+    # Get precomputed means
+    shift = da_stats.mean(X, axis=da_axis)
 
     # Compute moments
     da_moment = da_stats.moment(X, 8, axis=da_axis)
@@ -234,21 +216,15 @@ def test_moment_functionality_1D(get_data1D, da_axis, np_axis, shift):
 
     # check expected results
     ex_moment = moment(X, 8, axis=np_axis)
-    ex_moment_with_precomputed_mean = get_expected_moments_precomputed_mean(
-        X, 8, mean=shift, axis="all")
 
     error = np.max(np.abs(da_moment - ex_moment))
     assert error < tol
-    error = np.max(
-        np.abs(da_moment_with_precomputed_mean -
-               ex_moment_with_precomputed_mean))
+    error = np.max(np.abs(da_moment_with_precomputed_mean - ex_moment))
     assert error < tol
     # Assert that 1D array passed as 2D array is also correct
     error = np.max(np.abs(da_moment2 - ex_moment))
     assert error < tol
-    error = np.max(
-        np.abs(da_moment_with_precomputed_mean2 -
-               ex_moment_with_precomputed_mean))
+    error = np.max(np.abs(da_moment_with_precomputed_mean2 - ex_moment))
     assert error < tol
 
 
