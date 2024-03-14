@@ -46,7 +46,7 @@ setup(
     #ext_modules=[CMakeExtension('aoclda._aoclda')],
     cmdclass={'bdist_wheel': spec_bdist_wheel},
     long_description="AOCL-DA Python Interfaces",
-    version="4.2",
+    version="4.2.1",
     packages=find_packages(),
     include_package_data=True,
     package_data={'aoclda': dep_libs},
