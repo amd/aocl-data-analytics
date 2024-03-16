@@ -33,7 +33,6 @@ import numpy as np
 import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
 
-
 def test_pca():
     """
     Basic 3 x 2 problem

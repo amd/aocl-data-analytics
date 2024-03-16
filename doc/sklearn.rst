@@ -48,6 +48,13 @@ You can switch back to standard Scikit-learn using
 
    undo_skpatch()
 
+The ``skpatch()`` and ``undo_skpatch`` functions can also be called with string or list arguments, specifying which Scikit-learn package should be patched, for example:
+
+.. code-block::
+
+   skpatch("PCA")
+   skpatch(["LinearRegression", "Ridge"])
+
 Alternatively, you may wish to use the ``aoclda.sklearn`` module from the command line, without
 making any changes to your own code:
 
@@ -74,5 +81,6 @@ The following Scikit-learn classes are currently available in the AOCL-DA extens
 
 Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after
 patching, you attempt to call class member functions which have not been implemented by AOCL-DA,
-then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
+then a ``RuntimeError`` will be thrown.
+It is recommended that for the full benefit of using AOCL-DA
 you use the Python APIs described on the subsequent pages of this manual.

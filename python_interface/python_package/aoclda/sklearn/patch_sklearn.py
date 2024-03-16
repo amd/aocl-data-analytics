@@ -35,6 +35,8 @@ from ._linear_model import LinearRegression as LinearRegression_da
 from ._linear_model import Ridge as Ridge_da
 from ._linear_model import Lasso as Lasso_da
 
+# Now on a case-by-case basis, overwrite with AMD symbols where we have performant implementations
+
 # Global map of the sklearn symbols to replace
 # key: class name
 # value: dict containing the sklearn symbols and their replacements
@@ -55,21 +57,62 @@ SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                      'da_sym': Lasso_da}}
 
 
-def skpatch():
+def skpatch(*args):
     """
-    Replace all sklearn packages listed in SYMBOLS by their DA equivalent
+    Replace specified sklearn packages by their DA equivalent
     """
-    for method, sym in SYMBOLS.items():
-        pack = sym['pack']
-        da_sym = sym['da_sym']
-        setattr(pack, method, da_sym)
+
+    if not args:
+        packages = SYMBOLS.keys()
+    elif isinstance(args[0], str):
+        packages = [args[0]]
+    elif isinstance(args[0], (list, tuple)):
+        packages = args[0]
+    else:
+        raise TypeError("Unrecognized argument")
+
+    successfully_patched = []
+
+    for package in packages:
+
+        try:
+            pack = SYMBOLS[package]['pack']
+            sym = SYMBOLS[package]['da_sym']
+            setattr(pack, package, sym)
+            successfully_patched.append(package)
+        except KeyError:
+            print(f"The package {package} was not found.")
+
+    if successfully_patched:
+        print("AOCL Extension for Scikit-learn enabled for the following packages:")
+        print(', '.join(successfully_patched))
 
 
-def undo_skpatch():
+def undo_skpatch(*args):
     """
-    Reinstore sklearn packages with their original symbols
+    Reinstate sklearn packages with their original symbols
     """
-    for method, sym in SYMBOLS.items():
-        pack = sym['pack']
-        sk_sym = sym['sk_sym']
-        setattr(pack, method, sk_sym)
+
+    if not args:
+        packages = SYMBOLS.keys()
+    elif isinstance(args[0], str):
+        packages = [args[0]]
+    elif isinstance(args[0], (list, tuple)):
+        packages = args[0]
+    else:
+        raise TypeError("Unrecognized argument")
+
+    successfully_unpatched = []
+
+    for package in packages:
+        try:
+            pack = SYMBOLS[package]['pack']
+            sym = SYMBOLS[package]['sk_sym']
+            setattr(pack, package, sym)
+            successfully_unpatched.append(package)
+        except KeyError:
+            print(f"The package {package} was not found.")
+
+    if successfully_unpatched:
+        print("AOCL Extension for Scikit-learn disabled for the following packages:")
+        print(', '.join(successfully_unpatched))
