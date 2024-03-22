@@ -72,8 +72,8 @@ typedef struct linregParam_t {
  * [ ]  Coord     L1 + L2     none <-------------- NOT TESTED YET
  * [D]  Coord     L1 + L2     standardize
  * [D]  Coord     L1 + L2     scale only
- * [W]  BFGS      L2          centering
- * [W]  BFGS      L2          centering
+ * [D]  BFGS      L2          centering
+ * [D]  BFGS      L2          centering
  */
 const linregParam linregParamPos[] = {
     // 0
@@ -102,37 +102,37 @@ const linregParam linregParamPos[] = {
     {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "scale only"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
     // Data and solution generated using R (glmnet_trivial.R)
     // 12
-    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 5}, {"optim iteration limit", 1800}},
+    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 13
-    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 5}, {"optim iteration limit", 1800}},
+    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 1800}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 14
-    {"CoordL1Reg+1", "triviall1",    {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 150}},
+    {"CoordL1Reg+1", "triviall1",    {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 150}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",2.f},{"alpha",1.0f}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 15
-    {"CoordL1Reg+0", "triviall1",    {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 150}},
+    {"CoordL1Reg+0", "triviall1",    {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 150}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",2.f},{"alpha",1.0f}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 16
-    {"CoordL2Reg+1", "triviall2", {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+1", "triviall2", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
                                      },
     // 17
-    {"CoordL2Reg+0", "triviall2", {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+0", "triviall2", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
@@ -151,37 +151,37 @@ const linregParam linregParamPos[] = {
                                      },
     // Data and solution generated using R (glmnet_trivial.R) (STANDARDIZED = FALSE, our scaling = "scale only")
     // 20
-    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 5}, {"optim iteration limit", 1800}},
+    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 21
-    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 5}, {"optim iteration limit", 10000}},
+    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 10000}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 22
-    {"CoordL1Reg+1", "triviall1unscl",    {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 150}},
+    {"CoordL1Reg+1", "triviall1unscl",    {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 150}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",2.f},{"alpha",1.0f}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 23
-    {"CoordL1Reg+0", "triviall1unscl",    {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 500}},
+    {"CoordL1Reg+0", "triviall1unscl",    {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",2.f},{"alpha",1.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 24
-    {"CoordL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
                                      },
     // 25
-    {"CoordL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
@@ -308,7 +308,7 @@ const linregParam linregParamPos[] = {
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 46
-    {"LbfgsStdL2Reg+1", "triviall2", {{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
+    {"LbfgsStdL2Reg+1", "triviall2", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"}, {"scaling", "standardize"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
@@ -451,29 +451,228 @@ const linregParam linregParamPos[] = {
     // 72 models y ~ X + 0, y ~ X + 1, Ridge, centering => NEED to scale manually lambda
     // scaling = centering needs to be used as scaling = "scaling only" so _unscl data needs to be used.
     // Also lambda needs to be pre-scaled since sy is set to 1.
-    // Model has intercept so lambda is scaled by sd(y)*sqrt(n-1)/sqrt(n)
+    // Model has intercept so lambda is scaled by n * sd(y)*sqrt(n-1)/sqrt(n)
     {"LbfgsCenL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"}, {"scaling", "centering"}},
-                                     {{"lambda",10.0f/5.053189312f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 10.0}},
-                                     {{"lambda",10.0/5.053189312},{"alpha",0.0},{"optim convergence tol", 1.0e-9f},{"optim progress factor", 10.0}}
+                                     {{"lambda",6*10.0f/(5.053189312f)},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 10.0}},
+                                     {{"lambda",6*10.0/(5.053189312)},{"alpha",0.0},{"optim convergence tol", 1.0e-9f},{"optim progress factor", 10.0}}
                                      },
     // 73 Model has no intercept so we scale lambda by norm2(y)*sqrt(nsamples) and also use _unscl data for the test.
     {"LbfgsCenL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"}, {"scaling", "centering"}},
-                                     {{"lambda",10.0f/11.72781594f},{"alpha",0.0f}},
-                                     {{"lambda",10.0/11.72781594},{"alpha",0.0}}
+                                     {{"lambda",6*10.0f/(11.72781594f)},{"alpha",0.0f}},
+                                     {{"lambda",6*10.0/(11.72781594)},{"alpha",0.0}}
                                      },
     // 74 Model has intercept so lambda is scaled by sd(y)*sqrt(n-1)/sqrt(n)
     {"LbfgsCenNormTab-Ridge+1", "glmnet-100x20l2unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "centering"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f/8.71398621795f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",22.0/8.71398621795},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     {{"optim convergence tol",1.e-7f},{"lambda",100*22.0f/8.71398621795f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",100*22.0/8.71398621795},{"alpha",0.0},{"optim progress factor", 10.0}}
                                      },
     // 75 Model has no intercept so we scale lambda by norm2(y)/sqrt(n) and also use _unscl data for the test.
     {"LbfgsCenNormTab-Ridge+0", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "centering"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f/10.3711999994f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",22.0/10.3711999994},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     {{"optim convergence tol",1.e-7f},{"lambda",100*22.0f/10.3711999994f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",100*22.0/10.3711999994},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     },
+    // Compare with matrix-formulation (solved with normal equations)
+    //
+    // [A'A + lambda diag(I,0)] x = A'b <- INTERCEPT NO ASSUMPTIONS ON columns of A
+    // ============================================================================
+    // scaling type   lbfgs  coord  lambda-fix
+    // none             OK    BOA   same
+    // centering        OK    BOA   same
+    // scale only       OK    OK    lambda/m * stdev(b)
+    // standardize      DP    DP    *  xs[i] /= 1 so different problem solved
+    //
+    // [A'A + lambda I] x = A'b <- NO INTERCEPT NO ASSUMPTIONS ON columns of A
+    // =======================================================================
+    // scaling type   lbfgs  coord  lambda-fix
+    // none             OK    BOA   same
+    // centering        OK    BOA   same
+    // scale only       OK    OK    lambda/m * norm2(b)/sqrt(m)
+    // standardize      DP    DP    *  xs[i] /= 1 so different problem solved
+    // =======================================================================
+    // test only for none/centering and "scale only", standardize would solve a different problem
+    // test group works for L-BFGS-B, SVD, CHOL, CG. For COORD (only "scale only" is valid, otherwise
+    // assumptions not met, so not testing)
+    // 76 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
+    {"NE7x2-l2+0/L/n", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                  {{"optim method", "lbfgs"},{"scaling", "none"}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  true, false,
+                                  },
+    // 77 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
+    {"NE7x2-l2+1/L/n", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                  {{"optim method", "lbfgs"},{"scaling", "none"}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  true, false
+                                  },
+    // 77 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
+    {"NE7x2-l2+0/L/c", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                  {{"optim method", "lbfgs"},{"scaling", "centering"}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  true, false
+                                  },
+    // 78 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
+    {"NE7x2-l2+1/L/c", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                  {{"optim method", "lbfgs"},{"scaling", "centering"}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  true, false
+                                  },
+    // 79 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
+    // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
+    {"NE7x2-l2+0/L/s", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                  {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  true, false
+                                  },
+    // 80 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
+    // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
+    {"NE7x2-l2+1/L/s", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                  {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  true, false
+                                  },
+    // 81 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
+    // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
+    {"NE7x2-l2+0/Coord/s", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 82 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
+    // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
+    {"NE7x2-l2+1/Coord/s", "mtx_7x2",{{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // Compare with matrix-formulation (solved with normal equations)
+    // test ALL none/centering/scale only/standardize
+    //
+    // A \in m x n: m = nsamples
+    // BOA = Assumptions of algo not satisfied
+    // DP = different problem solved where l2 penalty is scaled
+    // [A'A + lambda I] x = A'b <- NO INTERCEPT
+    // ========================================
+    // A is such that for each column, ai, 1/nsamples sum[ai - mean(ai)]^2 = 1
+    // scaling type   lbfgs  coord  lambda-fix
+    // none             OK    BOA   same
+    // centering        OK    BOA   same
+    // scale only       OK    OK    lambda/m * norm2(b)/sqrt(m)
+    // standardize      OK    OK    lambda/m * norm2(b)/sqrt(m)
+    //
+    // [A'A + lambda diag(I,0)] x = A'b <- INTERCEPT
+    // =============================================
+    // A is such that for each column, ai, 1/nsamples sum[ai - mean(ai)]^2 = 1
+    // scaling type   lbfgs  coord  lambda-fix
+    // none             OK    BOA   same
+    // centering        OK    BOA   same
+    // scale only       OK    OK    lambda/m * stdev(b)
+    // standardize      OK    OK    lambda/m * stdev(b)
+    // =============================================
+    // test group works for L-BFGS-B, SVD, CHOL, CG, and COORD
+    // data: A is such that for each column, ai, 1/nsamples sum[ai - mean(ai)]^2 = 1
+    // 83 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    {"NE7x2-l2+0/L/n", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false,
+                                     },
+    // 84 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    {"NE7x2-l2+1/L/n", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 85 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    {"NE7x2-l2+0/L/c", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 86 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    {"NE7x2-l2+1/L/c", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 87 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
+    {"NE7x2-l2+0/L/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 88 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
+    {"NE7x2-l2+1/L/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 89 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
+    {"NE7x2-l2+0/Coord/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 90 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
+    {"NE7x2-l2+1/Coord/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 91 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
+    {"NE7x2-l2+0/L/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 92 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
+    {"NE7x2-l2+1/L/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 93 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
+    {"NE7x2-l2+0/Coord/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 94 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
+    {"NE7x2-l2+1/Coord/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "standardize"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
                                      },
 };
 // clang-format on

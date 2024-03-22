@@ -282,15 +282,20 @@ da_status da_linmod_fit_start<float>(da_handle handle, da_int ncoef, float *coef
     return da_linmod_fit_start_s(handle, ncoef, coefs);
 }
 
-inline da_status da_linmod_evaluate_model(da_handle handle, da_int n_samples,
-                                          da_int n_features, double *X,
-                                          double *predictions) {
-    return da_linmod_evaluate_model_d(handle, n_samples, n_features, X, predictions);
+inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
+                                          double *X, double *predictions,
+                                          double *observations = nullptr,
+                                          double *loss = nullptr) {
+    return da_linmod_evaluate_model_d(handle, nsamples, nfeat, X, predictions,
+                                      observations, loss);
 }
-inline da_status da_linmod_evaluate_model(da_handle handle, da_int n_samples,
-                                          da_int n_features, float *X,
-                                          float *predictions) {
-    return da_linmod_evaluate_model_s(handle, n_samples, n_features, X, predictions);
+
+inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
+                                          float *X, float *predictions,
+                                          float *observations = nullptr,
+                                          float *loss = nullptr) {
+    return da_linmod_evaluate_model_s(handle, nsamples, nfeat, X, predictions,
+                                      observations, loss);
 }
 
 /* Datastore overloaded functions */

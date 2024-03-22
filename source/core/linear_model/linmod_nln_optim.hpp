@@ -131,7 +131,7 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
  * v = [X, 1^T] * x
  */
 template <typename T>
-void eval_feature_matrix(da_int n, T *x, da_int nsamples, const T *X, T *v,
+void eval_feature_matrix(da_int n, const T *x, da_int nsamples, const T *X, T *v,
                          bool intercept) {
     T alpha = 1.0, beta = 0.0;
 
@@ -145,43 +145,40 @@ void eval_feature_matrix(da_int n, T *x, da_int nsamples, const T *X, T *v,
 }
 
 /* Add regularization, l1 and l2 terms */
-template <typename T> T regfun(usrdata_base<T> *data, da_int n, T const *x) {
-    const T l1{data->l1reg};
-    const T l2{data->l2reg};
+template <typename T> T regfun(da_int n, const T *x, const T l1reg, const T l2reg) {
     T f1{0}, f2{0};
-    if (l1 > 0) {
+    if (l1reg > 0) {
         // Add LASSO term
         for (da_int i = 0; i < n; i++) {
             f1 += fabs(x[i]);
         }
-        f1 *= l1;
+        f1 *= l1reg;
     }
-    if (l2 > 0) {
+    if (l2reg > 0) {
         // Add Ridge term
         for (da_int i = 0; i < n; i++) {
             f2 += x[i] * x[i];
         }
-        f2 *= l2;
+        f2 *= l2reg;
     }
     return f1 + f2;
 }
 
 /* Add regularization, l1 and l2 term derivatives */
-template <typename T> void reggrd(usrdata_base<T> *data, da_int n, T const *x, T *grad) {
-    const T l1{data->l1reg};
-    const T l2{data->l2reg};
-    if (l1 > 0) {
+template <typename T> void reggrd(da_int n, T const *x, T l1reg, T l2reg, T *grad) {
+    if (l1reg > 0) {
         // Add LASSO term
         for (da_int i = 0; i < n; i++) {
             // at xi = 0 there is no derivative => set to 0
             if (x[i] != 0)
-                grad[i] += x[i] < 0 ? -l1 : l1;
+                grad[i] += x[i] < 0 ? -l1reg : l1reg;
         }
     }
-    if (l2 > 0) {
+    if (l2reg > 0) {
         // Add Ridge term
+        const T l2term = T(2) * l2reg;
         for (da_int i = 0; i < n; i++) {
-            grad[i] += 2 * l2 * x[i];
+            grad[i] += l2term * x[i];
         }
     }
 }
@@ -243,7 +240,7 @@ da_int objfun_logistic([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
     }
 
     // Add regularization (exclude intercept)
-    *f += regfun(data, data->nfeat, x);
+    *f += regfun(data->nfeat, x, data->l1reg, data->l2reg);
 
     return 0;
 }
@@ -306,7 +303,7 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *udata,
     }
 
     // Add regularization (exclude intercept)
-    reggrd(data, data->nfeat, x, grad);
+    reggrd(data->nfeat, x, data->l1reg, data->l2reg, grad);
 
     return 0;
 }
@@ -315,13 +312,13 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *udata,
  * The MSE loss objective is
  * f = 1/2N \sum (MSE)^2 + lambda/2 (1-alpha) L2 + lambda alpha L1
  */
-template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *udata) {
+template <typename T> da_int objfun_mse(da_int n, T *x, T *loss, void *udata) {
 
     cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)udata;
     da_int nsamples = data->nsamples;
     const T *y = data->y;
     T *matvec = data->matvec.data();
-    *f = 0;
+    *loss = 0;
 
     // Compute matvec = X*x (+ intercept)
     eval_feature_matrix(n, x, nsamples, data->X, matvec, data->intercept);
@@ -332,13 +329,59 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *f, void *udata) {
 
     // sum (X * x (+intr) - y)^2
     for (da_int i = 0; i < nsamples; i++) {
-        *f += pow(matvec[i], (T)2.0);
+        *loss += pow(matvec[i], (T)2.0);
     }
-    *f /= T(2 * nsamples);
+    *loss /= T(2 * nsamples);
 
     // Add regularization (exclude intercept)
     da_int nmod = data->intercept ? n - 1 : n;
-    *f += regfun(data, nmod, x);
+    *loss += regfun(nmod, x, data->l1reg, data->l2reg);
+
+    return 0;
+}
+
+/* Evaluate model on a provided x and return loss and prediction
+ * Input:
+ *  * nsamples number of samples
+ *  * ncoef number of coefficients (includes intercept coefficient)
+ *  * coef[ncoef] vector of coefficientes (includes beta0, intercept coefficient)
+ *  * X matrix of size (nsamples times nfeat, nfeat = ncoef if intercept=false,
+ *    otherwise nfeat = ncoef-1.
+ *  * intercept true/false
+ *  * l1reg regularization penalty associated with L1
+ *  * l2reg regularization penalty associated with L2
+ *  * y[nsamples] nullptr is no observations provided, otherwise a vector of
+ *    nsamples observations
+ *
+ * Output
+ *  * loss value of the loss for the predictions given the y observations or
+ *         zero if y is nullptr
+ *  * pred[nsamples] model predictions
+ *
+ * Assumes that all input is valid
+ */
+template <typename T>
+da_int loss_mse(da_int nsamples, da_int nfeat, const T *X, bool intercept, T l1reg,
+                T l2reg, const T *coef, const T *y, T *loss, T *pred) {
+
+    const da_int ncoef = intercept ? nfeat + 1 : nfeat;
+
+    // Compute predictions: X*coef (+ intercept)
+    eval_feature_matrix(ncoef, coef, nsamples, X, pred, intercept);
+
+    if (y) {
+        *loss = 0;
+        // Observation vector provided, return also the loss function value
+        // sum (X * coef (+intr) - y)^2
+        for (da_int i = 0; i < nsamples; i++) {
+            T res = pred[i] - y[i];
+            *loss += res * res;
+        }
+        *loss /= T(2 * nsamples);
+
+        // Add regularization (exclude intercept coefficient)
+        *loss += regfun(nfeat, coef, l1reg, l2reg);
+    }
 
     return 0;
 }
@@ -375,7 +418,7 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
 
     // Add regularization (exclude intercept)
     da_int nmod = data->intercept ? n - 1 : n;
-    reggrd(data, nmod, x, grad);
+    reggrd(nmod, x, data->l1reg, data->l2reg, grad);
 
     return 0;
 }
@@ -477,9 +520,15 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
     T xk;
     T residual;
     T betak;
-    T l1, l2;
-    T gk = T(0);
-    bool standardized = data->scaling == da_linmod::scaling_t::standardize;
+    T gk{T(0)};
+    T xvk{T(1)};
+
+    const bool standardized = data->scaling == da_linmod::scaling_t::standardize;
+    const bool usexv = data->scaling == da_linmod::scaling_t::standardize ||
+                       data->scaling == da_linmod::scaling_t::scale_only;
+    const T l1{data->l1reg};        // lambdahat * alpha
+    const T l2{T(2) * data->l2reg}; // Note that data->l2reg = lambdahat (1-alpha) / 2;
+
     if (k < nmod) {
         // handle model coefficients beta1..betaN=coef[0]..coef[nmod-1]
         for (da_int i = 0; i < nsamples; ++i) {
@@ -491,13 +540,15 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
         if (standardized) {
             gk /= T(nsamples);
         }
+        if (usexv) {
+            xvk = data->xv[k];
+        }
         // betak = gk + coef[k]; // see (8) paper GLM2010
-        betak = gk + coef[k] * data->xv[k]; // <- scale by xv[k]
-        l1 = data->l1reg;                   // lambdahat * alpha
-        // Note that data->l2reg = lambdahat (1-alpha) / 2;
-        l2 = T(2) * data->l2reg; // FIXME precompute!
+        // betak = gk + coef[k] * data->xv[k]; // <- scale by xv[k]
+        betak = gk + coef[k] * xvk; // <- scale by xv[k]
 
-        betak = soft(betak, l1) / (data->xv[k] + l2);
+        // betak = soft(betak, l1) / (data->xv[k] + l2);
+        betak = soft(betak, l1) / (xvk + l2);
     } else {
         // handle intercept beta0 = coef[nmod+1] = coef[nfeat]
         for (da_int i = 0; i < nsamples; ++i) {
@@ -522,9 +573,7 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
     *f /= ((T)2 * (T)nsamples);
 
     // Add regularization (exclude intercept)
-    *f += regfun(
-        data, nmod,
-        coef); // FIXME potentially wrong if l1reg = update needs to consider x scales in standardization
+    *f += regfun(nmod, coef, data->l1reg, data->l2reg);
 
     data = nullptr;
     return 0;

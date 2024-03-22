@@ -150,7 +150,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_coeffs.csv";
     if (FILE *file = fopen(coef_fname.c_str(), "r")) {
         // read the expected coefficients
-        std::fclose(file);
+        fclose(file);
         EXPECT_EQ(
             da_read_csv(csv_store, coef_fname.c_str(), &coef_exp, &mc, &nc, nullptr),
             da_status_success);
@@ -170,7 +170,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     b = nullptr;
 
     // Predict
-#if 0
+
     // Check that solver found the same solution
     // A is the training set and b is the predicted y of the trained model:
     // beta = y ~ x, then b = predict(beta, x)
@@ -216,7 +216,6 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         FAIL() << "Check of predictions was requested but the data file "
                << solution_fname << " could not be opened.";
     }
-#endif
 
     delete[] A;
     A = nullptr;
@@ -225,6 +224,82 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     da_int linfo = 100;
     T info[100];
     std::vector<T> info_exp(100, T(0));
+
+    // Check predictions on a random data (A) not used for training
+    // A is the new data set and b is the predicted y of the trained model:
+    // beta = y ~ x, then b = predict(beta, newx)
+    std::string predict_fname =
+        std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_predict_data.csv";
+    if (FILE *file = fopen(predict_fname.c_str(), "r")) {
+        fclose(file);
+
+        EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
+        EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datastore precision",
+                                                  prec_name<T>()),
+                  da_status_success);
+        EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datatype",
+                                                  type_opt_name<T>()),
+                  da_status_success);
+
+        EXPECT_EQ(da_data_load_from_csv(csv_store, predict_fname.c_str()),
+                  da_status_success);
+
+        EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
+        EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
+
+        // The first ncols-1 columns contain the feature matrix; the last one the response vector
+        // Create the selections in the data store
+        EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 2),
+                  da_status_success);
+        EXPECT_EQ(da_data_select_columns(csv_store, "response", ncols - 1, ncols - 1),
+                  da_status_success);
+
+        nfeat = ncols - 1;
+        nsamples = nrows;
+        // Extract the selections
+        A = new T[nfeat * nsamples];
+        b = new T[nsamples];
+        EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nsamples),
+                  da_status_success);
+        EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nsamples),
+                  da_status_success);
+
+        da_datastore_destroy(&csv_store);
+
+        // Check that solver found the same solution
+        // A is the training set and b is the predicted y of the trained model:
+        // beta = y ~ x, then b = predict(beta, x)
+        std::vector<T> pred(nsamples);
+        EXPECT_EQ(
+            da_linmod_evaluate_model(linmod_handle, nsamples, nfeat, A, pred.data()),
+            da_status_success);
+        EXPECT_ARR_NEAR(nsamples, pred.data(), b, expected_precision<T>(check_tol_scale));
+        T loss;
+        EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, nsamples, nfeat, A, pred.data(),
+                                           b, &loss),
+                  da_status_success);
+
+        // FIXME info_exp[?] = loss;
+        // info_objective, info_grad_norm, info_iter, info_time, info_nevalf, info_inorm, info_inorm_init, info_ncheap
+        // info_exp.assign({})
+        EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
+                  da_status_success);
+        // TODO compare info
+
+        T alpha, lambda;
+        EXPECT_EQ(da_options_get(linmod_handle, "lambda", &lambda), da_status_success);
+        EXPECT_EQ(da_options_get(linmod_handle, "alpha", &alpha), da_status_success);
+
+        delete[] A;
+        A = nullptr;
+
+        delete[] b;
+        b = nullptr;
+
+    } else if (check_predict) {
+        FAIL() << "Check of predictions was requested but the data file " << predict_fname
+               << " could not be opened.";
+    }
 
 #if 0
     // double call
@@ -251,8 +326,5 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     //////////////
     // Free memory
     //////////////
-    delete[] A;
-    delete[] b;
-    da_datastore_destroy(&csv_store);
     da_handle_destroy(&linmod_handle);
 }

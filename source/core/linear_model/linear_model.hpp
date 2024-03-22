@@ -151,9 +151,24 @@ template <typename T> class linear_model : public basic_handle<T> {
     ~linear_model();
 
     /* This function is called when data in the handle has changed, e.g. options
-     * changed. We mark the model untrained
+     * changed. We mark the model untrained and prepare the handle in a way that
+     * it is suitable to solve again.
+     *
+     * TODO this needs to be optimized and
+     * avoid rescaling when data was already prepared.
      */
-    void refresh() { model_trained = false; };
+    void refresh() {
+        if (model_trained) {
+            // Reset
+            model_trained = false;
+            if (X != XUSR)
+                free(X);
+            if (y != yusr)
+                free(y);
+            X = (T *)(XUSR);
+            y = (T *)(yusr);
+        }
+    };
 
     da_status define_features(da_int nfeat, da_int nsamples, const T *X, const T *y);
     da_status select_model(linmod_model mod);
@@ -164,7 +179,8 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status fit_linreg_lbfgs();
     da_status fit_linreg_coord();
     da_status get_coef(da_int &nx, T *coef);
-    da_status evaluate_model(da_int nfeat, da_int nsamples, T *X, T *predictions);
+    da_status evaluate_model(da_int nfeat, da_int nsamples, T *X, T *predictions,
+                             T *observations, T *loss);
 
     /* get_result (required to be defined by basic_handle) */
     da_status get_result(da_result query, da_int *dim, T *result);
@@ -430,55 +446,59 @@ template <typename T> da_status linear_model<T>::get_coef(da_int &nx, T *coef) {
 
 template <typename T>
 da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
-                                          T *predictions) {
-    da_int i;
+                                          T *predictions, T *observations, T *loss) {
+    da_int i, status;
 
     if (nfeat != this->nfeat)
         return da_error(this->err, da_status_invalid_input,
-                        "nt_feat = " + std::to_string(nfeat) +
+                        "nfeat = " + std::to_string(nfeat) +
                             ". it must match the number of features of the computed "
-                            "model: n_feat = " +
-                            std::to_string(this->nfeat));
+                            "model: nfeat = " +
+                            std::to_string(this->nfeat) + ".");
     if (nsamples <= 0)
-        return da_error(this->err, da_status_invalid_input,
-                        "nt_samples must be positive.");
+        return da_error(this->err, da_status_invalid_input, "nsamples must be positive.");
     if (X == nullptr || predictions == nullptr)
         return da_error(this->err, da_status_invalid_input,
-                        "One of Xt or predictions was a null pointer.");
+                        "One of X or predictions was a null pointer.");
     if (!model_trained)
         return da_error(this->err, da_status_out_of_date,
-                        "The model has not been trained yet");
+                        "The model has not been trained yet.");
 
-    // X is assumed to be of shape (nsamples,nfeat)
+    // X is assumed to be of shape (nsamples, nfeat)
     // y is assumed to be of size nsamples
+
+    const T l1reg = this->alpha * this->lambda;
+    const T l2reg = (T(1) - this->alpha) * this->lambda / T(2);
+
     T alpha = 1.0, beta = 0.0;
-    T *cf_p = coef.data();
     T aux;
     da_int nmod;
-    std::vector<T> log_proba;
-    T *log_p;
+    std::vector<T> log_proba(0);
     switch (mod) {
     case linmod_model_mse:
-        // start by computing X*coef = predictions
-        da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, nfeat, alpha, X,
-                            nsamples, cf_p, 1, beta, predictions, 1);
-        if (intercept) {
-            for (i = 0; i < nsamples; i++)
-                predictions[i] += coef[ncoef - 1];
+        // Call loss_mse
+        status = loss_mse(nsamples, nfeat, X, this->intercept, l1reg, l2reg,
+                          this->coef.data(), observations, loss, predictions);
+        if (status != 0) {
+            return da_error(this->err, da_status_incorrect_output,
+                            "Unexpected error at evaluating model.");
         }
-        for (i = 0; i < nsamples; i++)
-            predictions[i] -= y[i];
         break;
     case linmod_model_logistic:
         nmod = intercept ? nfeat + 1 : nfeat;
-        log_proba.resize(nsamples * nclass, 0);
-        std::fill(predictions, predictions + nsamples, 0.0);
-        log_p = log_proba.data();
-        std::fill(&log_p[nsamples * (nclass - 1)], &log_p[nsamples * nclass], 1.0);
+        try {
+            log_proba.resize(nsamples * nclass, 0);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        std::fill(predictions, predictions + nsamples, T(0));
+        //FIXME: move this to nln_optim header
+        std::fill(log_proba.begin() + nsamples * (nclass - 1), log_proba.end(), T(1));
         for (da_int k = 0; k < nclass - 1; k++) {
             da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, nfeat, alpha, X,
-                                nsamples, &cf_p[k * nmod], 1, beta, &log_p[k * nsamples],
-                                1);
+                                nsamples, &coef[k * nmod], 1, beta,
+                                &log_proba[k * nsamples], 1);
             if (intercept) {
                 for (i = 0; i < nsamples; i++)
                     log_proba[k * nsamples + i] += coef[(k + 1) * nmod - 1];
@@ -610,14 +630,14 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             return status; // message already loaded
         }
 
-        if (scaling != scaling_t::none) {
+        if (scaling == scaling_t::standardize || scaling == scaling_t::scale_only) {
             // Rescale lambda
             lambda /= std_scales[nfeat];
-            // Rescale lambda when scaling = "scale only" and the solver is not coord, ie,
-            // need the scaled lambda for the objective and gradient
-            if (scaling == scaling_t::scale_only && mid == linmod_method::lbfgsb) {
-                lambda /= T(nsamples);
-            }
+        }
+        // Rescale lambda when scaling != "standardize" and the solver is not coord, ie,
+        // need the scaled lambda for the objective and gradient
+        if ((mid == linmod_method::lbfgsb) && (scaling != scaling_t::standardize)) {
+            lambda /= T(nsamples);
         }
 
         // last so to capture all option changes by the solver

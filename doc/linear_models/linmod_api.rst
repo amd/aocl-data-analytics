@@ -69,3 +69,4 @@ Linear Model APIs
       .. doxygenfunction:: da_linmod_evaluate_model_s
          :outline:
       .. doxygenfunction:: da_linmod_evaluate_model_d
+

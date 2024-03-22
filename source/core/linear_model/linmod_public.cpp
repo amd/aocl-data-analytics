@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -137,7 +137,8 @@ da_status da_linmod_fit_s(da_handle handle) {
 }
 
 da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int nfeat,
-                                     double *X, double *predictions) {
+                                     double *X, double *predictions, double *observations,
+                                     double *loss) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -149,12 +150,21 @@ da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int n
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_linmod or "
                         "handle is invalid.");
-
-    return handle->linreg_d->evaluate_model(nfeat, nsamples, X, predictions);
+    if (observations && loss)
+        return handle->linreg_d->evaluate_model(nfeat, nsamples, X, predictions,
+                                                observations, loss);
+    else if (!observations || !loss) {
+        return handle->linreg_d->evaluate_model(nfeat, nsamples, X, predictions, nullptr,
+                                                nullptr);
+    }
+    return da_error(handle->err, da_status_invalid_input,
+                    "Parameter `observations` should contain at least one single "
+                    "observation. Parameter `loss` should point to a valid adress.");
 }
 
 da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int nfeat,
-                                     float *X, float *predictions) {
+                                     float *X, float *predictions, float *observations,
+                                     float *loss) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -166,6 +176,14 @@ da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int n
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_linmod or "
                         "handle is invalid.");
-
-    return handle->linreg_s->evaluate_model(nfeat, nsamples, X, predictions);
+    if (observations && loss)
+        return handle->linreg_s->evaluate_model(nfeat, nsamples, X, predictions,
+                                                observations, loss);
+    else if (!observations || !loss) {
+        return handle->linreg_s->evaluate_model(nfeat, nsamples, X, predictions, nullptr,
+                                                nullptr);
+    }
+    return da_error(handle->err, da_status_invalid_input,
+                    "Parameter `observations` should contain at least one single "
+                    "observation. Parameter `loss` should point to a valid adress.");
 }

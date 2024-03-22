@@ -47,8 +47,55 @@ template <> double expected_precision<double>(double scale) { return scale * 1.0
 
 template <> float expected_precision<float>(float scale) { return scale * 0.5f; }
 
-//template <typename T> T log_loss(T y, T p) { return -y * log(p) - (1 - y) * log(1 - p); }
-//template <typename T> T logistic(T x) { return 1 / (1 + exp(-x)); }
+template <typename T>
+T objfun_mse(da_int n, da_int m, const T *x, const T *A, const T *b, bool intercept,
+             T alpha, T lambda) {
+    T eta{1}, beta{0};
+    std::vector<T> y;
+    y.resize(m);
+    da_int aux = intercept ? 1 : 0;
+    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, m, n - aux, eta, A, m, x, 1, beta,
+                        y.data(), 1);
+    if (intercept) {
+        for (da_int i = 0; i < m; i++)
+            y[i] += x[n - 1];
+    }
+    eta = T(-1);
+    da_blas::cblas_axpy(m, eta, b, 1, y.data(), 1);
+    T rsq{0};
+    T l1{0}, l2{0};
+    for (da_int i = 0; i < m; ++i) {
+        T res = (b[i] - y[i]);
+        rsq += res * res;
+        l1 += std::abs(x[i]);
+        l2 += x[i] * x[i];
+    }
+    l1 *= (alpha * lambda);
+    l2 *= ((T(1) - alpha) * lambda) / T(2);
+    T loss = T(1) / T(2 * m) * rsq + l1 + l2;
+}
+
+// Get Loss value (MSE)
+template <typename T>
+T objfun(linmod_model mod, da_int n, da_int m, const T *x, const T *A, const T *b,
+         bool intercept, T alpha, T lambda) {
+    switch (mod) {
+    case (linmod_model_mse):
+        return objfun_mse(n, m, x, A, b, intercept, alpha, lambda);
+        break;
+
+    case (linmod_model_logistic):
+        // return objfun_logistic(n, m, x, A, b, intercept, alpha, lambda);
+        FAIL() << "not yet implemented";
+        break;
+
+    default:
+        FAIL() << "unexpected gradient function";
+    }
+}
+
+// T log_loss(T y, T p) { return -y * log(p) - (1 - y) * log(1 - p); }
+// T logistic(T x) { return 1 / (1 + exp(-x)); }
 
 template <typename T>
 void objgrd_mse(da_int n, da_int m, T *x, std::vector<T> &grad, const T *A, const T *b,

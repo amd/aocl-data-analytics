@@ -145,10 +145,11 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
 /** \} */
 
 /** \{
- * @brief Evaluate the model previously computed on a new set of data @p Xt.
+ * @brief Evaluate the model previously computed on a new set of data @p X and observations y.
  *
- * After a model has been fit using \ref da_linmod_fit_s "da_linmod_fit_?", it can be evaluated on  a new set of data.
- * This function returns the model evaluation in the array @p predictions.
+ * After a model has been fit using \ref da_linmod_fit_s "da_linmod_fit_?", it can be evaluated on
+ * a new set of data and observations.
+ * This function returns the model evaluation (loss) in the array @p loss and the predictions in @p predictions.
 
  * @rst
  * In the case where the model chosen solves a classification problem (e.g., logistic regression), the predictions computed will be categorical.
@@ -156,10 +157,14 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
  * @endrst
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
- * @param nt_features number of columns of \p Xt or equivalently the number of features of the test data. It must match the number features of the data defined in the \p handle.
- * @param nt_samples number of rows of \p Xt or equivalently the number of samples to estimate the model on.
- * @param Xt the @p nt_samples @f$\times@f$ @p nt_feat data matrix to evaluate the model on, in column major format.
- * @param predictions
+ * @param nfeat number of columns of \p X or equivalently the number of features of the test data. It must match the number features of the data defined in the \p handle.
+ * @param nsamples number of rows of \p X or equivalently the number of samples to estimate the model on.
+ * @param X the @p nsamples @f$\times@f$ @p nfeat data matrix to evaluate the model on, in column major format.
+ * @param predictions vector of size \p nsamples containing the model's prediction.
+ * @param observations vector of size \p nsamples containing new observations, may be \p NULL if none are provided
+ * @param loss scalar containing the model's loss given the new data \p X and the new observations \p y, may be \p NULL if
+ *        no observations are provided. Note that either both \p  observations and \p loss parameters are \p NULL or both
+ *        must contain a valid address.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
@@ -169,10 +174,13 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
  *
  * \{
  */
-da_status da_linmod_evaluate_model_d(da_handle handle, da_int nt_samples,
-                                     da_int nt_features, double *Xt, double *predictions);
-da_status da_linmod_evaluate_model_s(da_handle handle, da_int nt_samples,
-                                     da_int nt_features, float *Xt, float *predictions);
+da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int nfeat,
+                                     double *X, double *predictions, double *observations,
+                                     double *loss);
+
+da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int nfeat,
+                                     float *X, float *predictions, float *observations,
+                                     float *loss);
 /** \} */
 
 #ifdef __cplusplus

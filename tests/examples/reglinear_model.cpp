@@ -53,7 +53,7 @@ int main(void) {
     double tol = 1.0e-6;
 
     // Expected solution
-    // alpha = 1; lambda = 10; x = (A'*A + lambda/2 * eye(2)) \ A'*b
+    // alpha = 1; lambda = 5; x = (A'*A + lambda * eye(2)) \ A'*b
     double xexp[2]{0.185375, 0.12508};
 
     // Initialize the linear regression
@@ -67,7 +67,8 @@ int main(void) {
     da_linmod_define_features_d(handle, m, n, Al, bl);
     da_options_set_int(handle, "intercept", 0);
     da_options_set_real_d(handle, "alpha", 0.0);
-    da_options_set_real_d(handle, "lambda", 10.0);
+    da_options_set_real_d(handle, "lambda", 5.0);
+    da_options_set_string(handle, "scaling", "none");
     da_options_set_string(handle, "print options", "yes");
     da_options_set_string(handle, "optim method", "lbfgs");
 
@@ -86,7 +87,7 @@ int main(void) {
         std::cout << "Expected    : " << xexp[0] << " " << xexp[1] << std::endl;
 
         // Check result
-        double err = std::max((x[0] - xexp[0]), (x[1] - xexp[1]));
+        double err = std::max(std::abs(x[0] - xexp[0]), std::abs(x[1] - xexp[1]));
         if (err > tol) {
             std::cout << "Solution is not within the expected tolerance: " << err
                       << std::endl;
