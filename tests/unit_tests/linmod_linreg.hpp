@@ -58,7 +58,10 @@ template <typename T>
 void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iopts,
                           std::vector<option_t<std::string>> sopts,
                           std::vector<option_t<T>> ropts, bool check_coeff,
-                          T check_tol_scale) {
+                          T check_tol_scale, bool double_call = false) {
+
+    // Double call: calls a second time the solver with the solution point and
+    // makes sure no iterations are performed.
 
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
@@ -130,6 +133,15 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     // Check the results
     ////////////////////
     // Check the coefficients if reference file is present
+    T *coef_exp = nullptr;
+    da_int ncoef = intercept ? ncols : ncols - 1;
+    std::vector<T> coef(ncoef, -9.87654321);
+    // read the computed coefficients
+    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_linmod_coef, &ncoef,
+                                   coef.data()),
+              da_status_success);
+
+    da_int mc{0}, nc{0};
     std::string intercept_suff = "";
     if (!intercept)
         intercept_suff = "_noint";
@@ -137,21 +149,12 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_coeffs.csv";
     if (std::filesystem::exists(coef_fname)) {
         // read the expected coefficients
-        T *coef_exp = nullptr;
-        da_int mc, nc;
         EXPECT_EQ(
             da_read_csv(csv_store, coef_fname.c_str(), &coef_exp, &mc, &nc, nullptr),
             da_status_success);
-
-        // read the computed coefficients
-        T *coef = new T[nc];
-        EXPECT_EQ(
-            da_handle_get_result(linmod_handle, da_result::da_linmod_coef, &nc, coef),
-            da_status_success);
-
+        EXPECT_EQ(nc, ncoef) << "Number of coefficients to check does not match";
         // Check coefficients
         EXPECT_ARR_NEAR(nc, coef, coef_exp, expected_precision<T>(check_tol_scale));
-        delete[] coef;
         free(coef_exp);
     } else if (check_coeff) {
         FAIL() << "Check of coefficients was requested but the solution file "
@@ -161,9 +164,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     // Check that info contains the correct values
     da_int linfo = 100;
     T info[100];
-    T info_exp[100];
-    for (da_int i = 0; i < 100; i++)
-        info_exp[i] = (T)0.0;
+    std::vector<T> info_exp(100, T(0));
     info_exp[0] = (T)(ncols - 1);
     info_exp[1] = (T)nrows;
     info_exp[2] = intercept ? (T)(ncols - 1) : ncols;
@@ -174,6 +175,20 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
               da_status_success);
 
     // TODO compare info
+    da_int lsolver{15};
+    char solver[15];
+    EXPECT_EQ(da_options_set(linmod_handle, "lambda", info_exp[5]), da_status_success);
+
+    // EXPECT_EQ(da_options_get(linmod_handle, "optim method", &solver[0], &lsolver), da_status_success);
+    // std::string sol(solver);
+    // if (double_call && (solver == "coord"s || solver == )){
+    // Problem has been solved once and coef holds the solution
+    // set any option to retriger
+    // EXPECT_EQ(da_linmod_fit_start<T>(linmod_handle, nc, coef.data()), da_status_success);
+    // EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
+    //       da_status_success);
+    // todo compare info
+    // }
 
     //////////////
     // Free memory

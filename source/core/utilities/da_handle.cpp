@@ -28,8 +28,13 @@
 #include "da_handle.hpp"
 #include "aoclda.h"
 
-da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
-
+/*
+ * Get pointer to the option member of the currently active sub-handle, also
+ * if refresh is true, the it call's the appropiate sub-handle's refresh()
+ * member to indicate that substantial changes have occurred in the handle.
+ * E.g. options changes that alter the model requiring re-training, etc...
+ */
+da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool refresh) {
     const std::string msg = "handle seems to be corrupted.";
     switch (handle_type) {
     case da_handle_linmod:
@@ -38,11 +43,15 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
             if (linreg_d == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &linreg_d->opts;
+            if (refresh)
+                linreg_d->refresh();
             break;
         case da_single:
             if (linreg_s == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &linreg_s->opts;
+            if (refresh)
+                linreg_s->refresh();
             break;
         }
         break;
@@ -52,11 +61,15 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
             if (dt_d == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &dt_d->opts;
+            if (refresh)
+                dt_d->refresh();
             break;
         case da_single:
             if (dt_s == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &dt_s->opts;
+            if (refresh)
+                dt_s->refresh();
             break;
         }
         break;
@@ -66,11 +79,15 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
             if (df_d == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &df_d->opts;
+            if (refresh)
+                df_d->refresh();
             break;
         case da_single:
             if (df_s == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &df_s->opts;
+            if (refresh)
+                df_s->refresh();
             break;
         }
         break;
@@ -80,11 +97,15 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
             if (pca_d == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &pca_d->opts;
+            if (refresh)
+                pca_d->refresh();
             break;
         case da_single:
             if (pca_s == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &pca_s->opts;
+            if (refresh)
+                pca_s->refresh();
             break;
         }
         break;
@@ -94,11 +115,15 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
             if (kmeans_d == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &kmeans_d->opts;
+            if (refresh)
+                kmeans_d->refresh();
             break;
         case da_single:
             if (kmeans_s == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
             *opts = &kmeans_s->opts;
+            if (refresh)
+                kmeans_s->refresh();
             break;
         }
         break;
@@ -106,6 +131,5 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts) {
         return da_error(this->err, da_status_handle_not_initialized,
                         "handle has not been initialized.");
     }
-
     return da_status_success;
 }

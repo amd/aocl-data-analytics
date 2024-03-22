@@ -45,13 +45,15 @@
  */
 struct _da_handle {
   public:
-    da_csv::csv_reader *csv_parser = nullptr;
-    da_linmod::linear_model<double> *linreg_d = nullptr;
-    da_linmod::linear_model<float> *linreg_s = nullptr;
-    da_handle_type handle_type = da_handle_uninitialized;
     // Pointer to error trace and related methods
     da_errors::da_error_t *err = nullptr;
+    // pointer for each sub-handle
+    da_csv::csv_reader *csv_parser = nullptr;
     da_precision precision = da_double;
+    da_handle_type handle_type = da_handle_uninitialized;
+    // list of sub-handles
+    da_linmod::linear_model<double> *linreg_d = nullptr;
+    da_linmod::linear_model<float> *linreg_s = nullptr;
     da_pca::da_pca<double> *pca_d = nullptr;
     da_pca::da_pca<float> *pca_s = nullptr;
     da_kmeans::da_kmeans<double> *kmeans_d = nullptr;
@@ -68,7 +70,7 @@ struct _da_handle {
             err->clear();
     };
 
-    da_status get_current_opts(da_options::OptionRegistry **opts);
+    da_status get_current_opts(da_options::OptionRegistry **opts, bool refresh = false);
 };
 
 #endif

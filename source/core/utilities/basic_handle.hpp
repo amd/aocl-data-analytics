@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -47,5 +47,13 @@ template <typename T> class basic_handle {
      */
     virtual da_status get_result(da_result query, da_int *dim, T *result) = 0;
     virtual da_status get_result(da_result query, da_int *dim, da_int *result) = 0;
+
+    /*
+     * Function to inform that something related to the (sub)handle has
+     * changed and to mark as update-required. E.g. options changed and potentially
+     * the underlying model is different and a new call to fit is required.
+     * Each (sub)handle is responsible to implement this function if required.
+     */
+    void refresh(){};
 };
 #endif

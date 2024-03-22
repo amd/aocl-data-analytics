@@ -566,6 +566,9 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
                 if (intercept) {
                     coef[ncoef - 1] = usr_ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
                 }
+
+                // FIXME: if scaling -> scale back coefficients to problem scale
+
             } else {
                 coef.resize(ncoef, (T)0);
             }

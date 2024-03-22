@@ -271,6 +271,17 @@ template <> da_status da_linmod_fit<float>(da_handle handle) {
     return da_linmod_fit_s(handle);
 }
 
+template <class T>
+da_status da_linmod_fit_start(da_handle handle, da_int ncoef, T *coefs);
+template <>
+da_status da_linmod_fit_start<double>(da_handle handle, da_int ncoef, double *coefs) {
+    return da_linmod_fit_start_d(handle, ncoef, coefs);
+}
+template <>
+da_status da_linmod_fit_start<float>(da_handle handle, da_int ncoef, float *coefs) {
+    return da_linmod_fit_start_s(handle, ncoef, coefs);
+}
+
 inline da_status da_linmod_evaluate_model(da_handle handle, da_int n_samples,
                                           da_int n_features, double *X,
                                           double *predictions) {

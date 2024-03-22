@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ da_status da_options_set_int(da_handle handle, const char *option, da_int value)
     handle->clear(); // clean up handle logs
 
     da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
+    status = handle->get_current_opts(&opts, true);
     if (status != da_status_success)
         return status; // Error message already loaded
 
@@ -57,7 +57,7 @@ da_status da_options_set_string(da_handle handle, const char *option, const char
     handle->clear(); // clean up handle logs
 
     da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
+    status = handle->get_current_opts(&opts, true);
     if (status != da_status_success)
         return status; // Error message already loaded
 
@@ -82,7 +82,7 @@ da_status da_options_set_real_s(da_handle handle, const char *option, float valu
             "handle was not initialized with single precision floating point type.");
 
     da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
+    status = handle->get_current_opts(&opts, true);
     if (status != da_status_success)
         return status; // Error message already loaded
 
@@ -107,7 +107,7 @@ da_status da_options_set_real_d(da_handle handle, const char *option, double val
             "handle was not initialized with double precision floating point type.");
 
     da_options::OptionRegistry *opts;
-    status = handle->get_current_opts(&opts);
+    status = handle->get_current_opts(&opts, true);
     if (status != da_status_success)
         return status; // Error message already loaded
 
