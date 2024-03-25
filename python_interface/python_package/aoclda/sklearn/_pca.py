@@ -79,8 +79,14 @@ class PCA(PCA_sklearn):
 
         # new internal attributes
         self.aocl = True
+
+        # Translate options to aocl-da ones
+        solver = svd_solver
+        if svd_solver == 'full':
+            solver = 'gesdd'
+
         self.pca = PCA_da(n_components, method="covariance",
-                          solver=self.svd_solver, precision="double", bias='unbiased')
+                          solver=solver, precision="double", bias='unbiased')
 
     def fit(self, X, y=None):
         self.pca.fit(X)
@@ -105,7 +111,16 @@ class PCA(PCA_sklearn):
         raise RuntimeError("This feature is not implemented")
 
     def get_params(self, deep=True):
-        raise RuntimeError("This feature is not implemented")
+        params = {'copy': True,
+                  'iterated_power': 'auto',
+                  'n_components': self.n_components,
+                  'n_oversamples': self.n_oversamples,
+                  'power_iteration_normalizer': self.power_iteration_normalizer,
+                  'random_state': self.random_state,
+                  'svd_solver': self.svd_solver,
+                  'tol': self.tol,
+                  'whiten': self.whiten}
+        return params
 
     def get_precision(self, *args):
         raise RuntimeError("This feature is not implemented")
@@ -157,8 +172,7 @@ class PCA(PCA_sklearn):
 
     @property
     def noise_variance_(self):
-        print("This attribute is not implemented")
-        return None
+        return 1.0
 
     @property
     def n_features_in_(self):

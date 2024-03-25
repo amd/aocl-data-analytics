@@ -57,7 +57,7 @@ SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                      'da_sym': Lasso_da}}
 
 
-def skpatch(*args):
+def skpatch(*args, print_patched=True):
     """
     Replace specified sklearn packages by their DA equivalent
     """
@@ -83,12 +83,12 @@ def skpatch(*args):
         except KeyError:
             print(f"The package {package} was not found.")
 
-    if successfully_patched:
+    if successfully_patched and print_patched:
         print("AOCL Extension for Scikit-learn enabled for the following packages:")
         print(', '.join(successfully_patched))
 
 
-def undo_skpatch(*args):
+def undo_skpatch(*args, print_patched=True):
     """
     Reinstate sklearn packages with their original symbols
     """
@@ -113,6 +113,6 @@ def undo_skpatch(*args):
         except KeyError:
             print(f"The package {package} was not found.")
 
-    if successfully_unpatched:
+    if successfully_unpatched and print_patched:
         print("AOCL Extension for Scikit-learn disabled for the following packages:")
         print(', '.join(successfully_unpatched))
