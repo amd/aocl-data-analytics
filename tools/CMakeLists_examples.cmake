@@ -72,14 +72,17 @@ if(WIN32)
   if(BUILD_SMP)
     set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
     set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
+    set(SPARSE_NAME "AOCL-LibSparse-Win-MT-dll")
   else()
     set(BLAS_NAME "AOCL-LibBlis-Win-dll")
     set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
+    set(SPARSE_NAME "AOCL-LibSparse-Win-dll")
   endif()
   set(UTILS_NAME "libaoclutils")
 
   set(BLAS_PATH "${CMAKE_AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
   set(LAPACK_PATH "${CMAKE_AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
+  set(SPARSE_PATH "${CMAKE_AOCL_ROOT}/amd-sparse/lib/${INT_LIB}")
   set(UTILS_PATH "${CMAKE_AOCL_ROOT}/amd-utils/lib")
 else() # Linux
   if(BUILD_SMP)
@@ -88,10 +91,12 @@ else() # Linux
     set(BLAS_NAME "blis")
   endif()
   set(LAPACK_NAME "flame")
+  set(SPARSE_NAME "aoclsparse")
   set(UTILS_NAME "aoclutils")
 
   set(BLAS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
   set(LAPACK_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+  set(SPARSE_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
   set(UTILS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
 endif()
 
@@ -103,6 +108,11 @@ find_library(
 find_library(
   LAPACK name ${LAPACK_NAME}
   PATHS ${LAPACK_PATH} REQUIRED
+  NO_DEFAULT_PATH)
+
+find_library(
+  SPARSE name ${SPARSE_NAME}
+  PATHS ${SPARSE_PATH} REQUIRED
   NO_DEFAULT_PATH)
 
 find_library(UTILS name ${UTILS_NAME} PATHS ${UTILS_PATH})
@@ -131,7 +141,7 @@ foreach(ex_source ${DA_EX})
   endif()
   add_executable(${ex_target} ${ex_source})
   target_include_directories(${ex_target} PRIVATE ${DA_INCLUDE_DIR})
-  target_link_libraries(${ex_target} PRIVATE ${AOCL_DA} ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME})
+  target_link_libraries(${ex_target} PRIVATE ${AOCL_DA} ${LAPACK} ${BLAS} ${SPARSE} ${UTILS} ${FORTRAN_RUNTIME})
   target_compile_definitions(${ex_target} PRIVATE ${AOCLDA_ILP64})
 
   message(NOTICE "   ${ex_target}")
@@ -143,6 +153,7 @@ message(NOTICE "Dependent libraries")
 message(NOTICE "   AOCL-DA               : ${AOCL_DA}")
 message(NOTICE "   AOCL-BLAS             : ${BLAS}")
 message(NOTICE "   AOCL-LAPACK           : ${LAPACK}")
+message(NOTICE "   AOCL-SPARSE           : ${SPARSE}")
 message(NOTICE "   AOCL-utils            : ${UTILS}")
 message(NOTICE "\nOptions")
 message(NOTICE "   Building for ILP64    : ${BUILD_ILP64}")

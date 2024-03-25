@@ -22,8 +22,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-
-
 """
 Patching scikit learn linear models: LinearRegression, Ridge, Lasso
 """
@@ -41,7 +39,12 @@ class LinearRegression(LinearRegression_sklearn):
     Overwrite sklearn LinearRegression to call DA library
     """
 
-    def __init__(self, *, fit_intercept=True, copy_X=True, n_jobs=None, positive=False) -> None:
+    def __init__(self,
+                 *,
+                 fit_intercept=True,
+                 copy_X=True,
+                 n_jobs=None,
+                 positive=False) -> None:
         # Supported attributes
         self.fit_intercept = fit_intercept
 
@@ -93,8 +96,16 @@ class Ridge(Ridge_sklearn):
     Overwrite sklearn Ridge to call DA library
     """
 
-    def __init__(self, alpha=1, *, fit_intercept=True, copy_X=True, max_iter=None, tol=0.0001,
-                 solver="auto", positive=False, random_state=None) -> None:
+    def __init__(self,
+                 alpha=1,
+                 *,
+                 fit_intercept=True,
+                 copy_X=True,
+                 max_iter=None,
+                 tol=0.0001,
+                 solver="auto",
+                 positive=False,
+                 random_state=None) -> None:
         # supported attributes
         self.alpha = alpha
         self.fit_intercept = fit_intercept
@@ -115,14 +126,16 @@ class Ridge(Ridge_sklearn):
 
         # solver can be in
         # ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga', 'lbfgs']
-        if solver not in ['auto', 'lbfgs']:
-            raise ValueError("Only 'auto' and 'lbfgs' solvers are supported")
+        if solver not in ['auto', 'lbfgs', 'cholesky', 'svd', 'sparse_cg']:
+            raise ValueError(
+                "Only 'auto', 'lbfgs', 'cholesky', 'svd' and 'sparse_cg' solvers are supported"
+            )
         if positive:
             raise ValueError(
                 "Constraints on the coefficients are not supported")
 
         # Initialize aoclda object
-        self.lmod = linmod_da("mse", intercept=fit_intercept)
+        self.lmod = linmod_da("mse", intercept=fit_intercept, solver=solver)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
@@ -164,9 +177,18 @@ class Lasso(Lasso_sklearn):
     Overwrite sklearn Lasso to call DA library
     """
 
-    def __init__(self, alpha=1.0, *, fit_intercept=True, precompute=False, copy_X=True,
-                 max_iter=1000, tol=0.0001, warm_start=False, positive=False,
-                 random_state=None, selection='cyclic'):
+    def __init__(self,
+                 alpha=1.0,
+                 *,
+                 fit_intercept=True,
+                 precompute=False,
+                 copy_X=True,
+                 max_iter=1000,
+                 tol=0.0001,
+                 warm_start=False,
+                 positive=False,
+                 random_state=None,
+                 selection='cyclic'):
         # supported attributes
         self.alpha = alpha
         self.fit_intercept = fit_intercept

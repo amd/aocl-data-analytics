@@ -109,7 +109,9 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
                           {"lbfgsb", linmod_method::lbfgsb},
                           {"qr", linmod_method::qr},
                           {"coord", linmod_method::coord},
-                          {"svd", linmod_method::svd}},
+                          {"svd", linmod_method::svd},
+                          {"sparse_cg", linmod_method::cg},
+                          {"cholesky", linmod_method::cholesky}},
                          "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(

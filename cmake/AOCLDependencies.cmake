@@ -24,7 +24,7 @@
 
 # Check we can find AOCL or custom blas/lapack installation
 function(linalg_libs)
-  # Set paths to BLAS/LAPACK/UTILS if CMAKE_AOCL_ROOT was set but *_INCLUDE_DIR and *_LIB
+  # Set paths to BLAS/LAPACK/SPARSE/UTILS if CMAKE_AOCL_ROOT was set but *_INCLUDE_DIR and *_LIB
   # were not set. This means that if they were set, they override the location of CMAKE_AOCL_ROOT.
   if(WIN32)
     if(BLAS_INCLUDE_DIR STREQUAL "")
@@ -33,11 +33,23 @@ function(linalg_libs)
     if(LAPACK_INCLUDE_DIR STREQUAL "")
       set(LAPACK_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/amd-libflame/include/${INT_LIB})
     endif()
+    if(SPARSE_INCLUDE_DIR STREQUAL "")
+      set(SPARSE_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/amd-sparse/include/)
+    endif()
     if(BLAS_LIB STREQUAL "")
       set(BLAS_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-blis/lib/${INT_LIB})
     endif()
     if(LAPACK_LIB STREQUAL "")
       set(LAPACK_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-libflame/lib/${INT_LIB})
+    endif()
+    if(SPARSE_LIB STREQUAL "")
+      # if (BUILD_SHARED_LIBS)
+      #   set(SHARED_DIR_NAME shared)
+      # else()
+      #   set(SHARED_DIR_NAME static)
+      # endif()
+      set(SHARED_DIR_NAME shared)
+      set(SPARSE_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-sparse/lib/${INT_LIB}/${SHARED_DIR_NAME})
     endif()
     if(UTILS_LIB STREQUAL "")
       set(UTILS_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-utils/lib)
@@ -49,11 +61,17 @@ function(linalg_libs)
     if(LAPACK_INCLUDE_DIR STREQUAL "")
       set(LAPACK_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
     endif()
+    if(SPARSE_INCLUDE_DIR STREQUAL "")
+      set(SPARSE_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
+    endif()
     if(BLAS_LIB STREQUAL "")
       set(BLAS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
     if(LAPACK_LIB STREQUAL "")
       set(LAPACK_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+    endif()
+    if(SPARSE_LIB STREQUAL "")
+      set(SPARSE_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
     if(UTILS_LIB STREQUAL "")
       set(UTILS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
@@ -71,6 +89,7 @@ function(linalg_libs)
       set(BLAS_NAME "AOCL-LibBlis-Win-dll")
       set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
     endif()
+    set(SPARSE_NAME "aoclsparse")
     set(UTILS_NAME "libaoclutils")
   else(WIN32) # linux
     set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
@@ -85,6 +104,7 @@ function(linalg_libs)
       set(BLAS_NAME "blis")
     endif()
     set(LAPACK_NAME "flame")
+    set(SPARSE_NAME "aoclsparse")
     set(UTILS_NAME "aoclutils")
   endif()
 
@@ -106,6 +126,15 @@ function(linalg_libs)
     set(LAPACK ${LAPACK_LIB} PARENT_SCOPE)
   endif()
 
+  if(SPARSE_LIB STREQUAL "")
+    find_library(
+      SPARSE name ${SPARSE_NAME}
+      PATHS ${SPARSE_LIB_DIR} REQUIRED
+      NO_DEFAULT_PATH)
+  else()
+    set(SPARSE ${SPARSE_LIB} PARENT_SCOPE)
+  endif()
+
   if(UTILS_LIB STREQUAL "")
     find_library(
       UTILS name ${UTILS_NAME}
@@ -117,14 +146,17 @@ function(linalg_libs)
 
   include_directories(${LAPACK_INCLUDE_DIR})
   include_directories(${BLAS_INCLUDE_DIR})
-  
+  include_directories(${SPARSE_INCLUDE_DIR})
+
   set(BLAS_INCLUDE_DIR ${BLAS_INCLUDE_DIR} PARENT_SCOPE)
   set(LAPACK_INCLUDE_DIR ${LAPACK_INCLUDE_DIR} PARENT_SCOPE)
+  set(SPARSE_INCLUDE_DIR ${SPARSE_INCLUDE_DIR} PARENT_SCOPE)
 endfunction(linalg_libs)
 
 # reset all libs
 set(BLAS)
 set(LAPACK)
+set(SPARSE)
 set(UTILS)
 
 linalg_libs()

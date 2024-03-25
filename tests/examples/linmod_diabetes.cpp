@@ -130,6 +130,8 @@ int main() {
     pass = pass && da_handle_init_d(&handle, da_handle_linmod) == da_status_success;
     pass =
         pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
+    pass = pass &&
+           da_options_set_string(handle, "scaling", "standardise") == da_status_success;
     pass = pass && da_options_set_real_d(handle, "alpha", 1) == da_status_success;
     pass = pass && da_options_set_real_d(handle, "lambda", 4) == da_status_success;
     pass = pass &&

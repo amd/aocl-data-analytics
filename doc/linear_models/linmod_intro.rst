@@ -216,7 +216,7 @@ Linear Model Options
       .. csv-table:: Linear models options
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
-         "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `coord`, `lbfgs`, `lbfgsb`, `qr`, or `svd`."
+         "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
          "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
          "optim convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
          "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."

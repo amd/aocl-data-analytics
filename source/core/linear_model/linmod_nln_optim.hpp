@@ -38,7 +38,7 @@ template <class T> class usrdata_base {
     da_int nsamples = 0, nfeat = 0;
     /* Feature matrix of size (nsamples x nfeat)*/
     const T *X = nullptr;
-    /* Responce vector */
+    /* Response vector */
     const T *y = nullptr;
 
     /* Intercept */

@@ -34,7 +34,7 @@ class linmod(pybind_linmod):
 
     Args:
 
-        linmod_model (str): Which linear model to compute.
+        mod (str): Which linear model to compute.
 
             - If ``linmod_model='mse'`` then :math:`L_2` norm linear regression is calculated.
 
@@ -48,7 +48,7 @@ class linmod(pybind_linmod):
             Default = 'double'.
     """
 
-    def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0):
+    def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0, tol=0.0001):
         """
         Computes the chosen linear model on the feature matrix X and response vector y
 
@@ -58,13 +58,15 @@ class linmod(pybind_linmod):
 
             y (numpy.ndarray): The response vector. Its shape is (n_samples).
 
-            reg_lambda (float, optional): :math:`lambda`, the magnitude of the regularization term.
+            reg_lambda (float, optional): :math:`\lambda`, the magnitude of the regularization term.
                 Default=0.0.
 
-            reg_alpha (float, optional): :math:`alpha`, the share of the :math:`\ell_1` term in the
+            reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` term in the
                 regularization.
+
+            tol (float, optional): Tolerance of convergence for iterative solvers.
         """
-        self.pybind_fit(X, y, reg_lambda=reg_lambda, reg_alpha=reg_alpha)
+        self.pybind_fit(X, y, reg_lambda=reg_lambda, reg_alpha=reg_alpha, tol=tol)
 
     def predict(self, X):
         """

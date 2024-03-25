@@ -590,7 +590,8 @@ class linmod : public pyda_handle {
     da_precision precision = da_double;
 
   public:
-    linmod(std::string mod, bool intercept = false, std::string prec = "double") {
+    linmod(std::string mod, bool intercept = false, std::string solver = "auto",
+           std::string scaling = "auto", std::string prec = "double") {
         da_status status;
         linmod_model mod_enum;
         if (mod == "mse") {
@@ -612,12 +613,16 @@ class linmod : public pyda_handle {
         // Set optional parameters
         if (intercept)
             da_options_set_int(handle, "intercept", 1);
+        status = da_options_set_string(handle, "optim method", solver.c_str());
+        exception_check(status);
+        status = da_options_set_string(handle, "scaling", scaling.c_str());
+        exception_check(status);
     }
     ~linmod() { da_handle_destroy(&handle); }
 
     template <typename T>
     void fit(py::array_t<T, py::array::f_style> X, py::array_t<T> y, T reg_lambda = 0.0,
-             T reg_alpha = 0.0) {
+             T reg_alpha = 0.0, T tol = 0.0001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         // TODO Should it be a separate function call like in C with the "define_features" function
 
@@ -631,6 +636,8 @@ class linmod : public pyda_handle {
         status = da_options_set(handle, "lambda", reg_lambda);
         exception_check(status);
         status = da_options_set(handle, "alpha", reg_alpha);
+        exception_check(status);
+        status = da_options_set(handle, "optim convergence tol", tol);
         exception_check(status);
 
         if (precision == da_double)
@@ -1193,12 +1200,15 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
-        .def(py::init<std::string, bool, std::string &>(), "mod"_a,
-             py::arg("intercept") = false, py::arg("precision") = "double")
+        .def(py::init<std::string, bool, std::string, std::string, std::string &>(), py::arg("mod"),
+             py::arg("intercept") = false, py::arg("solver") = "auto",
+             py::arg("scaling") = "auto", py::arg("precision") = "double")
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
-             py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0)
+             py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,
+             py::arg("tol") = (float)0.0001)
         .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
-             py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0)
+             py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0,
+             py::arg("tol") = (double)0.0001)
         .def("pybind_predict", &linmod::predict<double>, "Evaluate the model on X", "X"_a)
         .def("pybind_predict", &linmod::predict<float>, "Evaluate the model on X", "X"_a)
         .def("get_coef", &linmod::get_coef);

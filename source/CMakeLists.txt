@@ -87,11 +87,11 @@ endif()
 # Create combined library from da_core and Fortran libraries
 add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
                     $<TARGET_OBJECTS:lbfgsb_s>)
-target_link_libraries(aocl-da PRIVATE ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME})
+target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME})
 
 target_link_directories(aocl-da PRIVATE ${IFORT_LIBS})
 target_link_directories(aocl-da PRIVATE ${FLANG_LIBS})
-target_include_directories(aocl-da PRIVATE ${BLAS_INCLUDE_DIR} ${LAPACK_INCLUDE_DIR})
+target_include_directories(aocl-da PRIVATE ${BLAS_INCLUDE_DIR} ${SPARSE_INCLUDE_DIR} ${LAPACK_INCLUDE_DIR})
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)
   set_target_properties(aocl-da PROPERTIES POSITION_INDEPENDENT_CODE ON)

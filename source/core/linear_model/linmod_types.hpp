@@ -35,9 +35,10 @@ enum linmod_method {
     undefined = 0,
     lbfgsb = da_optim::solvers::solver_lbfgsb,
     coord = da_optim::solvers::solver_coord,
+    svd = da_optim::solvers::solver_svd,
+    cholesky = da_optim::solvers::solver_cholesky,
+    cg = da_optim::solvers::solver_cg,
     qr,
-    svd,
-    chol,
 };
 /* type of scaling to perform */
 enum scaling_t : da_int {

@@ -97,12 +97,18 @@ set(BLAS_INCLUDE_DIR
 set(LAPACK_INCLUDE_DIR
     ""
     CACHE STRING "Path to LAPACK include directory")
+set(SPARSE_INCLUDE_DIR
+    ""
+    CACHE STRING "Path to SPARSE include directory")
 set(BLAS_LIB
     ""
     CACHE STRING "Path to BLAS library")
 set(LAPACK_LIB
     ""
     CACHE STRING "Path to LAPACK library")
+set(SPARSE_LIB
+    ""
+    CACHE STRING "Path to SPARSE library")
 set(UTILS_LIB
     ""
     CACHE STRING "Path to AOCL-UTILS library")
@@ -175,13 +181,15 @@ endif()
 if(CMAKE_AOCL_ROOT STREQUAL ""
    AND (BLAS_INCLUDE_DIR STREQUAL ""
         OR LAPACK_INCLUDE_DIR STREQUAL ""
+        OR SPARSE_INCLUDE_DIR STREQUAL ""
         OR BLAS_LIB STREQUAL ""
         OR LAPACK_LIB STREQUAL ""
+        OR SPARSE_LIB STREQUAL ""
         OR UTILS_LIB STREQUAL ""
        ))
   message(
     FATAL_ERROR
-      "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR."
+      "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/SPARSE/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR/SPARSE."
   )
 endif()
 
@@ -424,6 +432,7 @@ endif()
 message(NOTICE "\nDEPENDENT LIBRARIES")
 message(NOTICE "blas                    : ${BLAS}")
 message(NOTICE "lapack                  : ${LAPACK}")
+message(NOTICE "sparse                   : ${SPARSE}")
 message(NOTICE "utils                   : ${UTILS}")
 
 message(NOTICE "\nOPTIONS")

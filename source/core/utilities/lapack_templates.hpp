@@ -30,6 +30,23 @@
 #include "aoclda_types.h"
 
 extern "C" {
+void sposv_(char *uplo, da_int *n, da_int *nrhs, float *a, da_int *lda, float *b,
+            da_int *ldb, da_int *info);
+void dposv_(char *uplo, da_int *n, da_int *nrhs, double *a, da_int *lda, double *b,
+            da_int *ldb, da_int *info);
+
+void spotrf_(char *uplo, da_int *n, float *a, da_int *lda, da_int *info);
+void dpotrf_(char *uplo, da_int *n, double *a, da_int *lda, da_int *info);
+
+void spotrs_(char *uplo, da_int *n, da_int *nrhs, float *a, da_int *lda, float *b,
+             da_int *ldb, da_int *info);
+void dpotrs_(char *uplo, da_int *n, da_int *nrhs, double *a, da_int *lda, double *b,
+             da_int *ldb, da_int *info);
+
+void spocon_(char *uplo, da_int *n, float *a, da_int *lda, float *anorm, float *rcond,
+             float *work, da_int *iwork, da_int *info);
+void dpocon_(char *uplo, da_int *n, double *a, da_int *lda, double *anorm, double *rcond,
+             double *work, da_int *iwork, da_int *info);
 void sgesdd_(char *jobz, da_int *m, da_int *n, float *a, da_int *lda, float *s, float *u,
              da_int *ldu, float *vt, da_int *ldvt, float *work, da_int *lwork,
              da_int *iwork, da_int *info);
@@ -71,6 +88,38 @@ float slange_(char const *norm, da_int const *m, da_int const *n, float const *A
 }
 
 namespace da {
+// --- Cholesky factorization ---
+inline void posv(char *uplo, da_int *n, da_int *nrhs, float *a, da_int *lda, float *b,
+                 da_int *ldb, da_int *info) {
+    sposv_(uplo, n, nrhs, a, lda, b, ldb, info);
+};
+inline void posv(char *uplo, da_int *n, da_int *nrhs, double *a, da_int *lda, double *b,
+                 da_int *ldb, da_int *info) {
+    dposv_(uplo, n, nrhs, a, lda, b, ldb, info);
+};
+inline void potrf(char *uplo, da_int *n, float *a, da_int *lda, da_int *info) {
+    spotrf_(uplo, n, a, lda, info);
+};
+inline void potrf(char *uplo, da_int *n, double *a, da_int *lda, da_int *info) {
+    dpotrf_(uplo, n, a, lda, info);
+};
+inline void potrs(char *uplo, da_int *n, da_int *nrhs, float *a, da_int *lda, float *b,
+                  da_int *ldb, da_int *info) {
+    spotrs_(uplo, n, nrhs, a, lda, b, ldb, info);
+};
+inline void potrs(char *uplo, da_int *n, da_int *nrhs, double *a, da_int *lda, double *b,
+                  da_int *ldb, da_int *info) {
+    dpotrs_(uplo, n, nrhs, a, lda, b, ldb, info);
+};
+inline void pocon(char *uplo, da_int *n, float *a, da_int *lda, float *anorm,
+                  float *rcond, float *work, da_int *iwork, da_int *info) {
+    spocon_(uplo, n, a, lda, anorm, rcond, work, iwork, info);
+}
+inline void pocon(char *uplo, da_int *n, double *a, da_int *lda, double *anorm,
+                  double *rcond, double *work, da_int *iwork, da_int *info) {
+    dpocon_(uplo, n, a, lda, anorm, rcond, work, iwork, info);
+}
+// --- SVD ---
 inline void gesdd(char *jobz, da_int *m, da_int *n, float *a, da_int *lda, float *s,
                   float *u, da_int *ldu, float *vt, da_int *ldvt, float *work,
                   da_int *lwork, da_int *iwork, da_int *info) {

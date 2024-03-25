@@ -36,7 +36,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 # Install the full python package as well as all the dependent libraries in
 # python_package/aoclda
-set(BASE_DEP_LIBS ${BLAS} ${LAPACK} ${UTILS})
+set(BASE_DEP_LIBS ${BLAS} ${LAPACK} ${SPARSE} ${UTILS})
 set(DEP_LIBS "")
 
 if(WIN32)
