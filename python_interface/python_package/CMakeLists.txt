@@ -68,5 +68,5 @@ install(
   RUNTIME DESTINATION python_package/aoclda)
 
 if (NOT WIN32)
-  install(CODE "execute_process(COMMAND patchelf --set-rpath \$ORIGIN install/python_package/aoclda/$<TARGET_FILE_NAME:_aoclda>)")
+  install(CODE "execute_process(COMMAND patchelf --set-rpath \$ORIGIN ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/$<TARGET_FILE_NAME:_aoclda>)")
 endif()
