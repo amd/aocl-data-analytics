@@ -30,6 +30,7 @@
 #include "utest_utils.hpp"
 #include "gtest/gtest.h"
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -147,8 +148,9 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         intercept_suff = "_noint";
     std::string coef_fname =
         std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_coeffs.csv";
-    if (std::filesystem::exists(coef_fname)) {
+    if (FILE *file = fopen(coef_fname.c_str(), "r")) {
         // read the expected coefficients
+        std::fclose(file);
         EXPECT_EQ(
             da_read_csv(csv_store, coef_fname.c_str(), &coef_exp, &mc, &nc, nullptr),
             da_status_success);

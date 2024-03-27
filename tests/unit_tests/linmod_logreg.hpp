@@ -30,6 +30,7 @@
 #include "utest_utils.hpp"
 #include "gtest/gtest.h"
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -140,8 +141,8 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         intercept_suff = "_noint";
     std::string coef_fname =
         std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_coeffs.csv";
-    if (std::filesystem::exists(coef_fname)) {
-        // read the expected coefficients
+    if (FILE *file = fopen(coef_fname.c_str(), "r")) {
+        std::fclose(file); // read the expected coefficients
         T *coef_exp = nullptr;
         da_int mc, nc;
         EXPECT_EQ(
@@ -162,7 +163,8 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
 
     // Check predictions if test data is present
     std::string test_set_fname = std::string(DATA_DIR) + "/" + csvname + "_test.csv";
-    if (std::filesystem::exists(test_set_fname)) {
+    if (FILE *file = fopen(test_set_fname.c_str(), "r")) {
+        std::fclose(file);
         da_datastore test_store = nullptr;
         EXPECT_EQ(da_datastore_init(&test_store), da_status_success);
         EXPECT_EQ(da_datastore_options_set_string(test_store, "CSV datastore precision",
