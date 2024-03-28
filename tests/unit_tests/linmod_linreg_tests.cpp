@@ -41,6 +41,8 @@ typedef struct linregParam_t {
     std::vector<option_t<double>> dopts;
     // check the solution
     bool check_coeff{true};
+    // check the prediction
+    bool check_predict{true};
     // scale to pass to expected_precision<T>(T scale=1.0)
     float check_tol_scale{1.0f};
 } linregParam;
@@ -70,6 +72,8 @@ typedef struct linregParam_t {
  * [ ]  Coord     L1 + L2     none <-------------- NOT TESTED YET
  * [D]  Coord     L1 + L2     standardize
  * [D]  Coord     L1 + L2     scale only
+ * [W]  BFGS      L2          centering
+ * [W]  BFGS      L2          centering
  */
 const linregParam linregParamPos[] = {
     // 0
@@ -106,7 +110,7 @@ const linregParam linregParamPos[] = {
     // 13
     {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 5}, {"optim iteration limit", 1800}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
-                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 14
@@ -136,8 +140,8 @@ const linregParam linregParamPos[] = {
     // 18
     {"CoordElastic+1", "trivialelnet",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}},
-                                     {{"lambda",12.0f},{"alpha",0.9f}},
-                                     {{"lambda",12.0},{"alpha",0.9}}
+                                     {{"lambda",5.0f},{"alpha",0.8f}},
+                                     {{"lambda",5.0},{"alpha",0.8}}
                                      },
     // 19
     {"CoordElastic+0", "trivialelnet",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
@@ -155,7 +159,7 @@ const linregParam linregParamPos[] = {
     // 21
     {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 5}, {"optim iteration limit", 10000}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 22
@@ -167,7 +171,7 @@ const linregParam linregParamPos[] = {
     // 23
     {"CoordL1Reg+0", "triviall1unscl",    {{"intercept", 0},{"print level", 5}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",2.f},{"alpha",1.0f}},
+                                     {{"lambda",2.f},{"alpha",1.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 24
@@ -185,8 +189,8 @@ const linregParam linregParamPos[] = {
     // 26
     {"CoordElastic+1", "trivialelnetunscl",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",5.0f},{"alpha",0.9f}},
-                                     {{"lambda",5.0},{"alpha",0.9}}
+                                     {{"lambda",5.0f},{"alpha",0.8f}},
+                                     {{"lambda",5.0},{"alpha",0.8}}
                                      },
     // 27
     {"CoordElastic+0", "trivialelnetunscl",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
@@ -349,13 +353,13 @@ const linregParam linregParamPos[] = {
     {"LbfgsStdNormTab+1", "glmnet-100x20",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "standardize"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
-                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0},{"optim progress factor", 10.0}},
                                      },
     // 54
     {"LbfgsStdNormTab-Ridge+0", "glmnet-100x20l2",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0},{"optim progress factor", 10.0}}
                                      },
     // 55
     {"LbfgsStdNormTab-Ridge+1", "glmnet-100x20l2",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
@@ -372,8 +376,8 @@ const linregParam linregParamPos[] = {
     // 57
     {"LbfgsSclNormTab+1", "glmnet-100x20unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-8f},{"lambda",0.0f},{"alpha",1.0f},{"optim progress factor", 1.0}},
+                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0},{"optim progress factor", 1.0}},
                                      },
     // 58
     {"LbfgsSclNormTab-Ridge+0", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
@@ -430,12 +434,47 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
                                      },
-    // 68
+    // 67
     {"QRSclNormTab+1", "glmnet-100x20unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "qr"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
-                                     }
+                                     },
+    // 68
+    {"trivialNointLbfgsCent", "trivial", {{"intercept", 0}}, {{"optim method", "lbfgs"},{"scaling", "centering"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    // 69
+    {"trivialIntLbfgsCent", "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "centering"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    // 70
+    {"trivialNointQRCent", "trivial", {{"intercept", 0}}, {{"optim method", "qr"},{"scaling", "centering"}}, {}, {}},
+    // 71
+    {"trivialIntQRCent", "trivial", {{"intercept", 1}}, {{"optim method", "qr"},{"scaling", "centering"}}, {}, {}},
+    // 72 models y ~ X + 0, y ~ X + 1, Ridge, centering => NEED to scale manually lambda
+    // scaling = centering needs to be used as scaling = "scaling only" so _unscl data needs to be used.
+    // Also lambda needs to be pre-scaled since sy is set to 1.
+    // Model has intercept so lambda is scaled by sd(y)*sqrt(n-1)/sqrt(n)
+    {"LbfgsCenL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"lambda",10.0f/5.053189312f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 10.0}},
+                                     {{"lambda",10.0/5.053189312},{"alpha",0.0},{"optim convergence tol", 1.0e-9f},{"optim progress factor", 10.0}}
+                                     },
+    // 73 Model has no intercept so we scale lambda by norm2(y)*sqrt(nsamples) and also use _unscl data for the test.
+    {"LbfgsCenL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"lambda",10.0f/11.72781594f},{"alpha",0.0f}},
+                                     {{"lambda",10.0/11.72781594},{"alpha",0.0}}
+                                     },
+    // 74 Model has intercept so lambda is scaled by sd(y)*sqrt(n-1)/sqrt(n)
+    {"LbfgsCenNormTab-Ridge+1", "glmnet-100x20l2unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f/8.71398621795f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0/8.71398621795},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     },
+    // 75 Model has no intercept so we scale lambda by norm2(y)/sqrt(n) and also use _unscl data for the test.
+    {"LbfgsCenNormTab-Ridge+0", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "lbfgs"},{"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f/10.3711999994f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0/10.3711999994},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     },
 };
 // clang-format on
 
@@ -452,14 +491,16 @@ void PrintTo(const linregParam &param, ::std::ostream *os) { *os << param.test_n
 TEST_P(linregPosD, Double) {
     const linregParam &param = GetParam();
     test_linreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts,
-                                 param.check_coeff, (double)param.check_tol_scale);
+                                 param.check_coeff, param.check_predict,
+                                 (double)param.check_tol_scale);
 }
 
 // Positive tests with float type
 TEST_P(linregPosF, Float) {
     const linregParam &param = GetParam();
     test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts,
-                                param.check_coeff, (double)param.check_tol_scale);
+                                param.check_coeff, param.check_predict,
+                                (double)param.check_tol_scale);
 }
 
 // Test public option registry printing

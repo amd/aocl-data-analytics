@@ -604,10 +604,20 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             this->opts.set("scaling", scalingstr, da_options::solver);
         }
 
-        // Scales: lambda, box-bounds, X, and y
+        // Scales: X and y
         status = model_scaling(mid);
         if (status != da_status_success) {
             return status; // message already loaded
+        }
+
+        if (scaling != scaling_t::none) {
+            // Rescale lambda
+            lambda /= std_scales[nfeat];
+            // Rescale lambda when scaling = "scale only" and the solver is not coord, ie,
+            // need the scaled lambda for the objective and gradient
+            if (scaling == scaling_t::scale_only && mid == linmod_method::lbfgsb) {
+                lambda /= T(nsamples);
+            }
         }
 
         // last so to capture all option changes by the solver
@@ -690,7 +700,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     return da_status_success;
 }
 
-/* fit a linear regression model with the lbfgs method */
+/* fit a linear regression model with the coordinate descent method */
 template <class T> da_status linear_model<T>::fit_linreg_coord() {
     da_status status = da_status_success;
     try {
@@ -914,32 +924,31 @@ template <typename T> da_status linear_model<T>::choose_method() {
      * The rescaled model at exit of this function will modify
      * 1. X data matrix
      * 2. y responce vector
-     * 3. lambda penalty parameter lambda <- user_lambda / yscale
-     * 4. box bounds l = user_l / yscale and is standardized the xscale[j] * user_l[j] / yscale, same for u
+     * 3. box bounds l = user_l / yscale and is standardized the xscale[j] * user_l[j] / yscale, same for u
      *    For now there is not support for this feature
      *
      * N := nsamples.
      *
-     * |---------------------------------------------------------------------------------------------------|
-     * |    Object        |                          Transform type                                        |
-     * |                  |standardize+intrcpt|    standardize         | scale+intrcpt  | scale            |
-     * |---------------------------------------------------------------------------------------------------|
-     * | X (copy of XUSR) |    1     X-mu(X)  |      1       X         | X-mu(X)        |    X             |
-     * |                  | ------- --------- |   ------- --------     | -------        | -------          |
-     * |                  | sqrt(N)  sigma(X) |   sqrt(N) sigma(X)     | sqrt(N)        | sqrt(N)          |
-     * |----------------------------------------------------------------------------------------------------
-     * | y (copy of yusr) |    1     Y-mu(Y)  |      1        Y        |   1     Y-mu(Y)|   1        Y     |
-     * |                  | ------- --------  |   ------- --------     |------- --------|------- --------- |
-     * |                  | sqrt(N) sigma(Y)  |   sqrt(N) sigma(Y)     |sqrt(N) sigma(Y)|sqrt(N)  sigma(Y) |
-     * |----------------------------------------------------------------------------------------------------
-     * | Storage scheme   |                    [ X[0], X[1], ..., X[N]; Y ]                                |
-     * |----------------------------------------------------------------------------------------------------
-     * | std_shifts       | [ mu(X); mu(Y)]   |  [ 0,0,...,0; 0 ]      |[ mu(X); mu(Y)] |  [0,0,...,0;0]   |
-     * |----------------------------------------------------------------------------------------------------
-     * | std_scales       |[sigma(X);sigma(Y)]|[sigma(X);nrm(Y)/sqrt(N)|[1;sigma(Y)]    |[1;nrm(Y)/sqrt(N)]|
-     * |----------------------------------------------------------------------------------------------------
-     * | std_xv[j]        |         1         |<X[j],X[j]>/N*var(X[j]) | var(X[j])      | <X[j],X[j]>/N    |
-     * |----------------------------------------------------------------------------------------------------
+     * |------------------------------------------------------------------------------------------------------------------------------------|
+     * |    Object        |                                             Transform type                                                      |
+     * |                  |standardize+intrcpt|    standardize         | scale+intrcpt  | scale            |centering+intrcpt |  centering  |
+     * |---------------------------------------------------------------------------------------------------|--------------------------------|
+     * | X (copy of XUSR) |    1     X-mu(X)  |      1       X         | X-mu(X)        |    X             |  X - mu(X)       |     X       |
+     * |                  | ------- --------- |   ------- --------     | -------        | -------          |                  |             |
+     * |                  | sqrt(N)  sigma(X) |   sqrt(N) sigma(X)     | sqrt(N)        | sqrt(N)          |                  |             |
+     * |------------------------------------------------------------------------------------------------------------------------------------|
+     * | y (copy of yusr) |    1     Y-mu(Y)  |      1        Y        |   1     Y-mu(Y)|   1        Y     |  Y - mu(Y)       |     Y       |
+     * |                  | ------- --------  |   ------- --------     |------- --------|------- --------- |                  |             |
+     * |                  | sqrt(N) sigma(Y)  |   sqrt(N) norm(Y)      |sqrt(N) sigma(Y)|sqrt(N)  norm(Y)  |                  |             |
+     * |------------------------------------------------------------------------------------------------------------------------------------|
+     * | Storage scheme   |                    [ X[0], X[1], ..., X[N]; Y ]                                                                 |
+     * |------------------------------------------------------------------------------------------------------------------------------------|
+     * | std_shifts       | [ mu(X); mu(Y)]   |  [ 0,0,...,0; 0 ]      |[ mu(X); mu(Y)] |  [0,0,...,0;0]   | [mu(X); mu(Y)]   |      0      |
+     * |-------------------------------------------------------------------------------------------------------------------------------------
+     * | std_scales       |[sigma(X);sigma(Y)]|[sigma(X);nrm(Y)/sqrt(N)|[1;sigma(Y)]    |[1;nrm(Y)/sqrt(N)]|       1          |      1      |
+     * |-------------------------------------------------------------------------------------------------------------------------------------
+     * | std_xv[j]        |         1         |<X[j],X[j]>/N*var(X[j]) | var(X[j])      | <X[j],X[j]>/N    |       1          |      1      |
+     * |-------------------------------------------------------------------------------------------------------------------------------------
      *
      * Note see reverse_scaling for reverting of the scaling on the model coefficients (solution)
      *
@@ -957,9 +966,9 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int mid) {
                         "X and y are not pointing to user data.");
     }
     try {
-        std_scales.resize(nfeat + 1);
-        std_shifts.resize(nfeat + 1);
-        std_xv.resize(nfeat);
+        std_scales.assign(nfeat + 1, T(0));
+        std_shifts.assign(nfeat + 1, T(0));
+        std_xv.assign(nfeat, T(0));
         X = new T[nsamples * nfeat];
         y = new T[nsamples];
     } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
@@ -974,6 +983,34 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int mid) {
     if (memcpy(y, yusr, nsamples * sizeof(T)) != y) {
         return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Could not copy data from user.");
+    }
+
+    // FIXME std_xxxx can be assigned (resized) only once. Currently in some
+    // places it done twice.
+
+    if (scaling == scaling_t::centering) {
+        std_scales.assign(nfeat + 1, T(1));
+        std_shifts.assign(nfeat + 1, T(0));
+        std_xv.assign(nfeat, T(1));
+        if (!intercept) {
+            // data copied XUSR -> X and yusr -> y, set-up scaling vectors and exit
+            return da_status_success;
+        }
+        if (da_basic_statistics::standardize(da_axis_col, nsamples, nfeat, X, nsamples,
+                                             nsamples, 0, std_shifts.data(),
+                                             (T *)nullptr) != da_status_success) {
+            return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Call to standardize on feature matrix unexpectedly failed.");
+        }
+        // intercept -> shift and scale Y
+        if (da_basic_statistics::standardize(da_axis_col, nsamples, 1, y, nsamples,
+                                             nsamples, 0, &std_shifts[nfeat],
+                                             (T *)nullptr) != da_status_success) {
+            return da_error(                   // LCOV_EXCL_LINE
+                err, da_status_internal_error, // LCOV_EXCL_LINE
+                "Call to standardize on responce vector unexpectedly failed.");
+        }
+        return da_status_success;
     }
 
     bool standardize = scaling == scaling_t::standardize;
@@ -1096,15 +1133,6 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int mid) {
         for (da_int j = 0; j < nsamples; ++j) {
             y[j] = y[j] / ynrm;
         }
-    }
-
-    T yscale = std_scales[nfeat];
-    lambda /= yscale;
-
-    // Rescale lambda when scaling = "scale only" and the solver is not coord, ie,
-    // need the scaled lambda for the objective and gradient
-    if (!standardize && mid != linmod_method::coord) {
-        lambda /= T(nsamples);
     }
 
     // FIXME rescale box-bounds: l[j] <= x[j] <= u[j]

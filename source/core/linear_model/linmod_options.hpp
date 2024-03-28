@@ -126,7 +126,8 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
              {"scale", scaling_t::scale_only},
              {"scale only", scaling_t::scale_only},
              {"standardize", scaling_t::standardize},
-             {"standardise", scaling_t::standardize}},
+             {"standardise", scaling_t::standardize},
+             {"centering", scaling_t::centering}},
             "auto"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {

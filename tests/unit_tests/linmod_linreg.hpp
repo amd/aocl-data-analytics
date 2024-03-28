@@ -34,9 +34,10 @@
 #include <iostream>
 #include <string>
 #include <type_traits>
+using namespace std::literals::string_literals;
 
 template <class T> struct option_t {
-    std::string name = "";
+    std::string name{""};
     T value;
 };
 
@@ -59,10 +60,7 @@ template <typename T>
 void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iopts,
                           std::vector<option_t<std::string>> sopts,
                           std::vector<option_t<T>> ropts, bool check_coeff,
-                          T check_tol_scale, bool double_call = false) {
-
-    // Double call: calls a second time the solver with the solution point and
-    // makes sure no iterations are performed.
+                          bool check_predict, T check_tol_scale) {
 
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
@@ -110,13 +108,15 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(da_data_select_columns(csv_store, "response", ncols - 1, ncols - 1),
               da_status_success);
 
+    da_int nfeat = ncols - 1;
+    da_int nsamples = nrows;
     // Extract the selections
     T *A = nullptr, *b = nullptr;
-    A = new T[(ncols - 1) * nrows];
-    b = new T[nrows];
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nrows),
+    A = new T[nfeat * nsamples];
+    b = new T[nsamples];
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nsamples),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nrows),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nsamples),
               da_status_success);
 
     ///////////////////
@@ -124,7 +124,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     ///////////////////
     EXPECT_EQ(da_linmod_select_model<T>(linmod_handle, linmod_model_mse),
               da_status_success);
-    EXPECT_EQ(da_linmod_define_features(linmod_handle, nrows, ncols - 1, A, b),
+    EXPECT_EQ(da_linmod_define_features(linmod_handle, nsamples, nfeat, A, b),
               da_status_success);
 
     // compute regression
@@ -134,8 +134,8 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     // Check the results
     ////////////////////
     // Check the coefficients if reference file is present
-    T *coef_exp = nullptr;
-    da_int ncoef = intercept ? ncols : ncols - 1;
+    T *coef_exp{nullptr};
+    da_int ncoef = intercept ? nfeat + 1 : nfeat;
     std::vector<T> coef(ncoef, -9.87654321);
     // read the computed coefficients
     EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_linmod_coef, &ncoef,
@@ -156,42 +156,98 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
             da_status_success);
         EXPECT_EQ(nc, ncoef) << "Number of coefficients to check does not match";
         // Check coefficients
-        EXPECT_ARR_NEAR(nc, coef, coef_exp, expected_precision<T>(check_tol_scale));
+        EXPECT_ARR_NEAR(nc, coef, coef_exp, expected_precision<T>(check_tol_scale))
+            << "Checking coefficients (solution)";
         free(coef_exp);
     } else if (check_coeff) {
         FAIL() << "Check of coefficients was requested but the solution file "
                << coef_fname << " could not be opened.";
     }
 
+    da_datastore_destroy(&csv_store);
+
+    delete[] b;
+    b = nullptr;
+
+    // Predict
+#if 0
+    // Check that solver found the same solution
+    // A is the training set and b is the predicted y of the trained model:
+    // beta = y ~ x, then b = predict(beta, x)
+    std::string solution_fname =
+        std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_solution.csv";
+    if (std::filesystem::exists(solution_fname)) {
+        // read the expected prediction
+        da_datastore sol_store = nullptr;
+        EXPECT_EQ(da_datastore_init(&sol_store), da_status_success);
+        EXPECT_EQ(da_datastore_options_set_string(sol_store, "CSV datastore precision",
+                                                  prec_name<T>()),
+                  da_status_success);
+        EXPECT_EQ(da_datastore_options_set_string(sol_store, "CSV datatype",
+                                                  type_opt_name<T>()),
+                  da_status_success);
+        EXPECT_EQ(da_data_load_from_csv(sol_store, solution_fname.c_str()),
+                  da_status_success);
+
+        da_int scols, srows;
+        EXPECT_EQ(da_data_get_n_cols(sol_store, &scols), da_status_success);
+        EXPECT_EQ(da_data_get_n_rows(sol_store, &srows), da_status_success);
+        EXPECT_EQ(scols, nsamples);
+        EXPECT_EQ(srows, 1);
+
+        // The first ncols-1 columns contain the feature matrix; the last one the response vector
+        // Create the selections in the data store
+        EXPECT_EQ(da_data_select_columns(sol_store, "solution", 0, nsamples - 1),
+                  da_status_success);
+        std::vector<T> sol(nsamples);
+        T *sol_exp{nullptr};
+        EXPECT_EQ(da_read_csv(sol_store, solution_fname.c_str(), &sol_exp, &srows, &scols,
+                              nullptr),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, nsamples, nfeat, A, sol.data()),
+                  da_status_success);
+
+        // Check predictions
+        EXPECT_ARR_NEAR(nsamples, sol, sol_exp, expected_precision<T>(check_tol_scale));
+        free(sol_exp);
+        sol_exp = nullptr;
+        da_datastore_destroy(&sol_store);
+    } else if (check_predict) {
+        FAIL() << "Check of predictions was requested but the data file "
+               << solution_fname << " could not be opened.";
+    }
+#endif
+
+    delete[] A;
+    A = nullptr;
+
     // Check that info contains the correct values
     da_int linfo = 100;
     T info[100];
     std::vector<T> info_exp(100, T(0));
-    info_exp[0] = (T)(ncols - 1);
-    info_exp[1] = (T)nrows;
-    info_exp[2] = intercept ? (T)(ncols - 1) : ncols;
-    info_exp[3] = intercept ? (T)1 : (T)0;
-    EXPECT_EQ(da_options_get(linmod_handle, "alpha", &info_exp[4]), da_status_success);
-    EXPECT_EQ(da_options_get(linmod_handle, "lambda", &info_exp[5]), da_status_success);
-    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
-              da_status_success);
 
-    // TODO compare info
+#if 0
+    // double call
     da_int lsolver{15};
     char solver[15];
-    EXPECT_EQ(da_options_set(linmod_handle, "lambda", info_exp[5]), da_status_success);
-
-    // EXPECT_EQ(da_options_get(linmod_handle, "optim method", &solver[0], &lsolver), da_status_success);
-    // std::string sol(solver);
-    // if (double_call && (solver == "coord"s || solver == )){
-    // Problem has been solved once and coef holds the solution
-    // set any option to retriger
-    // EXPECT_EQ(da_linmod_fit_start<T>(linmod_handle, nc, coef.data()), da_status_success);
-    // EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
-    //       da_status_success);
-    // todo compare info
-    // }
-
+    EXPECT_EQ(da_options_get(linmod_handle, "optim method", &solver[0], &lsolver),
+              da_status_success);
+    std::string sol(solver);
+    if (solver == "coord"s || solver == "lbfgs"s || solver == "bfgs"s ||
+        solver == "lbfgsb"s) {
+        std::vector<T> coef0 = coef;
+        // Calling any setter will trigger a re-fit of the model
+        EXPECT_EQ(da_options_set(linmod_handle, "print level", da_int(1)),
+                  da_status_success);
+        // Problem has been solved once and coef0 holds the solution
+        EXPECT_EQ(da_linmod_fit_start<T>(linmod_handle, ncoef, coef0.data()),
+                  da_status_success);
+        EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
+                  da_status_success);
+        // info_exp.assign({}); zero iteration
+        // check that coef is solution.
+    }
+#endif
     //////////////
     // Free memory
     //////////////

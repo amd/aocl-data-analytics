@@ -207,7 +207,7 @@ void test_linmod_positive(std::string csvname, linmod_model mod,
     // compute regression
     EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
 
-    // Check that RINFO containt data
+    // Check that RINFO content data
     T rinfo[100], rexp[100]{0};
     da_int dim = 100;
     rexp[0] = (T)n;

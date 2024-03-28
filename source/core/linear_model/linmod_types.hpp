@@ -37,6 +37,7 @@ enum linmod_method {
     coord = da_optim::solvers::solver_coord,
     qr,
     svd,
+    chol,
 };
 /* type of scaling to perform */
 enum scaling_t : da_int {
@@ -44,6 +45,7 @@ enum scaling_t : da_int {
     automatic,
     scale_only,
     standardize,
+    centering,
 };
 } // namespace da_linmod
 
