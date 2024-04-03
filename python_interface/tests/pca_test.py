@@ -30,7 +30,6 @@ Principal component analysis Python test script
 import numpy as np
 import pytest
 from aoclda.factorization import PCA
-import aoclda as da
 
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [

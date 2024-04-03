@@ -36,16 +36,16 @@ class linmod(pybind_linmod):
 
         linmod_model (str): Which linear model to compute.
 
-            - If ``linmod_model=mse`` then :math:`L_2` norm linear regression is calculated.
+            - If ``linmod_model='mse'`` then :math:`L_2` norm linear regression is calculated.
 
-            - If ``linmod_model=logistic`` then logistic regression is calculated.
+            - If ``linmod_model='logistic'`` then logistic regression is calculated.
 
         intercept (bool, optional): Controls whether to add an intercept variable to the model.
             Default=False.
 
         precision (str, optional): Whether to compute the linear model in double or
-            single precision. It can take the values ``single`` or ``double``.
-            Default = ``double``.
+            single precision. It can take the values 'single' or 'double'.
+            Default = 'double'.
     """
 
     def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0):

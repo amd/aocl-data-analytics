@@ -39,7 +39,7 @@ The general form of a linear model fitting problem is as follows:
 
     \min_{\beta}\left[ C_{\theta}\left( y, g^{-1}(\ \beta \, \phi(X)\ ) \right) \right],
 
-where :math:`X` is an array of :math:`n_{\text{samples}}` observations with :math:`n_{\text{features}}` features, :math:`y` is an array of :math:`n_{\text{samples}}` responses
+where :math:`X` is an array of :math:`n_{\mathrm{samples}}` observations with :math:`n_{\mathrm{features}}` features, :math:`y` is an array of :math:`n_{\mathrm{samples}}` responses
 / labels, :math:`\phi` is a set of (possibly nonlinear) basis functions, :math:`\beta` is a set of weights /
 coefficients, :math:`g^{-1}` is a (possibly nonlinear) activation / link function, and :math:`C_{\theta}` is a cost /
 error function, which may depend on a set of (fixed) hyperparameters, :math:`\theta`.
@@ -69,7 +69,7 @@ where :math:`\alpha=0` are called Ridge Regression. Conversely, when :math:`\alp
 **Intercept**
 
 
-If a linear model contains an intercept term, the parameter vector :math:`\beta` has dimension :math:`n_{\text{feat}}+1` and the
+If a linear model contains an intercept term, the parameter vector :math:`\beta` has dimension :math:`n_{\mathrm{features}}+1` and the
 observations :math:`X_i` are extended with a constant of :math:`1`.  For example, if there is a single feature and the
 linear model has an intercept term the Mean Square Error Loss cost function becomes,
 
@@ -94,7 +94,7 @@ The cost function for a linear regression Model where the fit (loss) is measured
 
 .. math::
 
-   C_{\{0<\lambda,0\le\alpha\le1\}}\left( \beta \right) = L(y, \beta X) =\text{MSE}(y, \beta X)= \sum_{i=1}^n (y_i - \beta X_i)^2
+   C_{\{0<\lambda,0\le\alpha\le1\}}\left( \beta \right) = L(y, \beta X) =\mathrm{MSE}(y, \beta X)= \sum_{i=1}^n (y_i - \beta X_i)^2
    + \lambda \bigg( \alpha \lVert \beta \rVert_1 + (1 - \alpha) \lVert \beta \rVert_2^2  \bigg),
 
 where :math:`X_i` represents a single (multi-dimensional) observation, i.e., a row in a table of observations.
@@ -108,7 +108,7 @@ The fit is based on maximizing the log-likelihood (loss function) of the probabi
 in turn defined by,
 
 .. math::
-   p(y_i=k\,|\,X_i, \beta) = \frac{ \exp(\beta_k X_i) }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }, \text{ for } 0 \leq k < K-1,\\
+   p(y_i=k\,|\,X_i, \beta) = \frac{ \exp(\beta_k X_i) }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }, \mathrm{ for } 0 \leq k < K-1,\\
    p(y_i=K-1\,|\,X_i, \beta) = \frac{ 1 }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }.
 
 As an example, if :math:`K=2`, the loss function simplifies to,
@@ -147,7 +147,7 @@ Different methods are available to compute the models. The method is chosen auto
 
    X = QR,
 
-where :math:`Q` is a :math:`n_{\text{samples}} \times n_{\text{features}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\text{feat}}\times n_{\text{feat}}` triangular matrix.
+where :math:`Q` is a :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\mathrm{features}}\times n_{\mathrm{features}}` triangular matrix.
 
 **Iterative solvers**
 

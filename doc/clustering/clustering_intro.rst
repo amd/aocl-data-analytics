@@ -29,25 +29,34 @@
 Clustering
 **********
 
-This chapter contains functions for unsupervised clustering.
+This chapter contains functions for performing unsupervised clustering computations.
 
 .. _kmeans_intro:
 
 *k*-means Clustering
 ============================
 
-Description of *k*-means clustering still to be written. Should contain details on choosing the number of clusters and the underlying algorithm.
+*k*-means clustering aims to partition a set of :math:`n_{\mathrm{samples}}` data points :math:`\{x_1, x_2, \dots, x_{n_{\mathrm{samples}}}\}` into :math:`n_{\text{clusters}}` groups. Each group is described by the mean of the data points assigned to it :math:`\{\mu_1, \mu_2, \dots, \mu_{n_{\mathrm{clusters}}}\}`.
+These means are commonly known as the *cluster centres* or *centroids* and are not generally points from the original data matrix.
+
+Various *k*-means algorithms are available, but each one proceeds by attempting to minimize a quantity known as the *inertia*, or the *within-cluster sum-of-squares*:
+
+.. math::
+   \sum^{n_{\mathrm{samples}}}_{i=1}\min_{1\le j\le n_{\mathrm{clusters}}}\left(\|x_i-\mu_j\|^2\right).
+
+Since this is an NP-hard problem, algorithms are heuristic in nature and converge to local optima.
+Therefore it is often desirable to run the algorithms several times and select the result with the smallest inertia.
 
 Outputs from *k*-means clustering
 ---------------------------------
 After a *k*-means clustering computation the following results are stored:
 
 - **cluster centres** - the centre of the clusters.
-- **labels** - the cluster each sample int he data matrix is in.
-- **inertia** - the sum of the squared distance of each sample to its closest cluster centre.
+- **labels** - the cluster each sample in the data matrix belongs to.
+- **inertia** - the sum of the squared distances of each sample to its closest cluster centre.
 - **iterations** - the number of iterations that were performed.
 
-After the PCA has been computed, two post-processing operations may be of interest:
+Two post-processing operations may be of interest:
 
 - **transform** - given a data matrix :math:`X` in the same coordinates as the original data matrix :math:`A`, express :math:`X` in terms of new coordinates in which each dimension is the distance to the cluster centres previously computed for :math:`A`.
 - **predict** - given a data matrix :math:`Y` find the closest cluster centre out of the clusters previously computed for :math:`A`.
@@ -62,10 +71,10 @@ The standard way of using *k*-means clustering in AOCL-DA  is as follows.
    .. tab-item:: Python
       :sync: Python
 
-      1. Initialize a NOT YET IMPLEMENTED object with options set in the class constructor.
-      2. Compute the *k*-means clusters using NOT YET IMPLEMENTED.
-      3. Perform further transformations or predictions.
-      4. Extract results from the NOT YET IMPLEMENTED object via its class attributes.
+      1. Initialize a :func:`aoclda.clustering.kmeans` object with options set in the class constructor.
+      2. Compute the *k*-means clusters using :func:`aoclda.clustering.kmeans.fit`.
+      3. Perform further transformations or predictions using :func:`aoclda.clustering.kmeans.transform` or :func:`aoclda.clustering.kmeans.predict`.
+      4. Extract results from the :func:`aoclda.clustering.kmeans` object via its class attributes.
 
    .. tab-item:: C
       :sync: C
@@ -89,7 +98,7 @@ Options
    .. tab-item:: Python
       :sync: Python
 
-      The available Python options are detailed in the NOT YET IMPLEMENTED class constructor.
+      The available Python options are detailed in the :func:`aoclda.factorization.kmeans` class constructor.
 
    .. tab-item:: C
       :sync: C
@@ -102,13 +111,17 @@ Options
          :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
          "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance", ":math:`0 < r`"
-         "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm", ":math:`s=` `elkan`, `hartigan-wong`, or `lloyd`."
-         "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres", ":math:`s=` `k-means++`, `random`, or `supplied`."
+         "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
+         "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
          "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results", ":math:`-1 \le i`"
          "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations", ":math:`1 \le i`"
          "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres)", ":math:`1 \le i`"
          "n_clusters", "integer", ":math:`i=1`", "Number of clusters required", ":math:`1 \le i`"
 
+Note that if the initialization method is set to ``random`` then the initial cluster centres are chosen randomly from the sample points.
+If it is set to ``random partitions`` then the sample points are assigned to a random cluster and the corresponding cluster centres are computed and used as the starting point.
+
+For more information on the available algorithms see :cite:t:`elkan`, :cite:t:`hartigan1979algorithm`, :cite:t:`lloyd1982least` and :cite:t:`macqueen1967some`.
 
 Examples
 ========
@@ -120,12 +133,18 @@ Examples
 
       The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
 
+      .. collapse:: k-means Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/kmeans_ex.py
+              :language: Python
+              :linenos:
+
    .. tab-item:: C
       :sync: C
 
       The code below can be found in ``kmeans.cpp`` in the ``examples`` folder of your installation.
 
-      .. collapse:: k-means Example Code
+      .. collapse:: k-means Example
 
          .. literalinclude:: ../../tests/examples/kmeans.cpp
             :language: C++

@@ -142,7 +142,6 @@ da_status da_kmeans_transform_s(da_handle handle, da_int m_samples, da_int m_fea
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_s->transform(m_samples, m_features, X, ldx, X_transform,
                                        ldx_transform);
 }

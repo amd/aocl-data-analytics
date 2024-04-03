@@ -26,8 +26,8 @@
 
 namespace da_kmeans {
 
-enum kmeans_method { lloyd = 0, elkan, hartigan_wong };
-enum kmeans_init { random_centres = 0, kmeanspp, supplied };
+enum kmeans_method { lloyd = 0, elkan, hartigan_wong, macqueen };
+enum kmeans_init { random_samples = 0, kmeanspp, supplied, random_partitions };
 
 } // namespace da_kmeans
 

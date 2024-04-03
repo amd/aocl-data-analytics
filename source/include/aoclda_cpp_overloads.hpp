@@ -399,6 +399,16 @@ inline da_status da_kmeans_set_data(da_handle handle, da_int n_samples, da_int n
     return da_kmeans_set_data_s(handle, n_samples, n_features, A, lda);
 }
 
+inline da_status da_kmeans_set_init_centres(da_handle handle, const float *C,
+                                            da_int ldc) {
+    return da_kmeans_set_init_centres_s(handle, C, ldc);
+}
+
+inline da_status da_kmeans_set_init_centres(da_handle handle, const double *C,
+                                            da_int ldc) {
+    return da_kmeans_set_init_centres_d(handle, C, ldc);
+}
+
 template <class T> inline da_status da_kmeans_compute(da_handle handle);
 
 template <> inline da_status da_kmeans_compute<double>(da_handle handle) {
@@ -424,13 +434,13 @@ inline da_status da_kmeans_transform(da_handle handle, da_int m_samples,
 }
 
 inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_features,
-                                   const double *Y, da_int ldy, da_int *Y_predict) {
-    return da_kmeans_predict_d(handle, k_samples, k_features, Y, ldy, Y_predict);
+                                   const double *Y, da_int ldy, da_int *Y_labels) {
+    return da_kmeans_predict_d(handle, k_samples, k_features, Y, ldy, Y_labels);
 }
 
 inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_features,
-                                   const float *Y, da_int ldy, da_int *Y_predict) {
-    return da_kmeans_predict_s(handle, k_samples, k_features, Y, ldy, Y_predict);
+                                   const float *Y, da_int ldy, da_int *Y_labels) {
+    return da_kmeans_predict_s(handle, k_samples, k_features, Y, ldy, Y_labels);
 }
 
 /* Decision Forest overloaded functions */

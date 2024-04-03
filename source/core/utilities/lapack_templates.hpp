@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -64,6 +64,10 @@ void dtrtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, doubl
              da_int *lda, double *b, da_int *ldb, da_int *info);
 int strtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, float *a,
             da_int *lda, float *b, da_int *ldb, da_int *info);
+double dlange_(char const *norm, da_int const *m, da_int const *n, double const *A,
+               da_int const *lda, double *work);
+float slange_(char const *norm, da_int const *m, da_int const *n, float const *A,
+              da_int const *lda, float *work);
 }
 
 namespace da {
@@ -137,5 +141,16 @@ inline void trtrs(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, 
                   da_int *lda, double *b, da_int *ldb, da_int *info) {
     dtrtrs_(uplo, trans, diag, n, nrhs, a, lda, b, ldb, info);
 }
+
+// --- Compute norm of a real matrix ---
+inline float lange(char const *norm, da_int const *m, da_int const *n, float const *A,
+                   da_int const *lda, float *work) {
+    return slange_(norm, m, n, A, lda, work);
+}
+inline double lange(char const *norm, da_int const *m, da_int const *n, double const *A,
+                    da_int const *lda, double *work) {
+    return dlange_(norm, m, n, A, lda, work);
+}
+
 } // namespace da
 #endif

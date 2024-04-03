@@ -921,8 +921,8 @@ da_status decision_tree<T>::sample_feature_ind(da_int n_samples, da_int *samples
 
     da_int N = this->d; // n_features (set inside set_training_data)
 
-    T top = N - n_samples;
-    T Nreal = N;
+    T top = (T)(N - n_samples);
+    T Nreal = (T)N;
     da_int idx0 = -1;
     std::vector<da_int> subsample(n_samples);
 

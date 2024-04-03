@@ -199,6 +199,8 @@ class da_error_t {
 #else
         strncpy(*message, mesg.front().c_str(), len);
 #endif
+        // Ensure null termination
+        (*message)[len] = '\0';
         return da_status_success;
     }
 

@@ -574,11 +574,12 @@ class pyda_handle {
         da_severity severity;
         da_handle_get_error_message(handle, &message);
         da_handle_get_error_severity(handle, &severity);
+        std::string mesg = message;
         if (severity == DA_ERROR) {
-            PyErr_SetString(PyExc_RuntimeError, message);
+            PyErr_SetString(PyExc_RuntimeError, mesg.c_str());
             throw py::error_already_set();
         } else
-            PyErr_WarnEx(PyExc_RuntimeWarning, message, 1);
+            PyErr_WarnEx(PyExc_RuntimeWarning, mesg.c_str(), 1);
 
         free(message);
     }
@@ -627,17 +628,10 @@ class linmod : public pyda_handle {
         exception_check(status); // throw an exception if status is not success
 
         // Set the real optional parameters
-        if (precision == da_double) {
-            status = da_options_set_real_d(handle, "lambda", reg_lambda);
-            exception_check(status);
-            status = da_options_set_real_d(handle, "alpha", reg_alpha);
-            exception_check(status);
-        } else {
-            status = da_options_set_real_s(handle, "lambda", reg_lambda);
-            exception_check(status);
-            status = da_options_set_real_s(handle, "alpha", reg_alpha);
-            exception_check(status);
-        }
+        status = da_options_set(handle, "lambda", reg_lambda);
+        exception_check(status);
+        status = da_options_set(handle, "alpha", reg_alpha);
+        exception_check(status);
 
         if (precision == da_double)
             status = da_linmod_fit<double>(handle);
@@ -870,6 +864,259 @@ class pca : public pyda_handle {
     auto get_column_sdevs() { return get_result(da_pca_column_sdevs); }
 };
 
+class kmeans : public pyda_handle {
+    da_precision precision = da_double;
+
+  public:
+    kmeans(da_int n_clusters = 1, std::string initialization_method = "k-means++",
+           da_int n_init = 10, da_int max_iter = 300, da_int seed = -1,
+           std::string algorithm = "elkan", std::string prec = "double") {
+        if (prec == "double")
+            da_handle_init<double>(&handle, da_handle_kmeans);
+        else if (prec == "single") {
+            da_handle_init<float>(&handle, da_handle_kmeans);
+            precision = da_single;
+        }
+        da_status status;
+        status = da_options_set_int(handle, "n_clusters", n_clusters);
+        exception_check(status);
+        status = da_options_set_string(handle, "algorithm", algorithm.c_str());
+        exception_check(status);
+        status = da_options_set_string(handle, "initialization method",
+                                       initialization_method.c_str());
+        exception_check(status);
+        status = da_options_set_int(handle, "max_iter", max_iter);
+        exception_check(status);
+        status = da_options_set_int(handle, "seed", seed);
+        exception_check(status);
+    }
+    ~kmeans() { da_handle_destroy(&handle); }
+
+    template <typename T>
+    void fit(py::array_t<T, py::array::f_style> A,
+             std::optional<py::array_t<T, py::array::f_style>> C, T tol = 1.0e-4) {
+        // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
+        da_status status;
+        status = da_options_set(handle, "convergence tolerance", tol);
+        exception_check(status);
+        da_int n_samples = A.shape()[0], n_features = A.shape()[1], lda = A.shape()[0];
+        status = da_kmeans_set_data(handle, n_samples, n_features, A.data(), lda);
+        exception_check(status);
+        if (C.has_value()) {
+            status = da_options_set_string(handle, "initialization method", "supplied");
+            exception_check(status);
+            da_int ldc = C->shape()[0];
+            status = da_kmeans_set_init_centres(handle, C->data(), ldc);
+            exception_check(status);
+        }
+        status = da_kmeans_compute<T>(handle);
+        exception_check(status);
+    }
+
+    template <typename T> py::array_t<T> transform(py::array_t<T, py::array::f_style> X) {
+        da_status status;
+        da_int m_samples = X.shape()[0], m_features = X.shape()[1], ldx = X.shape()[0];
+
+        T result[5];
+        da_int dim = 5;
+
+        status = da_handle_get_result(handle, da_rinfo, &dim, result);
+        exception_check(status);
+
+        // define the output vector
+        da_int n_clusters = (da_int)result[2];
+        da_int ldx_transform = m_samples;
+        size_t shape[2]{(size_t)m_samples, (size_t)n_clusters};
+        size_t strides[2]{sizeof(T), sizeof(T) * m_samples};
+        auto X_transform = py::array_t<T>(shape, strides);
+
+        status = da_kmeans_transform(handle, m_samples, m_features, X.data(), ldx,
+                                     X_transform.mutable_data(), ldx_transform);
+        exception_check(status);
+        return X_transform;
+    }
+
+    template <typename T>
+    py::array_t<da_int> predict(py::array_t<T, py::array::f_style> Y) {
+        da_status status;
+        da_int k_samples = Y.shape()[0], k_features = Y.shape()[1], ldy = Y.shape()[0];
+
+        T result[5];
+        da_int dim = 5;
+
+        status = da_handle_get_result(handle, da_rinfo, &dim, result);
+        exception_check(status);
+
+        // define the output vector
+        da_int n_clusters = (da_int)result[2];
+        size_t shape[1]{(size_t)k_samples};
+        size_t strides[1]{sizeof(da_int)};
+        auto Y_labels = py::array_t<da_int>(shape, strides);
+
+        status = da_kmeans_predict(handle, k_samples, k_features, Y.data(), ldy,
+                                   Y_labels.mutable_data());
+        exception_check(status);
+        return Y_labels;
+    }
+
+    template <typename T>
+    void get_rinfo(da_int *n_samples, da_int *n_features, da_int *n_clusters,
+                   da_int *n_iter, T *inertia) {
+        da_status status;
+
+        da_int dim = 5;
+
+        T rinfo[5];
+        status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+        *n_samples = (da_int)rinfo[0];
+        *n_features = (da_int)rinfo[1];
+        *n_clusters = (da_int)rinfo[2];
+        *n_iter = (da_int)rinfo[3];
+        *inertia = rinfo[4];
+
+        exception_check(status);
+    }
+
+    auto get_cluster_centres() {
+        da_status status;
+
+        size_t stride_size;
+        da_int n_samples, n_features, n_clusters, n_iter;
+        da_int dim, dim1, dim2;
+
+        if (precision == da_single) {
+            stride_size = sizeof(float);
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        } else {
+            stride_size = sizeof(double);
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        }
+
+        dim1 = n_clusters;
+        dim2 = n_features;
+        dim = dim1 * dim2;
+
+        std::vector<size_t> shape, strides;
+        shape.push_back(dim1);
+        strides.push_back(stride_size);
+        if (dim2 > 1) {
+            shape.push_back(dim2);
+            strides.push_back(stride_size * dim1);
+        }
+
+        if (precision == da_single) {
+
+            // define the output vector
+            auto res = py::array_t<float>(shape, strides);
+            status = da_handle_get_result(handle, da_kmeans_cluster_centres, &dim,
+                                          res.mutable_data());
+            exception_check(status);
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        } else {
+
+            // define the output vector
+            auto res = py::array_t<double>(shape, strides);
+            status = da_handle_get_result(handle, da_kmeans_cluster_centres, &dim,
+                                          res.mutable_data());
+            exception_check(status);
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        }
+    }
+
+    auto get_labels() {
+
+        da_status status;
+
+        size_t stride_size = sizeof(da_int);
+        da_int n_samples, n_features, n_clusters, n_iter;
+        da_int dim, dim1, dim2;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        }
+
+        dim1 = n_samples;
+        dim2 = 1;
+        dim = dim1 * dim2;
+
+        std::vector<size_t> shape, strides;
+        shape.push_back(dim1);
+        strides.push_back(stride_size);
+        // define the output vector
+        auto res = py::array_t<da_int>(shape, strides);
+        status = da_handle_get_result(handle, da_kmeans_labels, &dim, res.mutable_data());
+        exception_check(status);
+        py::array ret = py::reinterpret_borrow<py::array>(res);
+        return ret;
+    }
+
+    auto get_inertia() {
+
+        da_status status;
+
+        size_t stride_size;
+        da_int n_samples, n_features, n_clusters, n_iter;
+        da_int dim, dim1, dim2;
+
+        if (precision == da_single) {
+            stride_size = sizeof(float);
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<float>(shape, strides);
+            *(res.mutable_data(0)) = inertia;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        } else {
+            stride_size = sizeof(double);
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<double>(shape, strides);
+            *(res.mutable_data(0)) = inertia;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        }
+    }
+
+    auto get_n_iter() {
+
+        size_t stride_size = sizeof(da_int);
+        da_int n_samples, n_features, n_clusters, n_iter;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        }
+
+        std::vector<size_t> shape, strides;
+        shape.push_back(1);
+        strides.push_back(stride_size);
+        // define the output vector
+        auto res = py::array_t<da_int>(shape, strides);
+        *(res.mutable_data(0)) = n_iter;
+        py::array ret = py::reinterpret_borrow<py::array>(res);
+        return ret;
+    }
+};
+
 PYBIND11_MODULE(_aoclda, m) {
     m.doc() = "Python wrappers for the AOCL-DA library";
 
@@ -969,4 +1216,30 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_vt", &pca::get_vt)
         .def("get_column_means", &pca::get_column_means)
         .def("get_column_sdevs", &pca::get_column_sdevs);
+    /**********************************/
+    /*       k-means clustering       */
+    /**********************************/
+    auto m_clustering = m.def_submodule("clustering", "Clustering algorithms.");
+    py::class_<kmeans, pyda_handle>(m_clustering, "pybind_kmeans")
+        .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string,
+                      std::string &>(),
+             py::arg("n_clusters") = 1, py::arg("initialization_method") = "k-means++",
+             py::arg("n_init") = 10, py::arg("max_iter") = 300, py::arg("seed") = -1,
+             py::arg("algorithm") = "elkan", py::arg("precision") = "double")
+        .def("pybind_fit", &kmeans::fit<float>, "Fit the k-means clusters", "A"_a,
+             "C"_a = py::none(), py::arg("convergence_tolerance") = (float)1.0e-4)
+        .def("pybind_fit", &kmeans::fit<double>, "Fit the k-means clusters", "A"_a,
+             "C"_a = py::none(), py::arg("convergence_tolerance") = (double)1.0e-4)
+        .def("pybind_transform", &kmeans::transform<float>,
+             "Transform using computed k-means clusters", "X"_a)
+        .def("pybind_transform", &kmeans::transform<double>,
+             "Transform using computed k-means clusters", "X"_a)
+        .def("pybind_predict", &kmeans::predict<float>,
+             "Predict labels using computed k-means clusters", "Y"_a)
+        .def("pybind_predict", &kmeans::predict<double>,
+             "Predict labels using computed k-means clusters", "Y"_a)
+        .def("get_cluster_centres", &kmeans::get_cluster_centres)
+        .def("get_labels", &kmeans::get_labels)
+        .def("get_inertia", &kmeans::get_inertia)
+        .def("get_n_iter", &kmeans::get_n_iter);
 }

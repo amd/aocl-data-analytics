@@ -113,10 +113,9 @@ template <typename T> class da_pca : public basic_handle<T> {
 
         da_int rinfo_size = 3;
 
-        if (result == nullptr || *dim <= 0) {
+        if (result == nullptr) {
             return da_warn(err, da_status_invalid_array_dimension,
-                           "The results array has not been allocated, or an unsuitable "
-                           "dimension has been provided.");
+                           "The results array has not been allocated.");
         }
 
         switch (query) {
@@ -367,16 +366,16 @@ template <typename T> da_status da_pca<T>::compute() {
         vt.resize(ldvt * p);
         iwork.resize(iwork_size);
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error,
-                        "Memory allocation failed."); // LCOV_EXCL_LINE
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
     }
 
     // Depending on the chosen method standardize by column means and possible standard deviations
     try {
         column_means.resize(p);
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error,
-                        "Memory allocation failed."); // LCOV_EXCL_LINE
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
     }
     std::fill(column_means.begin(), column_means.end(), 0);
 
@@ -389,8 +388,8 @@ template <typename T> da_status da_pca<T>::compute() {
         try {
             column_sdevs.resize(p);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error,
-                            "Memory allocation failed."); // LCOV_EXCL_LINE
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
         }
         std::fill(column_sdevs.begin(), column_sdevs.end(), 0);
         da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n, dof, 0,

@@ -39,7 +39,7 @@ extern "C" {
 /** \{
  * \brief Pass a data matrix to the \ref da_handle object in preparation for <i>k</i>-means clustering.
  *
- * A copy of the data matrix is stored internally, to avoid overwriting the user's data during the computation.
+ * The data itself is not copied; a pointer to the data matrix is stored instead.
  * @rst
  * After calling this function you may use the option setting APIs to set :ref:`options <kmeans_options>`.
  * @endrst
@@ -54,6 +54,7 @@ extern "C" {
  * - \ref da_status_wrong_type - the handle may have been initialized with the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or \p A is null.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_incompatible_options - if you have already set the :ref:`number of clusters <kmeans_options>` and it is too high, then it will be reduced accordingly, and this warning returned.
  */
 da_status da_kmeans_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
                                const double *A, da_int lda);
@@ -65,8 +66,8 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
 /** \{
  * \brief Pass a matrix of initial cluster centres to the \ref da_handle object in preparation for <i>k</i>-means clustering.
  *
- * A copy of the data matrix is stored internally, to avoid overwriting the user's data during the computation.
- * The matrix of initial clusters is not required if *k*-means++ or random initialization are used (which is specified using \ref da_options_set_string)
+ * The data itself is not copied; a pointer to the data matrix is stored instead.
+ * The matrix of initial clusters is not required if *k*-means++ or random initialization methods are used (see :ref:`options <kmeans_options>`).
  *
  * @rst
  * Note, you must call :ref:`da_kmeans_set_data_? <da_kmeans_set_data>` prior to this function.
@@ -77,6 +78,7 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
  * \param[in] ldc the leading dimension of the data matrix. Constraint: \p ldc @f$\ge@f$ \p n_clusters so make sure you set \p n_clusters using \ref da_options_set_int first.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_no_data - the function :ref:`da_kmeans_set_data_? <da_kmeans_set_data>` has not been called.
  * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or \p C is null.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
@@ -99,18 +101,20 @@ da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int 
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized.
- * - \ref da_status_no_data - \ref da_kmeans_set_data_s "da_kmeans_set_data_?" has not been called prior to this function call.
+ * - \ref da_status_no_data - \ref da_kmeans_set_data_s "da_kmeans_set_data_?" has not been called prior to this function call, or the required initial cluster centres have not been provided.
  * - \ref da_status_internal_error - this can occur if your data contains undefined values.
- * - \ref da_status_maxit - iteration limit reached without converging
+ * - \ref da_status_incompatible_options - you can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_maxit - the iteration limit was reached without converging. The results may still be usable though.
 
  *
  * \post
  * @rst
- * After successful execution, :ref:`da_handle_get_result_? <da_handle_get_result>` can be queried with the following enums:
+ * After successful execution, :ref:`da_handle_get_result_? <da_handle_get_result>` can be queried with the following enums for floating-point output:
  * @endrst
  * - \p da_kmeans_cluster_centres - return an array of size \p n_clusters @f$\times@f$ \p n_features containing the coordinates of the cluster centres, in column major format.
  * - \p da_rinfo - return an array of size 5 containing \p n_samples, \p n_features, \p n_clusters, \p n_iter (the number of iterations performed) and \p inertia (the sum of the squared distance of each sample to its closest cluster centre).
- * and \ref da_handle_get_result_int can be queried with the following enum:
+ *
+ * In addition \ref da_handle_get_result_int can be queried with the following enum:
  * - \p da_kmeans_labels - return an array of size \p n_samples containing the label (i.e. which cluster it is in) of each sample point.
  */
 da_status da_kmeans_compute_d(da_handle handle);

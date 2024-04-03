@@ -97,6 +97,9 @@ target_compile_definitions(
 
 add_executable(interval_map interval_map_tests.cpp)
 
+add_executable(euclidean_distance euclidean_distance_tests.cpp)
+target_link_libraries(euclidean_distance PRIVATE ${BLAS})
+
 add_executable(interval_set interval_set_tests.cpp)
 
 add_executable(doc_tests doc_tests.cpp)
@@ -109,7 +112,6 @@ target_link_libraries(lbfgsb_rc PRIVATE aocl-da)
 
 add_executable(lbfgsb_fcomm lbfgsb_fcomm.cpp)
 target_link_libraries(lbfgsb_fcomm PRIVATE aocl-da)
-
 
 add_executable(coord coord_tests.cpp)
 target_compile_definitions(
@@ -136,6 +138,7 @@ set(GTEST_EXES
   option_registry
   data
   interval_map
+  euclidean_distance
   interval_set
   errors_tests
   doc_tests

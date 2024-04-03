@@ -52,7 +52,7 @@ The PCA is closely related to a matrix factorization known as the *singular valu
 .. math::
    A = U\Sigma V^T,
 
-where :math:`A` is a (standardized) data matrix of size :math:`n_{\text{samples}} \times n_{\text{features}}`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n_{\text{samples}} \times n_{\text{features}}` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n_{\text{samples}} \times n_{\text{samples}}` and  :math:`n_{\text{features}} \times n_{\text{features}}` respectively.
+where :math:`A` is a (standardized) data matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{samples}}` and  :math:`n_{\mathrm{features}} \times n_{\mathrm{features}}` respectively.
 The nonzero entries of :math:`\Sigma` are known as the *singular values* of :math:`A`.
 
 Internally, AOCL-DA computes the PCA via the SVD (with :math:`\Sigma` and :math:`V` truncated according to the number of principal components requested) rather than by eigenvalue decomposition of the covariance/correlation matrix.

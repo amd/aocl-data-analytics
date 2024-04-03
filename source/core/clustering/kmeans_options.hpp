@@ -67,13 +67,19 @@ inline da_status register_kmeans_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
             "initialization method", "How to determine the initial cluster centres",
-            {{"random", random_centres}, {"k-means++", kmeanspp}, {"supplied", supplied}},
+            {{"random", random_samples},
+             {"k-means++", kmeanspp},
+             {"supplied", supplied},
+             {"random partitions", random_partitions}},
             "random"));
         opts.register_opt(os);
-        os = std::make_shared<OptionString>(OptionString(
-            "algorithm", "Choice of underlying k-means algorithm",
-            {{"lloyd", lloyd}, {"elkan", elkan}, {"hartigan-wong", hartigan_wong}},
-            "lloyd"));
+        os = std::make_shared<OptionString>(
+            OptionString("algorithm", "Choice of underlying k-means algorithm",
+                         {{"lloyd", lloyd},
+                          {"elkan", elkan},
+                          {"hartigan-wong", hartigan_wong},
+                          {"macqueen", macqueen}},
+                         "lloyd"));
         opts.register_opt(os);
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(

@@ -39,7 +39,7 @@ class PCA(pybind_PCA):
         n_components (int, optional): Number of components to keep. Default=1.
 
         bias (str, optional): Whether to use unbiased or biased estimators for standard deviations
-            and variances. It can take the values 'unbiased' or 'biased' (default: 'unbiased').
+            and variances. It can take the values 'unbiased' or 'biased'. Default: 'unbiased'.
 
         method (str, optional): The method used to compute the PCA. Default = 'covariance'.
 
@@ -54,14 +54,14 @@ class PCA(pybind_PCA):
 
         solver (str, optional): Which LAPACK solver to use to compute the underlying singular value
             decomposition, allowed values: 'auto', 'gesdd', 'gesvd', 'gesvdx'. Default='auto'.
-            If ``solver = 'auto'`` then ``gesdd`` will be used unless the number of components
+            If ``solver = 'auto'`` then 'gesdd' will be used unless the number of components
             requested is less than 10% of the smallest dimension of your data matrix, in which case
-            ``gesvdx`` is used.
+            'gesvdx' is used.
 
 
         precision (str, optional): Whether to initialize the PCA object in double or
-            single precision. It can take the values ``single`` or ``double``.
-            Default = ``double``.
+            single precision. It can take the values 'single' or 'double'.
+            Default = 'double'.
 
     """
     @property
@@ -124,7 +124,7 @@ class PCA(pybind_PCA):
 
         Args:
             A (numpy.ndarray): The data matrix with which to compute the PCA. It has shape
-              (n_components, n_features).
+              (n_samples, n_features).
 
         Returns:
             self (object): Returns the instance itself.

@@ -70,17 +70,18 @@ The following Scikit-learn classes are currently available in the AOCL-DA extens
 
    * - Scikit-learn class
      - Notes
+   * - ``sklearn.cluster.KMeans``
+     - ``fit``, ``transform``, ``predict``, ``fit_transform`` and ``fit_predict`` methods and various class attributes
    * - ``sklearn.decomposition.PCA``
-     - ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes only
+     - ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes
    * - ``sklearn.linear_model.LinearRegression``
-     - ``fit`` method and various class attributes only
+     - ``fit`` method and various class attributes
    * - ``sklearn.linear_model.Ridge``
-     - ``fit`` method and various class attributes only
+     - ``fit`` method and various class attributes
    * - ``sklearn.linear_model.Lasso``
-     - ``fit`` method and various class attributes only
+     - ``fit`` method and various class attributes
 
 Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after
 patching, you attempt to call class member functions which have not been implemented by AOCL-DA,
-then a ``RuntimeError`` will be thrown.
-It is recommended that for the full benefit of using AOCL-DA
+then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
 you use the Python APIs described on the subsequent pages of this manual.

@@ -25,12 +25,14 @@
 
 
 """
-Contains the functions to replace symbols from scikit-learn by the AOCL-DA monkey patch
+Contains the functions to replace symbols from scikit-learn by the AOCL-DA patch
 """
 
 import sklearn.decomposition as decomp_sklearn
 import sklearn.linear_model as linmod_sklearn
+import sklearn.cluster as clustering_sklearn
 from ._pca import PCA as PCA_da
+from ._kmeans import kmeans as kmeans_da
 from ._linear_model import LinearRegression as LinearRegression_da
 from ._linear_model import Ridge as Ridge_da
 from ._linear_model import Lasso as Lasso_da
@@ -54,7 +56,11 @@ SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                      'da_sym': Ridge_da},
            'Lasso': {'pack': linmod_sklearn,
                      'sk_sym': getattr(linmod_sklearn, 'Lasso'),
-                     'da_sym': Lasso_da}}
+                     'da_sym': Lasso_da},
+           'KMeans': {'pack': clustering_sklearn,
+                   'sk_sym': getattr(clustering_sklearn, "KMeans"),
+                   'da_sym': kmeans_da}
+                     }
 
 
 def skpatch(*args, print_patched=True):
