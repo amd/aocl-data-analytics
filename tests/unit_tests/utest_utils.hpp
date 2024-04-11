@@ -37,17 +37,17 @@
 #define EXPECT_ARR_NEAR(n, x, y, abs_error)                                              \
     for (da_int j = 0; j < (n); j++)                                                     \
     EXPECT_NEAR((x[j]), (y[j]), abs_error)                                               \
-        << "Vectors " #x " and " #y " different at index j=" << j << "."
+        << "*** Vectors " #x "[" << j << "] and " #y "[" << j << "] are different!     "
 
 #define EXPECT_ARR_EQ(n, x, y, incx, incy, startx, starty)                               \
     for (da_int j = 0; j < (n); j++)                                                     \
     EXPECT_EQ((x[startx + j * incx]), (y[starty + j * incy]))                            \
-        << "Vectors " #x " and " #y " different at index j=" << j << "."
+        << "*** Vectors " #x "[" << j << "] and " #y "[" << j << "] are different!     "
 
 #define EXPECT_ARR_ABS_NEAR(n, x, y, abs_error)                                          \
     for (da_int j = 0; j < (n); j++)                                                     \
     EXPECT_NEAR((std::abs(x[j])), (std::abs(y[j])), abs_error)                           \
-        << "Vectors " #x " and " #y " different at index j=" << j << "."
+        << "*** Vectors " #x "[" << j << "] and " #y "[" << j << "] are different!     "
 
 /* Convert std::vector from one type to another, to avoid warnings in templated tests*/
 template <class T_in, class T_out>
@@ -64,5 +64,16 @@ inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, double *x) {
 inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, float *x) {
     return da_handle_get_result_s(handle, da_result::da_linmod_coef, nc, x);
 }
+
+namespace da_numeric {
+// Safe numerical tolerances to be used with single and double precision float types
+template <class T> struct tolerance {
+    static constexpr T eps = std::numeric_limits<T>::epsilon();
+    static T safe_tol(void) { return std::sqrt(T(2) * eps); };
+    static T tol(T numerator = T(1), T denominator = T(1)) {
+        return numerator * safe_tol() / denominator;
+    }
+};
+} // namespace da_numeric
 
 #endif

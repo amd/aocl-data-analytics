@@ -60,6 +60,27 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             da_options::ubound_t::p_inf, 10000));
         opts.register_opt(oi);
 
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("optim coord skip min",
+                                  "Minimum times a coordinate change is smaller than "
+                                  "\"coord skip tol\" to start skipping",
+                                  2, da_options::lbound_t::greaterequal, max_da_int,
+                                  da_options::ubound_t::p_inf, 2));
+        opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("optim coord skip max",
+                                  "Maximum times a coordinate can be skipped, after "
+                                  "this the coordinate is checked",
+                                  10, da_options::lbound_t::greaterequal, max_da_int,
+                                  da_options::ubound_t::p_inf, 100));
+        opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "debug", "set debug level (internal use)", 0,
+            da_options::lbound_t::greaterequal, 3, da_options::ubound_t::lessequal, 0));
+        opts.register_opt(oi);
+
         std::shared_ptr<OptionNumeric<T>> oT;
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -90,7 +111,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             "tolerance to declare convergence for the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps(), tol.safe_eps_latex()));
+            tol.safe_eps(10, 2), tol.safe_eps_latex(10, 2)));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "optim progress factor",

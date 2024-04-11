@@ -165,18 +165,26 @@ template <typename T> class linear_model : public basic_handle<T> {
      *
      * TODO this needs to be optimized and
      * avoid rescaling when data was already prepared.
+     * TODO we could avoid destroying the optimization options and user data at
+     * every warm-start...
      */
     void refresh() {
         if (model_trained) {
             // Reset
             model_trained = false;
-            if (X != XUSR)
-                free(X);
-            if (y != yusr)
-                free(y);
+            if (X && X != XUSR)
+                delete[] X;
+            if (y && y != yusr)
+                delete[] y;
             X = (T *)(XUSR);
             y = (T *)(yusr);
         }
+        // Destroy optimization option registry
+        if (opt)
+            delete opt;
+        // Destroy linear model data
+        if (udata)
+            delete udata;
     };
 
     da_status define_features(da_int nfeat, da_int nsamples, const T *X, const T *y);
@@ -185,6 +193,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     void revert_scaling();
     void setup_xtx_xty(const T *X_input, const T *y_input, std::vector<T> &A,
                        std::vector<T> &b);
+    void scale_warmstart();
     da_status fit(da_int usr_ncoefs, const T *coefs);
     da_status fit_logreg_lbfgs();
     da_status fit_linreg_lbfgs();
@@ -247,15 +256,14 @@ da_status linear_model<T>::get_result(da_result query, da_int *dim, T *result) {
                            "least size: " +
                                std::to_string(*dim) + ".");
         }
-        result[0] = (T)this->nfeat;
-        result[1] = (T)this->nsamples;
-        result[2] = (T)this->ncoef;
-        result[3] = (T)(this->intercept ? 1.0 : 0.0);
-        result[4] = alpha;
-        result[5] = lambda;
-        // Reserved for future use
-        for (auto i = 6; i < 100; i++)
-            result[i] = static_cast<T>(0);
+        for (da_int i = 0; i < 100; ++i)
+            result[i] = T(0);
+
+        // Copy out the info array if available
+        if (opt)
+            // Hopefully no opt solver will use more that the hard coded limit
+            return opt->get_info(*dim, result);
+
         return da_status_success;
         break;
 
@@ -322,8 +330,8 @@ template <typename T> da_status linear_model<T>::select_model(linmod_model mod) 
  */
 template <typename T> da_status linear_model<T>::init_opt_method(linmod_method method) {
     da_status status;
-    da_int maxit, prnlvl;
-    std::string slv, prnopt, optstr;
+    da_int maxit, prnlvl, prnopt;
+    std::string slv, prnopt_str, optstr;
     T tol, factr, maxtime;
 
     switch (method) {
@@ -356,6 +364,13 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
                             std::to_string(ncoef) + ", expecting ncoef > 0.");
     }
     // Set options here
+    da_int dbg{0};
+    if (this->opts.get("debug", dbg) != da_status_success) {
+        return da_error( // LCOV_EXCL_LINE
+            opt->err, da_status_internal_error,
+            "Unexpectedly <debug> option not found in the linear model "
+            "option registry.");
+    }
     // Pass print level option from linmod to optimization
     if (this->opts.get("print level", prnlvl) != da_status_success) {
         return da_error( // LCOV_EXCL_LINE
@@ -370,16 +385,19 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
                         "<print level> option.");
     }
     // Pass print options
-    if (this->opts.get("print options", prnopt) != da_status_success) {
+    if (this->opts.get("print options", prnopt_str, prnopt) != da_status_success) {
         return da_error( // LCOV_EXCL_LINE
             opt->err, da_status_internal_error,
             "Unexpectedly <print options> option not found in the linear model "
             "option registry.");
     }
-    if (opt->opts.set("print options", prnopt) != da_status_success) {
-        return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "Unexpectedly linear model provided an invalid value to the "
-                        "<print options> option.");
+    if (dbg && prnopt) {
+        // Request solver to also print options
+        if (opt->opts.set("print options", prnopt_str) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Unexpectedly linear model provided an invalid value to the "
+                            "<print options> option.");
+        }
     }
     // Setup optimization method
     if (opt->opts.set("optim method", slv) != da_status_success) {
@@ -423,6 +441,45 @@ template <typename T> da_status linear_model<T>::init_opt_method(linmod_method m
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly linear model provided an invalid value to the <" +
                             optstr + "> option.");
+    }
+    if (slv == "coord") {
+        // specific options for coord
+        optstr = slv + " skip tol";
+        if (opt->opts.set(optstr, tol) != da_status_success) {
+            return da_error(
+                opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                "Unexpectedly linear model provided an invalid value to the <" + optstr +
+                    "> option.");
+        }
+        // Pass ledger parameters
+        da_int skipmin;
+        da_int skipmax;
+        if (this->opts.get("optim coord skip min", skipmin) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Unexpectedly <optim coord skip min> option not "
+                            "found in the linear model "
+                            "option registry.");
+        }
+        optstr = "coord skip min";
+        if (opt->opts.set(optstr, skipmin) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Unexpectedly linear model provided an invalid value to the "
+                            "<" +
+                                optstr + "> option.");
+        }
+        if (this->opts.get("optim coord skip max", skipmax) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Unexpectedly <optim coord skip max> option not "
+                            "found in the linear model "
+                            "option registry.");
+        }
+        optstr = "coord skip max";
+        if (opt->opts.set(optstr, skipmax) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Unexpectedly linear model provided an invalid value to the "
+                            "<" +
+                                optstr + "> option.");
+        }
     }
 
     // Pass time limit
@@ -560,7 +617,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     if (model_trained)
         return da_status_success;
 
-    da_int mid, prn, intercept_int, scalingint;
+    da_int mid, prn, intercept_int, scalingint, dbg{0};
     std::string val, method, scalingstr;
     da_status status;
 
@@ -600,31 +657,6 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         ncoef = nfeat;
         if (intercept)
             ncoef += 1;
-
-        copycoefs = (coefs != nullptr) && (usr_ncoefs >= nfeat);
-        // copy if solver can use it...
-        copycoefs &= mid == linmod_method::coord || mid == linmod_method::lbfgsb;
-
-        try {
-            if (copycoefs) {
-                coef.resize(ncoef);
-                // user provided starting coefficients, check, copy and use.
-                // copy first nfeat elements, then check the intercept
-                for (da_int j = 0; j < nfeat; j++)
-                    coef[j] = coefs[j];
-                if (intercept) {
-                    coef[ncoef - 1] = usr_ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
-                }
-
-                // FIXME: if scaling -> scale back coefficients to problem scale
-
-            } else {
-                coef.resize(ncoef, (T)0);
-            }
-        } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation error");
-        }
 
         // FIXME Add box-bound
 
@@ -699,9 +731,35 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             lambda /= T(nsamples);
         }
 
+        copycoefs = (coefs != nullptr) && (usr_ncoefs >= nfeat);
+        // copy if solver can use it...
+        copycoefs &= mid == linmod_method::coord || mid == linmod_method::lbfgsb;
+
+        try {
+            if (copycoefs) {
+                coef.resize(ncoef);
+                // user provided starting coefficients, check, copy and use.
+                // copy first nfeat elements, then check the intercept
+                for (da_int j = 0; j < nfeat; j++)
+                    coef[j] = coefs[j];
+                if (intercept) {
+                    coef[ncoef - 1] = usr_ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
+                }
+                // Scale coefficient once we have the scaling factors
+                if (scaling != scaling_t::none)
+                    scale_warmstart();
+
+            } else {
+                coef.resize(ncoef, (T)0);
+            }
+        } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+
         // last so to capture all option changes by the solver
         opts.get("print options", val, prn);
-        if (prn != 0)
+        if (prn)
             opts.print_options();
 
         switch (mid) {
@@ -747,8 +805,29 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         // Revert scaling on coefficients
         if (scalingint) {
             revert_scaling();
+            if (mid == linmod_method::coord || mid == linmod_method::lbfgsb) {
+                // Update the objective value in info array
+                T uloss{-1}; // unscalled loss
+                const T l1regul = udata->l1reg;
+                const T l2regul = udata->l2reg;
+                T *tmp;
+                if (mid == linmod_method::coord) {
+                    // use temporary storage of coord
+                    stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
+                    tmp = data->residual.data();
+                } else { // BFGS
+                         // use temporary storage from BFGS
+                    cb_usrdata_linreg<T> *data = (cb_usrdata_linreg<T> *)udata;
+                    tmp = data->matvec.data();
+                }
+                loss_mse(nsamples, nfeat, XUSR, intercept, l1regul, l2regul, coef.data(),
+                         yusr, &uloss, tmp);
+                tmp = nullptr;
+                status = opt->set_info(da_optim::info_t::info_objective, uloss);
+                if (status != da_status_success)
+                    return status;
+            }
         }
-
         break;
 
     case linmod_model_logistic:
@@ -1164,7 +1243,7 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
             return da_error(this->err, da_status_incompatible_options,
                             "This solver is incompatible with the logistic "
                             "regression model.");
-        if (method == linmod_method::lbfgsb && lambda != 0 && alpha != 0)
+        else if (method == linmod_method::lbfgsb && alpha != T(0) && lambda != T(0))
             return da_error(this->err, da_status_incompatible_options,
                             "The BFGS solver is incompatible with a 1-norm "
                             "regularization term.");
@@ -1180,10 +1259,22 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
 template <typename T> da_status linear_model<T>::choose_method() {
     switch (mod) {
     case (linmod_model_mse):
-        // Cholesky for normal and L2 regression
-        if (alpha == (T)0) {
-            opts.set("optim method", "cholesky", da_options::solver);
-        } else
+        if (lambda == (T)0) {
+            if (nsamples > nfeat) {
+                /* QR direct method can only solve when nsamples >= ncoef
+                Potential TODO - this condition cannot be set exactly as above because ncoef
+                has not been defined yet, so using nfeat is a workaround but does not accomodate
+                situation where X is square matrix and we don't want intercept. We could still
+                use QR there but here it falls back to alternative method */
+                opts.set("optim method", "qr", da_options::solver);
+            } else {
+                // Fall back to svd for short fat matrix with no regularisation
+                opts.set("optim method", "svd", da_options::solver);
+            }
+        } else if (alpha == (T)0)
+            // SVD handles L2 regularization
+            opts.set("optim method", "svd", da_options::solver);
+        else
             // Coordinate Descent for L1 [and L2 combined: Elastic Net]
             opts.set("optim method", "coord", da_options::solver);
         break;
@@ -1485,8 +1576,8 @@ template <typename T> void linear_model<T>::revert_scaling(void) {
     }
 }
 
-/* Function used at the beginning of cholesky and cg solver to get X'X (or XX') and X'y (or not) 
-    X_input and y_input is data provided by user, A and b are outputs that are later used to 
+/* Function used at the beginning of cholesky and cg solver to get X'X (or XX') and X'y (or not)
+    X_input and y_input is data provided by user, A and b are outputs that are later used to
     solve system of linear equations Ax=b where x is coefficient matrix. */
 template <typename T>
 void linear_model<T>::setup_xtx_xty(const T *X_input, const T *y_input, std::vector<T> &A,
@@ -1496,7 +1587,7 @@ void linear_model<T>::setup_xtx_xty(const T *X_input, const T *y_input, std::vec
         da_blas::cblas_syrk(CblasColMajor, CblasUpper, CblasTrans, nfeat, nsamples,
                             (T)1.0, X_input, nsamples, (T)0.0, A.data(), ncoef);
         /* In case of intercept, the last column of X'X needs to be filled.
-            Each row of that column is equal to the sum of entries of respective 
+            Each row of that column is equal to the sum of entries of respective
             column of original X matrix */
         if (intercept) {
             da_int end = ncoef * nfeat;
@@ -1534,6 +1625,19 @@ void linear_model<T>::setup_xtx_xty(const T *X_input, const T *y_input, std::vec
             A[i * nsamples + i] += this->lambda;
             b[i] = y_input[i];
         }
+    }
+}
+
+// Apply scaling for user provided warm start coefficients
+template <typename T> void linear_model<T>::scale_warmstart(void) {
+    T cum0{0};
+    T yscale = std_scales[nfeat];
+    for (da_int k = 0; k < nfeat; ++k) {
+        cum0 += std_shifts[k] * coef[k];
+        coef[k] = std_scales[k] * coef[k] / yscale;
+    }
+    if (intercept) {
+        coef[nfeat] = (coef[nfeat] - std_shifts[nfeat] + cum0) / yscale;
     }
 }
 

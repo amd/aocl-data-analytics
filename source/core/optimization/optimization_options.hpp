@@ -47,15 +47,15 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             OptionNumeric<da_int>("coord skip min",
                                   "Minimum times a coordinate change is smaller than "
                                   "\"coord skip tol\" to start skipping",
-                                  1, da_options::lbound_t::greaterequal, max_da_int,
-                                  da_options::ubound_t::p_inf, 5));
+                                  2, da_options::lbound_t::greaterequal, max_da_int,
+                                  da_options::ubound_t::p_inf, 2));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("coord skip max",
-                                  "Initial max times a coordinate can be skipped after "
+                                  "Maximum times a coordinate can be skipped, after "
                                   "this the coordinate is checked",
-                                  4, da_options::lbound_t::greaterequal, max_da_int,
-                                  da_options::ubound_t::p_inf, 8));
+                                  10, da_options::lbound_t::greaterequal, max_da_int,
+                                  da_options::ubound_t::p_inf, 100));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "coord restart",

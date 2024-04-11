@@ -95,11 +95,11 @@ const linregParam linregParamPos[] = {
     // 0
     {"trivialNoint",      "trivial", {}, {}, {}, {}},
     // 1
-    {"trivialNoint",      "trivial", {}, {{"scaling", "standardize"}}, {}, {}},
+    {"trivialNoint/z",      "trivial", {}, {{"scaling", "standardize"}}, {}, {}},
     // 2
-    {"trivialNoint",      "trivial", {}, {{"scaling", "scale only"}}, {}, {}},
+    {"trivialNoint/s",      "trivial", {}, {{"scaling", "scale only"}}, {}, {}},
     // 3
-    {"trivialNointLbfgs", "trivial", {}, {{"optim method", "lbfgs"}}, {}, {}},
+    {"trivialNointLbfgs", "trivial", {{"print level", 5}}, {{"optim method", "lbfgs"}}, {}, {}},
     // 4
     {"trivialNointLbfgs", "trivial", {}, {{"optim method", "lbfgs"},{"scaling", "standardize"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
     // 5
@@ -107,206 +107,209 @@ const linregParam linregParamPos[] = {
     // 6
     {"trivialIntercept",  "trivial", {{"intercept", 1}}, {}, {}, {}},
     // 7
-    {"trivialIntercept",  "trivial", {{"intercept", 1}}, {{"scaling", "standardize"}}, {}, {}},
+    {"trivialIntercept/z",  "trivial", {{"intercept", 1}}, {{"scaling", "standardize"}}, {}, {}},
     // 8 QR with intercept and scaling only
-    {"trivialIntercept",  "trivial", {{"intercept", 1}}, {{"scaling", "scale only"}}, {}, {}},
+    {"trivialIntercept/s",  "trivial", {{"intercept", 1}}, {{"scaling", "scale only"}}, {}, {}},
     // 9
     {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"}}, {}, {}},
     // 10
-    {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "standardize"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    {"trivialILbfgs/z",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "standardize"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
     // 11
-    {"trivialILbfgs",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "scale only"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
+    {"trivialILbfgs/s",     "trivial", {{"intercept", 1}}, {{"optim method", "lbfgs"},{"scaling", "scale only"}}, {{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}}, {}},
     // Data and solution generated using R (glmnet_trivial.R)
     // 12
-    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+    {"CoordNoReg+1/z", "trivial",      {{"intercept", 1}, {"print level", 5}, {"optim iteration limit", 1800}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 13
-    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 1800}},
+    {"CoordNoReg+0/z", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 1800}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 14
-    {"CoordL1Reg+1", "triviall1",    {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 150}},
+    {"CoordL1Reg+1/z", "triviall1",    {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 150}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",2.f},{"alpha",1.0f}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 15
-    {"CoordL1Reg+0", "triviall1",    {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 150}},
+    {"CoordL1Reg+0/z", "triviall1",    {{"intercept", 0},{"print level", 4}, {"optim iteration limit", 150}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",2.f},{"alpha",1.0f}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 16
-    {"CoordL2Reg+1", "triviall2", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+1/z", "triviall2", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
                                      },
     // 17
-    {"CoordL2Reg+0", "triviall2", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+0/z", "triviall2", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
                                      },
     // 18
-    {"CoordElastic+1", "trivialelnet",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordElastic+1/z", "trivialelnet",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",5.0f},{"alpha",0.8f}},
                                      {{"lambda",5.0},{"alpha",0.8}}
                                      },
     // 19
-    {"CoordElastic+0", "trivialelnet",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordElastic+0/z", "trivialelnet",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
-                                     {{"lambda",6.0f},{"alpha",0.9f}},
+                                     {{"lambda",6.0f},{"alpha",0.9f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",6.0},{"alpha",0.9}},
                                      },
     // Data and solution generated using R (glmnet_trivial.R) (STANDARDIZED = FALSE, our scaling = "scale only")
     // 20
-    {"CoordNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+    {"CoordNoReg+1/s", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",0.0f},{"alpha",0.5f}},
+                                     {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 21
-    {"CoordNoReg+0", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 10000}},
+    {"CoordNoReg+0/s", "trivial",      {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 10000}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 22
-    {"CoordL1Reg+1", "triviall1unscl",    {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 150}},
+    {"CoordL1Reg+1/s", "triviall1unscl",    {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 150}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",2.f},{"alpha",1.0f}},
+                                     {{"lambda",2.f},{"alpha",1.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 23
-    {"CoordL1Reg+0", "triviall1unscl",    {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordL1Reg+0/s", "triviall1unscl",    {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",2.f},{"alpha",1.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",2.},{"alpha",1.0}}
                                      },
     // 24
-    {"CoordL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+1/s", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",10.0f*6.0f/5.05319f},{"alpha",0.0f}},
+                                     {{"lambda",10.0f*6.0f/5.05319f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",10.0*6.0/5.05319},{"alpha",0.0}}
                                      },
     // 25
-    {"CoordL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordL2Reg+0/s", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",10.0f*6.0f/11.7278f},{"alpha",0.0f}},
+                                     {{"lambda",10.0f*6.0f/11.7278f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",10.0*6.0/11.7278},{"alpha",0.0}}
+//                                   {{"lambda",10.0f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+//                                   {{"lambda",10.0},{"alpha",0.0}}
                                      },
     // 26
-    {"CoordElastic+1", "trivialelnetunscl",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordElastic+1/s", "trivialelnetunscl",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",5.0f},{"alpha",0.8f}},
+                                     {{"lambda",5.0f},{"alpha",0.8f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",5.0},{"alpha",0.8}}
                                      },
     // 27
-    {"CoordElastic+0", "trivialelnetunscl",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
+    {"CoordElastic+0/s", "trivialelnetunscl",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",6.0f},{"alpha",0.9f}},
+                                     {{"lambda",6.0f},{"alpha",0.9f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
                                      {{"lambda",6.0},{"alpha",0.9}}
                                      },
     // Data and solution generated using R (glmnet_driver.R)
     // 28
-    {"NormTab+0", "glmnet-100x20",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab+0/z", "glmnet-100x20",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
-                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     {{"optim convergence tol",1.e-6f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",0.0},{"alpha",1.0}},
                                      },
     // 29
-    {"NormTab+1", "glmnet-100x20",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab+1/z", "glmnet-100x20",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
-                                     {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
+                                     {{"optim convergence tol",1.e-6f},{"lambda",0.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",0.0},{"alpha",1.0}},
                                      },
     // 30
-    {"NormTab-LASSO+0", "glmnet-100x20l1",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-LASSO+0/z", "glmnet-100x20l1",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
+                                     {{"optim convergence tol",1.e-6f},{"lambda",2.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",2.0},{"alpha",1.0}}
                                      },
     // 31
-    {"NormTab-LASSO+1", "glmnet-100x20l1",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-LASSO+1/z", "glmnet-100x20l1",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
+                                     {{"optim convergence tol",1.e-6f},{"lambda",2.0f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",2.0},{"alpha",1.0}}
                                      },
     // 32
-    {"NormTab-Ridge+0", "glmnet-100x20l2",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-Ridge+0/z", "glmnet-100x20l2",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     {{"optim convergence tol",1.e-6f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",22.0},{"alpha",0.0}}
                                      },
     // 33
-    {"NormTab-Ridge+1", "glmnet-100x20l2",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-Ridge+1/z", "glmnet-100x20l2",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0}}
+                                     {{"optim convergence tol",1.e-6f},{"lambda",22.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",22.0},{"alpha",0.0}}
                                      },
     // 34
-    {"NormTab-ElNet+0", "glmnet-100x20en",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-ElNet+0/z", "glmnet-100x20en",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
+                                     {{"optim convergence tol",1.e-6f},{"lambda",2.25f},{"alpha",0.8f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",2.25},{"alpha",0.8}}
                                      },
     // 35
-    {"NormTab-ElNet+1", "glmnet-100x20en",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-ElNet+1/z", "glmnet-100x20en",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
+                                     {{"optim convergence tol",1.e-6f},{"lambda",2.25f},{"alpha",0.8f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",2.25},{"alpha",0.8}}
                                      },
     // 36 - same set of problems 12-19 but scaling="scale only" (standardize=FALSE)
-    {"NormTab+0", "glmnet-100x20unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab+0/s", "glmnet-100x20unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
                                      },
     // 37
-    {"NormTab+1", "glmnet-100x20unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab+1/s", "glmnet-100x20unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
                                      },
     // 38
-    {"NormTab-LASSO+0", "glmnet-100x20l1unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-LASSO+0/s", "glmnet-100x20l1unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
                                      },
     // 39
-    {"NormTab-LASSO+1", "glmnet-100x20l1unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-LASSO+1/s", "glmnet-100x20l1unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",2.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-10},{"lambda",2.0},{"alpha",1.0}}
                                      },
     // 40
-    {"NormTab-Ridge+0", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-Ridge+0/s", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",22.0f*100.0f/10.3712f},{"alpha",0.0f}},
                                      {{"optim convergence tol",1.e-10},{"lambda",22.0*100.0/10.3712},{"alpha",0.0}}
                                      },
     // 41
-    {"NormTab-Ridge+1", "glmnet-100x20l2unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-Ridge+1/s", "glmnet-100x20l2unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500},
+                                     {"optim coord skip min", 4}, {"optim coord skip max", 25}, {"debug", 1}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",22.0f*100.0f/8.71399f},{"alpha",0.0f}},
                                      {{"optim convergence tol",1.e-10},{"lambda",22.0*100.0/8.71399},{"alpha",0.0}}
                                      },
     // 42
-    {"NormTab-ElNet+0", "glmnet-100x20enunscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-ElNet+0/s", "glmnet-100x20enunscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
                                      {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
                                      },
     // 43
-    {"NormTab-ElNet+1", "glmnet-100x20enunscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NormTab-ElNet+1/s", "glmnet-100x20enunscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",2.25f},{"alpha",0.8f}},
                                      {{"optim convergence tol",1.e-10},{"lambda",2.25},{"alpha",0.8}}
@@ -527,21 +530,21 @@ const linregParam linregParamPos[] = {
                                   {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
-    // 77 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
+    // 78 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
     {"NE7x2-l2+0/L/c", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "centering"}},
                                   {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                   {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
-    // 78 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
+    // 79 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
     {"NE7x2-l2+1/L/c", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "centering"}},
                                   {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                   {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
-    // 79 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
+    // 80 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/L/s", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "scale only"}},
@@ -549,7 +552,7 @@ const linregParam linregParamPos[] = {
                                   {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
-    // 80 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
+    // 81 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/L/s", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "scale only"}},
@@ -698,7 +701,7 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 82 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
+    // 83 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/Coord/s", "mtx_7x2",{{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
@@ -711,7 +714,7 @@ const linregParam linregParamPos[] = {
     //
     // A \in m x n: m = nsamples
     // BOA = Assumptions of algo not satisfied
-    // DP = different problem solved where l2 penalty is scaled 
+    // DP = different problem solved where l2 penalty is scaled
     // [A'A + lambda I] x = A'b <- NO INTERCEPT
     // ========================================
     // A is such that for each column, ai, 1/nsamples sum[ai - mean(ai)]^2 = 1
@@ -732,45 +735,45 @@ const linregParam linregParamPos[] = {
     // =============================================
     // test group works for L-BFGS-B, SVD, CHOL, CG, and COORD
     // data: A is such that for each column, ai, 1/nsamples sum[ai - mean(ai)]^2 = 1
-    // 83 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
-    {"NE7x2-l2+0/L/n", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    // 84 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    {"NE7x2P-l2+0/L/n", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "none"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false,
                                      },
-    // 84 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
-    {"NE7x2-l2+1/L/n", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    // 85 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    {"NE7x2P-l2+1/L/n", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "none"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 85 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
-    {"NE7x2-l2+0/L/c", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    // 86 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    {"NE7x2P-l2+0/L/c", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "centering"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 86 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
-    {"NE7x2-l2+1/L/c", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    // 87 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    {"NE7x2P-l2+1/L/c", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "centering"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 87 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    // 88 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
-    {"NE7x2-l2+0/L/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+0/L/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 88 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // 89 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
-    {"NE7x2-l2+1/L/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+1/L/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
@@ -908,34 +911,34 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
-                                     },                                                                  
+                                     },
     // 89 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
-    {"NE7x2-l2+0/Coord/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+0/Coord/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 90 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // 91 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
-    {"NE7x2-l2+1/Coord/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+1/Coord/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 91 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
+    // 92 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
-    {"NE7x2-l2+0/L/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+0/L/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "standardize"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 92 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // 93 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
-    {"NE7x2-l2+1/L/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+1/L/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "standardize"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
@@ -991,15 +994,15 @@ const linregParam linregParamPos[] = {
                                      },
     // 93 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
-    {"NE7x2-l2+0/Coord/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+0/Coord/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 94 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
+    // 95 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
-    {"NE7x2-l2+1/Coord/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+    {"NE7x2P-l2+1/Coord/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
@@ -1009,7 +1012,7 @@ const linregParam linregParamPos[] = {
     // ========================================
     // NO L1 NO L2
     //
-    // NO INTERCEPT 
+    // NO INTERCEPT
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      OK    OK    OK   OK   DP    TODO (either underdetermined QR or fallback to SVD)
     // tall-thin      OK    OK    OK   OK   OK    OK
@@ -1026,7 +1029,7 @@ const linregParam linregParamPos[] = {
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      NA    NA    NA   NA   OK    NA
     // tall-thin      NA    NA    NA   NA   OK    NA
-    // tall-fat       NA    NA    NA   NA   OK    NA 
+    // tall-fat       NA    NA    NA   NA   OK    NA
     //
     // ONLY L2
     // matrix size   lbfgs  svd  chol  cg  coord  qr
@@ -1038,7 +1041,7 @@ const linregParam linregParamPos[] = {
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      NA    NA   NA    NA   OK    NA
     // tall-thin      NA    NA   NA    NA   OK    NA
-    // tall-fat       NA    NA   NA    NA   OK    NA 
+    // tall-fat       NA    NA   NA    NA   OK    NA
     // =============================================
 
     /* NORMAL TESTS */
@@ -1122,7 +1125,7 @@ const linregParam linregParamPos[] = {
     {"TallFat/norm/lbfgs/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     {{"optim convergence tol",1.e-9}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
     {"TallFat/norm/svd/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
@@ -1157,7 +1160,7 @@ const linregParam linregParamPos[] = {
                                      },
     /* INTERCEPT */
     /* SHORT FAT */
-    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
         conditional number which makes the solution unstable and difficult to compare between each other */
     // Bump lambda a bit to get around singular matrix and increase tolerance to 0.025
     {"ShortFat/norm/lbfgs/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
@@ -1236,7 +1239,7 @@ const linregParam linregParamPos[] = {
                                      true, false
                                      },
     /* TALL FAT */
-    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
         conditional number which makes the solution unstable and difficult to compare between each other */
     {"TallFat/norm/lbfgs/1", "tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
                                      {{"optim method", "lbfgs"}},
@@ -1508,14 +1511,14 @@ const linregParam linregParamPos[] = {
     {"TallFat/L2/coord/1", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+                                     {{"optim convergence tol",1.e-10}, {"lambda",5.0},{"alpha",0.0}},
                                      true, false
                                      },
     /* ELASTIC NET TESTS */
     /* OUTPUT HERE IS COMPARED TO GLMNET INSTEAD OF SKLEARN */
     /* NO INTERCEPT */
     /* SHORT FAT */
-    // TODO: Possibly enable this test just for doubles 
+    // TODO: Possibly enable this test just for doubles
     // {"ShortFat/L12/coord/0", "short_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
     //                                  {{"optim method", "coord"}},
     //                                  {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
@@ -1558,6 +1561,13 @@ const linregParam linregParamPos[] = {
                                      {{"optim method", "coord"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",3.0},{"alpha",0.5}},
+                                     true, false
+                                     },
+    // 96 scikit-learn sparse signal example LASSO
+    {"signal-l1+1/Coord/s", "signal-scikit", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
+                                     {{"optim convergence tol",1.e-8f},{"lambda",0.14f},{"alpha",1.0f},{"optim progress factor", 1.0}},
+                                     {{"optim convergence tol",1.e-8},{"lambda",0.14},{"alpha",1.0},{"optim progress factor", 1.0}},
                                      true, false
                                      },
 };

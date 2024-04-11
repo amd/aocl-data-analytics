@@ -272,6 +272,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
             iter++;
             info[da_optim::info_t::info_iter] = static_cast<T>(iter);
             info[da_optim::info_t::info_grad_norm] = dsave[12]; // sbgnrm
+            info[da_optim::info_t::info_time] = dsave[6] + dsave[7] + dsave[8];
 
             if (iter > maxit) {
                 itask = 100;
@@ -289,7 +290,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
             }
 
             if (maxtime > 0) {
-                if (dsave[6] + dsave[7] + dsave[8] > maxtime) {
+                if (info[da_optim::info_t::info_time] > maxtime) {
                     // run out of time
                     itask = 101;
                 }
@@ -299,6 +300,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
                      itask == 21 || // 'FG_START'
                      itask == 20;   // 'FG_LNSRCH
         if (compute_fg) {
+            ++info[da_optim::info_t::info_nevalf];
             if (objfun(n, &x[0], f, usrdata) != 0) {
                 // This solver does not have recovery, stop
                 // FIXME-FUTURE: restore last valid x (and stats?)

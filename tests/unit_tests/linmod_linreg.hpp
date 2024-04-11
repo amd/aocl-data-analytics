@@ -27,6 +27,7 @@
 
 #include "aoclda.h"
 #include "da_cblas.hh"
+#include "linmod_functions.hpp"
 #include "utest_utils.hpp"
 #include "gtest/gtest.h"
 #include <fstream>
@@ -35,31 +36,14 @@
 #include <type_traits>
 using namespace std::literals::string_literals;
 
-template <class T> struct option_t {
-    std::string name{""};
-    T value;
-};
-
-// return precision as a string litteral to set CSV options
-template <typename T> constexpr const char *prec_name();
-template <> constexpr const char *prec_name<float>() { return "single"; }
-template <> constexpr const char *prec_name<double>() { return "double"; }
-
-template <typename T> constexpr const char *type_opt_name();
-template <> constexpr const char *type_opt_name<float>() { return "float"; }
-template <> constexpr const char *type_opt_name<double>() { return "double"; }
-
-// Helper to define precision to which we expect the results match
-template <typename T> T expected_precision(T scale = (T)1.0);
-template <> double expected_precision<double>(double scale) { return scale * 1.0e-3; }
-
-template <> float expected_precision<float>(float scale) { return scale * 0.5f; }
-
 template <typename T>
 void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iopts,
                           std::vector<option_t<std::string>> sopts,
                           std::vector<option_t<T>> ropts, bool check_coeff,
                           bool check_predict, T check_tol_scale) {
+
+    // get template instantiation type (either single or double)
+    const bool single = std::is_same_v<T, float>; // otherwise assume double
 
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
@@ -129,6 +113,43 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     // compute regression
     EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
 
+    // Check that info contains the correct values
+    da_int linfo = 100;
+    T info[100];
+    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
+              da_status_success);
+
+    char cmethod[100];
+    da_int lmethod = 100;
+    EXPECT_EQ(da_options_get(linmod_handle, "optim method", cmethod, &lmethod),
+              da_status_success);
+    std::string method{cmethod};
+    EXPECT_STRNE(method.c_str(), "auto");
+    bool infochk = (method == "lbfgs"s || method == "coord"s || method == "bfgs"s ||
+                    method == "lbfgsb"s);
+
+    if (infochk) { // Assumes that initial iterate is not solution and that problem does not have residual=0 at x=0
+        // info_objective is checked later
+        const T iter = info[da_optim::info_t::info_iter];
+#if defined(WIN32)
+        EXPECT_GE(info[da_optim::info_t::info_time], 0);
+#else
+        EXPECT_GT(info[da_optim::info_t::info_time], 0);
+#endif
+        EXPECT_GT(info[da_optim::info_t::info_nevalf], 0);
+        if (method == "coord"s) {
+            EXPECT_GT(iter, 1);
+            EXPECT_GE(info[da_optim::info_t::info_inorm], 0);
+            EXPECT_GE(info[da_optim::info_t::info_inorm_init], 0);
+            EXPECT_GT(info[da_optim::info_t::info_nevalf], 0);
+            EXPECT_GE(info[da_optim::info_t::info_ncheap], std::max(T(1), iter - T(1)));
+        } else {
+            EXPECT_GT(iter, 0);
+            EXPECT_GT(info[da_optim::info_t::info_nevalf], 0);
+            EXPECT_GE(info[da_optim::info_t::info_grad_norm], 0);
+        }
+    }
+
     ////////////////////
     // Check the results
     ////////////////////
@@ -165,9 +186,6 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
 
     da_datastore_destroy(&csv_store);
 
-    delete[] b;
-    b = nullptr;
-
     // Predict
 
     // Check that solver found the same solution
@@ -201,14 +219,27 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
                   da_status_success);
         std::vector<T> sol(nsamples);
         T *sol_exp{nullptr};
+        T loss{T(-1)};
         EXPECT_EQ(da_read_csv(sol_store, solution_fname.c_str(), &sol_exp, &srows, &scols,
                               nullptr),
                   da_status_success);
-        EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, nsamples, nfeat, A, sol.data()),
+        EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, nsamples, nfeat, A, sol.data(),
+                                           b, &loss),
                   da_status_success);
 
         // Check predictions
         EXPECT_ARR_NEAR(nsamples, sol, sol_exp, expected_precision<T>(check_tol_scale));
+
+        // Check loss with info from solver (objective function)
+        if (infochk) {
+            if (single) {
+                EXPECT_FLOAT_EQ(loss, info[da_optim::info_t::info_objective])
+                    << "Objective function (LOSS) mismatch!";
+            } else {
+                EXPECT_DOUBLE_EQ(loss, info[da_optim::info_t::info_objective])
+                    << "Objective function (LOSS) mismatch!";
+            }
+        }
         free(sol_exp);
         sol_exp = nullptr;
         da_datastore_destroy(&sol_store);
@@ -217,13 +248,11 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
                << solution_fname << " could not be opened.";
     }
 
+    delete[] b;
+    b = nullptr;
+
     delete[] A;
     A = nullptr;
-
-    // Check that info contains the correct values
-    da_int linfo = 100;
-    T info[100];
-    std::vector<T> info_exp(100, T(0));
 
     // Check predictions on a random data (A) not used for training
     // A is the new data set and b is the predicted y of the trained model:
@@ -278,17 +307,6 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, nsamples, nfeat, A, pred.data(),
                                            b, &loss),
                   da_status_success);
-
-        // FIXME info_exp[?] = loss;
-        // info_objective, info_grad_norm, info_iter, info_time, info_nevalf, info_inorm, info_inorm_init, info_ncheap
-        // info_exp.assign({})
-        EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
-                  da_status_success);
-        // TODO compare info
-
-        T alpha, lambda;
-        EXPECT_EQ(da_options_get(linmod_handle, "lambda", &lambda), da_status_success);
-        EXPECT_EQ(da_options_get(linmod_handle, "alpha", &alpha), da_status_success);
 
         delete[] A;
         A = nullptr;

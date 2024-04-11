@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -97,25 +97,29 @@ template <typename T> class da_optimization {
     da_status solve(std::vector<T> &x, void *usrdata);
 
     // Retrieve data from solver
-    da_status get_info(std::vector<T> &info, std::vector<T> &g);
+    da_status get_info(da_int linfo, T *info);
+
+    // Update info
+    da_status set_info(da_int idx, const T value) {
+        if (0 <= idx && idx < info.size()) {
+            info[idx] = value;
+            return da_status_success;
+        }
+        return da_error(err, da_status_internal_error, "info index out-of-bounds?");
+    }
 };
 
-template <typename T>
-da_status da_optimization<T>::get_info(std::vector<T> &g, std::vector<T> &info) {
-    // blind copy-out of elements in da_optimization
-    try {
-        g.resize(0);
-        // copy
-        std::copy(this->g.begin(), this->g.end(), std::back_inserter(g));
-
-        info.resize(0);
-        // copy
-        std::copy(this->info.begin(), this->info.end(), std::back_inserter(info));
-    } catch (...) {
+template <typename T> da_status da_optimization<T>::get_info(da_int linfo, T *info) {
+    // copy-out of elements in da_optimization
+    const da_int size = this->info.size();
+    if (linfo < size) {
         return da_error(this->err, da_status_operation_failed,
-                        "Failed to resize or copy input vectors g or info.");
+                        "Destination array, info, must be at least of size: " +
+                            std::to_string(size) + ".");
     }
-
+    for (da_int i = 0; i < size; ++i) {
+        info[i] = this->info[i];
+    }
     return da_status_success;
 };
 

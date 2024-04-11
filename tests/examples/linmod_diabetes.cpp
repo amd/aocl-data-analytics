@@ -161,7 +161,7 @@ int main() {
         bool oki;
         ok = !ok;
         for (da_int i = 0; i < nx; i++) {
-            oki = std::abs(x[i] - x_ref[i]) <= 5.0e-4;
+            oki = std::abs(x[i] - x_ref[i]) <= 1.0e-3;
             std::cout << " x[" << std::setw(2) << i << "] = " << std::setw(9) << x[i]
                       << " expecting " << std::setw(9) << x_ref[i]
                       << (oki ? " (OK)" : " [WRONG]") << std::endl;
