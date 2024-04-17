@@ -36,7 +36,7 @@ This chapter contains functions for performing unsupervised clustering computati
 *k*-means Clustering
 ============================
 
-*k*-means clustering aims to partition a set of :math:`n_{\mathrm{samples}}` data points :math:`\{x_1, x_2, \dots, x_{n_{\mathrm{samples}}}\}` into :math:`n_{\text{clusters}}` groups. Each group is described by the mean of the data points assigned to it :math:`\{\mu_1, \mu_2, \dots, \mu_{n_{\mathrm{clusters}}}\}`.
+*k*-means clustering aims to partition a set of :math:`n_{\mathrm{samples}}` data points :math:`\{x_1, x_2, \dots, x_{n_{\mathrm{samples}}}\}` into :math:`n_{\mathrm{clusters}}` groups. Each group is described by the mean of the data points assigned to it :math:`\{\mu_1, \mu_2, \dots, \mu_{n_{\mathrm{clusters}}}\}`.
 These means are commonly known as the *cluster centres* or *centroids* and are not generally points from the original data matrix.
 
 Various *k*-means algorithms are available, but each one proceeds by attempting to minimize a quantity known as the *inertia*, or the *within-cluster sum-of-squares*:
