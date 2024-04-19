@@ -107,6 +107,12 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_int lda;
     da_int ldc;
 
+    // Maximum size of data chunks for elkan, lloyd and macqueen algorithms
+    da_int max_chunk_size = KMEANS_CHUNK_SIZE;
+
+    // Leading dimension of worksc1
+    da_int ldworksc1 = max_chunk_size;
+
     // This will point to the function to perform k-means iterations depending on algorithm choice
     void (da_kmeans<T>::*single_iteration)(bool);
 
@@ -140,6 +146,9 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     void lloyd_iteration(bool update_centres);
 
+    void lloyd_iteration_chunk(bool update_centres, da_int chunk_size,
+                               da_int chunk_index);
+
     void elkan_iteration(bool update_centres);
 
     void macqueen_iteration(bool update_centres);
@@ -153,6 +162,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void init_elkan_bounds();
 
     void init_macqueen();
+
+    void init_macqueen_chunk(da_int chunk_size, da_int chunk_index);
 
     void kmeans_plusplus();
 
@@ -408,14 +419,17 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 workcc1.resize(n_clusters * n_clusters, 0.0);
                 worksc1.resize(n_samples * n_clusters, 0.0);
                 works1.resize(n_samples, 0.0);
+                ldworksc1 = n_samples;
                 break;
             case macqueen:
-                worksc1.resize(n_samples * n_clusters, 0.0);
+                worksc1.resize(max_chunk_size * n_clusters, 0.0);
                 workc2.resize(n_clusters, 0.0);
+                ldworksc1 = max_chunk_size;
                 break;
             case lloyd:
-                worksc1.resize(n_samples * n_clusters, 0.0);
+                worksc1.resize(max_chunk_size * n_clusters, 0.0);
                 works1.resize(n_samples, 0.0);
+                ldworksc1 = max_chunk_size;
                 break;
             case hartigan_wong:
                 works1.resize(n_samples, 0.0);

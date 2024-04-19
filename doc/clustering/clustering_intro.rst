@@ -121,7 +121,7 @@ Options
 Note that if the initialization method is set to ``random`` then the initial cluster centres are chosen randomly from the sample points.
 If it is set to ``random partitions`` then the sample points are assigned to a random cluster and the corresponding cluster centres are computed and used as the starting point.
 
-For more information on the available algorithms see :cite:t:`elkan`, :cite:t:`hartigan1979algorithm`, :cite:t:`lloyd1982least` and :cite:t:`macqueen1967some`.
+The standard algorithm for solving *k*-means problems is Lloyd's algorithm. Elkan's algorithm can be faster on naturally clustered datasets but uses considerably more memory. For more information on the available algorithms see :cite:t:`elkan`, :cite:t:`hartigan1979algorithm`, :cite:t:`lloyd1982least` and :cite:t:`macqueen1967some`.
 
 Examples
 ========

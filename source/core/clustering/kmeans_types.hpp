@@ -24,6 +24,8 @@
 #ifndef KMEANS_TYPES_HPP
 #define KMEANS_TYPES_HPP
 
+#define KMEANS_CHUNK_SIZE 256
+
 namespace da_kmeans {
 
 enum kmeans_method { lloyd = 0, elkan, hartigan_wong, macqueen };

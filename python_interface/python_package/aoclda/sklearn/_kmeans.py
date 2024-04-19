@@ -70,6 +70,11 @@ class kmeans(kmeans_sklearn):
         self.aocl = True
         self.seed = random_state
 
+        ## guard against some deprecated options in Scikit-learn
+        algorithm_internal = self.algorithm
+        if algorithm_internal == "full" or algorithm_internal == "auto":
+            algorithm_internal = "lloyd"
+
         if isinstance(random_state, np.random.RandomState):
             raise ValueError("random_state must be an integer or None.")
 
@@ -79,16 +84,16 @@ class kmeans(kmeans_sklearn):
         if isinstance(init, np.ndarray):
             self.kmeans = kmeans_da(n_clusters, initialization_method = "supplied", n_init = 1,
                                     precision="double", max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = self.algorithm)
+                                    algorithm = algorithm_internal)
         elif n_init == "auto":
             self.kmeans = kmeans_da(n_clusters, initialization_method = self.init, n_init = 10,
                                     precision="double", max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = self.algorithm)
+                                    algorithm = algorithm_internal)
         else:
             self.kmeans = kmeans_da(n_clusters, initialization_method = self.init,
                                     n_init = self.n_init, precision="double",
                                     max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = self.algorithm)
+                                    algorithm = algorithm_internal)
 
     def fit(self, X, y=None, sample_weight = None):
         if isinstance(self.init, np.ndarray):

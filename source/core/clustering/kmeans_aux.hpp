@@ -46,7 +46,7 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
 
         for (da_int j = 0; j < n_clusters; j++) {
             // Compute distance between the ith sample and the jth centre only if needed
-            worksc1[i + j * n_samples] = (T)0.0;
+            worksc1[i + j * ldworksc1] = (T)0.0;
             tmp_int = (label < j) ? label + j * n_clusters : label * n_clusters + j;
             if (smallest_dist > workcc1[tmp_int]) {
 
@@ -58,7 +58,7 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
                         (A[i + k * lda] - (*current_cluster_centres)[j + k * n_clusters]);
                 }
                 dist = std::sqrt(dist);
-                worksc1[i + j * n_samples] = dist;
+                worksc1[i + j * ldworksc1] = dist;
 
                 if (dist < smallest_dist) {
                     label = j;
@@ -225,7 +225,7 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
                               : (*previous_labels)[i] * n_clusters + j;
 
                 if (j != (*previous_labels)[i] &&
-                    works1[i] > worksc1[i + j * n_samples] &&
+                    works1[i] > worksc1[i + j * ldworksc1] &&
                     works1[i] > workcc1[tmp_int]) {
 
                     if (tight_bounds == false) {
@@ -238,12 +238,12 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
                             works1[i] += tmp * tmp;
                         }
                         works1[i] = std::sqrt(works1[i]);
-                        worksc1[i + (*previous_labels)[i] * n_samples] = works1[i];
+                        worksc1[i + (*previous_labels)[i] * ldworksc1] = works1[i];
                         tight_bounds = true;
                     }
 
                     // If condition still holds then compute distance to candidate centre and check
-                    if (works1[i] > worksc1[i + j * n_samples] ||
+                    if (works1[i] > worksc1[i + j * ldworksc1] ||
                         works1[i] > workcc1[tmp_int]) {
 
                         T dist = 0.0;
@@ -253,7 +253,7 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
                             dist += tmp * tmp;
                         }
                         dist = std::sqrt(dist);
-                        worksc1[i + j * n_samples] = dist;
+                        worksc1[i + j * ldworksc1] = dist;
                         if (dist < works1[i]) {
                             works1[i] = dist;
                             (*current_labels)[i] = j;
@@ -301,8 +301,8 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
         for (da_int i = 0; i < n_samples; i++) {
             works1[i] += workc1[(*current_labels)[i]];
             for (da_int j = 0; j < n_clusters; j++) {
-                worksc1[i + j * n_samples] =
-                    std::max(worksc1[i + j * n_samples] - workc1[j], (T)0.0);
+                worksc1[i + j * ldworksc1] =
+                    std::max(worksc1[i + j * ldworksc1] - workc1[j], (T)0.0);
             }
         }
     }
@@ -310,32 +310,26 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
     compute_centre_half_distances();
 }
 
-/* Perform single iteration of Lloyd's method */
-template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
+/* Within lloyd iteration update a chunk of the distance matrix*/
+template <typename T>
+void da_kmeans<T>::lloyd_iteration_chunk(bool update_centres, da_int chunk_size,
+                                         da_int chunk_index) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
 
     T *dummy = nullptr;
-    euclidean_distance(n_samples, n_clusters, n_features, A, lda,
+    euclidean_distance(chunk_size, n_clusters, n_features, &A[chunk_index], lda,
                        (*previous_cluster_centres).data(), n_clusters, worksc1.data(),
-                       n_samples, dummy, 0, works1.data(), 2, true, false);
-
-    if (update_centres) {
-        for (da_int j = 0; j < n_clusters; j++) {
-            work_int1[j] = 0;
-        }
-        for (da_int j = 0; j < n_clusters * n_features; j++)
-            (*current_cluster_centres)[j] = (T)0.0;
-    }
+                       ldworksc1, dummy, 0, workc1.data(), 2, true, false);
 
     // Go through each sample (row) in worksc1 and find argmin
-    for (da_int i = 0; i < n_samples; i++) {
+    for (da_int i = chunk_index; i < chunk_index + chunk_size; i++) {
         T smallest_dist = std::numeric_limits<T>::infinity();
         da_int label = 0;
         for (da_int j = 0; j < n_clusters; j++) {
-            if (worksc1[i + n_samples * j] < smallest_dist) {
+            if (worksc1[i - chunk_index + ldworksc1 * j] < smallest_dist) {
                 label = j;
-                smallest_dist = worksc1[i + n_samples * j];
+                smallest_dist = worksc1[i - chunk_index + ldworksc1 * j];
             }
         }
         (*current_labels)[i] = label;
@@ -345,6 +339,33 @@ template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
             for (da_int j = 0; j < n_features; j++) {
                 (*current_cluster_centres)[label + j * n_clusters] += A[i + j * lda];
             }
+        }
+    }
+}
+
+/* Perform single iteration of Lloyd's method */
+template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
+
+    if (update_centres) {
+        for (da_int j = 0; j < n_clusters; j++) {
+            work_int1[j] = 0;
+        }
+        for (da_int j = 0; j < n_clusters * n_features; j++)
+            (*current_cluster_centres)[j] = (T)0.0;
+    }
+
+    // Distance matrix part of the computation needs to be done in chunks since it is memory intensive
+    da_int n_chunks = n_samples / max_chunk_size;
+    da_int chunk_rem = n_samples % max_chunk_size;
+    // Count the remainder in the number of chunks
+    if (chunk_rem > 0)
+        n_chunks += 1;
+
+    for (da_int i = 0; i < n_chunks; i++) {
+        if (i == n_chunks - 1 && chunk_rem > 0) {
+            lloyd_iteration_chunk(update_centres, chunk_rem, n_samples - chunk_rem);
+        } else {
+            lloyd_iteration_chunk(update_centres, max_chunk_size, i * max_chunk_size);
         }
     }
 
@@ -366,28 +387,23 @@ template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
     }
 }
 
-/* Initialization for MacQueen's method */
-template <typename T> void da_kmeans<T>::init_macqueen() {
-    // Form in workc1 the cluster centre norms squared
-    for (da_int j = 0; j < n_clusters; j++) {
-        work_int1[j] = 0; // Initialize to zero for use later
-    }
+/* Chunked part of MacQueen's method initialization */
+template <typename T>
+void da_kmeans<T>::init_macqueen_chunk(da_int chunk_size, da_int chunk_index) {
 
     T *dummy = nullptr;
-    euclidean_distance(n_samples, n_clusters, n_features, A, lda,
-                       (*current_cluster_centres).data(), n_clusters, worksc1.data(),
-                       n_samples, dummy, 0, workc1.data(), 2, true, false);
 
-    for (da_int i = 0; i < n_clusters * n_features; i++)
-        (*current_cluster_centres)[i] = 0;
+    euclidean_distance(chunk_size, n_clusters, n_features, &A[chunk_index], lda,
+                       (*previous_cluster_centres).data(), n_clusters, worksc1.data(),
+                       ldworksc1, dummy, 0, workc1.data(), 2, true, false);
 
-    for (da_int i = 0; i < n_samples; i++) {
+    for (da_int i = chunk_index; i < chunk_index + chunk_size; i++) {
         T smallest_dist = std::numeric_limits<T>::infinity();
         da_int label = 0;
         for (da_int j = 0; j < n_clusters; j++) {
-            if (worksc1[i + n_samples * j] < smallest_dist) {
+            if (worksc1[i - chunk_index + ldworksc1 * j] < smallest_dist) {
                 label = j;
-                smallest_dist = worksc1[i + n_samples * j];
+                smallest_dist = worksc1[i - chunk_index + ldworksc1 * j];
             }
         }
         (*current_labels)[i] = label;
@@ -399,6 +415,35 @@ template <typename T> void da_kmeans<T>::init_macqueen() {
             (*current_cluster_centres)[label + j * n_clusters] += A[i + j * lda];
         }
     }
+}
+
+/* Initialization for MacQueen's method */
+template <typename T> void da_kmeans<T>::init_macqueen() {
+    // Form in workc1 the cluster centre norms squared
+    for (da_int j = 0; j < n_clusters; j++) {
+        work_int1[j] = 0; // Initialize to zero for use later
+    }
+
+    for (da_int i = 0; i < n_clusters * n_features; i++)
+        (*previous_cluster_centres)[i] = (*current_cluster_centres)[i];
+
+    for (da_int i = 0; i < n_clusters * n_features; i++)
+        (*current_cluster_centres)[i] = 0;
+
+    // Distance matrix computation needs to be done in chunks due to memory use
+    da_int n_chunks = n_samples / max_chunk_size;
+    da_int chunk_rem = n_samples % max_chunk_size;
+    // Count the remainder in the number of chunks
+    if (chunk_rem > 0)
+        n_chunks += 1;
+
+    for (da_int i = 0; i < n_chunks; i++) {
+        if (i == n_chunks - 1 && chunk_rem > 0) {
+            init_macqueen_chunk(chunk_rem, n_samples - chunk_rem);
+        } else {
+            init_macqueen_chunk(max_chunk_size, i * max_chunk_size);
+        }
+    }
 
     // Finish updating cluster centres - being careful to guard against zero division in empty clusters
     for (da_int j = 0; j < n_features; j++) {
@@ -407,6 +452,10 @@ template <typename T> void da_kmeans<T>::init_macqueen() {
                 (*current_cluster_centres)[i + j * n_clusters] /= work_int1[i];
         }
     }
+
+    // Rezero previous clusters, which were used temporarily here
+    for (da_int i = 0; i < n_clusters * n_features; i++)
+        (*previous_cluster_centres)[i] = 0;
 }
 
 /* Perform single iteration of MacQueen's method */

@@ -84,7 +84,7 @@ inline da_status register_kmeans_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "convergence tolerance", "Convergence tolerance", 0,
-            da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
+            da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             static_cast<T>(1.0e-4), "10^{-4}"));
         opts.register_opt(oT);
 
