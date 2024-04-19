@@ -122,7 +122,16 @@ class kmeans(kmeans_sklearn):
         raise RuntimeError("This feature is not implemented")
 
     def get_params(self, deep=True):
-        raise RuntimeError("This feature is not implemented")
+        params = {'n_clusters': self.n_clusters,
+                  'max_iter': self.max_iter,
+                  'algorithm': self.algorithm,
+                  'random_state': self.random_state,
+                  'n_init': self.n_init,
+                  'tol': self.tol,
+                  'init': self.init,
+                  'copy_x': self.copy_x,
+                  'verbose': self.verbose}
+        return params
 
     def score(self, X, y=None):
         raise RuntimeError("This feature is not implemented")
