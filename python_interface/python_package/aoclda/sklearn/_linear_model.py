@@ -29,6 +29,7 @@ Patching scikit learn linear models: LinearRegression, Ridge, Lasso
 """
 # pylint: disable = super-init-not-called, too-many-ancestors, missing-function-docstring, useless-return
 
+from numpy import ndarray
 from sklearn.linear_model import LinearRegression as LinearRegression_sklearn
 from sklearn.linear_model import Ridge as Ridge_sklearn
 from sklearn.linear_model import Lasso as Lasso_sklearn
@@ -58,6 +59,9 @@ class LinearRegression(LinearRegression_sklearn):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
         self.lmod.fit(X, y)
+
+    def predict(self, X) -> ndarray:
+        return self.lmod.predict(X)
 
     @property
     def coef_(self):

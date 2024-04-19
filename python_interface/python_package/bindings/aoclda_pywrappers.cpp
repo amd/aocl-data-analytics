@@ -641,6 +641,19 @@ class linmod : public pyda_handle {
         exception_check(status);
     }
 
+    template <typename T> py::array_t<T> predict(py::array_t<T, py::array::f_style> X) {
+
+        da_status status;
+        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        size_t shape[1]{(size_t)n_samples};
+        size_t strides[1]{sizeof(T)};
+        auto predictions = py::array_t<T>(shape, strides);
+        status = da_linmod_evaluate_model(handle, n_samples, n_features, X.mutable_data(),
+                                          predictions.mutable_data());
+        exception_check(status);
+        return predictions;
+    }
+
     auto get_coef() {
         da_status status;
         da_int dim = -1;
@@ -1184,6 +1197,8 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0)
         .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
              py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0)
+        .def("pybind_predict", &linmod::predict<double>, "Evaluate the model on X", "X"_a)
+        .def("pybind_predict", &linmod::predict<float>, "Evaluate the model on X", "X"_a)
         .def("get_coef", &linmod::get_coef);
 
     /**********************************/

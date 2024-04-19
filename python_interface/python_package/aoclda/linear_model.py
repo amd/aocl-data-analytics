@@ -66,6 +66,18 @@ class linmod(pybind_linmod):
         """
         self.pybind_fit(X, y, reg_lambda=reg_lambda, reg_alpha=reg_alpha)
 
+    def predict(self, X):
+        """
+        Evaluate the model on a data set X.
+
+        Args:
+            X (numpy.ndarray): The feature matrix to evaluate the model on. It must have n_features columns.
+
+        Returns:
+            numpy.ndarray of length n_samples: The prediction vector, where n_samples is the number of rows of X.
+        """
+        return self.pybind_predict(X)
+
     @property
     def coef(self):
         """

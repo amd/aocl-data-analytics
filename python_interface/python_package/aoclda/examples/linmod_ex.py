@@ -42,9 +42,16 @@ def linmod_example():
     lmod = linmod("mse", intercept=True)
     lmod.fit(X, y)
 
+    # Extract coefficients
     coef = lmod.coef
     print(f"coefficients: [{coef[0]:.3f}, {coef[1]:.3f}, {coef[2]:.3f}]")
-    print('expected    : [2.350, 0.350, 0.433]')
+    print('expected    : [2.350, 0.350, 0.433]\n')
+
+    # Evaluate model on new data
+    X_test = np.array([[1, 1.1], [2.5, 3], [7, 9]])
+    pred = lmod.predict(X_test)
+    print(f"predictions: [{pred[0]:.3f}, {pred[1]:.3f}, {pred[2]:.3f}]")
+    print('expected   : [3.168  7.358 20.0333]')
 
 
 if __name__ == "__main__":
