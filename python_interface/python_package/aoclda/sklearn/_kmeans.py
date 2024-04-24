@@ -163,11 +163,11 @@ class kmeans(kmeans_sklearn):
 
     @property
     def inertia_(self):
-        return self.kmeans.get_inertia()[0]
+        return self.kmeans.get_inertia().item(0)
 
     @property
     def n_iter_(self):
-        return self.kmeans.get_n_iter()[0]
+        return self.kmeans.get_n_iter().item(0)
 
     @property
     def n_features_in_(self):
