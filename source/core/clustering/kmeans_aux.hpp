@@ -703,14 +703,6 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
                 T current_cost = 0.0;
                 da_int current_candidate = work_int2[trials];
 
-                for (da_int i = 0; i < n_features; i++) {
-                    for (da_int j = 0; j < n_clusters; j++) {
-                        // Also store extended copy in previous cluster centres for use in dgemm
-                        (*previous_cluster_centres)[i * n_clusters + j] =
-                            A[i * lda + current_candidate];
-                    }
-                }
-
                 // Compute the distance from each point to the candidate centre and store in works4
 
                 euclidean_distance(n_samples, 1, n_features, A, lda,
