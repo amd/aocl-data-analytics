@@ -136,7 +136,7 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
         break;
     }
 
-    for (current_n_iter = 1; current_n_iter <= max_iter; current_n_iter++) {
+    for (current_n_iter = 0; current_n_iter < max_iter; current_n_iter++) {
         // Start with the 'old' centres stored in previous_cluster_centres
         // Note using swap quite a lot here, but it's only swapping pointers
         std::swap(previous_cluster_centres, current_cluster_centres);

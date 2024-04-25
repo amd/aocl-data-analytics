@@ -67,9 +67,10 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
  * \brief Pass a matrix of initial cluster centres to the \ref da_handle object in preparation for <i>k</i>-means clustering.
  *
  * The data itself is not copied; a pointer to the data matrix is stored instead.
- * The matrix of initial clusters is not required if *k*-means++ or random initialization methods are used (see :ref:`options <kmeans_options>`).
  *
  * @rst
+ * The matrix of initial clusters is not required if *k*-means++ or random initialization methods are used (see :ref:`options <kmeans_options>`).
+ *
  * Note, you must call :ref:`da_kmeans_set_data_? <da_kmeans_set_data>` prior to this function.
  * @endrst
  *
@@ -78,7 +79,7 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
  * \param[in] ldc the leading dimension of the data matrix. Constraint: \p ldc @f$\ge@f$ \p n_clusters so make sure you set \p n_clusters using \ref da_options_set_int first.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
- * - \ref da_status_no_data - the function :ref:`da_kmeans_set_data_? <da_kmeans_set_data>` has not been called.
+ * - \ref da_status_no_data - the function \ref da_kmeans_set_data_s "da_kmeans_set_data_?"` has not been called.
  * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or \p C is null.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.

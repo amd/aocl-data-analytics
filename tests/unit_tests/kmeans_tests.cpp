@@ -155,13 +155,13 @@ TYPED_TEST(KMeansTest, MultipleCalls) {
     Get3ClustersBaseData(param2);
     params.push_back(param2);
     param2.algorithm = "lloyd";
-    param2.expected_rinfo[3] = 2.0;
-    params.push_back(param2);
-    param2.algorithm = "macqueen";
     param2.expected_rinfo[3] = 1.0;
     params.push_back(param2);
+    param2.algorithm = "macqueen";
+    param2.expected_rinfo[3] = 0.0;
+    params.push_back(param2);
     param2.algorithm = "elkan";
-    param2.expected_rinfo[3] = 2.0;
+    param2.expected_rinfo[3] = 1.0;
     params.push_back(param2);
 
     da_int count = 0;

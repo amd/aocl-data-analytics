@@ -117,7 +117,7 @@ template <typename T> void Get1by1BaseData(KMeansParamType<T> &param) {
     param.initialization_method = "k-means++";
     param.algorithm = "elkan";
 
-    std::vector<double> expected_rinfo{1.0, 1.0, 1.0, 1.0, 0.0};
+    std::vector<double> expected_rinfo{1.0, 1.0, 1.0, 0.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> expected_centres{2.1};
     param.expected_centres = convert_vector<double, T>(expected_centres);
@@ -371,12 +371,12 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     // Three cluster tests
     params.push_back(param);
     param.algorithm = "lloyd";
-    param.expected_rinfo[3] = (T)2.0;
-    params.push_back(param);
-    param.algorithm = "macqueen";
     param.expected_rinfo[3] = (T)1.0;
     params.push_back(param);
-    param.expected_rinfo[3] = (T)2.0;
+    param.algorithm = "macqueen";
+    param.expected_rinfo[3] = (T)0.0;
+    params.push_back(param);
+    param.expected_rinfo[3] = (T)1.0;
     param.algorithm = "elkan";
     params.push_back(param);
     // Tests with some inherent randomness
@@ -396,7 +396,7 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     params.push_back(param);
     param.initialization_method = "k-means++";
     param.algorithm = "lloyd";
-    param.expected_rinfo[3] = (T)2.0;
+    param.expected_rinfo[3] = (T)1.0;
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "macqueen";
@@ -457,7 +457,7 @@ template <typename T> void GetZeroData(std::vector<KMeansParamType<T>> &params) 
     param.algorithm = "elkan";
     param.initialization_method = "k-means++";
     param.n_init = 3;
-    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 301.0, 0.0};
+    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 300.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     param.expected_status = da_status_maxit;
     params.push_back(param);
@@ -485,14 +485,14 @@ template <typename T> void GetSubarrayData(std::vector<KMeansParamType<T>> &para
     GetSubarrayBaseData(param);
     // Three cluster tests, data stored in a subarray
     params.push_back(param);
-    param.expected_rinfo[3] = (T)2.0;
+    param.expected_rinfo[3] = (T)1.0;
     param.algorithm = "lloyd";
     params.push_back(param);
     param.algorithm = "macqueen";
-    param.expected_rinfo[3] = (T)1.0;
+    param.expected_rinfo[3] = (T)0.0;
     params.push_back(param);
     param.algorithm = "elkan";
-    param.expected_rinfo[3] = (T)2.0;
+    param.expected_rinfo[3] = (T)1.0;
     params.push_back(param);
     param.max_iter = 300;
     // Tests with some inherent randomness

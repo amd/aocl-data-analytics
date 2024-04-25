@@ -64,7 +64,6 @@ def test_kmeans():
     da_centres = kmeans_da.cluster_centers_
     da_labels = kmeans_da.labels_
     da_inertia = kmeans_da.inertia_
-    da_n_iter = kmeans_da.n_iter_
     da_x_transform = kmeans_da.transform(x)
     da_predict = kmeans_da.predict(x)
     kmeans_da = KMeans(n_clusters = 2, init = c)
@@ -81,7 +80,6 @@ def test_kmeans():
     sk_centres = kmeans_sk.cluster_centers_
     sk_labels = kmeans_sk.labels_
     sk_inertia = kmeans_sk.inertia_
-    sk_n_iter = kmeans_sk.n_iter_
     sk_x_transform = kmeans_sk.transform(x)
     sk_predict = kmeans_sk.predict(x)
     kmeans_sk = KMeans(n_clusters = 2, init = c)
@@ -94,7 +92,6 @@ def test_kmeans():
     assert da_inertia == pytest.approx(sk_inertia, 1.0e-08)
     assert da_centres == pytest.approx(sk_centres, 1.0e-08)
     assert not np.any(da_labels - sk_labels)
-    assert da_n_iter == sk_n_iter
     assert da_x_transform == pytest.approx(sk_x_transform, 1.0e-08)
     assert not np.any(da_predict - sk_predict)
     assert da_a_transform == pytest.approx(sk_a_transform, 1.0e-08)

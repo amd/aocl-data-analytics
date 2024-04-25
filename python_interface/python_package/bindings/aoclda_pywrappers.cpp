@@ -902,6 +902,8 @@ class kmeans : public pyda_handle {
         exception_check(status);
         status = da_options_set_int(handle, "seed", seed);
         exception_check(status);
+        status = da_options_set_int(handle, "n_init", n_init);
+        exception_check(status);
     }
     ~kmeans() { da_handle_destroy(&handle); }
 
