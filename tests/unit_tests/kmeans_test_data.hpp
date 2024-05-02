@@ -221,7 +221,7 @@ template <typename T> void Get3ClustersBaseData(KMeansParamType<T> &param) {
 
     param.n_clusters = 3;
     param.n_init = 1;
-    param.max_iter = 30;
+    param.max_iter = 50;
     param.seed = 78;
     param.convergence_tolerance = (T)1.0e-4;
     param.initialization_method = "supplied";
@@ -400,7 +400,6 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "macqueen";
-    ;
     param.max_iter = 300;
     params.push_back(param);
     param.n_clusters = 10;
@@ -446,6 +445,7 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.max_allowed_inertia = (T)0.11;
     param.initialization_method = "random partitions";
     param.algorithm = "macqueen";
+    param.max_iter = 300;
     params.push_back(param);
 }
 

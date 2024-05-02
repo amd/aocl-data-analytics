@@ -40,6 +40,7 @@
 #include "lapack_templates.hpp"
 #include "options.hpp"
 #include <iostream>
+#include <omp.h>
 #include <random>
 #include <string>
 
@@ -107,8 +108,20 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_int lda;
     da_int ldc;
 
+    /*
+    double t_kmeanspp = 0.0;
+    double t_iteration = 0.0;
+    double t_euclidean_it = 0.0;
+    double t_euclidean_kmeanspp = 0.0;
+    double t_lloyd_chunk = 0.0;
+    double t_inertia = 0.0;
+    double t_compute = 0.0;
+    */
+
     // Maximum size of data chunks for elkan, lloyd and macqueen algorithms
     da_int max_chunk_size = KMEANS_CHUNK_SIZE;
+    da_int n_chunks;
+    da_int chunk_rem;
 
     // Leading dimension of worksc1
     da_int ldworksc1 = max_chunk_size;
@@ -166,6 +179,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void init_macqueen_chunk(da_int chunk_size, da_int chunk_index);
 
     void kmeans_plusplus();
+
+    void get_chunking_scheme();
 
   public:
     da_options::OptionRegistry opts;
@@ -334,7 +349,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_status compute() {
 
         da_status status = da_status_success;
-
+        double tt0 = omp_get_wtime();
         if (initdone == false)
             return da_error(err, da_status_no_data,
                             "No data has been passed to the handle. Please call "
@@ -469,7 +484,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         best_inertia = std::numeric_limits<T>::infinity();
 
         // Run k-means algorithm n_init times and select the run with the lowest inertia
-
+        double tt2 = omp_get_wtime();
         for (da_int run = 0; run < n_init; run++) {
 
             // Initialize the centres if needed
@@ -490,6 +505,20 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         }
 
         iscomputed = true;
+
+        /*
+        double tt1 = omp_get_wtime();
+        t_compute = tt1 - tt0;
+        std::cout << "t_kmeans++: " << t_kmeanspp << std::endl;
+        std::cout << "t_euclidean_kmeanspp: " << t_euclidean_kmeanspp << std::endl;
+        std::cout << "t_iteration: " << t_iteration << std::endl;
+        std::cout << "t_lloyd_chunk: " << t_lloyd_chunk << std::endl;
+        std::cout << "t_euclidean_it: " << t_euclidean_it << std::endl;
+        std::cout << "t_inertia: " << t_inertia << std::endl;
+        std::cout << "t_alloc (first part of compute): " << tt2 - tt0 << std::endl;
+        std::cout << "t_runs (second part of compute): " << tt1 - tt2 << std::endl;
+        std::cout << "t_compute whole compute function(): " << t_compute << std::endl;
+        */
 
         if (warn_maxit_reached)
             return da_warn(err, da_status_maxit,

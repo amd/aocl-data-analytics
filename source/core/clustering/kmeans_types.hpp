@@ -24,7 +24,7 @@
 #ifndef KMEANS_TYPES_HPP
 #define KMEANS_TYPES_HPP
 
-#define KMEANS_CHUNK_SIZE 256
+#define KMEANS_CHUNK_SIZE 128
 
 namespace da_kmeans {
 
