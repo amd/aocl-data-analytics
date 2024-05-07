@@ -36,16 +36,16 @@ template <typename T> struct cg_data {
     aoclsparse_itsol_rci_job ircomm;
     T *u, *v, rinfo[100], tol;
     T beta = T(0.0), alpha = T(1.0);
-    da_int nsamples, nfeat, min_order;
-    std::vector<T> coef, A, B;
+    da_int nsamples, ncoef, min_order, maxit;
+    std::vector<T> coef, A, b;
 
     // Constructors
-    cg_data(da_int nsamples, da_int nfeat, T tol)
-        : nsamples(nsamples), nfeat(nfeat), tol(tol) {
-        min_order = std::min(nsamples, nfeat);
-        coef.resize(min_order);          // Initilise starting point to be vector of 0s
+    cg_data(da_int nsamples, da_int ncoef, T tol, da_int maxit)
+        : nsamples(nsamples), ncoef(ncoef), tol(tol), maxit(maxit) {
+        min_order = std::min(nsamples, ncoef);
+        coef.resize(min_order, 0);       // Initilise starting point to be vector of 0s
         A.resize(min_order * min_order); // Initilise array for X'X or XX'
-        B.resize(min_order);             // Initilise array for X'y
+        b.resize(min_order);             // Initilise array for X'y
         // Create handle
         handle = nullptr;
         if (aoclsparse_itsol_init<T>(&handle) != aoclsparse_status_success) {
@@ -53,13 +53,19 @@ template <typename T> struct cg_data {
         }
         // Set handle options
         // TODO: Handle absolute tolerance as a function of relative tolerance
+        // The following workaround with sprintf is due to the fact that std::to_string()
+        // truncates small numbers to 0.
         char tolerance[16];
         sprintf(tolerance, "%9.2e", tol);
+        char max_iteration[16];
+        sprintf(max_iteration, "%d", maxit);
         if (aoclsparse_itsol_option_set(handle, "CG abs tolerance", tolerance) !=
                 aoclsparse_status_success ||
             aoclsparse_itsol_option_set(handle, "CG rel tolerance", tolerance) !=
                 aoclsparse_status_success ||
             aoclsparse_itsol_option_set(handle, "CG preconditioner", "none") !=
+                aoclsparse_status_success ||
+            aoclsparse_itsol_option_set(handle, "CG iteration limit", max_iteration) !=
                 aoclsparse_status_success)
             throw std::runtime_error("Internal error with CG solver");
     };
@@ -67,7 +73,7 @@ template <typename T> struct cg_data {
 
     da_status compute_cg() {
         aoclsparse_status status;
-        status = aoclsparse_itsol_rci_input(handle, min_order, B.data());
+        status = aoclsparse_itsol_rci_input(handle, min_order, b.data());
         if (status != aoclsparse_status_success) {
             if (status == aoclsparse_status_memory_error) {
                 return da_status_memory_error;

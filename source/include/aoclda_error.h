@@ -60,6 +60,7 @@ typedef enum da_status_ {
     da_status_no_data,          ///< No data was found
     da_status_maxit,            ///< Iteration limit reached without converging
     da_status_maxtime,          ///< Time limit reached without converging
+    da_status_numerical_difficulties, ///< Numerical difficulties
 
     // CSV errors 100-199
     da_status_file_reading_error = 100, ///< An error occurred when reading a CSV file

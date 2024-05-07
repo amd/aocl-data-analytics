@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,33 +31,19 @@ namespace da_linmod {
 // data for QR factorization used in standard linear least squares
 template <typename T> struct qr_data {
     // X needs to be copied as lapack's dgeqr modifies the matrix
-    std::vector<T> X, y, tau, work;
-    da_int lwork = 0;
+    std::vector<T> tau, work;
+    da_int lwork = 0, n_col, n_row;
 
     // Constructors
-    qr_data(da_int nsamples, da_int nfeat, const T *Xi, const T *yi, bool intercept,
-            da_int ncoef) {
-
-        // Copy X and y, starting with the first nfeat columns of X
-        X.resize(nsamples * ncoef);
-        for (da_int j = 0; j < nfeat; j++) {
-            for (da_int i = 0; i < nsamples; i++) {
-                X[j * nsamples + i] = Xi[j * nsamples + i];
-            }
-        }
-        y.resize(nsamples);
-        for (da_int i = 0; i < nsamples; i++)
-            y[i] = yi[i];
-
-        // add a column of 1 to X if intercept is required
-        if (intercept) {
-            for (da_int i = 0; i < nsamples; i++)
-                X[nfeat * nsamples + i] = 1.0;
-        }
-
+    qr_data(da_int nsamples, da_int nfeat) {
         // work arrays for the LAPACK QR factorization
-        tau.resize(std::min(nsamples, ncoef));
-        lwork = ncoef;
+        /* Naming convention of n_col and n_row comes from the fact that in QR we are always
+            dealing with tall matrix (if we don't, we transpose it so that we do). So it's more
+            natural to call it this way rather than min_order/max_order */
+        n_col = std::min(nsamples, nfeat);
+        n_row = std::max(nsamples, nfeat);
+        tau.resize(n_col);
+        lwork = n_col;
         work.resize(lwork);
     };
 };

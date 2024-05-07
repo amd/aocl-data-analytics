@@ -43,10 +43,60 @@ class linmod(pybind_linmod):
         intercept (bool, optional): Controls whether to add an intercept variable to the model.
             Default=False.
 
+        solver (str, optional): Which solver to use in computation of coefficients. It can \
+            take values 'auto', 'svd', 'cholesky', 'sparse_cg', 'qr', 'coord', 'lbfgs'. \
+            Some solvers are not suitable for some regularisation types.
+
+            - ``'auto'`` chooses the best solver based on regression type and data.
+
+            - ``'svd'`` works with normal and Ridge regression. Most robust solver at cost of \
+                efficiency.
+            
+            - ``'cholesky'`` works with normal and Ridge regression. Will return error when \
+                singular matrix is encountered.
+
+            - ``'sparse_cg'`` works with normal and Ridge regression. Might need to set smaller \
+                `tol` when badly conditioned matrix is encountered.
+
+            - ``'qr'`` works with normal linear regression only. Will return error when undertermined \
+                system is encountered.
+
+            - ``'coord'`` works with all regression types. Requires data to have variance of 1 \
+                column wise (can be achievied with `scaling` option set to `scale only`). \
+                In case of normal linear regression and undertermined system \
+                will converge to solution that is not necessarily a minimum norm solution.
+
+            - ``'lbfgs'`` works with normal and Ridge regression. In case of normal linear \
+                regression and undertermined system will converge to solution that is \
+                not necessarily a minimum norm solution.
+
+        scaling (str, optional): What type of preprocessing you want to appply on the dataset. \
+            Available options are: 'none', 'centering', 'scale_only', 'standardize'.
+
+        max_iter (int, optional): Maximum number of iterations. Applies only to iterative \
+            solvers: 'sparse_cg', 'coord', 'lbfgs'. Default value depends on a solver. For \
+            'sparse_cg' it is 500, for 'lbfgs' and 'coord' it is 10000.
+
         precision (str, optional): Whether to compute the linear model in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
     """
+
+    # This is done to change the order of parameters, in pybind usage of std::optional for max_iter
+    # made it necessary to put it in the front, but more natural position is near the end.
+    def __init__(self,
+                 mod,
+                 intercept=False,
+                 solver='auto',
+                 scaling='auto',
+                 max_iter=None,
+                 precision='double'):
+        super().__init__(mod=mod,
+                         max_iter=max_iter,
+                         intercept=intercept,
+                         solver=solver,
+                         scaling=scaling,
+                         precision=precision)
 
     def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0, tol=0.0001):
         """
@@ -63,10 +113,15 @@ class linmod(pybind_linmod):
 
             reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` term in the
                 regularization.
-
-            tol (float, optional): Tolerance of convergence for iterative solvers.
+            
+            tol (float, optional): Convergence tolerance for iterative solvers. Applies only \
+                to iterative solvers: 'sparse_cg', 'coord', 'lbfgs'.
         """
-        self.pybind_fit(X, y, reg_lambda=reg_lambda, reg_alpha=reg_alpha, tol=tol)
+        self.pybind_fit(X,
+                        y,
+                        reg_lambda=reg_lambda,
+                        reg_alpha=reg_alpha,
+                        tol=tol)
 
     def predict(self, X):
         """

@@ -234,20 +234,133 @@ TEST(linmod, incompatibleOptions) {
     da_handle handle_d = nullptr;
 
     EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_define_features_d(handle_d, n, m, Ad, bd), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "QR"), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
     EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_logistic),
               da_status_success);
 
-    // QR factorization should not be compatible with logistic regression
+    // Solvers that should not be compatible with logistic regression
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "QR"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "svd"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "coord"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "sparse_cg"),
+              da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
-    // lbfgs  with 1-norm term
+    // lbfgs  with logistic 1-norm term
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "lbfgsb"),
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", 1.0), da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "alpha", 1.0), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    // solvers incompatible with L1 linear regression
+    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "QR"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "svd"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "lbfgs"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "sparse_cg"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    // solvers incompatible with Elastic Net linear regression
+    EXPECT_EQ(da_options_set_real_d(handle_d, "alpha", 0.5), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "QR"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "svd"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "lbfgs"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "sparse_cg"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    // SVD intercept without scaling
+    EXPECT_EQ(da_options_set_real_d(handle_d, "alpha", 0.0), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "none"), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "svd"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    // QR solver with regularisation
+    EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", 1.0), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    da_handle_destroy(&handle_d);
+}
+
+TEST(linmod, wideMatrixProblems) {
+    // problem data
+    da_int m = 2, n = 5;
+    double Ad[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    double bd[2] = {1, 0};
+    da_handle handle_d = nullptr;
+
+    EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
+
+    // Can't fit QR solver on underdetermined problem with intercept
+    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "auto"), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    da_handle_destroy(&handle_d);
+}
+
+TEST(linmod, singularTallMatrix) {
+    // problem data
+    da_int m = 5, n = 2;
+    double Ad[10] = {1, 1, 1, 4, 5, 1, 1, 1, 4, 5};
+    double bd[5] = {1, 1, 0, 1, 0};
+    da_handle handle_d = nullptr;
+
+    EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
+
+    // Cholesky factorization should not be able to compute on singular matrix
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_numerical_difficulties);
+
+    da_handle_destroy(&handle_d);
+}
+
+TEST(linmod, singularWideMatrix) {
+    // problem data
+    da_int m = 2, n = 5;
+    double Ad[10] = {1, 2, 2, 4, 3, 6, 4, 8, 5, 10};
+    double bd[2] = {1, 0};
+    da_handle handle_d = nullptr;
+
+    EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
+
+    // Cholesky factorization should not be able to compute on singular matrix
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_numerical_difficulties);
 
     da_handle_destroy(&handle_d);
 }

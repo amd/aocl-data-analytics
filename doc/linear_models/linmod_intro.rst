@@ -143,11 +143,37 @@ Different methods are available to compute the models. The method is chosen auto
 
 * QR: the standard MSE linear regression model can be computed using the QR factorization of the data matrix if no regularization term is required.
 
-.. math::
+  .. math::
 
    X = QR,
 
-where :math:`Q` is a :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\mathrm{features}}\times n_{\mathrm{features}}` triangular matrix.
+  where :math:`Q` is a :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\mathrm{features}}\times n_{\mathrm{features}}` triangular matrix.
+
+* SVD: Singular value decomposition can be used to compute standard MSE and Ridge regression models.
+
+  .. math::
+
+   X = UDV^T,
+
+  where :math:`U` is a square matrix of size :math:`n_{\mathrm{samples}}` with orthogonal columns, :math:`D` is a :math:`n_{\mathrm{features}}\times n_{\mathrm{features}}`
+  diagonal matrix whose elements are non-negative singular values and :math:`V^T` is a transpose of a :math:`n_{\mathrm{features}} \times n_{\mathrm{features}}` orthogonal matrix.
+
+* Cholesky: Cholesky decomposition can be used for normal and Ridge regression when data is full-rank. It factorizes 
+  the symmetric positive-definite normal equations matrix :math:`X^TX` into two triangular matrices. In linear models it can be used to find coefficients expressed as:
+
+  .. math::
+
+   \beta = (X^TX+\lambda)^{-1}X^Ty,
+  
+  where after left multiplying by an expression inside of the inverse, we end up with system of linear equations in the form :math:`Ax=B`. Left hand side can be factorised using Cholesky
+  as follows:
+
+  .. math::
+
+   X^TX+\lambda = LL^T,
+
+  where :math:`L` is a lower triangular matrix with real and positive diagonal entries. Such matrix is then used to find a solution to a system of linear equations.
+
 
 **Iterative solvers**
 
@@ -155,6 +181,9 @@ where :math:`Q` is a :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` m
 
 * Coordinate descent: a solver aimed at minimizing nonlinear functions.
   It is particularly suitable for linear models with an :math:`\ell_1` regularization term and even Elastic Nets (:cite:t:`coord_elastic`).
+
+* Conjugate gradient: a solver aimed at finding a solution to a system of linear equations.
+  It can be used to compute linear regression with or without :math:`\ell_2` regularization.
 
 
 Typical workflow for linear models

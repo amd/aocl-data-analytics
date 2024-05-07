@@ -496,7 +496,7 @@ const linregParam linregParamPos[] = {
     // [A'A + lambda diag(I,0)] x = A'b <- INTERCEPT NO ASSUMPTIONS ON columns of A
     // ============================================================================
     // scaling type   lbfgs  svd  chol  cg  coord  lambda-fix
-    // none             OK   DP    DP   DP   BOA   same
+    // none             OK   X     DP   DP   BOA   same
     // centering        OK   OK    OK   OK   BOA   same
     // scale only       OK   OK    OK   OK   OK    lambda/m * stdev(b)
     // standardize      DP   DP    DP   DP   DP    *  xs[i] /= 1 so different problem solved
@@ -504,7 +504,7 @@ const linregParam linregParamPos[] = {
     // [A'A + lambda I] x = A'b <- NO INTERCEPT NO ASSUMPTIONS ON columns of A
     // =======================================================================
     // scaling type   lbfgs  svd  chol  cg  coord  lambda-fix
-    // none             OK   OK    OK   OK   BOA   same
+    // none             OK   X     OK   OK   BOA   same
     // centering        OK   OK    OK   OK   BOA   same
     // scale only       OK   OK    OK   OK   OK    lambda/m * norm2(b)/sqrt(m)
     // standardize      DP   DP    DP   DP   DP    *  xs[i] /= 1 so different problem solved
@@ -512,6 +512,7 @@ const linregParam linregParamPos[] = {
     // test only for none/centering and "scale only", standardize would solve a different problem
     // test group works for L-BFGS-B, SVD, CHOL, CG. For COORD (only "scale only" is valid, otherwise
     // assumptions not met, so not testing)
+    // none scaling enforces no copying which is required for svd
     // 76 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
     {"NE7x2-l2+0/L/n", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "none"}},
@@ -609,13 +610,12 @@ const linregParam linregParamPos[] = {
                                   true, false,
                                   },
     // 77 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
-    // Can't solve with intercept when scaling==none
-    // {"NE7x2-l2+1/chol/n", "mtx_7x2", {{"intercept", 1},{"print level", 1}},
-    //                               {{"optim method", "cholesky"},{"scaling", "none"}},
-    //                               {{"lambda",1.5f},{"alpha",0.0f}},
-    //                               {{"lambda",1.5},{"alpha",0.0}},
-    //                               true, false
-    //                               },
+    {"NE7x2-l2+1/chol/n", "mtx_7x2", {{"intercept", 1},{"print level", 1}},
+                                  {{"optim method", "cholesky"},{"scaling", "none"}},
+                                  {{"lambda",1.5f},{"alpha",0.0f}},
+                                  {{"lambda",1.5},{"alpha",0.0}},
+                                  true, false
+                                  },
     // 77 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
     {"NE7x2-l2+0/chol/c", "mtx_7x2", {{"intercept", 0},{"print level", 1}},
                                   {{"optim method", "cholesky"},{"scaling", "centering"}},
@@ -654,13 +654,12 @@ const linregParam linregParamPos[] = {
                                   true, false,
                                   },
     // 77 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
-    // Can't solve with intercept when scaling==none
-    // {"NE7x2-l2+1/cg/n", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
-    //                               {{"optim method", "sparse_cg"},{"scaling", "none"}},
-    //                               {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-    //                               {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
-    //                               true, false
-    //                               },
+    {"NE7x2-l2+1/cg/n", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                  {{"optim method", "sparse_cg"},{"scaling", "none"}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  true, false
+                                  },
     // 77 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
     {"NE7x2-l2+0/cg/c", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "sparse_cg"},{"scaling", "centering"}},
@@ -830,13 +829,12 @@ const linregParam linregParamPos[] = {
                                      true, false,
                                      },
     // 84 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
-    // Can't solve with intercept when scaling==none
-    // {"NE7x2-l2+1/chol/n", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1}},
-    //                                  {{"optim method", "cholesky"},{"scaling", "none"}},
-    //                                  {{"lambda",1.5f},{"alpha",0.0f}},
-    //                                  {{"lambda",1.5},{"alpha",0.0}},
-    //                                  true, false
-    //                                  },
+    {"NE7x2-l2+1/chol/n", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1}},
+                                     {{"optim method", "cholesky"},{"scaling", "none"}},
+                                     {{"lambda",1.5f},{"alpha",0.0f}},
+                                     {{"lambda",1.5},{"alpha",0.0}},
+                                     true, false
+                                     },
     // 85 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     {"NE7x2-l2+0/chol/c", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1}},
                                      {{"optim method", "cholesky"},{"scaling", "centering"}},
@@ -875,13 +873,12 @@ const linregParam linregParamPos[] = {
                                      true, false,
                                      },
     // 84 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
-    // Can't solve with intercept when scaling==none
-    // {"NE7x2-l2+1/cg/n", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
-    //                                  {{"optim method", "sparse_cg"},{"scaling", "none"}},
-    //                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-    //                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
-    //                                  true, false
-    //                                  },
+    {"NE7x2-l2+1/cg/n", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "sparse_cg"},{"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
     // 85 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     {"NE7x2-l2+0/cg/c", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "sparse_cg"},{"scaling", "centering"}},
@@ -1078,12 +1075,12 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-11}, {"lambda",0.0001},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false, 2.1
                                      },
-    // {"ShortFat/norm/qr/0", "short_fat", {{"intercept", 0}, {"print level", 1}},
-    //                                  {{"optim method", "qr"}},
-    //                                  {{"lambda",0.0f},{"alpha",0.0f}},
-    //                                  {{"lambda",0.0},{"alpha",0.0}},
-    //                                  true, false
-    //                                  },
+    {"ShortFat/norm/qr/0", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
     /* TALL THIN */
     {"TallThin/norm/lbfgs/0", "tall_thin", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}},
@@ -1165,9 +1162,9 @@ const linregParam linregParamPos[] = {
     // Bump lambda a bit to get around singular matrix and increase tolerance to 0.025
     {"ShortFat/norm/lbfgs/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.001f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",0.001},{"alpha",0.0}, {"optim progress factor",10.0}},
-                                     true, false, 25
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
                                      },
     {"ShortFat/norm/svd/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "svd"}},
@@ -1241,11 +1238,10 @@ const linregParam linregParamPos[] = {
     /* TALL FAT */
     /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
         conditional number which makes the solution unstable and difficult to compare between each other */
-    // Add tiny bit of lambda
     {"TallFat/norm/lbfgs/1", "tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
                                      {{"optim method", "lbfgs"}},
-                                     {{"optim convergence tol",1.e-9f}, {"lambda",0.15f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-13}, {"lambda",0.0001},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     {{"optim convergence tol",1.e-9f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
     {"TallFat/norm/svd/1", "tall_fat", {{"intercept", 1}, {"print level", 1}},
@@ -1258,7 +1254,7 @@ const linregParam linregParamPos[] = {
     {"TallFat/norm/chol/1", "tall_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "cholesky"}},
                                      {{"lambda",0.0001f},{"alpha",0.0f}},
-                                     {{"lambda",0.00001},{"alpha",0.0}},
+                                     {{"lambda",0.0001},{"alpha",0.0}},
                                      true, false
                                      },
     // Add tiny bit of lambda

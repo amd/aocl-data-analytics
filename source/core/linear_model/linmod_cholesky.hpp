@@ -30,16 +30,16 @@
 namespace da_linmod {
 // Data for cholesky solver in linear regression
 template <typename T> struct cholesky_data {
-    std::vector<T> A, B;
+    std::vector<T> A, b;
     da_int min_order;
     T alpha = 1.0, beta = 0.0;
 
     // Constructors
-    cholesky_data(da_int nsamples, da_int nfeat) {
+    cholesky_data(da_int nsamples, da_int ncoef) {
         // work arrays for the cholesky
-        min_order = std::min(nsamples, nfeat);
+        min_order = std::min(nsamples, ncoef);
         A.resize(min_order * min_order);
-        B.resize(min_order);
+        b.resize(min_order);
     };
 };
 } // namespace da_linmod

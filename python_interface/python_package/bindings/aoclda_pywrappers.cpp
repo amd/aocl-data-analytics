@@ -588,11 +588,15 @@ class pyda_handle {
 class linmod : public pyda_handle {
     //da_handle handle = nullptr;
     da_precision precision = da_double;
+    da_int n_samples, n_feat;
+    bool intercept;
 
   public:
-    linmod(std::string mod, bool intercept = false, std::string solver = "auto",
-           std::string scaling = "auto", std::string prec = "double") {
-        da_status status = da_status_success;
+    linmod(std::string mod, std::optional<da_int> max_iter, bool intercept = false,
+           std::string solver = "auto", std::string scaling = "auto",
+           std::string prec = "double")
+        : intercept(intercept) {
+        da_status status;
         linmod_model mod_enum;
         if (mod == "mse") {
             mod_enum = linmod_model_mse;
@@ -617,6 +621,11 @@ class linmod : public pyda_handle {
         exception_check(status);
         status = da_options_set_string(handle, "scaling", scaling.c_str());
         exception_check(status);
+        if (max_iter.has_value()) {
+            status =
+                da_options_set_int(handle, "optim iteration limit", max_iter.value());
+            exception_check(status);
+        }
     }
     ~linmod() { da_handle_destroy(&handle); }
 
@@ -627,7 +636,8 @@ class linmod : public pyda_handle {
         // TODO Should it be a separate function call like in C with the "define_features" function
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_feat = X.shape()[1];
+        n_samples = X.shape()[0];
+        n_feat = X.shape()[1];
         status = da_linmod_define_features(handle, n_samples, n_feat, X.mutable_data(),
                                            y.mutable_data());
         exception_check(status); // throw an exception if status is not success
@@ -663,37 +673,21 @@ class linmod : public pyda_handle {
 
     auto get_coef() {
         da_status status;
-        da_int dim = -1;
+        da_int dim = intercept ? n_feat + 1 : n_feat;
+        // define the output vector
+        size_t shape[1]{(size_t)dim};
         if (precision == da_single) {
-            float result_s = 1;
-            // First call to get dim right
-            status = da_handle_get_result(handle, da_linmod_coef, &dim, &result_s);
-            if (status != da_status_invalid_array_dimension)
-                status_to_exception(status);
-
-            // define the output vector
-            size_t shape[1]{(size_t)dim};
             size_t strides[1]{sizeof(float)};
             auto coef = py::array_t<float>(shape, strides);
             status =
                 da_handle_get_result(handle, da_linmod_coef, &dim, coef.mutable_data());
-            exception_check(status);
             py::array ret = py::reinterpret_borrow<py::array>(coef);
             return ret;
         } else {
-            double result_d = 1;
-            // First call to get dim right
-            status = da_handle_get_result(handle, da_linmod_coef, &dim, &result_d);
-            if (status != da_status_invalid_array_dimension)
-                exception_check(status);
-
-            // define the output vector
-            size_t shape[1]{(size_t)dim};
             size_t strides[1]{sizeof(double)};
             auto coef = py::array_t<double>(shape, strides);
             status =
                 da_handle_get_result(handle, da_linmod_coef, &dim, coef.mutable_data());
-            exception_check(status);
             py::array ret = py::reinterpret_borrow<py::array>(coef);
             return ret;
         }
@@ -1296,8 +1290,10 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
-        .def(py::init<std::string, bool, std::string, std::string, std::string &>(),
-             py::arg("mod"), py::arg("intercept") = false, py::arg("solver") = "auto",
+        .def(py::init<std::string, std::optional<da_int>, bool, std::string, std::string,
+                      std::string &>(),
+             py::arg("mod"), py::arg("max_iter") = py::none(),
+             py::arg("intercept") = false, py::arg("solver") = "auto",
              py::arg("scaling") = "auto", py::arg("precision") = "double")
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,

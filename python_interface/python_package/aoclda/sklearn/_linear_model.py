@@ -31,6 +31,7 @@ from numpy import ndarray
 from sklearn.linear_model import LinearRegression as LinearRegression_sklearn
 from sklearn.linear_model import Ridge as Ridge_sklearn
 from sklearn.linear_model import Lasso as Lasso_sklearn
+from sklearn.linear_model import ElasticNet as ElasticNet_sklearn
 from aoclda.linear_model import linmod as linmod_da
 
 
@@ -42,6 +43,7 @@ class LinearRegression(LinearRegression_sklearn):
     def __init__(self,
                  *,
                  fit_intercept=True,
+                 solver='auto',
                  copy_X=True,
                  n_jobs=None,
                  positive=False) -> None:
@@ -56,7 +58,8 @@ class LinearRegression(LinearRegression_sklearn):
         # New attributes used internally
         self.aocl = True
         self.intercept_val = None
-        self.lmod = linmod_da("mse", intercept=fit_intercept)
+        self.solver = solver
+        self.lmod = linmod_da("mse", solver=solver, intercept=fit_intercept)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
@@ -110,15 +113,15 @@ class Ridge(Ridge_sklearn):
         # supported attributes
         self.alpha = alpha
         self.fit_intercept = fit_intercept
+        self.solver = solver
+        self.max_iter = max_iter
+        self.tol = tol
 
         # currently ignored
         self.copy_X = copy_X
-        self.max_iter = max_iter
-        self.tol = tol
         self.random_state = random_state
 
         # not supported
-        self.solver = solver
         self.positive = positive
 
         # New attributes used internally
@@ -136,12 +139,18 @@ class Ridge(Ridge_sklearn):
                 "Constraints on the coefficients are not supported")
 
         # Initialize aoclda object
-        self.lmod = linmod_da("mse", intercept=fit_intercept, solver=solver)
+        self.lmod = linmod_da("mse",
+                              intercept=fit_intercept,
+                              solver=solver,
+                              max_iter=self.max_iter)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
-        self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=0.0)
+        self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=0.0, tol=self.tol)
+
+    def predict(self, X) -> ndarray:
+        return self.lmod.predict(X)
 
     @property
     def coef_(self):
@@ -193,12 +202,13 @@ class Lasso(Lasso_sklearn):
         # supported attributes
         self.alpha = alpha
         self.fit_intercept = fit_intercept
+        self.max_iter = max_iter
+        self.tol = tol
 
         # Currently ignored attributes
         self.precompute = precompute
         self.copy_X = copy_X
-        self.max_iter = max_iter
-        self.tol = tol
+
         self.warm_start = warm_start
         self.random_state = random_state
         self.selection = selection
@@ -211,12 +221,17 @@ class Lasso(Lasso_sklearn):
         self.intercept_val = None
 
         # Initialize aoclda object
-        self.lmod = linmod_da("mse", intercept=fit_intercept)
+        self.lmod = linmod_da("mse",
+                              intercept=fit_intercept,
+                              max_iter=self.max_iter)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
-        self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=1.0)
+        self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=1.0, tol=self.tol)
+
+    def predict(self, X) -> ndarray:
+        return self.lmod.predict(X)
 
     @property
     def coef_(self):
@@ -251,3 +266,102 @@ class Lasso(Lasso_sklearn):
     def dual_gap_(self):
         print("This feature is not implemented")
         return None
+
+
+class ElasticNet(ElasticNet_sklearn):
+    """
+    Overwrite sklearn ElasticNet to call DA library
+    """
+
+    def __init__(
+        self,
+        alpha=1.0,
+        *,
+        l1_ratio=0.5,
+        fit_intercept=True,
+        precompute=False,
+        max_iter=1000,
+        copy_X=True,
+        tol=1e-4,
+        warm_start=False,
+        positive=False,
+        random_state=None,
+        selection="cyclic",
+    ):
+        # supported attributes
+        self.alpha = alpha
+        self.l1_ratio = l1_ratio
+        self.fit_intercept = fit_intercept
+        self.max_iter = max_iter
+        self.tol = tol
+
+        # Currently ignored attributes
+        self.precompute = precompute
+        self.copy_X = copy_X
+
+        self.warm_start = warm_start
+        self.random_state = random_state
+        self.selection = selection
+
+        # not supported attributes
+        self.positive = positive
+
+        # New attributes used internally
+        self.aocl = True
+        self.intercept_val = None
+
+        # Initialize aoclda object
+        self.lmod = linmod_da("mse",
+                              intercept=fit_intercept,
+                              max_iter=self.max_iter)
+
+    def fit(self, X, y, sample_weight=None, check_input=True):
+        if sample_weight is not None:
+            raise ValueError("sample_weight is not supported")
+        self.lmod.fit(X,
+                      y,
+                      reg_lambda=self.alpha,
+                      reg_alpha=self.l1_ratio,
+                      tol=self.tol)
+
+    def predict(self, X) -> ndarray:
+        return self.lmod.predict(X)
+
+    @property
+    def coef_(self):
+        coef = self.lmod.get_coef()
+        if self.intercept_val is None:
+            self.intercept_val = coef[-1]
+        return coef[:-1]
+
+    @property
+    def n_iter_(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def dual_gap_(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def sparse_coef_(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def n_features_in_(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def feature_names_in(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def intercept_(self):
+        if self.intercept_val is None:
+            coef = self.lmod.get_coef()
+            self.intercept_val = coef[-1]
+        return self.intercept_val

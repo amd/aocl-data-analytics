@@ -22,8 +22,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-
-
 """
 Contains the functions to replace symbols from scikit-learn by the AOCL-DA patch
 """
@@ -36,6 +34,7 @@ from ._kmeans import kmeans as kmeans_da
 from ._linear_model import LinearRegression as LinearRegression_da
 from ._linear_model import Ridge as Ridge_da
 from ._linear_model import Lasso as Lasso_da
+from ._linear_model import ElasticNet as ElasticNet_da
 
 # Now on a case-by-case basis, overwrite with AMD symbols where we have performant implementations
 
@@ -45,22 +44,38 @@ from ._linear_model import Lasso as Lasso_da
 #        pack - sklearn subpackage
 #        sk_sym - name of the sklearn symbol to replace
 #        da_sym - equivalent name in the DA sklearn lib
-SYMBOLS = {'PCA': {'pack': decomp_sklearn,
-                   'sk_sym': getattr(decomp_sklearn, "PCA"),
-                   'da_sym': PCA_da},
-           'LinearRegression': {'pack': linmod_sklearn,
-                                'sk_sym': getattr(linmod_sklearn, 'LinearRegression'),
-                                'da_sym': LinearRegression_da},
-           'Ridge': {'pack': linmod_sklearn,
-                     'sk_sym': getattr(linmod_sklearn, 'Ridge'),
-                     'da_sym': Ridge_da},
-           'Lasso': {'pack': linmod_sklearn,
-                     'sk_sym': getattr(linmod_sklearn, 'Lasso'),
-                     'da_sym': Lasso_da},
-           'KMeans': {'pack': clustering_sklearn,
-                   'sk_sym': getattr(clustering_sklearn, "KMeans"),
-                   'da_sym': kmeans_da}
-                     }
+SYMBOLS = {
+    'PCA': {
+        'pack': decomp_sklearn,
+        'sk_sym': getattr(decomp_sklearn, "PCA"),
+        'da_sym': PCA_da
+    },
+    'LinearRegression': {
+        'pack': linmod_sklearn,
+        'sk_sym': getattr(linmod_sklearn, 'LinearRegression'),
+        'da_sym': LinearRegression_da
+    },
+    'Ridge': {
+        'pack': linmod_sklearn,
+        'sk_sym': getattr(linmod_sklearn, 'Ridge'),
+        'da_sym': Ridge_da
+    },
+    'Lasso': {
+        'pack': linmod_sklearn,
+        'sk_sym': getattr(linmod_sklearn, 'Lasso'),
+        'da_sym': Lasso_da
+    },
+    'ElasticNet': {
+        'pack': linmod_sklearn,
+        'sk_sym': getattr(linmod_sklearn, 'ElasticNet'),
+        'da_sym': ElasticNet_da
+    },
+    'KMeans': {
+        'pack': clustering_sklearn,
+        'sk_sym': getattr(clustering_sklearn, "KMeans"),
+        'da_sym': kmeans_da
+    }
+}
 
 
 def skpatch(*args, print_patched=True):
@@ -90,7 +105,9 @@ def skpatch(*args, print_patched=True):
             print(f"The package {package} was not found.")
 
     if successfully_patched and print_patched:
-        print("AOCL Extension for Scikit-learn enabled for the following packages:")
+        print(
+            "AOCL Extension for Scikit-learn enabled for the following packages:"
+        )
         print(', '.join(successfully_patched))
 
 
@@ -120,5 +137,7 @@ def undo_skpatch(*args, print_patched=True):
             print(f"The package {package} was not found.")
 
     if successfully_unpatched and print_patched:
-        print("AOCL Extension for Scikit-learn disabled for the following packages:")
+        print(
+            "AOCL Extension for Scikit-learn disabled for the following packages:"
+        )
         print(', '.join(successfully_unpatched))

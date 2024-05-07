@@ -79,8 +79,8 @@ void sormqr_(char *side, char *trans, da_int *m, da_int *n, da_int *k, float *a,
              da_int *info);
 void dtrtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, double *a,
              da_int *lda, double *b, da_int *ldb, da_int *info);
-int strtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, float *a,
-            da_int *lda, float *b, da_int *ldb, da_int *info);
+void strtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, float *a,
+             da_int *lda, float *b, da_int *ldb, da_int *info);
 double dlange_(char const *norm, da_int const *m, da_int const *n, double const *A,
                da_int const *lda, double *work);
 float slange_(char const *norm, da_int const *m, da_int const *n, float const *A,
