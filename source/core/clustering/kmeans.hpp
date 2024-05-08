@@ -40,7 +40,7 @@
 #include "lapack_templates.hpp"
 #include "options.hpp"
 #include <iostream>
-#include <omp.h>
+//#include <omp.h>
 #include <random>
 #include <string>
 
@@ -109,13 +109,12 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_int ldc;
 
     /*
-    double t_kmeanspp = 0.0;
     double t_iteration = 0.0;
     double t_euclidean_it = 0.0;
-    double t_euclidean_kmeanspp = 0.0;
-    double t_lloyd_chunk = 0.0;
-    double t_inertia = 0.0;
-    double t_compute = 0.0;
+    double t_centre_half_distances = 0.0;
+    double t_init_bounds = 0.0;
+    double t_assign = 0.0;
+    double t_update = 0.0;
     */
 
     // Maximum size of data chunks for elkan, lloyd and macqueen algorithms
@@ -159,8 +158,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     void lloyd_iteration(bool update_centres);
 
-    void lloyd_iteration_chunk(bool update_centres, da_int chunk_size,
-                               da_int chunk_index);
+    void lloyd_iteration_chunk(bool update_centres, da_int chunk_size, da_int chunk_index,
+                               da_int *labels);
 
     void elkan_iteration(bool update_centres);
 
@@ -349,7 +348,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_status compute() {
 
         da_status status = da_status_success;
-        double tt0 = omp_get_wtime();
+        //double tt0 = omp_get_wtime();
         if (initdone == false)
             return da_error(err, da_status_no_data,
                             "No data has been passed to the handle. Please call "
@@ -484,7 +483,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         best_inertia = std::numeric_limits<T>::infinity();
 
         // Run k-means algorithm n_init times and select the run with the lowest inertia
-        double tt2 = omp_get_wtime();
+        //double tt2 = omp_get_wtime();
         for (da_int run = 0; run < n_init; run++) {
 
             // Initialize the centres if needed
@@ -508,16 +507,12 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         /*
         double tt1 = omp_get_wtime();
-        t_compute = tt1 - tt0;
-        std::cout << "t_kmeans++: " << t_kmeanspp << std::endl;
-        std::cout << "t_euclidean_kmeanspp: " << t_euclidean_kmeanspp << std::endl;
         std::cout << "t_iteration: " << t_iteration << std::endl;
-        std::cout << "t_lloyd_chunk: " << t_lloyd_chunk << std::endl;
         std::cout << "t_euclidean_it: " << t_euclidean_it << std::endl;
-        std::cout << "t_inertia: " << t_inertia << std::endl;
-        std::cout << "t_alloc (first part of compute): " << tt2 - tt0 << std::endl;
-        std::cout << "t_runs (second part of compute): " << tt1 - tt2 << std::endl;
-        std::cout << "t_compute whole compute function(): " << t_compute << std::endl;
+        std::cout << "t_centre_half_distances: " << t_centre_half_distances << std::endl;
+        std::cout << "t_init_bounds: " << t_init_bounds << std::endl;
+        std::cout << "t_assign: " << t_assign << std::endl;
+        std::cout << "t_update: " << t_update << std::endl;
         */
 
         if (warn_maxit_reached)
