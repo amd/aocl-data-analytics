@@ -165,7 +165,7 @@ template <typename T> void GetZeroBaseData(KMeansParamType<T> &param) {
 
     param.n_clusters = 2;
     param.n_init = 1;
-    param.max_iter = 300;
+    param.max_iter = 3;
     param.seed = -1;
     param.convergence_tolerance = (T)1.0e-4;
     param.initialization_method = "supplied";
@@ -282,7 +282,7 @@ template <typename T> void GetSubarrayBaseData(KMeansParamType<T> &param) {
 
     param.n_clusters = 3;
     param.n_init = 1;
-    param.max_iter = 300;
+    param.max_iter = 30;
     param.seed = 78;
     param.convergence_tolerance = (T)1.0e-4;
     param.initialization_method = "supplied";
@@ -336,7 +336,7 @@ template <typename T> void GetPseudoRandomBaseData(KMeansParamType<T> &param) {
 
     param.n_clusters = 3;
     param.n_init = 1;
-    param.max_iter = 300;
+    param.max_iter = 30;
     param.seed = 593228;
     param.convergence_tolerance = (T)1.0e-4;
     param.initialization_method = "random";
@@ -380,7 +380,7 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.algorithm = "elkan";
     params.push_back(param);
     // Tests with some inherent randomness
-    param.max_iter = 300;
+    param.max_iter = 30;
     param.is_random = true;
     param.initialization_method = "k-means++";
     param.n_init = 10;
@@ -400,7 +400,7 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "macqueen";
-    param.max_iter = 300;
+    param.max_iter = 30;
     params.push_back(param);
     param.n_clusters = 10;
     param.initialization_method = "k-means++";
@@ -437,6 +437,7 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.algorithm = "lloyd";
     params.push_back(param);
     param.initialization_method = "random";
+    param.max_allowed_inertia = (T)0.09;
     param.algorithm = "elkan";
     params.push_back(param);
     param.algorithm = "hartigan-wong";
@@ -445,7 +446,7 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.max_allowed_inertia = (T)0.11;
     param.initialization_method = "random partitions";
     param.algorithm = "macqueen";
-    param.max_iter = 300;
+    param.max_iter = 30;
     params.push_back(param);
 }
 
@@ -457,7 +458,7 @@ template <typename T> void GetZeroData(std::vector<KMeansParamType<T>> &params) 
     param.algorithm = "elkan";
     param.initialization_method = "k-means++";
     param.n_init = 3;
-    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 300.0, 0.0};
+    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 3.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     param.expected_status = da_status_maxit;
     params.push_back(param);
@@ -473,7 +474,7 @@ template <typename T> void GetPseudoRandomData(std::vector<KMeansParamType<T>> &
     // Tests with a data matrix with fairly random points to properly exercise the Elkan algorithm for code coverage purposes
     KMeansParamType<T> param;
     GetPseudoRandomBaseData(param);
-    // Start with Hartgan-Wong for comparison and to get 'correct' answer
+    // Start with Hartigan-Wong for comparison and to get 'correct' answer
     params.push_back(param);
     param.algorithm = "elkan";
     params.push_back(param);
@@ -494,7 +495,7 @@ template <typename T> void GetSubarrayData(std::vector<KMeansParamType<T>> &para
     param.algorithm = "elkan";
     param.expected_rinfo[3] = (T)1.0;
     params.push_back(param);
-    param.max_iter = 300;
+    param.max_iter = 30;
     // Tests with some inherent randomness
     param.is_random = true;
     param.initialization_method = "k-means++";

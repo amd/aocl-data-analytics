@@ -25,7 +25,7 @@ Building the Library
 
 AOCL-DA is built with CMake, with supported compilers GNU and AOCC on Linux and MSVC on MS Windows.
 
-AOCL-DA is dependent on BLAS and LAPACK.
+AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
 
 Building on Linux
 -----------------
@@ -69,7 +69,7 @@ Building on Linux
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>` to specify the install path for the library
 
-   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
    **Note** that not all the options available in `Release` build mode.
 
@@ -85,7 +85,7 @@ Building on MS Windows
    * GCC and gfortran compilers, which are available via MinGW and MSYS2.
 
 2. Make sure you have set the `AOCL_ROOT` environment variable to your AOCL installation directory (e.g. `C:\Users\username\AOCL-4.0`), and update your `PATH` to take in the relevant BLAS and LAPACK libraries e.g.
-`set PATH=C:\path\to\AOCL\amd-blis\lib\LP64;C:\path\to\AOCL\amd-libflame\lib\LP64;%PATH%`.
+`set PATH=C:\path\to\AOCL\amd-blis\lib\LP64;C:\path\to\AOCL\amd-libflame\lib\LP64;C:\path\to\AOCL\amd-sparse\lib\LP64\shared;%PATH%`.
 
 3. Configure cmake with any of the following options:
 
@@ -99,7 +99,7 @@ Building on MS Windows
 
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 
-   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
     **Note** that not all the options available in Linux are available in Windows
 

@@ -26,11 +26,11 @@ AOCL-DA is developed and maintained by [AMD](https://www.amd.com/). For support 
 
 AOCL-DA is built with CMake, with supported compilers GNU and AOCC on Linux and MSVC (with ifort) on MS Windows.
 
-AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be dependent on other AOCL libraries (such as Sparse).
+AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
 
 ## Building on Linux
 
-1. You will need to have AOCL-BLAS and AOCL-LAPACK installed somewhere
+1. You will need to have AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils installed somewhere
 
 2. Make sure you have set the environment variable `$AOCL_ROOT` to where the AOCL libraries are
    installed e.g. `/home/username/amd/aocl/4.0`
@@ -71,7 +71,7 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>`. Path where to install the library (using the build target `install` of step 5)
 
-   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DLAPACK_INCLUDE_DIR`, `-DBLAS_INCLUDE_DIR` and `-DSPARSE_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS, LAPACK or Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
    **Note** that not all the options are available in `Release` build mode
 
@@ -83,9 +83,9 @@ AOCL-DA is dependent on BLAS and LAPACK currently, and ultimately may be depende
 
 1. Install Visual Studio 2022 (the free version, which also comes with Ninja, CMake and clang) and the Intel Fortran compiler for MS Windows
 
-2. Make sure you have set the `AOCL_ROOT` environment variable to your AOCL installation directory (e.g. `C:\Users\username\AOCL-4.0`) and `INTEL_FCOMPILER` to the location of the Intel fortran compiler (e.g. `C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows`). You can also update your `PATH` to take in the relevant BLAS and LAPACK libraries e.g.
-`set PATH=C:\path\to\AOCL\amd-blis\lib\LP64;C:\path\to\AOCL\amd-libflame\lib\LP64;%PATH%`
-It is most likely to work if BLAS and LAPACK are installed within your user directory rather than e.g. `Program Files`.
+2. Make sure you have set the `AOCL_ROOT` environment variable to your AOCL installation directory (e.g. `C:\Users\username\AOCL-4.0`) and `INTEL_FCOMPILER` to the location of the Intel fortran compiler (e.g. `C:\Program Files (x86)\Intel\oneAPI\compiler\latest\windows`). You can also update your `PATH` to take in the relevant BLAS, LAPACK and Sparse libraries e.g.
+`set PATH=C:\path\to\AOCL\amd-blis\lib\LP64;C:\path\to\AOCL\amd-libflame\lib\LP64;C:\path\to\AOCL\amd-sparse\lib\LP64\shared;%PATH%`
+It is most likely to work if BLAS, LAPACK and Sparse are installed within your user directory rather than e.g. `Program Files`.
 
 1. In your checkout create a directory called build
 
@@ -105,7 +105,7 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 
-   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS and LAPACK libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS, LAPACK and Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
    * `-DOpenMP_libomp_LIBRARY=<path to preferred OpenMP library>` to link a specific OpenMP library.
 
@@ -119,7 +119,7 @@ It is most likely to work if BLAS and LAPACK are installed within your user dire
 
 * In your powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate or use `cmake --build .`)
 
-8. Depending on whether BLAS/LAPACK libraries are on your `PATH`, the compiled executables may only work if the BLAS and LAPACK dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll` and `AOCL-LibFlame-Win-MT-dll.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
+8. Depending on whether BLAS/LAPACK/Sparse libraries are on your `PATH`, the compiled executables may only work if the BLAS, LAPACK and Sparse library dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll`, `AOCL-LibFlame-Win-MT-dll.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
 
 9. Use ctest in your powershell/command prompt window to run the tests
 
@@ -177,7 +177,7 @@ to use Visual Studio's build system, or
 
 5. Type `ninja` to build
 
-6. Depending on your particular environment variables, the compiled executables may only work if the BLAS and LAPACK dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll` and `AOCL-LibFlame-Win-MT-dll.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
+6. Depending on your particular environment variables, the compiled executables may only work if the BLAS and LAPACK dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll`, `AOCL-LibFlame-Win-MT-dll.dll` and `aoclsparse.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
 
 7. Use `ctest` in your command prompt window to run the tests
 
