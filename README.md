@@ -55,6 +55,8 @@ AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
 
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
 
+   * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4
+
    * `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats). Note that to build the Python documentation the PYTHONPATH environment variable must be set to aocl-da/python_interface/python_package
 
    * `-DINTERNAL_DOC=On` to build the internal documentation alongside the main one
@@ -104,6 +106,8 @@ It is most likely to work if BLAS, LAPACK and Sparse are installed within your u
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
 
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
+
+   * `-DARCH=<arch>` to set the `/arch:<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. AVX512
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS, LAPACK and Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 

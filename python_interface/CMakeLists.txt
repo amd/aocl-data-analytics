@@ -58,7 +58,7 @@ set(CMAKE_INSTALL_MODE COPY)
 install(DIRECTORY python_package/aoclda DESTINATION python_package)
 install(FILES python_package/setup.py DESTINATION python_package)
 install(FILES ${DEP_LIBS} DESTINATION python_package/aoclda OPTIONAL)
-# Optional accounts for lack of dll for utils)
+# Optional accounts for lack of a dll in case that static utils was linked)
 install(
   TARGETS aocl-da
   ARCHIVE DESTINATION python_package/aoclda

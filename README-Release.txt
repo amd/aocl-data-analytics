@@ -53,6 +53,8 @@ Building on Linux
 
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
 
+   * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4
+
    * `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats)
 
    * `-DINTERNAL_DOC=On` to build the internal documentation alongside the main one
@@ -96,6 +98,8 @@ Building on MS Windows
    * `-DBUILD_SMP=On` to build using OpenMP and threaded BLAS (`On` by default)
 
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
+
+   * `-DARCH=<arch>` to set the `/arch:<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. AVX512
 
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 

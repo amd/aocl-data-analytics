@@ -83,8 +83,9 @@ option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
+option(ARCH "-march or /arch flag ()")
 option(BUILD_PYTHON "Python bindings" OFF)
-# Set paths to AOCLUTILS, BLAS and LAPACK installations.
+# Set paths to AOCLUTILS, BLAS, LAPACK and SPARSE installations.
 set(CMAKE_AOCL_ROOT
     $ENV{AOCL_ROOT}
     CACHE
@@ -189,7 +190,7 @@ if(CMAKE_AOCL_ROOT STREQUAL ""
        ))
   message(
     FATAL_ERROR
-      "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternative, specify BLAS/LAPACK_LIB/SPARSE/UTILS_LIB and BLAS/LAPACK_INCLUDE_DIR/SPARSE."
+      "Environment variable \$AOCL_ROOT not found.\n - Perhaps source AOCL config script, or\n - Define \$AOCL_ROOT to point to AOCL install dir, and try again, or set -DCMAKE_AOCL_ROOT.\n - Alternatively, specify BLAS/LAPACK/SPARSE/UTILS_LIB and BLAS/LAPACK/SPARSE_INCLUDE_DIR."
   )
 endif()
 
@@ -263,7 +264,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
                                                   "MSVC"))
   # MSVC and clang-cl compiler flags
   if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-O2")
+    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
   else()
@@ -277,6 +278,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
 
   if(USE_AVX512 AND (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang"))
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX512")
+  endif()
+
+  if(ARCH)
+    set(ARCH_FLAG "/arch:${ARCH}")
   endif()
 
   if(VECTORIZATION_REPORTS)
@@ -300,7 +305,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   endif()
 
   # Release flags
-  set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-O2;")
+  set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;")
 
   if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
@@ -313,10 +318,14 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
         "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
   endif()
 
+  if(ARCH)
+    set(ARCH_FLAG "-march=${ARCH}")
+  endif()
+
   if(VECTORIZATION_REPORTS)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       set(COMPILER_FLAGS_COMMON
-          "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize"
+          "${COMPILER_FLAGS_COMMON};-Rpass=loop-vectorize;-Rpass-analysis=loop-vectorize;-Rpass-missed=loop-vectorize;-gline-tables-only;-gcolumn-info;"
       )
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
       set(COMPILER_FLAGS_COMMON
@@ -324,6 +333,8 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
     endif()
   endif()
 endif()
+
+set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${ARCH_FLAG}")
 
 # Add convenience cleaning add "add_dependencies(cleanall ...) to all custom
 # cleans, e.g. clean-doc and clean-coverage is a dependency of cleanall Note:
@@ -444,6 +455,7 @@ message(NOTICE "Building with OpenMP    : ${BUILD_SMP}")
 message(NOTICE "Shared library build    : ${BUILD_SHARED_LIBS}")
 message(NOTICE "Vectorization reports   : ${VECTORIZATION_REPORTS}")
 message(NOTICE "Debug printing          : ${DA_LOGGING}")
+message(NOTICE "Architecture flag       : ${ARCH_FLAG}")
 
 if(${VALGRIND})
   message(
