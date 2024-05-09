@@ -115,15 +115,16 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     double t_init_bounds = 0.0;
     double t_assign = 0.0;
     double t_update = 0.0;
-    */
+    double t_loop361 = 0.0;
+*/
 
     // Maximum size of data chunks for elkan, lloyd and macqueen algorithms
-    da_int max_chunk_size = KMEANS_CHUNK_SIZE;
+    da_int max_chunk_size;
     da_int n_chunks;
     da_int chunk_rem;
 
     // Leading dimension of worksc1
-    da_int ldworksc1 = max_chunk_size;
+    da_int ldworksc1;
 
     // This will point to the function to perform k-means iterations depending on algorithm choice
     void (da_kmeans<T>::*single_iteration)(bool);
@@ -162,6 +163,13 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                                da_int *labels);
 
     void elkan_iteration(bool update_centres);
+
+    void elkan_iteration_assign_chunk(bool update_centres, da_int chunk_size,
+                                      da_int chunk_index, T *u_bounds, da_int *old_labels,
+                                      da_int *new_labels);
+
+    void elkan_iteration_update_chunk(da_int chunk_size, da_int chunk_index, T *l_bound,
+                                      T *u_bound, da_int *labels);
 
     void macqueen_iteration(bool update_centres);
 
@@ -407,6 +415,17 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 "centres have been provided.");
         }
 
+        switch (algorithm) {
+        case lloyd:
+            max_chunk_size = KMEANS_LLOYD_CHUNK_SIZE;
+        case elkan:
+            max_chunk_size = KMEANS_ELKAN_CHUNK_SIZE;
+        case macqueen:
+            max_chunk_size = KMEANS_MACQUEEN_CHUNK_SIZE;
+        default:
+            max_chunk_size = 1;
+        }
+
         // Initialize some arrays
         try {
             current_cluster_centres->resize(n_clusters * n_features, 0.0);
@@ -504,7 +523,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         }
 
         iscomputed = true;
-
         /*
         double tt1 = omp_get_wtime();
         std::cout << "t_iteration: " << t_iteration << std::endl;
@@ -513,8 +531,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         std::cout << "t_init_bounds: " << t_init_bounds << std::endl;
         std::cout << "t_assign: " << t_assign << std::endl;
         std::cout << "t_update: " << t_update << std::endl;
-        */
-
+        std::cout << "t_loop361: " << t_loop361 << std::endl;
+*/
         if (warn_maxit_reached)
             return da_warn(err, da_status_maxit,
                            "The maximum number of iterations was reached.");
