@@ -226,8 +226,6 @@ template <typename T> linear_model<T>::~linear_model() {
     yusr = nullptr;
     err = nullptr;
 
-    if (opt)
-        delete opt;
     if (qr)
         delete qr;
     if (svd)
@@ -236,6 +234,8 @@ template <typename T> linear_model<T>::~linear_model() {
         delete cg;
     if (cholesky)
         delete cholesky;
+    if (opt)
+        delete opt;
     if (udata)
         delete udata;
 };
@@ -733,7 +733,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
         copycoefs = (coefs != nullptr) && (usr_ncoefs >= nfeat);
         // copy if solver can use it...
-        copycoefs &= mid == linmod_method::coord || mid == linmod_method::lbfgsb;
+        copycoefs &= da_linmod::linmod_method_type::is_iterative(linmod_method(mid));
 
         try {
             if (copycoefs) {
@@ -1082,7 +1082,7 @@ template <typename T> da_status linear_model<T>::fit_linreg_cg() {
         case da_status_memory_error:
             return da_error(err, status, // LCOV_EXCL_LINE
                             "Encountered memory error in CG solver.");
-        case da_status_optimization_num_difficult:
+        case da_status_numerical_difficulties:
             da_warn(err, status, // LCOV_EXCL_LINE
                     "Encountered numerically difficult problem, use SVD solver "
                     "for more stable solution.");

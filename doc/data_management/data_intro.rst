@@ -30,6 +30,8 @@
 Data Management
 ***************
 
+.. _data-management_intro:
+
 Introduction
 ============
 

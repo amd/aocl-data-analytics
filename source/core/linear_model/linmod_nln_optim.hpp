@@ -125,19 +125,24 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
 /* This function evaluates the feature matrix X over the parameter vector x (taking into account the intercept),
  * it performs the GEMV operation
  *
- * v = [X, 1^T] * x
+ * v = [X, 1^T] * x OR v = [X, 1^T]^T x
  */
 template <typename T>
 void eval_feature_matrix(da_int n, const T *x, da_int nsamples, const T *X, T *v,
-                         bool intercept) {
+                         bool intercept, bool trans = false) {
     T alpha = 1.0, beta = 0.0;
 
     da_int aux = intercept ? 1 : 0;
-    da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, n - aux, alpha, X,
-                        nsamples, x, 1, beta, v, 1);
-    if (intercept) {
+    enum CBLAS_TRANSPOSE transpose = trans ? CblasTrans : CblasNoTrans;
+    da_blas::cblas_gemv(CblasColMajor, transpose, nsamples, n - aux, alpha, X, nsamples,
+                        x, 1, beta, v, 1);
+    if (intercept && !trans) {
         for (da_int i = 0; i < nsamples; i++)
             v[i] += x[n - 1];
+    } else if (intercept && trans) {
+        v[n - 1] = T(0);
+        for (da_int i = 0; i < nsamples; i++)
+            v[n - 1] += x[i];
     }
 }
 
@@ -460,8 +465,8 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
                       da_int action, T kdiff) {
     stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
 
-    da_int nmod = data->intercept ? nfeat - 1 : nfeat;
-    da_int nsamples = data->nsamples;
+    const da_int nmod = data->intercept ? nfeat - 1 : nfeat;
+    const da_int nsamples = data->nsamples;
 
     if (f) { // quick exit, just provide f
         *f = (T)0;

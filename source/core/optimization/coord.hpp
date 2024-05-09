@@ -545,11 +545,18 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             break;
         case OPTIMCHK:
             // FIXME: add duality gap as convergence criteria.
+            cbflag = 0;
+            if (cbflag) {
+                status = da_error(
+                    &err, da_status_numerical_difficulties,
+                    "Optimality check call-back returned error at current iterate.");
+                cbstop = true;
+            }
             optim = T(-1);
             break;
         case NEWX:
         case STOP: // Copy and print for the last time
-            if (itask == STOP || prnlvl > 1) {
+            if ((itask == STOP || prnlvl > 1) && (!cbstop)) {
                 // Get the objective value of the scaled problem.
                 cbflag = stepfun(n, &x[0], &newxk, k, f, usrdata, action, w.kdiff);
             }
@@ -592,13 +599,14 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             if (cbstop) {
                 if (iter == 1)
                     status = da_error(
-                        &err, da_status_optimization_num_difficult,
+                        &err, da_status_numerical_difficulties,
                         "Initial iterate is unusable. One or more coordinate steps could "
-                        "not be computed by the callback."); /// <---- TEST TODO
-                else
-                    status = da_warn(&err, da_status_optimization_num_difficult,
+                        "not be computed by the callback.");
+                else if (status == da_status_success) {
+                    status = da_warn(&err, da_status_numerical_difficulties,
                                      "One or more coordinate steps could not be computed "
-                                     "by the callback."); /// <---- TEST TODO
+                                     "by the callback.");
+                } // otherwise status already filled.
                 break;
             }
 

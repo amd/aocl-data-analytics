@@ -117,7 +117,7 @@ template <typename T> struct cg_data {
             exit_status = da_status_success;
             break;
         case aoclsparse_status_numerical_error:
-            exit_status = da_status_optimization_num_difficult;
+            exit_status = da_status_numerical_difficulties;
             break;
         case aoclsparse_status_maxit:
             exit_status = da_status_maxit;

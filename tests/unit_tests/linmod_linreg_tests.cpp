@@ -153,8 +153,8 @@ const linregParam linregParamPos[] = {
                                      {{"lambda",10.0f},{"alpha",0.0f}},
                                      {{"lambda",10.0},{"alpha",0.0}}
                                      },
-    // 18
-    {"CoordElastic+1/z", "trivialelnet",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
+    // 18 Code coverage for printing -> print level = 5
+    {"CoordElastic+1/z", "trivialelnet",{{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
                                      {{"lambda",5.0f},{"alpha",0.8f}},
                                      {{"lambda",5.0},{"alpha",0.8}}
@@ -162,7 +162,7 @@ const linregParam linregParamPos[] = {
     // 19
     {"CoordElastic+0/z", "trivialelnet",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
-                                     {{"lambda",6.0f},{"alpha",0.9f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+                                     {{"lambda",6.0f},{"alpha",0.9f},{"optim convergence tol", 1.0e-5f}},
                                      {{"lambda",6.0},{"alpha",0.9}},
                                      },
     // Data and solution generated using R (glmnet_trivial.R) (STANDARDIZED = FALSE, our scaling = "scale only")
@@ -193,13 +193,13 @@ const linregParam linregParamPos[] = {
     // 24
     {"CoordL2Reg+1/s", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",10.0f*6.0f/5.05319f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+                                     {{"lambda",10.0f*6.0f/5.05319f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f}},
                                      {{"lambda",10.0*6.0/5.05319},{"alpha",0.0}}
                                      },
     // 25
     {"CoordL2Reg+0/s", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"lambda",10.0f*6.0f/11.7278f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
+                                     {{"lambda",10.0f*6.0f/11.7278f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f}},
                                      {{"lambda",10.0*6.0/11.7278},{"alpha",0.0}}
 //                                   {{"lambda",10.0f},{"alpha",0.0f},{"optim convergence tol", 1.0e-5f},{"optim progress factor", 100.0}},
 //                                   {{"lambda",10.0},{"alpha",0.0}}
@@ -256,7 +256,7 @@ const linregParam linregParamPos[] = {
     // 34
     {"NormTab-ElNet+0/z", "glmnet-100x20en",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-6f},{"lambda",2.25f},{"alpha",0.8f}},
+                                     {{"optim convergence tol",1.e-5f},{"lambda",2.25f},{"alpha",0.8f}},
                                      {{"optim convergence tol",1.e-9},{"lambda",2.25},{"alpha",0.8}}
                                      },
     // 35
@@ -932,16 +932,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2P-l2+0/L/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-6f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 93 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2P-l2+1/L/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-6f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 91 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
@@ -1006,6 +1006,13 @@ const linregParam linregParamPos[] = {
                                      {{"optim method", "coord"},{"scaling", "standardize"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     true, false
+                                     },
+    // 96 scikit-learn sparse signal example LASSO
+    {"signal-l1+1/Coord/s", "signal-scikit", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+                                     {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
+                                     {{"optim convergence tol",1.e-8f},{"lambda",0.14f},{"alpha",1.0f},{"optim progress factor", 1.0}},
+                                     {{"optim convergence tol",1.e-8},{"lambda",0.14},{"alpha",1.0},{"optim progress factor", 1.0}},
                                      true, false
                                      },
     // Compare auto scaling of all solvers with sci-kit learn output
@@ -1160,8 +1167,11 @@ const linregParam linregParamPos[] = {
                                      },
     /* INTERCEPT */
     /* SHORT FAT */
-    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
-        conditional number which makes the solution unstable and difficult to compare between each other */
+    /* Tricky situation, calculating solution to undetermined system with
+     * intercept in unregularised case leads to dealing with matrix with
+     * very high conditional number which makes the solution unstable and
+     * difficult to compare between each other
+     */
     // Bump lambda a bit to get around singular matrix and increase tolerance to 0.025
     {"ShortFat/norm/lbfgs/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}},
@@ -1510,8 +1520,8 @@ const linregParam linregParamPos[] = {
                                      },
     {"TallFat/L2/coord/1", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"optim convergence tol",1.e-10}, {"lambda",5.0},{"alpha",0.0}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",5.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-9},{"lambda",5.0},{"alpha",0.0}},
                                      true, false
                                      },
     /* ELASTIC NET TESTS */

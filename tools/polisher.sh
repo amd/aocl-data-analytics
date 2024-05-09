@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,9 @@ if [ ! -f .clang-format ] ; then
   echo This script should be called from the project root.
   exit 1
 fi
+
+echo clang-format-binary: `which clang-format`
+echo clang-format-version: `clang-format --version`
 
 find source tests \( -iname "*.c" -o -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" \) -type f -print -exec clang-format --style="file:.clang-format" -i '{}' \;
 

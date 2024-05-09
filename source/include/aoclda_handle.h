@@ -117,7 +117,6 @@ da_status da_handle_print_error_message(da_handle handle);
  * @note memory leaks may occur if handles are not destroyed after use.
  *
  * @param[in,out] handle the main \ref da_handle structure.
- * @return void.
  */
 void da_handle_destroy(da_handle *handle);
 

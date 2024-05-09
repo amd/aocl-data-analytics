@@ -38,8 +38,15 @@ enum linmod_method {
     svd = da_optim::solvers::solver_svd,
     cholesky = da_optim::solvers::solver_cholesky,
     cg = da_optim::solvers::solver_cg,
-    qr,
+    qr = da_optim::solvers::solver_qr
 };
+// static struct see if a method is iterative
+struct linmod_method_type {
+    static bool is_iterative(linmod_method mid) {
+        return mid == linmod_method::lbfgsb || mid == linmod_method::coord || mid == cg;
+    }
+};
+
 /* type of scaling to perform */
 enum scaling_t : da_int {
     none = 0 /* must be zero */,

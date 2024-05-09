@@ -339,42 +339,42 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
         return da_error(&err, da_status_optimization_infeasible, "Problem is infeasible");
         break;
     case 5:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "ABNORMAL_TERMINATION_IN_LNSRCH");
         break;
     case 9:
-        return da_warn(&err, da_status_optimization_num_difficult, "RESTART_FROM_LNSRCH");
+        return da_warn(&err, da_status_numerical_difficulties, "RESTART_FROM_LNSRCH");
         break;
     case 16:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "ERROR: STP .GT. STPMAX");
         break;
     case 17:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "ERROR: STP .LT. STPMIN");
         break;
     case 18:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "ERROR: STPMAX .LT. STPMIN");
         break;
     case 19:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "ERROR: STPMIN .LT. ZERO");
         break;
     case 23:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "WARNING: ROUNDING ERRORS PREVENT PROGRESS");
         break;
     case 24:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "WARNING: STP = STPMAX");
         break;
     case 25:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "WARNING: STP = STPMIN");
         break;
     case 26:
-        return da_warn(&err, da_status_optimization_num_difficult,
+        return da_warn(&err, da_status_numerical_difficulties,
                        "WARNING: XTOL TEST SATISFIED");
         break;
     case 10: // This can't happen due to options range check

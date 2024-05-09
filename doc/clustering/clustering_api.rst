@@ -28,7 +28,7 @@
 Clustering APIs
 *********************
 
-*k*-means Clustering
+*k*-means
 ========================================
 
 .. tab-set::

@@ -68,9 +68,9 @@ inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, float *x) {
 namespace da_numeric {
 // Safe numerical tolerances to be used with single and double precision float types
 template <class T> struct tolerance {
-    static constexpr T eps = std::numeric_limits<T>::epsilon();
-    static T safe_tol(void) { return std::sqrt(T(2) * eps); };
-    static T tol(T numerator = T(1), T denominator = T(1)) {
+    static constexpr T eps{std::numeric_limits<T>::epsilon()};
+    static const T safe_tol() { return std::sqrt(T(2) * eps); };
+    static const T tol(T numerator = T(1), T denominator = T(1)) {
         return numerator * safe_tol() / denominator;
     }
 };

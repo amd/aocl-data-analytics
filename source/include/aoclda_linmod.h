@@ -138,7 +138,7 @@ da_status da_linmod_fit_s(da_handle handle);
  *        You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  * - @ref da_status_internal_error - an unexpected error occurred.
- * \{
+ *
  */
 da_status da_linmod_fit_start_d(da_handle handle, da_int n_coefs, double *coefs);
 da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
@@ -172,7 +172,7 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
  *
- * \{
+ *
  */
 da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int nfeat,
                                      double *X, double *predictions, double *observations,

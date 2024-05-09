@@ -30,7 +30,7 @@
 import sys
 import os
 project = 'AOCL-DA'
-copyright = '2023, Advanced Micro Devices, Inc'
+copyright = '2024, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
 version = ''
 release = '4.2.1'
@@ -38,7 +38,7 @@ release = '4.2.1'
 # -- Get doc working for Python ----------------------------------------------
 # Add to PYTHONPATH
 sys.path.insert(0, os.path.relpath('../python_interface/'))
-autodoc_mock_imports = ['aoclda._aoclda', 'numpy']
+autodoc_mock_imports = ['aoclda', 'numpy']
 
 # -- General configuration ---------------------------------------------------
 extensions = ['sphinxcontrib.bibtex', 'breathe', 'sphinx.ext.napoleon',

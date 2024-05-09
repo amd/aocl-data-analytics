@@ -1,0 +1,18 @@
+# Jenkins log parser plugin rules
+
+# ignore LaTeX warnings
+ok /^LaTeX Warning:/
+ok /^Package.*Warning:/
+
+# ignore doxygen config warnings
+ok /(?i)warning: ignoring.*tag/
+ok /(?i)warning: (?i)tag/
+
+# Relax python mocked objects
+ok /WARNING: A mocked/
+
+# ok first -> warn last
+
+# catch Sphinx warnings
+warn /(?i)warning:/
+

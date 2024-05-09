@@ -92,6 +92,17 @@ if(NOT WIN32)
   )
 endif()
 
+execute_process(
+  COMMAND ${Python3_EXECUTABLE} -c "from wheel.bdist_wheel import bdist_wheel"
+  RESULT_VARIABLE EXIT_CODE
+  OUTPUT_QUIET)
+if(NOT ${EXIT_CODE} EQUAL 0)
+  message(
+    FATAL_ERROR
+      "Python3 package wheel is required to build the Python bindings\n   Use: ${Python3_EXECUTABLE} -m pip install \"wheel\""
+  )
+endif()
+
 # Build the Python bindings
 add_subdirectory(python_package)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -78,13 +78,14 @@ int main(void) {
     da_int exit_status = 1;
     da_status status;
     double params[2] = {1.0, 100.0}; // parameter to pass to the call-backs
-    da_int n = 2;
+    const da_int n = 2;
     std::vector<double> l(n, -5.0);
     std::vector<double> u(n, 5.0);
     double tol = 1.0e-7;
     std::vector<double> x(2);
-    std::vector<double> xref(2, 1.0);
-    da_errors::da_error_t err(da_errors::action_t::DA_ABORT);
+    const std::vector<double> xref(2, 1.0);
+    da_errors::da_error_t err(da_errors::action_t::DA_RECORD);
+    const da_int mon[2] = {10, 1};
 
     da_optim::da_optimization<double> *pd =
         new da_optim::da_optimization<double>(status, err);
@@ -116,36 +117,39 @@ int main(void) {
         goto abort;
     if (pd->opts.set("LBFGSB Convergence Tol", tol) != da_status_success)
         goto abort;
-    if (pd->opts.set("Monitoring Frequency", (da_int)0) != da_status_success)
-        goto abort;
     if (pd->opts.set("LBfgSB Iteration Limit", (da_int)31) != da_status_success)
         goto abort;
     if (pd->opts.set("time limit", 100.1) != da_status_success)
         goto abort;
     if (pd->opts.set("LBfgSB memory Limit", (da_int)12) != da_status_success)
         goto abort;
-    // if (pd->opts.set("l2 regularization term", 0.0000001) != da_status_success)
-    //    goto abort;
-    // Ready to solve
-    status = pd->solve(x, (void *)params);
-    // make sure to check the return status (pd.err error structure contains the details)
-    // some return codes provide a useble solution.
 
-    // status that provide usable solutions:
-    if (status == da_status_success || status == da_status_optimization_usrstop ||
-        status == da_status_optimization_num_difficult) {
-        // solution is potentially OK, check...
-        bool ok = true;
-        for (da_int i = 0; i < n; i++)
-            ok &= std::fabs(x[i] - xref[i]) <= 10.0 * tol;
-        if (ok) {
-            // operation was successfull, x holds the solution
-            std::cout << "Solution found: " << x[0] << ", " << x[1] << std::endl;
-            exit_status = 0; // operation was successfull
-        } else {
-            // fill error trace (e.g. unexpected)
-            status = da_error(pd->err, da_status_internal_error,
-                              "Expecting the correct solution point");
+    for (int i = 0; i < 2; ++i) {
+        if (pd->opts.set("Monitoring Frequency", mon[i]) != da_status_success)
+            goto abort;
+        for (int j = 0; j < 2; ++j)
+            x[i] = 0.0;
+        // Ready to solve
+        status = pd->solve(x, (void *)params);
+        // make sure to check the return status (pd.err error structure contains the details)
+        // some return codes provide a useble solution.
+
+        // status that provide usable solutions:
+        if (status == da_status_success || status == da_status_optimization_usrstop ||
+            status == da_status_numerical_difficulties) {
+            // solution is potentially OK, check...
+            bool ok = true;
+            for (da_int i = 0; i < n; i++)
+                ok &= std::fabs(x[i] - xref[i]) <= 10.0 * tol;
+            if (ok) {
+                // operation was successfull, x holds the solution
+                std::cout << "Solution found: " << x[0] << ", " << x[1] << std::endl;
+                exit_status = 0; // operation was successfull
+            } else {
+                // fill error trace (e.g. unexpected)
+                status = da_error(pd->err, da_status_internal_error,
+                                  "Expecting the correct solution point");
+            }
         }
     }
 

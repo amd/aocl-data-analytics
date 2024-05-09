@@ -131,6 +131,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     if (infochk) { // Assumes that initial iterate is not solution and that problem does not have residual=0 at x=0
         // info_objective is checked later
         const T iter = info[da_optim::info_t::info_iter];
+        // lbfgs timer may be broken for windows
 #if defined(WIN32)
         EXPECT_GE(info[da_optim::info_t::info_time], 0);
 #else
@@ -319,28 +320,6 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
                << " could not be opened.";
     }
 
-#if 0
-    // double call
-    da_int lsolver{15};
-    char solver[15];
-    EXPECT_EQ(da_options_get(linmod_handle, "optim method", &solver[0], &lsolver),
-              da_status_success);
-    std::string sol(solver);
-    if (solver == "coord"s || solver == "lbfgs"s || solver == "bfgs"s ||
-        solver == "lbfgsb"s) {
-        std::vector<T> coef0 = coef;
-        // Calling any setter will trigger a re-fit of the model
-        EXPECT_EQ(da_options_set(linmod_handle, "print level", da_int(1)),
-                  da_status_success);
-        // Problem has been solved once and coef0 holds the solution
-        EXPECT_EQ(da_linmod_fit_start<T>(linmod_handle, ncoef, coef0.data()),
-                  da_status_success);
-        EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_rinfo, &linfo, info),
-                  da_status_success);
-        // info_exp.assign({}); zero iteration
-        // check that coef is solution.
-    }
-#endif
     //////////////
     // Free memory
     //////////////

@@ -35,6 +35,24 @@
 
 namespace {
 
+TEST(linmod, methodType) {
+    using namespace da_linmod;
+
+    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative((linmod_method)0));
+    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(linmod_method::undefined));
+    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(linmod_method::cholesky));
+    da_int mid{linmod_method::cholesky};
+    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(linmod_method(mid)));
+    linmod_method id{linmod_method::svd};
+    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(id));
+
+    EXPECT_TRUE(da_linmod::linmod_method_type::is_iterative(linmod_method::lbfgsb));
+    mid = linmod_method::coord;
+    EXPECT_TRUE(da_linmod::linmod_method_type::is_iterative(linmod_method(mid)));
+    id = linmod_method::cg;
+    EXPECT_TRUE(da_linmod::linmod_method_type::is_iterative(id));
+}
+
 /* simple errors tests */
 TEST(linmod, badHandle) {
     da_handle handle = nullptr;
@@ -478,6 +496,8 @@ TEST(linmod, CheckGetInfo) {
     da_handle_destroy(&handle_d);
 }
 
+const double safe_tol{da_numeric::tolerance<double>::safe_tol()};
+
 TEST(linmod, ReturnLastSol) {
     // problem data
     const da_int nsamples = 5, nfeat = 2;
@@ -487,7 +507,7 @@ TEST(linmod, ReturnLastSol) {
     da_int ncoef{nfeat + 1};
     double coef[nfeat + 1];
     const double coef_exp[nfeat + 1] = {0.265625, -0.07412109375, 0.94619140625};
-    const double tol{1.e4 * sqrt(2.0 * std::numeric_limits<double>::epsilon())};
+    const double tol{1.e4 * safe_tol};
 
     EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, nsamples, nfeat, Ad, bd),
@@ -518,8 +538,6 @@ typedef struct warmstart_params_t {
     double tol;
     da_int iter;
 } warmstart_params;
-
-const double safe_tol{sqrt(2.0 * std::numeric_limits<double>::epsilon())};
 
 const warmstart_params warmstart_values[]{
     {"Coord+Z", "coord", "standardize", 0.5, 0.05, 10.0 * safe_tol, 1},

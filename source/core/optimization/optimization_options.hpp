@@ -57,12 +57,13 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
                                   10, da_options::lbound_t::greaterequal, max_da_int,
                                   da_options::ubound_t::p_inf, 100));
         opts.register_opt(oi);
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "coord restart",
-            "Number of inner iteration to perform before requesting to perform a full "
-            "evaluation of the step function",
-            0, da_options::lbound_t::greaterequal, max_da_int,
-            da_options::ubound_t::p_inf, max_da_int, "\\infty"));
+        oi = std::make_shared<OptionNumeric<da_int>>(
+            OptionNumeric<da_int>("coord restart",
+                                  "Number of inner inner iterations to perform before "
+                                  "requesting to perform a full "
+                                  "evaluation of the step function",
+                                  0, da_options::lbound_t::greaterequal, max_da_int,
+                                  da_options::ubound_t::p_inf, max_da_int, "\\infty"));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "coord iteration limit", "Maximum number of iterations to perform", 1,

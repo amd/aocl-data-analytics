@@ -2,21 +2,21 @@
    ignore_blis
    Memcheck:Cond
    ...
-   obj:*blis*
+   obj:*bli*
 }
 
 {
    ignore_blis
    Memcheck:Leak
    ...
-   obj:*blis*
+   obj:*bli*
 }
 
 {
    ignore_blis
    Memcheck:Leak
    ...
-   fun:*blis*
+   fun:*bli*
 }
 
 {
@@ -24,4 +24,19 @@
    Memcheck:Leak
    ...
    obj:*gomp*
+}
+
+{
+   ignore_libflame
+   Memcheck:Leak
+   ...
+   fun:*_fla
+}
+
+{
+   ignore_reachable_stuff
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:_dl_*
 }

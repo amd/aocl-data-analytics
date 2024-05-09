@@ -95,14 +95,14 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("alpha",
                              "coefficient of alpha in the regularization terms: lambda( "
-                             "(1-alpha) L2 + alpha L1 )",
+                             "(1-alpha)/2 L2 + alpha L1 )",
                              0.0, da_options::lbound_t::greaterequal, 1.0,
                              da_options::ubound_t::lessequal, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("lambda",
                              "penalty coefficient for the regularization terms: lambda( "
-                             "(1-alpha) L2 + alpha L1 )",
+                             "(1-alpha)/2 L2 + alpha L1 )",
                              0.0, da_options::lbound_t::greaterequal, rmax,
                              da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(oT);
@@ -132,7 +132,9 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
                           {"coord", linmod_method::coord},
                           {"svd", linmod_method::svd},
                           {"sparse_cg", linmod_method::cg},
-                          {"cholesky", linmod_method::cholesky}},
+                          {"cg", linmod_method::cg},
+                          {"cholesky", linmod_method::cholesky},
+                          {"chol", linmod_method::cholesky}},
                          "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(

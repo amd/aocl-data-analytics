@@ -110,7 +110,7 @@ Options
       .. csv-table:: k-means options
          :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
-         "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance", ":math:`0 < r`"
+         "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance", ":math:`0 \le r`"
          "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
          "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
          "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results", ":math:`-1 \le i`"
@@ -123,8 +123,8 @@ If it is set to ``random partitions`` then the sample points are assigned to a r
 
 The standard algorithm for solving *k*-means problems is Lloyd's algorithm. Elkan's algorithm can be faster on naturally clustered datasets but uses considerably more memory. For more information on the available algorithms see :cite:t:`elkan`, :cite:t:`hartigan1979algorithm`, :cite:t:`lloyd1982least` and :cite:t:`macqueen1967some`.
 
-Examples
-========
+Examples (clustering)
+========================
 
 .. tab-set::
 

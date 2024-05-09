@@ -21,6 +21,7 @@ doc/404.md
 doc/requirements.txt
 tools/valgrind_suppress\.txt
 tools/copyright_suppression\.txt
+jenkins_log_rules\.txt
 source/core/csv/tokenizer.[ch]
 source/core/csv/khash.h
 source/core/csv/portable.h

@@ -375,7 +375,7 @@ add_subdirectory(source)
 # Put all custom configuration BEFORE including "CTest"
 if(VALGRIND)
   set(MEMORYCHECK_COMMAND_OPTIONS
-      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all --gen-suppressions=all"
+      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" #  --gen-suppressions=all
   )
   set(MEMORYCHECK_TYPE "valgrind")
   set(MEMORYCHECK_SUPPRESSIONS_FILE
@@ -437,16 +437,20 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
 endif()
 
 message(NOTICE "\nOPTIONS")
-message(NOTICE "Building for ILP64      : ${BUILD_ILP64}")
-message(NOTICE "Building with ASan      : ${ASAN}")
-message(NOTICE "Building with MemSan    : ${MEMSAN}")
-message(NOTICE "Building with Valgrind  : ${VALGRIND}")
-message(NOTICE "Building with OpenMP    : ${BUILD_SMP}")
-message(NOTICE "Shared library build    : ${BUILD_SHARED_LIBS}")
-message(NOTICE "Vectorization reports   : ${VECTORIZATION_REPORTS}")
-message(NOTICE "Debug printing          : ${DA_LOGGING}")
-message(NOTICE "Architecture flag       : ${ARCH_FLAG}")
-
+message(NOTICE "Architecture flag         ARCH_FLAG............: ${ARCH_FLAG}")
+message(NOTICE "Building with ASan        ASAN.................: ${ASAN}")
+message(NOTICE "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
+message(NOTICE "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
+message(NOTICE "Building with OpenMP      BUILD_SMP............: ${BUILD_SMP}")
+message(NOTICE "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")
+message(NOTICE "Building with Coverage    COVERAGE.............: ${COVERAGE}")
+message(NOTICE "Debug printing            DA_LOGGING...........: ${DA_LOGGING}")
+message(NOTICE "Building docs             BUILD_DOC............: ${BUILD_DOC}")
+if(INTERNAL_DOC)
+  message(NOTICE "Build internal docs       INTERNAL_DOC.........: ${INTERNAL_DOC}")
+endif()
+message(NOTICE "Building with MemSan      MEMSAN...............: ${MEMSAN}")
+message(NOTICE "Building with Valgrind    VALGRIND.............: ${VALGRIND}")
 if(${VALGRIND})
   message(
     NOTICE
@@ -455,22 +459,14 @@ if(${VALGRIND})
   message(NOTICE
           "         Valgrind suppression: ${MEMORYCHECK_SUPPRESSIONS_FILE}")
 endif()
-
-message(NOTICE "Building with Coverage  : ${COVERAGE}")
-message(NOTICE "Building docs           : ${BUILD_DOC}")
-
-if(INTERNAL_DOC)
-  message(NOTICE "Build internal docs     : ${INTERNAL_DOC}")
-endif()
-
-message(NOTICE "Building Python bindings:  ${BUILD_PYTHON}")
+message(NOTICE "Vectorization reports     VECTORIZATION_REPORTS: ${VECTORIZATION_REPORTS}")
 
 message(NOTICE "\nTARGETS")
-message(NOTICE "Build the EXAMPLE programs   : ${BUILD_EXAMPLES}")
-message(NOTICE "Build GTEST unit-tests       : ${BUILD_GTEST}")
+message(NOTICE "Build the EXAMPLE programs  BUILD_EXAMPLES.....: ${BUILD_EXAMPLES}")
+message(NOTICE "Build GTEST unit-tests      BUILD_GTEST........: ${BUILD_GTEST}")
 
 message(NOTICE "\nDEPENDENT LIBRARIES")
-message(NOTICE "BLAS                    : ${BLAS}")
-message(NOTICE "LAPACK                  : ${LAPACK}")
-message(NOTICE "AOCL-Sparse             : ${SPARSE}")
-message(NOTICE "AOCL-Utils              : ${UTILS}")
+message(NOTICE "BLAS         BLAS=${BLAS}")
+message(NOTICE "LAPACK       LAPACK=${LAPACK}")
+message(NOTICE "AOCL-Sparse  SPARSE=${SPARSE}")
+message(NOTICE "AOCL-Utils   UTILS=${UTILS}")

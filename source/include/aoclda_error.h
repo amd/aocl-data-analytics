@@ -79,7 +79,6 @@ typedef enum da_status_ {
 
     // Optimization solvers 500-599
     da_status_optimization_usrstop = 500, ///< User requested to stop optimization process
-    da_status_optimization_num_difficult, ///< Numerical difficulties encountered during the optimization process
     da_status_optimization_infeasible, ///< The problem is infeasible, the bounds describe an empty domain
     da_status_optimization_empty_space, ///< No variables are defined in the problem
 

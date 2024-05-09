@@ -141,8 +141,6 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  */
 da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
                                da_int *block, da_ordering order, da_int copy_data);
-da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **block, da_ordering order);
 da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
                                   double *block, da_ordering order, da_int copy_data);
 da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_cols,
@@ -152,11 +150,39 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
 /** \} */
 
 /** \{
+ * @brief Load new columns into a @ref da_datastore from a dense matrix.
+ * The last suffix of the function name marks the type of the data to add.
+ *
+ * The *da_data_load_col_str* routine will try to add columns to the right of the @ref da_datastore passed in argument.
+ * If data was already loaded in the store, the number of rows of the new block must match
+ * with the number of rows already present.
+ *
+ * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row
+ * major or column major ordering.
+ *
+ * @param[inout] store the main structure.
+ * @param[in] n_rows number of rows of the new block.
+ * @param[in] n_cols number of columns of the new block.
+ * @param[in] block pointer to the raw data to add to the store.
+ * @param[in] order a @ref da_ordering enumerated type.
+  *                 Specifies if the data block was stored in a column or row major ordering.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success - the operation was successful.
+ * - @ref da_status_invalid_input - some of the input data was not correct.
+ *        Use @ref da_handle_print_error_message to get more details.
+ * - @ref da_status_invalid_pointer - the store was not correctly initialized.
+ * - @ref da_status_memory_error - internal memory allocation encountered a problem.
+ */
+da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
+                               const char **block, da_ordering order);
+/** \} */
+
+/** \{
  * @brief Load new rows into a @ref da_datastore from a dense matrix.
  * The last suffix of the function name marks the type of the data to add.
  *
  * @rst
- * The *da_data_load_row_X* routines will try to add rows at the bottom of the @ref da_datastore passed in argument.
+ * The *da_data_load_row_X* routines will try to add rows at the bottom of the @ref da_datastore passed in the argument.
  * If data was already loaded in the store, the routines must be called repeatedly until the columns of the new blocks
  * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the stores structure).
  * @endrst
@@ -167,7 +193,7 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
  * The data provided can be optionally copied into the store (for non C-string data blocks)
  * if @p copy_data was set to true.
  * Warning: if @p copy_data is set to false, the pointer will be copied as it is provided.
- * modifying or deallocating the memory before calling @ref da_datastore_destroy can create
+ * Modifying or deallocating the memory before calling @ref da_datastore_destroy can create
  * unintended behaviour.
  *
  * @param[inout] store the main structure.
@@ -186,14 +212,42 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
  */
 da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
                                da_int *block, da_ordering order, da_int copy_data);
-da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **block, da_ordering order);
 da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
                                   double *block, da_ordering order, da_int copy_data);
 da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_cols,
                                   float *block, da_ordering order, da_int copy_data);
 da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_cols,
                                  uint8_t *block, da_ordering order, da_int copy_data);
+/** \} */
+
+/** \{
+ * @brief Load new rows into a @ref da_datastore from a dense matrix.
+ * The last suffix of the function name marks the type of the data to add.
+ *
+ * @rst
+ * The *da_data_load_row_str* routine will try to add rows at the bottom of the @ref da_datastore passed in the argument.
+ * If data was already loaded in the store, the routines must be called repeatedly until the columns of the new blocks
+ * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the stores structure).
+ * @endrst
+ *
+ * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row major
+ * or column major ordering.
+ *
+ * @param[inout] store the main structure.
+ * @param[in] n_rows number of rows of the new block.
+ * @param[in] n_cols number of columns of the new block.
+ * @param[in] block pointer to the raw data to add to the store.
+ * @param[in] order a @ref da_ordering enumerated type.
+ *              Specifies if the data block was stored in a column or row major ordering.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success - the operation was successful.
+ * - @ref da_status_invalid_input - some of the input data was not correct.
+ *        Use @ref da_handle_print_error_message to get more details.
+ * - @ref da_status_invalid_pointer - the store was not correctly initialized.
+ * - @ref da_status_memory_error - internal memory allocation encountered a problem.
+ */
+da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
+                               const char **block, da_ordering order);
 /** \} */
 
 /**
