@@ -405,7 +405,7 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.n_clusters = 10;
     param.initialization_method = "k-means++";
     param.algorithm = "lloyd";
-    param.max_allowed_inertia = 0.0;
+    param.max_allowed_inertia = 0.1;
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "macqueen";

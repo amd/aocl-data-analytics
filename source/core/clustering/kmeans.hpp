@@ -108,15 +108,13 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_int lda;
     da_int ldc;
 
-    /*
-    double t_iteration = 0.0;
-    double t_euclidean_it = 0.0;
-    double t_centre_half_distances = 0.0;
-    double t_init_bounds = 0.0;
-    double t_assign = 0.0;
-    double t_update = 0.0;
-    double t_loop361 = 0.0;
-*/
+    //double t_iteration = 0.0;
+    //double t_euclidean_it = 0.0;
+    //double t_centre_half_distances = 0.0;
+    //double t_init_bounds = 0.0;
+    //double t_assign = 0.0;
+    //double t_update = 0.0;
+    //double t_loop361 = 0.0;
 
     // Maximum size of data chunks for elkan, lloyd and macqueen algorithms
     da_int max_chunk_size;
@@ -159,8 +157,17 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     void lloyd_iteration(bool update_centres);
 
-    void lloyd_iteration_chunk(bool update_centres, da_int chunk_size, da_int chunk_index,
-                               da_int *labels);
+    // We need various unrolled versions of the chunked part of the lloyd iteration
+    void lloyd_iteration_chunk_no_unroll(bool update_centres, da_int chunk_size,
+                                         da_int chunk_index, da_int *labels);
+
+    void lloyd_iteration_chunk_unroll_4(bool update_centres, da_int chunk_size,
+                                        da_int chunk_index, da_int *labels);
+
+    void lloyd_iteration_chunk_unroll_8(bool update_centres, da_int chunk_size,
+                                        da_int chunk_index, da_int *labels);
+
+    void (da_kmeans<T>::*lloyd_iteration_chunk)(bool, da_int, da_int, da_int *);
 
     void elkan_iteration(bool update_centres);
 
@@ -432,7 +439,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
             previous_cluster_centres->resize(n_clusters * n_features, 0.0);
             work_int1.resize(n_clusters, 0);
             work_int2.resize(n_samples, 0);
-            workc1.resize(n_clusters, 0.0);
+            // Extra bit on workc1 just to enable some padding to be done if loop unrolling occurs
+            workc1.resize(n_clusters + 8, 0.0);
             current_labels->resize(n_samples, 0);
             previous_labels->resize(n_samples, 0);
             if (n_init > 1) {
@@ -460,7 +468,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 ldworksc1 = max_chunk_size;
                 break;
             case lloyd:
-                worksc1.resize(max_chunk_size * n_clusters, 0.0);
+                worksc1.resize(max_chunk_size * (n_clusters + 8), 0.0);
                 works1.resize(n_samples, 0.0);
                 ldworksc1 = max_chunk_size;
                 break;
@@ -523,16 +531,16 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         }
 
         iscomputed = true;
-        /*
-        double tt1 = omp_get_wtime();
-        std::cout << "t_iteration: " << t_iteration << std::endl;
-        std::cout << "t_euclidean_it: " << t_euclidean_it << std::endl;
-        std::cout << "t_centre_half_distances: " << t_centre_half_distances << std::endl;
-        std::cout << "t_init_bounds: " << t_init_bounds << std::endl;
-        std::cout << "t_assign: " << t_assign << std::endl;
-        std::cout << "t_update: " << t_update << std::endl;
-        std::cout << "t_loop361: " << t_loop361 << std::endl;
-*/
+
+        //double tt1 = omp_get_wtime();
+        //std::cout << "t_iteration: " << t_iteration << std::endl;
+        //std::cout << "t_euclidean_it: " << t_euclidean_it << std::endl;
+        //std::cout << "t_centre_half_distances: " << t_centre_half_distances << std::endl;
+        //std::cout << "t_init_bounds: " << t_init_bounds << std::endl;
+        //std::cout << "t_assign: " << t_assign << std::endl;
+        //std::cout << "t_update: " << t_update << std::endl;
+        //std::cout << "t_loop361: " << t_loop361 << std::endl;
+
         if (warn_maxit_reached)
             return da_warn(err, da_status_maxit,
                            "The maximum number of iterations was reached.");

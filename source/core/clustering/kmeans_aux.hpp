@@ -27,6 +27,7 @@
 #include "da_cblas.hh"
 #include "euclidean_distance.hpp"
 #include "hartigan_wong.hpp"
+#include "kmeans_lloyd_iteration_unrolls.hpp"
 #include <cstdlib>
 #include <numeric>
 //#include <omp.h>
@@ -106,7 +107,8 @@ template <typename T> void da_kmeans<T>::compute_centre_half_distances() {
         dummy, 0, workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0, false, true);
     //double t1 = omp_get_wtime();
     // For each centre, compute half distance to next closest centre and store in workc1
-    std::fill(workc1.begin(), workc1.end(), std::numeric_limits<T>::infinity());
+    std::fill(workc1.begin(), workc1.begin() + n_clusters,
+              std::numeric_limits<T>::infinity());
 
     for (da_int j = 0; j < n_clusters; j++) {
         for (da_int i = 0; i < j; i++) {
@@ -132,6 +134,16 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
     switch (algorithm) {
     case lloyd:
         single_iteration = &da_kmeans<T>::lloyd_iteration;
+        if (n_clusters < 6) {
+            lloyd_iteration_chunk = &da_kmeans<T>::lloyd_iteration_chunk_no_unroll;
+
+        } else {
+            // Ensure the extra bit of padding in workc1 and works1 isn't going to interfere with the computation
+            std::fill(workc1.end() - 8, workc1.end(), std::numeric_limits<T>::infinity());
+            std::fill(worksc1.end() - 8 * ldworksc1, worksc1.end(),
+                      std::numeric_limits<T>::infinity());
+            lloyd_iteration_chunk = &da_kmeans<T>::lloyd_iteration_chunk_unroll_4;
+        }
         break;
     case macqueen:
         init_macqueen();
@@ -422,68 +434,6 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
     compute_centre_half_distances();
 }
 
-/* Within Lloyd iteration update a chunk of the labels*/
-template <typename T>
-void da_kmeans<T>::lloyd_iteration_chunk(bool update_centres, da_int chunk_size,
-                                         da_int chunk_index, da_int *labels) {
-
-    // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
-    // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
-
-    /*for (da_int j = 0 ; j < n_clusters ; j++){
-        #pragma omp simd
-        for (da_int i = 0 ; i < chunk_size ; i++){
-            worksc1[i + ldworksc1 * j] = workc1[j];
-        }
-    }
-    */
-
-    T tmp2;
-    //double t0 = omp_get_wtime();
-    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, chunk_size, n_clusters,
-                        n_features, -2.0, &A[chunk_index], lda,
-                        (*previous_cluster_centres).data(), n_clusters, 0.0,
-                        worksc1.data(), ldworksc1);
-    //double t1 = omp_get_wtime();
-    //t_euclidean_it += t1 - t0;
-    // Go through each sample (row) in worksc1 and find argmin
-
-    tmp2 = workc1[0];
-    // Note, this is the critical loop performance-wise; it needs to vectorize, but currently does not
-    const da_int i_size = chunk_size;
-    const da_int j_size = n_clusters;
-#pragma omp simd
-    for (da_int i = 0; i < i_size; i++) {
-        T smallest_dist = worksc1[i] + tmp2;
-        da_int label = 0;
-        for (da_int j = 1; j < j_size; j++) {
-            da_int index = i + ldworksc1 * j;
-            T tmp = worksc1[index] + workc1[j];
-            if (tmp < smallest_dist) {
-                label = j;
-                smallest_dist = tmp;
-            }
-        }
-        labels[i] = label;
-    }
-    //double t2 = omp_get_wtime();
-    //t_assign += t2 - t1;
-    if (update_centres) {
-
-        for (da_int i = 0; i < chunk_size; i++) {
-            da_int label = labels[i];
-            work_int1[label] += 1;
-            // Add this sample to the cluster mean
-            for (da_int j = 0; j < n_features; j++) {
-                (*current_cluster_centres)[label + j * n_clusters] +=
-                    A[i + chunk_index + j * lda];
-            }
-        }
-    }
-    //double t3 = omp_get_wtime();
-    //t_update += t3 - t2;
-}
-
 /* Perform single iteration of Lloyd's method */
 template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
 
@@ -512,11 +462,13 @@ template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
     //double t0 = omp_get_wtime();
     for (da_int i = 0; i < n_chunks; i++) {
         if (i == n_chunks - 1 && chunk_rem > 0) {
-            lloyd_iteration_chunk(update_centres, chunk_rem, n_samples - chunk_rem,
-                                  &(*current_labels)[n_samples - chunk_rem]);
+            (this->*lloyd_iteration_chunk)(update_centres, chunk_rem,
+                                           n_samples - chunk_rem,
+                                           &(*current_labels)[n_samples - chunk_rem]);
         } else {
-            lloyd_iteration_chunk(update_centres, max_chunk_size, i * max_chunk_size,
-                                  &(*current_labels)[i * max_chunk_size]);
+            (this->*lloyd_iteration_chunk)(update_centres, max_chunk_size,
+                                           i * max_chunk_size,
+                                           &(*current_labels)[i * max_chunk_size]);
         }
     }
     //double t1 = omp_get_wtime();
