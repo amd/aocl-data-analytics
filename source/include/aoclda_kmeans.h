@@ -54,7 +54,7 @@ extern "C" {
  * - \ref da_status_wrong_type - the handle may have been initialized with the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or \p A is null.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
- * - \ref da_status_incompatible_options - if you have already set the :ref:`number of clusters <kmeans_options>` and it is too high, then it will be reduced accordingly, and this warning returned.
+ * - \ref da_status_incompatible_options - if you have already set the number of clusters and it is too high, then it will be reduced accordingly, and this warning returned.
  */
 da_status da_kmeans_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
                                const double *A, da_int lda);

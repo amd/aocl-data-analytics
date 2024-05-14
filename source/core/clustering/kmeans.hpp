@@ -81,7 +81,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_int best_n_iter = 0, current_n_iter = 0;
 
     // Do we need to warn the user that the best run of k-means ended after the maximum number of iterations?
-    bool warn_maxit_reached;
+    bool warn_maxit_reached = false;
 
     // This will be used to record the convergence status of the current/latest k-means run
     da_int converged = 0;
@@ -96,17 +96,14 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     // Norm of previous cluster centre array, for use in convergence testing
     T normc = 0.0;
 
-    // This just allows us to save a little computation if predict is called multiple times
-    bool storing_centre_norms = false;
-
     // Pointer to error trace
     da_errors::da_error_t *err = nullptr;
 
     // User's data
     const T *A;
     const T *C;
-    da_int lda;
-    da_int ldc;
+    da_int lda = 0;
+    da_int ldc = 0;
 
     //double t_iteration = 0.0;
     //double t_euclidean_it = 0.0;
@@ -116,20 +113,20 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     //double t_update = 0.0;
     //double t_loop361 = 0.0;
 
-    // Maximum size of data chunks for elkan, lloyd and macqueen algorithms
-    da_int max_chunk_size;
-    da_int n_chunks;
-    da_int chunk_rem;
+    // Maximum size of data blocks for elkan, lloyd and macqueen algorithms
+    da_int max_block_size = 0;
+    da_int n_blocks = 0;
+    da_int block_rem = 0;
 
-    // Leading dimension of worksc1
-    da_int ldworksc1;
+    // Leading dimension of workcs1
+    da_int ldworkcs1 = 0;
 
     // This will point to the function to perform k-means iterations depending on algorithm choice
     void (da_kmeans<T>::*single_iteration)(bool);
 
     // Arrays used internally, and to store results
     T best_inertia = 0.0, current_inertia = 0.0; // Inertia
-    std::vector<T> workcc1, worksc1, works1, works2, works3, works4, works5, workc1,
+    std::vector<T> workcc1, workcs1, works1, works2, works3, works4, works5, workc1,
         workc2, workc3;
     std::vector<da_int> work_int1, work_int2, work_int3, work_int4;
 
@@ -147,6 +144,91 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     std::unique_ptr<std::vector<da_int>> previous_labels =
         std::make_unique<std::vector<da_int>>();
 
+    // Lloyd algorithm functions, including various unrolled versions of the blocked part of the lloyd iteration
+
+    void init_lloyd();
+
+    void lloyd_iteration(bool update_centres);
+
+    void lloyd_iteration_block_no_unroll(bool update_centres, da_int block_size,
+                                         da_int block_index, const T *data, da_int lddata,
+                                         T *cluster_centres, T *new_cluster_centres,
+                                         T *centre_norms, da_int *cluster_count,
+                                         da_int *labels, T *work, da_int ldwork);
+
+    void lloyd_iteration_block_unroll_2(bool update_centres, da_int block_size,
+                                        da_int block_index, const T *data, da_int lddata,
+                                        T *cluster_centres, T *new_cluster_centres,
+                                        T *centre_norms, da_int *cluster_count,
+                                        da_int *labels, T *work, da_int ldwork);
+
+    void lloyd_iteration_block_unroll_4_T(bool update_centres, da_int block_size,
+                                          da_int block_index, const T *data,
+                                          da_int lddata, T *cluster_centres,
+                                          T *new_cluster_centres, T *centre_norms,
+                                          da_int *cluster_count, da_int *labels, T *work,
+                                          da_int ldwork);
+
+    void lloyd_iteration_block_unroll_4(bool update_centres, da_int block_size,
+                                        da_int block_index, const T *data, da_int lddata,
+                                        T *cluster_centres, T *new_cluster_centres,
+                                        T *centre_norms, da_int *cluster_count,
+                                        da_int *labels, T *work, da_int ldwork);
+
+    void lloyd_iteration_block_unroll_8(bool update_centres, da_int block_size,
+                                        da_int block_index, const T *data, da_int lddata,
+                                        T *cluster_centres, T *new_cluster_centres,
+                                        T *centre_norms, da_int *cluster_count,
+                                        da_int *labels, T *work, da_int ldwork);
+
+    // Elkan algorithm functions, including various unrolled versions of the blocked part of the iteration
+
+    void init_elkan();
+
+    void init_elkan_bounds();
+
+    void elkan_iteration(bool update_centres);
+
+    void elkan_iteration_assign_block(bool update_centres, da_int block_size,
+                                      da_int block_index, T *u_bounds, da_int *old_labels,
+                                      da_int *new_labels);
+
+    void elkan_iteration_update_block_no_unroll(da_int block_size, T *l_bound,
+                                                da_int ldl_bound, T *u_bound,
+                                                T *centre_shift, da_int *labels);
+
+    void elkan_iteration_update_block_unroll_4(da_int block_size, T *l_bound,
+                                               da_int ldl_bound, T *u_bound,
+                                               T *centre_shift, da_int *labels);
+
+    void elkan_iteration_update_block_unroll_8(da_int block_size, T *l_bound,
+                                               da_int ldl_bound, T *u_bound,
+                                               T *centre_shift, da_int *labels);
+
+    // Function pointers which will be set when the algorithm has been chosen
+
+    void (da_kmeans<T>::*initialize_algorithm)();
+
+    void (da_kmeans<T>::*lloyd_iteration_block)(bool, da_int, da_int, const T *, da_int,
+                                                T *, T *, T *, da_int *, da_int *, T *,
+                                                da_int);
+
+    void (da_kmeans<T>::*predict_block)(bool, da_int, da_int, const T *, da_int, T *, T *,
+                                        T *, da_int *, da_int *, T *, da_int);
+
+    void (da_kmeans<T>::*elkan_iteration_update_block)(da_int, T *, da_int, T *, T *,
+                                                       da_int *);
+
+    // Macqueen algorithm functions
+
+    void init_macqueen();
+
+    void init_macqueen_block(da_int block_size, da_int block_index);
+
+    void macqueen_iteration(bool update_centres);
+
+    // Miscellaneous functions and functions used by multiple algorithms
+
     void initialize_centres();
 
     void initialize_rng();
@@ -155,46 +237,19 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     da_int convergence_test();
 
-    void lloyd_iteration(bool update_centres);
-
-    // We need various unrolled versions of the chunked part of the lloyd iteration
-    void lloyd_iteration_chunk_no_unroll(bool update_centres, da_int chunk_size,
-                                         da_int chunk_index, da_int *labels);
-
-    void lloyd_iteration_chunk_unroll_4(bool update_centres, da_int chunk_size,
-                                        da_int chunk_index, da_int *labels);
-
-    void lloyd_iteration_chunk_unroll_8(bool update_centres, da_int chunk_size,
-                                        da_int chunk_index, da_int *labels);
-
-    void (da_kmeans<T>::*lloyd_iteration_chunk)(bool, da_int, da_int, da_int *);
-
-    void elkan_iteration(bool update_centres);
-
-    void elkan_iteration_assign_chunk(bool update_centres, da_int chunk_size,
-                                      da_int chunk_index, T *u_bounds, da_int *old_labels,
-                                      da_int *new_labels);
-
-    void elkan_iteration_update_chunk(da_int chunk_size, da_int chunk_index, T *l_bound,
-                                      T *u_bound, da_int *labels);
-
-    void macqueen_iteration(bool update_centres);
-
     void compute_current_inertia();
 
     void compute_centre_half_distances();
 
     void compute_centre_shift();
 
-    void init_elkan_bounds();
-
-    void init_macqueen();
-
-    void init_macqueen_chunk(da_int chunk_size, da_int chunk_index);
+    void scale_current_cluster_centres();
 
     void kmeans_plusplus();
 
-    void get_chunking_scheme();
+    void perform_hartigan_wong();
+
+    void get_blocking_scheme(da_int n_samples);
 
   public:
     da_options::OptionRegistry opts;
@@ -311,7 +366,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         // Record that initialization is complete but computation has not yet been performed
         initdone = true;
         iscomputed = false;
-        storing_centre_norms = false;
 
         // Now that we have a data matrix we can re-register the n_clusters option with new constraints
         da_int temp_clusters;
@@ -369,8 +423,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                             "No data has been passed to the handle. Please call "
                             "da_kmeans_set_data_s or da_kmeans_set_data_d.");
 
-        storing_centre_norms = false;
-
         // Read in options and store in class
         this->opts.get("n_clusters", n_clusters);
 
@@ -424,14 +476,22 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         switch (algorithm) {
         case lloyd:
-            max_chunk_size = KMEANS_LLOYD_CHUNK_SIZE;
+            max_block_size = KMEANS_LLOYD_BLOCK_SIZE;
+            initialize_algorithm = &da_kmeans<T>::init_lloyd;
+            break;
         case elkan:
-            max_chunk_size = KMEANS_ELKAN_CHUNK_SIZE;
+            max_block_size = KMEANS_ELKAN_BLOCK_SIZE;
+            initialize_algorithm = &da_kmeans<T>::init_elkan;
+            break;
         case macqueen:
-            max_chunk_size = KMEANS_MACQUEEN_CHUNK_SIZE;
+            max_block_size = KMEANS_MACQUEEN_BLOCK_SIZE;
+            initialize_algorithm = &da_kmeans<T>::init_macqueen;
+            break;
         default:
-            max_chunk_size = 1;
+            max_block_size = n_samples;
+            break;
         }
+        max_block_size = std::min(max_block_size, n_samples);
 
         // Initialize some arrays
         try {
@@ -452,25 +512,25 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                             "Memory allocation failed.");
         }
 
+        // Ensure the extra padding in workc1 (for vectorization) won't interfere with any computation
+        std::fill(workc1.end() - 8, workc1.end(), std::numeric_limits<T>::infinity());
+
         // Based on what algorithms we are using, allocate the remaining memory
         try {
 
             switch (algorithm) {
             case elkan:
                 workcc1.resize(n_clusters * n_clusters, 0.0);
-                worksc1.resize(n_samples * n_clusters, 0.0);
+                workcs1.resize(n_samples * (n_clusters + 8), 0.0);
                 works1.resize(n_samples, 0.0);
-                ldworksc1 = n_samples;
                 break;
             case macqueen:
-                worksc1.resize(max_chunk_size * n_clusters, 0.0);
+                workcs1.resize(max_block_size * n_clusters, 0.0);
                 workc2.resize(n_clusters, 0.0);
-                ldworksc1 = max_chunk_size;
                 break;
             case lloyd:
-                worksc1.resize(max_chunk_size * (n_clusters + 8), 0.0);
+                workcs1.resize(max_block_size * (n_clusters + 8), 0.0);
                 works1.resize(n_samples, 0.0);
-                ldworksc1 = max_chunk_size;
                 break;
             case hartigan_wong:
                 works1.resize(n_samples, 0.0);
@@ -506,7 +566,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         // If needed, initialize random number generation
         da_kmeans<T>::initialize_rng();
 
-        // Set the initial best_inertia to something large
+        // Set the initial best_inertia over all the runs to something large
         best_inertia = std::numeric_limits<T>::infinity();
 
         // Run k-means algorithm n_init times and select the run with the lowest inertia
@@ -527,6 +587,19 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 warn_maxit_reached = (converged == 0) ? true : false;
                 std::swap(best_cluster_centres, current_cluster_centres);
                 std::swap(best_labels, current_labels);
+            }
+        }
+
+        // Compute the squared norms of the cluster centres in preparation for the predict phase of the algorithm; store in workc1
+        for (da_int i = 0; i < n_clusters; i++) {
+            workc1[i] = (T)0.0;
+        }
+
+        T tmp;
+        for (da_int j = 0; j < n_features; j++) {
+            for (da_int i = 0; i < n_clusters; i++) {
+                tmp = (*best_cluster_centres)[i + j * n_clusters];
+                workc1[i] += tmp * tmp;
             }
         }
 
@@ -600,15 +673,11 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                             "Memory allocation failed.");
         }
 
-        // We may be able to reuse previously computed centre norms
-        da_int compute_centre_norms = storing_centre_norms ? 1 : 2;
-
         // Compute m_samples x n_clusters matrix of distances to cluster centres
         euclidean_distance(m_samples, n_clusters, n_features, X, ldx,
                            (*best_cluster_centres).data(), n_clusters, X_transform,
-                           ldx_transform, x_work.data(), 2, workc1.data(),
-                           compute_centre_norms, false, false);
-        storing_centre_norms = true;
+                           ldx_transform, x_work.data(), 2, workc1.data(), 1, false,
+                           false);
 
         return da_status_success;
     }
@@ -649,39 +718,55 @@ template <typename T> class da_kmeans : public basic_handle<T> {
             return da_error(err, da_status_invalid_pointer,
                             "The array Y_labels is null.");
 
-        // Compute nearest cluster centre for each sample in Y
+        // Compute nearest cluster centre for each sample in Y; essentially a single blocked step of the Lloyd iteration
         std::vector<T> y_work;
 
+        max_block_size = std::min(KMEANS_LLOYD_BLOCK_SIZE, k_samples);
+
         try {
-            y_work.resize(k_samples * n_clusters);
+            y_work.resize(max_block_size * (n_clusters + 8));
         } catch (std::bad_alloc const &) {
             return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
 
-        T *dummy = nullptr;
+        get_blocking_scheme(k_samples);
 
-        // We may be able to reuse previously computed centre norms
-        da_int compute_centre_norms = storing_centre_norms ? 1 : 2;
-
-        euclidean_distance(k_samples, n_clusters, n_features, Y, ldy,
-                           (*best_cluster_centres).data(), n_clusters, y_work.data(),
-                           k_samples, dummy, 0, workc1.data(), compute_centre_norms, true,
-                           false);
-
-        storing_centre_norms = true;
-
-        for (da_int i = 0; i < k_samples; i++) {
-            T smallest_dist = std::numeric_limits<T>::infinity();
-            da_int label = 0;
-            for (da_int j = 0; j < n_clusters; j++) {
-                if (y_work[i + k_samples * j] < smallest_dist) {
-                    label = j;
-                    smallest_dist = y_work[i + k_samples * j];
-                }
-            }
-            Y_labels[i] = label;
+        da_int ldy_work;
+        if (n_clusters < 4) {
+            ldy_work = n_clusters + 8;
+            predict_block = &da_kmeans<T>::lloyd_iteration_block_no_unroll;
+        } else if (n_clusters < 6) {
+            ldy_work = max_block_size;
+            predict_block = &da_kmeans<T>::lloyd_iteration_block_unroll_4_T;
+        } else if (n_clusters < 16) {
+            predict_block = &da_kmeans<T>::lloyd_iteration_block_unroll_4;
+            ldy_work = n_clusters + 8;
+        } else {
+            predict_block = &da_kmeans<T>::lloyd_iteration_block_unroll_8;
+            ldy_work = n_clusters + 8;
         }
+
+        T *dummy = nullptr;
+        da_int *dummy_int = nullptr;
+        da_int block_index;
+
+        for (da_int i = 0; i < n_blocks; i++) {
+            if (i == n_blocks - 1 && block_rem > 0) {
+                block_index = k_samples - block_rem;
+                (this->*predict_block)(false, block_rem, block_index, &Y[block_index],
+                                       ldy, (*best_cluster_centres).data(), dummy,
+                                       workc1.data(), dummy_int, &Y_labels[block_index],
+                                       y_work.data(), ldy_work);
+            } else {
+                block_index = i * max_block_size;
+                (this->*predict_block)(
+                    false, max_block_size, block_index, &Y[block_index], ldy,
+                    (*best_cluster_centres).data(), dummy, workc1.data(), dummy_int,
+                    &Y_labels[block_index], y_work.data(), ldy_work);
+            }
+        }
+
         return da_status_success;
     }
 };
