@@ -89,7 +89,8 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
         for (da_int j = 1; j < n_clusters; j++) {
             // Compute distance between the ith sample and the jth centre only if needed
             workcs1[index + j] = (T)0.0;
-            tmp_int = (label < j) ? label + j * n_clusters : label * n_clusters + j;
+            //tmp_int = (label < j) ? label + j * n_clusters : label * n_clusters + j;
+            tmp_int = label * n_clusters + j;
             if (smallest_dist > workcc1[tmp_int]) {
 
                 dist = (T)0.0;
@@ -115,95 +116,6 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
     //t_init_bounds += t1 - t0;
 }
 
-/* Within Elkan iteration, assign a block of the labels*/
-template <typename T>
-void da_kmeans<T>::elkan_iteration_assign_block(bool update_centres, da_int block_size,
-                                                da_int block_index, T *u_bounds,
-                                                da_int *old_labels, da_int *new_labels) {
-
-    // In this function, workcc1 contains the previously computed centre half distances and workc1
-    // contains the distance from each centre to the next closest centre
-
-    T tmp, dist, u_bound;
-    da_int workcc1_index, previous_label, current_label;
-
-    for (da_int i = 0; i < block_size; i++) {
-
-        // New labels remain the same until we change them
-        previous_label = old_labels[i];
-        new_labels[i] = previous_label;
-        u_bound = u_bounds[i];
-        da_int A_index = i + block_index;
-        da_int workcs1_index = A_index * ldworkcs1;
-
-        // This will be true if the upper and lower bounds are equal
-        bool tight_bounds = false;
-
-        // Only proceed if distance to closest centre exceeds 0.5* distance to next centre
-        if (u_bound > workc1[previous_label]) {
-
-            for (da_int j = 0; j < n_clusters; j++) {
-
-                // Check if this centre is a good candidate for relabelling the sample - need to account for the fact
-                // that only upper triangle of workcc1 is stored
-                workcc1_index = (previous_label < j) ? previous_label + j * n_clusters
-                                                     : previous_label * n_clusters + j;
-                da_int tmp_index = workcs1_index + j;
-
-                if (j != previous_label && u_bound > workcs1[tmp_index] &&
-                    u_bound > workcc1[workcc1_index]) {
-
-                    if (tight_bounds == false) {
-                        // Get distance from sample point to currently assigned centre
-                        u_bound = (T)0.0;
-#pragma omp simd reduction(+ : u_bound)
-                        for (da_int k = 0; k < n_features; k++) {
-                            T tmp = A[A_index + k * lda] -
-                                    (*previous_cluster_centres)[previous_label +
-                                                                k * n_clusters];
-                            u_bound += tmp * tmp;
-                        }
-                        u_bound = std::sqrt(u_bound);
-                        workcs1[workcs1_index + previous_label] = u_bound;
-                        tight_bounds = true;
-                    }
-
-                    // If condition still holds then compute distance to candidate centre and check
-                    if (u_bound > workcs1[tmp_index] ||
-                        u_bound > workcc1[workcc1_index]) {
-
-                        dist = (T)0.0;
-#pragma omp simd reduction(+ : dist)
-                        for (da_int k = 0; k < n_features; k++) {
-                            tmp = A[A_index + k * lda] -
-                                  (*previous_cluster_centres)[j + k * n_clusters];
-                            dist += tmp * tmp;
-                        }
-                        dist = std::sqrt(dist);
-                        workcs1[tmp_index] = dist;
-                        if (dist < u_bound) {
-                            u_bound = dist;
-                            new_labels[i] = j;
-                        }
-                    }
-                }
-            }
-        }
-
-        u_bounds[i] = u_bound;
-        current_label = new_labels[i];
-
-        if (update_centres) {
-            work_int1[current_label] += 1;
-            // Add this sample to the cluster mean
-            for (da_int j = 0; j < n_features; j++) {
-                (*current_cluster_centres)[current_label + j * n_clusters] +=
-                    A[A_index + j * lda];
-            }
-        }
-    }
-}
-
 /* Perform a single iteration of Elkan's method */
 template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
 
@@ -219,18 +131,21 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
     // The latest labels and centres are in 'previous' so we can update them to current
 
     //double t0 = omp_get_wtime();
+
+    da_int block_size = max_block_size;
+    da_int block_index;
     for (da_int i = 0; i < n_blocks; i++) {
         if (i == n_blocks - 1 && block_rem > 0) {
-            elkan_iteration_assign_block(update_centres, block_rem, n_samples - block_rem,
-                                         &works1[n_samples - block_rem],
-                                         &(*previous_labels)[n_samples - block_rem],
-                                         &(*current_labels)[n_samples - block_rem]);
+            block_index = n_samples - block_rem;
+            block_size = block_rem;
         } else {
-            elkan_iteration_assign_block(update_centres, max_block_size,
-                                         i * max_block_size, &works1[i * max_block_size],
-                                         &(*previous_labels)[i * max_block_size],
-                                         &(*current_labels)[i * max_block_size]);
+            block_index = i * max_block_size;
         }
+        elkan_iteration_assign_block(
+            update_centres, block_size, &A[block_index], lda, &works1[block_index],
+            &workcs1[block_index * ldworkcs1], ldworkcs1,
+            &(*previous_labels)[block_index], &(*current_labels)[block_index],
+            workcc1.data(), workc1.data(), work_int1.data());
     }
     //double t1 = omp_get_wtime();
     //t_assign += t1 - t0;
@@ -252,21 +167,22 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
         }
         // workc1 now contains the distance moved by each centre during the iteration
         //double t3 = omp_get_wtime();
-        /*
+
         // only run this when parallelism available
+        /*
+        da_int block_size = max_block_size;
+        da_int block_index;
         for (da_int i = 0; i < n_blocks; i++) {
             if (i == n_blocks - 1 && block_rem > 0) {
-                (this->*elkan_iteration_update_block)(
-                    block_rem, &workcs1[(n_samples - block_rem) * ldworkcs1],
-                    &works1[n_samples - block_rem],
-                    &(*current_labels)[n_samples - block_rem]);
+                block_index = n_samples - block_rem;
+                block_size = block_rem;
             } else {
-                (this->*elkan_iteration_update_block)(
-                    max_block_size, &workcs1[i * max_block_size * ldworkcs1],
-                    &works1[i * max_block_size], &(*current_labels)[i * max_block_size]);
+                block_index = i * max_block_size;
             }
-        }
-*/
+            (this->*elkan_iteration_update_block)(
+                    block_size, &workcs1[block_index * ldworkcs1], ldworkcs1,
+                    &works1[block_index], workc1.data(), &(*current_labels)[block_index]);
+        }*/
 
         (this->*elkan_iteration_update_block)(n_samples, workcs1.data(), ldworkcs1,
                                               works1.data(), workc1.data(),
@@ -280,6 +196,110 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
     //t_update += t2 - t1;
 
     compute_centre_half_distances();
+}
+
+/* Within Elkan iteration, assign a block of the labels*/
+template <typename T>
+void da_kmeans<T>::elkan_iteration_assign_block(
+    bool update_centres, da_int block_size, const T *data, da_int lddata, T *u_bounds,
+    T *l_bounds, da_int ldl_bounds, da_int *old_labels, da_int *new_labels,
+    T *centre_half_distances, T *next_centre_distances, da_int *cluster_counts) {
+
+    for (da_int i = 0; i < block_size; i++) {
+
+        // New labels remain the same until we change them
+        da_int label = old_labels[i];
+        T u_bound = u_bounds[i];
+        da_int l_bounds_index = i * ldl_bounds;
+
+        // This will be true if the upper and lower bounds are equal
+        bool tight_bounds = false;
+
+        // Only proceed if distance to closest centre exceeds 0.5* distance to next centre
+        if (u_bound > next_centre_distances[label]) {
+
+            for (da_int j = 0; j < n_clusters; j++) {
+                // Check if this centre is a good candidate for relabelling the sample - need to account for the fact
+                // that only upper triangle of workcc1 is stored
+                //double t12 = omp_get_wtime();
+                //workcc1_index =
+                //  (label < j) ? label + j * n_clusters : label * n_clusters + j;
+                da_int centre_half_distances_index = label * n_clusters + j;
+                //double t5 = omp_get_wtime();
+                //t_assign5 += t5 - t12;
+                //tmp_index = workcs1_index + j;
+                T l_bound = l_bounds[l_bounds_index + j];
+                T centre_half_distance =
+                    centre_half_distances[centre_half_distances_index];
+
+                if (j != label && u_bound > l_bound && u_bound > centre_half_distance) {
+                    //double t9 = omp_get_wtime();
+
+                    if (tight_bounds == false) {
+                        // Get distance from sample point to currently assigned centre
+                        u_bound = (T)0.0;
+                        //double t0 = omp_get_wtime();
+#pragma omp simd reduction(+ : u_bound)
+                        for (da_int k = 0; k < n_features; k++) {
+                            T tmp = data[i + k * lddata] -
+                                    (*previous_cluster_centres)[label + k * n_clusters];
+                            u_bound += tmp * tmp;
+                        }
+                        u_bound = std::sqrt(u_bound);
+                        //double t1 = omp_get_wtime();
+                        //t_euclidean_it += t1 - t0;
+                        l_bounds[l_bounds_index + label] = u_bound;
+                        tight_bounds = true;
+                    }
+                    //double t10 = omp_get_wtime();
+                    //t_assign4 += t10 - t9;
+
+                    // If condition still holds then compute distance to candidate centre and check
+                    //double t7 = omp_get_wtime();
+                    if (u_bound > l_bound || u_bound > centre_half_distance) {
+                        T dist = (T)0.0;
+                        //double t3 = omp_get_wtime();
+#pragma omp simd reduction(+ : dist)
+                        for (da_int k = 0; k < n_features; k++) {
+                            T tmp = data[i + k * lddata] -
+                                    (*previous_cluster_centres)[j + k * n_clusters];
+                            dist += tmp * tmp;
+                        }
+
+                        dist = std::sqrt(dist);
+                        //double t4 = omp_get_wtime();
+                        //t_euclidean_it += t4 - t3;
+                        l_bounds[l_bounds_index + j] = dist;
+                        if (dist < u_bound) {
+                            u_bound = dist;
+                            //new_labels[i] = j;
+                            label = j;
+                        }
+                    }
+                    //double t8 = omp_get_wtime();
+                    //t_assign3 += t8 - t7;
+                }
+                //double t6 = omp_get_wtime();
+                //t_assign2 += t6 - t5;
+            }
+        }
+
+        u_bounds[i] = u_bound;
+        //current_label = new_labels[i];
+        new_labels[i] = label;
+
+        if (update_centres) {
+            cluster_counts[label] += 1;
+            // Add this sample to the cluster mean
+            //double t0 = omp_get_wtime();
+            for (da_int j = 0; j < n_features; j++) {
+                (*current_cluster_centres)[label + j * n_clusters] +=
+                    data[i + j * lddata];
+            }
+            //double t1 = omp_get_wtime();
+            //t_assign1 += t1 - t0;
+        }
+    }
 }
 
 /* In the Elkan algorithm, compute the half distances between centres in current_cluster_centres and
@@ -308,6 +328,7 @@ template <typename T> void da_kmeans<T>::compute_centre_half_distances() {
                 workc1[j] = tmp;
         }
     }
+
     //double t2 = omp_get_wtime();
     //t_centre_half_distances += t2 - t0;
     //t_euclidean_it += t1 - t0;
@@ -355,22 +376,19 @@ template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
     // Distance matrix part of the computation needs to be done in blocks since it is memory intensive
     //double t0 = omp_get_wtime();
     da_int block_index;
+    da_int block_size = max_block_size;
     for (da_int i = 0; i < n_blocks; i++) {
         if (i == n_blocks - 1 && block_rem > 0) {
             block_index = n_samples - block_rem;
-            (this->*lloyd_iteration_block)(
-                update_centres, block_rem, block_index, &A[block_index], lda,
-                (*previous_cluster_centres).data(), (*current_cluster_centres).data(),
-                workc1.data(), work_int1.data(), &(*current_labels)[block_index],
-                workcs1.data(), ldworkcs1);
+            block_size = block_rem;
         } else {
             block_index = i * max_block_size;
-            (this->*lloyd_iteration_block)(
-                update_centres, max_block_size, block_index, &A[block_index], lda,
-                (*previous_cluster_centres).data(), (*current_cluster_centres).data(),
-                workc1.data(), work_int1.data(), &(*current_labels)[block_index],
-                workcs1.data(), ldworkcs1);
         }
+        (this->*lloyd_iteration_block)(update_centres, block_size, &A[block_index], lda,
+                                       (*previous_cluster_centres).data(),
+                                       (*current_cluster_centres).data(), workc1.data(),
+                                       work_int1.data(), &(*current_labels)[block_index],
+                                       workcs1.data(), ldworkcs1);
     }
     //double t1 = omp_get_wtime();
     //t_lloyd_block += t1 - t0;
@@ -623,6 +641,7 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
         // Tolerance-based convergence: means we should rerun labelling step without recomputing centres
         std::swap(previous_labels, current_labels);
         std::swap(previous_cluster_centres, current_cluster_centres);
+        // Perform one more iteration to update labels, but without updating the cluster centres
         (this->*single_iteration)(false);
         std::swap(previous_cluster_centres, current_cluster_centres);
     }

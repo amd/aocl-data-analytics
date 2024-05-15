@@ -112,6 +112,11 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     //double t_assign = 0.0;
     //double t_update = 0.0;
     //double t_loop361 = 0.0;
+    //double t_assign1 = 0.0;
+    //double t_assign2 = 0.0;
+    //double t_assign3 = 0.0;
+    //double t_assign4 = 0.0;
+    //double t_assign5 = 0.0;
 
     // Maximum size of data blocks for elkan, lloyd and macqueen algorithms
     da_int max_block_size = 0;
@@ -151,35 +156,34 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void lloyd_iteration(bool update_centres);
 
     void lloyd_iteration_block_no_unroll(bool update_centres, da_int block_size,
-                                         da_int block_index, const T *data, da_int lddata,
-                                         T *cluster_centres, T *new_cluster_centres,
-                                         T *centre_norms, da_int *cluster_count,
-                                         da_int *labels, T *work, da_int ldwork);
+                                         const T *data, da_int lddata, T *cluster_centres,
+                                         T *new_cluster_centres, T *centre_norms,
+                                         da_int *cluster_count, da_int *labels, T *work,
+                                         da_int ldwork);
 
     void lloyd_iteration_block_unroll_2(bool update_centres, da_int block_size,
-                                        da_int block_index, const T *data, da_int lddata,
-                                        T *cluster_centres, T *new_cluster_centres,
-                                        T *centre_norms, da_int *cluster_count,
-                                        da_int *labels, T *work, da_int ldwork);
+                                        const T *data, da_int lddata, T *cluster_centres,
+                                        T *new_cluster_centres, T *centre_norms,
+                                        da_int *cluster_count, da_int *labels, T *work,
+                                        da_int ldwork);
 
     void lloyd_iteration_block_unroll_4_T(bool update_centres, da_int block_size,
-                                          da_int block_index, const T *data,
-                                          da_int lddata, T *cluster_centres,
-                                          T *new_cluster_centres, T *centre_norms,
-                                          da_int *cluster_count, da_int *labels, T *work,
-                                          da_int ldwork);
+                                          const T *data, da_int lddata,
+                                          T *cluster_centres, T *new_cluster_centres,
+                                          T *centre_norms, da_int *cluster_count,
+                                          da_int *labels, T *work, da_int ldwork);
 
     void lloyd_iteration_block_unroll_4(bool update_centres, da_int block_size,
-                                        da_int block_index, const T *data, da_int lddata,
-                                        T *cluster_centres, T *new_cluster_centres,
-                                        T *centre_norms, da_int *cluster_count,
-                                        da_int *labels, T *work, da_int ldwork);
+                                        const T *data, da_int lddata, T *cluster_centres,
+                                        T *new_cluster_centres, T *centre_norms,
+                                        da_int *cluster_count, da_int *labels, T *work,
+                                        da_int ldwork);
 
     void lloyd_iteration_block_unroll_8(bool update_centres, da_int block_size,
-                                        da_int block_index, const T *data, da_int lddata,
-                                        T *cluster_centres, T *new_cluster_centres,
-                                        T *centre_norms, da_int *cluster_count,
-                                        da_int *labels, T *work, da_int ldwork);
+                                        const T *data, da_int lddata, T *cluster_centres,
+                                        T *new_cluster_centres, T *centre_norms,
+                                        da_int *cluster_count, da_int *labels, T *work,
+                                        da_int ldwork);
 
     // Elkan algorithm functions, including various unrolled versions of the blocked part of the iteration
 
@@ -190,8 +194,10 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void elkan_iteration(bool update_centres);
 
     void elkan_iteration_assign_block(bool update_centres, da_int block_size,
-                                      da_int block_index, T *u_bounds, da_int *old_labels,
-                                      da_int *new_labels);
+                                      const T *data, da_int lddata, T *u_bounds,
+                                      T *l_bounds, da_int ldl_bounds, da_int *old_labels,
+                                      da_int *new_labels, T *centre_half_distances,
+                                      T *next_centre_distances, da_int *cluster_counts);
 
     void elkan_iteration_update_block_no_unroll(da_int block_size, T *l_bound,
                                                 da_int ldl_bound, T *u_bound,
@@ -209,12 +215,11 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     void (da_kmeans<T>::*initialize_algorithm)();
 
-    void (da_kmeans<T>::*lloyd_iteration_block)(bool, da_int, da_int, const T *, da_int,
-                                                T *, T *, T *, da_int *, da_int *, T *,
-                                                da_int);
+    void (da_kmeans<T>::*lloyd_iteration_block)(bool, da_int, const T *, da_int, T *, T *,
+                                                T *, da_int *, da_int *, T *, da_int);
 
-    void (da_kmeans<T>::*predict_block)(bool, da_int, da_int, const T *, da_int, T *, T *,
-                                        T *, da_int *, da_int *, T *, da_int);
+    void (da_kmeans<T>::*predict_block)(bool, da_int, const T *, da_int, T *, T *, T *,
+                                        da_int *, da_int *, T *, da_int);
 
     void (da_kmeans<T>::*elkan_iteration_update_block)(da_int, T *, da_int, T *, T *,
                                                        da_int *);
@@ -613,6 +618,11 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         //std::cout << "t_assign: " << t_assign << std::endl;
         //std::cout << "t_update: " << t_update << std::endl;
         //std::cout << "t_loop361: " << t_loop361 << std::endl;
+        //std::cout << "t_assign1: " << t_assign1 << std::endl;
+        //std::cout << "t_assign2: " << t_assign2 << std::endl;
+        //std::cout << "t_assign3: " << t_assign3 << std::endl;
+        //std::cout << "t_assign4: " << t_assign4 << std::endl;
+        //std::cout << "t_assign5: " << t_assign5 << std::endl;
 
         if (warn_maxit_reached)
             return da_warn(err, da_status_maxit,
@@ -750,21 +760,18 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         T *dummy = nullptr;
         da_int *dummy_int = nullptr;
         da_int block_index;
-
+        da_int block_size = max_block_size;
         for (da_int i = 0; i < n_blocks; i++) {
             if (i == n_blocks - 1 && block_rem > 0) {
                 block_index = k_samples - block_rem;
-                (this->*predict_block)(false, block_rem, block_index, &Y[block_index],
-                                       ldy, (*best_cluster_centres).data(), dummy,
-                                       workc1.data(), dummy_int, &Y_labels[block_index],
-                                       y_work.data(), ldy_work);
+                block_size = block_rem;
             } else {
                 block_index = i * max_block_size;
-                (this->*predict_block)(
-                    false, max_block_size, block_index, &Y[block_index], ldy,
-                    (*best_cluster_centres).data(), dummy, workc1.data(), dummy_int,
-                    &Y_labels[block_index], y_work.data(), ldy_work);
             }
+            (this->*predict_block)(false, block_size, &Y[block_index], ldy,
+                                   (*best_cluster_centres).data(), dummy, workc1.data(),
+                                   dummy_int, &Y_labels[block_index], y_work.data(),
+                                   ldy_work);
         }
 
         return da_status_success;

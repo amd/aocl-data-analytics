@@ -41,17 +41,22 @@ void da_kmeans<T>::elkan_iteration_update_block_no_unroll(da_int block_size, T *
                                                           T *centre_shift,
                                                           da_int *labels) {
 
-#pragma omp simd
-    for (da_int i = 0; i < block_size; i++) {
-        da_int index = i * ldl_bound;
-        for (da_int j = 0; j < n_clusters; j++) {
-            l_bound[index + j] = std::max(l_bound[index + j] - centre_shift[j], (T)0.0);
-        }
-    }
-
+    da_int index = 0;
     for (da_int i = 0; i < block_size; i++) {
         u_bound[i] += centre_shift[labels[i]];
+#pragma omp simd
+        for (da_int j = 0; j < n_clusters; j++) {
+            l_bound[index + j] -= centre_shift[j];
+            if (l_bound[index + j] < 0) {
+                l_bound[index + j] = (T)0.0;
+            }
+        }
+        index += ldl_bound;
     }
+
+    //for (da_int i = 0; i < block_size; i++) {
+
+    //}
 }
 
 // LCOV_EXCL_START
@@ -65,26 +70,27 @@ void da_kmeans<T>::elkan_iteration_update_block_unroll_4(da_int block_size, T *l
 #pragma omp simd
     for (da_int i = 0; i < block_size; i++) {
         da_int col_index = i * ldl_bound;
+#pragma omp simd
         for (da_int j = 0; j < n_clusters; j += 4) {
             da_int index1 = col_index + j;
-            da_int index2 = index1 + 1;
-            da_int index3 = index1 + 2;
-            da_int index4 = index1 + 3;
-            l_bound[index1] = l_bound[index1] - centre_shift[j];
-            l_bound[index2] = l_bound[index2] - centre_shift[j + 1];
-            l_bound[index3] = l_bound[index3] - centre_shift[j + 2];
-            l_bound[index4] = l_bound[index4] - centre_shift[j + 3];
+            da_int index2 = col_index + j + 1;
+            da_int index3 = col_index + j + 2;
+            da_int index4 = col_index + j + 3;
+            l_bound[index1] -= centre_shift[j];
+            l_bound[index2] -= centre_shift[j + 1];
+            l_bound[index3] -= centre_shift[j + 2];
+            l_bound[index4] -= centre_shift[j + 3];
             if (l_bound[index1] < 0) {
-                l_bound[index1] == (T)0.0;
+                l_bound[index1] = (T)0.0;
             }
             if (l_bound[index2] < 0) {
-                l_bound[index2] == (T)0.0;
+                l_bound[index2] = (T)0.0;
             }
             if (l_bound[index3] < 0) {
-                l_bound[index4] == (T)0.0;
+                l_bound[index3] = (T)0.0;
             }
             if (l_bound[index4] < 0) {
-                l_bound[index4] == (T)0.0;
+                l_bound[index4] = (T)0.0;
             }
         }
     }
@@ -103,46 +109,47 @@ void da_kmeans<T>::elkan_iteration_update_block_unroll_8(da_int block_size, T *l
 #pragma omp simd
     for (da_int i = 0; i < block_size; i++) {
         da_int col_index = i * ldl_bound;
+#pragma omp simd
         for (da_int j = 0; j < n_clusters; j += 8) {
             da_int index1 = col_index + j;
-            da_int index2 = index1 + 1;
-            da_int index3 = index1 + 2;
-            da_int index4 = index1 + 3;
-            da_int index5 = index1 + 4;
-            da_int index6 = index1 + 5;
-            da_int index7 = index1 + 6;
-            da_int index8 = index1 + 7;
-            l_bound[index1] = l_bound[index1] - centre_shift[j];
-            l_bound[index2] = l_bound[index2] - centre_shift[j + 1];
-            l_bound[index3] = l_bound[index3] - centre_shift[j + 2];
-            l_bound[index4] = l_bound[index4] - centre_shift[j + 3];
-            l_bound[index5] = l_bound[index5] - centre_shift[j + 4];
-            l_bound[index6] = l_bound[index6] - centre_shift[j + 5];
-            l_bound[index7] = l_bound[index7] - centre_shift[j + 6];
-            l_bound[index8] = l_bound[index8] - centre_shift[j + 7];
+            da_int index2 = col_index + j + 1;
+            da_int index3 = col_index + j + 2;
+            da_int index4 = col_index + j + 3;
+            da_int index5 = col_index + j + 4;
+            da_int index6 = col_index + j + 5;
+            da_int index7 = col_index + j + 6;
+            da_int index8 = col_index + j + 7;
+            l_bound[index1] -= centre_shift[j];
+            l_bound[index2] -= centre_shift[j + 1];
+            l_bound[index3] -= centre_shift[j + 2];
+            l_bound[index4] -= centre_shift[j + 3];
+            l_bound[index5] -= centre_shift[j + 4];
+            l_bound[index6] -= centre_shift[j + 5];
+            l_bound[index7] -= centre_shift[j + 6];
+            l_bound[index8] -= centre_shift[j + 7];
             if (l_bound[index1] < 0) {
-                l_bound[index1] == (T)0.0;
+                l_bound[index1] = (T)0.0;
             }
             if (l_bound[index2] < 0) {
-                l_bound[index2] == (T)0.0;
+                l_bound[index2] = (T)0.0;
             }
             if (l_bound[index3] < 0) {
-                l_bound[index3] == (T)0.0;
+                l_bound[index3] = (T)0.0;
             }
             if (l_bound[index4] < 0) {
-                l_bound[index4] == (T)0.0;
+                l_bound[index4] = (T)0.0;
             }
             if (l_bound[index5] < 0) {
-                l_bound[index5] == (T)0.0;
+                l_bound[index5] = (T)0.0;
             }
             if (l_bound[index6] < 0) {
-                l_bound[index6] == (T)0.0;
+                l_bound[index6] = (T)0.0;
             }
             if (l_bound[index7] < 0) {
-                l_bound[index7] == (T)0.0;
+                l_bound[index7] = (T)0.0;
             }
             if (l_bound[index8] < 0) {
-                l_bound[index8] == (T)0.0;
+                l_bound[index8] = (T)0.0;
             }
         }
     }
@@ -156,9 +163,9 @@ void da_kmeans<T>::elkan_iteration_update_block_unroll_8(da_int block_size, T *l
 
 template <typename T>
 void da_kmeans<T>::lloyd_iteration_block_no_unroll(
-    bool update_centres, da_int block_size, da_int block_index, const T *data,
-    da_int lddata, T *cluster_centres, T *new_cluster_centres, T *centre_norms,
-    da_int *cluster_count, da_int *labels, T *work, da_int ldwork) {
+    bool update_centres, da_int block_size, const T *data, da_int lddata,
+    T *cluster_centres, T *new_cluster_centres, T *centre_norms, da_int *cluster_count,
+    da_int *labels, T *work, da_int ldwork) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
@@ -212,8 +219,8 @@ void da_kmeans<T>::lloyd_iteration_block_no_unroll(
 
 template <typename T>
 void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int block_size,
-                                                  da_int block_index, const T *data,
-                                                  da_int lddata, T *cluster_centres,
+                                                  const T *data, da_int lddata,
+                                                  T *cluster_centres,
                                                   T *new_cluster_centres, T *centre_norms,
                                                   da_int *cluster_count, da_int *labels,
                                                   T *work, da_int ldwork) {
@@ -232,21 +239,21 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
     //t_euclidean_it += t1 - t0;
     // Go through each sample (row) in worksc1 and find argmin
 
-    double smallest_dists[2];
+    T smallest_dists[2];
     da_int tmp_labels[2];
 
 #pragma omp simd
-    for (int i = 0; i < block_size; i++) {
+    for (da_int i = 0; i < block_size; i++) {
         da_int ind = i * ldwork;
         smallest_dists[0] = work[ind] + centre_norms[0];
         smallest_dists[1] = work[ind + 1] + centre_norms[1];
         tmp_labels[0] = 0;
         tmp_labels[1] = 1;
-        for (int j = 2; j < n_clusters; j += 2) {
-            int index1 = ind + j;
-            int index2 = ind + j + 1;
-            double tmp1 = work[index1] + centre_norms[j];
-            double tmp2 = work[index2] + centre_norms[j + 1];
+        for (da_int j = 2; j < n_clusters; j += 2) {
+            da_int index1 = ind + j;
+            da_int index2 = ind + j + 1;
+            T tmp1 = work[index1] + centre_norms[j];
+            T tmp2 = work[index2] + centre_norms[j + 1];
             if (tmp1 < smallest_dists[0]) {
                 tmp_labels[0] = j;
                 smallest_dists[0] = tmp1;
@@ -257,7 +264,7 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
             }
         }
 
-        int label = tmp_labels[0];
+        da_int label = tmp_labels[0];
         if (smallest_dists[1] < smallest_dists[0]) {
             label = tmp_labels[1];
         }
@@ -284,8 +291,8 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
 
 template <typename T>
 void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int block_size,
-                                                  da_int block_index, const T *data,
-                                                  da_int lddata, T *cluster_centres,
+                                                  const T *data, da_int lddata,
+                                                  T *cluster_centres,
                                                   T *new_cluster_centres, T *centre_norms,
                                                   da_int *cluster_count, da_int *labels,
                                                   T *work, da_int ldwork) {
@@ -304,11 +311,11 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
     //t_euclidean_it += t1 - t0;
     // Go through each sample (row) in worksc1 and find argmin
 
-    double smallest_dists[4];
+    T smallest_dists[4];
     da_int tmp_labels[4];
 
 #pragma omp simd
-    for (int i = 0; i < block_size; i++) {
+    for (da_int i = 0; i < block_size; i++) {
         da_int ind = i * ldwork;
         smallest_dists[0] = work[ind] + centre_norms[0];
         smallest_dists[1] = work[ind + 1] + centre_norms[1];
@@ -318,15 +325,15 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
         tmp_labels[1] = 1;
         tmp_labels[2] = 2;
         tmp_labels[3] = 3;
-        for (int j = 4; j < n_clusters; j += 4) {
-            int index1 = ind + j;
-            int index2 = ind + j + 1;
-            int index3 = ind + j + 2;
-            int index4 = ind + j + 3;
-            double tmp1 = work[index1] + centre_norms[j];
-            double tmp2 = work[index2] + centre_norms[j + 1];
-            double tmp3 = work[index3] + centre_norms[j + 2];
-            double tmp4 = work[index4] + centre_norms[j + 3];
+        for (da_int j = 4; j < n_clusters; j += 4) {
+            da_int index1 = ind + j;
+            da_int index2 = ind + j + 1;
+            da_int index3 = ind + j + 2;
+            da_int index4 = ind + j + 3;
+            T tmp1 = work[index1] + centre_norms[j];
+            T tmp2 = work[index2] + centre_norms[j + 1];
+            T tmp3 = work[index3] + centre_norms[j + 2];
+            T tmp4 = work[index4] + centre_norms[j + 3];
             if (tmp1 < smallest_dists[0]) {
                 tmp_labels[0] = j;
                 smallest_dists[0] = tmp1;
@@ -345,8 +352,8 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
             }
         }
 
-        int label = tmp_labels[0];
-        for (int j = 1; j < 4; j++) {
+        da_int label = tmp_labels[0];
+        for (da_int j = 1; j < 4; j++) {
             if (smallest_dists[j] < smallest_dists[0]) {
                 smallest_dists[0] = smallest_dists[j];
                 label = tmp_labels[j];
@@ -374,9 +381,9 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
 
 template <typename T>
 void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
-    bool update_centres, da_int block_size, da_int block_index, const T *data,
-    da_int lddata, T *cluster_centres, T *new_cluster_centres, T *centre_norms,
-    da_int *cluster_count, da_int *labels, T *work, da_int ldwork) {
+    bool update_centres, da_int block_size, const T *data, da_int lddata,
+    T *cluster_centres, T *new_cluster_centres, T *centre_norms, da_int *cluster_count,
+    da_int *labels, T *work, da_int ldwork) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
@@ -391,13 +398,13 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
     //t_euclidean_it += t1 - t0;
     // Go through each sample (row) in worksc1 and find argmin
 
-    double smallest_dists[4];
+    T smallest_dists[4];
     da_int tmp_labels[4];
     da_int ldx2 = ldwork * 2;
     da_int ldx3 = ldwork * 3;
 
 #pragma omp simd
-    for (int i = 0; i < block_size; i++) {
+    for (da_int i = 0; i < block_size; i++) {
         //da_int ind = i * ldworksc1;
         smallest_dists[0] = work[i] + centre_norms[0];
         smallest_dists[1] = work[i + ldwork] + centre_norms[1];
@@ -408,14 +415,14 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
         tmp_labels[2] = 2;
         tmp_labels[3] = 3;
         for (int j = 4; j < n_clusters; j += 4) {
-            int index1 = i + ldwork * j;
-            int index2 = i + ldwork * (j + 1);
-            int index3 = i + ldwork * (j + 2);
-            int index4 = i + ldwork * (j + 3);
-            double tmp1 = work[index1] + centre_norms[j];
-            double tmp2 = work[index2] + centre_norms[j + 1];
-            double tmp3 = work[index3] + centre_norms[j + 2];
-            double tmp4 = work[index4] + centre_norms[j + 3];
+            da_int index1 = i + ldwork * j;
+            da_int index2 = i + ldwork * (j + 1);
+            da_int index3 = i + ldwork * (j + 2);
+            da_int index4 = i + ldwork * (j + 3);
+            T tmp1 = work[index1] + centre_norms[j];
+            T tmp2 = work[index2] + centre_norms[j + 1];
+            T tmp3 = work[index3] + centre_norms[j + 2];
+            T tmp4 = work[index4] + centre_norms[j + 3];
             if (tmp1 < smallest_dists[0]) {
                 tmp_labels[0] = j;
                 smallest_dists[0] = tmp1;
@@ -434,8 +441,8 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
             }
         }
 
-        int label = tmp_labels[0];
-        for (int j = 1; j < 4; j++) {
+        da_int label = tmp_labels[0];
+        for (da_int j = 1; j < 4; j++) {
             if (smallest_dists[j] < smallest_dists[0]) {
                 smallest_dists[0] = smallest_dists[j];
                 label = tmp_labels[j];
@@ -463,8 +470,8 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
 
 template <typename T>
 void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int block_size,
-                                                  da_int block_index, const T *data,
-                                                  da_int lddata, T *cluster_centres,
+                                                  const T *data, da_int lddata,
+                                                  T *cluster_centres,
                                                   T *new_cluster_centres, T *centre_norms,
                                                   da_int *cluster_count, da_int *labels,
                                                   T *work, da_int ldwork) {
@@ -482,10 +489,10 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
     //t_euclidean_it += t1 - t0;
     // Go through each sample (row) in worksc1 and find argmin
 
-    double smallest_dists[8];
-    int tmp_labels[8];
+    T smallest_dists[8];
+    da_int tmp_labels[8];
 #pragma omp simd
-    for (int i = 0; i < block_size; i++) {
+    for (da_int i = 0; i < block_size; i++) {
         da_int ind = i * ldwork;
         smallest_dists[0] = work[ind] + centre_norms[0];
         smallest_dists[1] = work[ind + 1] + centre_norms[1];
@@ -503,23 +510,23 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
         tmp_labels[5] = 5;
         tmp_labels[6] = 6;
         tmp_labels[7] = 7;
-        for (int j = 8; j < n_clusters; j += 8) {
-            int index1 = ind + j;
-            int index2 = ind + j + 1;
-            int index3 = ind + j + 2;
-            int index4 = ind + j + 3;
-            int index5 = ind + j + 4;
-            int index6 = ind + j + 5;
-            int index7 = ind + j + 6;
-            int index8 = ind + j + 7;
-            double tmp1 = work[index1] + centre_norms[j];
-            double tmp2 = work[index2] + centre_norms[j + 1];
-            double tmp3 = work[index3] + centre_norms[j + 2];
-            double tmp4 = work[index4] + centre_norms[j + 3];
-            double tmp5 = work[index5] + centre_norms[j + 4];
-            double tmp6 = work[index6] + centre_norms[j + 5];
-            double tmp7 = work[index7] + centre_norms[j + 6];
-            double tmp8 = work[index8] + centre_norms[j + 7];
+        for (da_int j = 8; j < n_clusters; j += 8) {
+            da_int index1 = ind + j;
+            da_int index2 = ind + j + 1;
+            da_int index3 = ind + j + 2;
+            da_int index4 = ind + j + 3;
+            da_int index5 = ind + j + 4;
+            da_int index6 = ind + j + 5;
+            da_int index7 = ind + j + 6;
+            da_int index8 = ind + j + 7;
+            T tmp1 = work[index1] + centre_norms[j];
+            T tmp2 = work[index2] + centre_norms[j + 1];
+            T tmp3 = work[index3] + centre_norms[j + 2];
+            T tmp4 = work[index4] + centre_norms[j + 3];
+            T tmp5 = work[index5] + centre_norms[j + 4];
+            T tmp6 = work[index6] + centre_norms[j + 5];
+            T tmp7 = work[index7] + centre_norms[j + 6];
+            T tmp8 = work[index8] + centre_norms[j + 7];
             if (tmp1 < smallest_dists[0]) {
                 tmp_labels[0] = j;
                 smallest_dists[0] = tmp1;
@@ -554,8 +561,8 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
             }
         }
 
-        int label = tmp_labels[0];
-        for (int j = 1; j < 8; j++) {
+        da_int label = tmp_labels[0];
+        for (da_int j = 1; j < 8; j++) {
             if (smallest_dists[j] < smallest_dists[0]) {
                 smallest_dists[0] = smallest_dists[j];
                 label = tmp_labels[j];
