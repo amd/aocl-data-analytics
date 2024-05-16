@@ -224,7 +224,7 @@ void split(T *x, da_int d, da_int col_idx, T diff_thres, uint8_t *y, da_int n,
         acc_r -= y[idx - 1];
         acc_l += y[idx - 1];
 
-        T x_im1 = x[idx * (d - 1) + col_idx];
+        T x_im1 = x[(idx - 1) * d + col_idx];
         T x_i = x[idx * d + col_idx];
         if (std::abs(x_i - x_im1) > diff_thres) {
             T score = score_fun(acc_l, n_l, acc_r, n_r);
@@ -442,6 +442,10 @@ template <typename T> da_status decision_tree<T>::fit() {
     opts.get("scoring function", scoring_fun_str, this->scoring_fun_id);
     opts.get("depth", this->max_level);
     opts.get("n_features_to_select", this->n_features_to_select);
+
+    if (this->n_features_to_select == -1) {
+        this->n_features_to_select = this->d;
+    }
 
     if (this->d < this->n_features_to_select)
         return da_error(
@@ -1022,7 +1026,7 @@ template <typename T> da_status decision_forest<T>::fit_tree(decision_tree<T> *p
     opts.get("n_features_to_select", n_features_to_select);
 
     std::vector<da_int> obs_ind(n_obs_per_tree);
-    std::vector<da_int> feature_ind(n_features_to_select);
+    // std::vector<da_int> feature_ind(n_features_to_select);
 
     sample_obs_ind(n_obs, n_obs_per_tree, obs_ind.data());
     // sample_feature_ind(n_features_to_select, feature_ind.data());

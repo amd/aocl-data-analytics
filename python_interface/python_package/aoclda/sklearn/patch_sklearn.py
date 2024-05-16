@@ -33,12 +33,16 @@ import contextlib
 import sklearn.decomposition as decomp_sklearn
 import sklearn.linear_model as linmod_sklearn
 import sklearn.cluster as clustering_sklearn
+import sklearn.tree as decision_tree_sklearn
+import sklearn.ensemble as decision_forest_sklearn
 from ._pca import PCA as PCA_da
 from ._kmeans import kmeans as kmeans_da
 from ._linear_model import LinearRegression as LinearRegression_da
 from ._linear_model import Ridge as Ridge_da
 from ._linear_model import Lasso as Lasso_da
 from ._linear_model import ElasticNet as ElasticNet_da
+from ._decision_tree import DecisionTreeClassifier as DecisionTreeClassifier_da
+from ._decision_forest import RandomForestClassifier as RandomForestClassifier_da
 
 # Check if we should be using Intel's Scikit-learn extension
 try:
@@ -63,38 +67,28 @@ if USE_INTEL_SKLEARNEX:
 #        pack - sklearn subpackage
 #        sk_sym - name of the sklearn symbol to replace
 #        da_sym - equivalent name in the DA sklearn lib
-AMD_SYMBOLS = {
-    'PCA': {
-        'pack': decomp_sklearn,
-        'sk_sym': getattr(decomp_sklearn, "PCA"),
-        'da_sym': PCA_da
-    },
-    'LinearRegression': {
-        'pack': linmod_sklearn,
-        'sk_sym': getattr(linmod_sklearn, 'LinearRegression'),
-        'da_sym': LinearRegression_da
-    },
-    'Ridge': {
-        'pack': linmod_sklearn,
-        'sk_sym': getattr(linmod_sklearn, 'Ridge'),
-        'da_sym': Ridge_da
-    },
-    'Lasso': {
-        'pack': linmod_sklearn,
-        'sk_sym': getattr(linmod_sklearn, 'Lasso'),
-        'da_sym': Lasso_da
-    },
-    'ElasticNet': {
-        'pack': linmod_sklearn,
-        'sk_sym': getattr(linmod_sklearn, 'ElasticNet'),
-        'da_sym': ElasticNet_da
-    },
-    'KMeans': {
-        'pack': clustering_sklearn,
-        'sk_sym': getattr(clustering_sklearn, "KMeans"),
-        'da_sym': kmeans_da
-    }
-}
+AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
+                   'sk_sym': getattr(decomp_sklearn, "PCA"),
+                   'da_sym': PCA_da},
+           'LinearRegression': {'pack': linmod_sklearn,
+                                'sk_sym': getattr(linmod_sklearn, 'LinearRegression'),
+                                'da_sym': LinearRegression_da},
+           'Ridge': {'pack': linmod_sklearn,
+                     'sk_sym': getattr(linmod_sklearn, 'Ridge'),
+                     'da_sym': Ridge_da},
+           'Lasso': {'pack': linmod_sklearn,
+                     'sk_sym': getattr(linmod_sklearn, 'Lasso'),
+                     'da_sym': Lasso_da},
+           'KMeans': {'pack': clustering_sklearn,
+                   'sk_sym': getattr(clustering_sklearn, "KMeans"),
+                   'da_sym': kmeans_da},
+            'DecisionTreeClassifier' : {'pack': decision_tree_sklearn,
+                                        'sk_sym': getattr(decision_tree_sklearn, 'DecisionTreeClassifier'),
+                                        'da_sym': DecisionTreeClassifier_da},
+            'RandomForestClassifier' : {'pack': decision_forest_sklearn,
+                                        'sk_sym': getattr(decision_forest_sklearn, 'RandomForestClassifier'),
+                                        'da_sym': RandomForestClassifier_da},
+                     }
 
 # List of symbols where AMD is chosen over Intel
 AMD_vs_INTEL = ['KMeans', 'LinearRegression']

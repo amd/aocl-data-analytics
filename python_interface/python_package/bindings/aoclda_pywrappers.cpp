@@ -1229,6 +1229,142 @@ class kmeans : public pyda_handle {
     }
 };
 
+class decision_forest : public pyda_handle {
+
+    da_precision precision = da_double;
+
+public:
+    decision_forest(da_int seed = -1,
+                    da_int n_obs_per_tree = 1,
+                    da_int n_features_to_select = 1,
+                    da_int n_trees = 1,
+                    std::string score_criteria = "gini",
+                    std::string prec = "double") {
+        da_status status;
+        if (prec == "double") {
+            da_handle_init<double>(&handle, da_handle_decision_tree);
+        } else {
+            da_handle_init<float>(&handle, da_handle_decision_tree);
+            precision = da_single;
+        }
+
+        status = da_options_set_int(handle, "seed", seed);
+        exception_check(status);
+        status = da_options_set_int(handle, "n_obs_per_tree", n_obs_per_tree);
+        exception_check(status);
+        status = da_options_set_int(handle, "n_features_to_select", n_features_to_select);
+        exception_check(status);
+        status = da_options_set_int(handle, "n_trees", n_trees);
+        exception_check(status);
+        status = da_options_set_string(handle, "scoring function", score_criteria.data());
+        exception_check(status);
+    }
+    ~decision_forest() { da_handle_destroy(&handle); }
+
+    template <typename T>
+    void fit(py::array_t<T, py::array::f_style> X, py::array_t<uint8_t> y) {
+        da_status status;
+
+        da_int n_obs = X.shape()[0], n_features = X.shape()[1];
+        status = da_df_set_training_data(handle, n_obs, n_features, X.mutable_data(), n_obs,
+                                         y.mutable_data());
+        exception_check(status); // throw an exception if status is not success
+
+        status = da_df_fit<T>(handle);
+        exception_check(status);
+    }
+
+    template <typename T>
+    T score(py::array_t<T, py::array::f_style> X_test, py::array_t<uint8_t> y_test) {
+        da_status status;
+        T score_val = 0.0;
+        da_int n_obs = X_test.shape()[0], d = X_test.shape()[1];
+        status = da_df_score(handle, n_obs, d, X_test.mutable_data(), n_obs,
+                             y_test.mutable_data(), &score_val);
+        exception_check(status);
+        return score_val;
+    }
+
+    template <typename T> py::array_t<uint8_t> predict(py::array_t<T, py::array::f_style> X) {
+
+        da_status status;
+        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        size_t shape[1]{(size_t)n_samples};
+        size_t strides[1]{sizeof(T)};
+        auto predictions = py::array_t<uint8_t>(shape, strides);
+        status = da_df_predict(handle, n_samples, n_features, X.mutable_data(),
+                                       n_samples, predictions.mutable_data());
+        exception_check(status);
+        return predictions;
+    }
+};
+
+class decision_tree : public pyda_handle {
+    da_precision precision = da_double;
+
+public:
+    decision_tree(da_int seed = -1,
+                  da_int depth = -1,
+                  da_int n_features_to_select = 1,
+                  std::string score_criteria = "gini",
+                  std::string prec = "double") {
+        da_status status;
+        if (prec == "double") {
+            da_handle_init<double>(&handle, da_handle_decision_tree);
+        } else {
+            da_handle_init<float>(&handle, da_handle_decision_tree);
+            precision = da_single;
+        }
+
+        status = da_options_set_int(handle, "seed", seed);
+        exception_check(status);
+        status = da_options_set_int(handle, "depth", depth);
+        exception_check(status);
+        status = da_options_set_int(handle, "n_features_to_select", n_features_to_select);
+        exception_check(status);
+        status = da_options_set_string(handle, "scoring function", score_criteria.data());
+        exception_check(status);
+    }
+    ~decision_tree() { da_handle_destroy(&handle); }
+
+    template <typename T>
+    void fit(py::array_t<T, py::array::f_style> X, py::array_t<uint8_t> y) {
+        da_status status;
+
+        da_int n_obs = X.shape()[0], n_features = X.shape()[1];
+        status = da_df_set_training_data(handle, n_obs, n_features, X.mutable_data(), n_obs,
+                                         y.mutable_data());
+        exception_check(status); // throw an exception if status is not success
+
+        status = da_df_fit<T>(handle);
+        exception_check(status);
+    }
+
+    template <typename T>
+    T score(py::array_t<T, py::array::f_style> X_test, py::array_t<uint8_t> y_test) {
+        da_status status;
+        T score_val = 0.0;
+        da_int n_obs = X_test.shape()[0], d = X_test.shape()[1];
+        status = da_df_score(handle, n_obs, d, X_test.mutable_data(), n_obs,
+                             y_test.mutable_data(), &score_val);
+        exception_check(status);
+        return score_val;
+    }
+
+    template <typename T> py::array_t<uint8_t> predict(py::array_t<T, py::array::f_style> X) {
+
+        da_status status;
+        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        size_t shape[1]{(size_t)n_samples};
+        size_t strides[1]{sizeof(T)};
+        auto predictions = py::array_t<uint8_t>(shape, strides);
+        status = da_df_predict(handle, n_samples, n_features, X.mutable_data(),
+                                       n_samples, predictions.mutable_data());
+        exception_check(status);
+        return predictions;
+    }
+};
+
 PYBIND11_MODULE(_aoclda, m) {
     m.doc() = "Python wrappers for the AOCL-DA library";
 
@@ -1367,4 +1503,41 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &kmeans::get_n_features)
         .def("get_n_clusters", &kmeans::get_n_clusters)
         .def("get_n_iter", &kmeans::get_n_iter);
+
+    /**********************************/
+    /*  Decision Trees                */
+    /**********************************/
+    auto m_decision_tree = m.def_submodule("decision_tree", "Decision trees.");
+    py::class_<decision_tree, pyda_handle>(m_decision_tree, "pybind_decision_tree")
+        .def(py::init<da_int, da_int, da_int, std::string, std::string &>(),
+            py::arg("seed") = -1,
+            py::arg("depth") = -1,
+            py::arg("n_features_to_select") = 1,
+            py::arg("score_criteria") = "gini",
+            py::arg("precision") = "double")
+        .def("pybind_fit", &decision_tree::fit<float>, "Fit the decision tree", "X"_a, "y"_a)
+        .def("pybind_fit", &decision_tree::fit<double>, "Fit the decision tree", "X"_a, "y"_a)
+        .def("pybind_score", &decision_tree::score<float>, "Score the decision tree", "X_test"_a, "y_test"_a)
+        .def("pybind_score", &decision_tree::score<double>, "Score the decision tree", "X_test"_a, "y_test"_a)
+        .def("pybind_predict", &decision_tree::predict<double>, "Evaluate the model on X", "X"_a)
+        .def("pybind_predict", &decision_tree::predict<float>, "Evaluate the model on X", "X"_a);
+
+    /**********************************/
+    /*  Decision Forests              */
+    /**********************************/
+    auto m_decision_forest = m.def_submodule("decision_forest", "Decision forests.");
+    py::class_<decision_forest, pyda_handle>(m_decision_forest, "pybind_decision_forest")
+        .def(py::init<da_int, da_int, da_int, da_int, std::string, std::string &>(),
+             py::arg("seed") = -1,
+             py::arg("n_obs_per_tree") = 1,
+             py::arg("n_features_to_select") = 1,
+             py::arg("n_trees") = 1,
+             py::arg("score_criteria") = "gini",
+             py::arg("precision") = "double")
+        .def("pybind_fit", &decision_forest::fit<float>, "Fit the decision forest", "X"_a, "y"_a)
+        .def("pybind_fit", &decision_forest::fit<double>, "Fit the decision forest", "X"_a, "y"_a)
+        .def("pybind_score", &decision_forest::score<float>, "Score the decision forest", "X_test"_a, "y_test"_a)
+        .def("pybind_score", &decision_forest::score<double>, "Score the decision forest", "X_test"_a, "y_test"_a)
+        .def("pybind_predict", &decision_forest::predict<double>, "Evaluate the model on X", "X"_a)
+        .def("pybind_predict", &decision_forest::predict<float>, "Evaluate the model on X", "X"_a);
 }
