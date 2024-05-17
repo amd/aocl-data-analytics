@@ -53,10 +53,6 @@ void da_kmeans<T>::elkan_iteration_update_block_no_unroll(da_int block_size, T *
         }
         index += ldl_bound;
     }
-
-    //for (da_int i = 0; i < block_size; i++) {
-
-    //}
 }
 
 // LCOV_EXCL_START
@@ -177,7 +173,7 @@ void da_kmeans<T>::lloyd_iteration_block_no_unroll(
                         work, ldwork);
     //double t1 = omp_get_wtime();
     //t_euclidean_it += t1 - t0;
-    // Go through each sample (row) in worksc1 and find argmin
+    // Go through each sample in work and find argmin
 
     tmp2 = centre_norms[0];
 
@@ -237,7 +233,7 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
                         work, ldwork);
     //double t1 = omp_get_wtime();
     //t_euclidean_it += t1 - t0;
-    // Go through each sample (row) in worksc1 and find argmin
+    // Go through each sample in work and find argmin
 
     T smallest_dists[2];
     da_int tmp_labels[2];
@@ -309,7 +305,7 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
                         work, ldwork);
     //double t1 = omp_get_wtime();
     //t_euclidean_it += t1 - t0;
-    // Go through each sample (row) in worksc1 and find argmin
+    // Go through each sample in works and find argmin
 
     T smallest_dists[4];
     da_int tmp_labels[4];
@@ -396,7 +392,7 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
 
     //double t1 = omp_get_wtime();
     //t_euclidean_it += t1 - t0;
-    // Go through each sample (row) in worksc1 and find argmin
+    // Go through each sample in work and find argmin
 
     T smallest_dists[4];
     da_int tmp_labels[4];
@@ -405,7 +401,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
 
 #pragma omp simd
     for (da_int i = 0; i < block_size; i++) {
-        //da_int ind = i * ldworksc1;
         smallest_dists[0] = work[i] + centre_norms[0];
         smallest_dists[1] = work[i + ldwork] + centre_norms[1];
         smallest_dists[2] = work[i + ldx2] + centre_norms[2];
@@ -414,7 +409,7 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
         tmp_labels[1] = 1;
         tmp_labels[2] = 2;
         tmp_labels[3] = 3;
-        for (int j = 4; j < n_clusters; j += 4) {
+        for (da_int j = 4; j < n_clusters; j += 4) {
             da_int index1 = i + ldwork * j;
             da_int index2 = i + ldwork * (j + 1);
             da_int index3 = i + ldwork * (j + 2);
@@ -487,7 +482,7 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
                         work, ldwork);
     //double t1 = omp_get_wtime();
     //t_euclidean_it += t1 - t0;
-    // Go through each sample (row) in worksc1 and find argmin
+    // Go through each sample in work and find argmin
 
     T smallest_dists[8];
     da_int tmp_labels[8];
