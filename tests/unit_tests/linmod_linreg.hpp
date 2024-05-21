@@ -29,7 +29,6 @@
 #include "da_cblas.hh"
 #include "utest_utils.hpp"
 #include "gtest/gtest.h"
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
@@ -176,7 +175,8 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     // beta = y ~ x, then b = predict(beta, x)
     std::string solution_fname =
         std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_solution.csv";
-    if (std::filesystem::exists(solution_fname)) {
+    if (FILE *file = fopen(solution_fname.c_str(), "r")) {
+        std::fclose(file);
         // read the expected prediction
         da_datastore sol_store = nullptr;
         EXPECT_EQ(da_datastore_init(&sol_store), da_status_success);
