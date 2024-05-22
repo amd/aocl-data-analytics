@@ -118,6 +118,21 @@ class PCA(pybind_PCA):
             These are only computed if ``method = 'correlation'``"""
         return self.get_column_sdevs()
 
+    @property
+    def n_samples(self):
+        """int: The number of samples in the data matrix used to compute the PCA. """
+        return self.get_n_samples()
+
+    @property
+    def n_features(self):
+        """int: The number of features in the data matrix used to compute the PCA. """
+        return self.get_n_features()
+
+    @property
+    def n_components(self):
+        """int: The number of components found in the PCA. """
+        return self.get_n_components()
+
     def fit(self, A):
         """
         Computes the principal component analysis on the supplied data matrix.

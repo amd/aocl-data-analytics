@@ -60,7 +60,7 @@ def test_kmeans():
     skpatch()
     from sklearn.cluster import KMeans
     kmeans_da = KMeans(n_clusters = 2, init = c)
-    kmeans_da.fit(a)
+    kmeans_da = kmeans_da.fit(a)
     da_centres = kmeans_da.cluster_centers_
     da_labels = kmeans_da.labels_
     da_inertia = kmeans_da.inertia_
@@ -96,6 +96,7 @@ def test_kmeans():
     assert not np.any(da_predict - sk_predict)
     assert da_a_transform == pytest.approx(sk_a_transform, 1.0e-08)
     assert not np.any(da_a_predict - sk_a_predict)
+    assert kmeans_da.n_features_in_ == kmeans_sk.n_features_in_
 
     # print the results if pytest is invoked with the -rA option
     print("Centres")
@@ -157,7 +158,6 @@ def test_kmeans_errors():
     with pytest.raises(RuntimeError):
         kmeans.set_fit_request()
 
-    assert kmeans.n_features_in_ is None
     assert kmeans.feature_names_in_ is None
 
 

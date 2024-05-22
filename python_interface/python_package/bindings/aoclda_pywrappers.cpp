@@ -592,7 +592,7 @@ class linmod : public pyda_handle {
   public:
     linmod(std::string mod, bool intercept = false, std::string solver = "auto",
            std::string scaling = "auto", std::string prec = "double") {
-        da_status status;
+        da_status status = da_status_success;
         linmod_model mod_enum;
         if (mod == "mse") {
             mod_enum = linmod_model_mse;
@@ -783,6 +783,31 @@ class pca : public pyda_handle {
         return Y_inv_transform;
     }
 
+    void get_rinfo(da_int *n_samples, da_int *n_features, da_int *n_components,
+                   size_t *stride_size) {
+        da_status status;
+
+        da_int dim = 3;
+
+        if (precision == da_single) {
+            float rinfo[3];
+            *stride_size = sizeof(float);
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            *n_samples = (da_int)rinfo[0];
+            *n_features = (da_int)rinfo[1];
+            *n_components = (da_int)rinfo[2];
+        } else {
+            double rinfo[3];
+            *stride_size = sizeof(double);
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            *n_samples = (da_int)rinfo[0];
+            *n_features = (da_int)rinfo[1];
+            *n_components = (da_int)rinfo[2];
+        }
+
+        exception_check(status);
+    }
+
     auto get_result(da_result result) {
         da_status status;
 
@@ -790,22 +815,7 @@ class pca : public pyda_handle {
         da_int dim = 3, dim1, dim2;
         size_t stride_size;
 
-        if (precision == da_single) {
-            float rinfo[3];
-            stride_size = sizeof(float);
-            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
-            n_samples = (da_int)rinfo[0];
-            n_features = (da_int)rinfo[1];
-            n_components = (da_int)rinfo[2];
-        } else {
-            double rinfo[3];
-            stride_size = sizeof(double);
-            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
-            n_samples = (da_int)rinfo[0];
-            n_features = (da_int)rinfo[1];
-            n_components = (da_int)rinfo[2];
-        }
-        exception_check(status);
+        get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
 
         switch (result) {
         case da_pca_principal_components:
@@ -842,6 +852,10 @@ class pca : public pyda_handle {
             break;
         case da_pca_column_sdevs:
             dim1 = n_features;
+            dim2 = 1;
+            break;
+        case da_rinfo:
+            dim1 = 3;
             dim2 = 1;
             break;
         }
@@ -882,6 +896,51 @@ class pca : public pyda_handle {
     auto get_vt() { return get_result(da_pca_vt); }
     auto get_column_means() { return get_result(da_pca_column_means); }
     auto get_column_sdevs() { return get_result(da_pca_column_sdevs); }
+    auto get_n_samples() {
+
+        da_int n_samples, n_features, n_components;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
+        }
+
+        return n_samples;
+    }
+    auto get_n_components() {
+
+        da_int n_samples, n_features, n_components;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
+        }
+
+        return n_components;
+    }
+    auto get_n_features() {
+
+        da_int n_samples, n_features, n_components;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
+        }
+
+        return n_features;
+    }
 };
 
 class kmeans : public pyda_handle {
@@ -1117,7 +1176,6 @@ class kmeans : public pyda_handle {
 
     auto get_n_iter() {
 
-        size_t stride_size = sizeof(da_int);
         da_int n_samples, n_features, n_clusters, n_iter;
 
         if (precision == da_single) {
@@ -1128,14 +1186,52 @@ class kmeans : public pyda_handle {
             get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
         }
 
-        std::vector<size_t> shape, strides;
-        shape.push_back(1);
-        strides.push_back(stride_size);
-        // define the output vector
-        auto res = py::array_t<da_int>(shape, strides);
-        *(res.mutable_data(0)) = n_iter;
-        py::array ret = py::reinterpret_borrow<py::array>(res);
-        return ret;
+        return n_iter;
+    }
+
+    auto get_n_samples() {
+
+        da_int n_samples, n_features, n_clusters, n_iter;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        }
+
+        return n_samples;
+    }
+
+    auto get_n_features() {
+
+        da_int n_samples, n_features, n_clusters, n_iter;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        }
+
+        return n_features;
+    }
+
+    auto get_n_clusters() {
+
+        da_int n_samples, n_features, n_clusters, n_iter;
+
+        if (precision == da_single) {
+            float inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        } else {
+            double inertia;
+            get_rinfo(&n_samples, &n_features, &n_clusters, &n_iter, &inertia);
+        }
+
+        return n_clusters;
     }
 };
 
@@ -1200,8 +1296,8 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
-        .def(py::init<std::string, bool, std::string, std::string, std::string &>(), py::arg("mod"),
-             py::arg("intercept") = false, py::arg("solver") = "auto",
+        .def(py::init<std::string, bool, std::string, std::string, std::string &>(),
+             py::arg("mod"), py::arg("intercept") = false, py::arg("solver") = "auto",
              py::arg("scaling") = "auto", py::arg("precision") = "double")
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,
@@ -1242,7 +1338,10 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_sigma", &pca::get_sigma)
         .def("get_vt", &pca::get_vt)
         .def("get_column_means", &pca::get_column_means)
-        .def("get_column_sdevs", &pca::get_column_sdevs);
+        .def("get_column_sdevs", &pca::get_column_sdevs)
+        .def("get_n_samples", &pca::get_n_samples)
+        .def("get_n_features", &pca::get_n_features)
+        .def("get_n_components", &pca::get_n_components);
     /**********************************/
     /*       k-means clustering       */
     /**********************************/
@@ -1268,5 +1367,8 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_cluster_centres", &kmeans::get_cluster_centres)
         .def("get_labels", &kmeans::get_labels)
         .def("get_inertia", &kmeans::get_inertia)
+        .def("get_n_samples", &kmeans::get_n_samples)
+        .def("get_n_features", &kmeans::get_n_features)
+        .def("get_n_clusters", &kmeans::get_n_clusters)
         .def("get_n_iter", &kmeans::get_n_iter);
 }

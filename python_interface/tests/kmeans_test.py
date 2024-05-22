@@ -83,6 +83,14 @@ def test_kmeans_functionality(da_precision, numpy_precision, numpy_order):
 
     assert not np.any(x_labels - expected_x_labels)
 
+    assert km.n_samples == 8
+
+    assert km.n_features == 2
+
+    assert km.n_clusters == 2
+
+    assert km.n_iter == 1
+
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [
     ("double", np.float64), ("single", np.float32),

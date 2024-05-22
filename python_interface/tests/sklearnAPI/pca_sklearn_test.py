@@ -45,10 +45,13 @@ def test_pca():
     skpatch()
     from sklearn.decomposition import PCA
     pca_da = PCA(n_components=3)
-    pca_da.fit(a)
+    pca_da = pca_da.fit(a)
     da_x = pca_da.transform(b)
     da_y = pca_da.inverse_transform(b)
     da_z = pca_da.fit_transform(a)
+    da_explained_variance_ratio = pca_da.explained_variance_ratio_
+    da_explained_variance = pca_da.explained_variance_
+    da_noise_variance = pca_da.noise_variance_
     assert pca_da.aocl is True
 
     # unpatch and solve the same problem with sklearn
@@ -59,6 +62,9 @@ def test_pca():
     sk_x = pca.transform(b)
     sk_y = pca.inverse_transform(b)
     sk_z = pca.fit_transform(a)
+    sk_explained_variance_ratio = pca.explained_variance_ratio_
+    sk_explained_variance = pca.explained_variance_
+    sk_noise_variance = pca.noise_variance_
     assert not hasattr(pca, 'aocl')
 
     # Check results
@@ -74,6 +80,12 @@ def test_pca():
     assert da_x == pytest.approx(sk_x, 1.0e-08)
     assert da_y == pytest.approx(sk_y, 1.0e-08)
     assert da_z == pytest.approx(sk_z, 1.0e-08)
+    assert da_explained_variance_ratio == pytest.approx(sk_explained_variance_ratio, 1.0e-08)
+    assert da_explained_variance == pytest.approx(sk_explained_variance, 1.0e-08)
+    assert da_noise_variance == pytest.approx(sk_noise_variance, 1.0e-08)
+    assert pca_da.n_features_in_ == pca.n_features_in_
+    assert pca_da.n_components_ == pca.n_components_
+    assert pca_da.n_samples_ == pca.n_samples_
 
     # print the results if pytest is invoked with the -rA option
     print("Components")
@@ -122,12 +134,6 @@ def test_pca_errors():
     with pytest.raises(RuntimeError):
         pca.score_samples(1)
 
-    assert pca.explained_variance_ratio_ is None
-    # FIXME noise_variance_ is set to the dummy value 1.0 for sbench.
-    # assert pca.noise_variance_ is None
-    assert pca.n_components_ is None
-    assert pca.n_samples_ is None
-    assert pca.n_features_in_ is None
     assert pca.feature_names_in_ is None
 
 

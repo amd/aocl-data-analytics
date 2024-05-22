@@ -100,6 +100,7 @@ class kmeans(kmeans_sklearn):
             self.kmeans.fit(X, C = self.init, tol = self.tol)
         else:
             self.kmeans.fit(X, tol = self.tol)
+        return self
 
     def transform(self, X):
         return self.kmeans.transform(X)
@@ -167,12 +168,11 @@ class kmeans(kmeans_sklearn):
 
     @property
     def n_iter_(self):
-        return self.kmeans.get_n_iter().item(0)
+        return self.kmeans.get_n_iter()
 
     @property
     def n_features_in_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.kmeans.n_features
 
     @property
     def feature_names_in_(self):

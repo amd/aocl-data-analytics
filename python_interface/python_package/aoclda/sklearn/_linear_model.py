@@ -62,6 +62,7 @@ class LinearRegression(LinearRegression_sklearn):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
         self.lmod.fit(X, y)
+        return self
 
     def predict(self, X) -> ndarray:
         return self.lmod.predict(X)

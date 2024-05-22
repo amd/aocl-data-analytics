@@ -104,6 +104,12 @@ def test_pca_functionality(da_precision, numpy_precision, numpy_order):
         pca.transform(x)) - expected_transform)
     assert norm < tol
 
+    assert pca.n_samples == 3
+
+    assert pca.n_features == 3
+
+    assert pca.n_components == 2
+
     # Simple test to check we can also get column_sdevs
     a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
                  dtype=numpy_precision, order=numpy_order)

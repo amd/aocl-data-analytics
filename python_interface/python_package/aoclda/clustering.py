@@ -82,9 +82,24 @@ class kmeans(pybind_kmeans):
 
     @property
     def n_iter(self):
-        """numpy.ndarray of shape (1, ): The number iterations performed in the k-means computation.
+        """int: The number iterations performed in the k-means computation.
         """
         return self.get_n_iter()
+
+    @property
+    def n_samples(self):
+        """int: The number of samples in the data matrix used. """
+        return self.get_n_samples()
+
+    @property
+    def n_features(self):
+        """int: The number of features in the data matrix. """
+        return self.get_n_features()
+
+    @property
+    def n_clusters(self):
+        """int: The number of clusters found. """
+        return self.get_n_clusters()
 
     def fit(self, A, C = None, tol = 1.0e-4):
         """

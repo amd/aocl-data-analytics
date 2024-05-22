@@ -32,7 +32,7 @@ Patching scikit learn decomposition: PCA
 import warnings
 from sklearn.decomposition import PCA as PCA_sklearn
 from aoclda.factorization import PCA as PCA_da
-import aoclda as da
+import numpy as np
 
 
 class PCA(PCA_sklearn):
@@ -90,6 +90,7 @@ class PCA(PCA_sklearn):
 
     def fit(self, X, y=None):
         self.pca.fit(X)
+        return self
 
     def transform(self, X):
         return self.pca.transform(X)
@@ -149,8 +150,7 @@ class PCA(PCA_sklearn):
 
     @property
     def explained_variance_ratio_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.pca.get_variance() / self.pca.get_total_variance()
 
     @property
     def singular_values_(self):
@@ -162,22 +162,24 @@ class PCA(PCA_sklearn):
 
     @property
     def n_components_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.pca.get_n_components()
 
     @property
     def n_samples_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.pca.get_n_samples()
 
     @property
     def noise_variance_(self):
-        return 1.0
+        n_discarded = min(self.pca.n_features, self.pca.n_samples) - self.pca.n_components
+        if n_discarded > 0:
+            return (self.pca.get_total_variance().item() - np.sum(self.pca.get_variance())) \
+                / n_discarded
+
+        return 0.0
 
     @property
     def n_features_in_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.pca.get_n_features()
 
     @property
     def feature_names_in_(self):
