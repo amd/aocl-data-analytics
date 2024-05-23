@@ -25,30 +25,24 @@
  *
  */
 
-/* This file is a place for miscellaneous utility functions that do not belong with
- * any particular classes and do not fit elsewhere. */
+// clang-format off
 
-#include "aoclda.h"
-#include "da_omp.hpp"
+#ifndef DA_OMP_HPP
+#define DA_OMP_HPP
 
-// Check that parallel builds of AOCL-DA work. Once we have further OpenMP functionality, this can probably be removed
-da_status da_parallel_check() {
+#ifdef _OPENMP
+#include <omp.h>
+#else
+inline int omp_get_max_active_levels() { return 1; };
+inline int omp_get_level() { return 1; };
+inline int omp_get_max_threads() { return 1; };
+inline int omp_get_thread_num() { return 0; };
+typedef int omp_lock_t;
+inline void omp_init_lock(omp_lock_t *lock) {};
+inline void omp_destroy_lock(omp_lock_t *lock) {};
+inline void omp_set_lock(omp_lock_t *lock) {};
+inline void omp_unset_lock(omp_lock_t *lock) {};
+#endif
 
-    da_int max_threads = omp_get_max_threads();
-
-    da_int n_threads = 1;
-
-// We could do anything here really - we just want to check we are linking omp.h correctly
-#pragma omp parallel reduction(max : n_threads) num_threads(max_threads) default(none)
-    { n_threads = omp_get_thread_num() + 1; }
-
-    if (n_threads != max_threads)
-        return da_status_internal_error;
-
-    return da_status_success;
-}
-
-static const char *da_version = AOCLDA_VERSION_STRING;
-
-// Return the version string of AOCL-DA.
-const char *da_get_version() { return da_version; }
+#endif
+// clang-format on

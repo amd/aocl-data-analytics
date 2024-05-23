@@ -30,7 +30,6 @@
 #include "kmeans_loop_unrolls.hpp"
 #include <cstdlib>
 #include <numeric>
-//#include <omp.h>
 
 namespace da_kmeans {
 
@@ -41,6 +40,14 @@ template <typename T> void da_kmeans<T>::get_blocking_scheme(da_int n_samples) {
     // Count the remainder in the number of blocks
     if (block_rem > 0)
         n_blocks += 1;
+}
+
+/* Return the number of threads use in a parallel region containing a loop*/
+template <typename T> da_int da_kmeans<T>::get_n_threads(da_int loop_size) {
+    if (omp_get_max_active_levels() == omp_get_level())
+        return (da_int)1;
+
+    return std::min((da_int)omp_get_max_threads(), loop_size);
 }
 
 /* Initialization function for Elkan's algorithm */
@@ -69,8 +76,12 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
     da_int tmp_int;
     T smallest_dist, dist, tmp;
 
-    // For every sample, set upper bound (works1) to be distance to closest centre and update label
-    // Lower bound (workcs1) will contain distance from each sample to each cluster centre, if computed
+// For every sample, set upper bound (works1) to be distance to closest centre and update label
+// Lower bound (workcs1) will contain distance from each sample to each cluster centre, if computed
+#pragma omp parallel for schedule(dynamic, KMEANS_ELKAN_BLOCK_SIZE) private(             \
+        label, tmp_int, smallest_dist, dist, tmp)                                        \
+    shared(A, lda, current_cluster_centres, n_clusters, workcc1, workcs1, ldworkcs1,     \
+               works1, current_labels) default(none)
     for (da_int i = 0; i < n_samples; i++) {
 
         da_int index = i * ldworkcs1;
@@ -117,14 +128,23 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
 }
 
 /* Perform a single iteration of Elkan's method */
-template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
+template <typename T>
+void da_kmeans<T>::elkan_iteration(bool update_centres, da_int n_threads) {
 
     if (update_centres) {
-        for (da_int j = 0; j < n_clusters; j++) {
-            work_int1[j] = 0;
-        }
+        for (da_int j = 0; j < n_clusters; j++)
+            cluster_count[j] = 0;
+
         for (da_int j = 0; j < n_clusters * n_features; j++)
             (*current_cluster_centres)[j] = (T)0.0;
+
+        if (n_threads > 1) {
+            for (da_int j = 0; j < n_clusters * n_threads; j++)
+                work_int1[j] = 0;
+
+            for (da_int j = 0; j < n_clusters * n_features * n_threads; j++)
+                thread_cluster_centres[j] = (T)0.0;
+        }
     }
 
     // At this point workc1 contains distance of each cluster centre to the next nearest
@@ -134,18 +154,81 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
 
     da_int block_size = max_block_size;
     da_int block_index;
-    for (da_int i = 0; i < n_blocks; i++) {
-        if (i == n_blocks - 1 && block_rem > 0) {
-            block_index = n_samples - block_rem;
-            block_size = block_rem;
-        } else {
-            block_index = i * max_block_size;
+    if (n_threads > 1) {
+
+        omp_lock_t cluster_count_lock, cluster_centres_lock;
+        omp_init_lock(&cluster_count_lock);
+        omp_init_lock(&cluster_centres_lock);
+
+#pragma omp parallel shared(                                                             \
+        thread_cluster_centres, work_int1, n_blocks, block_rem, update_centres, A, lda,  \
+            previous_cluster_centres, current_cluster_centres, cluster_count, workc1,    \
+            workcc1, ldworkcs1, max_block_size, current_labels, previous_labels, works1, \
+            workcs1, cluster_count_lock, cluster_centres_lock)                           \
+    firstprivate(block_size) private(block_index) default(none) num_threads(n_threads)
+        {
+            da_int work_int1_index = (da_int)omp_get_thread_num() * n_clusters;
+            da_int thread_cluster_centres_index =
+                (da_int)omp_get_thread_num() * n_clusters * n_features;
+#pragma omp for schedule(dynamic) nowait
+            for (da_int i = 0; i < n_blocks; i++) {
+                if (i == n_blocks - 1 && block_rem > 0) {
+                    block_index = n_samples - block_rem;
+                    block_size = block_rem;
+                } else {
+                    block_index = i * max_block_size;
+                }
+                elkan_iteration_assign_block(
+                    update_centres, block_size, &A[block_index], lda,
+                    (*previous_cluster_centres).data(),
+                    &thread_cluster_centres[thread_cluster_centres_index],
+                    &works1[block_index], &workcs1[block_index * ldworkcs1], ldworkcs1,
+                    &(*previous_labels)[block_index], &(*current_labels)[block_index],
+                    workcc1.data(), workc1.data(), &work_int1[work_int1_index]);
+            }
+            // Now aggregate work_int1 into cluster_count and thread_cluster_centres into current_cluster_centres
+            // The while loop is used because we don't mind what order each thread executes the two critical regions
+            bool reduced_cluster_count = false, reduced_cluster_centres = false;
+            while (!reduced_cluster_count || !reduced_cluster_centres) {
+                if (!reduced_cluster_count) {
+
+                    omp_set_lock(&cluster_count_lock);
+
+                    for (da_int i = 0; i < n_clusters; i++) {
+                        cluster_count[i] += work_int1[work_int1_index + i];
+                    }
+                    omp_unset_lock(&cluster_count_lock);
+                    reduced_cluster_count = true;
+                }
+                if (!reduced_cluster_centres) {
+                    omp_set_lock(&cluster_centres_lock);
+                    for (da_int i = 0; i < n_clusters * n_features; i++) {
+                        (*current_cluster_centres)[i] +=
+                            thread_cluster_centres[thread_cluster_centres_index + i];
+                    }
+                    omp_unset_lock(&cluster_centres_lock);
+                    reduced_cluster_centres = true;
+                }
+            }
+        } // end parallel region
+        omp_destroy_lock(&cluster_count_lock);
+        omp_destroy_lock(&cluster_centres_lock);
+    } else {
+
+        for (da_int i = 0; i < n_blocks; i++) {
+            if (i == n_blocks - 1 && block_rem > 0) {
+                block_index = n_samples - block_rem;
+                block_size = block_rem;
+            } else {
+                block_index = i * max_block_size;
+            }
+            elkan_iteration_assign_block(
+                update_centres, block_size, &A[block_index], lda,
+                (*previous_cluster_centres).data(), (*current_cluster_centres).data(),
+                &works1[block_index], &workcs1[block_index * ldworkcs1], ldworkcs1,
+                &(*previous_labels)[block_index], &(*current_labels)[block_index],
+                workcc1.data(), workc1.data(), cluster_count.data());
         }
-        elkan_iteration_assign_block(
-            update_centres, block_size, &A[block_index], lda, &works1[block_index],
-            &workcs1[block_index * ldworkcs1], ldworkcs1,
-            &(*previous_labels)[block_index], &(*current_labels)[block_index],
-            workcc1.data(), workc1.data(), work_int1.data());
     }
     //double t1 = omp_get_wtime();
     //t_assign += t1 - t0;
@@ -165,29 +248,31 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
             }
             workc1[i] = std::sqrt(tmp2);
         }
-        // workc1 now contains the distance moved by each centre during the iteration
+
         //double t3 = omp_get_wtime();
 
-        // only run this when parallelism available
-        /*
-        da_int block_size = max_block_size;
-        da_int block_index;
-        for (da_int i = 0; i < n_blocks; i++) {
-            if (i == n_blocks - 1 && block_rem > 0) {
-                block_index = n_samples - block_rem;
-                block_size = block_rem;
-            } else {
-                block_index = i * max_block_size;
-            }
-            (this->*elkan_iteration_update_block)(
+        if (n_threads > 1) {
+            block_size = max_block_size;
+#pragma omp parallel for default(none) schedule(dynamic)                                 \
+    shared(n_blocks, n_samples, workcs1, ldworkcs1, works1, workc1, current_labels)      \
+    firstprivate(block_size) private(block_index)
+            for (da_int i = 0; i < n_blocks; i++) {
+                if (i == n_blocks - 1 && block_rem > 0) {
+                    block_index = n_samples - block_rem;
+                    block_size = block_rem;
+                } else {
+                    block_index = i * max_block_size;
+                }
+                (this->*elkan_iteration_update_block)(
                     block_size, &workcs1[block_index * ldworkcs1], ldworkcs1,
                     &works1[block_index], workc1.data(), &(*current_labels)[block_index]);
-        }*/
+            }
+        } else {
 
-        (this->*elkan_iteration_update_block)(n_samples, workcs1.data(), ldworkcs1,
-                                              works1.data(), workc1.data(),
-                                              (*current_labels).data());
-
+            (this->*elkan_iteration_update_block)(n_samples, workcs1.data(), ldworkcs1,
+                                                  works1.data(), workc1.data(),
+                                                  (*current_labels).data());
+        }
         //double t4 = omp_get_wtime();
         //t_loop361 += t4 - t3;
     }
@@ -201,16 +286,18 @@ template <typename T> void da_kmeans<T>::elkan_iteration(bool update_centres) {
 /* Within Elkan iteration, assign a block of the labels*/
 template <typename T>
 void da_kmeans<T>::elkan_iteration_assign_block(
-    bool update_centres, da_int block_size, const T *data, da_int lddata, T *u_bounds,
-    T *l_bounds, da_int ldl_bounds, da_int *old_labels, da_int *new_labels,
-    T *centre_half_distances, T *next_centre_distances, da_int *cluster_counts) {
+    bool update_centres, da_int block_size, const T *data, da_int lddata,
+    T *old_cluster_centres, T *new_cluster_centres, T *u_bounds, T *l_bounds,
+    da_int ldl_bounds, da_int *old_labels, da_int *new_labels, T *centre_half_distances,
+    T *next_centre_distances, da_int *cluster_counts) {
+
+    da_int l_bounds_index = 0;
 
     for (da_int i = 0; i < block_size; i++) {
 
         // New labels remain the same until we change them
         da_int label = old_labels[i];
         T u_bound = u_bounds[i];
-        da_int l_bounds_index = i * ldl_bounds;
 
         // This will be true if the upper and lower bounds are equal
         bool tight_bounds = false;
@@ -219,15 +306,11 @@ void da_kmeans<T>::elkan_iteration_assign_block(
         if (u_bound > next_centre_distances[label]) {
 
             for (da_int j = 0; j < n_clusters; j++) {
-                // Check if this centre is a good candidate for relabelling the sample - need to account for the fact
-                // that only upper triangle of workcc1 is stored
+                // Check if this centre is a good candidate for relabelling the sample
                 //double t12 = omp_get_wtime();
-                //workcc1_index =
-                //  (label < j) ? label + j * n_clusters : label * n_clusters + j;
                 da_int centre_half_distances_index = label * n_clusters + j;
                 //double t5 = omp_get_wtime();
                 //t_assign5 += t5 - t12;
-                //tmp_index = workcs1_index + j;
                 T l_bound = l_bounds[l_bounds_index + j];
                 T centre_half_distance =
                     centre_half_distances[centre_half_distances_index];
@@ -242,7 +325,7 @@ void da_kmeans<T>::elkan_iteration_assign_block(
 #pragma omp simd reduction(+ : u_bound)
                         for (da_int k = 0; k < n_features; k++) {
                             T tmp = data[i + k * lddata] -
-                                    (*previous_cluster_centres)[label + k * n_clusters];
+                                    old_cluster_centres[label + k * n_clusters];
                             u_bound += tmp * tmp;
                         }
                         u_bound = std::sqrt(u_bound);
@@ -262,7 +345,7 @@ void da_kmeans<T>::elkan_iteration_assign_block(
 #pragma omp simd reduction(+ : dist)
                         for (da_int k = 0; k < n_features; k++) {
                             T tmp = data[i + k * lddata] -
-                                    (*previous_cluster_centres)[j + k * n_clusters];
+                                    old_cluster_centres[j + k * n_clusters];
                             dist += tmp * tmp;
                         }
 
@@ -293,12 +376,12 @@ void da_kmeans<T>::elkan_iteration_assign_block(
             // Add this sample to the cluster mean
             //double t0 = omp_get_wtime();
             for (da_int j = 0; j < n_features; j++) {
-                (*current_cluster_centres)[label + j * n_clusters] +=
-                    data[i + j * lddata];
+                new_cluster_centres[label + j * n_clusters] += data[i + j * lddata];
             }
             //double t1 = omp_get_wtime();
             //t_assign1 += t1 - t0;
         }
+        l_bounds_index += ldl_bounds;
     }
 }
 
@@ -350,14 +433,22 @@ template <typename T> void da_kmeans<T>::init_lloyd() {
 }
 
 /* Perform a single iteration of Lloyd's method */
-template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
+template <typename T>
+void da_kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
 
     if (update_centres) {
-        for (da_int j = 0; j < n_clusters; j++) {
-            work_int1[j] = 0;
-        }
+        for (da_int j = 0; j < n_clusters; j++)
+            cluster_count[j] = 0;
+
         for (da_int j = 0; j < n_clusters * n_features; j++)
             (*current_cluster_centres)[j] = (T)0.0;
+
+        if (n_threads > 1) {
+            for (da_int j = 0; j < n_clusters * n_threads; j++)
+                work_int1[j] = 0;
+            for (da_int j = 0; j < n_clusters * n_features * n_threads; j++)
+                thread_cluster_centres[j] = (T)0.0;
+        }
     }
 
     // Compute the squared norms of the previous cluster centres to avoid recomputing them repeatedly in the blocked section
@@ -377,18 +468,81 @@ template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
     //double t0 = omp_get_wtime();
     da_int block_index;
     da_int block_size = max_block_size;
-    for (da_int i = 0; i < n_blocks; i++) {
-        if (i == n_blocks - 1 && block_rem > 0) {
-            block_index = n_samples - block_rem;
-            block_size = block_rem;
-        } else {
-            block_index = i * max_block_size;
+
+    if (n_threads > 1) {
+
+        omp_lock_t cluster_count_lock, cluster_centres_lock;
+        omp_init_lock(&cluster_count_lock);
+        omp_init_lock(&cluster_centres_lock);
+
+#pragma omp parallel shared(n_blocks, block_rem, update_centres, A, lda,                 \
+                                previous_cluster_centres, current_cluster_centres,       \
+                                cluster_count, current_labels, workc1, workcs1,          \
+                                ldworkcs1, max_block_size, thread_cluster_centres,       \
+                                work_int1, cluster_centres_lock, cluster_count_lock)     \
+    firstprivate(block_size) private(block_index) default(none) num_threads(n_threads)
+        {
+            da_int work_int1_index = (da_int)omp_get_thread_num() * n_clusters;
+            da_int thread_cluster_centres_index =
+                (da_int)omp_get_thread_num() * n_clusters * n_features;
+            da_int workcs1_index =
+                ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + 8);
+#pragma omp for nowait schedule(dynamic)
+            for (da_int i = 0; i < n_blocks; i++) {
+                if (i == n_blocks - 1 && block_rem > 0) {
+                    block_index = n_samples - block_rem;
+                    block_size = block_rem;
+                } else {
+                    block_index = i * max_block_size;
+                }
+                (this->*lloyd_iteration_block)(
+                    update_centres, block_size, &A[block_index], lda,
+                    (*previous_cluster_centres).data(),
+                    &thread_cluster_centres[thread_cluster_centres_index], workc1.data(),
+                    &work_int1[work_int1_index], &(*current_labels)[block_index],
+                    &workcs1[workcs1_index], ldworkcs1);
+            }
+            // Now aggregate work_int1 into cluster_count and thread_cluster_centres into current_cluster_centres
+            // The while loop is used because we don't mind what order each thread executes the two critical regions
+            bool reduced_cluster_count = false, reduced_cluster_centres = false;
+            while (!reduced_cluster_count || !reduced_cluster_centres) {
+                if (!reduced_cluster_count) {
+
+                    omp_set_lock(&cluster_count_lock);
+                    for (da_int i = 0; i < n_clusters; i++) {
+                        cluster_count[i] += work_int1[work_int1_index + i];
+                    }
+                    omp_unset_lock(&cluster_count_lock);
+                    reduced_cluster_count = true;
+                }
+                if (!reduced_cluster_centres) {
+                    omp_set_lock(&cluster_centres_lock);
+                    for (da_int i = 0; i < n_clusters * n_features; i++) {
+                        (*current_cluster_centres)[i] +=
+                            thread_cluster_centres[thread_cluster_centres_index + i];
+                    }
+                    omp_unset_lock(&cluster_centres_lock);
+                    reduced_cluster_centres = true;
+                }
+            }
+        } // end of parallel region
+        omp_destroy_lock(&cluster_count_lock);
+        omp_destroy_lock(&cluster_centres_lock);
+    } else {
+
+        for (da_int i = 0; i < n_blocks; i++) {
+            if (i == n_blocks - 1 && block_rem > 0) {
+                block_index = n_samples - block_rem;
+                block_size = block_rem;
+            } else {
+                block_index = i * max_block_size;
+            }
+            (this->*lloyd_iteration_block)(
+                update_centres, block_size, &A[block_index], lda,
+                (*previous_cluster_centres).data(), (*current_cluster_centres).data(),
+                workc1.data(), cluster_count.data(), &(*current_labels)[block_index],
+                workcs1.data(), ldworkcs1);
         }
-        (this->*lloyd_iteration_block)(update_centres, block_size, &A[block_index], lda,
-                                       (*previous_cluster_centres).data(),
-                                       (*current_cluster_centres).data(), workc1.data(),
-                                       work_int1.data(), &(*current_labels)[block_index],
-                                       workcs1.data(), ldworkcs1);
     }
     //double t1 = omp_get_wtime();
     //t_lloyd_block += t1 - t0;
@@ -399,21 +553,21 @@ template <typename T> void da_kmeans<T>::lloyd_iteration(bool update_centres) {
         // Compute change in centres in this iteration
         compute_centre_shift();
     }
-}
+} // namespace da_kmeans
 
 /* Scaling phase for the current cluster centres; part of both the Elkan and Lloyd algorithms */
 template <typename T> void da_kmeans<T>::scale_current_cluster_centres() {
     // Guard against empty clusters - avoid division by zero below
     for (da_int i = 0; i < n_clusters; i++) {
-        if (work_int1[i] == 0)
-            work_int1[i] = 1;
+        if (cluster_count[i] == 0)
+            cluster_count[i] = 1;
     }
 
-// Scale to get proper column means (work_int1 contains the number of data points in each cluster)
+// Scale to get proper column means (cluster_count contains the number of data points in each cluster)
 #pragma omp simd collapse(2)
     for (da_int j = 0; j < n_features; j++) {
         for (da_int i = 0; i < n_clusters; i++) {
-            (*current_cluster_centres)[i + j * n_clusters] /= work_int1[i];
+            (*current_cluster_centres)[i + j * n_clusters] /= cluster_count[i];
         }
     }
 }
@@ -425,7 +579,7 @@ template <typename T> void da_kmeans<T>::init_macqueen() {
     single_iteration = &da_kmeans<T>::macqueen_iteration;
 
     for (da_int j = 0; j < n_clusters; j++) {
-        work_int1[j] = 0; // Initialize to zero for use later
+        cluster_count[j] = 0; // Initialize to zero for use later
     }
 
     for (da_int i = 0; i < n_clusters * n_features; i++)
@@ -458,8 +612,8 @@ template <typename T> void da_kmeans<T>::init_macqueen() {
     // Finish updating cluster centres - being careful to guard against zero division in empty clusters
     for (da_int j = 0; j < n_features; j++) {
         for (da_int i = 0; i < n_clusters; i++) {
-            if (work_int1[i] > 0)
-                (*current_cluster_centres)[i + j * n_clusters] /= work_int1[i];
+            if (cluster_count[i] > 0)
+                (*current_cluster_centres)[i + j * n_clusters] /= cluster_count[i];
         }
     }
 
@@ -495,7 +649,7 @@ void da_kmeans<T>::init_macqueen_block(da_int block_size, da_int block_index) {
         }
         (*current_labels)[i] = label;
         // Also want to be counting number of points in each initial cluster
-        work_int1[label] += 1;
+        cluster_count[label] += 1;
 
         // Update clusters now that we have assigned points to them
         for (da_int j = 0; j < n_features; j++) {
@@ -505,7 +659,9 @@ void da_kmeans<T>::init_macqueen_block(da_int block_size, da_int block_index) {
 }
 
 /* Perform single iteration of MacQueen's method */
-template <typename T> void da_kmeans<T>::macqueen_iteration(bool update_centres) {
+template <typename T>
+void da_kmeans<T>::macqueen_iteration(bool update_centres,
+                                      [[maybe_unused]] da_int n_threads) {
 
     // Copy data from previous iteration since it's updated in place; no way round this since we need previous iteration for convergence test
     for (da_int i = 0; i < n_clusters * n_features; i++)
@@ -538,8 +694,8 @@ template <typename T> void da_kmeans<T>::macqueen_iteration(bool update_centres)
 
             if (update_centres) {
                 // Now need to update the two affected centres: closest_centre and old_centre
-                work_int1[closest_centre] += 1;
-                work_int1[old_centre] -= 1;
+                cluster_count[closest_centre] += 1;
+                cluster_count[old_centre] -= 1;
                 workc1[old_centre] = (T)0.0;
                 workc1[closest_centre] = (T)0.0;
 
@@ -565,15 +721,15 @@ template <typename T> void da_kmeans<T>::macqueen_iteration(bool update_centres)
 
                 // Scale to get proper mean and update the squared centre norms
                 for (da_int j = 0; j < n_features; j++) {
-                    if (work_int1[old_centre] > 0) {
+                    if (cluster_count[old_centre] > 0) {
                         (*current_cluster_centres)[old_centre + j * n_clusters] /=
-                            work_int1[old_centre];
+                            cluster_count[old_centre];
                         tmp = (*current_cluster_centres)[old_centre + j * n_clusters];
                         workc1[old_centre] += tmp * tmp;
                     }
-                    if (work_int1[closest_centre] > 0) {
+                    if (cluster_count[closest_centre] > 0) {
                         (*current_cluster_centres)[closest_centre + j * n_clusters] /=
-                            work_int1[closest_centre];
+                            cluster_count[closest_centre];
                         tmp = (*current_cluster_centres)[closest_centre + j * n_clusters];
                         workc1[closest_centre] += tmp * tmp;
                     }
@@ -617,6 +773,8 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
 
     get_blocking_scheme(n_samples);
 
+    da_int n_threads = get_n_threads(n_blocks);
+
     (this->*initialize_algorithm)();
 
     //double t0 = omp_get_wtime();
@@ -625,7 +783,7 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
         std::swap(previous_cluster_centres, current_cluster_centres);
         std::swap(previous_labels, current_labels);
 
-        (this->*single_iteration)(true);
+        (this->*single_iteration)(true, n_threads);
 
         // Check for convergence
         converged = convergence_test();
@@ -642,7 +800,7 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
         std::swap(previous_labels, current_labels);
         std::swap(previous_cluster_centres, current_cluster_centres);
         // Perform one more iteration to update labels, but without updating the cluster centres
-        (this->*single_iteration)(false);
+        (this->*single_iteration)(false, n_threads);
         std::swap(previous_cluster_centres, current_cluster_centres);
     }
 

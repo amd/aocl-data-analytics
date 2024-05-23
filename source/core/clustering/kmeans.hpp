@@ -34,13 +34,13 @@
 #include "callbacks.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_omp.hpp"
 #include "euclidean_distance.hpp"
 #include "kmeans_options.hpp"
 #include "kmeans_types.hpp"
 #include "lapack_templates.hpp"
 #include "options.hpp"
 #include <iostream>
-//#include <omp.h>
 #include <random>
 #include <string>
 
@@ -126,14 +126,11 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     // Leading dimension of workcs1
     da_int ldworkcs1 = 0;
 
-    // This will point to the function to perform k-means iterations depending on algorithm choice
-    void (da_kmeans<T>::*single_iteration)(bool);
-
     // Arrays used internally, and to store results
     T best_inertia = 0.0, current_inertia = 0.0; // Inertia
     std::vector<T> workcc1, workcs1, works1, works2, works3, works4, works5, workc1,
-        workc2, workc3;
-    std::vector<da_int> work_int1, work_int2, work_int3, work_int4;
+        workc2, workc3, thread_cluster_centres;
+    std::vector<da_int> work_int1, work_int2, work_int3, work_int4, cluster_count;
 
     // For multiple runs we want to use pointers to point to the current best results
     std::unique_ptr<std::vector<T>> best_cluster_centres =
@@ -153,7 +150,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     void init_lloyd();
 
-    void lloyd_iteration(bool update_centres);
+    void lloyd_iteration(bool update_centres, da_int n_threads);
 
     void lloyd_iteration_block_no_unroll(bool update_centres, da_int block_size,
                                          const T *data, da_int lddata, T *cluster_centres,
@@ -191,13 +188,15 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     void init_elkan_bounds();
 
-    void elkan_iteration(bool update_centres);
+    void elkan_iteration(bool update_centres, da_int n_threads);
 
     void elkan_iteration_assign_block(bool update_centres, da_int block_size,
-                                      const T *data, da_int lddata, T *u_bounds,
-                                      T *l_bounds, da_int ldl_bounds, da_int *old_labels,
-                                      da_int *new_labels, T *centre_half_distances,
-                                      T *next_centre_distances, da_int *cluster_counts);
+                                      const T *data, da_int lddata,
+                                      T *old_cluster_centres, T *new_cluster_centres,
+                                      T *u_bounds, T *l_bounds, da_int ldl_bounds,
+                                      da_int *old_labels, da_int *new_labels,
+                                      T *centre_half_distances, T *next_centre_distances,
+                                      da_int *cluster_counts);
 
     void elkan_iteration_update_block_no_unroll(da_int block_size, T *l_bound,
                                                 da_int ldl_bound, T *u_bound,
@@ -212,6 +211,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                                                T *centre_shift, da_int *labels);
 
     // Function pointers which will be set when the algorithm has been chosen
+
+    void (da_kmeans<T>::*single_iteration)(bool, da_int);
 
     void (da_kmeans<T>::*initialize_algorithm)();
 
@@ -230,7 +231,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     void init_macqueen_block(da_int block_size, da_int block_index);
 
-    void macqueen_iteration(bool update_centres);
+    void macqueen_iteration(bool update_centres, da_int n_threads);
 
     // Miscellaneous functions and functions used by multiple algorithms
 
@@ -255,6 +256,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void perform_hartigan_wong();
 
     void get_blocking_scheme(da_int n_samples);
+
+    da_int get_n_threads(da_int loop_size);
 
   public:
     da_options::OptionRegistry opts;
@@ -498,11 +501,15 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         }
         max_block_size = std::min(max_block_size, n_samples);
 
+        da_int n_threads = omp_get_max_threads();
+
         // Initialize some arrays
         try {
             current_cluster_centres->resize(n_clusters * n_features, 0.0);
             previous_cluster_centres->resize(n_clusters * n_features, 0.0);
-            work_int1.resize(n_clusters, 0);
+            thread_cluster_centres.resize(n_clusters * n_features * n_threads, 0.0);
+            cluster_count.resize(n_clusters, 0);
+            work_int1.resize(n_clusters * n_threads, 0);
             work_int2.resize(n_samples, 0);
             // Extra bit on workc1 just to enable some padding to be done if loop unrolling occurs
             workc1.resize(n_clusters + 8, 0.0);
@@ -534,7 +541,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 workc2.resize(n_clusters, 0.0);
                 break;
             case lloyd:
-                workcs1.resize(max_block_size * (n_clusters + 8), 0.0);
+                workcs1.resize(max_block_size * (n_clusters + 8) * n_threads, 0.0);
                 works1.resize(n_samples, 0.0);
                 break;
             case hartigan_wong:
@@ -733,16 +740,19 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         max_block_size = std::min(KMEANS_LLOYD_BLOCK_SIZE, k_samples);
 
+        get_blocking_scheme(k_samples);
+
+        da_int n_threads = get_n_threads(n_blocks);
+
+        da_int ldy_work;
+
         try {
-            y_work.resize(max_block_size * (n_clusters + 8));
+            y_work.resize(max_block_size * (n_clusters + 8) * n_threads);
         } catch (std::bad_alloc const &) {
             return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
 
-        get_blocking_scheme(k_samples);
-
-        da_int ldy_work;
         if (n_clusters < 4) {
             ldy_work = n_clusters + 8;
             predict_block = &da_kmeans<T>::lloyd_iteration_block_no_unroll;
@@ -761,19 +771,28 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         da_int *dummy_int = nullptr;
         da_int block_index;
         da_int block_size = max_block_size;
-        for (da_int i = 0; i < n_blocks; i++) {
-            if (i == n_blocks - 1 && block_rem > 0) {
-                block_index = k_samples - block_rem;
-                block_size = block_rem;
-            } else {
-                block_index = i * max_block_size;
-            }
-            (this->*predict_block)(false, block_size, &Y[block_index], ldy,
-                                   (*best_cluster_centres).data(), dummy, workc1.data(),
-                                   dummy_int, &Y_labels[block_index], y_work.data(),
-                                   ldy_work);
-        }
 
+#pragma omp parallel firstprivate(block_size) private(block_index)                       \
+    shared(n_blocks, block_rem, k_samples, max_block_size, Y, ldy, best_cluster_centres, \
+               dummy, workc1, dummy_int, Y_labels, y_work, ldy_work) default(none)       \
+    num_threads(n_threads)
+        {
+            da_int y_work_index =
+                ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + 8);
+#pragma omp for schedule(dynamic)
+            for (da_int i = 0; i < n_blocks; i++) {
+                if (i == n_blocks - 1 && block_rem > 0) {
+                    block_index = k_samples - block_rem;
+                    block_size = block_rem;
+                } else {
+                    block_index = i * max_block_size;
+                }
+                (this->*predict_block)(false, block_size, &Y[block_index], ldy,
+                                       (*best_cluster_centres).data(), dummy,
+                                       workc1.data(), dummy_int, &Y_labels[block_index],
+                                       &y_work[y_work_index], ldy_work);
+            }
+        }
         return da_status_success;
     }
 };
