@@ -23,9 +23,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 """
-Contains the functions to replace symbols from scikit-learn by the AOCL-DA patch
+Contains the functions to replace symbols from Scikit-learn by the AOCL-DA patch
 """
+# pylint: disable = possibly-used-before-assignment
 
+import os
+import warnings
+import contextlib
 import sklearn.decomposition as decomp_sklearn
 import sklearn.linear_model as linmod_sklearn
 import sklearn.cluster as clustering_sklearn
@@ -36,15 +40,30 @@ from ._linear_model import Ridge as Ridge_da
 from ._linear_model import Lasso as Lasso_da
 from ._linear_model import ElasticNet as ElasticNet_da
 
+# Check if we should be using Intel's Scikit-learn extension
+try:
+    USE_INTEL_SKLEARNEX = int(os.environ.get('USE_INTEL_SKLEARNEX'))
+except (ValueError, TypeError):
+    USE_INTEL_SKLEARNEX = 0
+
+using_intel = False
+if USE_INTEL_SKLEARNEX:
+    try:
+        from sklearnex import patch_sklearn, unpatch_sklearn
+        using_intel = True
+    except ImportError:
+        warnings.warn(
+            "Intel Extension for Scikit-learn not found", category=RuntimeWarning)
+
 # Now on a case-by-case basis, overwrite with AMD symbols where we have performant implementations
 
-# Global map of the sklearn symbols to replace
+# Global map of the sklearn symbols which have AMD implementations
 # key: class name
 # value: dict containing the sklearn symbols and their replacements
 #        pack - sklearn subpackage
 #        sk_sym - name of the sklearn symbol to replace
 #        da_sym - equivalent name in the DA sklearn lib
-SYMBOLS = {
+AMD_SYMBOLS = {
     'PCA': {
         'pack': decomp_sklearn,
         'sk_sym': getattr(decomp_sklearn, "PCA"),
@@ -77,14 +96,24 @@ SYMBOLS = {
     }
 }
 
+# List of symbols where AMD is chosen over Intel
+AMD_vs_INTEL = ['KMeans', 'LinearRegression']
+
 
 def skpatch(*args, print_patched=True):
     """
-    Replace specified sklearn packages by their DA equivalent
+    Replace specified sklearn packages by their AOCL-DA equivalent
     """
 
     if not args:
-        packages = SYMBOLS.keys()
+        # No arguments specified, so patch everything possible
+        if using_intel:
+            # Patch everything in Intel, but suppress printing to screen
+            with open(os.devnull, 'w', encoding="utf-8") as devnull:
+                with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                    patch_sklearn()
+
+        packages = AMD_SYMBOLS.keys()
     elif isinstance(args[0], str):
         packages = [args[0]]
     elif isinstance(args[0], (list, tuple)):
@@ -92,13 +121,34 @@ def skpatch(*args, print_patched=True):
     else:
         raise TypeError("Unrecognized argument")
 
+    # packages is a list of candidate package names to patch
+
+    if using_intel:
+        # Check if we should patch with Intel
+        tmp_list = []
+        intel_patches = []
+        for package in packages:
+            if package in AMD_vs_INTEL:
+                tmp_list.append(package)
+            else:
+                intel_patches.append(package)
+
+        packages = tmp_list
+        for package in intel_patches:
+            try:
+                with open(os.devnull, 'w', encoding="utf-8") as devnull:
+                    with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                        patch_sklearn(package)
+            except ValueError:
+                print(f"The package {package} was not found.")
+
     successfully_patched = []
 
     for package in packages:
 
         try:
-            pack = SYMBOLS[package]['pack']
-            sym = SYMBOLS[package]['da_sym']
+            pack = AMD_SYMBOLS[package]['pack']
+            sym = AMD_SYMBOLS[package]['da_sym']
             setattr(pack, package, sym)
             successfully_patched.append(package)
         except KeyError:
@@ -116,8 +166,14 @@ def undo_skpatch(*args, print_patched=True):
     Reinstate sklearn packages with their original symbols
     """
 
+    if using_intel:
+        # Unpatch anything that might have been patched with Intel, but suppress printing to screen
+        with open(os.devnull, 'w', encoding="utf-8") as devnull:
+            with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+                unpatch_sklearn()
+
     if not args:
-        packages = SYMBOLS.keys()
+        packages = AMD_SYMBOLS.keys()
     elif isinstance(args[0], str):
         packages = [args[0]]
     elif isinstance(args[0], (list, tuple)):
@@ -129,8 +185,8 @@ def undo_skpatch(*args, print_patched=True):
 
     for package in packages:
         try:
-            pack = SYMBOLS[package]['pack']
-            sym = SYMBOLS[package]['sk_sym']
+            pack = AMD_SYMBOLS[package]['pack']
+            sym = AMD_SYMBOLS[package]['sk_sym']
             setattr(pack, package, sym)
             successfully_unpatched.append(package)
         except KeyError:
