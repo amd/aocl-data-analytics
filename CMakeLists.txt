@@ -288,10 +288,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
     set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/Qvec-report:2")
   endif()
 
-  if($ENV{USERNAME} MATCHES "aoclwinuser")
-    set(CMAKE_VS_MSBUILD_COMMAND
-        "${CMAKE_VS_MSBUILD_COMMAND} /nodereuse:false /maxcpucount:1")
-  endif()
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
