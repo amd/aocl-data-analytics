@@ -840,9 +840,9 @@ template <typename T> da_int da_kmeans<T>::convergence_test() {
 
     da_int convergence_test = 0;
 
-    // Check if labels have changed, but only after we've done at least one complete
+    // Check if labels have changed, but only after we've done at least one complete iteration
     if (current_n_iter > 1) {
-        convergence_test = 0;
+        convergence_test = 2;
         for (da_int i = 0; i < n_samples; i++) {
             if ((*current_labels)[i] != (*previous_labels)[i]) {
                 convergence_test = 0;

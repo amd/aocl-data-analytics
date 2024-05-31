@@ -458,9 +458,9 @@ template <typename T> void GetZeroData(std::vector<KMeansParamType<T>> &params) 
     param.algorithm = "elkan";
     param.initialization_method = "k-means++";
     param.n_init = 3;
-    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 3.0, 0.0};
+    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 2.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
-    param.expected_status = da_status_maxit;
+    param.expected_status = da_status_success;
     params.push_back(param);
     param.algorithm = "lloyd";
     param.initialization_method = "random";
