@@ -31,6 +31,7 @@ import glob
 import sys
 import os
 import tempfile
+import shutil
 
 license_header = """Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
@@ -123,7 +124,8 @@ def process_file(filename):
         for line in contents:
             temp_file_obj.write(line)
 
-    os.replace(temp_file.name, filename)
+    shutil.copy(temp_file.name, filename)
+    os.remove(temp_file.name)
 
     print("DONE")
 
