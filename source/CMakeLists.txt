@@ -38,6 +38,7 @@ set(DA_DATA
     core/data_management/data_store_public.cpp
     core/data_management/data_store.cpp)
 set(DA_MISC core/utilities/miscellaneous.cpp)
+set(DA_METRICS core/metrics/pairwise_distances_public.cpp)
 
 set(DA_CORE_SRC
     ${LINMOD_SRC}
@@ -50,7 +51,8 @@ set(DA_CORE_SRC
     ${DA_CLUSTERING}
     ${DA_DECISION_FOREST}
     ${NLLS_SRC}
-    ${DA_MISC})
+    ${DA_MISC}
+    ${DA_METRICS})
 
 add_library(da_core OBJECT ${DA_CORE_SRC})
 target_include_directories(
@@ -61,6 +63,7 @@ target_include_directories(
           core/optimization
           core/utilities
           core/csv
+          core/metrics
           core/linear_model
           core/data_management
           core/factorization

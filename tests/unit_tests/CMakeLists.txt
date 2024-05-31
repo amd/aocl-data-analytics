@@ -46,6 +46,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
   ${CMAKE_SOURCE_DIR}/source/core/clustering
   ${CMAKE_SOURCE_DIR}/source/core/csv
+  ${CMAKE_SOURCE_DIR}/source/core/metrics
   ${CMAKE_SOURCE_DIR}/source/core/data_management
   ${CMAKE_SOURCE_DIR}/source/core/decision_forest
   ${CMAKE_SOURCE_DIR}/source/core/drivers
@@ -60,6 +61,9 @@ include_directories(
   )
 
 add_executable(basic_stats basic_statistics_tests.cpp)
+
+add_executable(metrics_tests metric_tests.cpp)
+target_link_libraries(metrics_tests PRIVATE ${BLAS})
 
 add_executable(csv csv_tests.cpp)
 target_compile_definitions(
@@ -141,6 +145,7 @@ target_compile_definitions(miscellaneous_tests PRIVATE ${VERS_DEF})
 
 set(GTEST_EXES
   basic_stats
+  metrics_tests
   csv
   linmod
   logreg

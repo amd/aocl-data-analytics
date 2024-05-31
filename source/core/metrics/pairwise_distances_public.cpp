@@ -25,31 +25,21 @@
  *
  */
 
-#ifndef AOCLDA
-#define AOCLDA
+#include "aoclda.h"
+#include "pairwise_distances.hpp"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#include "aoclda_basic_statistics.h"
-#include "aoclda_csv.h"
-#include "aoclda_datastore.h"
-#include "aoclda_decision_forest.h"
-#include "aoclda_error.h"
-#include "aoclda_handle.h"
-#include "aoclda_kmeans.h"
-#include "aoclda_linmod.h"
-#include "aoclda_metrics.h"
-#include "aoclda_miscellaneous.h"
-#include "aoclda_nlls.h"
-#include "aoclda_options.h"
-#include "aoclda_pca.h"
-#include "aoclda_result.h"
-#include "aoclda_types.h"
-
-#ifdef __cplusplus
+da_status da_pairwise_distances_d(da_int m, da_int n, da_int k, const double *X,
+                                  da_int ldx, const double *Y, da_int ldy, double *D,
+                                  da_int ldd, da_metric metric,
+                                  da_data_types force_all_finite) {
+    return pairwise_distance_kernel(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+                                    force_all_finite);
 }
-#endif
 
-#endif // AOCLDA
+da_status da_pairwise_distances_s(da_int m, da_int n, da_int k, const float *X,
+                                  da_int ldx, const float *Y, da_int ldy, float *D,
+                                  da_int ldd, da_metric metric,
+                                  da_data_types force_all_finite) {
+    return pairwise_distance_kernel(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+                                    force_all_finite);
+}

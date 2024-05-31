@@ -61,6 +61,8 @@ target_compile_definitions(
 add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans PRIVATE aocl-da)
 
+add_executable(metrics metrics.cpp)
+
 set(EXAMPLE_EXES
   nlls
   reglinear_model
@@ -72,7 +74,8 @@ set(EXAMPLE_EXES
   kmeans
   datastore
   decision_tree
-  random_forest)
+  random_forest
+  metrics)
 
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)

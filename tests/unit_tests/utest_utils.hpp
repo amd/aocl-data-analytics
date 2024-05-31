@@ -49,6 +49,21 @@
     EXPECT_NEAR((std::abs(x[j])), (std::abs(y[j])), abs_error)                           \
         << "*** Vectors " #x "[" << j << "] and " #y "[" << j << "] are different!     "
 
+#define ASSERT_ARR_NEAR(n, x, y, abs_error)                                              \
+    for (da_int j = 0; j < (n); j++)                                                     \
+    ASSERT_NEAR((x[j]), (y[j]), abs_error)                                               \
+        << "Vectors " #x " and " #y " different at index j=" << j << "."
+
+#define ASSERT_ARR_EQ(n, x, y, incx, incy, startx, starty)                               \
+    for (da_int j = 0; j < (n); j++)                                                     \
+    ASSERT_EQ((x[startx + j * incx]), (y[starty + j * incy]))                            \
+        << "Vectors " #x " and " #y " different at index j=" << j << "."
+
+#define ASSERT_ARR_ABS_NEAR(n, x, y, abs_error)                                          \
+    for (da_int j = 0; j < (n); j++)                                                     \
+    ASSERT_NEAR((std::abs(x[j])), (std::abs(y[j])), abs_error)                           \
+        << "Vectors " #x " and " #y " different at index j=" << j << "."
+
 /* Convert std::vector from one type to another, to avoid warnings in templated tests*/
 template <class T_in, class T_out>
 std::vector<T_out> convert_vector(const std::vector<T_in> &input) {

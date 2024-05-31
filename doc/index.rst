@@ -80,6 +80,7 @@ Library Reference Documentation
    linear_models/linmod_intro
    nonlinear_models/nldf_intro
    trees_forests/df_intro
+   metrics/metrics_intro
 
 .. only:: internal
 

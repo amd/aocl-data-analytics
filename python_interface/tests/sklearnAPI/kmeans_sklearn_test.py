@@ -138,7 +138,7 @@ def test_double_solve(precision):
 
 def test_kmeans_errors():
     '''
-    Check we can catch errors in the sklearn pca patch
+    Check we can catch errors in the sklearn kmeans patch
     '''
     a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]])
 

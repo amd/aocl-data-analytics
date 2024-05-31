@@ -25,10 +25,14 @@
  *
  */
 
-#ifndef EUCLIDEAN_DISTANCE_HPP
-#define EUCLIDEAN_DISTANCE_HPP
+#pragma once
+
+#include "aoclda.h"
 #include "aoclda_types.h"
 #include "da_cblas.hh"
+#include "da_error.hpp"
+#include <iostream>
+#include <vector>
 
 /*
 An important kernel used repeatedly in k-means and SVM computations, among others.
@@ -147,4 +151,44 @@ inline void euclidean_distance(da_int m, da_int n, da_int k, const T *X, da_int 
     }
 }
 
-#endif
+namespace da_metrics {
+namespace pairwise_distances {
+
+template <typename T>
+da_status euclidean(da_int m, da_int n, da_int k, const T *X, da_int ldx, const T *Y,
+                    da_int ldy, T *D, da_int ldd, bool square_distances) {
+    da_status status = da_status_success;
+    // Initialize X_is_Y.
+    bool X_is_Y = false;
+    // Allocate memory for compute_X_norms.
+    std::vector<T> x_work, y_work;
+    try {
+        x_work.resize(m);
+    } catch (std::bad_alloc const &) {
+        return da_status_memory_error;
+    }
+    if (Y) {
+        try {
+            y_work.resize(n);
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error;
+        }
+    } else {
+        // Y is null pointer, set X_is_Y to true
+        X_is_Y = true;
+    }
+    euclidean_distance(m, n, k, X, ldx, Y, ldy, D, ldd, x_work.data(), 2, y_work.data(),
+                       2, square_distances, X_is_Y);
+    // If X_is_Y only the upper triangular part of the symmetric matrix D is computed in euclidean_distance.
+    // Update the lower part accordingly before returning.
+    if (X_is_Y) {
+        for (da_int i = 0; i < m; i++)
+            for (da_int j = 0; j < m; j++)
+                if (i > j)
+                    D[i + j * ldd] = D[j + i * ldd];
+    }
+
+    return status;
+}
+} // namespace pairwise_distances
+} // namespace da_metrics

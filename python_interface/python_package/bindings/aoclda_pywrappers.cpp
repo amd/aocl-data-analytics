@@ -32,6 +32,7 @@
 #include "factorization_py.hpp"
 #include "kmeans_py.hpp"
 #include "linmod_py.hpp"
+#include "metrics_py.hpp"
 #include "nlls_py.hpp"
 #include "utilities_py.hpp"
 #include <iostream>
@@ -322,4 +323,15 @@ PYBIND11_MODULE(_aoclda, m) {
         // info[da_optim_info_t::info_grad_norm] = T(inform.norm_g);
         // info[da_optim_info_t::info_scl_grad_norm] = T(inform.scaled_g);
         .def("get_info_optim", &nlls::get_info_optim); // -> dict
+
+    /**********************************/
+    /*         Pairwise Distances     */
+    /**********************************/
+    auto m_pairwise = m.def_submodule("metrics", "Distance Metrics.");
+    m_pairwise.def("pybind_pairwise_distances", &py_da_pairwise_distances<float>, "X"_a,
+                   "Y"_a = py::none(), "metric"_a = "euclidean",
+                   "force_all_finite"_a = "allow_infinite");
+    m_pairwise.def("pybind_pairwise_distances", &py_da_pairwise_distances<double>, "X"_a,
+                   "Y"_a = py::none(), "metric"_a = "euclidean",
+                   "force_all_finite"_a = "allow_infinite");
 }

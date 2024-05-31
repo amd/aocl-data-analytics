@@ -574,4 +574,22 @@ inline da_status da_nlls_fit(da_handle hasdle, da_int n_coefs, float *coefs,
     return da_nlls_fit_s(hasdle, n_coefs, coefs, udata);
 }
 
+/* Pairwise distances overloaded functions */
+inline da_status
+da_pairwise_distances(da_int m, da_int n, da_int k, const double *X, da_int ldx,
+                      const double *Y, da_int ldy, double *D, da_int ldd,
+                      da_metric metric = da_euclidean,
+                      da_data_types force_all_finite = da_allow_infinite) {
+    return da_pairwise_distances_d(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+                                   force_all_finite);
+}
+
+inline da_status
+da_pairwise_distances(da_int m, da_int n, da_int k, const float *X, da_int ldx,
+                      const float *Y, da_int ldy, float *D, da_int ldd,
+                      da_metric metric = da_euclidean,
+                      da_data_types force_all_finite = da_allow_infinite) {
+    return da_pairwise_distances_s(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+                                   force_all_finite);
+}
 #endif // AOCLDA_CPP_OVERLOADS
