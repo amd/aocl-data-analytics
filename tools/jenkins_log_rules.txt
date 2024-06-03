@@ -9,7 +9,7 @@ ok /(?i)warning: ignoring.*tag/
 ok /(?i)warning: (?i)tag/
 
 # Relax python mocked objects
-ok /WARNING: A mocked/
+# ok /WARNING: A mocked/
 
 # ok first -> warn last
 

@@ -630,8 +630,9 @@ class linmod : public pyda_handle {
     ~linmod() { da_handle_destroy(&handle); }
 
     template <typename T>
-    void fit(py::array_t<T, py::array::f_style> X, py::array_t<T> y, T reg_lambda = 0.0,
-             T reg_alpha = 0.0, T tol = 0.0001) {
+    void fit(py::array_t<T, py::array::f_style> X, py::array_t<T> y,
+             std::optional<py::array_t<T>> x0, T reg_lambda = 0.0, T reg_alpha = 0.0,
+             T tol = 0.0001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         // TODO Should it be a separate function call like in C with the "define_features" function
 
@@ -649,11 +650,20 @@ class linmod : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "optim convergence tol", tol);
         exception_check(status);
-
-        if (precision == da_double)
-            status = da_linmod_fit<double>(handle);
-        else
-            status = da_linmod_fit<float>(handle);
+        if (x0.has_value()) {
+            if (precision == da_double) {
+                da_int ncoef = x0->shape()[0];
+                status = da_linmod_fit_start<T>(handle, ncoef, x0->mutable_data());
+            } else {
+                da_int ncoef = x0->shape()[0];
+                status = da_linmod_fit_start<T>(handle, ncoef, x0->mutable_data());
+            }
+        } else {
+            if (precision == da_double)
+                status = da_linmod_fit<double>(handle);
+            else
+                status = da_linmod_fit<float>(handle);
+        }
 
         exception_check(status);
     }
@@ -691,6 +701,135 @@ class linmod : public pyda_handle {
             py::array ret = py::reinterpret_borrow<py::array>(coef);
             return ret;
         }
+    }
+
+    template <typename T>
+    void get_rinfo(T *loss, T *nrm_gradient_loss, da_int *n_iter, T *time) {
+        da_status status;
+
+        da_int dim = 100;
+        T rinfo[100];
+        status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+        *loss = (T)rinfo[0];
+        *nrm_gradient_loss = (T)rinfo[1];
+        *n_iter = (da_int)rinfo[2];
+        *time = (T)rinfo[3];
+
+        exception_check(status);
+    }
+
+    auto get_loss() {
+        // This is a bit tricky due to return variable being either float or double
+        // Followed what was done for kmeans's get_inertia()
+        da_int n_iter;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            stride_size = sizeof(float);
+            float loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<float>(shape, strides);
+            *(res.mutable_data(0)) = loss;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        } else {
+            stride_size = sizeof(double);
+            double loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<double>(shape, strides);
+            *(res.mutable_data(0)) = loss;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        }
+    }
+
+    auto get_norm_gradient_loss() {
+        // This is a bit tricky due to return variable being either float or double
+        // Followed what was done for kmeans's get_inertia()
+        da_int n_iter;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            stride_size = sizeof(float);
+            float loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<float>(shape, strides);
+            *(res.mutable_data(0)) = nrm_gradient_loss;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        } else {
+            stride_size = sizeof(double);
+            double loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<double>(shape, strides);
+            *(res.mutable_data(0)) = nrm_gradient_loss;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        }
+    }
+
+    auto get_time() {
+        // This is a bit tricky due to return variable being either float or double
+        // Followed what was done for kmeans's get_inertia()
+        da_int n_iter;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            stride_size = sizeof(float);
+            float loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<float>(shape, strides);
+            *(res.mutable_data(0)) = time;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        } else {
+            stride_size = sizeof(double);
+            double loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+            std::vector<size_t> shape, strides;
+            shape.push_back(1);
+            strides.push_back(stride_size);
+            // define the output vector
+            auto res = py::array_t<double>(shape, strides);
+            *(res.mutable_data(0)) = time;
+            py::array ret = py::reinterpret_borrow<py::array>(res);
+            return ret;
+        }
+    }
+
+    auto get_n_iter() {
+
+        da_int n_iter;
+
+        if (precision == da_single) {
+            float loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+        } else {
+            double loss, nrm_gradient_loss, time;
+            get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time);
+        }
+
+        return n_iter;
     }
 };
 
@@ -1432,14 +1571,18 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("intercept") = false, py::arg("solver") = "auto",
              py::arg("scaling") = "auto", py::arg("precision") = "double")
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
-             py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,
-             py::arg("tol") = (float)0.0001)
+             py::arg("x0") = py::none(), py::arg("reg_lambda") = (float)0.0,
+             py::arg("reg_alpha") = (float)0.0, py::arg("tol") = (float)0.0001)
         .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
-             py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0,
-             py::arg("tol") = (double)0.0001)
+             py::arg("x0") = py::none(), py::arg("reg_lambda") = (double)0.0,
+             py::arg("reg_alpha") = (double)0.0, py::arg("tol") = (double)0.0001)
         .def("pybind_predict", &linmod::predict<double>, "Evaluate the model on X", "X"_a)
         .def("pybind_predict", &linmod::predict<float>, "Evaluate the model on X", "X"_a)
-        .def("get_coef", &linmod::get_coef);
+        .def("get_coef", &linmod::get_coef)
+        .def("get_loss", &linmod::get_loss)
+        .def("get_norm_gradient_loss", &linmod::get_norm_gradient_loss)
+        .def("get_n_iter", &linmod::get_n_iter)
+        .def("get_time", &linmod::get_time);
 
     /**********************************/
     /*  Principal component analysis  */

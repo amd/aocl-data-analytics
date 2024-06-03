@@ -353,14 +353,14 @@ const linregParam linregParamPos[] = {
     // 50
     {"LbfgsSclL2Reg+1", "triviall2unscl", {{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7},{"lambda",10.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-20},{"lambda",10.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     {{"optim convergence tol",1.e-7},{"lambda",10.0f*6.0f/(5.053189312f)},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-20},{"lambda",10.0*6.0/(5.053189312)},{"alpha",0.0},{"optim progress factor", 10.0}}
                                      },
     // 51
     {"LbfgsSclL2Reg+0", "triviall2unscl", {{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7},{"lambda",10.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-20},{"lambda",10.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     {{"optim convergence tol",1.e-7},{"lambda",10.0f*6.0f/(11.72781594f)},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-20},{"lambda",10.0*6.0/(11.72781594)},{"alpha",0.0},{"optim progress factor", 10.0}}
                                      },
     // 52
     {"LbfgsStdNormTab+0", "glmnet-100x20",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
@@ -401,14 +401,14 @@ const linregParam linregParamPos[] = {
     // 58
     {"LbfgsSclNormTab-Ridge+0", "glmnet-100x20l2unscl",   {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f*100.0f/10.3711999994f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0*100.0/10.3711999994},{"alpha",0.0},{"optim progress factor", 10.0}}
                                      },
     // 59
     {"LbfgsSclNormTab-Ridge+1", "glmnet-100x20l2unscl",   {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",22.0},{"alpha",0.0},{"optim progress factor", 10.0}}
+                                     {{"optim convergence tol",1.e-7f},{"lambda",22.0f*100.0f/8.71398621795f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",22.0*100.0/8.71398621795},{"alpha",0.0},{"optim progress factor", 10.0}}
                                      },
     // same problems 44-59 solved with QR - selectinh only NOREG
     // 60 models y ~ X + 0, y ~ X + 1, no-reg, scaling only OR standardize
@@ -515,7 +515,6 @@ const linregParam linregParamPos[] = {
     // test only for none/centering and "scale only", standardize would solve a different problem
     // test group works for L-BFGS-B, SVD, CHOL, CG. For COORD (only "scale only" is valid, otherwise
     // assumptions not met, so not testing)
-    // none scaling enforces no copying which is required for svd
     // 76 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
     {"NE7x2-l2+0/L/n", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "none"}},
@@ -548,16 +547,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/L/s", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "scale only"}},
-                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                  {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
     // 81 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/L/s", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "lbfgs"},{"scaling", "scale only"}},
-                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                  {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
     // 76 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
@@ -593,16 +592,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/svd/s", "mtx_7x2", {{"intercept", 0},{"print level", 1}},
                                   {{"optim method", "svd"},{"scaling", "scale only"}},
-                                  {{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f}},
-                                  {{"lambda",1.5/7.0*10.86771},{"alpha",0.0}},
+                                  {{"lambda",1.5f},{"alpha",0.0f}},
+                                  {{"lambda",1.5},{"alpha",0.0}},
                                   true, false
                                   },
     // 80 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/svd/s", "mtx_7x2", {{"intercept", 1},{"print level", 1}},
                                   {{"optim method", "svd"},{"scaling", "scale only"}},
-                                  {{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f}},
-                                  {{"lambda",1.5/7.0*5.76230},{"alpha",0.0}},
+                                  {{"lambda",1.5f},{"alpha",0.0f}},
+                                  {{"lambda",1.5},{"alpha",0.0}},
                                   true, false
                                   },
     // 76 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
@@ -637,16 +636,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/chol/s", "mtx_7x2", {{"intercept", 0},{"print level", 1}},
                                   {{"optim method", "cholesky"},{"scaling", "scale only"}},
-                                  {{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f}},
-                                  {{"lambda",1.5/7.0*10.86771},{"alpha",0.0}},
+                                  {{"lambda",1.5f},{"alpha",0.0f}},
+                                  {{"lambda",1.5},{"alpha",0.0}},
                                   true, false
                                   },
     // 80 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/chol/s", "mtx_7x2", {{"intercept", 1},{"print level", 1}},
                                   {{"optim method", "cholesky"},{"scaling", "scale only"}},
-                                  {{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f}},
-                                  {{"lambda",1.5/7.0*5.76230},{"alpha",0.0}},
+                                  {{"lambda",1.5f},{"alpha",0.0f}},
+                                  {{"lambda",1.5},{"alpha",0.0}},
                                   true, false
                                   },
     // 76 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
@@ -681,16 +680,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/cg/s", "mtx_7x2", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "sparse_cg"},{"scaling", "scale only"}},
-                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                  {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
     // 80 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [no prescaling of data]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/cg/s", "mtx_7x2", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                   {{"optim method", "sparse_cg"},{"scaling", "scale only"}},
-                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                  {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                  {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                   true, false
                                   },
     // 81 Solve x [A'*A + lambda*eye(n)] \ A'*b [no prescaling of data]
@@ -767,16 +766,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2P-l2+0/L/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 89 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2P-l2+1/L/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "lbfgs"},{"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 83 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
@@ -812,16 +811,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/svd/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1}},
                                      {{"optim method", "svd"},{"scaling", "scale only"}},
-                                     {{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f}},
-                                     {{"lambda",1.5/7.0*10.86771},{"alpha",0.0}},
+                                     {{"lambda",1.5f},{"alpha",0.0f}},
+                                     {{"lambda",1.5},{"alpha",0.0}},
                                      true, false
                                      },
     // 88 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/svd/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1}},
                                      {{"optim method", "svd"},{"scaling", "scale only"}},
-                                     {{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f}},
-                                     {{"lambda",1.5/7.0*5.76230},{"alpha",0.0}},
+                                     {{"lambda",1.5f},{"alpha",0.0f}},
+                                     {{"lambda",1.5},{"alpha",0.0}},
                                      true, false
                                      },
     // 83 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
@@ -856,16 +855,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/chol/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1}},
                                      {{"optim method", "cholesky"},{"scaling", "scale only"}},
-                                     {{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f}},
-                                     {{"lambda",1.5/7.0*10.86771},{"alpha",0.0}},
+                                     {{"lambda",1.5f},{"alpha",0.0f}},
+                                     {{"lambda",1.5},{"alpha",0.0}},
                                      true, false
                                      },
     // 88 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/chol/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1}},
                                      {{"optim method", "cholesky"},{"scaling", "scale only"}},
-                                     {{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f}},
-                                     {{"lambda",1.5/7.0*5.76230},{"alpha",0.0}},
+                                     {{"lambda",1.5f},{"alpha",0.0f}},
+                                     {{"lambda",1.5},{"alpha",0.0}},
                                      true, false
                                      },
     // 83 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
@@ -900,16 +899,16 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/cg/s", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "sparse_cg"},{"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 88 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/cg/s", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "sparse_cg"},{"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 89 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
@@ -948,48 +947,48 @@ const linregParam linregParamPos[] = {
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/svd/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1}},
                                      {{"optim method", "svd"},{"scaling", "standardize"}},
-                                     {{"lambda",1.5f*10.86771f},{"alpha",0.0f}},
-                                     {{"lambda",1.5*10.86771},{"alpha",0.0}},
+                                     {{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f}},
+                                     {{"lambda",1.5/7.0*10.86771},{"alpha",0.0}},
                                      true, false
                                      },
     // 92 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/svd/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "svd"},{"scaling", "standardize"}},
-                                     {{"lambda",1.5f*5.76230f},{"alpha",0.0f}},
-                                     {{"lambda",1.5*5.76230},{"alpha",0.0}},
+                                     {{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f}},
+                                     {{"lambda",1.5/7.0*5.76230},{"alpha",0.0}},
                                      true, false
                                      },
     // 91 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/chol/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "cholesky"},{"scaling", "standardize"}},
-                                     {{"lambda",1.5f*10.86771f},{"alpha",0.0f}},
-                                     {{"lambda",1.5*10.86771},{"alpha",0.0}},
+                                     {{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f}},
+                                     {{"lambda",1.5/7.0*10.86771},{"alpha",0.0}},
                                      true, false
                                      },
     // 92 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/chol/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "cholesky"},{"scaling", "standardize"}},
-                                     {{"lambda",1.5f*5.76230f},{"alpha",0.0f}},
-                                     {{"lambda",1.5*5.76230},{"alpha",0.0}},
+                                     {{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f}},
+                                     {{"lambda",1.5/7.0*5.76230},{"alpha",0.0}},
                                      true, false
                                      },
     // 91 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * norm2(y)/sqrt(m)
     {"NE7x2-l2+0/cg/z", "mtx_7x2_sd", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "sparse_cg"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*10.86771f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*10.86771},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 92 Solve x [A'*A + lambda*diag(1,1,0)] \ A'*b [data prescaled]
     // lambda is inflated to lambda/m * stdev(y)/sqrt(m)
     {"NE7x2-l2+1/cg/z", "mtx_7x2_sd", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "sparse_cg"},{"scaling", "standardize"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
-                                     {{"optim convergence tol",1.e-10},{"lambda",1.5*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-7f},{"lambda",1.5f/7.0f*5.76230f},{"alpha",0.0f},{"optim progress factor", 10.0}},
+                                     {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
     // 93 Solve x [A'*A + lambda*eye(n)] \ A'*b [data prescaled]
@@ -1008,159 +1007,825 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-10},{"lambda",1.5/7.0*5.76230},{"alpha",0.0},{"optim progress factor", 10.0}},
                                      true, false
                                      },
-    // 96 scikit-learn sparse signal example LASSO
-    {"signal-l1+1/Coord/s", "signal-scikit", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
-                                     {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
-                                     {{"optim convergence tol",1.e-8f},{"lambda",0.14f},{"alpha",1.0f},{"optim progress factor", 1.0}},
-                                     {{"optim convergence tol",1.e-8},{"lambda",0.14},{"alpha",1.0},{"optim progress factor", 1.0}},
-                                     true, false
-                                     },
-    // Compare auto scaling of all solvers with sci-kit learn output
+    // Compare all scalings of all solvers with sci-kit learn / glmnet (for elasticnet) output
     // ========================================
-    // NO L1 NO L2
+    // OK - Pass, OK* - Pass with modification to the problem (either add small lambda or relax tolerance)
+    // DP - Different problem, NA - Solver not applicable, F - Fail
     //
+    // NONE SCALING (coord incompatible)
+    // NORMAL
+    // NO INTERCEPT 
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK   OK   NA    OK
+    // tall-thin      OK    OK    OK   OK   NA    OK
+    // tall-fat       OK    OK    OK   OK   NA    OK
+    // INTERCEPT (solvers unavail because strategy for intercept in under-det. is to center data)
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK*   NA    NA   NA   NA    NA
+    // tall-thin      OK    NA    OK   OK   NA    NA
+    // tall-fat       OK*   NA    NA   NA   NA    NA
+    //
+    // LASSO - ALL NA (BOTH INTERCEPT AND NO INTERCEPT)
+    //
+    // RIDGE
     // NO INTERCEPT
     // matrix size   lbfgs  svd  chol  cg  coord  qr
-    // short-fat      OK    OK    OK   OK   DP    TODO (either underdetermined QR or fallback to SVD)
-    // tall-thin      OK    OK    OK   OK   OK    OK
-    // tall-fat       OK    OK    OK   OK   OK    OK
+    // short-fat      OK    OK    OK   OK   NA    NA
+    // tall-thin      OK    OK    OK   OK   NA    NA
+    // tall-fat       OK    OK    OK   OK   NA    NA
+    // INTERCEPT (same as normal regression)
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    NA    NA   NA   NA    NA
+    // tall-thin      OK    NA    OK   OK   NA    NA
+    // tall-fat       OK    NA    NA   NA   NA    NA
+    //
+    // ELASTIC NET - ALL NA (BOTH INTERCEPT AND NO INTERCEPT)
+    //
+    // CENTERING (coord incompatible)
+    // NORMAL
+    // NO INTERCEPT 
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK   OK   NA    OK
+    // tall-thin      OK    OK    OK   OK   NA    OK
+    // tall-fat       OK    OK    OK   OK   NA    OK
     //
     // INTERCEPT (singular in undetermined situation)
     // matrix size   lbfgs  svd  chol  cg  coord  qr
-    // short-fat      DP    OK    X    OK   DP    TODO (either underdetermined QR or fallback to SVD)
-    // tall-thin      OK    OK    OK   OK   OK    OK
-    // tall-fat       DP    OK    X    OK   DP    TODO (either underdetermined QR or fallback to SVD)
+    // short-fat      OK    OK    OK*  OK   NA    NA
+    // tall-thin      OK    OK    OK   OK   NA    OK
+    // tall-fat       OK    OK    OK*  OK*  NA    NA
     //
-    // BOTH INTERCEPT AND NO INTERCEPT
-    // ONLY L1
+    // LASSO - ALL NA (BOTH INTERCEPT AND NO INTERCEPT)
+    //
+    // RIDGE (BOTH INTERCEPT AND NO INTERCEPT)
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK   OK   NA    NA
+    // tall-thin      OK    OK    OK   OK   NA    NA
+    // tall-fat       OK    OK    OK   OK   NA    NA
+    //
+    // ELASTIC NET - ALL NA (BOTH INTERCEPT AND NO INTERCEPT)
+    //
+    // SCALE ONLY
+    // NORMAL
+    // NO INTERCEPT 
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK   OK   OK*   OK
+    // tall-thin      OK    OK    OK   OK   OK    OK
+    // tall-fat       OK    OK    OK   OK   OK    OK
+    //
+    // INTERCEPT
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK*  OK   OK*   NA
+    // tall-thin      OK    OK    OK   OK   OK    OK
+    // tall-fat       OK    OK    OK*  OK*  OK*   NA
+    //
+    // LASSO (BOTH INTERCEPT AND NO INTERCEPT)
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      NA    NA    NA   NA   OK    NA
     // tall-thin      NA    NA    NA   NA   OK    NA
-    // tall-fat       NA    NA    NA   NA   OK    NA
+    // tall-fat       NA    NA    NA   NA   OK    NA 
     //
-    // ONLY L2
+    // RIDGE (BOTH INTERCEPT AND NO INTERCEPT)
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      OK    OK    OK   OK   OK    NA
     // tall-thin      OK    OK    OK   OK   OK    NA
     // tall-fat       OK    OK    OK   OK   OK    NA
     //
-    // BOTH L1 AND L2
+    // ELASTIC NET (BOTH INTERCEPT AND NO INTERCEPT)
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      NA    NA   NA    NA   OK    NA
+    // tall-thin      NA    NA   NA    NA   OK    NA
+    // tall-fat       NA    NA   NA    NA   OK    NA
+    //
+    // STANDARDISE (HERE DATA PASSED IS PRESCALED TO HAVE VARIANCE=1 AND MEAN=0 IN EACH COLUMN AND OUTPUT IS BEING COMPARED TO GLMNET)
+    // QR UNAVAIL BECAUSE PRESCALING UNDERDETERMINED PROBLEM MAKES MATRIX LOW-RANK
+    // NORMAL
+    // NO INTERCEPT
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK*  OK   OK*   NA
+    // tall-thin      OK    OK    OK   OK   OK    OK
+    // tall-fat       OK    OK    OK*  OK   OK*   NA
+    //
+    // INTERCEPT (singular in undetermined situation)
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK*  OK   OK*   NA
+    // tall-thin      OK    OK    OK   OK   OK    OK
+    // tall-fat       OK    OK    OK*  OK*  OK*   NA
+    //
+    // LASSO (BOTH INTERCEPT AND NO INTERCEPT)
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      NA    NA    NA   NA   OK    NA
+    // tall-thin      NA    NA    NA   NA   OK    NA
+    // tall-fat       NA    NA    NA   NA   OK    NA
+    //
+    // RIDGE (BOTH INTERCEPT AND NO INTERCEPT)
+    // matrix size   lbfgs  svd  chol  cg  coord  qr
+    // short-fat      OK    OK    OK   OK   OK    NA
+    // tall-thin      OK    OK    OK   OK   OK    NA
+    // tall-fat       OK    OK    OK   OK   OK    NA
+    //
+    // ELASTIC NET (BOTH INTERCEPT AND NO INTERCEPT)
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      NA    NA   NA    NA   OK    NA
     // tall-thin      NA    NA   NA    NA   OK    NA
     // tall-fat       NA    NA   NA    NA   OK    NA
     // =============================================
 
+    /* NONE SCALING */
     /* NORMAL TESTS */
     /* NO INTERCEPT */
     /* SHORT FAT */
-    {"ShortFat/norm/lbfgs/0", "short_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
+    {"ShortFat/norm/lbfgs/0/n", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/norm/svd/0", "short_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
+    {"ShortFat/norm/svd/0/n", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/norm/chol/0", "short_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
+    {"ShortFat/norm/chol/0/n", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/norm/cg/0", "short_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
+    {"ShortFat/norm/cg/0/n", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    // Really hard to obtain sklearn result, need to add 0.0001 lambda and increase tolerance to 0.0021
-    {"ShortFat/norm/coord/0", "short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 600000}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-8f}, {"lambda",0.0001f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-11}, {"lambda",0.0001},{"alpha",0.0}, {"optim progress factor",10.0}},
-                                     true, false, 2.1
-                                     },
-    {"ShortFat/norm/qr/0", "short_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "qr"}},
+    {"ShortFat/norm/qr/0/n", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
     /* TALL THIN */
-    {"TallThin/norm/lbfgs/0", "tall_thin", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
+    {"TallThin/norm/lbfgs/0/n", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/svd/0", "tall_thin", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
+    {"TallThin/norm/svd/0/n", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/chol/0", "tall_thin", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
+    {"TallThin/norm/chol/0/n", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/cg/0", "tall_thin", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
+    {"TallThin/norm/cg/0/n", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/coord/0", "tall_thin", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",0.0f},{"alpha",0.0f}},
-                                     {{"lambda",0.0},{"alpha",0.0}},
-                                     true, false
-                                     },
-    {"TallThin/norm/qr/0", "tall_thin", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "qr"}},
+    {"TallThin/norm/qr/0/n", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
     /* TALL FAT */
-    {"TallFat/norm/lbfgs/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
+    {"TallFat/norm/lbfgs/0/n", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-9}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"TallFat/norm/svd/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
+    {"TallFat/norm/svd/0/n", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/norm/chol/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
+    {"TallFat/norm/chol/0/n", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/norm/cg/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
+    {"TallFat/norm/cg/0/n", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/norm/coord/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
+    {"TallFat/norm/qr/0/n", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "none"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/norm/qr/0", "tall_fat", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "qr"}},
+    /* INTERCEPT */
+    /* SHORT FAT */
+    // Add small lambda
+    {"ShortFat/norm/lbfgs/1/n", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.001f},{"alpha",0.0f}, {"optim progress factor",1.0f}},
+                                     {{"optim convergence tol",1.e-14}, {"lambda",0.00001},{"alpha",0.0}, {"optim progress factor",1.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/norm/lbfgs/1/n", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/chol/1/n", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/cg/1/n", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    // Add a bit of lambda (a lot for float)
+    {"TallFat/norm/lbfgs/1/n", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.1f},{"alpha",0.0f}, {"optim progress factor",1.0f}},
+                                     {{"optim convergence tol",1.e-14}, {"lambda",0.00001},{"alpha",0.0}, {"optim progress factor",1.0}},
+                                     true, false
+                                     },
+
+    /* L2 TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L2/lbfgs/0/n", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/svd/0/n", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/chol/0/n", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/cg/0/n", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L2/lbfgs/0/n", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/svd/0/n", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/chol/0/n", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/cg/0/n", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L2/lbfgs/0/n", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/svd/0/n", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/chol/0/n", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/cg/0/n", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L2/lbfgs/1/n", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L2/lbfgs/1/n", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/chol/1/n", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/cg/1/n", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "none"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L2/lbfgs/1/n", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "none"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",1.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",1.0}},
+                                     true, false
+                                     },
+    
+    /* CENTERING */
+    /* NORMAL TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/norm/lbfgs/0/c", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/svd/0/c", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/chol/0/c", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/cg/0/c", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/qr/0/c", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/norm/lbfgs/0/c", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/svd/0/c", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/chol/0/c", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/cg/0/c", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/qr/0/c", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/norm/lbfgs/0/c", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/svd/0/c", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/chol/0/c", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/cg/0/c", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/qr/0/c", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* INTERCEPT */
+    /* SHORT FAT */
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+        conditional number which makes the solution unstable and difficult to compare between each other */
+    {"ShortFat/norm/lbfgs/1/c", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/svd/1/c", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Bump lambda a bit to get around singular matrix
+    {"ShortFat/norm/chol/1/c", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.00001f},{"alpha",0.0f}},
+                                     {{"lambda",0.00001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/cg/1/c", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/norm/lbfgs/1/c", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/svd/1/c", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/chol/1/c", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/cg/1/c", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/qr/1/c", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+        conditional number which makes the solution unstable and difficult to compare between each other */
+    {"TallFat/norm/lbfgs/1/c", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-9f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/svd/1/c", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda to make it possible to factorise
+    {"TallFat/norm/chol/1/c", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"lambda",0.0001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"TallFat/norm/cg/1/c", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* L2 TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L2/lbfgs/0/c", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/svd/0/c", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/chol/0/c", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/cg/0/c", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L2/lbfgs/0/c", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/svd/0/c", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/chol/0/c", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/cg/0/c", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L2/lbfgs/0/c", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/svd/0/c", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/chol/0/c", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/cg/0/c", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L2/lbfgs/1/c", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/svd/1/c", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/chol/1/c", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/cg/1/c", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L2/lbfgs/1/c", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/svd/1/c", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/chol/1/c", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/cg/1/c", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L2/lbfgs/1/c", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "centering"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/svd/1/c", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/chol/1/c", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/cg/1/c", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "centering"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+
+    /* SCALE ONLY */
+    /* NORMAL TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/norm/lbfgs/0/s", "short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 600000}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-8f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-10}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/svd/0/s", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/chol/0/s", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/cg/0/s", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Hard to obtain sklearn result due to underdetermined system, need to add 0.0001 lambda and increase tolerance to 0.0021
+    {"ShortFat/norm/coord/0/s", "short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 600000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-8f}, {"lambda",0.0001f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-11}, {"lambda",0.0001},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false, 2.1
+                                     },
+    {"ShortFat/norm/qr/0/s", "short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/norm/lbfgs/0/s", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/svd/0/s", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/chol/0/s", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/cg/0/s", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/coord/0/s", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/qr/0/s", "tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/norm/lbfgs/0/s", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-9}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/svd/0/s", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/chol/0/s", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/cg/0/s", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/coord/0/s", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/qr/0/s", "tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
@@ -1172,78 +1837,74 @@ const linregParam linregParamPos[] = {
      * very high conditional number which makes the solution unstable and
      * difficult to compare between each other
      */
-    // Bump lambda a bit to get around singular matrix and increase tolerance to 0.025
-    {"ShortFat/norm/lbfgs/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
+        conditional number which makes the solution unstable and difficult to compare between each other */
+    {"ShortFat/norm/lbfgs/1/s", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"ShortFat/norm/svd/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
+    {"ShortFat/norm/svd/1/s", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
     // Bump lambda a bit to get around singular matrix
-    {"ShortFat/norm/chol/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
+    {"ShortFat/norm/chol/1/s", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
                                      {{"lambda",0.00001f},{"alpha",0.0f}},
                                      {{"lambda",0.00001},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/norm/cg/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
+    {"ShortFat/norm/cg/1/s", "short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    // Really hard to obtain sklearn result, need to add 0.019 lambda and increase tolerance to 0.43, since too big of a bump remove test for now
-    // {"ShortFat/norm/coord/1", "short_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
-    //                                  {{"optim method", "coord"}},
-    //                                  {{"optim convergence tol",1.e-7f}, {"lambda",0.019f},{"alpha",0.0f}},
-    //                                  {{"optim convergence tol",1.e-15f}, {"lambda",0.019},{"alpha",0.0}},
-    //                                  true, false, 430
-    //                                  },
-    // {"ShortFat/norm/qr/1", "short_fat", {{"intercept", 1}, {"print level", 1}},
-    //                                  {{"optim method", "qr"}},
-    //                                  {{"lambda",0.0f},{"alpha",0.0f}},
-    //                                  {{"lambda",0.0},{"alpha",0.0}},
-    //                                  true, false
-    //                                  },
+    // Add small lambda, bump max iter to 1,000,000 and set tolerance to 0.003
+    {"ShortFat/norm/coord/1/s", "short_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 1000000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-15f}, {"lambda",0.0001},{"alpha",0.0}},
+                                     true, false, 3
+                                     },
     /* TALL THIN */
-    {"TallThin/norm/lbfgs/1", "tall_thin", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+    // Fail for single precision
+    {"TallThin/norm/lbfgs/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",0.1f}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"TallThin/norm/svd/1", "tall_thin", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
+    {"TallThin/norm/svd/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/chol/1", "tall_thin", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
+    {"TallThin/norm/chol/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/cg/1", "tall_thin", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
+    {"TallThin/norm/cg/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/coord/1", "tall_thin", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
+    {"TallThin/norm/coord/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/norm/qr/1", "tall_thin", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "qr"}},
+    {"TallThin/norm/qr/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
@@ -1251,328 +1912,816 @@ const linregParam linregParamPos[] = {
     /* TALL FAT */
     /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
         conditional number which makes the solution unstable and difficult to compare between each other */
-    {"TallFat/norm/lbfgs/1", "tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
-                                     {{"optim method", "lbfgs"}},
+    {"TallFat/norm/lbfgs/1/s", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-9f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
                                      {{"optim convergence tol",1.e-13}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"TallFat/norm/svd/1", "tall_fat", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
+    {"TallFat/norm/svd/1/s", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.0f}},
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
     // Add tiny bit of lambda to make it possible to factorise
-    {"TallFat/norm/chol/1", "tall_fat", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
+    {"TallFat/norm/chol/1/s", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0001f},{"alpha",0.0f}},
                                      {{"lambda",0.0001},{"alpha",0.0}},
                                      true, false
                                      },
     // Add tiny bit of lambda
-    {"TallFat/norm/cg/1", "tall_fat", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
+    {"TallFat/norm/cg/1/s", "tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f}},
                                      {{"optim convergence tol",1.e-10}, {"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
     // Add tiny bit of lambda
-    {"TallFat/norm/coord/1", "tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
-                                     {{"optim method", "coord"}},
+    {"TallFat/norm/coord/1/s", "tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-9f}, {"lambda",0.01f},{"alpha",0.0f}},
                                      {{"optim convergence tol",1.e-10}, {"lambda",0.01},{"alpha",0.0}},
                                      true, false
                                      },
-    // {"TallFat/norm/qr/1", "tall_fat", {{"intercept", 1}, {"print level", 1}},
-    //                                  {{"optim method", "qr"}},
-    //                                  {{"lambda",0.0f},{"alpha",0.0f}},
-    //                                  {{"lambda",0.0},{"alpha",0.0}},
-    //                                  true, false
-    //                                  },
     /* L1 TESTS */
     /* NO INTERCEPT */
     /* SHORT FAT */
-    {"ShortFat/L1/coord/0", "short_fatl1", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 100000}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"optim convergence tol",1.e-15}, {"lambda",5.0},{"alpha",1.0}},
+    {"ShortFat/L1/coord/0/s", "short_fatl1", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 100000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",1.0}},
                                      true, false
                                      },
     /* TALL THIN */
-    {"TallThin/L1/coord/0", "tall_thinl1", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"lambda",5.0},{"alpha",1.0}},
+    {"TallThin/L1/coord/0/s", "tall_thinl1", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
                                      true, false
                                      },
     /* TALL FAT */
-    {"TallFat/L1/coord/0", "tall_fatl1", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"lambda",5.0},{"alpha",1.0}},
+    {"TallFat/L1/coord/0/s", "tall_fatl1", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
                                      true, false
                                      },
     /* INTERCEPT */
     /* SHORT FAT */
-    {"ShortFat/L1/coord/1", "short_fatl1", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"lambda",5.0},{"alpha",1.0}},
+    {"ShortFat/L1/coord/1/s", "short_fatl1", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
                                      true, false
                                      },
     /* TALL THIN */
-    {"TallThin/L1/coord/1", "tall_thinl1", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"lambda",5.0},{"alpha",1.0}},
+    {"TallThin/L1/coord/1/s", "tall_thinl1", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
                                      true, false
                                      },
     /* TALL FAT */
-    {"TallFat/L1/coord/1", "tall_fatl1", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",1.0f}},
-                                     {{"lambda",5.0},{"alpha",1.0}},
+    {"TallFat/L1/coord/1/s", "tall_fatl1", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
                                      true, false
                                      },
     /* L2 TESTS */
     /* NO INTERCEPT */
     /* SHORT FAT */
-    {"ShortFat/L2/lbfgs/0", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+    {"ShortFat/L2/lbfgs/0/s", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/svd/0", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/svd/0/s", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/chol/0", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/chol/0/s", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/cg/0", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/cg/0/s", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/coord/0", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/coord/0/s", "short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
     /* TALL THIN */
-    {"TallThin/L2/lbfgs/0", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/lbfgs/0/s", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"TallThin/L2/svd/0", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/svd/0/s", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/L2/chol/0", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/chol/0/s", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/L2/cg/0", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/cg/0/s", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/L2/coord/0", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/coord/0/s", "tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
     /* TALL FAT */
-    {"TallFat/L2/lbfgs/0", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",5.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+    {"TallFat/L2/lbfgs/0/s", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"TallFat/L2/svd/0", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/svd/0/s", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/L2/chol/0", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/chol/0/s", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/L2/cg/0", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/cg/0/s", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/L2/coord/0", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/coord/0/s", "tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
     /* INTERCEPT */
     /* SHORT FAT */
-    {"ShortFat/L2/lbfgs/1", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",5.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+    {"ShortFat/L2/lbfgs/1/s", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/svd/1", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/svd/1/s", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/chol/1", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/chol/1/s", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/cg/1", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/cg/1/s", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"ShortFat/L2/coord/1", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"ShortFat/L2/coord/1/s", "short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
     /* TALL THIN */
-    {"TallThin/L2/lbfgs/1", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/lbfgs/1/s", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",0.1f}},
+                                     {{"optim convergence tol",1.e-14}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"TallThin/L2/svd/1", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/svd/1/s", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/L2/chol/1", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/chol/1/s", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/L2/cg/1", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/cg/1/s", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallThin/L2/coord/1", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallThin/L2/coord/1/s", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
     /* TALL FAT */
-    {"TallFat/L2/lbfgs/1", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "lbfgs"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",5.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",5.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+    {"TallFat/L2/lbfgs/1/s", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
                                      true, false
                                      },
-    {"TallFat/L2/svd/1", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "svd"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/svd/1/s", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/L2/chol/1", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "cholesky"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/chol/1/s", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/L2/cg/1", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "sparse_cg"}},
-                                     {{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/cg/1/s", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "scale only"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    {"TallFat/L2/coord/1", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f},{"lambda",5.0f},{"alpha",0.0f}},
-                                     {{"optim convergence tol",1.e-9},{"lambda",5.0},{"alpha",0.0}},
+    {"TallFat/L2/coord/1/s", "tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
+    
     /* ELASTIC NET TESTS */
     /* OUTPUT HERE IS COMPARED TO GLMNET INSTEAD OF SKLEARN */
     /* NO INTERCEPT */
     /* SHORT FAT */
-    // TODO: Possibly enable this test just for doubles
-    // {"ShortFat/L12/coord/0", "short_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
-    //                                  {{"optim method", "coord"}},
-    //                                  {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
-    //                                  {{"optim convergence tol",1.e-15}, {"lambda",3.0},{"alpha",0.5}},
-    //                                  true, false
-    //                                  },
-    // Bump tolerance to 0.004
+    {"ShortFat/L12/coord/0/s", "short_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
+                                     },
     /* TALL THIN */
-    {"TallThin/L12/coord/0", "tall_thinl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
-                                     {{"optim convergence tol",1.e-15}, {"lambda",3.0},{"alpha",0.5}},
-                                     true, false, 4
+    {"TallThin/L12/coord/0/s", "tall_thinl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
                                      },
     /* TALL FAT */
-    // Bump tolerance to 0.005
-    {"TallFat/L12/coord/0", "tall_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100000}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",3.0},{"alpha",0.5}},
-                                     true, false, 5
+    {"TallFat/L12/coord/0/s", "tall_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
                                      },
     /* INTERCEPT */
     /* SHORT FAT */
-    {"ShortFat/L12/coord/1", "short_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
-                                     {{"optim convergence tol",1.e-15}, {"lambda",3.0},{"alpha",0.5}},
+    {"ShortFat/L12/coord/1/s", "short_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
     /* TALL THIN */
-    {"TallThin/L12/coord/1", "tall_thinl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",3.0},{"alpha",0.5}},
+    {"TallThin/L12/coord/1/s", "tall_thinl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
     /* TALL FAT */
-    {"TallFat/L12/coord/1", "tall_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
-                                     {{"optim method", "coord"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",3.0f},{"alpha",0.5f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",3.0},{"alpha",0.5}},
+    {"TallFat/L12/coord/1/s", "tall_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "scale only"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
+
+    /* STANDARDISE (HERE WE COMPARING TO GLMNET OUTPUT) */ 
+    /* NORMAL TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/norm/lbfgs/0/z", "scl_short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-8f}, {"lambda", 0.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/svd/0/z", "scl_short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add a bit of lambda
+    {"ShortFat/norm/chol/0/z", "scl_short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"lambda",0.0001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/cg/0/z", "scl_short_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add a bit of lambda
+    {"ShortFat/norm/coord/0/z", "scl_short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 600000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-8f}, {"lambda",0.0001f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-11}, {"lambda",0.0001},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/norm/lbfgs/0/z", "scl_tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-14}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/svd/0/z", "scl_tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/chol/0/z", "scl_tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/cg/0/z", "scl_tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/coord/0/z", "scl_tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/qr/0/z", "scl_tall_thin", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/norm/lbfgs/0/z", "scl_tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/svd/0/z", "scl_tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"TallFat/norm/chol/0/z", "scl_tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"lambda",0.0001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/cg/0/z", "scl_tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"TallFat/norm/coord/0/z", "scl_tall_fat", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.001f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-14f}, {"lambda",0.001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* INTERCEPT */
+    /* SHORT FAT */
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+        conditional number which makes the solution unstable and difficult to compare between each other */
+    {"ShortFat/norm/lbfgs/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/svd/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"ShortFat/norm/chol/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"lambda",0.0001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/norm/cg/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"ShortFat/norm/coord/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-15f}, {"lambda",0.0001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/norm/lbfgs/1/z", "scl_tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/svd/1/z", "scl_tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/chol/1/z", "scl_tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/cg/1/z", "scl_tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/coord/1/z", "scl_tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/norm/qr/1/z", "scl_tall_thin", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "qr"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+        conditional number which makes the solution unstable and difficult to compare between each other */
+    {"TallFat/norm/lbfgs/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-9f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-13}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/norm/svd/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0f},{"alpha",0.0f}},
+                                     {{"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"TallFat/norm/chol/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"lambda",0.0001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"TallFat/norm/cg/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10}, {"lambda",0.0},{"alpha",0.0}},
+                                     true, false
+                                     },
+    // Add tiny bit of lambda
+    {"TallFat/norm/coord/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-9f}, {"lambda",0.01f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-10}, {"lambda",0.0001},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* L1 TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L1/coord/0/z", "scl_short_fatl1", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 100000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",1.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L1/coord/0/z", "scl_tall_thinl1", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L1/coord/0/z", "scl_tall_fatl1", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
+                                     true, false
+                                     },
+    /* INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L1/coord/1/z", "scl_short_fatl1", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L1/coord/1/z", "scl_tall_thinl1", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L1/coord/1/z", "scl_tall_fatl1", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",1.0f}},
+                                     {{"lambda",0.3},{"alpha",1.0}},
+                                     true, false
+                                     },
+    /* L2 TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L2/lbfgs/0/z", "scl_short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/svd/0/z", "scl_short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/chol/0/z", "scl_short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/cg/0/z", "scl_short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/coord/0/z", "scl_short_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L2/lbfgs/0/z", "scl_tall_thinl2", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100000}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/svd/0/z", "scl_tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/chol/0/z", "scl_tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/cg/0/z", "scl_tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/coord/0/z", "scl_tall_thinl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L2/lbfgs/0/z", "scl_tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",1.0f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",0.1}},
+                                     true, false
+                                     },
+    {"TallFat/L2/svd/0/z", "scl_tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/chol/0/z", "scl_tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/cg/0/z", "scl_tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/coord/0/z", "scl_tall_fatl2", {{"intercept", 0}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L2/lbfgs/1/z", "scl_short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/svd/1/z", "scl_short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/chol/1/z", "scl_short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/cg/1/z", "scl_short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"ShortFat/L2/coord/1/z", "scl_short_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L2/lbfgs/1/z", "scl_tall_thinl2", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 100000}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/svd/1/z", "scl_tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/chol/1/z", "scl_tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/cg/1/z", "scl_tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallThin/L2/coord/1/z", "scl_tall_thinl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L2/lbfgs/1/z", "scl_tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/svd/1/z", "scl_tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "svd"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/chol/1/z", "scl_tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "cholesky"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/cg/1/z", "scl_tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "sparse_cg"}, {"scaling", "standardise"}},
+                                     {{"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    {"TallFat/L2/coord/1/z", "scl_tall_fatl2", {{"intercept", 1}, {"print level", 1}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}},
+                                     {{"lambda",0.5},{"alpha",0.0}},
+                                     true, false
+                                     },
+    /* ELASTIC NET TESTS */
+    /* NO INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L12/coord/0/z", "scl_short_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L12/coord/0/z", "scl_tall_thinl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L12/coord/0/z", "scl_tall_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
+                                     },
+    /* INTERCEPT */
+    /* SHORT FAT */
+    {"ShortFat/L12/coord/1/z", "scl_short_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
+                                     },
+    /* TALL THIN */
+    {"TallThin/L12/coord/1/z", "scl_tall_thinl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
+                                     },
+    /* TALL FAT */
+    {"TallFat/L12/coord/1/z", "scl_tall_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+                                     {{"optim method", "coord"}, {"scaling", "standardise"}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5}},
+                                     true, false
+                                     },
+    
     // 96 scikit-learn sparse signal example LASSO
     {"signal-l1+1/Coord/s", "signal-scikit", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},

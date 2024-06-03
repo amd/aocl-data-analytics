@@ -26,6 +26,7 @@
 
 #include "aoclda.h"
 #include "da_cblas.hh"
+#include "da_utils.hpp"
 #include "sparse_overloads.hpp"
 #include <vector>
 
@@ -55,17 +56,17 @@ template <typename T> struct cg_data {
         // TODO: Handle absolute tolerance as a function of relative tolerance
         // The following workaround with sprintf is due to the fact that std::to_string()
         // truncates small numbers to 0.
-        char tolerance[16];
-        sprintf(tolerance, "%9.2e", tol);
-        char max_iteration[16];
-        sprintf(max_iteration, "%d", maxit);
-        if (aoclsparse_itsol_option_set(handle, "CG abs tolerance", tolerance) !=
+        char tol_str[16];
+        char maxit_str[16];
+        da_utils::convert_num_to_char<T, 16>(tol, tol_str);
+        da_utils::convert_num_to_char<da_int, 16>(maxit, maxit_str);
+        if (aoclsparse_itsol_option_set(handle, "CG abs tolerance", tol_str) !=
                 aoclsparse_status_success ||
-            aoclsparse_itsol_option_set(handle, "CG rel tolerance", tolerance) !=
+            aoclsparse_itsol_option_set(handle, "CG rel tolerance", tol_str) !=
                 aoclsparse_status_success ||
             aoclsparse_itsol_option_set(handle, "CG preconditioner", "none") !=
                 aoclsparse_status_success ||
-            aoclsparse_itsol_option_set(handle, "CG iteration limit", max_iteration) !=
+            aoclsparse_itsol_option_set(handle, "CG iteration limit", maxit_str) !=
                 aoclsparse_status_success)
             throw std::runtime_error("Internal error with CG solver");
     };
@@ -127,6 +128,14 @@ template <typename T> struct cg_data {
             break;
         }
         return exit_status;
+    }
+
+    da_status get_info(da_int linfo, T *info) {
+        // Save information about the norm of the gradient of the loss function
+        info[1] = static_cast<T>(rinfo[0] * rinfo[1]);
+        // Save information about the number of iterations
+        info[2] = static_cast<T>(rinfo[30]);
+        return da_status_success;
     }
 };
 } // namespace da_linmod

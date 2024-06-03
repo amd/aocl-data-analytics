@@ -101,7 +101,7 @@ The cost function for a linear regression Model where the fit (loss) is measured
 .. math::
 
    C_{\{0<\lambda,0\le\alpha\le1\}}\left( \beta_0, \beta \right) & = L(y, \beta_0, \beta X) \\
-   & = \mathrm{MSE}(y, \beta_0, \beta X)= \sum_{i=1}^n (y_i - \beta_0 - \beta X_i)^2
+   & = \mathrm{MSE}(y, \beta_0, \beta X)= \frac{1}{2n} \sum_{i=1}^n (y_i - \beta_0 - \beta X_i)^2
    + \lambda \bigg( \alpha \lVert \beta \rVert_1 + \frac{(1 - \alpha)}{2} \lVert \beta \rVert_2^2  \bigg),
 
 where :math:`X_i` represents a single (multi-dimensional) observation, i.e., a row in a table of observations.
@@ -309,16 +309,17 @@ The standard way of computing a linear model using AOCL-DA is as follows.
          * some solvers provide extra information (:cpp:enumerator:`da_linmod_rinfo`), when available, it contains the
            info[100] array with the following values:
 
-           * rinfo[0]: Loss value at current iterate, :math:`L(\beta_0, \beta)`,
-           * rinfo[1]: Norm of the gradient of the Loss function at current iterate (L-BFGS-B solver),
-           * rinfo[2]: Number of iterations made (only for iterative solvers),
-           * rinfo[3]: Compute time (wall clock time in seconds),
-           * rinfo[4]: number of model evaluations performed,
-           * rinfo[5]: infinity norm of the optimization metric (varies on the method used),
-           * info[6]:  infinity norm of of a given metric at the initial iterate (varies on the method used),
-           * info[7]:  number of *cheap* model evaluations (only relevant for Coordenate Descent Method) and indicates the number of low-rank updates used to evaluate model,
-           * rinfo[8-99]: reserved for future use.
+           * info[0]: Loss value at current iterate, :math:`L(\beta_0, \beta)`,
+           * info[1]: Norm of the gradient of the loss function,
+           * info[2]: Number of iterations made (only for iterative solvers),
+           * info[3]: Compute time (wall clock time in seconds),
+           * info[4]: number of model evaluations performed,
+           * info[5]: infinity norm of the optimization metric (varies on the method used),
+           * info[6]: infinity norm of of a given metric at the initial iterate (varies on the method used),
+           * info[7]: number of *cheap* model evaluations (only relevant for Coordenate Descent Method) and indicates the number of low-rank updates used to evaluate model,
+           * info[8-99]: reserved for future use.
 
+           When information is not available, -1 is returned.
 .. _linmod_options:
 
 Linear Model Options

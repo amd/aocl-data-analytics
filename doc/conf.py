@@ -38,7 +38,7 @@ release = '4.2.1'
 # -- Get doc working for Python ----------------------------------------------
 # Add to PYTHONPATH
 sys.path.insert(0, os.path.relpath('../python_interface/'))
-autodoc_mock_imports = ['aoclda', 'numpy']
+autodoc_mock_imports = ['aoclda._aoclda', 'numpy']
 
 # -- General configuration ---------------------------------------------------
 extensions = ['sphinxcontrib.bibtex', 'breathe', 'sphinx.ext.napoleon',

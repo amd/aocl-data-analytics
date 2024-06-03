@@ -58,8 +58,8 @@ class linmod(pybind_linmod):
             - ``'sparse_cg'`` works with normal and Ridge regression. Might need to set smaller \
                 `tol` when badly conditioned matrix is encountered.
 
-            - ``'qr'`` works with normal linear regression only. Will return error when undertermined \
-                system is encountered.
+            - ``'qr'`` works with normal linear regression only. Will return error when \
+                undertermined system is encountered.
 
             - ``'coord'`` works with all regression types. Requires data to have variance of 1 \
                 column wise (can be achievied with `scaling` option set to `scale only`). \
@@ -98,7 +98,7 @@ class linmod(pybind_linmod):
                          scaling=scaling,
                          precision=precision)
 
-    def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0, tol=0.0001):
+    def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0, tol=0.0001, x0=None):
         """
         Computes the chosen linear model on the feature matrix X and response vector y
 
@@ -111,14 +111,18 @@ class linmod(pybind_linmod):
             reg_lambda (float, optional): :math:`\lambda`, the magnitude of the regularization term.
                 Default=0.0.
 
-            reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` term in the
-                regularization.
+            reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` \
+                term in the regularization.
             
             tol (float, optional): Convergence tolerance for iterative solvers. Applies only \
                 to iterative solvers: 'sparse_cg', 'coord', 'lbfgs'.
+
+            x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative \
+                solvers
         """
         self.pybind_fit(X,
                         y,
+                        x0=x0,
                         reg_lambda=reg_lambda,
                         reg_alpha=reg_alpha,
                         tol=tol)
@@ -128,10 +132,12 @@ class linmod(pybind_linmod):
         Evaluate the model on a data set X.
 
         Args:
-            X (numpy.ndarray): The feature matrix to evaluate the model on. It must have n_features columns.
+            X (numpy.ndarray): The feature matrix to evaluate the model on. It must have \
+                n_features columns.
 
         Returns:
-            numpy.ndarray of length n_samples: The prediction vector, where n_samples is the number of rows of X.
+            numpy.ndarray of length n_samples: The prediction vector, where n_samples is \
+                the number of rows of X.
         """
         return self.pybind_predict(X)
 
@@ -142,3 +148,27 @@ class linmod(pybind_linmod):
             required, it corresponds to the last element.
         """
         return self.get_coef()
+
+    @property
+    def loss(self):
+        """numpy.ndarray of shape (1, ): The value of loss function :math:`L(\\beta_0, \\beta)`.
+        """
+        return self.get_loss()
+
+    @property
+    def nrm_gradient_loss(self):
+        """numpy.ndarray of shape (1, ): The norm of the gradient of the loss function. Only valid for iterative solvers.
+        """
+        return self.get_norm_gradient_loss()
+
+    @property
+    def n_iter(self):
+        """int: The number iterations performed to find solution. Only valid for iterative solvers.
+        """
+        return self.get_n_iter()
+
+    @property
+    def time(self):
+        """numpy.ndarray of shape (1, ): Compute time (wall clock time in seconds).
+        """
+        return self.get_time()

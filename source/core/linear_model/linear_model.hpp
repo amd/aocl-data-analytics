@@ -45,6 +45,7 @@
 #include "optimization.hpp"
 #include "options.hpp"
 #include "statistical_utilities.hpp"
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -77,6 +78,7 @@ template <typename T> class linear_model : public basic_handle<T> {
   private:
     /* type of the model, has to de set at initialization phase */
     linmod_model mod = linmod_model_undefined;
+    da_int method_id = linmod_method::undefined;
 
     /* pointer to error trace */
     da_errors::da_error_t *err = nullptr;
@@ -85,6 +87,8 @@ template <typename T> class linear_model : public basic_handle<T> {
     bool model_trained = false;
     bool is_well_determined;
     bool is_transposed = false;
+    bool copycoefs = false;
+    bool use_dual_coefs = false;
 
     /* Regression data
      * nfeat: number of features
@@ -103,6 +107,8 @@ template <typename T> class linear_model : public basic_handle<T> {
     T *y = nullptr; // may contain a modified copy of yusr
     T *X = nullptr; // may contain a modified copy of XUSR
 
+    T time; // computation time
+
     /* parameters used during the standardization of the problem
      * these are only defined if "scaling" is not "none" and populated
      * on the call to ::model_scaling(...)
@@ -114,9 +120,11 @@ template <typename T> class linear_model : public basic_handle<T> {
 
     /* Training data
      * coef: vector containing the trained coefficients of the model
+       dual_coef: vector containing the trained dual coefficients of the model
      */
     da_int ncoef = 0;
     std::vector<T> coef;
+    std::vector<T> dual_coef; // Currently only used to store user's initial start coefs
 
     /* Elastic net penalty parameters (Regularization L1: LASSO, L2: Ridge, combination => Elastic net)
      * Penalty parameters are: lambda ( (1-alpha)L2 + alpha*L1 )
@@ -176,17 +184,38 @@ template <typename T> class linear_model : public basic_handle<T> {
             X = (T *)(XUSR);
             y = (T *)(yusr);
         }
+        if (qr) {
+            delete qr;
+            qr = nullptr;
+        }
+        if (cholesky) {
+            delete cholesky;
+            cholesky = nullptr;
+        }
+        if (svd) {
+            delete svd;
+            svd = nullptr;
+        }
+        if (cg) {
+            delete cg;
+            cg = nullptr;
+        }
         // Destroy optimization option registry
-        if (opt)
+        if (opt) {
             delete opt;
+            opt = nullptr;
+        }
+
         // Destroy linear model data
-        if (udata)
+        if (udata) {
             delete udata;
+            udata = nullptr;
+        }
     };
 
     da_status define_features(da_int nfeat, da_int nsamples, const T *X, const T *y);
     da_status select_model(linmod_model mod);
-    da_status model_scaling(da_int mid);
+    da_status model_scaling(da_int method_id);
     void revert_scaling();
     void setup_xtx_xty(const T *X_input, const T *y_input, std::vector<T> &A,
                        std::vector<T> &b);
@@ -225,14 +254,19 @@ template <typename T> linear_model<T>::~linear_model() {
 
     if (qr)
         delete qr;
+
     if (svd)
         delete svd;
+
     if (cg)
         delete cg;
+
     if (cholesky)
         delete cholesky;
+
     if (opt)
         delete opt;
+
     if (udata)
         delete udata;
 };
@@ -254,12 +288,34 @@ da_status linear_model<T>::get_result(da_result query, da_int *dim, T *result) {
                                std::to_string(*dim) + ".");
         }
         for (da_int i = 0; i < 100; ++i)
-            result[i] = T(0);
+            result[i] = T(-1);
 
-        // Copy out the info array if available
-        if (opt)
+        // Copy out the info array if available for optimisation solvers
+        if (method_id == linmod_method::lbfgsb || method_id == linmod_method::coord)
             // Hopefully no opt solver will use more that the hard coded limit
             return opt->get_info(*dim, result);
+        // For the rest of the solvers find loss value via loss_mse function and set compute time
+        else {
+            // Save information about loss function
+            da_int status;
+            T loss;
+            std::vector<T> pred(nsamples);
+            const T l1reg = alpha * lambda;
+            const T l2reg = (T(1) - alpha) * lambda / T(2);
+            // Call loss_mse
+            status = loss_mse(nsamples, nfeat, X, intercept, l1reg, l2reg, coef.data(), y,
+                              &loss, pred.data());
+            if (status != 0) {
+                return da_status_incorrect_output;
+            }
+            // Save information about the value of loss function
+            result[0] = loss;
+            // Save information about the computation time
+            result[3] = time;
+        }
+        // For CG we have member function that fills n_iter and gradient of loss
+        if (method_id == linmod_method::cg)
+            return cg->get_info(*dim, result);
 
         return da_status_success;
         break;
@@ -614,15 +670,16 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     if (model_trained)
         return da_status_success;
 
-    da_int mid, prn, intercept_int, scalingint, dbg{0};
+    da_int prn, intercept_int, scalingint, dbg{0};
     std::string val, method, scalingstr;
     da_status status;
+    auto clock = std::chrono::system_clock::now();
 
     // For all opts.get() it is assumed they don't fail
     opts.get("intercept", intercept_int);
     opts.get("alpha", this->alpha);
     opts.get("lambda", this->lambda);
-    opts.get("optim method", method, mid);
+    opts.get("optim method", method, method_id);
     this->intercept = (bool)intercept_int;
 
     if (method == "auto") {
@@ -631,7 +688,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             return status; // Error message already loaded
         }
     }
-    opts.get("optim method", method, mid);
+    opts.get("optim method", method, method_id);
 
     if (this->opts.get("scaling", scalingstr, scalingint) != da_status_success) {
         return da_error( // LCOV_EXCL_LINE
@@ -642,12 +699,10 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     scaling = scaling_t(scalingint);
 
     // Validation should be after reading user's chosen solvers and scaling
-    status = validate_options(mid);
+    status = validate_options(method_id);
     if (status != da_status_success) {
         return status; // Error message already loaded
     }
-
-    bool copycoefs = false;
 
     switch (mod) {
     case linmod_model_mse:
@@ -659,7 +714,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
         // Scaling
         if (scaling == scaling_t::automatic) {
-            switch (mid) {
+            switch (method_id) {
             // remove intercept by centering (and scaling) both X and y
             case linmod_method::coord:
                 scaling = scaling_t::scale_only;
@@ -698,7 +753,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         }
 
         // Scales: X and y
-        status = model_scaling(mid);
+        status = model_scaling(method_id);
         if (status != da_status_success) {
             return status; // message already loaded
         }
@@ -707,47 +762,76 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
         // Agreed standardising policy (matching glmnet and sklearn)
         // If scaling==standardise we are guaranteeing matching glmnet for lasso/ridge/elastic net
-        // If scaling==scale_only for Lasso and Ridge only we are guaranteeing to match sklearn
-        // If scaling==centering for Ridge we are guaranteeing sklearn solution except coord solver
-        if (mid == linmod_method::coord) {
-            // If L2 regression and scale only
-            if (alpha == T(0.0) && (lambda != T(0.0)) &&
-                (scaling == scaling_t::scale_only)) {
+        // If scaling==scale_only for Lasso and Ridge only we are guaranteeing to match sklearn, and for Elastic Net we match glmnet (in future we will match sklearn)
+        // If scaling==centering for Ridge we are guaranteeing sklearn solution except coord solver (which cannot be run on 'centering')
+
+        // If L2 regression
+        if (alpha == T(0.0) && lambda != T(0.0)) {
+            if (scaling == scaling_t::scale_only) {
                 lambda /= T(nsamples);
-                lambda *= std_scales[nfeat];
+            }
+            if (scaling == scaling_t::standardize) {
+                lambda /= std_scales[nfeat];
+                if (method_id == linmod_method::svd ||
+                    method_id == linmod_method::cholesky ||
+                    method_id == linmod_method::cg) {
+                    lambda *= T(nsamples);
+                }
+            }
+            // Rescale lambda when scaling != "standardize" and the solver is not coord, ie,
+            // need the scaled lambda for the objective and gradient
+            if ((method_id == linmod_method::lbfgsb) &&
+                (scaling != scaling_t::standardize)) {
+                lambda /= T(nsamples);
+            }
+        }
+        // If Lasso or Elastic Net
+        if (alpha != T(0.0) && lambda != T(0.0)) {
+            if (scaling == scaling_t::standardize || scaling == scaling_t::scale_only) {
+                // Rescale lambda
+                lambda /= std_scales[nfeat];
             }
         }
 
-        if (scaling == scaling_t::standardize || scaling == scaling_t::scale_only) {
-            // Rescale lambda
-            lambda /= std_scales[nfeat];
-        }
-        // Rescale lambda when scaling != "standardize" and the solver is not coord, ie,
-        // need the scaled lambda for the objective and gradient
-        if ((mid == linmod_method::lbfgsb) && (scaling != scaling_t::standardize)) {
-            lambda /= T(nsamples);
-        }
+        // copy if provide and solver can use it...
+        copycoefs = coefs != nullptr &&
+                    da_linmod::linmod_method_type::is_iterative(linmod_method(method_id));
 
-        copycoefs = (coefs != nullptr) && (usr_ncoefs >= nfeat);
-        // copy if solver can use it...
-        copycoefs &= da_linmod::linmod_method_type::is_iterative(linmod_method(mid));
+        // We accept dual coefficients for underdetermined cg problem with initial coefficients
+        if (copycoefs && method_id == linmod_method::cg && !is_well_determined) {
+            copycoefs &= usr_ncoefs >= nsamples;
+            use_dual_coefs = true;
+            da_warn(this->err, da_status_invalid_input, // LCOV_EXCL_LINE
+                    "In underdetermined system we are expecting dual coefficients as an "
+                    "initial guess for a CG solver. If you want to use primal "
+                    "coefficients as a starting point consider using LBFGS or Coordinate "
+                    "Descent solver. ");
+        } else {
+            copycoefs &= usr_ncoefs >= nfeat;
+        }
 
         try {
             if (copycoefs) {
                 coef.resize(ncoef);
+                dual_coef.resize(nsamples);
                 // user provided starting coefficients, check, copy and use.
                 // copy first nfeat elements, then check the intercept
-                for (da_int j = 0; j < nfeat; j++)
-                    coef[j] = coefs[j];
-                if (intercept) {
-                    coef[ncoef - 1] = usr_ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
+                if (use_dual_coefs) {
+                    for (da_int j = 0; j < nsamples; j++)
+                        dual_coef[j] = coefs[j];
+                } else {
+                    for (da_int j = 0; j < nfeat; j++)
+                        coef[j] = coefs[j];
+                    if (intercept) {
+                        coef[ncoef - 1] = usr_ncoefs >= ncoef ? coefs[ncoef - 1] : (T)0;
+                    }
+                    // Scale coefficient once we have the scaling factors
+                    if (scaling != scaling_t::none)
+                        scale_warmstart();
                 }
-                // Scale coefficient once we have the scaling factors
-                if (scaling != scaling_t::none)
-                    scale_warmstart();
-
             } else {
                 coef.resize(ncoef, (T)0);
+                dual_coef.resize(nsamples, (T)0);
             }
         } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
             return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
@@ -758,16 +842,19 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         opts.get("print options", val, prn);
         if (prn)
             opts.print_options();
-
-        switch (mid) {
+        // Start clock
+        clock = std::chrono::system_clock::now();
+        switch (method_id) {
         case linmod_method::lbfgsb:
             // l2 regularization, standard linear least-squares using L-BFGS-B
             status = fit_linreg_lbfgs();
             break;
 
         case linmod_method::qr:
+
             // No regularization, standard linear least-squares through QR factorization
             status = qr_lsq();
+
             break;
 
         case linmod_method::coord:
@@ -796,19 +883,21 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
                             "Unexpectedly an invalid optimization solver was requested.");
             break;
         }
+        // Record time
+        time = std::chrono::duration<T>(std::chrono::system_clock::now() - clock).count();
         if (status != da_status_success)
             return status; // Error message already loaded
 
         // Revert scaling on coefficients
         if (scalingint) {
             revert_scaling();
-            if (mid == linmod_method::coord || mid == linmod_method::lbfgsb) {
+            if (method_id == linmod_method::coord || method_id == linmod_method::lbfgsb) {
                 // Update the objective value in info array
                 T uloss{-1}; // unscalled loss
                 const T l1regul = udata->l1reg;
                 const T l2regul = udata->l2reg;
                 T *tmp;
-                if (mid == linmod_method::coord) {
+                if (method_id == linmod_method::coord) {
                     // use temporary storage of coord
                     stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
                     tmp = data->residual.data();
@@ -1072,6 +1161,16 @@ template <typename T> da_status linear_model<T>::fit_linreg_cg() {
 
     setup_xtx_xty(X, y, cg->A, cg->b);
 
+    // In case of providing initial coefficients we want to overwrite already initialised and filled with 0 cg->coef vector
+    // otherwise we leave it filled with 0 as a starting point.
+    if (copycoefs) {
+        if (is_well_determined) {
+            memcpy(cg->coef.data(), coef.data(), sizeof(T) * ncoef);
+        } else {
+            memcpy(cg->coef.data(), dual_coef.data(), sizeof(T) * nsamples);
+        }
+    }
+
     /* Solve Ax = b using CG solver*/
     status = cg->compute_cg();
     if (status != da_status_success) {
@@ -1212,27 +1311,46 @@ template <typename T> da_status linear_model<T>::fit_linreg_cholesky() {
 template <typename T> da_status linear_model<T>::validate_options(da_int method) {
     switch (mod) {
     case (linmod_model_mse):
+        // User wants to solve Lasso/Elastic net with something else than coord
         if (method != linmod_method::coord && alpha > T(0) && lambda != T(0))
             return da_error(this->err, da_status_incompatible_options,
                             "This solver cannot be used for Lasso/Elastic Net "
                             "regression. Please use coordinate descent.");
-        else if (!is_well_determined && scaling == scaling_t::none && intercept)
-            return da_error(this->err, da_status_incompatible_options,
-                            "Systems that are not over-determined cannot be solved with "
-                            "intercept without centering.");
+        // User wants to use QR with regularisation
         else if (method == linmod_method::qr && lambda != T(0))
             return da_error(this->err, da_status_incompatible_options,
                             "The QR solver is incompatible with regularization.");
+        // User wants to use coord with scaling other than scale only or standardise (or 'auto')
+        else if (method == linmod_method::coord &&
+                 (scaling == scaling_t::none || scaling == scaling_t::centering))
+            return da_error(this->err, da_status_incompatible_options,
+                            "Coordinate Descent solver can only be used with "
+                            "scaling=='scale only' or 'standardize'.");
+        // User wants to solve with intercept without scaling in underdetermined case, we cannot
+        // do it since only correct strategy that don't penalise intercept is to center data
+        else if (!is_well_determined && scaling == scaling_t::none && intercept &&
+                 method != linmod_method::lbfgsb)
+            // Excluded LBFGS from this if statement as it handles intercept internally
+            return da_error(this->err, da_status_incompatible_options,
+                            "Systems that are not over-determined cannot be solved with "
+                            "intercept without centering.");
+        // Extension of the test above to the well-determined situations
         else if ((method == linmod_method::qr || method == linmod_method::svd) &&
                  scaling == scaling_t::none && intercept)
             return da_error(
                 this->err, da_status_incompatible_options,
                 "This solver requires scaling = centering to compute intercept.");
+        // User wants intercept from underdetermined QR
         else if (method == linmod_method::qr && !is_well_determined && intercept)
-            return da_error(
-                this->err, da_status_incompatible_options,
-                "The QR solver cannot compute intercept in underdetermined situation.");
-
+            return da_error(this->err, da_status_incompatible_options,
+                            "The QR solver cannot compute intercept in "
+                            "underdetermined situation.");
+        // User wants QR in underdetermined and standardize scaling case (when centering underdetermined, matrix becomes low-rank)
+        else if (method == linmod_method::qr && !is_well_determined &&
+                 scaling == scaling_t::standardize)
+            return da_error(this->err, da_status_incompatible_options,
+                            "QR cannot solve underdetermined system with 'standardize' "
+                            "scaling. For robustness try SVD solver");
         break;
     case (linmod_model_logistic):
         if (method != linmod_method::lbfgsb)
@@ -1256,22 +1374,10 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
 template <typename T> da_status linear_model<T>::choose_method() {
     switch (mod) {
     case (linmod_model_mse):
-        if (lambda == (T)0) {
-            if (nsamples > nfeat) {
-                /* QR direct method can only solve when nsamples >= ncoef
-                Potential TODO - this condition cannot be set exactly as above because ncoef
-                has not been defined yet, so using nfeat is a workaround but does not accomodate
-                situation where X is square matrix and we don't want intercept. We could still
-                use QR there but here it falls back to alternative method */
-                opts.set("optim method", "qr", da_options::solver);
-            } else {
-                // Fall back to svd for short fat matrix with no regularisation
-                opts.set("optim method", "svd", da_options::solver);
-            }
-        } else if (alpha == (T)0)
-            // SVD handles L2 regularization
-            opts.set("optim method", "svd", da_options::solver);
-        else
+        // Cholesky for normal and L2 regression
+        if (alpha == (T)0) {
+            opts.set("optim method", "cholesky", da_options::solver);
+        } else
             // Coordinate Descent for L1 [and L2 combined: Elastic Net]
             opts.set("optim method", "coord", da_options::solver);
         break;
@@ -1335,10 +1441,10 @@ template <typename T> da_status linear_model<T>::choose_method() {
      * Note see reverse_scaling for reverting of the scaling on the model coefficients (solution)
      *
      */
-template <typename T> da_status linear_model<T>::model_scaling(da_int mid) {
+template <typename T> da_status linear_model<T>::model_scaling(da_int method_id) {
     // For SVD and QR we still will want to copy X and y, even for scaling == none
-    if (scaling == scaling_t::none && mid != linmod_method::svd &&
-        mid != linmod_method::qr) {
+    if (scaling == scaling_t::none && method_id != linmod_method::svd &&
+        method_id != linmod_method::qr) {
         return da_status_success;
     }
 
@@ -1361,7 +1467,7 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int mid) {
     // Transpose matrix for undetermined QR case
     da_int nrow = nsamples, ncol = nfeat;
     da_axis axis = da_axis_col; // variables used later when computing standardisation
-    if (mid == linmod_method::qr && !is_well_determined) {
+    if (method_id == linmod_method::qr && !is_well_determined) {
         for (da_int i = 0; i < nsamples; i++)
             for (da_int j = 0; j < nfeat; j++)
                 X[i * nfeat + j] = XUSR[j * nsamples + i];
@@ -1458,7 +1564,9 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int mid) {
             // These are used for updating the coefficients (betas).
             std_xv[j] = sqdof / (sqdof - xcj);
 
-            sqdof = sqrt(sqdof - xcj);
+            sqdof =
+                sqrt(sqdof -
+                     xcj); // This is formula for standard deviation (after rearrangement)
             std_scales[j] = sqdof; // same as with intercept: stdev using 1/nsamples
             std_shifts[j] = (T)0;  // zero
         }
@@ -1469,7 +1577,8 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int mid) {
                             "Call to standardize on feature matrix unexpectedly failed.");
         }
         // no intercept -> scale Y
-        sqdof = sqrt(da_blas::cblas_dot(nsamples, y, 1, y, 1) / T(nsamples));
+        T ynrm = da_blas::cblas_dot(nsamples, y, 1, y, 1);
+        sqdof = sqrt(ynrm / T(nsamples));
         std_scales[nfeat] = sqdof;
         std_shifts[nfeat] = (T)0;
         if (da_basic_statistics::standardize(da_axis_col, nsamples, 1, y, nsamples,

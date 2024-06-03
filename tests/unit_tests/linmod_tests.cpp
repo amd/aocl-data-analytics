@@ -316,11 +316,22 @@ TEST(linmod, incompatibleOptions) {
               da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
-    // SVD intercept without scaling
+    // SVD/qr intercept without scaling
     EXPECT_EQ(da_options_set_real_d(handle_d, "alpha", 0.0), da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", 0.0), da_status_success);
     EXPECT_EQ(da_options_set_string(handle_d, "scaling", "none"), da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "svd"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    // Coord without scaling
+    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "none"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "coord"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "centering"), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
     // QR solver with regularisation
@@ -345,6 +356,26 @@ TEST(linmod, wideMatrixProblems) {
     // Can't fit QR solver on underdetermined problem with intercept
     EXPECT_EQ(da_options_set_string(handle_d, "scaling", "auto"), da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    // Can't fit QR solver on underdetermined problem with standardisation
+    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "standardize"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle_d, "intercept", 0), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+
+    // Can't fit svd/chol/cg/qr solver on underdetermined problem without scaling with intercept
+    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "none"), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "svd"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
+    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "sparse_cg"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
@@ -471,13 +502,15 @@ TEST(linmod, CheckGetInfo) {
     // model not trained
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_rinfo, &linfo, info),
               da_status_unknown_query);
-    // QR does not provide info[*]
+    // QR does not provide info (except loss function value and compute time)[*]
     EXPECT_EQ(da_linmod_fit<double>(handle_d), da_status_success);
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_rinfo, &linfo, info),
               da_status_success);
-    // so check that all are zero.
-    for (da_int i = 0; i < 100; ++i) {
-        EXPECT_EQ(info[i], 0.0);
+    // so check that all (except index 0 and 3) are -1.
+    for (da_int i = 1; i < 100; ++i) {
+        if (i == 3)
+            continue;
+        EXPECT_EQ(info[i], -1.0);
     }
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "bfgs"), da_status_success);
     EXPECT_EQ(da_linmod_fit<double>(handle_d), da_status_success);
@@ -542,10 +575,14 @@ typedef struct warmstart_params_t {
 const warmstart_params warmstart_values[]{
     {"Coord+Z", "coord", "standardize", 0.5, 0.05, 10.0 * safe_tol, 1},
     {"Coord+S", "coord", "scale only", 0.5, 0.05, 10.0 * safe_tol, 1},
-    {"BFGS+N", "bfgs", "none", 0.0, 1.0, 1000.0 * safe_tol, 1},
+    {"BFGS+N", "bfgs", "none", 0.0, 1.0, 1000.0 * safe_tol, 0},
     {"BFGS+C", "bfgs", "centering", 0.0, 1.0, 10.0 * safe_tol, 0},
-    {"BFGS+Z", "bfgs", "standardize", 0.0, 1.0, 10000.0 * safe_tol, 1},
-    {"BFGS+S", "bfgs", "scale only", 0.0, 1.0, 1000.0 * safe_tol, 1},
+    {"BFGS+Z", "bfgs", "standardize", 0.0, 1.0, 10000.0 * safe_tol, 0},
+    {"BFGS+S", "bfgs", "scale only", 0.0, 1.0, 1000.0 * safe_tol, 0},
+    {"CG+N", "sparse_cg", "none", 0.0, 1.0, 1000.0 * safe_tol, 0},
+    {"CG+C", "sparse_cg", "centering", 0.0, 1.0, 10.0 * safe_tol, 0},
+    {"CG+Z", "sparse_cg", "standardize", 0.0, 1.0, 10000.0 * safe_tol, 0},
+    {"CG+S", "sparse_cg", "scale only", 0.0, 1.0, 1000.0 * safe_tol, 0},
 };
 
 class linmodWarmStart : public testing::TestWithParam<warmstart_params> {};
@@ -577,6 +614,8 @@ void test_linmod_warmstart(const warmstart_params pr) {
     EXPECT_EQ(da_options_set_string(handle_d, "scaling", pr.scaling.c_str()),
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "optim convergence tol", safe_tol),
+              da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle_d, "optim progress factor", 10.0),
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "alpha", pr.alpha), da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", pr.lambda), da_status_success);
