@@ -59,11 +59,24 @@ class LinearRegression(LinearRegression_sklearn):
         self.aocl = True
         self.intercept_val = None
         self.solver = solver
-        self.lmod = linmod_da("mse", solver=solver, intercept=fit_intercept)
+        self.precision = "double"
+
+        # Initialize both single and double precision classes for now
+        self.lmod_double = linmod_da(
+            "mse", solver=solver, intercept=fit_intercept, precision="double")
+        self.lmod_single = linmod_da(
+            "mse", solver=solver, intercept=fit_intercept, precision="single")
+        self.lmod = self.lmod_double
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
+
+        # If data matrix is in single precision switch internally
+        if X.dtype == "float32":
+            self.precision = "single"
+            self.lmod = self.lmod_single
+            del self.lmod_double
         self.lmod.fit(X, y)
         return self
 

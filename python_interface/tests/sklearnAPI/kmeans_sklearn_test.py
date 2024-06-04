@@ -33,10 +33,13 @@ import numpy as np
 import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
 
+
 def dummy():
     return 0
 
-def test_kmeans():
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_kmeans(precision):
     """
     Basic 8 x 2 problem
     """
@@ -48,53 +51,55 @@ def test_kmeans():
                   [-3., -2.],
                   [-2., -1.],
                   [-2., -3.],
-                  [1., 2.]])
+                  [1., 2.]], dtype=precision)
 
     c = np.array([[1., 1.],
-                  [-3., -3.]])
+                  [-3., -3.]], dtype=precision)
 
     x = np.array([[0., 1.],
-                  [0., -1.]])
+                  [0., -1.]], dtype=precision)
+
+    tol = np.sqrt(np.finfo(precision).eps)
 
     # patch and import scikit-learn
     skpatch()
     from sklearn.cluster import KMeans
-    kmeans_da = KMeans(n_clusters = 2, init = c)
+    kmeans_da = KMeans(n_clusters=2, init=c)
     kmeans_da = kmeans_da.fit(a)
     da_centres = kmeans_da.cluster_centers_
     da_labels = kmeans_da.labels_
     da_inertia = kmeans_da.inertia_
     da_x_transform = kmeans_da.transform(x)
     da_predict = kmeans_da.predict(x)
-    kmeans_da = KMeans(n_clusters = 2, init = c)
+    kmeans_da = KMeans(n_clusters=2, init=c)
     da_a_transform = kmeans_da.fit_transform(a)
-    kmeans_da = KMeans(n_clusters = 2, init = c)
+    kmeans_da = KMeans(n_clusters=2, init=c)
     da_a_predict = kmeans_da.fit_predict(a)
     assert kmeans_da.aocl is True
 
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn.cluster import KMeans
-    kmeans_sk = KMeans(n_clusters = 2, init = c)
+    kmeans_sk = KMeans(n_clusters=2, init=c)
     kmeans_sk.fit(a)
     sk_centres = kmeans_sk.cluster_centers_
     sk_labels = kmeans_sk.labels_
     sk_inertia = kmeans_sk.inertia_
     sk_x_transform = kmeans_sk.transform(x)
     sk_predict = kmeans_sk.predict(x)
-    kmeans_sk = KMeans(n_clusters = 2, init = c)
+    kmeans_sk = KMeans(n_clusters=2, init=c)
     sk_a_transform = kmeans_sk.fit_transform(a)
-    kmeans_sk = KMeans(n_clusters = 2, init = c)
+    kmeans_sk = KMeans(n_clusters=2, init=c)
     sk_a_predict = kmeans_sk.fit_predict(a)
     assert not hasattr(kmeans_sk, 'aocl')
 
     # Check results
-    assert da_inertia == pytest.approx(sk_inertia, 1.0e-08)
-    assert da_centres == pytest.approx(sk_centres, 1.0e-08)
+    assert da_inertia == pytest.approx(sk_inertia, tol)
+    assert da_centres == pytest.approx(sk_centres, tol)
     assert not np.any(da_labels - sk_labels)
-    assert da_x_transform == pytest.approx(sk_x_transform, 1.0e-08)
+    assert da_x_transform == pytest.approx(sk_x_transform, tol)
     assert not np.any(da_predict - sk_predict)
-    assert da_a_transform == pytest.approx(sk_a_transform, 1.0e-08)
+    assert da_a_transform == pytest.approx(sk_a_transform, tol)
     assert not np.any(da_a_predict - sk_a_predict)
     assert kmeans_da.n_features_in_ == kmeans_sk.n_features_in_
 
@@ -119,10 +124,10 @@ def test_kmeans_errors():
     skpatch()
     from sklearn.cluster import KMeans
     with pytest.raises(ValueError):
-        kmeans = KMeans(init = dummy)
+        kmeans = KMeans(init=dummy)
 
     with pytest.warns(RuntimeWarning):
-        kmeans = KMeans(n_clusters = 1, copy_x = True)
+        kmeans = KMeans(n_clusters=1, copy_x=True)
 
     kmeans.fit(a)
 

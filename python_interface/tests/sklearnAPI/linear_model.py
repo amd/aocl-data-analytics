@@ -36,12 +36,16 @@ import pytest
 from sklearn.datasets import make_regression
 
 
-def test_linear_regression():
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_linear_regression(precision):
     """
     Vanilla linear regression
     """
-    X = np.array([[1, 1], [1, 2], [2, 2], [2, 3]], dtype=np.float64)
-    y = np.dot(X, np.array([1, 2])) + 3
+    X = np.array([[1, 1], [1, 2], [2, 2], [2, 3]], dtype=precision)
+    y = np.dot(X, np.array([1, 2], dtype=precision)) + 3
+
+    tol = np.sqrt(np.finfo(precision).eps)
+
     # patch and import scikit-learn
     skpatch()
     from sklearn.linear_model import LinearRegression
@@ -61,8 +65,8 @@ def test_linear_regression():
     assert not hasattr(linreg, 'aocl')
 
     # Check results
-    assert da_coef == pytest.approx(coef, 1.0e-08)
-    assert da_intercept == pytest.approx(intercept, 1.0e-08)
+    assert da_coef == pytest.approx(coef, tol)
+    assert da_intercept == pytest.approx(intercept, tol)
 
     # print the results if pytest is invoked with the -rA option
     print("coefficients")
@@ -72,13 +76,15 @@ def test_linear_regression():
     print("    aoclda:", linreg_da.intercept_)
     print("   sklearn:", linreg_da.intercept_)
 
-
-def test_ridge():
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_ridge(precision):
     """
     Ridge regression using LBFGS
     """
     X, y, _ = make_regression(
         n_samples=200, n_features=8, coef=True, random_state=1)
+    X = X.astype(precision)
+    y = y.astype(precision)
 
     skpatch()
     from sklearn.linear_model import Ridge
@@ -112,13 +118,16 @@ def test_ridge():
     print("   sklearn:", ridge.intercept_/2)
 
 
-def test_lasso():
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_lasso(precision):
     """
     Lasso
     """
     X = np.array([[-1 / np.sqrt(2), -1 / np.sqrt(2)],
-                 [0, 0], [1 / np.sqrt(2), 1 / np.sqrt(2)]])
-    y = np.array([-1, 0, 1])
+                 [0, 0], [1 / np.sqrt(2), 1 / np.sqrt(2)]], dtype=precision)
+    y = np.array([-1, 0, 1], dtype=precision)
+
+    tol = np.sqrt(np.finfo(precision).eps)
 
     skpatch()
     from sklearn.linear_model import Lasso
@@ -141,7 +150,7 @@ def test_lasso():
     # remove check on value for now:
     # Internal standardization is not the same et between sklearn and DA
     # assert da_coef == pytest.approx(coef, 1.0e-08)
-    assert da_intercept == pytest.approx(intercept, 1.0e-08)
+    assert da_intercept == pytest.approx(intercept, tol)
 
     # print the results if pytest is invoked with the -rA option
     print("coefficients")

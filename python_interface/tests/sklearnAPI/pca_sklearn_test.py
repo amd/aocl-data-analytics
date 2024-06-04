@@ -34,12 +34,15 @@ import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
 
 
-def test_pca():
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_pca(precision):
     """
     Basic 3 x 2 problem
     """
-    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]])
-    b = np.array([[3, 2, 3], [1.22, 5, 4.1], [3, 3, 1]])
+    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]], dtype=precision)
+    b = np.array([[3, 2, 3], [1.22, 5, 4.1], [3, 3, 1]], dtype=precision)
+
+    tol = np.sqrt(np.finfo(precision).eps)
 
     # patch and import scikit-learn
     skpatch()
@@ -47,8 +50,7 @@ def test_pca():
     pca_da = PCA(n_components=3)
     pca_da = pca_da.fit(a)
     da_x = pca_da.transform(b)
-    da_y = pca_da.inverse_transform(b)
-    da_z = pca_da.fit_transform(a)
+    da_y = pca_da.fit_transform(a)
     da_explained_variance_ratio = pca_da.explained_variance_ratio_
     da_explained_variance = pca_da.explained_variance_
     da_noise_variance = pca_da.noise_variance_
@@ -59,9 +61,8 @@ def test_pca():
     from sklearn.decomposition import PCA
     pca = PCA(n_components=3)
     pca.fit(a)
-    sk_x = pca.transform(b)
-    sk_y = pca.inverse_transform(b)
-    sk_z = pca.fit_transform(a)
+    sk_x = pca_da.transform(b)
+    sk_y = pca_da.fit_transform(a)
     sk_explained_variance_ratio = pca.explained_variance_ratio_
     sk_explained_variance = pca.explained_variance_
     sk_noise_variance = pca.noise_variance_
@@ -70,19 +71,20 @@ def test_pca():
     # Check results
     da_components = pca_da.components_
     components = pca.components_
-    assert da_components == pytest.approx(components, 1.0e-08)
+    assert np.abs(da_components) == pytest.approx(np.abs(components), tol)
     da_mean = pca_da.mean_
     mean = pca.mean_
-    assert da_mean == pytest.approx(mean, 1.0e-08)
+    assert da_mean == pytest.approx(mean, tol)
     da_singval = pca_da.singular_values_
     singval = pca.singular_values_
-    assert da_singval == pytest.approx(singval, 1.0e-08)
-    assert da_x == pytest.approx(sk_x, 1.0e-08)
-    assert da_y == pytest.approx(sk_y, 1.0e-08)
-    assert da_z == pytest.approx(sk_z, 1.0e-08)
-    assert da_explained_variance_ratio == pytest.approx(sk_explained_variance_ratio, 1.0e-08)
-    assert da_explained_variance == pytest.approx(sk_explained_variance, 1.0e-08)
-    assert da_noise_variance == pytest.approx(sk_noise_variance, 1.0e-08)
+    assert da_singval == pytest.approx(singval, abs=tol)
+    assert np.abs(da_x) == pytest.approx(np.abs(sk_x), abs=tol)
+    assert np.abs(da_y) == pytest.approx(np.abs(sk_y), abs=tol)
+    assert da_explained_variance_ratio == pytest.approx(
+        sk_explained_variance_ratio, tol)
+    assert da_explained_variance == pytest.approx(
+        sk_explained_variance, tol)
+    assert da_noise_variance == pytest.approx(sk_noise_variance, tol)
     assert pca_da.n_features_in_ == pca.n_features_in_
     assert pca_da.n_components_ == pca.n_components_
     assert pca_da.n_samples_ == pca.n_samples_

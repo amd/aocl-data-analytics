@@ -69,6 +69,7 @@ class kmeans(kmeans_sklearn):
         # new internal attributes
         self.aocl = True
         self.seed = random_state
+        self.precision = "double"
 
         ## guard against some deprecated options in Scikit-learn
         algorithm_internal = self.algorithm
@@ -82,20 +83,38 @@ class kmeans(kmeans_sklearn):
             self.seed = -1
 
         if isinstance(init, np.ndarray):
-            self.kmeans = kmeans_da(n_clusters, initialization_method = "supplied", n_init = 1,
+            self.kmeans_double = kmeans_da(n_clusters, initialization_method = "supplied", n_init = 1,
                                     precision="double", max_iter = self.max_iter, seed = self.seed,
+                                    algorithm = algorithm_internal)
+            self.kmeans_single = kmeans_da(n_clusters, initialization_method = "supplied", n_init = 1,
+                                    precision="single", max_iter = self.max_iter, seed = self.seed,
                                     algorithm = algorithm_internal)
         elif n_init == "auto":
-            self.kmeans = kmeans_da(n_clusters, initialization_method = self.init, n_init = 10,
+            self.kmeans_double = kmeans_da(n_clusters, initialization_method = self.init, n_init = 10,
                                     precision="double", max_iter = self.max_iter, seed = self.seed,
                                     algorithm = algorithm_internal)
+            self.kmeans_single = kmeans_da(n_clusters, initialization_method = self.init, n_init = 10,
+                                    precision="single", max_iter = self.max_iter, seed = self.seed,
+                                    algorithm = algorithm_internal)
         else:
-            self.kmeans = kmeans_da(n_clusters, initialization_method = self.init,
+            self.kmeans_double = kmeans_da(n_clusters, initialization_method = self.init,
                                     n_init = self.n_init, precision="double",
                                     max_iter = self.max_iter, seed = self.seed,
                                     algorithm = algorithm_internal)
+            self.kmeans_single = kmeans_da(n_clusters, initialization_method = self.init,
+                                    n_init = self.n_init, precision="single",
+                                    max_iter = self.max_iter, seed = self.seed,
+                                    algorithm = algorithm_internal)
+
+        self.kmeans = self.kmeans_double
 
     def fit(self, X, y=None, sample_weight = None):
+        # If data matrix is in single precision switch internally
+        if X.dtype == "float32":
+            self.precision = "single"
+            self.kmeans = self.kmeans_single
+            del self.kmeans_double
+
         if isinstance(self.init, np.ndarray):
             self.kmeans.fit(X, C = self.init, tol = self.tol)
         else:

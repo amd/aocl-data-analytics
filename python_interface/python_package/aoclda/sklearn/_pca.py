@@ -79,16 +79,28 @@ class PCA(PCA_sklearn):
 
         # new internal attributes
         self.aocl = True
+        self.precision = "double"
 
         # Translate options to aocl-da ones
         solver = svd_solver
         if svd_solver == 'full':
             solver = 'gesdd'
 
-        self.pca = PCA_da(n_components, method="covariance",
+        # Initialize both single and double precision classes for now
+        self.pca_double = PCA_da(n_components, method="covariance",
                           solver=solver, precision="double", bias='unbiased')
+        self.pca_single = PCA_da(n_components, method="covariance",
+                          solver=solver, precision="single", bias='unbiased')
+
+        self.pca = self.pca_double
 
     def fit(self, X, y=None):
+        # If data matrix is in single precision switch internally
+        if X.dtype == "float32":
+            self.precision = "single"
+            self.pca = self.pca_single
+            del self.pca_double
+
         self.pca.fit(X)
         return self
 
