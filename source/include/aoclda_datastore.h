@@ -151,7 +151,6 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
 
 /** \{
  * @brief Load new columns into a @ref da_datastore from a dense matrix.
- * The last suffix of the function name marks the type of the data to add.
  *
  * The *da_data_load_col_str* routine will try to add columns to the right of the @ref da_datastore passed in argument.
  * If data was already loaded in the store, the number of rows of the new block must match
@@ -165,7 +164,7 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
  * @param[in] n_cols number of columns of the new block.
  * @param[in] block pointer to the raw data to add to the store.
  * @param[in] order a @ref da_ordering enumerated type.
-  *                 Specifies if the data block was stored in a column or row major ordering.
+ *            Specifies if the data block was stored in a column or row major ordering.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successful.
  * - @ref da_status_invalid_input - some of the input data was not correct.
@@ -222,7 +221,6 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
 
 /** \{
  * @brief Load new rows into a @ref da_datastore from a dense matrix.
- * The last suffix of the function name marks the type of the data to add.
  *
  * @rst
  * The *da_data_load_row_str* routine will try to add rows at the bottom of the @ref da_datastore passed in the argument.
@@ -238,7 +236,7 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * @param[in] n_cols number of columns of the new block.
  * @param[in] block pointer to the raw data to add to the store.
  * @param[in] order a @ref da_ordering enumerated type.
- *              Specifies if the data block was stored in a column or row major ordering.
+ *            Specifies if the data block was stored in a column or row major ordering.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successful.
  * - @ref da_status_invalid_input - some of the input data was not correct.
