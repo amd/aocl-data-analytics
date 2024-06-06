@@ -4,3 +4,4 @@ wheel
 pytest
 scikit-learn
 pylint
+setuptools
