@@ -38,6 +38,8 @@ if(BUILD_ILP64)
   endif()
 endif()
 
+set(CMAKE_Fortran_PREPROCESS ON)
+
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON) # SET fPIC

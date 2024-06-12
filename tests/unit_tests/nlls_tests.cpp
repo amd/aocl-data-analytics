@@ -191,7 +191,7 @@ TEST(nlls, template_double_lm_example_c) {
     EXPECT_EQ(da_options_set(handle, "ralfit nlls method", "more-sorensen"),
               da_status_success);
     EXPECT_EQ(da_options_set(handle, "Storage Scheme", "C"), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "print level", 2), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "print level", da_int(2)), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
     // Check output
     std::vector<T> info(100);
