@@ -26,6 +26,8 @@
 # that now that Fortran was enabled, it can find the Fortran runtimes.
 # find_package(OpenMP REQUIRED)
 
+set(CMAKE_Fortran_PREPROCESS ON)
+
 if(BUILD_ILP64)
   if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
     list(APPEND CMAKE_Fortran_FLAGS -finteger-4-integer-8)
@@ -38,7 +40,6 @@ if(BUILD_ILP64)
   endif()
 endif()
 
-set(CMAKE_Fortran_PREPROCESS ON)
 
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)
