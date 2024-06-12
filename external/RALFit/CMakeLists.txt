@@ -40,6 +40,7 @@ if(BUILD_ILP64)
   endif()
 endif()
 
+list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
 
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)
@@ -55,3 +56,7 @@ if(WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
 endif()
 
 add_subdirectory(libRALFit/src EXCLUDE_FROM_ALL)
+
+message(NOTICE "RALFit: Fortran Compiler ID       : ${CMAKE_Fortran_COMPILER_ID}")
+
+message(NOTICE "RALFit: Fortran Compiler flags    : ${CMAKE_Fortran_FLAGS}")

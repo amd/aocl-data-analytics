@@ -56,9 +56,9 @@ list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
 
 set(LBFGSB_SRC lbfgsb_mod.F90 linpack.F90 timer.F90 lbfgsb.F90)
 
-message(NOTICE "Fortran Compiler ID     : ${CMAKE_Fortran_COMPILER_ID}")
+message(NOTICE "L-BFGS-B: Fortran Compiler ID     : ${CMAKE_Fortran_COMPILER_ID}")
 
-message(NOTICE "Fortran Compiler flags  : ${CMAKE_Fortran_FLAGS}")
+message(NOTICE "L-BFGS-B: Fortran Compiler flags  : ${CMAKE_Fortran_FLAGS}")
 
 # Writing a function that will be used to generate the required object libraries
 # for the required precisions.
