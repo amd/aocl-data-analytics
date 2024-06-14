@@ -125,11 +125,11 @@ The following workflow can be used to fit a decision tree or a decision forest m
 
       1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_decision_tree`` /
          ``da_handle_decision_forest``.
-      2. Pass data to the handle using :ref:`da_df_set_training_data_? <da_df_set_training_data>`.
+      2. Pass data to the handle using :ref:`da_tree_set_training_data_? <da_tree_set_training_data>`.
       3. Set optional parameters, such as maximum depth, using :ref:`da_options_set_? <da_options_set>`  (see :ref:`options section <opts_decisionforest>`).
-      4. Fit the model using :ref:`da_df_fit_? <da_df_fit>`.
-      5. Evaluate prediction accuracy on test data using :ref:`da_df_score_? <da_df_score>`.
-      6. Make predictions using the fitted model using :ref:`da_df_predict_? <da_df_predict>`.
+      4. Fit the model using :ref:`da_tree_fit_? <da_tree_fit>`.
+      5. Evaluate prediction accuracy on test data using :ref:`da_tree_score_? <da_tree_score>`.
+      6. Make predictions using the fitted model using :ref:`da_tree_predict_? <da_tree_predict>`.
 
 Options
 -------
@@ -159,11 +159,11 @@ Examples
    .. tab-item:: C
       :sync: C
 
-      The code below can be found in ``decision_forest.cpp`` in the ``examples`` folder of your installation.
+      The code below can be found in ``decision_tree.cpp`` in the ``examples`` folder of your installation.
 
       .. collapse:: Decision Forest Example Code
 
-         .. literalinclude:: ../../tests/examples/decision_forest.cpp
+         .. literalinclude:: ../../tests/examples/decision_tree.cpp
             :language: C++
             :linenos:
 

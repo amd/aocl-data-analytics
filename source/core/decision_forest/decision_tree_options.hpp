@@ -25,62 +25,94 @@
  *
  */
 
+#ifndef DECISION_TREE_OPTIONS_HPP
+#define DECISION_TREE_OPTIONS_HPP
+
+#include "decision_tree_types.hpp"
+#include "options.hpp"
+
+namespace da_decision_tree {
+
 template <class T>
-inline da_status register_df_options(da_options::OptionRegistry &opts) {
+inline da_status register_decision_tree_options(da_options::OptionRegistry &opts) {
     da_status status = da_status_success;
 
     try {
-        // put following in global namespace for this try{ }
-        // da_options::OptionString, da_options::OptionNumeric,
-        // da_options::lbound_t,     da_options::ubound_t,
         using namespace da_options;
 
         std::shared_ptr<OptionString> os;
         std::shared_ptr<OptionNumeric<da_int>> oi;
         std::shared_ptr<OptionNumeric<T>> oT;
 
-        os = std::make_shared<OptionString>(OptionString(
-            "scoring function", "Select scoring function to use",
-            {{"gini", 0}, {"cross-entropy", 1}, {"misclassification-error", 2}}, "gini"));
+        os = std::make_shared<OptionString>(
+            OptionString("scoring function", "Select scoring function to use",
+                         {{"gini", gini},
+                          {"cross-entropy", cross_entropy},
+                          {"entropy", cross_entropy},
+                          {"misclassification-error", misclassification},
+                          {"misclassification", misclassification},
+                          {"misclass", misclassification}},
+                         "gini"));
         status = opts.register_opt(os);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "depth",
-            "Set max depth of tree.  If "
-            "the value is -1, the tree does t have a maximum depth",
-            -1, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
+            "maximum depth", "Set the maximum depth of trees.", 1, lbound_t::greaterequal,
+            (da_int)(std::numeric_limits<da_int>::digits) - 2, ubound_t::lessequal, 10));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "seed",
-            "Set random seed for Mersenne Twister (64-bit) PRNG.  If "
-            "the value is -1, the std::random_device function is used to generate a "
-            "seed, otherwise "
-            "the input value is used as a seed.",
+            "Set random seed for the random number generator. If "
+            "the value is -1, a random seed is automatically generated.",
             -1, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_obs_per_tree", "Set number of observations in each tree", 0,
-            lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
+            "maximum features",
+            "Set the number of features in consideration for splitting a node. 0 means "
+            "take all the features.",
+            0, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 0));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "n_features_to_select", "Set number of features in selection for splitting",
-            -1, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
-        status = opts.register_opt(oi);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(
-            OptionNumeric<da_int>("n_trees", "Set number of trees", 0,
-                                  lbound_t::greaterthan, max_da_int, ubound_t::p_inf, 1));
+            "node minimum samples",
+            "Minimum number of samples to consider a node for splitting", 2,
+            lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 2));
         status = opts.register_opt(oi);
 
         T rmax = std::numeric_limits<T>::max();
         T diff_thres_default = (T)1e-6;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "diff_thres", "Minimum difference in feature value required for splitting",
-            0.0, lbound_t::greaterthan, rmax, ubound_t::p_inf, diff_thres_default));
+            "feature threshold",
+            "Minimum difference in feature value required for splitting", 0.0,
+            lbound_t::greaterequal, rmax, ubound_t::p_inf, diff_thres_default));
         status = opts.register_opt(oT);
+
+        // TODO check default value
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "Minimum split score",
+            "Minimum score needed for a node to be considered for splitting.", 0.0,
+            lbound_t::greaterequal, 1.0, ubound_t::lessequal, (T)0.03));
+        status = opts.register_opt(oT);
+
+        os = std::make_shared<OptionString>(OptionString(
+            "tree building order", "Select in which order to explore the nodes",
+            {{"depth first", depth_first}, {"breadth first", breadth_first}},
+            "depth first"));
+        status = opts.register_opt(os);
+
+        // TODO check the default value
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "Minimum split improvement",
+            "Minimum score improvement needed to consider a split from the parent node.",
+            0.0, lbound_t::greaterequal, rmax, ubound_t::p_inf, (T)0.03));
+        status = opts.register_opt(oT);
+
+        os = std::make_shared<OptionString>(
+            OptionString("print timings",
+                         "Print the timings of different part of the fitting process.",
+                         {{"yes", 1}, {"no", 0}}, "no"));
+        status = opts.register_opt(os);
 
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
@@ -94,3 +126,5 @@ inline da_status register_df_options(da_options::OptionRegistry &opts) {
 
     return status;
 }
+} // namespace da_decision_tree
+#endif

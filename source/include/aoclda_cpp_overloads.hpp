@@ -444,49 +444,88 @@ inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_
 }
 
 /* Decision Forest overloaded functions */
-
-inline da_status da_df_set_training_data(da_handle handle, da_int n_obs,
-                                         da_int n_features, double *X, da_int ldx,
-                                         uint8_t *y) {
-    return da_df_set_training_data_d(handle, n_obs, n_features, X, ldx, y);
+/* Decision tree */
+inline da_status da_tree_set_training_data(da_handle handle, da_int n_samples,
+                                           da_int n_features, da_int n_class, double *X,
+                                           da_int ldx, da_int *y) {
+    return da_tree_set_training_data_d(handle, n_samples, n_features, n_class, X, ldx, y);
+}
+inline da_status da_tree_set_training_data(da_handle handle, da_int n_samples,
+                                           da_int n_features, da_int n_class, float *X,
+                                           da_int ldx, da_int *y) {
+    return da_tree_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx, y);
 }
 
-inline da_status da_df_set_training_data(da_handle handle, da_int n_obs,
-                                         da_int n_features, float *X, da_int ldx,
-                                         uint8_t *y) {
-    return da_df_set_training_data_s(handle, n_obs, n_features, X, ldx, y);
+template <typename T> inline da_status da_tree_fit(da_handle handle);
+template <> inline da_status da_tree_fit<double>(da_handle handle) {
+    return da_tree_fit_d(handle);
+}
+template <> inline da_status da_tree_fit<float>(da_handle handle) {
+    return da_tree_fit_s(handle);
 }
 
-template <typename T> inline da_status da_df_fit(da_handle handle);
-
-template <> inline da_status da_df_fit<float>(da_handle handle) {
-    return da_df_fit_s(handle);
+inline da_status da_tree_predict(da_handle handle, da_int n_samples, da_int n_features,
+                                 double *X_test, da_int ldx_test, da_int *y_pred) {
+    return da_tree_predict_d(handle, n_samples, n_features, X_test, ldx_test, y_pred);
+}
+inline da_status da_tree_predict(da_handle handle, da_int n_samples, da_int n_features,
+                                 float *X_test, da_int ldx_test, da_int *y_pred) {
+    return da_tree_predict_s(handle, n_samples, n_features, X_test, ldx_test, y_pred);
+}
+inline da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_features,
+                               double *X_test, da_int ldx_test, da_int *y_test,
+                               double *mean_accuracy) {
+    return da_tree_score_d(handle, n_samples, n_features, X_test, ldx_test, y_test,
+                           mean_accuracy);
+}
+inline da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_features,
+                               float *X_test, da_int ldx_test, da_int *y_test,
+                               float *mean_accuracy) {
+    return da_tree_score_s(handle, n_samples, n_features, X_test, ldx_test, y_test,
+                           mean_accuracy);
 }
 
-template <> inline da_status da_df_fit<double>(da_handle handle) {
-    return da_df_fit_d(handle);
+/* Random forest */
+inline da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
+                                             da_int n_features, da_int n_class, double *X,
+                                             da_int ldx, da_int *y) {
+    return da_forest_set_training_data_d(handle, n_samples, n_features, n_class, X, ldx,
+                                         y);
+}
+inline da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
+                                             da_int n_features, da_int n_class, float *X,
+                                             da_int ldx, da_int *y) {
+    return da_forest_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx,
+                                         y);
 }
 
-inline da_status da_df_score(da_handle handle, da_int n_obs, da_int n_features,
-                             double *X_test, da_int ldx_test, uint8_t *y_test,
-                             double *score) {
-    return da_df_score_d(handle, n_obs, n_features, X_test, ldx_test, y_test, score);
+template <typename T> inline da_status da_forest_fit(da_handle handle);
+template <> inline da_status da_forest_fit<double>(da_handle handle) {
+    return da_forest_fit_d(handle);
+}
+template <> inline da_status da_forest_fit<float>(da_handle handle) {
+    return da_forest_fit_s(handle);
 }
 
-inline da_status da_df_score(da_handle handle, da_int n_obs, da_int n_features,
-                             float *X_test, da_int ldx_test, uint8_t *y_test,
-                             float *score) {
-    return da_df_score_s(handle, n_obs, n_features, X_test, ldx_test, y_test, score);
+inline da_status da_forest_predict(da_handle handle, da_int n_samples, da_int n_features,
+                                   double *X_test, da_int ldx_test, da_int *y_pred) {
+    return da_forest_predict_d(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
-
-inline da_status da_df_predict(da_handle handle, da_int n_obs, da_int n_features,
-                               double *X_test, da_int ldx_test, uint8_t *y_pred) {
-    return da_df_predict_d(handle, n_obs, n_features, X_test, ldx_test, y_pred);
+inline da_status da_forest_predict(da_handle handle, da_int n_samples, da_int n_features,
+                                   float *X_test, da_int ldx_test, da_int *y_pred) {
+    return da_forest_predict_s(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
-
-inline da_status da_df_predict(da_handle handle, da_int n_obs, da_int n_features,
-                               float *X_test, da_int ldx_test, uint8_t *y_pred) {
-    return da_df_predict_s(handle, n_obs, n_features, X_test, ldx_test, y_pred);
+inline da_status da_forest_score(da_handle handle, da_int n_samples, da_int n_features,
+                                 double *X_test, da_int ldx_test, da_int *y_test,
+                                 double *mean_accuracy) {
+    return da_forest_score_d(handle, n_samples, n_features, X_test, ldx_test, y_test,
+                             mean_accuracy);
+}
+inline da_status da_forest_score(da_handle handle, da_int n_samples, da_int n_features,
+                                 float *X_test, da_int ldx_test, da_int *y_test,
+                                 float *mean_accuracy) {
+    return da_forest_score_s(handle, n_samples, n_features, X_test, ldx_test, y_test,
+                             mean_accuracy);
 }
 
 inline da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int nres,

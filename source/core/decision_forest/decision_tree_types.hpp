@@ -25,13 +25,27 @@
  *
  */
 
-#ifndef DF_TYPES_HPP
-#define DF_TYPES_HPP
+#ifndef DECISION_TREE_TYPES
+#define DECISION_TREE_TYPES
 
-namespace da_df {
+namespace da_decision_tree {
+enum score_method {
+    gini = 0,
+    cross_entropy,
+    misclassification,
+};
 
-enum scoring_fun { gini = 0, cross_entropy, misclassification_error };
+enum tree_order {
+    depth_first = 0,
+    breadth_first,
+};
 
-} // namespace da_df
+enum feat_selection {
+    all = 0,
+    sqrt,
+    log2,
+    custom,
+};
+} // namespace da_decision_tree
 
-#endif // DF_TYPES_HPP
+#endif

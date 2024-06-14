@@ -36,26 +36,26 @@ Decision Forest APIs
 
    .. tab-item:: C
 
-      .. _da_df_set_training_data:
+      .. _da_tree_set_training_data:
 
-      .. doxygenfunction:: da_df_set_training_data_s
+      .. doxygenfunction:: da_tree_set_training_data_s
          :outline:
-      .. doxygenfunction:: da_df_set_training_data_d
+      .. doxygenfunction:: da_tree_set_training_data_d
 
-      .. _da_df_fit:
+      .. _da_tree_fit:
 
-      .. doxygenfunction:: da_df_fit_s
+      .. doxygenfunction:: da_tree_fit_s
          :outline:
-      .. doxygenfunction:: da_df_fit_d
+      .. doxygenfunction:: da_tree_fit_d
 
-      .. _da_df_predict:
+      .. _da_tree_predict:
 
-      .. doxygenfunction:: da_df_predict_s
+      .. doxygenfunction:: da_tree_predict_s
          :outline:
-      .. doxygenfunction:: da_df_predict_d
+      .. doxygenfunction:: da_tree_predict_d
 
-      .. _da_df_score:
+      .. _da_tree_score:
 
-      .. doxygenfunction:: da_df_score_s
+      .. doxygenfunction:: da_tree_score_s
          :outline:
-      .. doxygenfunction:: da_df_score_d
+      .. doxygenfunction:: da_tree_score_d

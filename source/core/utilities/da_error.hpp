@@ -334,5 +334,16 @@ constexpr const char *basename(const char *const path) { return &path[strip_path
              std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
              DA_WARNING, true)
 
+#define da_error_bypass(e, status, msg)                                                  \
+    ((e) != nullptr                                                                      \
+         ? (e)->rec(status, (msg), "", std::string(da_errors::basename(__FILE__)) + ":", \
+                    __LINE__, DA_ERROR, false)                                           \
+         : status)
+#define da_warn_bypass(e, status, msg)                                                   \
+    ((e) != nullptr                                                                      \
+         ? (e)->rec(status, (msg), "",                                                   \
+                    std::string(da_errors::basename(__FILE__)) + std::string(":"),       \
+                    __LINE__, DA_WARNING, false)                                         \
+         : status)
 } // namespace da_errors
 #endif

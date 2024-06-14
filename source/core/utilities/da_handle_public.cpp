@@ -59,10 +59,12 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             (*handle)->kmeans_d = new da_kmeans::da_kmeans<double>(*(*handle)->err);
             break;
         case da_handle_decision_tree:
-            (*handle)->dt_d = new da_df::decision_tree<double>(*(*handle)->err);
+            (*handle)->dectree_d =
+                new da_decision_tree::decision_tree<double>(*(*handle)->err);
             break;
         case da_handle_decision_forest:
-            (*handle)->df_d = new da_df::decision_forest<double>(*(*handle)->err);
+            (*handle)->forest_d =
+                new da_random_forest::random_forest<double>(*(*handle)->err);
             break;
         case da_handle_nlls:
             (*handle)->nlls_d = new da_nlls::nlls<double>(*(*handle)->err, status);
@@ -109,10 +111,12 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             (*handle)->kmeans_s = new da_kmeans::da_kmeans<float>(*(*handle)->err);
             break;
         case da_handle_decision_tree:
-            (*handle)->dt_s = new da_df::decision_tree<float>(*(*handle)->err);
+            (*handle)->dectree_s =
+                new da_decision_tree::decision_tree<float>(*(*handle)->err);
             break;
         case da_handle_decision_forest:
-            (*handle)->df_s = new da_df::decision_forest<float>(*(*handle)->err);
+            (*handle)->forest_s =
+                new da_random_forest::random_forest<float>(*(*handle)->err);
             break;
         case da_handle_nlls:
             (*handle)->nlls_s = new da_nlls::nlls<float>(*(*handle)->err, status);
@@ -163,14 +167,14 @@ void da_handle_destroy(da_handle *handle) {
                 delete (*handle)->kmeans_d;
             if ((*handle)->kmeans_s)
                 delete (*handle)->kmeans_s;
-            if ((*handle)->dt_d)
-                delete (*handle)->dt_d;
-            if ((*handle)->dt_s)
-                delete (*handle)->dt_s;
-            if ((*handle)->df_d)
-                delete (*handle)->df_d;
-            if ((*handle)->df_s)
-                delete (*handle)->df_s;
+            if ((*handle)->dectree_d)
+                delete (*handle)->dectree_d;
+            if ((*handle)->dectree_s)
+                delete (*handle)->dectree_s;
+            if ((*handle)->forest_d)
+                delete (*handle)->forest_d;
+            if ((*handle)->forest_s)
+                delete (*handle)->forest_s;
             if ((*handle)->nlls_d)
                 delete (*handle)->nlls_d;
             if ((*handle)->nlls_s)
@@ -212,10 +216,10 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
         return handle->pca_d->get_result(query, dim, result);
     else if (handle->kmeans_d != nullptr)
         return handle->kmeans_d->get_result(query, dim, result);
-    else if (handle->dt_d != nullptr)
-        return handle->dt_d->get_result(query, dim, result);
-    else if (handle->df_d != nullptr)
-        return handle->df_d->get_result(query, dim, result);
+    else if (handle->dectree_d != nullptr)
+        return handle->dectree_d->get_result(query, dim, result);
+    else if (handle->forest_d != nullptr)
+        return handle->forest_d->get_result(query, dim, result);
     if (handle->nlls_d != nullptr)
         return handle->nlls_d->get_result(query, dim, result);
 
@@ -250,10 +254,10 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
         return handle->pca_s->get_result(query, dim, result);
     else if (handle->kmeans_s != nullptr)
         return handle->kmeans_s->get_result(query, dim, result);
-    else if (handle->dt_s != nullptr)
-        return handle->dt_s->get_result(query, dim, result);
-    else if (handle->df_s != nullptr)
-        return handle->df_s->get_result(query, dim, result);
+    else if (handle->dectree_s != nullptr)
+        return handle->dectree_s->get_result(query, dim, result);
+    else if (handle->forest_s != nullptr)
+        return handle->forest_s->get_result(query, dim, result);
     else if (handle->nlls_s != nullptr)
         return handle->nlls_s->get_result(query, dim, result);
 
@@ -286,14 +290,15 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
         return handle->pca_d->get_result(query, dim, result);
     else if (handle->pca_s != nullptr)
         return handle->pca_s->get_result(query, dim, result);
-    else if (handle->dt_d != nullptr)
-        return handle->dt_d->get_result(query, dim, result);
-    else if (handle->dt_s != nullptr)
-        return handle->dt_s->get_result(query, dim, result);
-    else if (handle->df_d != nullptr)
-        return handle->df_d->get_result(query, dim, result);
-    else if (handle->df_s != nullptr)
-        return handle->df_s->get_result(query, dim, result);
+    else if (handle->dectree_d != nullptr)
+        return handle->dectree_d->get_result(query, dim, result);
+    else if (handle->dectree_s != nullptr)
+        return handle->dectree_s->get_result(query, dim, result);
+    else if (handle->forest_d != nullptr)
+        return handle->forest_d->get_result(query, dim, result);
+    else if (handle->forest_s != nullptr)
+        return handle->forest_s->get_result(query, dim, result);
+
     else if (handle->kmeans_d != nullptr)
         return handle->kmeans_d->get_result(query, dim, result);
     else if (handle->kmeans_s != nullptr)

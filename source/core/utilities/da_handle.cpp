@@ -58,36 +58,36 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
     case da_handle_decision_tree:
         switch (precision) {
         case da_double:
-            if (dt_d == nullptr)
+            if (dectree_d == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
-            *opts = &dt_d->opts;
+            *opts = &dectree_d->opts;
             if (refresh)
-                dt_d->refresh();
+                dectree_d->refresh();
             break;
         case da_single:
-            if (dt_s == nullptr)
+            if (dectree_s == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
-            *opts = &dt_s->opts;
+            *opts = &dectree_s->opts;
             if (refresh)
-                dt_s->refresh();
+                dectree_s->refresh();
             break;
         }
         break;
     case da_handle_decision_forest:
         switch (precision) {
         case da_double:
-            if (df_d == nullptr)
+            if (forest_d == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
-            *opts = &df_d->opts;
+            *opts = &forest_d->opts;
             if (refresh)
-                df_d->refresh();
+                forest_d->refresh();
             break;
         case da_single:
-            if (df_s == nullptr)
+            if (forest_s == nullptr)
                 return da_error(this->err, da_status_invalid_pointer, msg);
-            *opts = &df_s->opts;
+            *opts = &forest_s->opts;
             if (refresh)
-                df_s->refresh();
+                forest_s->refresh();
             break;
         }
         break;

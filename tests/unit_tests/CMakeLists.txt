@@ -81,7 +81,13 @@ target_compile_definitions(
 
 add_executable(decision_tree_tests decision_tree_tests.cpp)
 target_compile_definitions(
-  decision_tree_tests PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/")
+    decision_tree_tests
+    PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/df_data/")
+
+add_executable(random_forest_tests random_forest_tests.cpp)
+    target_compile_definitions(
+        random_forest_tests
+        PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/df_data/")
 
 add_executable(option_registry option_registry_tests.cpp)
 
@@ -139,6 +145,7 @@ set(GTEST_EXES
   linmod
   logreg
   linreg
+  random_forest_tests
   decision_tree_tests
   option_registry
   data

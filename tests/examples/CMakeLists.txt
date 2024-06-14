@@ -42,14 +42,13 @@ target_compile_definitions(
   datastore PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(decision_tree decision_tree.cpp)
+target_compile_definitions(
+  decision_tree PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/df_data")
+
+add_executable(random_forest random_forest.cpp)
 
 target_compile_definitions(
-  decision_tree PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
-
-add_executable(decision_forest decision_forest.cpp)
-
-target_compile_definitions(
-  decision_forest PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
+  random_forest PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/df_data")
 
 add_executable(pca pca.cpp)
 target_link_libraries(pca PRIVATE aocl-da)
@@ -73,7 +72,7 @@ set(EXAMPLE_EXES
   kmeans
   datastore
   decision_tree
-  decision_forest)
+  random_forest)
 
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)

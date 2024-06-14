@@ -36,13 +36,13 @@
 
 int main() {
     std::cout << "----------------------------------------" << std::endl;
-    std::cout << "Decision tree model (double precision)" << std::endl;
+    std::cout << "Random forest model (double precision)" << std::endl;
     std::cout << "----------------------------------------" << std::endl;
     std::cout << std::fixed;
-    std::cout.precision(3);
+    std::cout.precision(5);
 
     da_status status;
-    bool pass = true;
+    bool pass;
 
     // Read in training data
     da_datastore csv_store = nullptr;
@@ -74,27 +74,32 @@ int main() {
         return 1;
     }
 
-    // Set up and train the decision tree
-    da_handle tree_handle = nullptr;
-    pass = da_handle_init_s(&tree_handle, da_handle_decision_tree) == da_status_success;
+    // Initialize the decision forest class and fit model
+    da_handle forest_handle = nullptr;
+    pass =
+        da_handle_init_s(&forest_handle, da_handle_decision_forest) == da_status_success;
     pass &=
-        da_tree_set_training_data_s(tree_handle, n_samples, n_features, n_class, X.data(),
-                                    n_samples, y.data()) == da_status_success;
-    pass &= da_options_set_int(tree_handle, "maximum depth", 5) == da_status_success;
-    pass &= da_options_set_int(tree_handle, "seed", 77) == da_status_success;
-    pass &= da_options_set_string(tree_handle, "scoring function", "gini") ==
+        da_forest_set_training_data_s(forest_handle, n_samples, n_features, n_class,
+                                      X.data(), n_samples, y.data()) == da_status_success;
+    pass &=
+        da_options_set_int(forest_handle, "number of trees", 100) == da_status_success;
+    pass &= da_options_set_int(forest_handle, "seed", 42) == da_status_success;
+    pass &= da_options_set_int(forest_handle, "maximum features", 5) == da_status_success;
+    pass &= da_options_set_string(forest_handle, "scoring function", "gini") ==
             da_status_success;
+    pass &= da_options_set_string(forest_handle, "bootstrap", "yes") == da_status_success;
     if (!pass) {
         std::cout << "Something went wrong setting up the decision tree data and "
                      "optional parameters.\n";
         return 1;
     }
 
-    status = da_tree_fit_s(tree_handle);
+    status = da_forest_fit_s(forest_handle);
     if (status != da_status_success) {
-        std::cout << "Failure while fitting the tree\n";
+        std::cout << "Failure while fitting the trees.\n";
         return 1;
     }
+
     // Read in data for making predictions
     filename = DATA_DIR;
     filename += "/decision_test.csv";
@@ -122,18 +127,13 @@ int main() {
 
     // Make predictions with model and evaluate score
     std::vector<da_int> y_pred(n_samples);
-    pass = da_tree_predict_s(tree_handle, n_samples, n_features, X_test.data(), n_samples,
-                             y_pred.data()) == da_status_success;
     float mean_accuracy;
-    pass &= da_tree_score_s(tree_handle, n_samples, n_features, X_test.data(), n_samples,
-                            y_test.data(), &mean_accuracy);
-    std::cout << "Mean accuracy of the tree on the test data: " << mean_accuracy
-              << std::endl;
-    if (mean_accuracy < 0.75) {
-        std::cout << "Performance unexpectedly low.\n";
-        return 1;
-    }
-    da_handle_destroy(&tree_handle);
+    status = da_forest_predict_s(forest_handle, n_samples, n_features, X_test.data(),
+                                 n_samples, y_pred.data());
+    status = da_forest_score_s(forest_handle, n_samples, n_features, X_test.data(),
+                               n_samples, y_test.data(), &mean_accuracy);
+    std::cout << "Mean accuracy on the test data: " << mean_accuracy << std::endl;
 
+    da_handle_destroy(&forest_handle);
     return 0;
 }

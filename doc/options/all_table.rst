@@ -110,13 +110,16 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "diff_thres", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 < r`"
-   "n_trees", "integer", ":math:`i=1`", "Set number of trees", ":math:`0 < i`"
-   "n_features_to_select", "integer", ":math:`i=1`", "Set number of features in selection for splitting", ":math:`0 < i`"
-   "seed", "integer", ":math:`i=-1`", "Set random seed for Mersenne Twister (64-bit) PRNG.  If the value is -1, the std::random_device function is used to generate a seed, otherwise the input value is used as a seed.", ":math:`-1 \le i`"
-   "n_obs_per_tree", "integer", ":math:`i=1`", "Set number of observations in each tree", ":math:`0 < i`"
-   "depth", "integer", ":math:`i=-1`", "Set max depth of tree.  If the value is -1, the tree does t have a maximum depth", ":math:`-1 \le i`"
-   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `gini`, or `misclassification-error`."
+   "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+   "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
+   "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes", ":math:`s=` `breadth first`, or `depth first`."
+   "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 \le r`"
+   "maximum features", "integer", ":math:`i=0`", "Set the number of features in consideration for splitting a node. 0 means take all the features.", ":math:`0 \le i`"
+   "print timings", "string", ":math:`s=` `no`", "Print the timings of different part of the fitting process.", ":math:`s=` `no`, or `yes`."
+   "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated.", ":math:`-1 \le i`"
+   "maximum depth", "integer", ":math:`i=10`", "Set the maximum depth of trees.", ":math:`1 \le i \le 29`"
+   "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting", ":math:`2 \le i`"
+   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
 
 
 .. _opts_decisionforest:
@@ -130,13 +133,19 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "diff_thres", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 < r`"
-   "n_trees", "integer", ":math:`i=1`", "Set number of trees", ":math:`0 < i`"
-   "n_features_to_select", "integer", ":math:`i=1`", "Set number of features in selection for splitting", ":math:`0 < i`"
-   "seed", "integer", ":math:`i=-1`", "Set random seed for Mersenne Twister (64-bit) PRNG.  If the value is -1, the std::random_device function is used to generate a seed, otherwise the input value is used as a seed.", ":math:`-1 \le i`"
-   "n_obs_per_tree", "integer", ":math:`i=1`", "Set number of observations in each tree", ":math:`0 < i`"
-   "depth", "integer", ":math:`i=-1`", "Set max depth of tree.  If the value is -1, the tree does t have a maximum depth", ":math:`-1 \le i`"
-   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `gini`, or `misclassification-error`."
+   "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+   "maximum features", "integer", ":math:`i=0`", "Set the number of features in consideration for splitting a node. 0 means take all the features.", ":math:`0 \le i`"
+   "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split", ":math:`s=` `all`, `custom`, `log2`, or `sqrt`."
+   "bootstrap samples factor", "real", ":math:`r=0.8`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
+   "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
+   "bootstrap", "string", ":math:`s=` `yes`", "Select wether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
+   "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 \le r`"
+   "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes", ":math:`s=` `breadth first`, or `depth first`."
+   "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute ", ":math:`1 \le i`"
+   "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated.", ":math:`-1 \le i`"
+   "maximum depth", "integer", ":math:`i=10`", "Set the maximum depth of trees.", ":math:`1 \le i \le 29`"
+   "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting", ":math:`2 \le i`"
+   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
 
 
 .. _opts_datastore:

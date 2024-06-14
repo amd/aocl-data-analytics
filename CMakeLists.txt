@@ -118,7 +118,7 @@ if(BUILD_SMP OR UNIX)
   # On Linux, even serial builds need an OpenMP runtime to enable correct
   # LibFlame linking
   find_package(OpenMP REQUIRED)
-  if((NOT WIN32) AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+  if((NOT WIN32))# AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   endif()
