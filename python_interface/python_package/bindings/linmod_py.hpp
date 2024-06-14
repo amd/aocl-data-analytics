@@ -41,8 +41,9 @@
 class linmod : public pyda_handle {
     //da_handle handle = nullptr;
     da_precision precision = da_double;
-    da_int n_samples, n_feat;
+    da_int n_samples, n_feat, n_class;
     bool intercept;
+    linmod_model mod_enum;
 
   public:
     linmod(std::string mod, std::optional<da_int> max_iter, bool intercept = false,
@@ -50,7 +51,6 @@ class linmod : public pyda_handle {
            std::string prec = "double")
         : intercept(intercept) {
         da_status status;
-        linmod_model mod_enum;
         if (mod == "mse") {
             mod_enum = linmod_model_mse;
         } else if (mod == "logistic") {
@@ -84,14 +84,18 @@ class linmod : public pyda_handle {
 
     template <typename T>
     void fit(py::array_t<T, py::array::f_style> X, py::array_t<T> y,
-             std::optional<py::array_t<T>> x0, T reg_lambda = 0.0, T reg_alpha = 0.0,
-             T tol = 0.0001) {
+             std::optional<py::array_t<T>> x0, std::optional<T> progress_factor,
+             T reg_lambda = 0.0, T reg_alpha = 0.0, T tol = 0.0001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         // TODO Should it be a separate function call like in C with the "define_features" function
 
         da_status status;
         n_samples = X.shape()[0];
         n_feat = X.shape()[1];
+        // y rhs is assumed to only contain values from 0 to K-1 (K being the number of classes)
+        n_class = (da_int)(std::round(*std::max_element(y.mutable_data(),
+                                                        y.mutable_data() + n_samples)) +
+                           1);
         status = da_linmod_define_features(handle, n_samples, n_feat, X.mutable_data(),
                                            y.mutable_data());
         exception_check(status); // throw an exception if status is not success
@@ -103,6 +107,11 @@ class linmod : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "optim convergence tol", tol);
         exception_check(status);
+        if (progress_factor.has_value()) {
+            status =
+                da_options_set(handle, "optim progress factor", progress_factor.value());
+            exception_check(status);
+        }
         if (x0.has_value()) {
             if (precision == da_double) {
                 da_int ncoef = x0->shape()[0];
@@ -136,7 +145,17 @@ class linmod : public pyda_handle {
 
     auto get_coef() {
         da_status status;
-        da_int dim = intercept ? n_feat + 1 : n_feat;
+        da_int dim;
+        switch (mod_enum) {
+        case linmod_model_mse:
+            dim = intercept ? n_feat + 1 : n_feat;
+            break;
+        case linmod_model_logistic:
+            dim = (n_class - 1) * n_feat;
+            if (intercept)
+                dim += n_class - 1;
+            break;
+        }
         // define the output vector
         size_t shape[1]{(size_t)dim};
         if (precision == da_single) {
@@ -144,6 +163,7 @@ class linmod : public pyda_handle {
             auto coef = py::array_t<float>(shape, strides);
             status =
                 da_handle_get_result(handle, da_linmod_coef, &dim, coef.mutable_data());
+            exception_check(status);
             py::array ret = py::reinterpret_borrow<py::array>(coef);
             return ret;
         } else {
@@ -151,6 +171,7 @@ class linmod : public pyda_handle {
             auto coef = py::array_t<double>(shape, strides);
             status =
                 da_handle_get_result(handle, da_linmod_coef, &dim, coef.mutable_data());
+            exception_check(status);
             py::array ret = py::reinterpret_borrow<py::array>(coef);
             return ret;
         }

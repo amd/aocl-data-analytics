@@ -226,7 +226,7 @@ it will apply different types of scaling. The following table shows the default 
     Coordinate Descent Method,    :code:`coord`,  :code:`scale only`
     Singular Value Decomposition, :code:`svd`,    :code:`centering`
     QR factorization,             :code:`qr`,     :code:`centering`
-    Cholesky factorization,       :code:`chold`,  :code:`centering` or :code:`none`
+    Cholesky factorization,       :code:`cholesky`,  :code:`centering` or :code:`none`
     L-BFGS-B Solver,              :code:`lbfgsb`, :code:`centering` or :code:`none`
 
 When a solver provides two default options for *scaling*, then it is chosen based on problem characteristics, e.g.,
@@ -279,6 +279,34 @@ columns of the predictor matrix :math:`X`.
     It is important to note that all reported metrics are based on the rescaled data.
 
     When requesting information from the handle, after training the model, the reported metrics are also based on the scaling type used.
+
+Initial coefficients
+====================
+
+For iterative solvers, it is possible to provide warm-start for the process given the user has some initial guess on starting coefficients (for example obtained via previous fit).
+When provided with too many coefficients only the first :math:`k` coefficients will be used, where :math:`k` is the expected number of coefficients. Intercept will always be
+the last member of the provided array. When provided with too few coefficients the initial guess will be ignored.
+
+.. warning::
+
+    For CG solver in the under-determined case (:math:`n_{\mathrm{features}} \geq n_{\mathrm{samples}}`) we are solving the dual problem, and thus the initial coefficients
+    should also be dual (expected number of coefficients :math:`k` is equal to :math:`n_{\mathrm{samples}}` instead of :math:`n_{\mathrm{features}}`).
+
+Initial coefficients can be provided in the following way:
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      Provide :code:`x0` parameter when calling :func:`aoclda.linear_model.linmod.fit`.
+      
+
+   .. tab-item:: C
+      :sync: C
+
+      Provide :code:`coefs` pointer to initial coefficients while calling :ref:`da_linmod_fit_start_? <da_linmod_fit_start>`
+      
 
 Typical Workflow for Linear Models
 ==================================

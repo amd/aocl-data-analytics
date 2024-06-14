@@ -31,9 +31,10 @@ Compare linear model modules with sklearn
 # pylint: disable = import-outside-toplevel, invalid-name, reimported, no-member
 
 import numpy as np
+import importlib
 from aoclda.sklearn import skpatch, undo_skpatch
 import pytest
-from sklearn.datasets import make_regression
+from sklearn.datasets import make_regression, make_classification
 
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
@@ -159,3 +160,71 @@ def test_lasso(precision):
     print("Intercept")
     print("    aoclda:", lasso_da.intercept_)
     print("   sklearn:", lasso_da.intercept_)
+
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_logistic(precision):
+    """
+    Logistic Regression
+    """
+    X, y = make_classification(
+        n_samples=200, n_features=8, random_state=1)
+    X = X.astype(precision)
+    y = y.astype(precision)
+
+    skpatch()
+    from sklearn.linear_model import LogisticRegression
+    lg_da = LogisticRegression()
+    lg_da.fit(X, y)
+    da_coef = lg_da.coef_
+    assert lg_da.aocl is True
+
+    # unpatch and solve the same problem with sklearn
+    undo_skpatch()
+    from sklearn.linear_model import LogisticRegression
+    lg = LogisticRegression()
+    lg.fit(X, y)
+    coef = lg.coef_
+    assert not hasattr(lg, 'aocl')
+
+    # Check results
+    # TODO: investigate reason for multiplying by -1, also sklearn returns array of arrays hence need to access [0]
+    assert da_coef == pytest.approx(coef[0]*-1, 1.0e-01)
+
+    # print the results if pytest is invoked with the -rA option
+    print("coefficients")
+    print("    aoclda: ", lg_da.coef_)
+    print("   sklearn: ", lg.coef_)
+    print("Intercept")
+    print("    aoclda:", lg_da.intercept_)
+    print("   sklearn:", lg.intercept_)
+
+
+@pytest.mark.parametrize("problem", ["LinearRegression", "Ridge", "Lasso", "ElasticNet"])
+def test_errors(problem):
+    '''
+    Test we catch the errors for unsupported functions
+    '''
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]])
+    y = np.array([3., 6.5, 10., 12., 13., 19.])
+    # patch and import scikit-learn
+    skpatch()
+    sklearn_patch_module = importlib.import_module("sklearn.linear_model")
+    problem_class = getattr(sklearn_patch_module, problem)
+    model = problem_class()
+    model.fit(X, y)
+
+    with pytest.raises(RuntimeError):
+        model.get_metadata_routing()
+
+    with pytest.raises(RuntimeError):
+        model.score(1, 1)
+
+    with pytest.raises(RuntimeError):
+        model.set_fit_request()
+
+    with pytest.raises(RuntimeError):
+        model.set_params()
+
+    with pytest.raises(RuntimeError):
+        model.set_score_request()

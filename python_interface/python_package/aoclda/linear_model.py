@@ -102,7 +102,14 @@ class linmod(pybind_linmod):
                          scaling=scaling,
                          precision=precision)
 
-    def fit(self, X, y, reg_lambda=0.0, reg_alpha=0.0, tol=0.0001, x0=None):
+    def fit(self,
+            X,
+            y,
+            reg_lambda=0.0,
+            reg_alpha=0.0,
+            x0=None,
+            tol=0.0001,
+            progress_factor=None):
         """
         Computes the chosen linear model on the feature matrix X and response vector y
 
@@ -118,18 +125,22 @@ class linmod(pybind_linmod):
             reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` \
                 term in the regularization.
 
+            x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative \
+                solvers
+
             tol (float, optional): Convergence tolerance for iterative solvers. Applies only \
                 to iterative solvers: 'sparse_cg', 'coord', 'lbfgs'.
 
-            x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative \
-                solvers
+            progress_factor (float, optional): Applies only to 'lbfgs' and 'coord' solver. \
+                Factor used to detect convergence of the iterative optimization step.
         """
         return self.pybind_fit(X,
-                        y,
-                        x0=x0,
-                        reg_lambda=reg_lambda,
-                        reg_alpha=reg_alpha,
-                        tol=tol)
+                               y,
+                               x0=x0,
+                               progress_factor=progress_factor,
+                               reg_lambda=reg_lambda,
+                               reg_alpha=reg_alpha,
+                               tol=tol)
 
     def predict(self, X):
         """
@@ -161,7 +172,8 @@ class linmod(pybind_linmod):
 
     @property
     def nrm_gradient_loss(self):
-        """numpy.ndarray of shape (1, ): The norm of the gradient of the loss function.
+        """numpy.ndarray of shape (1, ): The norm of the gradient of the loss function. Only valid \
+            for iterative solvers.
         """
         return self.get_norm_gradient_loss()
 

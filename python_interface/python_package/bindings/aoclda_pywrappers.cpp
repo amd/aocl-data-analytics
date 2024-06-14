@@ -149,11 +149,13 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("intercept") = false, py::arg("solver") = "auto",
              py::arg("scaling") = "auto", py::arg("precision") = "double")
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
-             py::arg("x0") = py::none(), py::arg("reg_lambda") = (float)0.0,
-             py::arg("reg_alpha") = (float)0.0, py::arg("tol") = (float)0.0001)
+             py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
+             py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,
+             py::arg("tol") = (float)0.0001)
         .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
-             py::arg("x0") = py::none(), py::arg("reg_lambda") = (double)0.0,
-             py::arg("reg_alpha") = (double)0.0, py::arg("tol") = (double)0.0001)
+             py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
+             py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0,
+             py::arg("tol") = (double)0.0001)
         .def("pybind_predict", &linmod::predict<double>, "Evaluate the model on X", "X"_a)
         .def("pybind_predict", &linmod::predict<float>, "Evaluate the model on X", "X"_a)
         .def("get_coef", &linmod::get_coef)

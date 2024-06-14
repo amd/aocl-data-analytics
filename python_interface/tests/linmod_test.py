@@ -57,3 +57,45 @@ def test_linear_regression(da_precision, numpy_precision, numpy_order):
         [2.35, 0.35, 0.43333333333333535], dtype=numpy_precision)
     norm = np.linalg.norm(np.abs(lmod.coef) - np.abs(expected_coef))
     assert norm < tol
+
+
+@pytest.mark.parametrize("da_precision, numpy_precision", [
+    ("double", np.float64), ("single", np.float32),
+])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_linear_regression_error_exits(da_precision, numpy_precision, numpy_order):
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]],
+                 dtype=numpy_precision, order=numpy_order)
+    y = np.array([3., 6.5, 10., 12., 13., 19.], dtype=numpy_precision)
+    lmod = linmod("mse", precision=da_precision)
+
+    # lambda out of bounds
+    with pytest.raises(RuntimeError):
+        lmod.fit(X, y, reg_lambda=-1)
+
+    # alpha out of bounds
+    with pytest.raises(RuntimeError):
+        lmod.fit(X, y, reg_alpha=-1)
+    with pytest.raises(RuntimeError):
+        lmod.fit(X, y, reg_alpha=1.1)
+
+    # max_iter out of bounds
+    with pytest.raises(RuntimeError):
+        lmod = linmod("mse", max_iter=-1, precision=da_precision)
+        lmod.fit(X, y)
+
+    # solving lasso with cholesky
+    with pytest.raises(RuntimeError):
+        lmod = linmod("mse", solver='cholesky', precision=da_precision)
+        lmod.fit(X, y, reg_alpha=1, reg_lambda=1)
+
+    # solving ridge with qr
+    with pytest.raises(RuntimeError):
+        lmod = linmod("mse", solver='qr', precision=da_precision)
+        lmod.fit(X, y, reg_alpha=0, reg_lambda=1)
+
+    # coordinate descent without scaling
+    with pytest.raises(RuntimeError):
+        lmod = linmod("mse", solver='coord', scaling='none',
+                      precision=da_precision)
+        lmod.fit(X, y)

@@ -27,11 +27,13 @@ Patching scikit learn linear models: LinearRegression, Ridge, Lasso
 """
 # pylint: disable = super-init-not-called, too-many-ancestors, missing-function-docstring, useless-return
 
-from numpy import ndarray
+import warnings
+from numpy import ndarray, unique
 from sklearn.linear_model import LinearRegression as LinearRegression_sklearn
 from sklearn.linear_model import Ridge as Ridge_sklearn
 from sklearn.linear_model import Lasso as Lasso_sklearn
 from sklearn.linear_model import ElasticNet as ElasticNet_sklearn
+from sklearn.linear_model import LogisticRegression as LogisticRegression_sklearn
 from aoclda.linear_model import linmod as linmod_da
 
 
@@ -83,6 +85,30 @@ class LinearRegression(LinearRegression_sklearn):
     def predict(self, X) -> ndarray:
         return self.lmod.predict(X)
 
+    def get_metadata_routing(self):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_params(self, deep=True):
+        params = {'fit_intercept': self.fit_intercept,
+                  'solver': self.solver,
+                  'copy_X': self.copy_X,
+                  'n_jobs': self.n_jobs,
+                  'positive': self.positive
+                  }
+        return params
+
+    def score(self, X, y, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_fit_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_params(self, **params):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_score_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
     @property
     def coef_(self):
         coef = self.lmod.get_coef()
@@ -106,6 +132,16 @@ class LinearRegression(LinearRegression_sklearn):
             coef = self.lmod.get_coef()
             self.intercept_val = coef[-1]
         return self.intercept_val
+
+    @property
+    def n_features_in_(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def features_names_in_(self):
+        print("This feature is not implemented")
+        return None
 
 
 class Ridge(Ridge_sklearn):
@@ -143,7 +179,7 @@ class Ridge(Ridge_sklearn):
 
         # solver can be in
         # ['auto', 'svd', 'cholesky', 'lsqr', 'sparse_cg', 'sag', 'saga', 'lbfgs']
-        if solver not in ['auto', 'lbfgs', 'cholesky', 'svd', 'sparse_cg']:
+        if self.solver not in ['auto', 'lbfgs', 'cholesky', 'svd', 'sparse_cg']:
             raise ValueError(
                 "Only 'auto', 'lbfgs', 'cholesky', 'svd' and 'sparse_cg' solvers are supported"
             )
@@ -151,19 +187,53 @@ class Ridge(Ridge_sklearn):
             raise ValueError(
                 "Constraints on the coefficients are not supported")
 
-        # Initialize aoclda object
-        self.lmod = linmod_da("mse",
-                              intercept=fit_intercept,
-                              solver=solver,
-                              max_iter=self.max_iter)
+        # Initialize both single and double precision classes for now
+        self.lmod_double = linmod_da(
+            "mse", solver=solver, intercept=fit_intercept, precision="double")
+        self.lmod_single = linmod_da(
+            "mse", solver=solver, intercept=fit_intercept, precision="single")
+        self.lmod = self.lmod_double
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
+        # If data matrix is in single precision switch internally
+        if X.dtype == "float32":
+            self.precision = "single"
+            self.lmod = self.lmod_single
+            del self.lmod_double
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=0.0, tol=self.tol)
+        return self
 
     def predict(self, X) -> ndarray:
         return self.lmod.predict(X)
+
+    def get_metadata_routing(self):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_params(self, deep=True):
+        params = {'fit_intercept': self.fit_intercept,
+                  'solver': self.solver,
+                  'copy_X': self.copy_X,
+                  'positive': self.positive,
+                  'alpha': self.alpha,
+                  'max_iter': self.max_iter,
+                  'random_state': self.random_state,
+                  'tol': self.tol
+                  }
+        return params
+
+    def score(self, X, y, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_fit_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_params(self, **params):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_score_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
 
     @property
     def coef_(self):
@@ -174,8 +244,8 @@ class Ridge(Ridge_sklearn):
 
     @property
     def n_iter_(self):
-        print("This feature is not implemented")
-        return None
+        n_iter = self.lmod.get_n_iter()
+        return n_iter
 
     @property
     def n_features_in_(self):
@@ -193,6 +263,10 @@ class Ridge(Ridge_sklearn):
             coef = self.lmod.get_coef()
             self.intercept_val = coef[-1]
         return self.intercept_val
+
+    @property
+    def solver_(self):
+        return self.solver
 
 
 class Lasso(Lasso_sklearn):
@@ -233,18 +307,59 @@ class Lasso(Lasso_sklearn):
         self.aocl = True
         self.intercept_val = None
 
-        # Initialize aoclda object
-        self.lmod = linmod_da("mse",
-                              intercept=fit_intercept,
-                              max_iter=self.max_iter)
+        # Initialize both single and double precision classes for now
+        self.lmod_double = linmod_da("mse",
+                                     intercept=fit_intercept,
+                                     max_iter=self.max_iter,
+                                     precision="double")
+        self.lmod_single = linmod_da("mse",
+                                     intercept=fit_intercept,
+                                     max_iter=self.max_iter,
+                                     precision="single")
+        self.lmod = self.lmod_double
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
+        # If data matrix is in single precision switch internally
+        if X.dtype == "float32":
+            self.precision = "single"
+            self.lmod = self.lmod_single
+            del self.lmod_double
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=1.0, tol=self.tol)
+        return self
 
     def predict(self, X) -> ndarray:
         return self.lmod.predict(X)
+
+    def get_metadata_routing(self):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_params(self, deep=True):
+        params = {'fit_intercept': self.fit_intercept,
+                  'precompute': self.precompute,
+                  'copy_X': self.copy_X,
+                  'positive': self.positive,
+                  'alpha': self.alpha,
+                  'max_iter': self.max_iter,
+                  'random_state': self.random_state,
+                  'tol': self.tol,
+                  'warm_start': self.warm_start,
+                  'selection': self.selection
+                  }
+        return params
+
+    def score(self, X, y, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_fit_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_params(self, **params):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_score_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
 
     @property
     def coef_(self):
@@ -255,8 +370,8 @@ class Lasso(Lasso_sklearn):
 
     @property
     def n_iter_(self):
-        print("This feature is not implemented")
-        return None
+        n_iter = self.lmod.get_n_iter()
+        return n_iter
 
     @property
     def n_features_in_(self):
@@ -277,6 +392,11 @@ class Lasso(Lasso_sklearn):
 
     @property
     def dual_gap_(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def sparse_coef_(self):
         print("This feature is not implemented")
         return None
 
@@ -323,22 +443,64 @@ class ElasticNet(ElasticNet_sklearn):
         self.aocl = True
         self.intercept_val = None
 
-        # Initialize aoclda object
-        self.lmod = linmod_da("mse",
-                              intercept=fit_intercept,
-                              max_iter=self.max_iter)
+        # Initialize both single and double precision classes for now
+        self.lmod_double = linmod_da("mse",
+                                     intercept=fit_intercept,
+                                     max_iter=self.max_iter,
+                                     precision="double")
+        self.lmod_single = linmod_da("mse",
+                                     intercept=fit_intercept,
+                                     max_iter=self.max_iter,
+                                     precision="single")
+        self.lmod = self.lmod_double
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
+        # If data matrix is in single precision switch internally
+        if X.dtype == "float32":
+            self.precision = "single"
+            self.lmod = self.lmod_single
+            del self.lmod_double
         self.lmod.fit(X,
                       y,
                       reg_lambda=self.alpha,
                       reg_alpha=self.l1_ratio,
                       tol=self.tol)
+        return self
 
     def predict(self, X) -> ndarray:
         return self.lmod.predict(X)
+
+    def get_metadata_routing(self):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_params(self, deep=True):
+        params = {'fit_intercept': self.fit_intercept,
+                  'precompute': self.precompute,
+                  'copy_X': self.copy_X,
+                  'positive': self.positive,
+                  'alpha': self.alpha,
+                  'max_iter': self.max_iter,
+                  'random_state': self.random_state,
+                  'tol': self.tol,
+                  'warm_start': self.warm_start,
+                  'selection': self.selection,
+                  'l1_ratio': self.l1_ratio
+                  }
+        return params
+
+    def score(self, X, y, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_fit_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_params(self, **params):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_score_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
 
     @property
     def coef_(self):
@@ -349,8 +511,8 @@ class ElasticNet(ElasticNet_sklearn):
 
     @property
     def n_iter_(self):
-        print("This feature is not implemented")
-        return None
+        n_iter = self.lmod.get_n_iter()
+        return n_iter
 
     @property
     def dual_gap_(self):
@@ -378,3 +540,188 @@ class ElasticNet(ElasticNet_sklearn):
             coef = self.lmod.get_coef()
             self.intercept_val = coef[-1]
         return self.intercept_val
+
+
+class LogisticRegression(LogisticRegression_sklearn):
+    """
+    Overwrite sklearn LogisticRegression to call DA library
+    """
+
+    def __init__(
+        self,
+        penalty="l2",
+        *,
+        dual=False,
+        tol=1e-4,
+        C=1.0,
+        fit_intercept=True,
+        intercept_scaling=1,
+        class_weight=None,
+        random_state=None,
+        solver="lbfgs",
+        max_iter=100,
+        multi_class="deprecated",
+        verbose=0,
+        warm_start=False,
+        n_jobs=None,
+        l1_ratio=0.0,
+        progress_factor=None
+    ):
+        # supported attributes
+        self.tol = tol
+        self.C = C
+        self.fit_intercept = fit_intercept
+        self.max_iter = max_iter
+
+        # Currently ignored attributes
+        self.penalty = penalty
+        self.dual = dual
+        self.solver = solver
+        self.verbose = verbose
+        self.warm_start = warm_start
+        self.l1_ratio = l1_ratio
+
+        if self.penalty != 'l2' and self.penalty is not None:
+            raise ValueError(
+                "penalty argument currently only supports 'l2' and None")
+
+        if self.dual is not False:
+            warnings.warn("dual argument is not supported and will be ignored")
+
+        if self.solver != "lbfgs":
+            warnings.warn("currently only lbfgs solver is supported")
+
+        if self.verbose != 0:
+            warnings.warn(
+                "verbose argument is not supported and will be ignored")
+
+        if self.warm_start is not False:
+            warnings.warn(
+                "warm_start argument is not supported and will be ignored")
+
+        if self.l1_ratio != 0.0:
+            raise ValueError("currently l1_ratio argument is not supported")
+
+        # not supported attributes
+        self.intercept_scaling = intercept_scaling
+        self.class_weight = class_weight
+        self.random_state = random_state
+        # We do not warn for this parameter since its becoming deprecated
+        self.multi_class = multi_class
+        self.n_jobs = n_jobs
+
+        if self.intercept_scaling != 1:
+            warnings.warn(
+                "intercept_scaling argument is not supported and will be ignored")
+
+        if self.class_weight is not None:
+            warnings.warn(
+                "class_weight argument is not supported and will be ignored")
+
+        if self.random_state is not None:
+            warnings.warn(
+                "random_state argument is not supported and will be ignored")
+
+        if self.n_jobs != None:
+            warnings.warn(
+                "n_jobs argument is not supported and will be ignored")
+
+        # New attributes used internally
+        self.aocl = True
+        self.intercept_val = None
+        self.progress_factor = progress_factor
+        self.reg_lambda = 1/self.C
+
+        # Initialize aoclda object
+        self.lmod_double = linmod_da("logistic",
+                                     intercept=self.fit_intercept,
+                                     max_iter=self.max_iter,
+                                     precision="double")
+        self.lmod_single = linmod_da("logistic",
+                                     intercept=self.fit_intercept,
+                                     max_iter=self.max_iter,
+                                     precision="single")
+        self.lmod = self.lmod_double
+
+    def fit(self, X, y, sample_weight=None, check_input=True):
+        if len(unique(y)) > 2:
+            raise ValueError("Multi class is currently not supported")
+        if sample_weight is not None:
+            raise ValueError("sample_weight is not supported")
+        # If data matrix is in single precision switch internally
+        if X.dtype == "float32":
+            self.precision = "single"
+            self.lmod = self.lmod_single
+            del self.lmod_double
+        self.lmod.fit(X,
+                      y,
+                      reg_lambda=self.reg_lambda,
+                      reg_alpha=self.l1_ratio,
+                      tol=self.tol,
+                      progress_factor=self.progress_factor)
+        return self
+
+    def predict(self, X) -> ndarray:
+        return self.lmod.predict(X)
+
+    def decision_fuction(self, X):
+        raise RuntimeError("This feature is not implemented")
+
+    def densify(self):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_metadata_routing(self):
+        raise RuntimeError("This feature is not implemented")
+
+    def get_params(self, deep=True):
+        raise RuntimeError("This feature is not implemented")
+
+    def predict_log_proba(self, X):
+        raise RuntimeError("This feature is not implemented")
+
+    def predict_proba(self, X):
+        raise RuntimeError("This feature is not implemented")
+
+    def score(self, X, y, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_fit_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_params(self, **params):
+        raise RuntimeError("This feature is not implemented")
+
+    def set_score_request(self, sample_weight=None):
+        raise RuntimeError("This feature is not implemented")
+
+    def sparsify(self):
+        raise RuntimeError("This feature is not implemented")
+
+    @property
+    def coef_(self):
+        coef = self.lmod.get_coef()
+        if self.intercept_val is None:
+            self.intercept_val = coef[-1]
+        return coef[:-1]
+
+    @property
+    def intercept_(self):
+        if self.intercept_val is None:
+            coef = self.lmod.get_coef()
+            self.intercept_val = coef[-1]
+        return self.intercept_val
+
+    @property
+    def n_features_in_(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def feature_names_in(self):
+        print("This feature is not implemented")
+        return None
+
+    @property
+    def n_iter_(self):
+        n_iter = self.lmod.get_n_iter()
+        return n_iter

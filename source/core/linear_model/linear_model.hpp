@@ -920,6 +920,9 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
 
         // y rhs is assumed to only contain values from 0 to K-1 (K being the number of classes)
         nclass = (da_int)(std::round(*std::max_element(y, y + nsamples)) + 1);
+        if (nclass < 2)
+            return da_error(this->err, da_status_invalid_input,
+                            "This solver needs at least two classes.");
         ncoef = (nclass - 1) * nfeat;
         if (intercept)
             ncoef += nclass - 1;
