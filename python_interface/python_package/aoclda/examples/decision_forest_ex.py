@@ -40,17 +40,15 @@ def decision_forest_example():
     X_test = np.array([[2., 2.]])
     y_test = np.array([[1]])
 
-    clf = decision_forest(seed = 988,
-                          n_obs_per_tree = 100,
-                          n_features_to_select = 1,
-                          n_trees = 20,
-                          score_criteria = "cross-entropy")
-    clf.fit(X_train, y_train)
+    forest = decision_forest(seed = 988,
+                          n_trees = 100,
+                          criterion = "gini")
+    forest.fit(X_train, y_train)
 
-    pred = clf.predict(X_test)
+    pred = forest.predict(X_test)
     print(f"predictions: [{pred[0]:d}]")
 
-    score = clf.score(X_test, y_test)
+    score = forest.score(X_test, y_test)
     print(f"score: {score:.3f}")
 
 if __name__ == "__main__":

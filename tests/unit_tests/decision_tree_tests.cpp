@@ -186,7 +186,7 @@ TYPED_TEST(decision_tree_test, sort_samples) {
     decision_tree<TypeParam> df(err);
     df.set_training_data(data.n_samples_train, data.n_feat, data.X_train.data(),
                          data.n_samples_train, data.y_train.data(), 2);
-    EXPECT_EQ(df.opts.set("maximum depth", 1), da_status_success);
+    EXPECT_EQ(df.opts.set("maximum depth", (da_int)1), da_status_success);
     df.fit();
 
     // Create a node with all the samples
@@ -254,7 +254,7 @@ TYPED_TEST(decision_tree_test, individual_splits) {
     TypeParam tol = 1.0e-05;
 
     // Set maximum depth to 1 to only have 1 node.
-    EXPECT_EQ(tree.opts.set("maximum depth", 1), da_status_success);
+    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)1), da_status_success);
     EXPECT_EQ(tree.opts.set("scoring function", "gini"), da_status_success);
     tree.fit();
     // Check that no nodes were added
@@ -262,7 +262,7 @@ TYPED_TEST(decision_tree_test, individual_splits) {
     EXPECT_EQ(tree.get_tree()[0].right_child_idx, -1);
 
     // Only one level of children
-    EXPECT_EQ(tree.opts.set("maximum depth", 2), da_status_success);
+    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)2), da_status_success);
     tree.refresh();
     tree.fit();
     EXPECT_EQ(tree.get_tree()[0].left_child_idx, 2);
@@ -415,7 +415,7 @@ TYPED_TEST(decision_tree_test, get_results) {
               da_status_invalid_array_dimension);
 
     // change an option and check that results are no longer available
-    EXPECT_EQ(da_options_set(tree_handle, "seed", 43), da_status_success);
+    EXPECT_EQ(da_options_set(tree_handle, "seed", (da_int)43), da_status_success);
     EXPECT_EQ(
         da_handle_get_result(tree_handle, da_result::da_linmod_coef, &dim, rinfo.data()),
         da_status_unknown_query);
@@ -596,7 +596,7 @@ TYPED_TEST(decision_tree_test, multiple_solve) {
     EXPECT_EQ(tree.fit(), da_status_success);
 
     // Change an option and solve again
-    EXPECT_EQ(tree.opts.set("maximum depth", 3), da_status_success);
+    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)3), da_status_success);
     tree.refresh(); // refressh is only called by the public interfaces
     EXPECT_EQ(tree.model_is_trained(), false);
     EXPECT_EQ(tree.fit(), da_status_success);

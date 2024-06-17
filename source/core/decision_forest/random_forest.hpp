@@ -225,7 +225,7 @@ template <typename T> da_status random_forest<T>::fit() {
 
     n_obs = n_samples;
     if (bootstrap && prop < 1.0) {
-        n_obs = std::max((da_int)std::round(n_samples * prop), 1);
+        n_obs = std::max((da_int)std::round(n_samples * prop), (da_int)1);
     }
     da_int prn_times = 0;
     da_status tree_status;

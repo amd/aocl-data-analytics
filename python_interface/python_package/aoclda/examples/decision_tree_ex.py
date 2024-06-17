@@ -41,13 +41,13 @@ def decision_tree_example():
     X_test = np.array([[2., 2.]])
     y_test = np.array([[1]])
 
-    clf = decision_tree()
-    clf.fit(X_train, y_train)
+    tree = decision_tree()
+    tree.fit(X_train, y_train)
 
-    pred = clf.predict(X_test)
+    pred = tree.predict(X_test)
     print(f"predictions: [{pred[0]:d}]")
 
-    score = clf.score(X_test, y_test)
+    score = tree.score(X_test, y_test)
     print(f"score: {score:.3f}")
 
 if __name__ == "__main__":

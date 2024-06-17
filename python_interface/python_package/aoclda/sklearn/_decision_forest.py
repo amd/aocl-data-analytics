@@ -27,12 +27,11 @@
 """
 Patching scikit learn tree: RandomForestClassifier
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
+# pylint: disable = missing-function-docstring, too-many-ancestors, super-init-not-called, too-many-instance-attributes, too-many-arguments, too-many-locals
 
 import warnings
-from sklearn.ensemble import RandomForestClassifier as RandomForestClassifier_sklearn
 from aoclda.decision_forest import decision_forest as decision_forest_da
-import aoclda as da
+from sklearn.ensemble import RandomForestClassifier as RandomForestClassifier_sklearn
 
 
 class RandomForestClassifier(RandomForestClassifier_sklearn):
@@ -126,12 +125,12 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
         self.aocl = True
 
         self.decision_forest_double = decision_forest_da(seed = seed,
-                                                  score_criteria = score_criteria,
+                                                  criterion = score_criteria,
                                                   n_trees = self.n_trees,
                                                   precision = "double")
 
         self.decision_forest_single = decision_forest_da(seed = seed,
-                                                  score_criteria = score_criteria,
+                                                  criterion = score_criteria,
                                                   n_trees = self.n_trees,
                                                   precision = "single")
 

@@ -27,11 +27,11 @@
 """
 Patching scikit learn tree: DecisionTreeClassifier
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
+# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, too-many-instance-attributes, too-many-arguments
 
 import warnings
-from sklearn.tree import DecisionTreeClassifier as DecisionTreeClassifier_sklearn
 from aoclda.decision_tree import decision_tree as decision_tree_da
+from sklearn.tree import DecisionTreeClassifier as DecisionTreeClassifier_sklearn
 
 class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
     """
@@ -74,12 +74,16 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
             score_criteria = "cross-entropy"
         elif criterion == "gini":
             score_criteria = "gini"
+        else:
+            score_criteria = "gini"
+            warnings.warn(
+                "invalid score criterion chosen, defaulting to gini.", category=RuntimeWarning)
 
         if splitter == "random":
             raise ValueError("splitter must be set to best")
 
         if max_depth is None:
-            depth = -1
+            depth = 10
         else:
             depth = max_depth
 
@@ -112,16 +116,17 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         self.aocl = True
 
         self.decision_tree_double = decision_tree_da(seed = seed,
-                                              score_criteria = score_criteria,
-                                              depth = depth,
+                                              criterion = score_criteria,
+                                              max_depth = depth,
                                               precision = "double")
 
         self.decision_tree_single = decision_tree_da(seed = seed,
-                                              score_criteria = score_criteria,
-                                              depth = depth,
+                                              criterion = score_criteria,
+                                              max_depth = depth,
                                               precision = "single")
 
         self.decision_tree = self.decision_tree_double
+
 
     def fit(self, X, y, sample_weight=None, check_input=True):
 

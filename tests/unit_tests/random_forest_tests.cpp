@@ -224,7 +224,7 @@ TYPED_TEST(random_forest_test, get_results) {
         da_status_invalid_array_dimension);
 
     // change an option and check that results are no longer available
-    EXPECT_EQ(da_options_set(forest_handle, "seed", 43), da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "seed", (da_int)43), da_status_success);
     EXPECT_EQ(da_handle_get_result(forest_handle, da_result::da_linmod_coef, &dim,
                                    rinfo.data()),
               da_status_unknown_query);

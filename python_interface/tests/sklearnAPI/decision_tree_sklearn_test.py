@@ -46,18 +46,18 @@ def test_decision_tree(precision):
     # patch and import scikit-learn
     skpatch()
     from sklearn import tree
-    clf = tree.DecisionTreeClassifier()
-    clf = clf.fit(X, Y)
-    da_yp = clf.predict( Xp )
-    assert clf.aocl is True
+    tree = tree.DecisionTreeClassifier()
+    tree = tree.fit(X, Y)
+    da_yp = tree.predict( Xp )
+    assert tree.aocl is True
 
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn import tree
-    clf = tree.DecisionTreeClassifier()
-    clf = clf.fit(X, Y)
-    yp = clf.predict( Xp )
-    assert not hasattr(clf, 'aocl')
+    tree = tree.DecisionTreeClassifier()
+    tree = tree.fit(X, Y)
+    yp = tree.predict( Xp )
+    assert not hasattr(tree, 'aocl')
 
     # Check results
     assert da_yp == yp

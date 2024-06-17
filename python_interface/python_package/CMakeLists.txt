@@ -57,7 +57,7 @@ else()
   add_definitions(-DAOCLDA_ILP64)
 endif()
 # Create the pybind11 modules
-pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp)
+pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp bindings/utilities_py.cpp)
 target_include_directories(_aoclda PRIVATE ${CMAKE_SOURCE_DIR}/source/include)
 target_link_libraries(_aoclda PRIVATE aocl-da)
 if(BUILD_SMP OR UNIX)

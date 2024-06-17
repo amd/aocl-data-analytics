@@ -592,7 +592,7 @@ template <typename T> da_status decision_tree<T>::fit() {
 
     // Allocate the tree accounting for a full binary tree of depth 10 (or maximum depth)
     try {
-        size_t init_capacity = 1 << std::min(max_depth, 9) + 1;
+        size_t init_capacity = 1 << std::min(max_depth, (da_int)9) + 1;
         tree.resize(init_capacity);
     } catch (std::bad_alloc &) {                            // LCOV_EXCL_LINE
         return da_error_bypass(err, da_status_memory_error, // LCOV_EXCL_LINE

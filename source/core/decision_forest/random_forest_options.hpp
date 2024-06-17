@@ -129,7 +129,6 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
             lbound_t::greaterequal, 1.0, ubound_t::lessequal, (T)0.03));
         status = opts.register_opt(oT);
 
-        // TODO check the default value
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "minimum split improvement",
             "Minimum score improvement needed to consider a split from the parent node.",

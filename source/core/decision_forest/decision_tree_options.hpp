@@ -90,7 +90,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
 
         // TODO check default value
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "Minimum split score",
+            "minimum split score",
             "Minimum score needed for a node to be considered for splitting.", 0.0,
             lbound_t::greaterequal, 1.0, ubound_t::lessequal, (T)0.03));
         status = opts.register_opt(oT);
@@ -103,7 +103,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
 
         // TODO check the default value
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "Minimum split improvement",
+            "minimum split improvement",
             "Minimum score improvement needed to consider a split from the parent node.",
             0.0, lbound_t::greaterequal, rmax, ubound_t::p_inf, (T)0.03));
         status = opts.register_opt(oT);
