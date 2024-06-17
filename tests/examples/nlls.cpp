@@ -140,8 +140,6 @@ int main(void) {
     pass &= da_handle_init_d(&handle, da_handle_nlls) == da_status_success;
     pass &= da_nlls_define_residuals_d(handle, n_coef, nres, eval_r, eval_J, nullptr,
                                        nullptr) == da_status_success;
-    pass &= da_nlls_define_residuals_d(handle, n_coef, nres, eval_r, eval_J, nullptr,
-                                       nullptr) == da_status_success;
     pass &= da_nlls_define_bounds_d(handle, n_coef, lower_bounds.data(), nullptr) ==
             da_status_success;
     pass &= da_nlls_define_weights_d(handle, nres, weights.data()) == da_status_success;
@@ -150,7 +148,7 @@ int main(void) {
         da_handle_destroy(&handle);
         return 1;
     }
-    pass &= da_options_set_int(handle, "print level", 0) == da_status_success;
+    pass &= da_options_set_int(handle, "print level", (da_int)0) == da_status_success;
     if (!pass) {
         std::cout << "Something unexpected happened while setting options\n";
         da_handle_destroy(&handle);

@@ -178,4 +178,4 @@ in Chapters 3-5 of :cite:t:`hastie`.
     :maxdepth: 1
     :hidden:
 
-    nlls_api
+    nldf_api

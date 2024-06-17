@@ -488,5 +488,4 @@ py::array_t<T> py_da_correlation(py::array_t<T, py::array::f_style> X) {
     return corr;
 }
 
-
 #endif

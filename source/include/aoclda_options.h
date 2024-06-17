@@ -112,6 +112,23 @@ da_status da_options_get_real_d(da_handle handle, const char *option, double *va
  **/
 da_status da_options_get_string(da_handle handle, const char *option, char *value,
                                 da_int *lvalue);
+/**
+ * \brief Get the current value of an option stored inside the \p handle argument.
+ * \param[in] handle the \ref da_handle which stores the options.
+ * \param[in] option the name of the option to get.
+ * \param[out] value the value of the option obtained from the \p handle.
+ * \param[in] lvalue the length of the string \p value.
+ * \param[out] key for the option string \p value. Some options have one or more
+ *             aliases but share the same key.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the option was successfully returned in \p value.
+ * - \ref da_status_option_not_found - the option was not found. Check the value of \p option.
+ * - \ref da_status_option_wrong_type - the wrong option type was passed.
+ * - \ref da_status_invalid_input - the length of the string \p value, lvalue, is too small to contain the option value. Please provide more space.
+ * - \ref da_status_invalid_pointer - the \p handle has not been initialized.
+ **/
+da_status da_options_get_string_key(da_handle handle, const char *option, char *value,
+                                    da_int *lvalue, da_int *key);
 
 /**
  * \brief Print options (key/value) stored inside the \p handle argument.

@@ -35,7 +35,6 @@
 #include "callbacks.hpp"
 #include "coord.hpp"
 #include "da_error.hpp"
-#include "info.hpp"
 #include "optimization_options.hpp"
 
 using T = double;
@@ -122,28 +121,28 @@ TEST(Coord, CycleEnd) {
 
     // Check info array
     // time
-    EXPECT_GT(info[da_optim::info_t::info_time], T(0));
+    EXPECT_GT(info[info_t::info_time], T(0));
     // iter
-    EXPECT_GT(info[da_optim::info_t::info_iter], T(28));
-    EXPECT_LT(info[da_optim::info_t::info_iter], T(32));
+    EXPECT_GT(info[info_t::info_iter], T(28));
+    EXPECT_LT(info[info_t::info_iter], T(32));
     // expensive
-    EXPECT_GT(info[da_optim::info_t::info_nevalf], T(28));
-    EXPECT_LT(info[da_optim::info_t::info_nevalf], T(32));
+    EXPECT_GT(info[info_t::info_nevalf], T(28));
+    EXPECT_LT(info[info_t::info_nevalf], T(32));
     // cheap
-    EXPECT_GT(info[da_optim::info_t::info_ncheap], T(28 * (n - 1)));
-    EXPECT_LT(info[da_optim::info_t::info_ncheap], T(32 * (n - 1)));
+    EXPECT_GT(info[info_t::info_ncheap], T(28 * (n - 1)));
+    EXPECT_LT(info[info_t::info_ncheap], T(32 * (n - 1)));
     // objective
-    EXPECT_LT(info[da_optim::info_t::info_objective], ftol);
+    EXPECT_LT(info[info_t::info_objective], ftol);
     // gradient infinity norm
-    EXPECT_EQ(info[da_optim::info_t::info_grad_norm], T(0));
+    EXPECT_EQ(info[info_t::info_grad_norm], T(0));
     // delta from two iterates in infinity norm
-    EXPECT_LT(info[da_optim::info_t::info_inorm], tol);
+    EXPECT_LT(info[info_t::info_inorm], tol);
     // infinity-norm of the initial iterate
-    EXPECT_EQ(info[da_optim::info_t::info_inorm_init], inorm_init);
+    EXPECT_EQ(info[info_t::info_inorm_init], inorm_init);
 
     // Second call at solution
     status = coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit, usrdata, err);
     EXPECT_EQ(status, da_status_success) << "error from 2nd call to coord";
 
-    EXPECT_LE(info[da_optim::info_t::info_iter], 1);
+    EXPECT_LE(info[info_t::info_iter], 1);
 }

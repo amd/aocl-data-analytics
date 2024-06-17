@@ -30,7 +30,6 @@
 #include "nlls_tests.hpp"
 #include "aoclda.h"
 #include "da_handle.hpp"
-#include "info.hpp"
 #include "utest_utils.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -84,7 +83,7 @@ TEST(nlls, template_double_nlls_example_box_c) {
         //                   0     1   2  3    4  5  6  7   8   9 10    11
         info_exp.assign({0.779, 6e-6, 24, 0, 212, 0, 0, 0, 33, 12, 0, 5e-6});
     else
-        info_exp.assign(da_optim::info_number, T(0));
+        info_exp.assign(info_t::info_number, T(0));
 
     // relaxed lower bounds
     EXPECT_LE(std::abs(info[0] - info_exp[0]), 0.1);
@@ -108,11 +107,11 @@ TEST(nlls, template_double_nlls_example_box_c) {
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
     EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
               da_status_success);
-    EXPECT_EQ(info[da_optim::info_iter], T(0));
-    EXPECT_EQ(info[da_optim::info_nevalf], T(1));
-    EXPECT_EQ(info[da_optim::info_nevalg], T(1));
-    EXPECT_EQ(info[da_optim::info_nevalh], T(0));
-    EXPECT_EQ(info[da_optim::info_nevalhp], T(0));
+    EXPECT_EQ(info[info_t::info_iter], T(0));
+    EXPECT_EQ(info[info_t::info_nevalf], T(1));
+    EXPECT_EQ(info[info_t::info_nevalg], T(1));
+    EXPECT_EQ(info[info_t::info_nevalh], T(0));
+    EXPECT_EQ(info[info_t::info_nevalhp], T(0));
     EXPECT_EQ(da_options_set(handle, "print level", (da_int)0), da_status_success);
 
     // initial x0 not provided
@@ -199,9 +198,9 @@ TEST(nlls, template_double_lm_example_c) {
     EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
               da_status_success);
 
-    EXPECT_GE(info[da_optim::info_iter], 5.0);
-    EXPECT_LE(info[da_optim::info_objective], 25.0);
-    EXPECT_LE(info[da_optim::info_grad_norm], 1.0e-3);
+    EXPECT_GE(info[info_t::info_iter], 5.0);
+    EXPECT_LE(info[info_t::info_objective], 25.0);
+    EXPECT_LE(info[info_t::info_grad_norm], 1.0e-3);
 
     // wrong query...
     T result[2];

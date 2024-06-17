@@ -94,23 +94,25 @@ class pyda_handle {
 
   public:
     void print_error_message() { da_handle_print_error_message(handle); };
-    void exception_check(da_status status) {
-        if (status == da_status_success) {
+    void exception_check(da_status status, std::string mesg = "") {
+        if (status == da_status_success)
             return;
-        }
-
         // If we got to here, there's an error to deal with
-        char *message;
-        da_severity severity;
-        da_handle_print_error_message(handle);
-        da_handle_get_error_message(handle, &message);
-        da_handle_get_error_severity(handle, &severity);
-        std::string mesg = message;
-        if (severity == DA_ERROR) {
+
+        // Overide the handle message if provided alternative message
+        if (mesg != "") {
             PyErr_SetString(PyExc_RuntimeError, mesg.c_str());
             throw py::error_already_set();
+        }
+        char *message;
+        da_severity severity;
+        da_handle_get_error_message(handle, &message);
+        da_handle_get_error_severity(handle, &severity);
+        if (severity == DA_ERROR) {
+            PyErr_SetString(PyExc_RuntimeError, std::string(message).c_str());
+            throw py::error_already_set();
         } else
-            PyErr_WarnEx(PyExc_RuntimeWarning, mesg.c_str(), 1);
+            PyErr_WarnEx(PyExc_RuntimeWarning, std::string(message).c_str(), 1);
 
         free(message);
     }

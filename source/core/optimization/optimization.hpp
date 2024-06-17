@@ -31,7 +31,6 @@
 #include "callbacks.hpp"
 #include "coord.hpp"
 #include "da_error.hpp"
-#include "info.hpp"
 #include "lbfgsb_driver.hpp"
 #include "optimization_options.hpp"
 #include "ralfit_driver.hpp"
@@ -408,9 +407,9 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
         break;
     case solver_ralfit:
         if (prnlvl > 0) {
-            std::cout << "------------------------------------------------------\n"
-                      << "    AOCL-DA NLP Solver for Nonlinear Least-Squares    \n"
-                      << "------------------------------------------------------\n";
+            std::cout << " ------------------------------------------------------\n"
+                      << "     AOCL-DA NLP Solver for Nonlinear Least-Squares    \n"
+                      << " ------------------------------------------------------\n";
         }
         if (prn == "yes")
             opts.print_options();

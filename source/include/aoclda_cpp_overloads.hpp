@@ -82,6 +82,10 @@ inline da_status da_options_get(da_handle handle, const char *option, char *valu
                                 da_int *lvalue) {
     return da_options_get_string(handle, option, value, lvalue);
 }
+inline da_status da_options_get(da_handle handle, const char *option, char *value,
+                                da_int *lvalue, da_int *key) {
+    return da_options_get_string_key(handle, option, value, lvalue, key);
+}
 
 inline da_status da_read_csv(da_datastore store, const char *filename, double **A,
                              da_int *n_rows, da_int *n_cols, char ***headings) {

@@ -909,7 +909,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
                 loss_mse(nsamples, nfeat, XUSR, intercept, l1regul, l2regul, coef.data(),
                          yusr, &uloss, tmp);
                 tmp = nullptr;
-                status = opt->set_info(da_optim::info_t::info_objective, uloss);
+                status = opt->set_info(info_t::info_objective, uloss);
                 if (status != da_status_success)
                     return status;
             }

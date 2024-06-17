@@ -78,8 +78,8 @@ Library Reference Documentation
    clustering/clustering_intro
    factorization/factorization_intro
    linear_models/linmod_intro
+   nonlinear_models/nldf_intro
    trees_forests/df_intro
-   nlls/nlls_intro
 
 .. only:: internal
 

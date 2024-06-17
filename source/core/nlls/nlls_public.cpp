@@ -43,6 +43,7 @@ da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int nre
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
+    handle->nlls_d->refresh();
     da_status status = handle->nlls_d->define_residuals(n_coef, nres);
     if (status != da_status_success)
         return status; // Error message already loaded
@@ -63,6 +64,7 @@ da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int nre
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
+    handle->nlls_s->refresh();
     da_status status = handle->nlls_s->define_residuals(n_coef, nres);
     if (status != da_status_success)
         return status; // Error message already loaded
@@ -83,6 +85,7 @@ da_status da_nlls_define_bounds_d(da_handle handle, da_int n_coef, double *lower
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
+    handle->nlls_d->refresh();
     return handle->nlls_d->define_bounds(n_coef, lower, upper);
 }
 da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
@@ -99,6 +102,7 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
+    handle->nlls_s->refresh();
     return handle->nlls_s->define_bounds(n_coef, lower, upper);
 }
 
@@ -115,6 +119,7 @@ da_status da_nlls_define_weights_d(da_handle handle, da_int n_coef, double *weig
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
+    handle->nlls_d->refresh();
     return handle->nlls_d->define_weights(n_coef, weights);
 }
 da_status da_nlls_define_weights_s(da_handle handle, da_int n_coef, float *weights) {
@@ -130,6 +135,7 @@ da_status da_nlls_define_weights_s(da_handle handle, da_int n_coef, float *weigh
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
+    handle->nlls_s->refresh();
     return handle->nlls_s->define_weights(n_coef, weights);
 }
 

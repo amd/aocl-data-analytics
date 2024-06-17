@@ -31,6 +31,7 @@
 #include "decision_forest_py.hpp"
 #include "factorization_py.hpp"
 #include "linmod_py.hpp"
+#include "nlls_py.hpp"
 #include "utilities_py.hpp"
 #include <iostream>
 #include <optional>
@@ -334,6 +335,44 @@ class kmeans : public pyda_handle {
     }
 };
 
+// -----------------------------------------------------------------------------
+// Call backs
+// NLLS
+// C++ side call-backs, these will instantiate a template that calls the python user-function
+da_int py_wrapper_resfun_d(da_int n_coef, da_int n_res, void *data, const double *x,
+                           double *r) {
+    return nlls_cb::py_wrapper_resfun_t(n_coef, n_res, data, x, r);
+}
+da_int py_wrapper_resfun_s(da_int n_coef, da_int n_res, void *data, const float *x,
+                           float *r) {
+    return nlls_cb::py_wrapper_resfun_t(n_coef, n_res, data, x, r);
+}
+da_int py_wrapper_resgrd_d(da_int n_coef, da_int n_res, void *data, const double *x,
+                           double *J) {
+    return nlls_cb::py_wrapper_resgrd_t(n_coef, n_res, data, x, J);
+}
+da_int py_wrapper_resgrd_s(da_int n_coef, da_int n_res, void *data, const float *x,
+                           float *J) {
+    return nlls_cb::py_wrapper_resgrd_t(n_coef, n_res, data, x, J);
+}
+da_int py_wrapper_reshes_d(da_int n_coef, da_int n_res, void *data, const double *x,
+                           const double *r, double *HF) {
+    return nlls_cb::py_wrapper_reshes_t(n_coef, n_res, data, x, r, HF);
+}
+da_int py_wrapper_reshes_s(da_int n_coef, da_int n_res, void *data, const float *x,
+                           const float *r, float *HF) {
+    return nlls_cb::py_wrapper_reshes_t(n_coef, n_res, data, x, r, HF);
+}
+da_int py_wrapper_reshp_d(da_int n_coef, da_int n_res, const double *x, const double *y,
+                          double *HP, void *data) {
+    return nlls_cb::py_wrapper_reshp_t(n_coef, n_res, x, y, HP, data);
+}
+da_int py_wrapper_reshp_s(da_int n_coef, da_int n_res, const float *x, const float *y,
+                          float *HP, void *data) {
+    return nlls_cb::py_wrapper_reshp_t(n_coef, n_res, x, y, HP, data);
+}
+// -----------------------------------------------------------------------------
+
 PYBIND11_MODULE(_aoclda, m) {
     m.doc() = "Python wrappers for the AOCL-DA library";
 
@@ -447,6 +486,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_samples", &pca::get_n_samples)
         .def("get_n_features", &pca::get_n_features)
         .def("get_n_components", &pca::get_n_components);
+
     /**********************************/
     /*       k-means clustering       */
     /**********************************/
@@ -478,7 +518,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_iter", &kmeans::get_n_iter);
 
     /**********************************/
-    /*  Decision Trees                */
+    /*        Decision Trees          */
     /**********************************/
     auto m_decision_tree = m.def_submodule("decision_tree", "Decision trees.");
     py::class_<decision_tree, pyda_handle>(m_decision_tree, "pybind_decision_tree")
@@ -503,7 +543,7 @@ PYBIND11_MODULE(_aoclda, m) {
              "X"_a);
 
     /**********************************/
-    /*  Decision Forests              */
+    /*       Decision Forests         */
     /**********************************/
     auto m_decision_forest = m.def_submodule("decision_forest", "Decision forests.");
     py::class_<decision_forest, pyda_handle>(m_decision_forest, "pybind_decision_forest")
@@ -530,4 +570,37 @@ PYBIND11_MODULE(_aoclda, m) {
              "Evaluate the model on X", "X"_a)
         .def("pybind_predict", &decision_forest::predict<float>,
              "Evaluate the model on X", "X"_a);
+
+    /**********************************/
+    /*     Nonlinear Data Fitting     */
+    /**********************************/
+    auto m_nlls = m.def_submodule("nlls", "Nonlinear data fitting.");
+    py::class_<nlls, pyda_handle>(m_nlls, "pybind_nlls")
+        .def(py::init<da_int, da_int, std::optional<py::array>, std::optional<py::array>,
+                      std::optional<py::array>, std::string, std::string, std::string,
+                      std::string, std::string, std::string, da_int>(),
+             py::arg("n_coef"), py::arg("n_res"), py::arg("weights") = py::none(),
+             py::arg("lower_bounds") = py::none(), py::arg("upper_bounds") = py::none(),
+             py::arg("order") = "c", py::arg("prec") = "double",
+             py::arg("model") = "hybrid", py::arg("method") = "galahad",
+             py::arg("glob_strategy") = "tr", py::arg("reg_power") = "quadratic",
+             py::arg("verbose") = (da_int)0)
+        .def("fit", &nlls::fit<double>, "Fit data and train the model", "x"_a, "fun"_a,
+             "jac"_a, "hes"_a = py::none(), "hep"_a = py::none(), "data"_a = py::none(),
+             py::arg("ftol") = (double)1.0e-8, py::arg("abs_ftol") = (double)1.0e-8,
+             py::arg("gtol") = (double)1.0e-8, py::arg("abs_gtol") = (double)1.0e-5,
+             py::arg("xtol") = (double)2.22e-16, py::arg("reg_term") = (double)0.0,
+             py::arg("maxit") = (da_int)100)
+        // @properties
+        // info[info_t::info_iter] = T(inform.iter);
+        .def("get_info_iter", &nlls::get_info_iter) // -> int
+        // info[info_t::info_nevalf] = T(inform.f_eval);
+        // info[info_t::info_nevalg] = T(inform.g_eval);
+        // info[info_t::info_nevalh] = T(inform.h_eval);
+        // info[info_t::info_nevalhp] = T(inform.hp_eval);
+        .def("get_info_evals", &nlls::get_info_evals) // -> dict
+        // info[info_t::info_objective] = T(inform.obj);
+        // info[info_t::info_grad_norm] = T(inform.norm_g);
+        // info[info_t::info_scl_grad_norm] = T(inform.scaled_g);
+        .def("get_info_optim", &nlls::get_info_optim); // -> dict
 }

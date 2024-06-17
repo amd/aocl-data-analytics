@@ -217,6 +217,7 @@ class OptionBase {
     }
     string get_name(void) const { return name; }
     option_t get_option_t(void) const { return otype; }
+    string get_errmsg(void) const { return errmsg; }
     template <typename T>
     da_status validate(T lower, lbound_t lbound, T upper, ubound_t ubound, T value,
                        bool checkall = true) {
@@ -760,7 +761,13 @@ class OptionRegistry {
         // double -> OptionNumeric<double>
         // otherwise -> OptionString
         // bool -> OptionNumeric<bool>
-        return std::static_pointer_cast<OptionType>(search->second)->set(value, setby);
+        da_status status =
+            std::static_pointer_cast<OptionType>(search->second)->set(value, setby);
+        if (status != da_status_success) {
+            // get the error message
+            errmsg = std::static_pointer_cast<OptionType>(search->second)->get_errmsg();
+        }
+        return status;
     }
 
     /* Registry Getter

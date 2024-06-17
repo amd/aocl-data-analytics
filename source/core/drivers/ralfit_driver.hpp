@@ -32,7 +32,6 @@
 #define ral_int da_int
 #include "ral_nlls.h"
 #undef ral_int
-#include "info.hpp"
 #include <cassert>
 #include <functional>
 #include <type_traits>
@@ -56,14 +55,14 @@ da_int da_nlls_eval_hf_dummy(da_int n, da_int m, void *params, const T *x, const
 // Copy RALFit's inform into DA's info array
 template <typename T>
 void copy_inform(struct ral_nlls_inform &inform, std::vector<T> &info) {
-    info[da_optim::info_t::info_iter] = T(inform.iter);
-    info[da_optim::info_t::info_nevalf] = T(inform.f_eval);
-    info[da_optim::info_t::info_nevalg] = T(inform.g_eval);
-    info[da_optim::info_t::info_nevalh] = T(inform.h_eval);
-    info[da_optim::info_t::info_nevalhp] = T(inform.hp_eval);
-    info[da_optim::info_t::info_objective] = T(inform.obj);
-    info[da_optim::info_t::info_grad_norm] = T(inform.norm_g);
-    info[da_optim::info_t::info_scl_grad_norm] = T(inform.scaled_g);
+    info[info_t::info_iter] = T(inform.iter);
+    info[info_t::info_nevalf] = T(inform.f_eval);
+    info[info_t::info_nevalg] = T(inform.g_eval);
+    info[info_t::info_nevalh] = T(inform.h_eval);
+    info[info_t::info_nevalhp] = T(inform.hp_eval);
+    info[info_t::info_objective] = T(inform.obj);
+    info[info_t::info_grad_norm] = T(inform.norm_g);
+    info[info_t::info_scl_grad_norm] = T(inform.scaled_g);
 }
 
 // Get RALFit's exit status/message and copy into DA's status
@@ -321,7 +320,7 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
                         resfun_t<T> eval_r, resgrd_t<T> eval_J, reshes_t<T> eval_HF,
                         reshp_t<T> eval_HP, T *lower_bounds, T *upper_bounds, T *weights,
                         void *usrdata, std::vector<T> &info, da_errors::da_error_t &err) {
-    // FIXME Remove brack once RALFit float is in.
+    // FIXME Remove once RALFit float is in
     if constexpr (!std::is_same_v<T, double>) {
         // Make sure we catch any not-implemented variant
         return da_error(&err, da_status_not_implemented,
@@ -337,6 +336,8 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
                                   "Could not copy the options into the RALFit struct.");
 
         // initialize the workspace
+        // FIXME move this to the handle so it can be checked and destroyed
+        // at the destructor as well at python exception
         void *workspace;
         void *inner_workspace;
 
@@ -385,7 +386,7 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
         nlls_solve(nvar, nres, x, ral_nlls_eval_r, ral_nlls_eval_J, ral_nlls_eval_HF,
                    usrdata, &options, &inform, weights, ral_nlls_eval_HP, lower_bounds,
                    upper_bounds);
-
+        // FIXME add this to the handle->nlls destructor: check + nullify
         ral_nlls_free_workspace(&workspace);
         ral_nlls_free_workspace(&inner_workspace);
 

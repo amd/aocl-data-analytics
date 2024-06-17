@@ -58,6 +58,8 @@ else()
 endif()
 # Create the pybind11 modules
 pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp bindings/utilities_py.cpp)
+# Do not add any new directories here. This is to keep
+# separated the python wrapper to the main library
 target_include_directories(_aoclda PRIVATE ${CMAKE_SOURCE_DIR}/source/include)
 target_link_libraries(_aoclda PRIVATE aocl-da)
 if(BUILD_SMP OR UNIX)

@@ -193,7 +193,7 @@ da_status test_nlls(void) {
     return status;
 }
 
-da_int main(void) {
+int main(void) {
     da_status status;
 
     status = test_linmod();

@@ -174,6 +174,41 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
     }
 }
 
+da_status da_options_get_string_key(da_handle handle, const char *option, char *value,
+                                    da_int *lvalue, da_int *key) {
+    da_status status;
+
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+
+    da_options::OptionRegistry *opts;
+    status = handle->get_current_opts(&opts);
+    if (status != da_status_success)
+        return status; // Error message already loaded
+
+    std::string svalue;
+    status = opts->get(option, svalue, *key);
+    // Need to make sure *value is big enough...
+    if (status == da_status_success) {
+        size_t n = svalue.size();
+        if (n >= (size_t)(*lvalue)) {
+            *lvalue = (da_int)(n + 1); // inform the user of the correct size
+            std::string buf = "target storage where to store option string value is too "
+                              "small, make it at least " +
+                              std::to_string(n + 1);
+            buf += " characters long";
+            return da_error(handle->err, da_status_invalid_input, buf);
+        }
+        svalue.copy(value, n);
+        value[n] = '\0';
+        return da_status_success;
+    } else {
+        // Construct error based on status & opts->errmsg string
+        return da_error(handle->err, status, opts->errmsg);
+    }
+}
+
 da_status da_options_get_real_s(da_handle handle, const char *option, float *value) {
     da_status status;
 

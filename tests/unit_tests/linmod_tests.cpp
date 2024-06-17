@@ -631,7 +631,7 @@ void test_linmod_warmstart(const warmstart_params pr) {
     // info -> iter == 1 or O depending on method
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_rinfo, &linfo, info),
               da_status_success);
-    EXPECT_EQ(info[da_optim::info_t::info_iter], pr.iter);
+    EXPECT_EQ(info[info_t::info_iter], pr.iter);
     // compare with warm start run
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coef, &ncoef, wcoef),
               da_status_success);

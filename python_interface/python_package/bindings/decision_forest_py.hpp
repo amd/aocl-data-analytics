@@ -177,8 +177,8 @@ class decision_forest : public pyda_handle {
         exception_check(status);
 
         da_int n_obs = X.shape()[0], n_features = X.shape()[1];
-        status = da_forest_set_training_data(handle, n_obs, n_features, 2, X.mutable_data(),
-                                           n_obs, y.mutable_data());
+        status = da_forest_set_training_data(handle, n_obs, n_features, 2,
+                                             X.mutable_data(), n_obs, y.mutable_data());
         exception_check(status); // throw an exception if status is not success
 
         status = da_forest_fit<T>(handle);
@@ -191,7 +191,7 @@ class decision_forest : public pyda_handle {
         T score_val = 0.0;
         da_int n_obs = X_test.shape()[0], d = X_test.shape()[1];
         status = da_forest_score(handle, n_obs, d, X_test.mutable_data(), n_obs,
-                               y_test.mutable_data(), &score_val);
+                                 y_test.mutable_data(), &score_val);
         exception_check(status);
         return score_val;
     }
@@ -205,7 +205,7 @@ class decision_forest : public pyda_handle {
         size_t strides[1]{sizeof(T)};
         auto predictions = py::array_t<da_int>(shape, strides);
         status = da_forest_predict(handle, n_samples, n_features, X.mutable_data(),
-                                 n_samples, predictions.mutable_data());
+                                   n_samples, predictions.mutable_data());
         exception_check(status);
         return predictions;
     }

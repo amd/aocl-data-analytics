@@ -119,7 +119,7 @@ template <typename T> using resfun_t = typename meta_resfuncb<T>::type;
 /* nonlinear residual gradient (Jacobian) function */
 template <typename T> struct meta_resgrdcb {
     static_assert(std::is_floating_point<T>::value,
-                  "Residual function arguments must be floating point");
+                  "Residual gradient function arguments must be floating point");
     using type = std::function<da_int(da_int, da_int, void *, T const *, T *)>;
 };
 template <typename T> using resgrd_t = typename meta_resgrdcb<T>::type;
@@ -127,7 +127,7 @@ template <typename T> using resgrd_t = typename meta_resgrdcb<T>::type;
 /* nonlinear residual Hessian function */
 template <typename T> struct meta_reshescb {
     static_assert(std::is_floating_point<T>::value,
-                  "Residual function arguments must be floating point");
+                  "Residual Hessian function arguments must be floating point");
     using type = std::function<da_int(da_int, da_int, void *, T const *, T const *, T *)>;
 };
 template <typename T> using reshes_t = typename meta_reshescb<T>::type;
@@ -135,7 +135,7 @@ template <typename T> using reshes_t = typename meta_reshescb<T>::type;
 /* nonlinear residual Hessian function */
 template <typename T> struct meta_reshpcb {
     static_assert(std::is_floating_point<T>::value,
-                  "Residual function arguments must be floating point");
+                  "Residual Hessian function arguments must be floating point");
     using type = std::function<da_int(da_int, da_int, const T *, const T *, T *, void *)>;
 };
 template <typename T> using reshp_t = typename meta_reshpcb<T>::type;
