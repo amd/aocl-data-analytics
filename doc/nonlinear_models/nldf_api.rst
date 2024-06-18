@@ -25,8 +25,42 @@
 
 
 
-Nonlinear Least-Square APIs
+Nonlinear Data Fitting APIs
 ***************************
+
+
+.. tab-set::
+
+   .. tab-item:: Python
+
+      .. autoclass:: aoclda.nonlinear_model.nlls(n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None, order='c', prec='double', model='hybrid', method='galahad', glob_strategy='tr', reg_power='quadratic', verbose=0)
+         :members:
+
+   .. tab-item:: C
+
+      .. _da_nlls_define_residuals:
+
+      .. doxygenfunction:: da_nlls_define_residuals_s
+         :outline:
+      .. doxygenfunction:: da_nlls_define_residuals_d
+
+      .. _da_nlls_define_weights:
+
+      .. doxygenfunction:: da_nlls_define_weights_s
+         :outline:
+      .. doxygenfunction:: da_nlls_define_weights_d
+
+      .. _da_nlls_define_bounds:
+
+      .. doxygenfunction:: da_nlls_define_bounds_s
+         :outline:
+      .. doxygenfunction:: da_nlls_define_bounds_d
+
+      .. _da_nlls_fit:
+
+      .. doxygenfunction:: da_nlls_fit_s
+         :outline:
+      .. doxygenfunction:: da_nlls_fit_d
 
 
 

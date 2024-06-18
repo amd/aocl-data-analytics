@@ -291,14 +291,14 @@ The standard way of computing a linear model using AOCL-DA is as follows.
       :sync: Python
 
       1. Initialize a :func:`aoclda.linear_model.linmod` object with options set in the class constructor.
-      2. Fit the linear model for your data using :func:`aoclda.linear_model.linmod.fit`.
+      2. Fit the linear model to your data using :func:`aoclda.linear_model.linmod.fit`.
       3. Extract results from the :func:`aoclda.linear_model.linmod` object via its class attributes.
 
    .. tab-item:: C
       :sync: C
 
       1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
-      2. Pass data to the handle using either :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
+      2. Pass data to the handle using :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
       3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
       4. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
       5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
@@ -319,7 +319,9 @@ The standard way of computing a linear model using AOCL-DA is as follows.
            * info[7]: number of *cheap* model evaluations (only relevant for Coordenate Descent Method) and indicates the number of low-rank updates used to evaluate model,
            * info[8-99]: reserved for future use.
 
-           When information is not available, -1 is returned.
+           .. note::
+                When information is not available, -1 is returned.
+
 .. _linmod_options:
 
 Linear Model Options
@@ -375,11 +377,17 @@ Examples
    .. tab-item:: C
       :sync: C
 
-      The code below can be found in ``linear_model.cpp`` in the ``examples`` folder of your installation.
+      The showcased examples sources and more, can be found in the ``examples`` folder of your installation.
 
       .. collapse:: Linear Model Example
 
-          .. literalinclude:: ../../tests/examples/pca.cpp
+          .. literalinclude:: ../../tests/examples/linear_model.cpp
+              :language: C++
+              :linenos:
+
+      .. collapse:: Elastic Net Example
+
+          .. literalinclude:: ../../tests/examples/linmod_diabetes.cpp
               :language: C++
               :linenos:
 

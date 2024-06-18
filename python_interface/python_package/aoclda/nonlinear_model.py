@@ -25,238 +25,239 @@
 
 # pylint: disable=import-error, invalid-name, too-many-arguments, missing-module-docstring
 from inspect import signature
-from typing import Optional, Any, Callable
-from numpy.typing import NDArray
 from ._aoclda.nlls import pybind_nlls
 
 
 class nlls(pybind_nlls):
-    """
+    r"""
     Nonlinear data fitting.
 
-    Data Fitting for nonlinear least-squares
-    =========================================
+    Data Fitting for nonlinear least-squares.
+    This class defines a model and solves the problem
 
-    This function defines the model and solves the problem
-
-    :math:`minimize F(x) = 1/2 \\sum_{i=0}^{n_res-1} ri(x)^2_W + sigma/p ||x||_2^p`
-    :math:`subject to x \\in R^{n_coef}`
+    .. math::
+         \underset{\text{subject to} x \in R^{n_{coef}}}{\text{minimize}}
+         F(x) = \frac{1}{2} \sum_{i=0}^{n_{res-1}} r_i(x)^2_W + \frac{\sigma}{p} ||x||_2^p
 
     where
 
-        `x` is the `n_coef`-vector of parameters to be trained,
+    - :math:`x` is the :math:`n_{coef}`-vector of coefficients (parameters) to be trained,
 
-        `ri(x)` is the `n_res`-vector of model residuals evaluated at x
+    - :math:`r_i(x)` is the :math:`n_{res}`-vector of model residuals evaluated at :math:`x`,
 
-        `sigma` > 0, and `p`=2,3 are the regularization hyperparams
+    - :math:`\sigma > 0`, and :math:`p=2,3` are the regularization hyperparameters, and
 
-        `W` is the (weight) norm marix
+    - :math:`W` is a vector of the diagonal elements of the weight norm matrix.
 
-    Parameters
-    ----------
+    Args:
 
-        ``n_coef`` (int): Number of coefficient in the model, must be positive.
+        n_coef (int): Number of coefficient in the model, must be positive.
 
-        ``n_res`` (int): Number of residuals in the model, must also be positive.
+        n_res (int): Number of residuals in the model, must also be positive.
 
-        ``weights`` (float, optional): Vector of weights containing the values of W.
-            It is expected that the values are all non-negative and normalized. Default: None.
+        weights (float, optional): Vector containing the values of the diagonal weight matrix ``W``.
+            It is expected that the values are all non-negative and normalized. Default = ``None``.
 
-        ``lower_bounds`` (float, optional): Vector of lower bounds of the coefficient vector.
+        lower_bounds (float, optional): Vector of lower bounds of the coefficient vector.
             Default = ``None``.
 
-        ``upper_bounds (float, optional): Vector of upper bounds of the coefficient vector.
+        upper_bounds (float, optional): Vector of upper bounds of the coefficient vector.
             Default = ``None``.
 
-        ``order`` (str, optional): defines the storage scheme for the matrices.
-            Default = "c" (row-major).
+        order (str, optional): defines the storage scheme for the matrices.
+            Default = ``'c'``.
 
-        ``prec`` (str, optional): defines the data precion to use. Default = "double".
+            - ``'c'`` (row-major),
+            - ``'fortran'`` (column-major)
 
-        ``model`` (str, optional): Chose the nonlinear model to use. Default = "hybrid".
+        prec (str, optional): defines the data precision to use.
+            Default = ``'double'``.
 
-        ``method`` (str, optional): Optimization solver for the subproblem. Default = "galahad".
+            - ``'double'`` uses floats in `float64` format,
+            - ``'single'`` uses floats in `float32` format.
 
-        ``glob_strategy`` (str, optional): Globalization strategy. Default = "tr".
+        model (str, optional): Choose the nonlinear model to use.  Default = ``'hybrid'``.
 
-        ``reg_power`` (str, optional): Regularization power. Default = "quadratic".
+            - ``'gauss-newton'`` Gauss-Newton method,
+            - ``'quasi-newton'`` Quasi-Newton method,
+            - ``'hybrid'`` uses a strategy that allows to switch between Gauss-Newton
+              and Quasi-Newton methods,
+            - ``'tensor-newton'`` higher order method that uses Hessians. This option
+              requires to have call-backs for second order derivatives Hessians.
 
-        ``verbose`` (int, optional): Set verbosity level (0 to 3) of the solver. Default = 0.
+        glob_strategy (str, optional): Globalization strategy. Only relevant when ``model`` =
+            ``'hybrid'``, ``'gauss-newton'``, or ``'quasi-newton'``.  Default = ``'tr'``.
 
-    Returns
-    -------
+            - ``'tr'`` uses trust-region methods,
+            - ``'reg'`` uses regularization techniques.
 
-        This function does not return a value.
+        method (str, optional): Optimization solver for the subproblem.  Default = ``'galahad'``.
 
-    See Also
-    --------
+            - Option value for when ``glob_strategy`` = ``'tr'``:
 
-        nlls.fit(...)
+                - ``'galahad'`` GALAHAD's DTRS,
+                - ``'more-sorensen'`` variant of More-Sorensen's method,
+                - ``'powell-dogleg'`` Powell's dog-leg method.
+                - ``'aint'`` Generalized eigen value method.
 
-        nlls.n_iter(...)
+            - Option value for when ``glob_stategy`` = ``'reg'``:
 
-        nlls.metrics(...)
+                - ``'galahad'`` GALAHAD's DRQS.
+                - ``'linear solver'`` solve step system using a linear solver,
 
-        nlls.n_eval(...)
+            Refer to :cite:p:`ralfit` for details on these subproblem solvers.
+
+
+        reg_power (str, optional): Regularization power (p).  Default = ``'quadratic'``.
+            This option is only relevant if the `regularization term` (parameter ``reg_term`` in
+            :py:meth:`~nlls.fit`) is positive.
+
+            - ``'quadratic'`` uses second order regularization,
+            - ``'cubic'`` uses third order regularization.
+
+        verbose (int, optional): Set verbosity level (0 to 3) of the solver. Default = 0.
     """
 
-    def __init__(self, n_coef: int, n_res: int,
-                 weights: Optional[NDArray] = None,
-                 lower_bounds: Optional[NDArray] = None,
-                 upper_bounds: Optional[NDArray] = None,
-                 order: Optional[str] = "c",
-                 prec: Optional[str] = "double",
-                 model: Optional[str] = "hybrid",
-                 method: Optional[str] = "galahad",
-                 glob_strategy: Optional[str] = "tr",
-                 reg_power: Optional[str] = "quadratic",
-                 verbose: Optional[int] = 0):
+    def __init__(self, n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None,
+                 order='c', prec='double', model='hybrid', method='galahad', glob_strategy='tr',
+                 reg_power='quadratic', verbose=0):
         super().__init__(n_coef=n_coef, n_res=n_res, weights=weights,
                          lower_bounds=lower_bounds, upper_bounds=upper_bounds,
                          order=order, prec=prec, model=model, method=method,
                          glob_strategy=glob_strategy, reg_power=reg_power,
                          verbose=verbose)
 
-    def fit(self, x: NDArray,
-            fun: Callable[[NDArray, NDArray, Any], int],
-            jac: Callable[[NDArray, NDArray, Any], int],
-            hes: Optional[Callable[[
-                NDArray, NDArray, NDArray, Any], int]] = None,
-            hep: Optional[Callable[[
-                NDArray, NDArray, NDArray, Any], int]] = None,
-            data: Any = None,
-            ftol: float = 1.0e-8, abs_ftol: float = 1.0e-8,
-            gtol: float = 1.0e-8, abs_gtol: float = 1.0e-5,
-            xtol: float = 2.22e-16, reg_term: float = 0,
-            maxit: int = 100):
+    def fit(self, x, fun, jac, hes=None, hep=None, data=None, ftol=1.0e-8, abs_ftol=1.0e-8,
+            gtol=1.0e-8, abs_gtol=1.0e-5, xtol=2.22e-16, reg_term=0, maxit=100):
         """
-        Train a nonlinear data model.
-
         Fit data to a nonlinear model using regularized least-squares.
 
-        Parameters
-        ----------
+        Args:
 
-            ``x`` (NDArray) initial guess to start optimizing from
+            x (NDArray): initial guess to start optimizing from
 
-            ``fun`` (method): function that calculates the n_res residuals.
+            fun (method): function that calculates the ``n_res`` residuals.
+                This function must return the residual vector of the model evaluated
+                at the point ``x``.
                 This function has the interface
 
-                ``def fun(x, residuals, data):``
+                :code:`def fun(x, residuals, data):`
 
-                This function must return the residual vector of the model evaluated
-                at the point x.
-                The function should only modify the residual vector.
-                Must return 0 on success and nonzero otherwise.
+                .. note::
+
+                    * The function should only modify **in-place** the residual vector.
+
+                    * Must return 0 on success and nonzero otherwise.
 
                 Example:
 
-                ```{python}
+                .. code-block:: python
+
                     def fun(x, r, data):
                         r[:] = data.residuals(x)
                         return 0;
-                ```
 
-            ``jac`` (method): function that calculates the residual Jacobian matrix:
+            jac (method): function that calculates the residual Jacobian matrix:
+                This function must return the Jacobian matrix of size
+                ``n_res`` by ``n_coef`` of the model evaluated
+                at the point ``x``.
                 This function has the interface
 
-                ``def jac(x, jacobian, data):``
+                :code:`def jac(x, jacobian, data):`
 
-                The function should only modify the Jacobian matrix.
-                Must return 0 on success and nonzero otherwise.
+                .. note::
+
+                    * The function should only modify **in-place** the Jacobian matrix.
+
+                    * Must return 0 on success and nonzero otherwise.
 
                 Example:
 
-                ```{python}
+                .. code-block:: python
+
                     def jac(x, j, data):
                         j[:] = data.Jacobian(x)
                         return 0;
-                ```
 
-            ``hes`` (method, optional): function that calculates the n_coef by n_coef
-                symmetric residual Hessian matrix: H = sum_i r_i H_i.
+            hes (method, optional): function that calculates the ``n_coef`` by
+                ``n_coef`` symmetric residual Hessian matrix: H = sum_i r_i H_i.
                 This function has the interface
 
-                ``def hes(x, r, h, data):``
-
-                The function should only modify the Hessian matrix.
-                Must return 0 on success and nonzero otherwise.
+                :code:`def hes(x, r, h, data):`
 
                 Default = `None`.
 
+                .. note::
+
+                    * The function should only modify **in-place** the Hessian matrix.
+
+                    * Must return 0 on success and nonzero otherwise.
+
+
                 Example:
 
-                ```{python}
+                .. code-block:: python
+
                     def hes(x, r, h, data):
                         n = data['n_coef'];
                         Hi = data['hessians']
-                        h[:] = Hi.sum(x,r)
+                        h[:] = Hi.sum(n, x, r)
                         return 0;
-                ```
 
-            ``hep`` (method, optional): function that calculates the matrix-vector
+            hep (method, optional): function that calculates the matrix-vector
                 product of the symmetric residual Hessian matrices with a vector y.
                 This function has the interface
 
-                ``def hep(x, y, hp, data):``
+                :code:`def hep(x, y, hp, data):`
 
-                The function should only modify **in-place** the ``hp``
-                Hessian-vector product matrix. Must return 0 on success and
-                nonzero otherwise.
 
                 Default = ``None``.
 
+                .. note::
+
+                    * The function should only modify **in-place** the ``hp``
+                      Hessian-vector product matrix.
+
+                    * Must return 0 on success and nonzero otherwise.
+
                 Example:
 
-                ```{python}
+                .. code-block:: python
+
                     def hep(x, y, hp, data):
                         n = data['n_coef'];
                         m = data['n_res'];
                         Hi = data['hessians']
-                        hp[:] = Hi.prod(x,y)
+                        hp[:] = Hi.prod(n, m, x, y)
                         return 0
-                ```
 
-            ``data`` (optional) user data object to pass to the user functions.
+            data (optional) user data object to pass to the user functions.
                 The solver does not read or write to this object.
                 Default = ``None``.
 
-            ``ftol`` (float, optional): Defines the relative tolerance for the
+            ftol (float, optional): Defines the relative tolerance for the
                 residual norm to declare convergence. Default = 1.0e-8.
 
-            ``abs_ftol`` (float, optional): Defines the absolute tolerance for the
+            abs_ftol (float, optional): Defines the absolute tolerance for the
                 residual norm to declare convergence. Default = 1.0e-8.
 
-            ``gtol`` (float, optional): Defines the relative tolerance of the
+            gtol (float, optional): Defines the relative tolerance of the
                 gradient norm to declare convergence. Default = 1.0e-8.
 
-            ``abs_gtol`` (float, optional): Defines the absolute tolerance of the
+            abs_gtol (float, optional): Defines the absolute tolerance of the
                 gradient norm to declare convergence. Default = 1.0e-5.
 
-            ``xtol`` (float, optional): Defines the tolerance of the step length of
+            xtol (float, optional): Defines the tolerance of the step length of
                 two consecutive iterates to declare convergence. Default = 2.22e-16.
 
-            ``reg_term`` (float, optional): Defines the tolerance to declare
-                convergence.  Default = 0.
+            reg_term (float, optional): Defines the regularizaon penalty term
+                (sigma).  Default = 0.
 
-            ``maxit`` (int, optional): Defines the tolerance to declare convergence.
+            maxit (int, optional): Defines the tolerance to declare convergence.
                 Default = 100.
 
-        Returns
-        -------
-
-            This function does not return a value.
-
-        See Also
-        --------
-
-            nlls(...)
-
-            nlls.n_iter(...)
-
-            nlls.metrics(...)
-
-            nlls.n_eval(...)
+        Returns:
+            self (object): Returns the fitted model, instance itself.
         """
 
         # inspect some parameter before entering c++
@@ -272,89 +273,45 @@ class nlls(pybind_nlls):
                         hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
                         gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
                         reg_term=reg_term, maxit=maxit)
+        return self
 
     @property
     def n_iter(self):
         """
-        Property
-        --------
-
-        (int): Returns the number of iterations the solver made.
-
-        See Also
-        --------
-
-        nlls(...)
-
-        nlls.fit(...)
-
-        nlls.metrics(...)
-
-        nlls.n_eval(...)
+        int: number of iterations the solver made.
         """
         return pybind_nlls.get_info_iter(self)
 
     @property
     def n_eval(self):
         """
-        Property
-        --------
+        (dict) [nevalf, nevalg, nevalh, nevalhp]: dictionary with the
+        number of function calls for
 
-        (dict) [nevalf, nevalg, nevalh, nevalhp].
+            ``nevalf`` (int): Residual function ``fun``.
 
-            Returns a dictionary with the number of function calls for
+            ``nevalg`` (int): Gradient function ``jac``.
 
-            ``nevalf`` (int): Resifual function `fun`.
+            ``nevalh`` (int): Hessian function ``hes``.
 
-            ``nevalg`` (int): Gradient function `jac`.
-
-            ``nevalh`` (int): Hessian function `hes`.
-
-            ``nevalhp`` (int): Hessian-vector product function `hep`.
-
-        See Also
-        --------
-
-        nlls(...)
-
-        nlls.fit(...)
-
-        nlls.n_iter(...)
-
-        nlls.metrics(...)
+            ``nevalhp`` (int): Hessian-vector product function ``hep``.
         """
         return pybind_nlls.get_info_evals(self)
 
     @property
     def metrics(self):
         """
-        Property
-        --------
+        (dict) [obj, nrmg, sclg]: dictionary with the metrics:
 
-        (dict) [obj, nrmg, sclg].
+            ``obj`` (float): Objective value at iterate ``x``.
 
-            Returns a dictionary with the metrics:
+            ``nrmg`` (float): Norm of the residual gradient at iterate ``x``.
 
-            ``obj`` (float): Objective value at iterate `x`.
-
-            ``nrmg`` (float): Norm of the residual gradient at iterate `x`.
-
-            ``sclg`` (float): Norm of the scaled residual gradient at `x`.
-        See Also
-        --------
-
-        nlls(...)
-
-        nlls.fit(...)
-
-        nlls.n_iter(...)
-
-        nlls.n_eval(...)
+            ``sclg`` (float): Norm of the scaled residual gradient at ``x``.
         """
         return pybind_nlls.get_info_optim(self)
 
-
-    def __cb_inspect(self, f: callable, narg: int):
+    def __cb_inspect(self, f, narg):
         """Internal helper function"""
         sig = signature(f)
         pos_cnt = sum(1 for param in sig.parameters.values()

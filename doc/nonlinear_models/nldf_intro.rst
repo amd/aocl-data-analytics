@@ -81,31 +81,37 @@ The standard way of computing a linear model using AOCL-DA is as follows.
    .. tab-item:: Python
       :sync: Python
 
-      1. Initialize a :func:`aoclda.linear_model.linmod` object with options set in the class constructor.
-      2. Fit the linear model for your data using :func:`aoclda.linear_model.linmod.fit`.
-      3. Extract results from the :func:`aoclda.linear_model.linmod` object via its class attributes.
+      1. Initialize a :func:`aoclda.nonlinear_model.nlls` object with some options set in the class constructor.
+      2. Fit a nonlinear model to the data using :func:`aoclda.nonlinear_model.nlls.fit`. Here you will have to provide some functions that
+         define the nonlinear model's residual vector and a function to return the residual Jacobian matrix. The optimized parameters,
+         \f$x\f$, are modified in-place and returned on the interface of :func:`aoclda.nonlinear_model.nlls.fit`.
+      3. Extract results from the :func:`aoclda.nonlinear_model.nlls` object via its class attributes.
 
    .. tab-item:: C
       :sync: C
 
-      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
-      2. Pass data to the handle using either :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
-      3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
-      4. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
-      5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
-      6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`. The following results are available:
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_nlls``.
+      2. Pass model to the handle using :ref:`da_nlls_define_residuals_? <da_nlls_define_residuals>`.
+      3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <nlls_options>` for a list of the available options).
+      4. Train the nonlinear model using :ref:`da_nlls_fit_? <da_nlls_fit>` (you will have to provide an initial guess).
+      5. Optimized parameters, \f$x\f$ are returned on the interface.
+      6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`
+         using :cpp:enum:`da_result::da_rinfo`.
+         The following results are available in the :code:`info[100]` array:
 
-         * coefficients (:cpp:enumerator:`da_linmod_coef`): the optimal coefficients of the fitted model
-
-         * rinfo[100] (:cpp:enumerator:`da_linmod_rinfo`): a set of values of interest
-            * rinfo[0]: :math:`n_{features}`, the number of features in the model.
-            * rinfo[1]: :math:`n_{samples}`, the number of samples the model has been trained on.
-            * rinfo[2]: :math:`n_{coef}`, the number of model coefficients.
-            * rinfo[3]: intercept, 1 if an intercept term is present in the model, 0 otherwise.
-            * rinfo[4]: :math:`\alpha`, share of the :math:`\ell_1` term in the regularization.
-            * rinfo[5]: :math:`\lambda`, the magnitude of the regularization term.
-            * rinfo[6-99]: reserved for future use.
-
+            * info[0] objective value,
+            * info[1] gradient norm of objective,
+            * info[2] number of iterations,
+            * info[3] reserved for future use,
+            * info[4] number of function callback evaluations,
+            * info[5] reserved for future use,
+            * info[6] reserved for future use,
+            * info[7] reserved for future use,
+            * info[8] number of gradient callback evaluations,
+            * info[9] number of Hessian callback evaluations,
+            * info[10] number of Hessian-vector callback evaluations,
+            * info[11] scaled gradient norm of objective,
+            * info[12-99]: reserved for future use.
 
 .. _nlls_options:
 
@@ -117,27 +123,33 @@ Nonlinear Least-Squares Options
    .. tab-item:: Python
       :sync: Python
 
-      The available Python options are detailed in the :func:`aoclda.linear_model.linmod` class constructor.
+      The available Python options are detailed in the :func:`aoclda.nonlinear_model.nlls` class constructor.
 
    .. tab-item:: C
       :sync: C
 
-      Various options can be set to customize the linear models by calling one of these
+      Various options can be set to customize the nonlinear models by calling one of these
       :ref:`functions <api_handle_options>`. The following table details the available options, where :math:`\epsilon` represents the machine precision.
 
-      .. update options using table _opts_linearmodel
+      .. update options using table _opts_optimizationsolvers
 
-      .. csv-table:: Linear models options
+      .. csv-table:: Nonlinear data fitting options
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
-         "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
-         "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
-         "optim convergence tol", "real", ":math:`r=10/2\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
-         "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
-         "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r`"
-         "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-         "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
-         "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
+         "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`."
+         "ralfit nlls method", "string", ":math:`s=` `galahad`", "NLLS solver to use.", ":math:`s=` `aint`, `galahad`, `linear solver`, `more-sorensen`, or `powell-dogleg`."
+         "ralfit globalization method", "string", ":math:`s=` `trust-region`", "Globalization method to use. This parameter makes use of the regularization term and power option values.", ":math:`s=` `reg`, `regularization`, `tr`, or `trust-region`."
+         "regularization power", "string", ":math:`s=` `quadratic`", "Value for the regularization power term.", ":math:`s=` `cubic`, or `quadratic`."
+         "regularization term", "real", ":math:`r=0`", "Value for the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`"
+         "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`"
+         "ralfit convergence rel tol fun", "real", ":math:`r=10^{-8}`", "relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence abs tol fun", "real", ":math:`r=10^{-8}`", "absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence rel tol grd", "real", ":math:`r=10^{-8}`", "relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence abs tol grd", "real", ":math:`r=10^{-5}`", "absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "print level", "integer", ":math:`i=1`", "set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
+         "print options", "string", ":math:`s=` `no`", "Print options list", ":math:`s=` `no`, or `yes`."
+         "storage scheme", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 Examples
 ========
@@ -149,20 +161,20 @@ Examples
 
       The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
 
-      .. collapse:: Linear Model Example
+      .. collapse:: Nonlinear Data Fitting Example
 
-          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/linmod_ex.py
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/nlls_ex.py
               :language: Python
               :linenos:
 
    .. tab-item:: C
       :sync: C
 
-      The code below can be found in ``linear_model.cpp`` in the ``examples`` folder of your installation.
+      The code below can be found in ``nlls.cpp`` in the ``examples`` folder of your installation.
 
-      .. collapse:: Linear Model Example
+      .. collapse:: Nonlinear Data Fitting Example
 
-          .. literalinclude:: ../../tests/examples/pca.cpp
+          .. literalinclude:: ../../tests/examples/nlls.cpp
               :language: C++
               :linenos:
 
@@ -171,8 +183,14 @@ Examples
 Further Reading
 ===============
 
-An introduction to linear models for Regression and Classification can be found in Chapters 3, 4 of :cite:t:`bishop`, or
-in Chapters 3-5 of :cite:t:`hastie`.
+An introduction to nonlinear least-squares methods can be found in
+:cite:t:`NocWri06NumOpt`.
+Indepth literature on modern trust-region solvers can be reviewed in:
+:cite:t:`ralfit`,
+:cite:t:`kanzow`,
+:cite:t:`adachi`,
+:cite:t:`ConGouToi00TR`, and
+:cite:t:`galahad`.
 
 .. toctree::
     :maxdepth: 1
