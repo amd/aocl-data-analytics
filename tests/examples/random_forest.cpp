@@ -83,11 +83,12 @@ int main() {
                                       X.data(), n_samples, y.data()) == da_status_success;
     pass &=
         da_options_set_int(forest_handle, "number of trees", 100) == da_status_success;
-    pass &= da_options_set_int(forest_handle, "seed", 42) == da_status_success;
-    pass &= da_options_set_int(forest_handle, "maximum features", 5) == da_status_success;
+    pass &= da_options_set_int(forest_handle, "seed", 84) == da_status_success;
+    pass &= da_options_set_string(forest_handle, "bootstrap", "yes") == da_status_success;
+    pass &= da_options_set_string(forest_handle, "features selection", "all") ==
+            da_status_success;
     pass &= da_options_set_string(forest_handle, "scoring function", "gini") ==
             da_status_success;
-    pass &= da_options_set_string(forest_handle, "bootstrap", "yes") == da_status_success;
     if (!pass) {
         std::cout << "Something went wrong setting up the decision tree data and "
                      "optional parameters.\n";

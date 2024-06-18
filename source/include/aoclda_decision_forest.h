@@ -43,7 +43,7 @@
  * @param handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param n_samples number of observations in \p X
  * @param n_features number of features in \p X
- * @param n_class number of distinct classes in \p y. Will be computed automaticaaly if \p n_class is set to 0
+ * @param n_class number of distinct classes in \p y. Will be computed automatically if \p n_class is set to 0
  * @param X array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
  * @param ldx leading dimension of \p X.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
  * @param y 1d array containing \p n_samples labels
@@ -62,7 +62,7 @@ da_status da_tree_set_training_data_s(da_handle handle, da_int n_samples,
 /** \} */
 
 /** \{
- * @brief Pass a 2d feature matrix containing double precision data and a 1d label array to the \ref da_handle object
+ * @brief Pass a 2d n_samples x n_features data matrix  containing double precision data and a 1d label array to the \ref da_handle object
  * in preparation for fitting a decision forest.
  *
  * @param handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
@@ -122,7 +122,7 @@ da_status da_tree_fit_s(da_handle handle);
  * @rst
  * Compute the decision forest parameters given the data passed by :ref:`da_forest_set_training_data_? <da_forest_set_training_data>`.
  * Note that you can customize the model before using the fit function through the use of optional parameters,
- * see :ref:`this section <opts_decisionforest>` for a list of available options.
+ * see :ref:`this section <opts_decisiontree>` for a list of available options.
  * @endrst
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
@@ -147,22 +147,22 @@ da_status da_forest_fit_s(da_handle handle);
 /** \} */
 
 /** \{
- * @brief Generate labels using fitted decision tree on a new set of data @p x.
+ * @brief Generate labels using fitted decision tree on a new set of data @p X_test.
  *
  * @rst
- * After a model has been fit using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
+ * After a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
  * function returns the decision tree predictions in the array ``y_pred``.
  *
  * For each data point ``i``, ``y_pred[i]`` will contain the label of the most likely class
  * according to the decision tree,
- * ``X_test[i*ldx + j]`` should contain the feature ``j`` for observation ``i``.
+ * ``X_test[i*ldx_test + j]`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param[in] n_samples - number of observations in \p X_test
  * @param[in] n_features - number of features in \p X_test
  * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx @f$\ge@f$ \p n_samples.
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
  * @param[out] y_pred - array of size at least \p n_samples. On output, will contain the predicted class labels
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
@@ -180,7 +180,7 @@ da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_feature
 /** \} */
 
 /** \{
- * @brief Generate labels using fitted decision forest on a new set of data @p x.
+ * @brief Generate labels using fitted decision forest on a new set of data @p X_test.
  *
  * @rst
  * After a model has been fit using :ref:forest_fit_? <da_forest_fit>`, it can be used to generate predicted labels on new data. This
@@ -188,14 +188,14 @@ da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_feature
  *
  * For each data point ``i``, ``y_pred[i]`` will contain the label of the most likely class
  * according to the decision forest,
- * ``x[i + j*ldx]`` should contain the feature ``j`` for observation ``i``.
+ * ``x[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
 * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param[in] n_samples - number of observations in \p X_test
  * @param[in] n_features - number of features in \p X_test
  * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx @f$\ge@f$ \p n_samples.
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
  * @param[out] y_pred - array of size at least \p n_samples. On output, will contain the predicted class labels
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
@@ -214,20 +214,21 @@ da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_featu
 
 /** \{
  * @brief Calculate score (prediction accuracy) by comparing predicted labels and actual labels on a new set
- * of data @p x_test.
+ * of data @p X_test.
  *
  * @rst
  * To be used after a model has been fit using :ref:`da_tree_fit_? <da_tree_fit>`.
  *
  * For each data point ``i``, ``y_test[i]`` will contain the label of the test data,
- * ``X_test[i*ldx + j]`` should contain the feature ``j`` for observation ``i``.
+ * ``X_test[i*ldx_test + j]`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param[in] n_samples - number of observations in \p X_test
- * @param[in] n_features - number of features in \p X_test
+ * @param[in] n_features - number of features in \p X_test. It must match the number of features from
+ *                         the training data set.
  * @param[in] X_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_obs.
  * @param[in] y_test - actual class labels
  * @param[out] mean_accuracy - proportion of observations where predicted label matches actual label
  * @return da_status
@@ -250,20 +251,21 @@ da_status da_tree_score_s(da_handle handle, da_int n_samples, da_int n_features,
 
 /** \{
  * @brief Calculate score (prediction accuracy) by comparing predicted labels and actual labels on a new set
- * of data @p x_test.
+ * of data @p X_test.
  *
  * @rst
  * To be used after a model has been fit using :ref:`da_forest_fit_? <da_forest_fit>`.
  *
  * For each data point ``i``, ``y_test[i]`` will contain the label of the test data,
- * ``X_test[i*ldx + j]`` should contain the feature ``j`` for observation ``i``.
+ * ``X_test[i*ldx_test + j]`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_samples - number of observations in \p X_test
- * @param[in] n_features - number of features in \p X_test
+ * @param[in] n_features - number of features in \p X_test. It must match the number of features from
+ *                         the training data set.
  * @param[in] X_test array containing \p n_obs  @f$\times@f$ \p n_features data matrix, in column-major format
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx @f$\ge@f$ \p n_obs.
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_obs.
  * @param[in] y_test - actual class labels
  * @param[out] mean_accuracy - proportion of observations where predicted label matches actual label
  * @return da_status

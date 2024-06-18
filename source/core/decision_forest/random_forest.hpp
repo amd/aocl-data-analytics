@@ -122,7 +122,6 @@ template <typename T>
 da_status random_forest<T>::set_training_data(da_int n_samples, da_int n_features,
                                               const T *X, da_int ldx, const da_int *y,
                                               da_int n_class) {
-    da_status status;
     if (X == nullptr || y == nullptr)
         return da_error(this->err, da_status_invalid_input,
                         "Either X, or y are not valid pointers.");
@@ -228,39 +227,36 @@ template <typename T> da_status random_forest<T>::fit() {
         n_obs = std::max((da_int)std::round(n_samples * prop), (da_int)1);
     }
     da_int prn_times = 0;
-    da_status tree_status;
     da_int n_failed_tree = 0;
 
     // Train all the trees in parallel
-#pragma omp parallel shared(n_failed_tree, forest, n_tree, max_depth, min_node_sample,   \
-                                method, prn_times, build_order, seed_tree,               \
-                                min_split_score, feat_thresh, min_improvement,           \
-                                n_samples, n_features, X, ldx, y, n_class, n_obs,        \
-                                tree_status, nfeat_split, bootstrap) default(none)
-    {
-#pragma omp for schedule(dynamic)
-        for (da_int i = 0; i < n_tree; i++) {
-            // Set tree optional parameters
-            try {
-                forest[i] = std::make_unique<decision_tree<T>>(
-                    decision_tree(max_depth, min_node_sample, method, prn_times,
-                                  build_order, nfeat_split, seed_tree[i], min_split_score,
-                                  feat_thresh, min_improvement, bootstrap));
-            } catch (std::bad_alloc &) {
-#pragma omp critical
-                { n_failed_tree += 1; }
-                continue;
-            }
-            tree_status = forest[i]->set_training_data(n_samples, n_features, X, ldx, y,
-                                                       n_class, n_obs, nullptr);
-            tree_status = forest[i]->fit();
-            forest[i]->clear_working_memory();
-            if (tree_status != da_status_success) {
-#pragma omp critical
-                { n_failed_tree += 1; }
-            }
+#pragma omp parallel for shared(                                                         \
+        n_failed_tree, forest, n_tree, max_depth, min_node_sample, method, prn_times,    \
+            build_order, seed_tree, min_split_score, feat_thresh, min_improvement,       \
+            n_samples, n_features, X, ldx, y, n_class, n_obs, nfeat_split,               \
+            bootstrap) default(none) schedule(dynamic)
+    for (da_int i = 0; i < n_tree; i++) {
+        // Set tree optional parameters
+        try {
+            forest[i] = std::make_unique<decision_tree<T>>(decision_tree(
+                max_depth, min_node_sample, method, prn_times, build_order, nfeat_split,
+                seed_tree[i], min_split_score, feat_thresh, min_improvement, bootstrap));
+        } catch (std::bad_alloc &) {
+#pragma omp atomic
+            n_failed_tree++;
+            continue;
+        }
+        da_status tree_status;
+        tree_status = forest[i]->set_training_data(n_samples, n_features, X, ldx, y,
+                                                   n_class, n_obs, nullptr);
+        tree_status = forest[i]->fit();
+        forest[i]->clear_working_memory();
+        if (tree_status != da_status_success) {
+#pragma omp atomic
+            n_failed_tree++;
         }
     }
+
     if (n_failed_tree != 0)
         return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
                         std::to_string(n_failed_tree) +
@@ -279,21 +275,21 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
     }
     if (nsamp <= 0) {
         return da_error(this->err, da_status_invalid_input,
-                        "nsamp = " + std::to_string(nsamp) +
+                        "n_samples = " + std::to_string(nsamp) +
                             ", it must be greater than 0.");
     }
     if (nfeat != n_features) {
         return da_error(this->err, da_status_invalid_input,
-                        "nfeat = " + std::to_string(nfeat) +
+                        "n_features = " + std::to_string(nfeat) +
                             " doesn't match the expected value " +
                             std::to_string(n_features) + ".");
     }
     if (ldx_test < nsamp) {
         return da_error(this->err, da_status_invalid_input,
-                        "nsamp = " + std::to_string(nsamp) +
+                        "n_samples = " + std::to_string(nsamp) +
                             ", ldx = " + std::to_string(ldx_test) +
                             ", the value of ldx needs to be at least as big as the value "
-                            "of nsamp");
+                            "of n_samples");
     }
 
     if (!model_trained) {
@@ -324,8 +320,7 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
         }
     }
 
-#pragma omp parallel shared(nsamp, n_class, y_pred, count_classes) default(none)
-#pragma omp for
+#pragma omp parallel for shared(nsamp, n_class, y_pred, count_classes) default(none)
     for (da_int i = 0; i < nsamp; i++) {
         da_int max_count = -1, class_i = -1;
         for (da_int c = 0; c < n_class; c++) {
@@ -349,21 +344,21 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     }
     if (nsamp <= 0) {
         return da_error(this->err, da_status_invalid_input,
-                        "nsamp = " + std::to_string(nsamp) +
+                        "n_samples = " + std::to_string(nsamp) +
                             ", it must be greater than 0.");
     }
     if (nfeat != n_features) {
         return da_error(this->err, da_status_invalid_input,
-                        "nfeat = " + std::to_string(nfeat) +
+                        "n_features = " + std::to_string(nfeat) +
                             " doesn't match the expected value " +
                             std::to_string(n_features) + ".");
     }
     if (ldx_test < nsamp) {
         return da_error(this->err, da_status_invalid_input,
-                        "nsamp = " + std::to_string(nsamp) +
+                        "n_sampels = " + std::to_string(nsamp) +
                             ", ldx = " + std::to_string(ldx_test) +
                             ", the value of ldx needs to be at least as big as the value "
-                            "of nsamp");
+                            "of n_samples");
     }
 
     if (!model_trained) {
@@ -396,8 +391,8 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
 
     // For each sample
     *score = 0;
-#pragma omp parallel shared(nsamp, n_class, y_test, count_classes, score) default(none)
-#pragma omp for
+#pragma omp parallel for shared(nsamp, n_class, y_test, count_classes,                   \
+                                    score) default(none)
     for (da_int i = 0; i < nsamp; i++) {
         da_int max_count = -1, class_i = -1;
         for (da_int c = 0; c < n_class; c++) {
@@ -407,8 +402,8 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
             }
         }
         if (class_i == y_test[i]) {
-#pragma omp critical
-            { *score += 1; }
+#pragma omp atomic
+            (*score)++;
         }
     }
     *score /= (T)nsamp;

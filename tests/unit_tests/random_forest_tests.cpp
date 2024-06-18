@@ -75,21 +75,18 @@ template <typename T> void set_test_data_8x2_unique(test_data_type<T> &data) {
 
     // idea is that y = 0 if x1 < 0.5 and x2 < 0.5, otherwise y = 1
     // training data values are unique
-    data.X_train = {
-        (T)0.12, (T)0.11, (T)0.42, (T)0.41,
-        (T)0.62, (T)0.61, (T)0.92, (T)0.91, // first column of data
-        (T)0.39, (T)0.79, (T)0.38, (T)0.78,
-        (T)0.37, (T)0.77, (T)0.36, (T)0.76 // second column of data
-    };
+    data.X_train = {(T)0.12, (T)0.11, (T)0.42, (T)0.41, (T)0.62, (T)0.61, (T)0.92,
+                    (T)0.91, (T)0.16, (T)0.30, (T)0.39, (T)0.79, (T)0.38, (T)0.78,
+                    (T)0.37, (T)0.77, (T)0.36, (T)0.76, (T)0.30, (T)0.16};
 
     // idea is that y = 0 if x1 < 0.5 and x2 < 0.5, otherwise y = 1
-    data.y_train = {0, 1, 0, 1, 1, 1, 1, 1};
+    data.y_train = {0, 1, 0, 1, 1, 1, 1, 1, 0, 0};
     data.X_test = {(T)0.25, (T)0.25, (T)0.75, (T)0.75,
                    (T)0.25, (T)0.75, (T)0.25, (T)0.75};
     data.y_test = {0, 1, 1, 1};
-    data.n_samples_train = 8, data.n_feat = 2;
+    data.n_samples_train = 10, data.n_feat = 2;
     data.n_samples_test = 4;
-    data.ldx_train = 8;
+    data.ldx_train = 10;
     data.ldx_test = 4;
 }
 
@@ -155,6 +152,9 @@ TYPED_TEST(random_forest_test, trivial_forests) {
                                               data.n_feat, 0, data.X_train.data(),
                                               data.ldx_train, data.y_train.data()),
                   da_status_success);
+        EXPECT_EQ(da_options_set(tree_handle, "features selection", "all"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(tree_handle, "bootstrap", "no"), da_status_success);
         EXPECT_EQ(da_forest_fit<TypeParam>(tree_handle), da_status_success);
         TypeParam accuracy;
         EXPECT_EQ(da_forest_score(tree_handle, data.n_samples_test, data.n_feat,

@@ -62,21 +62,22 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "seed",
-            "Set random seed for the random number generator. If "
-            "the value is -1, a random seed is automatically generated.",
+            "Set the random seed for the random number generator. If "
+            "the value is -1, a random seed is automatically generated. In this case the "
+            "resulting classification will create non-reproducible results.",
             -1, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, -1));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "maximum features",
-            "Set the number of features in consideration for splitting a node. 0 means "
+            "Set the number of features to consider when splitting a node. 0 means "
             "take all the features.",
             0, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 0));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "node minimum samples",
-            "Minimum number of samples to consider a node for splitting", 2,
+            "The minimum number of samples required to split an internal node.", 2,
             lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 2));
         status = opts.register_opt(oi);
 
@@ -110,7 +111,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
 
         os = std::make_shared<OptionString>(
             OptionString("print timings",
-                         "Print the timings of different part of the fitting process.",
+                         "Print the timings of different parts of the fitting process.",
                          {{"yes", 1}, {"no", 0}}, "no"));
         status = opts.register_opt(os);
 

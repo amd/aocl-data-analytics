@@ -45,8 +45,9 @@
 
 namespace da_decision_tree {
 
-using std::chrono::duration, std::chrono::seconds, std::chrono::duration_cast;
-using hr_clock = std::chrono::high_resolution_clock;
+// Commenting out the timing utilities until we figure out a better way to do it
+// using std::chrono::duration, std::chrono::seconds, std::chrono::duration_cast;
+// using hr_clock = std::chrono::high_resolution_clock;
 
 template <typename T> class node {
   public:
@@ -107,7 +108,7 @@ T gini_score(da_int n_samples, da_int n_class, std::vector<da_int> &count_classe
     for (da_int c = 0; c < n_class; c++) {
         score += count_classes[c] * count_classes[c];
     }
-    score = 1.0 - score / (n_samples * n_samples);
+    score = (T)1.0 - score / (n_samples * n_samples);
     return score;
 }
 
@@ -116,7 +117,6 @@ T entropy_score(da_int n_samples, da_int n_class, std::vector<da_int> &count_cla
     T score = 0.0;
     for (da_int c = 0; c < n_class; c++) {
         T prob_c = (T)count_classes[c] / (T)n_samples;
-        // TODO tolerance
         if (prob_c > (T)1.0e-5)
             score -= prob_c * std::log2(prob_c);
     }
@@ -126,8 +126,9 @@ T entropy_score(da_int n_samples, da_int n_class, std::vector<da_int> &count_cla
 template <class T>
 T misclassification_score(da_int n_samples, da_int n_class,
                           std::vector<da_int> &count_classes) {
-    T score = 1.0 - ((T)*std::max_element(count_classes.begin(), count_classes.end())) /
-                        (T)n_samples;
+    T score =
+        (T)1.0 -
+        ((T)*std::max_element(count_classes.begin(), count_classes.end())) / (T)n_samples;
     return score;
 }
 
@@ -192,9 +193,9 @@ template <typename T> class decision_tree : public basic_handle<T> {
     score_fun_t<T> score_function;
 
     // Profiling info
-    duration<float> fit_time = seconds(0), sort_time = seconds(0),
-                    split_time = seconds(0), count_class_time = seconds(0),
-                    setup_time = seconds(0);
+    // duration<float> fit_time = seconds(0), sort_time = seconds(0),
+    //                 split_time = seconds(0), count_class_time = seconds(0),
+    //                 setup_time = seconds(0);
 
     // Optional parameter values.
     // set by reading the option registry if used by external user.
@@ -256,7 +257,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
                               "There are no integer results available for this API.");
     };
 
-    void print_timings();
+    // void print_timings();
 
     // getters for testing purposes
     std::vector<da_int> const &get_samples_idx() { return samples_idx; }
@@ -272,14 +273,14 @@ template <typename T> class decision_tree : public basic_handle<T> {
     void set_bootstrap(bool bs) { this->bootstrap = bs; }
 };
 
-template <typename T> void decision_tree<T>::print_timings() {
-    std::cout << "Decision tree timings\n";
-    std::cout << "   Total fit time:   " << fit_time.count() << "s\n";
-    std::cout << "   Setup time:       " << setup_time.count() << "s\n";
-    std::cout << "   Sort time:        " << sort_time.count() << "s\n";
-    std::cout << "   Split time:       " << split_time.count() << "s\n";
-    std::cout << std::endl;
-}
+// template <typename T> void decision_tree<T>::print_timings() {
+//     std::cout << "Decision tree timings\n";
+//     std::cout << "   Total fit time:   " << fit_time.count() << "s\n";
+//     std::cout << "   Setup time:       " << setup_time.count() << "s\n";
+//     std::cout << "   Sort time:        " << sort_time.count() << "s\n";
+//     std::cout << "   Split time:       " << split_time.count() << "s\n";
+//     std::cout << std::endl;
+// }
 
 template <typename T>
 da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) {
@@ -320,7 +321,6 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
                                               const T *X, da_int ldx, const da_int *y,
                                               da_int n_class, da_int n_obs,
                                               da_int *samples_subset) {
-    da_status status;
     if (X == nullptr || y == nullptr)
         return da_error_bypass(this->err, da_status_invalid_input,
                                "Either X, or y are not valid pointers.");
@@ -423,9 +423,9 @@ da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
     // prediction: most represented class in the samples subset
     // TODO Should this be pre-computed ??
     count_class_occurences(count_classes, tree[n_nodes].start_idx, tree[n_nodes].end_idx);
-    tree[n_nodes].y_pred =
-        std::distance(count_classes.begin(),
-                      std::max_element(count_classes.begin(), count_classes.end()));
+    tree[n_nodes].y_pred = (da_int)std::distance(
+        count_classes.begin(),
+        std::max_element(count_classes.begin(), count_classes.end()));
     n_nodes += 1;
 
     return da_status_success;
@@ -439,7 +439,7 @@ template <class T> void decision_tree<T>::sort_samples(node<T> &nd, da_int feat_
      * - feature_values[nd.start_idx:nd.end_idx] will contain the values of the feat_idx feature
      *   corresponding to the indices in samples_idx
      */
-    hr_clock::time_point start_clock_sort = hr_clock::now();
+    // hr_clock::time_point start_clock_sort = hr_clock::now();
 
     std::vector<da_int>::iterator start = samples_idx.begin() + nd.start_idx;
     std::vector<da_int>::iterator stop =
@@ -450,8 +450,8 @@ template <class T> void decision_tree<T>::sort_samples(node<T> &nd, da_int feat_
     });
     for (da_int i = nd.start_idx; i <= nd.end_idx; i++)
         feature_values[i] = X[ldx * feat_idx + samples_idx[i]];
-    hr_clock::time_point stop_clock_sort = hr_clock::now();
-    sort_time += duration_cast<duration<float>>(stop_clock_sort - start_clock_sort);
+    // hr_clock::time_point stop_clock_sort = hr_clock::now();
+    // sort_time += duration_cast<duration<float>>(stop_clock_sort - start_clock_sort);
 }
 
 template <class T> da_int decision_tree<T>::get_next_node_idx(da_int build_order) {
@@ -478,7 +478,7 @@ template <typename T>
 void decision_tree<T>::find_best_split(node<T> &current_node, T feat_thresh,
                                        T maximum_split_score, split<T> &sp) {
 
-    hr_clock::time_point start_clock_split = hr_clock::now();
+    // hr_clock::time_point start_clock_split = hr_clock::now();
 
     // Initialize the split, all nodes to the right child.
     // count_class, samples_idx and feature_values are required to be up to date
@@ -530,8 +530,8 @@ void decision_tree<T>::find_best_split(node<T> &current_node, T feat_thresh,
 
         sidx++;
     }
-    hr_clock::time_point stop_clock_split = hr_clock::now();
-    split_time += duration_cast<duration<float>>(stop_clock_split - start_clock_split);
+    // hr_clock::time_point stop_clock_split = hr_clock::now();
+    // split_time += duration_cast<duration<float>>(stop_clock_split - start_clock_split);
 }
 
 template <typename T> da_status decision_tree<T>::fit() {
@@ -540,7 +540,7 @@ template <typename T> da_status decision_tree<T>::fit() {
         // Nothing to do, exit
         return da_status_success;
 
-    hr_clock::time_point start_clock_fit = hr_clock::now();
+    // hr_clock::time_point start_clock_fit = hr_clock::now();
 
     // Extract options
     if (read_public_options) {
@@ -592,7 +592,7 @@ template <typename T> da_status decision_tree<T>::fit() {
 
     // Allocate the tree accounting for a full binary tree of depth 10 (or maximum depth)
     try {
-        size_t init_capacity = 1 << std::min(max_depth, (da_int)9) + 1;
+        size_t init_capacity = ((da_int)1 << std::min(max_depth, (da_int)9)) + (da_int)1;
         tree.resize(init_capacity);
     } catch (std::bad_alloc &) {                            // LCOV_EXCL_LINE
         return da_error_bypass(err, da_status_memory_error, // LCOV_EXCL_LINE
@@ -626,17 +626,17 @@ template <typename T> da_status decision_tree<T>::fit() {
     tree[0].n_samples = n_obs;
     count_class_occurences(count_classes, 0, n_obs - 1);
     tree[0].score = score_function(n_obs, n_class, count_classes);
-    tree[0].y_pred =
-        std::distance(count_classes.begin(),
-                      std::max_element(count_classes.begin(), count_classes.end()));
+    tree[0].y_pred = (da_int)std::distance(
+        count_classes.begin(),
+        std::max_element(count_classes.begin(), count_classes.end()));
 
     // Insert the root node in the queue if the maximum depth is big enough
     // TODO/Discuss should we check for all memory reallocation??
     if (max_depth > 1)
         nodes_to_treat.push_back(0);
 
-    hr_clock::time_point stop_clock_setup = hr_clock::now();
-    setup_time = duration_cast<duration<float>>(stop_clock_setup - start_clock_fit);
+    // hr_clock::time_point stop_clock_setup = hr_clock::now();
+    // setup_time = duration_cast<duration<float>>(stop_clock_setup - start_clock_fit);
     split<T> sp, best_split;
     while (!nodes_to_treat.empty()) {
         da_int node_idx = get_next_node_idx(build_order);
@@ -687,10 +687,10 @@ template <typename T> da_status decision_tree<T>::fit() {
     }
 
     model_trained = true;
-    hr_clock::time_point stop_clock_fit = hr_clock::now();
-    fit_time = duration_cast<duration<float>>(stop_clock_fit - start_clock_fit);
-    if (prn_times)
-        print_timings();
+    // hr_clock::time_point stop_clock_fit = hr_clock::now();
+    // fit_time = duration_cast<duration<float>>(stop_clock_fit - start_clock_fit);
+    // if (prn_times)
+    //     print_timings();
     return da_status_success;
 }
 
@@ -703,12 +703,12 @@ da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
     }
     if (nsamp <= 0) {
         return da_error_bypass(this->err, da_status_invalid_input,
-                               "nsamp = " + std::to_string(nsamp) +
+                               "n_samples = " + std::to_string(nsamp) +
                                    ", it must be greater than 0.");
     }
     if (nfeat != n_features) {
         return da_error_bypass(this->err, da_status_invalid_input,
-                               "nfeat = " + std::to_string(nfeat) +
+                               "n_features = " + std::to_string(nfeat) +
                                    " doesn't match the expected value " +
                                    std::to_string(n_features) + ".");
     }
@@ -787,7 +787,7 @@ da_status decision_tree<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
                 current_node = &tree[current_node->right_child_idx];
         }
         if (current_node->y_pred == y_test[i])
-            *accuracy += 1.0;
+            *accuracy += (T)1.0;
     }
     *accuracy = *accuracy / (T)nsamp;
 
