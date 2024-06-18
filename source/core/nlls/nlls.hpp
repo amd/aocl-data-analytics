@@ -42,7 +42,7 @@
 
 /* Nonlinear Least Square Model and solver
  *
- * Solve the problem   minimize   F(x) = 1/2 \sum_{i=0}^{nres-1} ri(x)^2_W + sigma/p ||x||_2^p
+ * Solve the problem   minimize   F(x) = 1/2 \sum_{i=0}^{n_res-1} ri(x)^2_W + sigma/p ||x||_2^p
  *                   x \in R^n_coef
  * where
  *  * ri() are the model residuals
@@ -60,9 +60,9 @@ template <typename T> class nlls : public basic_handle<T> {
     bool model_trained{false};
 
     /* Regression data
-     * nres: number of residuals
+     * n_res: number of residuals
      */
-    da_int nres{0};
+    da_int n_res{0};
 
     /* Training data
      * coef: vector containing the model coefficients
@@ -115,11 +115,11 @@ template <typename T> class nlls : public basic_handle<T> {
         }
     };
 
-    da_status define_residuals(da_int n_coef, da_int nres);
+    da_status define_residuals(da_int n_coef, da_int n_res);
     da_status define_callbacks(resfun_t<T> resfun, resgrd_t<T> resgrd, reshes_t<T> reshes,
                                reshp_t<T> reshp);
     da_status define_bounds(da_int n_coef, T *lower, T *upper);
-    da_status define_weights(da_int nres, T *weights);
+    da_status define_weights(da_int n_res, T *weights);
     da_status init_opt_solver();
     da_status fit(da_int n_coef, T *coef, void *udata);
     /* get_result (required to be defined by basic_handle) */
@@ -153,14 +153,14 @@ da_status nlls<T>::get_result([[maybe_unused]] da_result query,
 };
 
 /* Store model features */
-template <typename T> da_status nlls<T>::define_residuals(da_int n_coef, da_int nres) {
+template <typename T> da_status nlls<T>::define_residuals(da_int n_coef, da_int n_res) {
     if (n_coef <= 0)
         return da_error(this->err, da_status_invalid_input, "n_coef must be positive.");
-    if (nres <= 0)
-        return da_error(this->err, da_status_invalid_input, "nres must be positive.");
+    if (n_res <= 0)
+        return da_error(this->err, da_status_invalid_input, "n_res must be positive.");
 
     this->n_coef = n_coef;
-    this->nres = nres;
+    this->n_res = n_res;
     model_trained = false;
 
     return da_status_success;
@@ -205,22 +205,22 @@ da_status nlls<T>::define_bounds(da_int n_coef, T *lower, T *upper) {
 }
 
 /* Define the residual weights */
-template <typename T> da_status nlls<T>::define_weights(da_int nres, T *weights) {
-    if (nres == 0) {
+template <typename T> da_status nlls<T>::define_weights(da_int n_res, T *weights) {
+    if (n_res == 0) {
         this->usrweights = nullptr;
-    } else if (this->nres == nres) {
+    } else if (this->n_res == n_res) {
         if (weights) {
             this->usrweights = weights;
         } else {
             return da_error(this->err, da_status_invalid_pointer,
-                            "Invalid pointer to weights array, nres is positive yet "
-                            "weights is invalid. To remove weights pass nres=0.");
+                            "Invalid pointer to weights array, n_res is positive yet "
+                            "weights is invalid. To remove weights pass n_res=0.");
         }
     } else {
         return da_error(this->err, da_status_invalid_input,
-                        "Invalid size of nres, it must match zero or the "
+                        "Invalid size of n_res, it must match zero or the "
                         "number of residuals defined: " +
-                            std::to_string(this->nres) + ".");
+                            std::to_string(this->n_res) + ".");
     }
     this->model_trained = false;
     return da_status_success;
@@ -303,7 +303,7 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly n_coef is invalid?");
     }
-    if (opt->add_res(this->nres) != da_status_success) {
+    if (opt->add_res(this->n_res) != da_status_success) {
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly n_res is invalid?");
     }
@@ -323,7 +323,7 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly failed to set the bounds?");
     }
-    if (opt->add_weights(nres, this->usrweights) != da_status_success) {
+    if (opt->add_weights(n_res, this->usrweights) != da_status_success) {
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly failed to set the weights?");
     }

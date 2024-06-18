@@ -64,10 +64,10 @@ typedef da_int da_reshp_t_s(da_int, da_int, const float *, const float *, float 
 typedef da_int da_reshp_t_d(da_int, da_int, const double *, const double *, double *,
                             void *);
 
-da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int nres,
+da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int n_res,
                                      da_resfun_t_d *resfun, da_resgrd_t_d *resgrd,
                                      da_reshes_t_d *reshes, da_reshp_t_d *reshp);
-da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int nres,
+da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_res,
                                      da_resfun_t_s *resfun, da_resgrd_t_s *resgrd,
                                      da_reshes_t_s *reshes, da_reshp_t_s *reshp);
 
@@ -76,11 +76,11 @@ da_status da_nlls_define_bounds_d(da_handle handle, da_int n_coef, double *lower
 da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
                                   float *upper);
 
-da_status da_nlls_define_weights_d(da_handle handle, da_int nres, double *weights);
-da_status da_nlls_define_weights_s(da_handle handle, da_int nres, float *weights);
+da_status da_nlls_define_weights_d(da_handle handle, da_int n_res, double *weights);
+da_status da_nlls_define_weights_s(da_handle handle, da_int n_res, float *weights);
 
-da_status da_nlls_fit_d(da_handle handle, da_int ncoef, double *coef, void *udata);
-da_status da_nlls_fit_s(da_handle handle, da_int ncoef, float *coef, void *udata);
+da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *udata);
+da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udata);
 
 /// Information vector containing metrics from optimization solvers
 enum info_t {

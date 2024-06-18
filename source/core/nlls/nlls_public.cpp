@@ -28,7 +28,7 @@
 #include "aoclda.h"
 #include "da_handle.hpp"
 
-da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int nres,
+da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int n_res,
                                      da_resfun_t_d *resfun, da_resgrd_t_d *resgrd,
                                      da_reshes_t_d *reshes, da_reshp_t_d *reshp) {
     if (!handle)
@@ -44,12 +44,12 @@ da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int nre
                         "handle is invalid.");
 
     handle->nlls_d->refresh();
-    da_status status = handle->nlls_d->define_residuals(n_coef, nres);
+    da_status status = handle->nlls_d->define_residuals(n_coef, n_res);
     if (status != da_status_success)
         return status; // Error message already loaded
     return handle->nlls_d->define_callbacks(resfun, resgrd, reshes, reshp);
 }
-da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int nres,
+da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_res,
                                      da_resfun_t_s *resfun, da_resgrd_t_s *resgrd,
                                      da_reshes_t_s *reshes, da_reshp_t_s *reshp) {
     if (!handle)
@@ -65,7 +65,7 @@ da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int nre
                         "handle is invalid.");
 
     handle->nlls_s->refresh();
-    da_status status = handle->nlls_s->define_residuals(n_coef, nres);
+    da_status status = handle->nlls_s->define_residuals(n_coef, n_res);
     if (status != da_status_success)
         return status; // Error message already loaded
     return handle->nlls_s->define_callbacks(resfun, resgrd, reshes, reshp);

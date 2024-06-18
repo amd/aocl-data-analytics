@@ -73,7 +73,7 @@ double gaussian(double d, double mu, double sigma, double Ag) {
 };
 
 // residuals for the convolution model
-da_int eval_r(da_int n_coef, da_int nres, void *udata, double const *x, double *r) {
+da_int eval_r(da_int n_coef, da_int n_res, void *udata, double const *x, double *r) {
     double const a = x[0];
     double const b = x[1];
     double const Al = x[2];
@@ -82,13 +82,13 @@ da_int eval_r(da_int n_coef, da_int nres, void *udata, double const *x, double *
     double const Ag = x[5];
     da_int const *d = ((struct udata_t *)udata)->diameter;
     double const *y = ((struct udata_t *)udata)->density;
-    for (da_int i = 0; i < nres; ++i)
+    for (da_int i = 0; i < n_res; ++i)
         r[i] = lognormal(d[i], a, b, Al) + gaussian(d[i], mu, sigma, Ag) - y[i];
     return 0;
 }
 
 // Jacobian matrix for the convolution model
-da_int eval_J(da_int n_coef, da_int nres, void *udata, double const *x, double *J) {
+da_int eval_J(da_int n_coef, da_int n_res, void *udata, double const *x, double *J) {
     double const a = x[0];
     double const b = x[1];
     double const Al = x[2];
@@ -96,7 +96,7 @@ da_int eval_J(da_int n_coef, da_int nres, void *udata, double const *x, double *
     double const sigma = x[4];
     double const Ag = x[5];
     da_int const *d = ((struct udata_t *)udata)->diameter;
-    for (da_int i = 0; i < nres; ++i) {
+    for (da_int i = 0; i < n_res; ++i) {
         double l = lognormal(d[i], a, b, Al);
         J[i * n_coef + 0] = (log(d[i]) - a) / pow(b, 2.0) * l;
         J[i * n_coef + 1] = (pow(log(d[i]) - a, 2.0) - pow(b, 2)) / pow(b, 3) * l;
@@ -114,7 +114,7 @@ int main(void) {
     std::cout << "----------------------------------------" << std::endl;
 
     const da_int n_coef = 6; /* vector (a, b, Al, mu, sigma, Ag) */
-    const da_int nres = 64;
+    const da_int n_res = 64;
     double coef[n_coef]{1.65, 0.9, 1.0, 30.0, 1.5, 0.25};
     const double coef_exp[n_coef]{1.99, 1.37, 0.68, 36.6, 7.08, 0.34};
 
@@ -122,11 +122,11 @@ int main(void) {
     double bux[2]{1.0, 10.0};
     double w[5]{1.0, 1.0, 1.0, 1.0, 1.0};
     const double tol{1.0e-2};
-    std::vector<double> lower_bounds(nres, 0.0);
-    std::vector<double> weights(nres, 1.0);
+    std::vector<double> lower_bounds(n_res, 0.0);
+    std::vector<double> weights(n_res, 1.0);
     for (da_int j = 55; j <= 63; ++j)
         weights[j] = 5.0;
-    double wsum = 1.0 * (nres - (63 - 55)) + 5.0 * (63 - 55);
+    double wsum = 1.0 * (n_res - (63 - 55)) + 5.0 * (63 - 55);
     for (da_int j = 55; j <= 63; ++j)
         weights[j] = 5.0;
     // normalize weights
@@ -138,11 +138,11 @@ int main(void) {
 
     bool pass = true;
     pass &= da_handle_init_d(&handle, da_handle_nlls) == da_status_success;
-    pass &= da_nlls_define_residuals_d(handle, n_coef, nres, eval_r, eval_J, nullptr,
+    pass &= da_nlls_define_residuals_d(handle, n_coef, n_res, eval_r, eval_J, nullptr,
                                        nullptr) == da_status_success;
     pass &= da_nlls_define_bounds_d(handle, n_coef, lower_bounds.data(), nullptr) ==
             da_status_success;
-    pass &= da_nlls_define_weights_d(handle, nres, weights.data()) == da_status_success;
+    pass &= da_nlls_define_weights_d(handle, n_res, weights.data()) == da_status_success;
     if (!pass) {
         std::cout << "Something unexpected happened in the model definition\n";
         da_handle_destroy(&handle);

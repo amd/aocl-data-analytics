@@ -246,8 +246,8 @@ da_int py_wrapper_reshp_s(da_int n_coef, da_int n_res, const float *x, const flo
 class nlls : public pyda_handle {
 
     da_precision precision{da_unknown};
-    da_int ncoef{0};
-    da_int nres{0};
+    da_int n_coef{0};
+    da_int n_res{0};
     bool storage_scheme_c{true};
 
     class nlls_cb::callbacks_t callbacks;
@@ -450,8 +450,8 @@ class nlls : public pyda_handle {
         // see optiomization_options.hpp
         this->storage_scheme_c = okey == 2;
 
-        this->ncoef = n_coef;
-        this->nres = n_res;
+        this->n_coef = n_coef;
+        this->n_res = n_res;
     }
     ~nlls() { da_handle_destroy(&handle); }
 
@@ -488,10 +488,10 @@ class nlls : public pyda_handle {
             exception_check(status, mesg);
         }
 
-        if (x.ndim() != 1 || x.shape()[0] != this->ncoef) {
+        if (x.ndim() != 1 || x.shape()[0] != this->n_coef) {
             status = da_status_invalid_array_dimension;
             mesg =
-                "``x`` must be a 1D array of size " + std::to_string(this->ncoef) + ".";
+                "``x`` must be a 1D array of size " + std::to_string(this->n_coef) + ".";
             exception_check(status, mesg);
         }
 
@@ -512,8 +512,8 @@ class nlls : public pyda_handle {
                 cxx_hf = nullptr;
             if (!hp.has_value())
                 cxx_hp = nullptr;
-            status = da_nlls_define_residuals_d(handle, this->ncoef, this->nres, cxx_fun,
-                                                cxx_jac, cxx_hf, cxx_hp);
+            status = da_nlls_define_residuals_d(handle, this->n_coef, this->n_res,
+                                                cxx_fun, cxx_jac, cxx_hf, cxx_hp);
         } else {
             da_resfun_t_s *cxx_fun{py_wrapper_resfun_s};
             da_resgrd_t_s *cxx_jac{py_wrapper_resgrd_s};
@@ -525,8 +525,8 @@ class nlls : public pyda_handle {
                 cxx_hf = nullptr;
             if (!hp.has_value())
                 cxx_hp = nullptr;
-            status = da_nlls_define_residuals_s(handle, this->ncoef, this->nres, cxx_fun,
-                                                cxx_jac, cxx_hf, cxx_hp);
+            status = da_nlls_define_residuals_s(handle, this->n_coef, this->n_res,
+                                                cxx_fun, cxx_jac, cxx_hf, cxx_hp);
         }
         exception_check(status, mesg);
 
@@ -553,7 +553,7 @@ class nlls : public pyda_handle {
 
         // Call solver
         void *udata = &callbacks;
-        status = da_nlls_fit(this->handle, this->ncoef, x.mutable_data(), udata);
+        status = da_nlls_fit(this->handle, this->n_coef, x.mutable_data(), udata);
 
         exception_check(status);
     }

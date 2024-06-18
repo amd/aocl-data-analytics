@@ -532,17 +532,17 @@ inline da_status da_forest_score(da_handle handle, da_int n_samples, da_int n_fe
                              mean_accuracy);
 }
 
-inline da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int nres,
+inline da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int n_res,
                                           da_resfun_t_d *resfun, da_resgrd_t_d *resgrd,
                                           da_reshes_t_d *reshes, da_reshp_t_d *reshp) {
-    return da_nlls_define_residuals_d(handle, n_coef, nres, resfun, resgrd, *reshes,
+    return da_nlls_define_residuals_d(handle, n_coef, n_res, resfun, resgrd, *reshes,
                                       *reshp);
 }
 
-inline da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int nres,
+inline da_status da_nlls_define_residuals(da_handle handle, da_int n_coef, da_int n_res,
                                           da_resfun_t_s *resfun, da_resgrd_t_s *resgrd,
                                           da_reshes_t_s *reshes, da_reshp_t_s *reshp) {
-    return da_nlls_define_residuals_s(handle, n_coef, nres, resfun, resgrd, reshes,
+    return da_nlls_define_residuals_s(handle, n_coef, n_res, resfun, resgrd, reshes,
                                       reshp);
 }
 
