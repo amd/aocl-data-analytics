@@ -32,7 +32,6 @@ class nlls(pybind_nlls):
     r"""
     Nonlinear data fitting.
 
-    Data Fitting for nonlinear least-squares.
     This class defines a model and solves the problem
 
     .. math::
@@ -93,17 +92,17 @@ class nlls(pybind_nlls):
 
         method (str, optional): Optimization solver for the subproblem.  Default = ``'galahad'``.
 
-            - Option value for when ``glob_strategy`` = ``'tr'``:
+            - Valid option values for when ``glob_strategy`` = ``'tr'``:
 
-                - ``'galahad'`` GALAHAD's DTRS,
-                - ``'more-sorensen'`` variant of More-Sorensen's method,
-                - ``'powell-dogleg'`` Powell's dog-leg method.
-                - ``'aint'`` Generalized eigen value method.
+              - ``'galahad'`` GALAHAD's DTRS,
+              - ``'more-sorensen'`` variant of More-Sorensen's method,
+              - ``'powell-dogleg'`` Powell's dog-leg method.
+              - ``'aint'`` Generalized eigen value method.
 
-            - Option value for when ``glob_stategy`` = ``'reg'``:
+            - Valid option values for when ``glob_strategy`` = ``'reg'``:
 
-                - ``'galahad'`` GALAHAD's DRQS.
-                - ``'linear solver'`` solve step system using a linear solver,
+              - ``'galahad'`` GALAHAD's DRQS.
+              - ``'linear solver'`` solve step system using a linear solver,
 
             Refer to :cite:p:`ralfit` for details on these subproblem solvers.
 
@@ -205,7 +204,9 @@ class nlls(pybind_nlls):
                         return 0;
 
             hep (method, optional): function that calculates the matrix-vector
-                product of the symmetric residual Hessian matrices with a vector y.
+                product of the symmetric residual Hessian matrices with a vector y:
+                hp[:] = [ H1(x)*y, H2(x)*y, ..., Hn(x)*y]. This resulting matrix
+                is of size number of coefficients by number of residuals.
                 This function has the interface
 
                 :code:`def hep(x, y, hp, data):`
@@ -250,10 +251,10 @@ class nlls(pybind_nlls):
             xtol (float, optional): Defines the tolerance of the step length of
                 two consecutive iterates to declare convergence. Default = 2.22e-16.
 
-            reg_term (float, optional): Defines the regularizaon penalty term
+            reg_term (float, optional): Defines the regularization penalty term
                 (sigma).  Default = 0.
 
-            maxit (int, optional): Defines the tolerance to declare convergence.
+            maxit (int, optional): Defines the iteration limit.
                 Default = 100.
 
         Returns:
@@ -286,15 +287,12 @@ class nlls(pybind_nlls):
     def n_eval(self):
         """
         (dict) [nevalf, nevalg, nevalh, nevalhp]: dictionary with the
-        number of function calls for
+        number of function calls for:
 
-            ``nevalf`` (int): Residual function ``fun``.
-
-            ``nevalg`` (int): Gradient function ``jac``.
-
-            ``nevalh`` (int): Hessian function ``hes``.
-
-            ``nevalhp`` (int): Hessian-vector product function ``hep``.
+        - ``nevalf`` (int): Residual function ``fun``.
+        - ``nevalg`` (int): Gradient function ``jac``.
+        - ``nevalh`` (int): Hessian function ``hes``.
+        - ``nevalhp`` (int): Hessian-vector product function ``hep``.
         """
         return pybind_nlls.get_info_evals(self)
 
@@ -303,15 +301,13 @@ class nlls(pybind_nlls):
         """
         (dict) [obj, nrmg, sclg]: dictionary with the metrics:
 
-            ``obj`` (float): Objective value at iterate ``x``.
-
-            ``nrmg`` (float): Norm of the residual gradient at iterate ``x``.
-
-            ``sclg`` (float): Norm of the scaled residual gradient at ``x``.
+        - ``obj`` (float): Objective value at iterate ``x``.
+        - ``nrmg`` (float): Norm of the residual gradient at iterate ``x``.
+        - ``sclg`` (float): Norm of the scaled residual gradient at ``x``.
         """
         return pybind_nlls.get_info_optim(self)
 
-    def __cb_inspect(self, f, narg):
+    def __cb_inspect(self, f: callable, narg: int):
         """Internal helper function"""
         sig = signature(f)
         pos_cnt = sum(1 for param in sig.parameters.values()

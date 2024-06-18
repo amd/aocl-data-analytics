@@ -38,6 +38,32 @@ Nonlinear Data Fitting APIs
 
    .. tab-item:: C
 
+      .. _da_nlls_callbacks:
+
+      .. _da_nlls_callbacks_r:
+
+      .. doxygentypedef:: da_resfun_t_s
+        :outline:
+      .. doxygentypedef:: da_resfun_t_d
+
+      .. _da_nlls_callbacks_j:
+
+      .. doxygentypedef:: da_resgrd_t_s
+        :outline:
+      .. doxygentypedef:: da_resgrd_t_d
+
+      .. _da_nlls_callbacks_hf:
+
+      .. doxygentypedef:: da_reshes_t_s
+        :outline:
+      .. doxygentypedef:: da_reshes_t_d
+
+      .. _da_nlls_callbacks_hp:
+
+      .. doxygentypedef:: da_reshp_t_s
+        :outline:
+      .. doxygentypedef:: da_reshp_t_d
+
       .. _da_nlls_define_residuals:
 
       .. doxygenfunction:: da_nlls_define_residuals_s
@@ -62,5 +88,6 @@ Nonlinear Data Fitting APIs
          :outline:
       .. doxygenfunction:: da_nlls_fit_d
 
+      .. _da_optim_info_t:
 
-
+      .. doxygenenum:: da_optim_info_t_

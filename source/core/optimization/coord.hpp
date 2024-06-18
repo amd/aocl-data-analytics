@@ -414,8 +414,8 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
         return status; // Error message already loaded
 
     da_int hdr{0}, fcnt{0}, lowrk{0}, iter{0}, k{0}, action{0};
-    T *f = &info[info_t::info_objective];
-    T *time = &info[info_t::info_time];
+    T *f = &info[da_optim_info_t::info_objective];
+    T *time = &info[da_optim_info_t::info_time];
     T newxk{T(0)};
     T inorm{std::numeric_limits<T>::infinity()};
     *f = std::numeric_limits<T>::infinity();
@@ -441,8 +441,8 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
         switch (itask) {
         case EVAL: // Compute new iterate for x[k]
             if (iter == 0) {
-                info[info_t::info_inorm_init] =
-                    std::max(info[info_t::info_inorm_init], std::abs(x[k]));
+                info[da_optim_info_t::info_inorm_init] =
+                    std::max(info[da_optim_info_t::info_inorm_init], std::abs(x[k]));
             }
             if (action > 0)
                 fcnt++;
@@ -586,10 +586,10 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             }
 
             // Copy all metrics to info
-            info[info_t::info_nevalf] = (T)fcnt;
-            info[info_t::info_ncheap] = (T)lowrk;
-            info[info_t::info_inorm] = inorm;
-            info[info_t::info_iter] = (T)iter;
+            info[da_optim_info_t::info_nevalf] = (T)fcnt;
+            info[da_optim_info_t::info_ncheap] = (T)lowrk;
+            info[da_optim_info_t::info_inorm] = inorm;
+            info[da_optim_info_t::info_iter] = (T)iter;
             *time = std::chrono::duration<T>(std::chrono::system_clock::now() - clock)
                         .count();
 

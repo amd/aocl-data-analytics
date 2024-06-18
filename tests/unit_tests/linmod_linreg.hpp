@@ -130,24 +130,24 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
 
     if (infochk) { // Assumes that initial iterate is not solution and that problem does not have residual=0 at x=0
         // info_objective is checked later
-        const T iter = info[info_t::info_iter];
+        const T iter = info[da_optim_info_t::info_iter];
         // lbfgs timer may be broken for windows
 #if defined(WIN32)
-        EXPECT_GE(info[info_t::info_time], 0);
+        EXPECT_GE(info[da_optim_info_t::info_time], 0);
 #else
-        EXPECT_GT(info[info_t::info_time], 0);
+        EXPECT_GT(info[da_optim_info_t::info_time], 0);
 #endif
-        EXPECT_GT(info[info_t::info_nevalf], 0);
+        EXPECT_GT(info[da_optim_info_t::info_nevalf], 0);
         if (method == "coord"s) {
             EXPECT_GT(iter, 1);
-            EXPECT_GE(info[info_t::info_inorm], 0);
-            EXPECT_GE(info[info_t::info_inorm_init], 0);
-            EXPECT_GT(info[info_t::info_nevalf], 0);
-            EXPECT_GE(info[info_t::info_ncheap], std::max(T(1), iter - T(1)));
+            EXPECT_GE(info[da_optim_info_t::info_inorm], 0);
+            EXPECT_GE(info[da_optim_info_t::info_inorm_init], 0);
+            EXPECT_GT(info[da_optim_info_t::info_nevalf], 0);
+            EXPECT_GE(info[da_optim_info_t::info_ncheap], std::max(T(1), iter - T(1)));
         } else {
             EXPECT_GT(iter, 0);
-            EXPECT_GT(info[info_t::info_nevalf], 0);
-            EXPECT_GE(info[info_t::info_grad_norm], 0);
+            EXPECT_GT(info[da_optim_info_t::info_nevalf], 0);
+            EXPECT_GE(info[da_optim_info_t::info_grad_norm], 0);
         }
     }
 
@@ -234,10 +234,10 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // Check loss with info from solver (objective function)
         if (infochk) {
             if (single) {
-                EXPECT_FLOAT_EQ(loss, info[info_t::info_objective])
+                EXPECT_FLOAT_EQ(loss, info[da_optim_info_t::info_objective])
                     << "Objective function (LOSS) mismatch!";
             } else {
-                EXPECT_DOUBLE_EQ(loss, info[info_t::info_objective])
+                EXPECT_DOUBLE_EQ(loss, info[da_optim_info_t::info_objective])
                     << "Objective function (LOSS) mismatch!";
             }
         }

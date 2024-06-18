@@ -62,13 +62,14 @@ da_int objgrd(da_int n [[maybe_unused]], double *x, double *val, void *usrdata,
 
 da_int monit(da_int n, double *x, double *val, double *info,
              void *usrdata [[maybe_unused]]) {
-    if (info[info_t::info_iter] <= 1)
+    if (info[da_optim_info_t::info_iter] <= 1)
         std::cout << "Iter objective gradient x[0] g[n]" << std::endl;
-    std::cout << (size_t)info[info_t::info_iter] << " " << info[info_t::info_objective]
-              << " " << info[info_t::info_grad_norm] << " " << x[0] << " " << val[n - 1]
+    std::cout << (size_t)info[da_optim_info_t::info_iter] << " "
+              << info[da_optim_info_t::info_objective] << " "
+              << info[da_optim_info_t::info_grad_norm] << " " << x[0] << " " << val[n - 1]
               << std::endl;
 
-    if (info[info_t::info_iter] == 3)
+    if (info[da_optim_info_t::info_iter] == 3)
         return -1;
     return 0;
 }

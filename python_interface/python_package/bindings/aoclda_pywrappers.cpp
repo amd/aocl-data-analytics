@@ -301,15 +301,15 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("xtol") = (double)2.22e-16, py::arg("reg_term") = (double)0.0,
              py::arg("maxit") = (da_int)100)
         // @properties
-        // info[info_t::info_iter] = T(inform.iter);
+        // info[da_optim_info_t::info_iter] = T(inform.iter);
         .def("get_info_iter", &nlls::get_info_iter) // -> int
-        // info[info_t::info_nevalf] = T(inform.f_eval);
-        // info[info_t::info_nevalg] = T(inform.g_eval);
-        // info[info_t::info_nevalh] = T(inform.h_eval);
-        // info[info_t::info_nevalhp] = T(inform.hp_eval);
+        // info[da_optim_info_t::info_nevalf] = T(inform.f_eval);
+        // info[da_optim_info_t::info_nevalg] = T(inform.g_eval);
+        // info[da_optim_info_t::info_nevalh] = T(inform.h_eval);
+        // info[da_optim_info_t::info_nevalhp] = T(inform.hp_eval);
         .def("get_info_evals", &nlls::get_info_evals) // -> dict
-        // info[info_t::info_objective] = T(inform.obj);
-        // info[info_t::info_grad_norm] = T(inform.norm_g);
-        // info[info_t::info_scl_grad_norm] = T(inform.scaled_g);
+        // info[da_optim_info_t::info_objective] = T(inform.obj);
+        // info[da_optim_info_t::info_grad_norm] = T(inform.norm_g);
+        // info[da_optim_info_t::info_scl_grad_norm] = T(inform.scaled_g);
         .def("get_info_optim", &nlls::get_info_optim); // -> dict
 }

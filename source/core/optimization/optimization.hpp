@@ -154,12 +154,12 @@ da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &er
     // Assuming that err is valid
     this->err = &err;
     try {
-        this->info.resize(info_t::info_number);
+        this->info.resize(da_optim_info_t::info_number);
     } catch (...) {
         status = da_error(&err, da_status_memory_error,
                           "could not resize solver information vector");
     }
-    this->info.assign(info_t::info_number, 0);
+    this->info.assign(da_optim_info_t::info_number, 0);
     status = register_optimization_options<T>(err, opts);
 };
 

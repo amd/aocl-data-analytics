@@ -567,14 +567,14 @@ class nlls : public pyda_handle {
         status = da_handle_get_result(handle, da_rinfo, &dim, info);
         exception_check(status);
 
-        iter = da_int(info[info_t::info_iter]);
-        f_eval = da_int(info[info_t::info_nevalf]);
-        g_eval = da_int(info[info_t::info_nevalg]);
-        h_eval = da_int(info[info_t::info_nevalh]);
-        hp_eval = da_int(info[info_t::info_nevalhp]);
-        obj = info[info_t::info_objective];
-        norm_g = info[info_t::info_grad_norm];
-        scaled_g = info[info_t::info_scl_grad_norm];
+        iter = da_int(info[da_optim_info_t::info_iter]);
+        f_eval = da_int(info[da_optim_info_t::info_nevalf]);
+        g_eval = da_int(info[da_optim_info_t::info_nevalg]);
+        h_eval = da_int(info[da_optim_info_t::info_nevalh]);
+        hp_eval = da_int(info[da_optim_info_t::info_nevalhp]);
+        obj = info[da_optim_info_t::info_objective];
+        norm_g = info[da_optim_info_t::info_grad_norm];
+        scaled_g = info[da_optim_info_t::info_scl_grad_norm];
     }
 
     // Getters for info

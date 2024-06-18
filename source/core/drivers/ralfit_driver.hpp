@@ -55,14 +55,14 @@ da_int da_nlls_eval_hf_dummy(da_int n, da_int m, void *params, const T *x, const
 // Copy RALFit's inform into DA's info array
 template <typename T>
 void copy_inform(struct ral_nlls_inform &inform, std::vector<T> &info) {
-    info[info_t::info_iter] = T(inform.iter);
-    info[info_t::info_nevalf] = T(inform.f_eval);
-    info[info_t::info_nevalg] = T(inform.g_eval);
-    info[info_t::info_nevalh] = T(inform.h_eval);
-    info[info_t::info_nevalhp] = T(inform.hp_eval);
-    info[info_t::info_objective] = T(inform.obj);
-    info[info_t::info_grad_norm] = T(inform.norm_g);
-    info[info_t::info_scl_grad_norm] = T(inform.scaled_g);
+    info[da_optim_info_t::info_iter] = T(inform.iter);
+    info[da_optim_info_t::info_nevalf] = T(inform.f_eval);
+    info[da_optim_info_t::info_nevalg] = T(inform.g_eval);
+    info[da_optim_info_t::info_nevalh] = T(inform.h_eval);
+    info[da_optim_info_t::info_nevalhp] = T(inform.hp_eval);
+    info[da_optim_info_t::info_objective] = T(inform.obj);
+    info[da_optim_info_t::info_grad_norm] = T(inform.norm_g);
+    info[da_optim_info_t::info_scl_grad_norm] = T(inform.scaled_g);
 }
 
 // Get RALFit's exit status/message and copy into DA's status
