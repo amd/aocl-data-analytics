@@ -30,46 +30,84 @@
 Nonlinear Data Fitting
 **********************
 
-The topic of linear models encompasses a range of commonly used statistical models and fitting algorithms, including
-Multiple linear regression, logistic regression, polynomial regression, and nonparametric regression.
+The topic of nonlinear data fitting encompasses a range of commonly used statistical models and fitting algorithms, including
+Nonlinear Least-Squares and its variations.
 
-The general form of a linear model fitting problem is as follows:
-
-.. math::
-
-    \min_{\beta}\left[ C_{\theta}\left( y, g^{-1}(\ \beta \, \phi(X)\ ) \right) \right],
-
-where :math:`X` is an array of :math:`n_{\mathrm{samples}}` observations with :math:`n_{\mathrm{features}}` features, :math:`y` is an array of :math:`n_{\mathrm{samples}}` responses
-/ labels, :math:`\phi` is a set of (possibly nonlinear) basis functions, :math:`\beta` is a set of weights /
-coefficients, :math:`g^{-1}` is a (possibly nonlinear) activation / link function, and :math:`C_{\theta}` is a cost /
-error function, which may depend on a set of (fixed) hyperparameters, :math:`\theta`.
-
-Most linear models satisfy a form where the cost function can be split into a Loss function (which measures quality
-of fit to the data) and a penalty term (which regularizes the model parameters).  Regularization is also referred to as
-shrinkage because it tends to shrink the size of the parameter values and/or shrink the number of non-zero parameters.
-
-The Loss function is typically a function of the responses or labels (:math:`y`), the features (:math:`X`), and the model
-parameters (:math:`\beta`), whereas the penalty term is typically only a function of the 1-norm and/or the 2-norm of the
-model parameters (:math:`\beta`).  Such linear models are often referred to as Elastic-Nets.
-
-Typically, in addition to the conditions above, :math:`\phi` and :math:`g^{-1}` are identity mappings and the general form
-for the cost function becomes,
+The general form of a nonlinear least-squares fitting problem is as follows:
 
 .. math::
 
-   C_{\{\lambda,\alpha\}} \left( \beta \right) = L(y, \beta X)
-   + \lambda \bigg( \alpha \lVert \beta \rVert_1 + (1 - \alpha) \lVert \beta \rVert_2^2  \bigg),
+    \underset{x \in \Omega}{\text{minimize }} F(x) := \frac{1}{2} \|\psi(r(x))\|_W^2 + \frac{\sigma}{p} \|x\|_2^p,
 
-where :math:`0\le\lambda, 0\le\alpha\le1` are hyperparameters, :math:`\lVert \beta \rVert_1` is the 1-norm
-and :math:`\lVert \beta \rVert_2` is the 2-norm of :math:`\beta`, while :math:`\lambda` sets the magnitude of the overall penalization,
-:math:`\alpha` distributes its share across the :math:`\ell_1` and :math:`\ell_2` regularization terms. :math:`L` is known as the
-*Loss function*. Linear models
-where :math:`\alpha=0` are called Ridge Regression. Conversely, when :math:`\alpha=1` the model is called Lasso.
+where
+:math:`x` is the coefficient vector of size :math:`n_{coef}` to be optimized,
+:math:`\Omega` is a constraint set, :math:`r(x): R^{n_{coef}} \rightarrow R^{n_{res}}` with
+:math:`\psi` a `loss` function. :math:`W` is a diagonal matrix of weights that defines the residual norm.
+While :math:`\sigma` and :math:`p` are the regularization parameters.
+
+In most common use cases, the set :math:`\Omega` is either absent or describes simple bounds constraints (i.e.,
+:math:`\ell_x \le x \le u_x`), the loss function is also absent
+and the weight matrix is the identity (making the residual norm :math:`\ell_2`), the regularization is also absent,
+thus reducing the problem to
+
+.. math::
+
+    \underset{\ell_x \le x \le u_x}{\text{minimize }} F(x) := \frac{1}{2} \|r(x)\|_2^2.
 
 
-Fitting Methods
-===============
+Given the nonlinear nature of the residual function, :math:`r(x)`, for solving this problem there is no closed formula
+as is the case for linear models. Here the approach is to use an iterative optimization method that improves on an
+initial guess at every iteration.
 
+Defining a Nonlinear Model
+--------------------------
+
+A model is defined inside a :ref:`handle<intro_handle>`, in it all the components of the model are configured.
+In particular, any model is defined via the residual function, :math:`r(x) = \theta(t, x) - y`, where
+the pair :math:`(t, y)` are the data points used to evaluate the model's residual vector.
+
+**Residual functions**
+
+To train the model, the optimizer requires to make calls to the residual function which is
+`defined` using the  :cpp:func:`da_nlls_define_residuals<da_nlls_define_residuals_s>`.
+Some solvers require further information such as the
+first order derivatives or even second order ones, these are also defined with this function.
+Refer to :ref:`nonlinear least-squares callbacks<da_nlls_callbacks>` for further details on the
+residual functions signatures.
+
+**Residual weights**
+
+Under certain circumstances it is known that some residuals are more `reliable` then others in such cases it is
+desirable to give more `importance` to these. This is done by :ref:`defining the weighting matrix<da_nlls_define_weights>`, :math:`W`, using
+:cpp:func:`da_nlls_define_weights<da_nlls_define_weights_s>`. Note that  :math:`W` is a diagonal matrix with
+positive elements, these elements
+should `correspond` to the inverse of the variance of each residual.
+
+**Constraining the model**
+
+Some models aim to explain real-life phenomena where some coefficients may not make physical sense if
+they take certain invalid
+values, e.g. coefficient :math:`x_j` representing a distance may not take negative values. For these cases, parameter
+optimization needs to be constrained to valid values, in the previous distance example, the coefficient would be
+`bound constrained` to the non-negative real half-space: :math:`0 \le x_j`.
+These constrains are defined into the model using :cpp:func:`da_nlls_define_bounds<da_nlls_define_bounds_s>`.
+
+**Adding regularization**
+
+Nonlinear models can have multiple local-minima that are undesirable, provide a biased solution or
+even show signs of overfitting.
+A practical way to tackle these scenarios is to introduce regularization,
+typically quadratic or cubic (i.e., :math:`p=2, 3`) yield best results. Note that :math:`\sigma` and
+:math:`p` are hyper-parameters and are not optimized by this model, they have to be provided by the caller.
+:math:`\sigma` provides a transition between an unregularized local solution (:math:`\sigma=0`) and the
+zero-coefficient vector (:math:`\sigma \gg 0`). Striking the correct ballance may require trial-and-error
+or have a good understanding of the underlying model. Regularization is added by using the
+optional parameters ``Regularization term`` (:math:`\sigma`) and ``Regularization power`` (:math:`p`),
+see :ref:`nlls_options`
+
+**Training the model**
+
+Once the model has been setup, the iterative training process is done by calling the optimizer :cpp:func:`da_nlls_fit<da_nlls_fit_s>`.
 
 Typical workflow for linear models
 ==================================
@@ -84,7 +122,7 @@ The standard way of computing a linear model using AOCL-DA is as follows.
       1. Initialize a :func:`aoclda.nonlinear_model.nlls` object with some options set in the class constructor.
       2. Fit a nonlinear model to the data using :func:`aoclda.nonlinear_model.nlls.fit`. Here you will have to provide some functions that
          define the nonlinear model's residual vector and a function to return the residual Jacobian matrix. The optimized parameters,
-         \f$x\f$, are modified in-place and returned on the interface of :func:`aoclda.nonlinear_model.nlls.fit`.
+         :math:`x`, are modified in-place and returned on the interface of :func:`aoclda.nonlinear_model.nlls.fit`.
       3. Extract results from the :func:`aoclda.nonlinear_model.nlls` object via its class attributes.
 
    .. tab-item:: C
@@ -94,7 +132,7 @@ The standard way of computing a linear model using AOCL-DA is as follows.
       2. Pass model to the handle using :ref:`da_nlls_define_residuals_? <da_nlls_define_residuals>`.
       3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <nlls_options>` for a list of the available options).
       4. Train the nonlinear model using :ref:`da_nlls_fit_? <da_nlls_fit>` (you will have to provide an initial guess).
-      5. Optimized parameters, \f$x\f$ are returned on the interface.
+      5. Optimized coefficients :math:`x` are returned on the interface.
       6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`
          using :cpp:enum:`da_result::da_rinfo`.
          The following results are available in the :code:`info[100]` array:
@@ -123,7 +161,8 @@ Nonlinear Least-Squares Options
    .. tab-item:: Python
       :sync: Python
 
-      The available Python options are detailed in the :func:`aoclda.nonlinear_model.nlls` class constructor.
+      The available Python options are detailed in the :func:`aoclda.nonlinear_model.nlls` class constructor and
+      the :func:`aoclda.nonlinear_model.nlls.fit` method.
 
    .. tab-item:: C
       :sync: C
