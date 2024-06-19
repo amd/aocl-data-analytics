@@ -53,8 +53,12 @@ typedef enum da_handle_type_ {
     da_handle_kmeans, ///< @rst
                       ///< the handle is to be used with functions for computing :ref:`k-means clustering <kmeans_intro>`.
                       ///< @endrst
-    da_handle_decision_tree, ///< the handle is to be used with functions from the decision trees (not yet implemented).
-    da_handle_decision_forest, ///< the handle is to be used with functions from the decision forests chapter (not yet implemented).
+    da_handle_decision_tree, ///< @rst
+                             ///< the handle is to be used with functions for computing :ref:`decision trees <decision_forest_intro>`.
+                             ///< @endrst
+    da_handle_decision_forest, ///< @rst
+                               ///< the handle is to be used with functions for computing :ref:`decision forests <decision_forest_intro>`.
+                               ///< @endrst
     da_handle_nlls , ///< @rst
                      ///< the handle is to be used with functions from the :ref:`nonlinear data fitting chapter <chapter_nlls>`.
                      ///< @endrst

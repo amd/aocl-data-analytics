@@ -292,7 +292,7 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
             "last call to the solver successful?");
     // Pointers were already tested in the generic get_result
 
-    da_int rinfo_size = 100;
+    da_int rinfo_size = 5;
     switch (query) {
     case da_result::da_rinfo:
         if (*dim < rinfo_size) {

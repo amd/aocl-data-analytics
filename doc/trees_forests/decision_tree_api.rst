@@ -25,16 +25,26 @@
 
 
 
-Decision Forest APIs
-**********************
+Decision trees and Forest APIs
+******************************
+
+This Chapter contains two sets of APIs, one for classification using a single :ref:`decision tree <da_decision_trees_apis>` and another
+one for the ensemble method :ref:`decision forests<da_decision_forests_apis>` (also known as random forests).
+
+.. _da_decision_trees_apis:
+
+Decision Trees
+==============
 
 .. tab-set::
 
    .. tab-item:: Python
+      :sync: Python
 
       Not yet implemented
 
    .. tab-item:: C
+      :sync: C
 
       .. _da_tree_set_training_data:
 
@@ -59,3 +69,43 @@ Decision Forest APIs
       .. doxygenfunction:: da_tree_score_s
          :outline:
       .. doxygenfunction:: da_tree_score_d
+
+
+.. _da_decision_forests_apis:
+
+Decision forests
+================
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      Not yet implemented
+
+   .. tab-item:: C
+      :sync: C
+
+      .. _da_forest_set_training_data:
+
+      .. doxygenfunction:: da_forest_set_training_data_s
+         :outline:
+      .. doxygenfunction:: da_forest_set_training_data_d
+
+      .. _da_forest_fit:
+
+      .. doxygenfunction:: da_forest_fit_s
+         :outline:
+      .. doxygenfunction:: da_forest_fit_d
+
+      .. _da_forest_predict:
+
+      .. doxygenfunction:: da_forest_predict_s
+         :outline:
+      .. doxygenfunction:: da_forest_predict_d
+
+      .. _da_forest_score:
+
+      .. doxygenfunction:: da_forest_score_s
+         :outline:
+      .. doxygenfunction:: da_forest_score_d
