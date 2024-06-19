@@ -227,23 +227,155 @@ da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_r
                                      da_reshes_t_s *reshes, da_reshp_t_s *reshp);
 /** \} */
 
+/**
+ * \{
+ * \brief Set bound constraints on nonlinear models.
+ * \details
+ * This function sets the bound constraints on the coefficients of a nonlinear model.
+ * Specifically, defines the lower and upper bounds of the coefficient vector
+ *
+ * @rst
+ * .. math::
+ *      \ell_x[i] \le x[i] \le u_x[i], i = 1,\ldots,n_{coef}.
+ *
+ * .. note::
+ *      The handle does not make a copy of the bound constraint vectors, it stores a pointer to
+ *      their location. It is important that these stay valid on all subsequent calls
+ *      to :cpp:func:`da_nlls_fit`.
+ *
+ * @endrst
+ *
+ * \param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_nlls.
+ * \param[in] n_coef number of coefficients of the model. Optionally, if set to zero then all
+ *            previously defined bounds are removed.
+ * \param[in] lower vector \f$\ell_x\f$ of length \p n_coef that defines the lower bound constraints on
+ *            the coefficients. If the problem does not
+ *            have lower bounds then \p lower can be \p NULL. Any value less than -1e20
+ *            is considered as -infinity and the coefficient is considered to not have a lower bound.
+ * \param[in] upper vector \f$ u_x\f$ of length \p n_coef that defines the upper bound constraints on
+ *            the coefficients. If the problem does not
+ *            have upper bounds then \p upper can be \p NULL. Any value greater than 1e20
+ *            is considered as infinity and the coefficient is considered to not have an upper bound.
+ * \return \ref da_status. The function returns:
+ *  - @ref da_status_success - the operation was successfully completed.
+ *  - @ref da_status_handle_not_initialized - handle was not initialized properly
+ *         (with @ref da_handle_nlls) or has been corrupted.
+ *  - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with
+ *         the @p handle initialization.
+ *  - @ref da_status_invalid_handle_type - \p handle was not initialized with \p handle_type =
+ *         @ref da_handle_nlls or \p handle is invalid.
+ *  - @ref da_status_invalid_input - one or more of the input arguments are invalid.
+ *
+ */
 da_status da_nlls_define_bounds_d(da_handle handle, da_int n_coef, double *lower,
                                   double *upper);
 da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
                                   float *upper);
-
-da_status da_nlls_define_weights_d(da_handle handle, da_int n_res, double *weights);
-da_status da_nlls_define_weights_s(da_handle handle, da_int n_res, float *weights);
-
-da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *udata);
-da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udata);
+/** \} */
 
 /**
- * @brief Information vector containing metrics from optimization solvers
+ * \{
+ * \brief Set residual weights on nonlinear models.
+ *
+ * \details
+ * This function sets the square-root of the diagonal elements of the
+ * \a weighting \a matrix \f$ W\f$.
+ * This diagonal matrix, defines the norm to be used in the
+ * \a least-square \a part of the optimization problem
+ * @rst
+ * .. math::
+ *        \underset{\text{subject to} x \in R^{n_{coef}}}{\text{minimize}}
+ *        F(x) = \frac{1}{2} \sum_{i=0}^{n_{res-1}} r_i(x)^2_W + \frac{\sigma}{p} ||x||_2^p.
+ *
+ * By default, the norm of the residuals
+ * is taken to be :math:`\ell_2` and so :math:`W = I`.
+ *
+ * Changing the weighting matrix provides a means to rescale the importance of
+ * certain residuals where it is `known` that some residuals are more
+ * `relevant` than others.
+ *
+ * .. note::
+ *      The handle does not make a copy of the weights vectors, it stores a pointer to
+ *      its location.  It is important that this stays valid on all subsequent calls
+ *      to :cpp:func:`da_nlls_fit`.
+ *
+ * @endrst
+ *
+ * \param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_nlls.
+ * \param[in] n_res number of residuals of the model. Optionally, if set to zero then all
+ *            previously defined weights are removed.
+ * \param[in] weights vector \f$ w\f$ of length \p n_res that defines the square-root of the
+ *            entries of the diagonal weighting matrix: \f$ w_i = \sqrt{W_{ii}}\f$.
+ *            The vector is not checked for correctness and is assumed that all
+ *            entries are valid.
+ *
+ * \return \ref da_status. The function returns:
+ *  - @ref da_status_success - the operation was successfully completed.
+ *  - @ref da_status_handle_not_initialized - handle was not initialized properly
+ *         (with @ref da_handle_nlls) or has been corrupted.
+ *  - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with
+ *         the @p handle initialization.
+ *  - @ref da_status_invalid_handle_type - \p handle was not initialized with \p handle_type =
+ *         @ref da_handle_nlls or \p handle is invalid.
+ *  - @ref da_status_invalid_input - one or more of the input arguments are invalid.
+ */
+da_status da_nlls_define_weights_d(da_handle handle, da_int n_res, double *weights);
+da_status da_nlls_define_weights_s(da_handle handle, da_int n_res, float *weights);
+/** \} */
+
+/**
+ * \{
+ * \brief Fit a nonlinear model.
+ *
+ * \details
+ * @rst
+ * This function trains a nonlinear model. Specifically, it optimizes the
+ * coefficients of a nonlinear model defined in a :code:`handle`.
+ * For further information on how to initialize a  :ref:`handle <intro_handle>` and on the steps to
+ * define and optimize a nonlinear model, see :ref:`Nonlinear Data Fitting <chapter_nlls>`.
+ * @endrst
+ *
+ * \param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_nlls.
+ * \param[in] n_coef number of coefficients of the model.
+ * \param[in,out] coef vector of coefficients of size \p n_coef. On entry, it is the initial
+ *            guess from where to start the optimization process. On exit, it contains the
+ *            optimized coefficients.
+ * \param[in,out] udata a generic pointer for the caller to pass any data objects to the
+ *                residual callbacks. This pointer is passed to the callbacks untouched.
+ *
+ * \return \ref da_status. Some \ref da_status flags are marked as \a warning, in these cases the
+ *    returned coefficient vector \p coef contains a valid iterate, potentially a rough estimate
+ *    of the solution. The function returns:
+ *    - @ref da_status_success - the operation was successfully completed.
+ *    - @ref da_status_handle_not_initialized - handle was not initialized properly
+ *           (with @ref da_handle_nlls) or has been corrupted.
+ *    - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with
+ *           the @p handle initialization.
+ *    - @ref da_status_invalid_handle_type - \p handle was not initialized with \p handle_type =
+ *           @ref da_handle_nlls or \p handle is invalid.
+ *    - @ref da_status_invalid_input - one or more of the input arguments are invalid.
+ *    - @ref da_status_maxit - warning: iteration limit reached, increasing limit may provide a better solution.
+ *      @rst
+ *      See :ref:`optimization option <nlls_options>` :code:`ralfit iteration limit`.
+ *      @endrst
+ *    - @ref da_status_optimization_usrstop - warning: callback indicated a problem evaluating the model.
+ *    - @ref da_status_numerical_difficulties - warning: a potential reason for this warning is that the
+ *           data for the model is very badly scaled.
+ *    - @ref da_status_invalid_option - Some of the optional parameters set are incompatible.
+ *    - @ref da_status_operation_failed - Could not complete a user-requested query.
+ *    - @ref da_status_option_invalid_bounds - The bound constraints of the coefficients are invalid.
+ *    - @ref da_status_memory_error - Could not allocate space for the solver data.
+ */
+da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *udata);
+da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udata);
+/** \} */
+
+/**
+ * @brief Indices of the information vector containing metrics from optimization solvers
  *
  * @details
  * @rst
- * The information vector can be retrieved after a successfull return from the
+ * The information vector can be retrieved after a successful return from the
  * fit function :cpp:func:`da_nlls_fit_? <da_nlls_fit_d>` by querying the handle,
  * using :cpp:func:`da_handle_get_result_? <da_handle_get_result_d>` and passing
  * the :ref:`query <extracting-results>` :cpp:enum:`da_result::da_rinfo`.
