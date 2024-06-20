@@ -257,11 +257,11 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_decision_forest = m.def_submodule("decision_forest", "Decision forests.");
     py::class_<decision_forest, pyda_handle>(m_decision_forest, "pybind_decision_forest")
         .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string,
-                      std::string, std::string, da_int, std::string &>(),
+                      bool, std::string, da_int, std::string &>(),
              py::arg("n_trees") = 100, py::arg("criterion") = "gini",
              py::arg("seed") = -1, py::arg("max_depth") = 10,
              py::arg("min_samples_split") = 2, py::arg("build_order") = "breadth first",
-             py::arg("bootstrap") = "yes", py::arg("features_selection") = "sqrt",
+             py::arg("bootstrap") = true, py::arg("features_selection") = "sqrt",
              py::arg("max_features") = 0, py::arg("precision") = "double")
         .def("pybind_fit", &decision_forest::fit<float>, "Fit the decision forest", "X"_a,
              "y"_a, py::arg("samples factor") = 0.8,

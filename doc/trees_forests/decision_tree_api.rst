@@ -25,15 +25,15 @@
 
 
 
-Decision trees and Forest APIs
-******************************
+Decision tree and decision forest APIs
+**************************************
 
-This Chapter contains two sets of APIs, one for classification using a single :ref:`decision tree <da_decision_trees_apis>` and another
+This chapter contains two sets of APIs, one for classification using a single :ref:`decision tree <da_decision_trees_apis>` and another
 one for the ensemble method :ref:`decision forests<da_decision_forests_apis>` (also known as random forests).
 
 .. _da_decision_trees_apis:
 
-Decision Trees
+Decision trees
 ==============
 
 .. tab-set::
@@ -41,7 +41,8 @@ Decision Trees
    .. tab-item:: Python
       :sync: Python
 
-      Not yet implemented
+      .. autoclass:: aoclda.decision_tree.decision_tree(criterion='gini', seed=-1, max_depth=10, max_features=0, min_samples_split=2, build_order='breadth first', precision='double')
+         :members:
 
    .. tab-item:: C
       :sync: C
@@ -81,7 +82,8 @@ Decision forests
    .. tab-item:: Python
       :sync: Python
 
-      Not yet implemented
+      .. autoclass:: aoclda.decision_forest.decision_forest(criterion='gini', bootstrap=True, n_trees=100, features_selection='sqrt', max_features=0, seed=-1, max_depth=10, min_samples_split=2, build_order='breadth first', precision='double')
+         :members:
 
    .. tab-item:: C
       :sync: C

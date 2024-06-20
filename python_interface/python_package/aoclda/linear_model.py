@@ -23,7 +23,11 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable = missing-module-docstring, unused-import
+# pylint: disable = import-error, anomalous-backslash-in-string, invalid-name, too-many-arguments
+
+"""
+aoclda.linear_model module
+"""
 
 from ._aoclda.linear_model import pybind_linmod
 
@@ -51,7 +55,7 @@ class linmod(pybind_linmod):
 
             - ``'svd'`` works with normal and Ridge regression. Most robust solver at cost of \
                 efficiency.
-            
+
             - ``'cholesky'`` works with normal and Ridge regression. Will return error when \
                 singular matrix is encountered.
 
@@ -113,14 +117,14 @@ class linmod(pybind_linmod):
 
             reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` \
                 term in the regularization.
-            
+
             tol (float, optional): Convergence tolerance for iterative solvers. Applies only \
                 to iterative solvers: 'sparse_cg', 'coord', 'lbfgs'.
 
             x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative \
                 solvers
         """
-        self.pybind_fit(X,
+        return self.pybind_fit(X,
                         y,
                         x0=x0,
                         reg_lambda=reg_lambda,
@@ -157,13 +161,14 @@ class linmod(pybind_linmod):
 
     @property
     def nrm_gradient_loss(self):
-        """numpy.ndarray of shape (1, ): The norm of the gradient of the loss function. Only valid for iterative solvers.
+        """numpy.ndarray of shape (1, ): The norm of the gradient of the loss function.
         """
         return self.get_norm_gradient_loss()
 
     @property
     def n_iter(self):
-        """int: The number iterations performed to find solution. Only valid for iterative solvers.
+        """int: The number iterations performed to find solution.
+        Only valid for iterative solvers.
         """
         return self.get_n_iter()
 
