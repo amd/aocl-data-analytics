@@ -118,18 +118,42 @@ The following workflow can be used to fit a decision tree or a decision forest m
    .. tab-item:: Python
       :sync: Python
 
-      Not yet implemented
+      **Decision trees**
+
+      1. Initialize a :func:`aoclda.decision_tree.decision_tree()` object with options set in the class constructor.
+      2. Fit the model using :func:`aoclda.decision_tree.decision_tree.fit`.
+      3. Evaluate prediction accuracy on test data using :func:`aoclda.decision_tree.decision_tree.score`.
+      4. Make predictions using the fitted model using :func:`aoclda.decision_tree.decision_tree.predict`.
+
+      **Decision forests**
+
+      1. Initialize a :func:`aoclda.decision_forest.decision_forest()` object with options set in the class constructor.
+      2. Fit the model using the :func:`aoclda.decision_forest.decision_forest.fit`.
+      3. Evaluate prediction accuracy on test data using :func:`aoclda.decision_forest.decision_forest.score`.
+      4. Make predictions using the fitted model using :func:`aoclda.decision_forest.decision_forest.predict`.
 
    .. tab-item:: C
       :sync: C
 
-      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_decision_tree`` /
-         ``da_handle_decision_forest``.
+      **Decision trees**
+
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_decision_tree``.
       2. Pass data to the handle using :ref:`da_tree_set_training_data_? <da_tree_set_training_data>`.
-      3. Set optional parameters, such as maximum depth, using :ref:`da_options_set_? <da_options_set>`  (see :ref:`options section <opts_decisionforest>`).
+      3. Set optional parameters, such as maximum depth, using :ref:`da_options_set_? <da_options_set>`  (see
+         :ref:`options section <opts_decisionforest>`).
       4. Fit the model using :ref:`da_tree_fit_? <da_tree_fit>`.
       5. Evaluate prediction accuracy on test data using :ref:`da_tree_score_? <da_tree_score>`.
       6. Make predictions using the fitted model using :ref:`da_tree_predict_? <da_tree_predict>`.
+
+      **Decision forests**
+
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_decision_forest``.
+      2. Pass data to the handle using :ref:`da_forest_set_training_data_? <da_forest_set_training_data>`.
+      3. Set optional parameters, such as maximum depth, using :ref:`da_options_set_? <da_options_set>`  (see
+         :ref:`options section <opts_decisionforest>`).
+      4. Fit the model using :ref:`da_forest_fit_? <da_forest_fit>`.
+      5. Evaluate prediction accuracy on test data using :ref:`da_forest_score_? <da_forest_score>`.
+      6. Make predictions using the fitted model using :ref:`da_forest_predict_? <da_forest_predict>`.
 
 Options
 -------
@@ -139,12 +163,34 @@ Options
    .. tab-item:: Python
       :sync: Python
 
-      The available Python options are detailed in the NOT YET IMPLEMENTED class constructor.
+      The available Python options are detailed in the :func:`aoclda.decision_tree.decision_tree` and
+      :func:`aoclda.decision_forest.decision_forest` class constructors.
 
    .. tab-item:: C
       :sync: C
 
       For details of optional parameters see the :ref:`options section <opts_decisiontree>`.
+
+Choosing the decision forest options
+""""""""""""""""""""""""""""""""""""
+
+By default the number of features to use in each split is set to the square root of the total number of
+features.  This default behaviour can be changed through the ``features selection`` option.  If ``features
+selection`` is set to ``custom`` then the value of ``maximum features`` will be used.  Otherwise the value of
+the ``maximum features`` option is ignored.
+
+By default boostrap sampling is used with the number of bootstrap samples set through the ``bootstrap samples
+factor`` option.  However if the value of the ``bootstrap`` option is set to ``no`` then no bootstrapping is
+done, i.e., each tree uses the full dataset.
+
+The optimal values of the optional parameters typically problem dependent.  Cross-validation is typically used to tune options /
+hyperparameters.
+
+The memory requirements for decision forests are proportional to :math:`\textit{number of trees} \times \textit{number of bootstrap samples}`.
+Reducing the number of bootstrap samples through the ``bootstrap samples factor`` option may
+improve performance.  If the dataset is large, reducing ``bootstrap samples factor`` may be needed to ensure
+that that all the data required to fit the decision forest can be stored in DRAM.
+
 
 Examples
 --------
@@ -155,6 +201,12 @@ Examples
       :sync: Python
 
       The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+      .. collapse:: Decision tree Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/decision_tree_ex.py
+              :language: Python
+              :linenos:
 
    .. tab-item:: C
       :sync: C
