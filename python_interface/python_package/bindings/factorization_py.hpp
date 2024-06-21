@@ -45,7 +45,7 @@ class pca : public pyda_handle {
   public:
     pca(da_int n_components = 1, std::string bias = "unbiased",
         std::string method = "covariance", std::string solver = "gesdd",
-        std::string prec = "double") {
+        bool store_U = false, std::string prec = "double") {
         if (prec == "double")
             da_handle_init<double>(&handle, da_handle_pca);
         else if (prec == "single") {
@@ -61,6 +61,10 @@ class pca : public pyda_handle {
         exception_check(status);
         status = da_options_set_string(handle, "svd solver", solver.c_str());
         exception_check(status);
+        if (store_U == true) {
+            status = da_options_set_int(handle, "store U", 1);
+            exception_check(status);
+        }
     }
     ~pca() { da_handle_destroy(&handle); }
 

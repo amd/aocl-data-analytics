@@ -69,7 +69,8 @@ class PCA(PCA_sklearn):
             raise ValueError("whiten must be set to False or None")
 
         if svd_solver in ('arpack', 'randomized'):
-            raise ValueError("svd_solver must be set to auto, full or None")
+            raise ValueError(
+                "svd_solver must be set to auto, full, covariance_eigh or None")
 
         if (tol != 0.0 or iterated_power != 'auto' or n_oversamples != 10 or
                 power_iteration_normalizer != 'auto' or random_state is not None):
@@ -86,11 +87,14 @@ class PCA(PCA_sklearn):
         if svd_solver == 'full':
             solver = 'gesdd'
 
+        if svd_solver == 'covariance_eigh':
+            solver = 'syevd'
+
         # Initialize both single and double precision classes for now
         self.pca_double = PCA_da(n_components, method="covariance",
-                          solver=solver, precision="double", bias='unbiased')
+                                 solver=solver, precision="double", bias='unbiased')
         self.pca_single = PCA_da(n_components, method="covariance",
-                          solver=solver, precision="single", bias='unbiased')
+                                 solver=solver, precision="single", bias='unbiased')
 
         self.pca = self.pca_double
 
@@ -112,7 +116,7 @@ class PCA(PCA_sklearn):
 
     def fit_transform(self, X):
         self.pca.fit(X)
-        return self.scores
+        return self.pca.transform(X)
 
     def get_covariance(self, *args):
         raise RuntimeError("This feature is not implemented")
@@ -182,7 +186,8 @@ class PCA(PCA_sklearn):
 
     @property
     def noise_variance_(self):
-        n_discarded = min(self.pca.n_features, self.pca.n_samples) - self.pca.n_components
+        n_discarded = min(self.pca.n_features,
+                          self.pca.n_samples) - self.pca.n_components
         if n_discarded > 0:
             return (self.pca.get_total_variance().item() - np.sum(self.pca.get_variance())) \
                 / n_discarded

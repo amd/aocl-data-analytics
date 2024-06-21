@@ -73,6 +73,7 @@ template <typename T> struct PCAParamType {
     da_int ldxinv_transform = 0;
 
     da_status expected_status = da_status_success;
+    da_int store_U = 1;
     T epsilon = 10 * std::numeric_limits<T>::epsilon();
 };
 

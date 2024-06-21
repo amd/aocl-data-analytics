@@ -50,6 +50,10 @@ void dpocon_(char *uplo, da_int *n, double *a, da_int *lda, double *anorm, doubl
 void sgesdd_(char *jobz, da_int *m, da_int *n, float *a, da_int *lda, float *s, float *u,
              da_int *ldu, float *vt, da_int *ldvt, float *work, da_int *lwork,
              da_int *iwork, da_int *info);
+void dsyevd_(char *job, char *uplo, da_int *n, double *a, da_int *lda, double *w,
+             double *work, da_int *lwork, da_int *iwork, da_int *liwork, da_int *info);
+void ssyevd_(char *job, char *uplo, da_int *n, float *a, da_int *lda, float *w,
+             float *work, da_int *lwork, da_int *iwork, da_int *liwork, da_int *info);
 void dgesdd_(char *jobz, da_int *m, da_int *n, double *a, da_int *lda, double *s,
              double *u, da_int *ldu, double *vt, da_int *ldvt, double *work,
              da_int *lwork, da_int *iwork, da_int *info);
@@ -71,12 +75,20 @@ void dgeqrf_(da_int *m, da_int *n, double *a, da_int *lda, double *tau, double *
              da_int *lwork, da_int *info);
 void sgeqrf_(da_int *m, da_int *n, float *a, da_int *lda, float *tau, float *work,
              da_int *lwork, da_int *info);
+void dgeqrt3_(da_int *m, da_int *n, double *a, da_int *lda, double *T, da_int *ldt,
+              da_int *info);
+void sgeqrt3_(da_int *m, da_int *n, float *a, da_int *lda, float *T, da_int *ldt,
+              da_int *info);
 void dormqr_(char *side, char *trans, da_int *m, da_int *n, da_int *k, double *a,
              da_int *lda, double *tau, double *c, da_int *ldc, double *work,
              da_int *lwork, da_int *info);
 void sormqr_(char *side, char *trans, da_int *m, da_int *n, da_int *k, float *a,
              da_int *lda, float *tau, float *c, da_int *ldc, float *work, da_int *lwork,
              da_int *info);
+void dorgqr_(da_int *m, da_int *n, da_int *k, double *a, da_int *lda, double *tau,
+             double *work, da_int *lwork, da_int *info);
+void sorgqr_(da_int *m, da_int *n, da_int *k, float *a, da_int *lda, float *tau,
+             float *work, da_int *lwork, da_int *info);
 void dtrtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, double *a,
              da_int *lda, double *b, da_int *ldb, da_int *info);
 void strtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, float *a,
@@ -119,6 +131,17 @@ inline void pocon(char *uplo, da_int *n, double *a, da_int *lda, double *anorm,
                   double *rcond, double *work, da_int *iwork, da_int *info) {
     dpocon_(uplo, n, a, lda, anorm, rcond, work, iwork, info);
 }
+// --- Eigensolvers ---
+inline void syevd(char *job, char *uplo, da_int *n, float *a, da_int *lda, float *w,
+                  float *work, da_int *lwork, da_int *iwork, da_int *liwork,
+                  da_int *info) {
+    ssyevd_(job, uplo, n, a, lda, w, work, lwork, iwork, liwork, info);
+};
+inline void syevd(char *job, char *uplo, da_int *n, double *a, da_int *lda, double *w,
+                  double *work, da_int *lwork, da_int *iwork, da_int *liwork,
+                  da_int *info) {
+    dsyevd_(job, uplo, n, a, lda, w, work, lwork, iwork, liwork, info);
+};
 // --- SVD ---
 inline void gesdd(char *jobz, da_int *m, da_int *n, float *a, da_int *lda, float *s,
                   float *u, da_int *ldu, float *vt, da_int *ldvt, float *work,
@@ -161,7 +184,7 @@ inline void gesvdx(char *jobu, char *jobv, char *range, da_int *m, da_int *n, do
              work, lwork, iwork, info);
 };
 
-// --- QR factorization (classic) ---
+// --- QR factorization ---
 inline void geqrf(da_int *m, da_int *n, float *a, da_int *lda, float *tau, float *work,
                   da_int *lwork, da_int *info) {
     sgeqrf_(m, n, a, lda, tau, work, lwork, info);
@@ -169,6 +192,14 @@ inline void geqrf(da_int *m, da_int *n, float *a, da_int *lda, float *tau, float
 inline void geqrf(da_int *m, da_int *n, double *a, da_int *lda, double *tau, double *work,
                   da_int *lwork, da_int *info) {
     dgeqrf_(m, n, a, lda, tau, work, lwork, info);
+}
+inline void geqrt3(da_int *m, da_int *n, double *a, da_int *lda, double *T, da_int *ldt,
+                   da_int *info) {
+    dgeqrt3_(m, n, a, lda, T, ldt, info);
+}
+inline void geqrt3(da_int *m, da_int *n, float *a, da_int *lda, float *T, da_int *ldt,
+                   da_int *info) {
+    sgeqrt3_(m, n, a, lda, T, ldt, info);
 }
 // --- Apply Q or Q' from QR factorization ---
 inline void ormqr(char *side, char *trans, da_int *m, da_int *n, da_int *k, float *a,
@@ -180,6 +211,14 @@ inline void ormqr(char *side, char *trans, da_int *m, da_int *n, da_int *k, doub
                   da_int *lda, double *tau, double *c, da_int *ldc, double *work,
                   da_int *lwork, da_int *info) {
     dormqr_(side, trans, m, n, k, a, lda, tau, c, ldc, work, lwork, info);
+}
+inline void orgqr(da_int *m, da_int *n, da_int *k, float *a, da_int *lda, float *tau,
+                  float *work, da_int *lwork, da_int *info) {
+    sorgqr_(m, n, k, a, lda, tau, work, lwork, info);
+}
+inline void orgqr(da_int *m, da_int *n, da_int *k, double *a, da_int *lda, double *tau,
+                  double *work, da_int *lwork, da_int *info) {
+    dorgqr_(m, n, k, a, lda, tau, work, lwork, info);
 }
 // --- solves a triangular system of the form A * X = B  or  A**T * X = B ---
 inline void trtrs(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, float *a,

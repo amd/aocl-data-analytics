@@ -33,14 +33,14 @@
  * Principal Component Analysis example
  * using the data set from
  *
- * Wolberg, William, Mangasarian, Olvi, Street, Nick, and Street,W.. (1995). 
- * Breast Cancer Wisconsin (Diagnostic). 
+ * Wolberg, William, Mangasarian, Olvi, Street, Nick, and Street,W.. (1995).
+ * Breast Cancer Wisconsin (Diagnostic).
  * UCI Machine Learning Repository. https://doi.org/10.24432/C5DW2B.
  *
  * The "breast cancer data set" consists of 569 observations
  * and 30 features.
  *
- * The example additionally showcases how to use 
+ * The example additionally showcases how to use
  * da_read_csv_? API to extract data
  */
 #ifndef DATA_DIR
@@ -95,6 +95,7 @@ int main() {
                     da_status_success);
     pass = pass && (da_options_set_int(handle, "n_components", n_components) ==
                     da_status_success);
+    pass = pass && (da_options_set_int(handle, "store U", 1) == da_status_success);
 
     // Compute the PCA
     pass = pass && (da_pca_compute_d(handle) == da_status_success);

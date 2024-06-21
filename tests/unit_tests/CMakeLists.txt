@@ -106,6 +106,7 @@ add_executable(nlls_tests nlls_tests.cpp)
 add_executable(pca_tests pca_tests.cpp)
 target_compile_definitions(
   pca PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../data/factorization_data/")
+  target_link_libraries(pca_tests PRIVATE ${BLAS})
 
 add_executable(data data_tests.cpp)
 target_compile_definitions(

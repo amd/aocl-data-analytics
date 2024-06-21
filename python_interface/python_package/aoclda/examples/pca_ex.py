@@ -31,6 +31,7 @@ import sys
 import numpy as np
 from aoclda.factorization import PCA
 
+
 def pca_example():
     """
     Principal component analysis example
@@ -50,7 +51,7 @@ def pca_example():
 
     print("\nPrincipal component analysis for a 6x5 data matrix\n")
     try:
-        pca = PCA(n_components=3)
+        pca = PCA(n_components=3, store_U=True)
         pca.fit(a)
         x_transform = pca.transform(x)
     except RuntimeError:
@@ -78,7 +79,8 @@ def pca_example():
                                          1.7953216115607247],
                                      [1.833601737126601, -0.2844305102179128, -0.5561178355649032]])
 
-    norm_components = np.linalg.norm(pca.principal_components - expected_components)
+    norm_components = np.linalg.norm(
+        pca.principal_components - expected_components)
     norm_x_transform = np.linalg.norm(x_transform - expected_x_transform)
 
     tol = 1.0e-12
@@ -88,6 +90,7 @@ def pca_example():
         sys.exit(1)
 
     print("\nPCA successfully computed\n")
+
 
 if __name__ == "__main__":
     pca_example()

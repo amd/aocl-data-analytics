@@ -34,7 +34,7 @@ Principal component analysis and the SVD
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.factorization.PCA(n_components=1, bias='unbiased', method='covariance', solver='auto', precision='double')
+      .. autoclass:: aoclda.factorization.PCA(n_components=1, bias='unbiased', method='covariance', solver='auto', store_U=False, precision='double')
          :members:
 
    .. tab-item:: C

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -78,11 +78,12 @@ da_status mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amea
 
     case da_axis_col:
         for (da_int i = 0; i < p; i++) {
-            amean[i] = zero;
+            T tmp = zero;
+#pragma omp simd reduction(+ : tmp)
             for (da_int j = 0; j < n; j++) {
-                amean[i] += x[j + ldx * i];
+                tmp += x[j + ldx * i];
             }
-            amean[i] /= n;
+            amean[i] = tmp / n;
         }
         break;
 
@@ -267,10 +268,12 @@ da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, da_
 
     case da_axis_col:
         for (da_int i = 0; i < p; i++) {
-            var[i] = zero;
+            T tmp = zero;
+#pragma omp simd reduction(+ : tmp)
             for (da_int j = 0; j < n; j++) {
-                var[i] += (x[j + ldx * i] - amean[i]) * (x[j + ldx * i] - amean[i]);
+                tmp += (x[j + ldx * i] - amean[i]) * (x[j + ldx * i] - amean[i]);
             }
+            var[i] = tmp;
 
             if (dof < 0) {
                 scale_factor = n;

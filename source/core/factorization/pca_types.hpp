@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,13 @@
 namespace da_pca {
 
 enum pca_method { pca_method_cov = 0, pca_method_corr, pca_method_svd };
-enum svd_solver { solver_auto = 0, solver_gesvdx, solver_gesvd, solver_gesdd };
+enum svd_solver {
+    solver_auto = 0,
+    solver_gesvdx,
+    solver_gesvd,
+    solver_gesdd,
+    solver_syevd
+};
 
 } // namespace da_pca
 

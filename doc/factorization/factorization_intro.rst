@@ -127,9 +127,18 @@ Options
       If the `pca method` option is set to `svd` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
       Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
 
-      If a full decomposition is required (so that all principal components are found) then `svd solver` should be set to `gesdd`. The LAPACK routines DGESDD or SGESDD (for double and single precision data respectively) will then be used. This choice offers the best performance. Setting `svd solver` to `auto` results in the same behaviour.
+      If a full decomposition is required (so that all principal components are found) then `svd solver` should be set to `gesdd`. The LAPACK routines DGESDD or SGESDD (for double and single precision data respectively) will then be used. This choice offers the best performance, while maintaining high accuracy.
+      Note that if internal heuristics determine that it is useful, a QR decomposition may be performed prior to the SVD.
+
+      If `svd solver` is set to `syevd` then the SVD will be found by explicitly forming the covariance or correlation matrix and using LAPACK routines DSYEVD or SSYEVD to perform an eigendecomposition. This is very fast for tall, thin data matrices but for wider matrices it requires a lot of memory.
+      The method is also more susceptible to ill-conditioning so must be used with care. It is incompatible with the `store U` option.
+
       `svd solver` should only be set to `gesvd` (so that the LAPACK routines DGESVD or SGESVD are used) if there is insufficient memory for the workspace requirements of `gesdd`, or if `gesdd` encounters convergence issues.
-      If a partial decomposition is required then, depending on your data matrix, `gesvdx` may be faster (so that the LAPACK routines DGESVDX or SGESVDX are used). If `svd solver` is set to `auto`, then these routine will only be used when the number of principal components required is less than 10% of the smallest dimension of your data matrix.
+      If only one or two principal components are required then, depending on your data matrix, `gesvdx` may be faster (so that the LAPACK routines DGESVDX or SGESVDX are used).
+
+      If `svd solver` is set to `auto`, then DGESDD or SGESDD will be used unless internal heuristics determine that the eigendecomposition may be used.
+
+      If `store U` is set to 1, then the matrix :math:`U` from the SVD will be stored and used to ensure deterministic results in the signs of the principal components. Note that there may be a small performance penalty in setting this option and it cannot be used if `svd solver` is set to `syevd`.
 
 Examples
 ========

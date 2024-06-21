@@ -170,10 +170,11 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_factorization = m.def_submodule("factorization", "Matrix factorizations.");
     py::class_<pca, pyda_handle>(m_factorization, "pybind_PCA")
-        .def(py::init<da_int, std::string, std::string, std::string, std::string &>(),
+        .def(py::init<da_int, std::string, std::string, std::string, bool,
+                      std::string &>(),
              py::arg("n_components") = 1, py::arg("bias") = "unbiased",
              py::arg("method") = "covariance", py::arg("solver") = "gesdd",
-             py::arg("precision") = "double")
+             py::arg("store_U") = false, py::arg("precision") = "double")
         .def("pybind_fit", &pca::fit<float>, "Fit the principal component analysis",
              "A"_a)
         .def("pybind_fit", &pca::fit<double>, "Fit the principal component analysis",

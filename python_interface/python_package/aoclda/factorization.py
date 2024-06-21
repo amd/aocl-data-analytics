@@ -53,11 +53,20 @@ class PCA(pybind_PCA):
               value decomposition.
 
         solver (str, optional): Which LAPACK solver to use to compute the underlying singular value
-            decomposition, allowed values: 'auto', 'gesdd', 'gesvd', 'gesvdx'. Default='auto'.
-            If ``solver = 'auto'`` then 'gesdd' will be used unless the number of components
-            requested is less than 10% of the smallest dimension of your data matrix, in which case
-            'gesvdx' is used.
+            decomposition, allowed values: 'auto', 'gesdd', 'gesvd', 'gesvdx', 'syevd'.
+            If ``solver = 'syevd'`` then then the SVD will be found by explicitly forming the
+            covariance or correlation matrix and performing an eigendecomposition. This is very fast
+            for tall, thin data matrices but for wider matrices it requires a lot of memory. The
+            method is also more susceptible to ill-conditioning so must be used with care. It is
+            incompatible with the 'store_U' option.
+            If ``solver = 'auto'`` then 'gesdd' will be used unless internal heuristics determine
+            that eigendecomposition using syevd is quicker.
+            Default='auto'.
 
+        store_U (bool, optional): Controls whether to store the matrix ``U`` fromm the singular
+            value decomposition. This allows deterministic results regarding the sign of the
+            principal components, at the expense of some extra computation. This option cannot be
+            used if ``solver = 'syevd'``. Default=False.
 
         precision (str, optional): Whether to initialize the PCA object in double or
             single precision. It can take the values 'single' or 'double'.

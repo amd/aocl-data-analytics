@@ -32,12 +32,15 @@
 #include "callbacks.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_qr.hpp"
 #include "lapack_templates.hpp"
 #include "options.hpp"
 #include "pca_options.hpp"
 #include "pca_types.hpp"
+#include <algorithm>
 #include <iostream>
 #include <string.h>
+#include <vector>
 
 namespace da_pca {
 
@@ -47,6 +50,10 @@ template <typename T> class da_pca : public basic_handle<T> {
     // n x p (samples x features)
     da_int n = 0;
     da_int p = 0;
+
+    // User's data
+    const T *A;
+    da_int lda;
 
     // Set true when initialization is complete
     bool initdone = false;
@@ -61,27 +68,34 @@ template <typename T> class da_pca : public basic_handle<T> {
     da_int solver = solver_gesdd;
 
     // Sign flip flag for consistency with sklearn results
-    bool svd_flip_u_based = true;
+    bool svd_flip_u_based = false;
+
+    // Whether we are storing U
+    bool store_U = false;
 
     // Number of principal components requested
     da_int npc = 1;
 
-    // Degrees of freedom (bias) when computing variances
+    // Degrees of freedom (bias) when computing variances, and associated divisor
     da_int dof = 0;
+    da_int div = 0;
 
     // Actual number of principal components found - on output should be the same as npc unless dgesvdx gives unexpected behaviour
     da_int ns = 0;
+
+    // Will we perform a QR decomposition prior to the SVD?
+    bool qr = false;
 
     // Pointer to error trace
     da_errors::da_error_t *err = nullptr;
 
     // Arrays used by the SVD, and to store results
-    std::vector<T> scores;                     // U*Sigma
-    std::vector<T> variance;                   // Sigma**2 / n-1
-    std::vector<T> principal_components;       // Vt
-    std::vector<T> column_means, column_sdevs; // Store standardization data
-    T total_variance = 0.0;                    // Sum((MeanCentered A [][])**2)
-    da_int n_components = 0, ldvt = 0, u_size = 0;
+    std::vector<T> scores;   // U*Sigma
+    std::vector<T> variance; // Sigma**2 / n-1
+    std::vector<T> column_means, column_sdevs,
+        column_sdevs_nonzero; // Store standardization data
+    T total_variance = 0.0;   // Sum((MeanCentered A [][])**2)
+    da_int n_components = 0, ldvt = 0, u_size = 0, ldu = 0;
     std::vector<T> u, sigma, vt, work, A_copy;
     std::vector<da_int> iwork;
 
@@ -132,6 +146,11 @@ template <typename T> class da_pca : public basic_handle<T> {
             result[2] = (T)ns;
             break;
         case da_result::da_pca_scores:
+            if (store_U == false) {
+                return da_error(
+                    err, da_status_invalid_option,
+                    "In order to return the scores, the option 'store U' must be set.");
+            }
             if (*dim < n * ns) {
                 *dim = n * ns;
                 return da_warn(err, da_status_invalid_array_dimension,
@@ -139,10 +158,19 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(n * ns) + ".");
             }
-            for (da_int i = 0; i < n * ns; i++)
-                result[i] = scores[i];
+            // Compute Scores matrix, U * Sigma
+            for (da_int j = 0; j < ns; j++) {
+                for (da_int i = 0; i < n; i++) {
+                    result[j * n + i] = sigma[j] * u[j * ldu + i];
+                }
+            }
             break;
         case da_result::da_pca_u:
+            if (store_U == false) {
+                return da_error(
+                    err, da_status_invalid_option,
+                    "In order to return U, the option 'store U' must be set.");
+            }
             if (*dim < n * ns) {
                 *dim = n * ns;
                 return da_warn(err, da_status_invalid_array_dimension,
@@ -150,8 +178,11 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(n * ns) + ".");
             }
-            for (da_int i = 0; i < n * ns; i++)
-                result[i] = u[i];
+            for (da_int j = 0; j < ns; j++) {
+                for (da_int i = 0; i < n; i++) {
+                    result[i + n * j] = u[i + ldu * j];
+                }
+            }
             break;
         case da_result::da_pca_principal_components:
             if (*dim < ns * p) {
@@ -161,8 +192,9 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(ns * p) + ".");
             }
-            for (da_int i = 0; i < ns * p; i++)
-                result[i] = principal_components[i];
+            for (da_int j = 0; j < p; j++)
+                for (da_int i = 0; i < ns; i++)
+                    result[i + j * ns] = vt[i + j * ldvt];
             break;
         case da_result::da_pca_vt:
             if (*dim < npc * p) {
@@ -186,8 +218,10 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(ns) + ".");
             }
-            for (da_int i = 0; i < ns; i++)
-                result[i] = variance[i];
+            // Compute variance, proportional to (Sigma**2)
+            for (da_int j = 0; j < ns; j++) {
+                result[j] = sigma[j] * sigma[j] / div;
+            }
             break;
         case da_result::da_pca_sigma:
             if (*dim < ns) {
@@ -251,6 +285,7 @@ template <typename T> class da_pca : public basic_handle<T> {
 /* Store the user's data matrix in preparation for PCA computation */
 template <typename T>
 da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
+
     // Check for illegal arguments and function calls
     if (n < 1)
         return da_error(err, da_status_invalid_input,
@@ -271,18 +306,18 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
     // Store dimensions of A
     this->n = n;
     this->p = p;
-    try {
-        A_copy.resize(n * p);
-    } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error,
-                        "Memory allocation failed."); // LCOV_EXCL_LINE
-    }
-    // Copy the input matrix into internal matrix buffer
-    for (da_int j = 0; j < p; j++) {
-        for (da_int i = 0; i < n; i++) {
-            A_copy[i + j * n] = A[i + lda * j];
-        }
-    }
+    this->A = A;
+    this->lda = lda;
+
+    qr = false;
+    store_U = false;
+
+    u.resize(0);
+    sigma.resize(0);
+    vt.resize(0);
+    column_means.resize(0);
+    column_sdevs.resize(0);
+    column_sdevs_nonzero.resize(0);
 
     // Record that initialization is complete but computation has not yet been performed
     initdone = true;
@@ -309,7 +344,6 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
 
 /* Compute the PCA */
 template <typename T> da_status da_pca<T>::compute() {
-
     if (initdone == false)
         return da_error(err, da_status_no_data,
                         "No data has been passed to the handle. Please call "
@@ -328,13 +362,24 @@ template <typename T> da_status da_pca<T>::compute() {
 
     this->opts.get("PCA method", opt_method, method);
 
+    da_int u_tmp;
+    this->opts.get("store U", u_tmp);
+    store_U = (u_tmp > 0) ? true : false;
+
     std::string svd_routine;
     this->opts.get("svd solver", svd_routine, solver);
-    if (solver == solver_auto)
-        solver = (npc < std::min(n, p) / 10) ? solver_gesvdx : solver_gesdd;
+    if (solver == solver_auto) {
+        solver = (n > 3 * p && !(store_U))
+                     ? solver_syevd
+                     : solver_gesdd; // TODO switch where appropriate
+    }
+    if (solver == solver_syevd && store_U) {
+        return da_error(err, da_status_incompatible_options,
+                        "The 'store U' and 'syevd' options cannot be used together.");
+    }
 
     std::string degrees_of_freedom;
-    da_int div = (n == 1) ? 1 : n - 1;
+    div = (n == 1) ? 1 : n - 1;
     this->opts.get("degrees of freedom", degrees_of_freedom);
     if (degrees_of_freedom == "biased") {
         dof = -1;
@@ -342,72 +387,162 @@ template <typename T> da_status da_pca<T>::compute() {
     }
 
     // Initialize some workspace arrays
-    da_int iwork_size = 0, sigma_size = 0;
+    da_int iwork_size = 0, sigma_size = 0, A_copy_size = 0;
+    ldu = n;
     if (solver == solver_gesvdx) {
         iwork_size = 12 * std::min(n, p);
-        u_size = n * npc;
+        u_size = (store_U) ? n * npc : 0;
         ldvt = npc;
         sigma_size = 2 * std::min(n, p) + 1; // TODO bug in gesvdx being fixed at 4.2
+        A_copy_size = n * p;
     } else if (solver == solver_gesvd) {
         iwork_size = 0;
-        u_size = n * std::min(n, p);
+        u_size = (store_U) ? n * std::min(n, p) : 0;
         ldvt = std::min(n, p);
         sigma_size = std::min(n, p);
+        A_copy_size = n * p;
     } else if (solver == solver_gesdd) {
         iwork_size = 8 * std::min(n, p);
         u_size = n * std::min(n, p);
         ldvt = std::min(n, p);
         sigma_size = std::min(n, p);
+        A_copy_size = n * p;
+    } else if (solver == solver_syevd) {
+        sigma_size = p;
+        ldvt = p;
     }
 
     try {
-        u.resize(u_size);
-        sigma.resize(sigma_size);
-        vt.resize(ldvt * p);
+        u.resize(u_size, 0.0);
+        sigma.resize(sigma_size, 0.0);
+        vt.resize(ldvt * p, 0.0);
         iwork.resize(iwork_size);
+        A_copy.resize(A_copy_size);
     } catch (std::bad_alloc const &) {
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
+    }
+
+    if (solver == solver_syevd) {
+        // Compute A^T A in vt
+        da_blas::cblas_gemm(CblasColMajor, CblasTrans, CblasNoTrans, p, p, n, 1.0, A, lda,
+                            A, lda, 0.0, vt.data(), ldvt);
     }
 
     // Depending on the chosen method standardize by column means and possible standard deviations
-    try {
-        column_means.resize(p);
-    } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation failed.");
-    }
-    std::fill(column_means.begin(), column_means.end(), 0);
+    // Note we don't use the standardize API here since are also copying the data in the same step
 
     switch (method) {
     case pca_method_cov:
-        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n, dof, 0,
-                                         column_means.data(), (T *)nullptr);
-        break;
-    case pca_method_corr:
         try {
-            column_sdevs.resize(p);
+            column_means.resize(p, 0.0);
         } catch (std::bad_alloc const &) {
             return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
-        std::fill(column_sdevs.begin(), column_sdevs.end(), 0);
-        da_basic_statistics::standardize(da_axis_col, n, p, A_copy.data(), n, dof, 0,
-                                         column_means.data(), column_sdevs.data());
+        da_basic_statistics::mean(da_axis_col, n, p, A, lda, column_means.data());
+
+        if (solver == solver_syevd) {
+#pragma omp simd
+            for (da_int j = 0; j < p; j++) {
+                for (da_int i = 0; i <= j; i++) {
+                    vt[i + ldvt * j] -= 2 * n * column_means[j] * column_means[i];
+                }
+            }
+        } else {
+#pragma omp simd
+            for (da_int j = 0; j < p; j++) {
+                for (da_int i = 0; i < n; i++) {
+                    A_copy[i + j * n] = A[i + lda * j] - column_means[j];
+                }
+            }
+        }
+        break;
+    case pca_method_corr:
+        try {
+            column_means.resize(p, 0.0);
+            column_sdevs.resize(p, 0.0);
+            column_sdevs_nonzero.resize(p, 0.0);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        da_basic_statistics::variance(da_axis_col, n, p, A, lda, dof, column_means.data(),
+                                      column_sdevs.data());
+        if (solver == solver_syevd) {
+#pragma omp simd
+            for (da_int j = 0; j < p; j++) {
+                column_sdevs[j] = sqrt(column_sdevs[j]);
+                column_sdevs_nonzero[j] =
+                    (column_sdevs[j] == (T)0.0) ? (T)1.0 : column_sdevs[j];
+                for (da_int i = 0; i <= j; i++) {
+                    vt[i + ldvt * j] -= 2 * n * column_means[j] * column_means[i];
+                    vt[i + ldvt * j] /=
+                        (column_sdevs_nonzero[j] * column_sdevs_nonzero[i]);
+                }
+            }
+        } else {
+#pragma omp simd
+            for (da_int j = 0; j < p; j++) {
+                column_sdevs[j] = sqrt(column_sdevs[j]);
+                column_sdevs_nonzero[j] =
+                    (column_sdevs[j] == (T)0.0) ? (T)1.0 : column_sdevs[j];
+                for (da_int i = 0; i < n; i++) {
+                    A_copy[i + j * n] =
+                        (A[i + lda * j] - column_means[j]) / column_sdevs_nonzero[j];
+                }
+            }
+        }
         break;
     default:
-        // No standardization is required
+        if (solver != solver_syevd) {
+            // No standardization is required, just copy the input matrix into internal matrix buffer
+#pragma omp simd
+            for (da_int j = 0; j < p; j++) {
+                for (da_int i = 0; i < n; i++) {
+                    A_copy[i + j * n] = A[i + lda * j];
+                }
+            }
+        }
         break;
     }
 
     // Compute and store the total variance of the (standardized) input matrix
     total_variance = 0.0;
-    for (da_int j = 0; j < p; j++) {
-        for (da_int i = 0; i < n; i++) {
-            total_variance += A_copy[i + n * j] * A_copy[i + n * j];
+    if (solver == solver_syevd) {
+#pragma omp simd reduction(+ : total_variance)
+        for (da_int i = 0; i < p; i++) {
+            total_variance += vt[i + ldvt * i];
+        }
+    } else {
+#pragma omp simd reduction(+ : total_variance)
+        for (da_int i = 0; i < n * p; i++) {
+            total_variance += A_copy[i] * A_copy[i];
         }
     }
     total_variance /= div;
+
+    // Collect the dimensions and pointers we will supply to the SVD routines
+    da_int m_svd = n;
+    da_int n_svd = p;
+    T *A_svd = A_copy.data();
+
+    // If necessary, perform a QR decomposition before the SVD
+    std::vector<T> tau, R_blocked, tau_R_blocked, R;
+    da_int n_blocks, block_size, final_block_size;
+    if (solver != solver_syevd && (T)n / (T)p > 1.2) {
+        // The factor is a heuristic based on flop counts of QR and SVD routines
+        qr = true;
+        da_status status = da_qr(n, p, A_copy, n, tau, R_blocked, tau_R_blocked, R,
+                                 n_blocks, block_size, final_block_size, store_U, err);
+        if (status != da_status_success)
+            return da_error(err, status, // LCOV_EXCL_LINE
+                            "Failed to compute QR decomposition prior to SVD.");
+
+        A_svd = R.data();
+        m_svd = p;
+        n_svd = p;
+    }
 
     // Compute SVD of standardized data matrix
 
@@ -418,7 +553,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
     switch (solver) {
     case solver_gesvdx: {
-        char JOBU = 'V';
+        char JOBU = (store_U) ? 'V' : 'N';
         char JOBVT = 'V';
         char RANGE = 'I';
         T vl = 0.0;
@@ -427,8 +562,8 @@ template <typename T> da_status da_pca<T>::compute() {
         da_int il = 1;
 
         // Query gesvdx for optimal work space required
-        da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu,
-                   &ns, sigma.data(), u.data(), &n, vt.data(), &ldvt, estworkspace,
+        da::gesvdx(&JOBU, &JOBVT, &RANGE, &m_svd, &n_svd, A_svd, &m_svd, &vl, &vu, &il,
+                   &iu, &ns, sigma.data(), u.data(), &ldu, vt.data(), &ldvt, estworkspace,
                    &lwork, iwork.data(), &INFO);
 
         // Handle SVD Error
@@ -451,9 +586,10 @@ template <typename T> da_status da_pca<T>::compute() {
         INFO = 0;
 
         /*Call gesvdx*/
-        da::gesvdx(&JOBU, &JOBVT, &RANGE, &n, &p, A_copy.data(), &n, &vl, &vu, &il, &iu,
-                   &ns, sigma.data(), u.data(), &n, vt.data(), &ldvt, work.data(), &lwork,
-                   iwork.data(), &INFO);
+        da::gesvdx(&JOBU, &JOBVT, &RANGE, &m_svd, &n_svd, A_svd, &m_svd, &vl, &vu, &il,
+                   &iu, &ns, sigma.data(), u.data(), &ldu, vt.data(), &ldvt, work.data(),
+                   &lwork, iwork.data(), &INFO);
+
         break;
     }
 
@@ -462,10 +598,10 @@ template <typename T> da_status da_pca<T>::compute() {
         char JOBVT = 'S';
 
         // Query gesvd for optimal work space required
-        da::gesvd(&JOBU, &JOBVT, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n,
-                  vt.data(), &ldvt, estworkspace, &lwork, &INFO);
+        da::gesvd(&JOBU, &JOBVT, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(),
+                  &ldu, vt.data(), &ldvt, estworkspace, &lwork, &INFO);
 
-        // Handle SVD Error
+        // Handle error
         if (INFO != 0) {
             return da_error(
                 err, da_status_internal_error,
@@ -484,8 +620,16 @@ template <typename T> da_status da_pca<T>::compute() {
         INFO = 0;
 
         /*Call gesvd*/
-        da::gesvd(&JOBU, &JOBVT, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n,
-                  vt.data(), &ldvt, work.data(), &lwork, &INFO);
+        da::gesvd(&JOBU, &JOBVT, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(),
+                  &ldu, vt.data(), &ldvt, work.data(), &lwork, &INFO);
+
+        // Handle error
+        if (INFO != 0) {
+            return da_error(
+                err, da_status_internal_error,
+                "An internal error occurred while computing the PCA. Please check "
+                "the input data for undefined values.");
+        }
         break;
     }
 
@@ -493,10 +637,10 @@ template <typename T> da_status da_pca<T>::compute() {
         char JOBZ = 'S';
 
         // Query gesdd for optimal work space required
-        da::gesdd(&JOBZ, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n, vt.data(),
-                  &ldvt, estworkspace, &lwork, iwork.data(), &INFO);
+        da::gesdd(&JOBZ, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(), &ldu,
+                  vt.data(), &ldvt, estworkspace, &lwork, iwork.data(), &INFO);
 
-        // Handle SVD Error
+        // Handle error
         if (INFO != 0) {
             return da_error(
                 err, da_status_internal_error,
@@ -515,8 +659,79 @@ template <typename T> da_status da_pca<T>::compute() {
         INFO = 0;
 
         /*Call gesdd*/
-        da::gesdd(&JOBZ, &n, &p, A_copy.data(), &n, sigma.data(), u.data(), &n, vt.data(),
-                  &ldvt, work.data(), &lwork, iwork.data(), &INFO);
+        da::gesdd(&JOBZ, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(), &ldu,
+                  vt.data(), &ldvt, work.data(), &lwork, iwork.data(), &INFO);
+
+        // Handle error
+        if (INFO != 0) {
+            return da_error(
+                err, da_status_internal_error,
+                "An internal error occurred while computing the PCA. Please check "
+                "the input data for undefined values.");
+        }
+
+        break;
+    }
+
+    case solver_syevd: {
+        char JOB = 'V';
+        char UPLO = 'U';
+        da_int liwork = -1;
+        da_int estiworkspace[1];
+
+        // Query syevd for workspace requirements
+        da::syevd(&JOB, &UPLO, &p, vt.data(), &ldvt, sigma.data(), estworkspace, &lwork,
+                  estiworkspace, &liwork, &INFO);
+
+        // Handle eigensolver error
+        if (INFO != 0) {
+            return da_error(
+                err, da_status_internal_error,
+                "An internal error occurred while computing the PCA. Please check "
+                "the input data for undefined values.");
+        }
+
+        // Allocate the workspace required
+        lwork = (da_int)estworkspace[0];
+        liwork = estiworkspace[0];
+        try {
+            work.resize(lwork);
+            iwork.resize(liwork);
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+
+        INFO = 0;
+
+        da::syevd(&JOB, &UPLO, &p, vt.data(), &ldvt, sigma.data(), work.data(), &lwork,
+                  iwork.data(), &liwork, &INFO);
+
+        // Handle error
+        if (INFO != 0) {
+            return da_error(
+                err, da_status_internal_error,
+                "An internal error occurred while computing the PCA. Please check "
+                "the input data for undefined values.");
+        }
+
+        // Need to reverse order of eigenvalues, square root them and transpose/reverse vt
+        std::reverse(sigma.begin(), sigma.end());
+
+        for (da_int i = 0; i < npc; i++) {
+            sigma[i] = (sigma[i] < 0) ? (T)0.0 : sqrt(sigma[i]);
+        }
+
+        for (da_int i = 0; i < p; i++) {
+            std::reverse(vt.begin() + i * p, vt.begin() + (i + 1) * p);
+        }
+
+#pragma omp simd
+        for (da_int j = 0; j < p; j++) {
+            for (da_int i = 0; i < j; i++) {
+                vt[i + ldvt * j] = vt[j + ldvt * i];
+            }
+        }
+
         break;
     }
     default:
@@ -526,70 +741,44 @@ template <typename T> da_status da_pca<T>::compute() {
             "the input data for undefined values.");
     }
 
-    // Handle SVD Error
-    if (INFO != 0) {
-        return da_error(
-            err, da_status_internal_error,
-            "An internal error occurred while computing the PCA. Please check "
-            "the input data for undefined values.");
+    if (qr && store_U) {
+        // Update the relevant ns columns of U with the reflectors used in the QR decomposition
+        da_status status =
+            da_qr_apply(p, A_copy, n, tau, R_blocked, tau_R_blocked, n_blocks, block_size,
+                        final_block_size, ns, u, ldu, err);
+        if (status != da_status_success)
+            return da_error(err, status, // LCOV_EXCL_LINE
+                            "Failed to update U following QR decomposition.");
     }
 
     // Go through the ns columns of U and find the max absolute value
     // If that value is negative, flip sign of that column of U and that row of VT
 
-    T colmax;
-    for (da_int j = 0; j < ns; j++) {
-        // Look at column j of U
-        colmax = (T)0.0;
-        for (da_int i = 0; i < n; i++) {
-            colmax = std::abs(u[i + n * j]) > std::abs(colmax) ? u[i + n * j] : colmax;
-        }
-        if (colmax < 0) {
-            // Negate column j of U and row j of VT
+    if (store_U) {
+        T colmax;
+        for (da_int j = 0; j < ns; j++) {
+            // Look at column j of U
+            colmax = (T)0.0;
             for (da_int i = 0; i < n; i++) {
-                u[i + n * j] = -u[i + n * j];
+                colmax =
+                    std::abs(u[i + ldu * j]) > std::abs(colmax) ? u[i + ldu * j] : colmax;
             }
-            for (da_int i = 0; i < p; i++) {
-                vt[j + ldvt * i] = -vt[j + ldvt * i];
+            if (colmax < 0) {
+                // Negate column j of U and row j of VT
+                for (da_int i = 0; i < n; i++) {
+                    u[i + ldu * j] = -u[i + ldu * j];
+                }
+                for (da_int i = 0; i < p; i++) {
+                    vt[j + ldvt * i] = -vt[j + ldvt * i];
+                }
             }
         }
-    }
-
-    // Allocate space for the results
-    try {
-        principal_components.resize(ns * p);
-        scores.resize(n * ns);
-        variance.resize(ns);
-    } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error,
-                        "Memory allocation failed."); // LCOV_EXCL_LINE
-    }
-
-    // Compute Scores matrix, U * Sigma
-    for (da_int j = 0; j < ns; j++) {
-        for (da_int i = 0; i < n; i++) {
-            scores[j * n + i] = sigma[j] * u[j * n + i];
-        }
-    }
-
-    // Save the principal components
-    // Note careful use of ns vs npc in principal_components: they should be identical, but this guards against unexpected gesvdx behaviour
-    for (da_int j = 0; j < p; j++) {
-        for (da_int i = 0; i < ns; i++) {
-            principal_components[j * ns + i] = vt[j * ldvt + i];
-        }
-    }
-
-    // Compute variance, proportional to (Sigma**2)
-    for (da_int j = 0; j < ns; j++) {
-        variance[j] = sigma[j] * sigma[j] / div;
     }
 
     n_components = ns;
 
     // Update flag to true
     iscomputed = true;
-
     return da_status_success;
 }
 
@@ -639,31 +828,43 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
         return da_error(err, da_status_memory_error,
                         "Memory allocation failed."); // LCOV_EXCL_LINE
     }
-    for (da_int j = 0; j < p; j++) {
-        for (da_int i = 0; i < m; i++) {
-            X_copy[i + j * m] = X[i + ldx * j];
-        }
-    }
+
+    const T *X_gemm;
+    da_int ldx_gemm;
 
     // Standardize the new data matrix based on the standardization used in the PCA computation
     switch (method) {
     case pca_method_cov:
-        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m, dof, 0,
-                                         column_means.data(), (T *)nullptr);
+#pragma omp simd
+        for (da_int j = 0; j < p; j++) {
+            for (da_int i = 0; i < m; i++) {
+                X_copy[i + j * m] = X[i + ldx * j] - column_means[j];
+            }
+        }
+        X_gemm = X_copy.data();
+        ldx_gemm = m;
         break;
     case pca_method_corr:
-        da_basic_statistics::standardize(da_axis_col, m, p, X_copy.data(), m, dof, 0,
-                                         column_means.data(), column_sdevs.data());
+#pragma omp simd
+        for (da_int j = 0; j < p; j++) {
+            for (da_int i = 0; i < m; i++) {
+                X_copy[i + j * m] =
+                    (X[i + ldx * j] - column_means[j]) / column_sdevs_nonzero[j];
+            }
+        }
+        X_gemm = X_copy.data();
+        ldx_gemm = m;
         break;
     default:
         // No standardization is required
+        X_gemm = X;
+        ldx_gemm = ldx;
         break;
     }
 
     // Compute X * VT^T and store in transformed_data
-    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, m, ns, p, 1.0,
-                        X_copy.data(), m, principal_components.data(), ns, 0.0,
-                        X_transform, ldx_transform);
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, m, ns, p, 1.0, X_gemm,
+                        ldx_gemm, vt.data(), ldvt, 0.0, X_transform, ldx_transform);
 
     return da_status_success;
 }
@@ -710,8 +911,7 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
 
     // Compute X * VT and store
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X, ldx,
-                        principal_components.data(), ns, 0.0, X_inv_transform,
-                        ldx_inv_transform);
+                        vt.data(), ldvt, 0.0, X_inv_transform, ldx_inv_transform);
 
     // Undo the standardization used in the PCA computation
     switch (method) {

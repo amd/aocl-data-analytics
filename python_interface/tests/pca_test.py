@@ -46,7 +46,7 @@ def test_pca_functionality(da_precision, numpy_precision, numpy_order):
     x = np.array([[1, 1, 4], [3, 2, 3], [0, 2, 3], [1, 0, 1]],
                  dtype=numpy_precision, order=numpy_order)
 
-    pca = PCA(n_components=2, precision=da_precision)
+    pca = PCA(n_components=2, store_U = True, precision=da_precision)
     pca.fit(a)
 
     expected_components = np.array([[0.4082482904638631,  0.816496580927726, -0.408248290463863],

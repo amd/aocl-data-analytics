@@ -28,10 +28,12 @@
 #include <iostream>
 #include <limits>
 #include <list>
+#include <random>
 #include <stdio.h>
 #include <string.h>
 
 #include "aoclda.h"
+#include "da_cblas.hh"
 #include "pca_test_data.hpp"
 
 template <typename T> class PCATest : public testing::Test {
@@ -73,6 +75,9 @@ TYPED_TEST(PCATest, PCAFunctionality) {
         }
 
         EXPECT_EQ(da_options_set_int(handle, "n_components", param.components_required),
+                  da_status_success);
+
+        EXPECT_EQ(da_options_set_int(handle, "store U", param.store_U),
                   da_status_success);
 
         if (param.svd_solver.size() != 0) {
@@ -197,6 +202,93 @@ TYPED_TEST(PCATest, PCAFunctionality) {
     }
 }
 
+TYPED_TEST(PCATest, TallSkinny) {
+    // Check the route through the blocked, tall, skinny QR decomposition
+    da_int m = 1000;
+    da_int n = 50;
+    da_int size_A = m * n;
+    std::vector<TypeParam> A(size_A);
+    std::vector<TypeParam> zeros(size_A, 0.0);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    gen.seed(474);
+    auto uniform_real_dist = std::uniform_real_distribution<TypeParam>(-1.0, 1.0);
+    std::generate(A.begin(), A.end(), [&]() { return uniform_real_dist(gen); });
+
+    EXPECT_EQ(da_standardize(da_axis_col, m, n, A.data(), m, 0, 0, nullptr, nullptr),
+              da_status_success);
+    std::vector<TypeParam> A_copy;
+    A_copy = A;
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
+    EXPECT_EQ(da_pca_set_data(handle, m, n, A.data(), m), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_components", n), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "store U", 1), da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    // All we want to do here is check that we can reform A via U * Sigma * Vt so we know the QR worked properly
+    da_int size_u = m * n;
+    da_int size_vt = n * n;
+    da_int size_sigma = n;
+    std::vector<TypeParam> u(size_u);
+    std::vector<TypeParam> vt(size_vt);
+    std::vector<TypeParam> sigma(size_sigma);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &size_u, u.data()),
+              da_status_success);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &size_vt, vt.data()),
+              da_status_success);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_sigma, &size_sigma, sigma.data()),
+              da_status_success);
+    // Compute A - U * Sigma * Vt
+    for (da_int j = 0; j < n; j++) {
+        for (da_int i = 0; i < n; i++) {
+            vt[i + j * n] *= sigma[i];
+        }
+    }
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, n, n,
+                        (TypeParam)1.0, u.data(), m, vt.data(), n, (TypeParam)-1.0,
+                        A.data(), m);
+    TypeParam epsilon = 1000 * std::numeric_limits<TypeParam>::epsilon();
+    EXPECT_ARR_NEAR(size_A, A.data(), zeros.data(), epsilon);
+    da_handle_destroy(&handle);
+
+    // Now do the same test with 'store U' set to 0 and check we get the same components
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
+    EXPECT_EQ(da_pca_set_data(handle, m, n, A_copy.data(), m), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_components", n), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "store U", 0), da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    std::vector<TypeParam> sigma2(size_sigma);
+    std::vector<TypeParam> vt2(size_vt);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &size_vt, vt2.data()),
+              da_status_success);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_sigma, &size_sigma, sigma2.data()),
+              da_status_success);
+    EXPECT_ARR_NEAR(size_sigma, sigma.data(), sigma2.data(), epsilon);
+    da_handle_destroy(&handle);
+
+    // Finally, the same test with the eigendecomposition method
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
+    EXPECT_EQ(da_pca_set_data(handle, m, n, A_copy.data(), m), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_components", n), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "store U", 0), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "svd solver", "syevd"), da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    std::vector<TypeParam> sigma3(size_sigma);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_sigma, &size_sigma, sigma3.data()),
+              da_status_success);
+    EXPECT_ARR_NEAR(size_sigma, sigma.data(), sigma3.data(), epsilon);
+
+    std::vector<TypeParam> vt3(size_vt);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &size_vt, vt3.data()),
+              da_status_success);
+    for (da_int i = 0; i < size_vt; i++) {
+        vt2[i] = std::abs(vt2[i]);
+        vt3[i] = std::abs(vt3[i]);
+    }
+    EXPECT_ARR_NEAR(size_vt, vt2.data(), vt3.data(), epsilon);
+    da_handle_destroy(&handle);
+}
+
 TYPED_TEST(PCATest, MultipleCalls) {
     // Check we can repeatedly call compute etc with the same single handle
 
@@ -227,6 +319,8 @@ TYPED_TEST(PCATest, MultipleCalls) {
                 da_options_set_string(handle, "svd solver", param.svd_solver.c_str()),
                 da_status_success);
         }
+        EXPECT_EQ(da_options_set_int(handle, "store U", param.store_U),
+                  da_status_success);
 
         EXPECT_EQ(da_pca_compute<TypeParam>(handle), param.expected_status);
 
@@ -364,6 +458,8 @@ TYPED_TEST(PCATest, ErrorExits) {
 
     EXPECT_EQ(da_options_set_int(handle, "n_components", params[0].components_required),
               da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "store U", params[0].store_U),
+              da_status_success);
     EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
                               params[0].lda),
               da_status_success);
@@ -456,6 +552,7 @@ TYPED_TEST(PCATest, ErrorExits) {
 
     // da_handle_results error exits for columns means and column sdevs
     EXPECT_EQ(da_options_set_string(handle, "PCA method", "svd"), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "store U", 1), da_status_success);
     EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
     dim = 1;
     EXPECT_EQ(da_handle_get_result(handle, da_pca_column_means, &dim, results_arr),
@@ -475,6 +572,27 @@ TYPED_TEST(PCATest, ErrorExits) {
     dim = 1;
     EXPECT_EQ(da_handle_get_result(handle, da_pca_column_sdevs, &dim, results_arr),
               da_status_invalid_array_dimension);
+
+    // da_handle_results error exits for store_U false
+    EXPECT_EQ(da_options_set_int(handle, "store U", 0), da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &dim, results_arr),
+              da_status_invalid_option);
+    dim = 1;
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_scores, &dim, results_arr),
+              da_status_invalid_option);
+
+    da_handle_destroy(&handle);
+
+    // Incompatible options
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "store U", 1), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "svd solver", "syevd"), da_status_success);
+    EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
+                              params[0].lda),
+              da_status_success);
+    EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_incompatible_options);
 
     da_handle_destroy(&handle);
 }

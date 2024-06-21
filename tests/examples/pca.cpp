@@ -68,6 +68,7 @@ int main() {
                     da_status_success);
     pass = pass && (da_options_set_int(handle, "n_components", n_components) ==
                     da_status_success);
+    pass = pass && (da_options_set_int(handle, "store U", 1) == da_status_success);
 
     // Compute the PCA
     pass = pass && (da_pca_compute_d(handle) == da_status_success);
