@@ -294,12 +294,20 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("model") = "hybrid", py::arg("method") = "galahad",
              py::arg("glob_strategy") = "tr", py::arg("reg_power") = "quadratic",
              py::arg("verbose") = (da_int)0)
-        .def("fit", &nlls::fit<double>, "Fit data and train the model", "x"_a, "fun"_a,
+        .def("fit_d", &nlls::fit<double>, "Fit data and train the model", "x"_a, "fun"_a,
              "jac"_a, "hes"_a = py::none(), "hep"_a = py::none(), "data"_a = py::none(),
              py::arg("ftol") = (double)1.0e-8, py::arg("abs_ftol") = (double)1.0e-8,
              py::arg("gtol") = (double)1.0e-8, py::arg("abs_gtol") = (double)1.0e-5,
              py::arg("xtol") = (double)2.22e-16, py::arg("reg_term") = (double)0.0,
              py::arg("maxit") = (da_int)100)
+        .def("fit_s", &nlls::fit<float>, "Fit data and train the model", "x"_a, "fun"_a,
+             "jac"_a, "hes"_a = py::none(), "hep"_a = py::none(), "data"_a = py::none(),
+             py::arg("ftol") = (float)1.0e-8, py::arg("abs_ftol") = (float)1.0e-8,
+             py::arg("gtol") = (float)1.0e-8, py::arg("abs_gtol") = (float)1.0e-5,
+             py::arg("xtol") = (float)2.22e-16, py::arg("reg_term") = (float)0.0,
+             py::arg("maxit") = (da_int)100)
+        // hidden @properties
+        .def("_get_precision", &nlls::get_precision) // -> string
         // @properties
         // info[da_optim_info_t::info_iter] = T(inform.iter);
         .def("get_info_iter", &nlls::get_info_iter) // -> int

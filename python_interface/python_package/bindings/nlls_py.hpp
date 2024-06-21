@@ -253,6 +253,14 @@ class nlls : public pyda_handle {
     class nlls_cb::callbacks_t callbacks;
 
   public:
+    std::string get_precision() {
+        if (precision == da_precision::da_double) {
+            return "double";
+        } else if (precision == da_precision::da_single) {
+            return "single";
+        }
+        return "unknown";
+    }
     nlls(da_int n_coef, da_int n_res, std::optional<py::array> weights,
          std::optional<py::array> lower_bounds, std::optional<py::array> upper_bounds,
          std::string order = "c", std::string prec = "double",
@@ -442,7 +450,7 @@ class nlls : public pyda_handle {
         status = da_options_set(handle, "storage scheme", order.c_str());
         exception_check(status);
         char opt_order[20];
-        da_int lorder;
+        da_int lorder = 20;
         da_int okey;
         status = da_options_get(handle, "storage scheme", opt_order, &lorder, &okey);
         exception_check(status);
@@ -557,6 +565,30 @@ class nlls : public pyda_handle {
 
         exception_check(status);
     }
+
+    void fit_d(py::array_t<double> x, nlls_cb::py_cb1_t<double> &fun,
+               std::optional<nlls_cb::py_cb1_t<double>> jac,
+               std::optional<nlls_cb::py_cb2_t<double>> hes,
+               std::optional<nlls_cb::py_cb2_t<double>> hp,
+               std::optional<py::object> data, double ftol = 1.0e-8,
+               double abs_ftol = 1.0e-8, double gtol = 1.0e-8, double abs_gtol = 1.0e-5,
+               double xtol = 2.22e-16, double reg_term = 0.0,
+               da_int maxit = da_int(100)) {
+        fit<double>(x, fun, jac, hes, hp, data, ftol, abs_ftol, gtol, abs_gtol, xtol,
+                    reg_term, maxit);
+    }
+
+    void fit_s(py::array_t<float> x, nlls_cb::py_cb1_t<float> &fun,
+               std::optional<nlls_cb::py_cb1_t<float>> jac,
+               std::optional<nlls_cb::py_cb2_t<float>> hes,
+               std::optional<nlls_cb::py_cb2_t<float>> hp, std::optional<py::object> data,
+               float ftol = 1.0e-8f, float abs_ftol = 1.0e-8f, float gtol = 1.0e-8f,
+               float abs_gtol = 1.0e-5f, float xtol = 2.22e-16f, float reg_term = 0.0,
+               da_int maxit = da_int(100)) {
+        fit<float>(x, fun, jac, hes, hp, data, ftol, abs_ftol, gtol, abs_gtol, xtol,
+                   reg_term, maxit);
+    }
+
     // Query handle for information
     template <typename T>
     void get_info(da_int &iter, da_int &f_eval, da_int &g_eval, da_int &h_eval,

@@ -140,7 +140,7 @@ class nlls(pybind_nlls):
                 at the point ``x``.
                 This function has the interface
 
-                :code:`def fun(x, residuals, data):`
+                :code:`def fun(x, residuals, data) -> int:`
 
                 .. note::
 
@@ -152,7 +152,7 @@ class nlls(pybind_nlls):
 
                 .. code-block:: python
 
-                    def fun(x, r, data):
+                    def fun(x, r, data) -> int:
                         r[:] = data.residuals(x)
                         return 0;
 
@@ -162,7 +162,7 @@ class nlls(pybind_nlls):
                 at the point ``x``.
                 This function has the interface
 
-                :code:`def jac(x, jacobian, data):`
+                :code:`def jac(x, jacobian, data) -> int:`
 
                 .. note::
 
@@ -174,7 +174,7 @@ class nlls(pybind_nlls):
 
                 .. code-block:: python
 
-                    def jac(x, j, data):
+                    def jac(x, j, data) -> int:
                         j[:] = data.Jacobian(x)
                         return 0;
 
@@ -182,7 +182,7 @@ class nlls(pybind_nlls):
                 ``n_coef`` symmetric residual Hessian matrix: H = sum_i r_i H_i.
                 This function has the interface
 
-                :code:`def hes(x, r, h, data):`
+                :code:`def hes(x, r, h, data) -> int:`
 
                 Default = `None`.
 
@@ -197,7 +197,7 @@ class nlls(pybind_nlls):
 
                 .. code-block:: python
 
-                    def hes(x, r, h, data):
+                    def hes(x, r, h, data) -> int:
                         n = data['n_coef'];
                         Hi = data['hessians']
                         h[:] = Hi.sum(n, x, r)
@@ -209,7 +209,7 @@ class nlls(pybind_nlls):
                 is of size number of coefficients by number of residuals.
                 This function has the interface
 
-                :code:`def hep(x, y, hp, data):`
+                :code:`def hep(x, y, hp, data) -> int:`
 
 
                 Default = ``None``.
@@ -225,7 +225,7 @@ class nlls(pybind_nlls):
 
                 .. code-block:: python
 
-                    def hep(x, y, hp, data):
+                    def hep(x, y, hp, data) -> int:
                         n = data['n_coef'];
                         m = data['n_res'];
                         Hi = data['hessians']
@@ -269,11 +269,17 @@ class nlls(pybind_nlls):
             self.__cb_inspect(hes, 4)
         if hep is not None:
             self.__cb_inspect(hep, 4)
-
-        pybind_nlls.fit(self, x=x, fun=fun, jac=jac, hes=hes,
-                        hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
-                        gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
-                        reg_term=reg_term, maxit=maxit)
+        # Separate calls, pybind is calling the wrong specialization
+        if pybind_nlls._get_precision(self) == "double":
+            pybind_nlls.fit_d(self, x=x, fun=fun, jac=jac, hes=hes,
+                              hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
+                              gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
+                              reg_term=reg_term, maxit=maxit)
+        else:
+            pybind_nlls.fit_s(self, x=x, fun=fun, jac=jac, hes=hes,
+                              hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
+                              gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
+                              reg_term=reg_term, maxit=maxit)
         return self
 
     @property
