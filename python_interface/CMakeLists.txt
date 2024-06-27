@@ -57,7 +57,10 @@ endif()
 set(CMAKE_INSTALL_MODE COPY)
 install(DIRECTORY python_package/aoclda DESTINATION python_package)
 install(FILES python_package/setup.py DESTINATION python_package)
-install(FILES ${DEP_LIBS} DESTINATION python_package/aoclda OPTIONAL)
+install(
+  FILES ${DEP_LIBS}
+  DESTINATION python_package/aoclda
+  OPTIONAL)
 # Optional accounts for lack of a dll in case that static utils was linked)
 install(
   TARGETS aocl-da
@@ -65,21 +68,54 @@ install(
   LIBRARY DESTINATION python_package/aoclda
   RUNTIME DESTINATION python_package/aoclda)
 
-if(WIN32 AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-  # Install Fortran runtimes
-  install(FILES "$ENV{FLANG_COMPILER}/lib/flang.lib"
-          DESTINATION python_package/aoclda)
-  install(FILES "$ENV{FLANG_COMPILER}/bin/flang.dll"
-          DESTINATION python_package/aoclda)
-  install(FILES "$ENV{FLANG_COMPILER}/lib/flangrti.lib"
-          DESTINATION python_package/aoclda)
-  install(FILES "$ENV{FLANG_COMPILER}/bin/flangrti.dll"
-          DESTINATION python_package/aoclda)
-  install(FILES "$ENV{FLANG_COMPILER}/lib/libomp.lib"
-          DESTINATION python_package/aoclda)
-  install(FILES "$ENV{FLANG_COMPILER}/bin/libomp.dll"
-          DESTINATION python_package/aoclda)
-  # TODO add clang omp?
+if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+  if(WIN32)
+    # Install Fortran runtimes
+    set(RUNTIME_LIBS
+        flang.lib
+        flang.dll
+        flangrti.lib
+        flangrti.dll
+        libomp.lib
+        libomp.dll
+        ompstub.lib
+        ompstub.dll
+        pgmath.lib
+        pgmath.dll)
+    foreach(LIB ${RUNTIME_LIBS})
+      install(FILES "$ENV{FLANG_COMPILER}/lib/${LIB}"
+              DESTINATION python_package/aoclda)
+    endforeach()
+  else()
+    # Fine where the Flang runtime folder is
+    string(REPLACE ":" ";" LD_LIBRARY_PATH_LIST $ENV{LD_LIBRARY_PATH})
+    find_path(
+      FLANG_RUNTIME_DIR
+      NAMES libflang.so
+      HINTS ${LD_LIBRARY_PATH_LIST})
+    if(NOT FLANG_RUNTIME_DIR)
+      message(FATAL_ERROR "Flang runtimes not found")
+    endif()
+    # Lists of required runtimes and symlinks
+    set(RUNTIME_LIBS libflang.so libflangrti.so libpgmath.so libompstub.so
+                     libomp.so)
+    set(SYMLINK_LIBS libamdlibm.so libamdalloc.so)
+    # Install the runtimes
+    foreach(LIB ${RUNTIME_LIBS})
+      install(FILES "${FLANG_RUNTIME_DIR}/${LIB}"
+              DESTINATION python_package/aoclda)
+    endforeach()
+    # Recreate the symlinks
+    foreach(LIB ${SYMLINK_LIBS})
+      get_filename_component(LIB_TARGET "${FLANG_RUNTIME_DIR}/${LIB}" REALPATH)
+      get_filename_component(LIB_TARGET_NAME ${LIB_TARGET} NAME)
+      install(FILES ${LIB_TARGET} DESTINATION python_package/aoclda)
+      install(
+        CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/${LIB_TARGET_NAME} ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/${LIB})"
+      )
+    endforeach()
+
+  endif()
 endif()
 
 if(NOT WIN32)
