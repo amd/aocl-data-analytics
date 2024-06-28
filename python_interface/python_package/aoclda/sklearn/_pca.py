@@ -99,7 +99,7 @@ class PCA(PCA_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.pca = self.pca_single
-            del self.pca_double
+            self.pca_double = None
 
         self.pca.fit(X)
         return self

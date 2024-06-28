@@ -78,6 +78,20 @@ def test_linear_regression(precision):
     print("   sklearn:", linreg_da.intercept_)
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve_linreg(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    X = np.array([[1, 1], [1, 2], [2, 2], [2, 3]], dtype=precision)
+    y = np.dot(X, np.array([1, 2], dtype=precision)) + 3
+    skpatch()
+    from sklearn.linear_model import LinearRegression
+    linreg_da = LinearRegression()
+    linreg_da.fit(X, y)
+    linreg_da.fit(X, y)
+
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
 def test_ridge(precision):
     """
     Ridge regression using LBFGS
@@ -117,6 +131,22 @@ def test_ridge(precision):
     print("Intercept")
     print("    aoclda:", ridge_da.intercept_)
     print("   sklearn:", ridge.intercept_/2)
+
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve_ridge(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    X, y, _ = make_regression(
+    n_samples=200, n_features=8, coef=True, random_state=1)
+    X = X.astype(precision)
+    y = y.astype(precision)
+    skpatch()
+    from sklearn.linear_model import Ridge
+    ridge_da = Ridge()
+    ridge_da.fit(X, y)
+    ridge_da.fit(X, y)
 
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
@@ -163,6 +193,22 @@ def test_lasso(precision):
 
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve_lasso(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    X, y, _ = make_regression(
+    n_samples=200, n_features=8, coef=True, random_state=1)
+    X = X.astype(precision)
+    y = y.astype(precision)
+    skpatch()
+    from sklearn.linear_model import Lasso
+    lasso_da = Lasso(alpha=0.1)
+    lasso_da.fit(X, y)
+    lasso_da.fit(X, y)
+
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
 def test_logistic(precision):
     """
     Logistic Regression
@@ -198,6 +244,24 @@ def test_logistic(precision):
     print("Intercept")
     print("    aoclda:", lg_da.intercept_)
     print("   sklearn:", lg.intercept_)
+
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve_lasso(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    X, y = make_classification(
+        n_samples=200, n_features=8, random_state=1)
+    X = X.astype(precision)
+    y = y.astype(precision)
+
+    skpatch()
+    from sklearn.linear_model import LogisticRegression
+    lg_da = LogisticRegression()
+    lg_da.fit(X, y)
+    lg_da.fit(X, y)
+
 
 
 @pytest.mark.parametrize("problem", ["LinearRegression", "Ridge", "Lasso", "ElasticNet"])

@@ -147,7 +147,7 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.decision_forest = self.decision_forest_single
-            del self.decision_forest_double
+            self.decision_forest_double = None
 
         self.decision_forest.fit(X, y)
 

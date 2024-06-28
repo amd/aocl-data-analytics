@@ -53,5 +53,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     package_data={'aoclda': dep_libs},
-    install_requires=['numpy', 'wheel'],
+    install_requires=['numpy<2.0', 'wheel'],
 )

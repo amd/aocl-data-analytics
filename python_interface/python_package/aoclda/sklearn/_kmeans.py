@@ -113,7 +113,7 @@ class kmeans(kmeans_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.kmeans = self.kmeans_single
-            del self.kmeans_double
+            self.kmeans_double = None
 
         if isinstance(self.init, np.ndarray):
             self.kmeans.fit(X, C = self.init, tol = self.tol)

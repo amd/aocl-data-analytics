@@ -46,18 +46,18 @@ def test_decision_tree(precision):
     # patch and import scikit-learn
     skpatch()
     from sklearn import tree
-    tree = tree.DecisionTreeClassifier()
-    tree = tree.fit(X, Y)
-    da_yp = tree.predict( Xp )
-    assert tree.aocl is True
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(X, Y)
+    da_yp = clf.predict( Xp )
+    assert clf.aocl is True
 
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn import tree
-    tree = tree.DecisionTreeClassifier()
-    tree = tree.fit(X, Y)
-    yp = tree.predict( Xp )
-    assert not hasattr(tree, 'aocl')
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(X, Y)
+    yp = clf.predict( Xp )
+    assert not hasattr(clf, 'aocl')
 
     # Check results
     assert da_yp == yp
@@ -66,6 +66,25 @@ def test_decision_tree(precision):
     print("Components")
     print("    aoclda: \n", da_yp)
     print("   sklearn: \n", yp)
+
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    X = np.array([[0.0, 0.0], [1.0, 1.0]], dtype=precision)
+    Y = np.array([0, 1], dtype=precision)
+
+    # patch and import scikit-learn
+    skpatch()
+    from sklearn import tree
+    # Fit a tree twice, shouldn't raise an error
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(X, Y)
+    clf.fit(X,Y)
+    assert clf.aocl is True
+
 
 def test_decision_tree_errors():
     '''
@@ -117,4 +136,5 @@ def test_decision_tree_errors():
 
 if __name__ == "__main__":
     test_decision_tree()
+    test_double_solve()
     test_decision_tree_errors()

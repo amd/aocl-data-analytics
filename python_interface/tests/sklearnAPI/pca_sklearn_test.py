@@ -95,6 +95,19 @@ def test_pca(precision):
     print("   sklearn: \n", components)
 
 
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]], dtype=precision)
+    skpatch()
+    from sklearn.decomposition import PCA
+    pca_da = PCA(n_components=3)
+    pca_da = pca_da.fit(a)
+    pca_da = pca_da.fit(a)
+
+
 def test_pca_errors():
     '''
     Check we can catch errors in the sklearn pca patch

@@ -140,7 +140,7 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.decision_tree = self.decision_tree_single
-            del self.decision_tree_double
+            self.decision_tree_double = None
 
         self.decision_tree.fit(X, y)
 

@@ -67,6 +67,23 @@ def test_decision_forest(precision):
     print("    aoclda: \n", da_yp)
     print("   sklearn: \n", yp)
 
+
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    X = np.array([[0.0, 0.0], [1.0, 1.0]], dtype=precision)
+    Y = np.array([0, 1], dtype=precision)
+
+    # patch and import scikit-learn
+    skpatch()
+    from sklearn import ensemble
+    clf = ensemble.RandomForestClassifier()
+    clf = clf.fit(X, Y)
+    clf.fit(X,Y)
+    assert clf.aocl is True
+
 def test_decision_forest_errors():
     '''
     Check we can catch errors in the sklearn decision_forest patch

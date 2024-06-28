@@ -78,7 +78,7 @@ class LinearRegression(LinearRegression_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.lmod = self.lmod_single
-            del self.lmod_double
+            self.lmod_double = None
         self.lmod.fit(X, y)
         return self
 
@@ -201,7 +201,7 @@ class Ridge(Ridge_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.lmod = self.lmod_single
-            del self.lmod_double
+            self.lmod_double = None
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=0.0, tol=self.tol)
         return self
 
@@ -325,7 +325,7 @@ class Lasso(Lasso_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.lmod = self.lmod_single
-            del self.lmod_double
+            self.lmod_double = None
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=1.0, tol=self.tol)
         return self
 
@@ -461,7 +461,7 @@ class ElasticNet(ElasticNet_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.lmod = self.lmod_single
-            del self.lmod_double
+            self.lmod_double = None
         self.lmod.fit(X,
                       y,
                       reg_lambda=self.alpha,
@@ -652,7 +652,7 @@ class LogisticRegression(LogisticRegression_sklearn):
         if X.dtype == "float32":
             self.precision = "single"
             self.lmod = self.lmod_single
-            del self.lmod_double
+            self.lmod_double = None
         self.lmod.fit(X,
                       y,
                       reg_lambda=self.reg_lambda,

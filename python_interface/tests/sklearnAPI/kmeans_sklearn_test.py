@@ -115,6 +115,27 @@ def test_kmeans(precision):
     print("   sklearn: \n", sk_predict)
 
 
+@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+def test_double_solve(precision):
+    """"
+    Check that solving the model twice doesn't fail
+    """
+    # Define data arrays
+    a = np.array([[2., 1.],
+                  [-1., -2.],
+                  [3., 2.],
+                  [2., 3.],
+                  [-3., -2.],
+                  [-2., -1.],
+                  [-2., -3.],
+                  [1., 2.]], dtype=precision)
+    skpatch()
+    from sklearn.cluster import KMeans
+    kmeans_da = KMeans(n_clusters=2)
+    kmeans_da = kmeans_da.fit(a)
+    kmeans_da = kmeans_da.fit(a)
+
+
 def test_kmeans_errors():
     '''
     Check we can catch errors in the sklearn pca patch
@@ -166,6 +187,9 @@ def test_kmeans_errors():
     assert kmeans.feature_names_in_ is None
 
 
+
+
 if __name__ == "__main__":
     test_kmeans()
+    test_double_solve()
     test_kmeans_errors()
