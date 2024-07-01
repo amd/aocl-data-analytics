@@ -58,7 +58,7 @@ da_status da_tree_set_training_data_s(da_handle handle, da_int n_samples,
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+            "The handle was initialized with a different precision type than single.");
     if (handle->dectree_s == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,

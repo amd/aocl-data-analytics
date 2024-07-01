@@ -75,7 +75,7 @@ After the PCA has been computed, two post-processing operations may be of intere
 
 Typical workflow for PCA
 ------------------------
-The standard way of computing the principal component analysis using AOCL-DA  is as follows.
+The standard way of computing the principal component analysis using AOCL-DA is as follows.
 
 .. tab-set::
 

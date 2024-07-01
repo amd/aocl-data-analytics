@@ -51,7 +51,8 @@ const static std::map<da_handle_type, std::string> htypes{
     {da_handle_linmod, "Linear Model"},
     {da_handle_kmeans, "k-means"},
     {da_handle_decision_tree, "Decision tree"},
-    {da_handle_decision_forest, "Decision forest"}};
+    {da_handle_decision_forest, "Decision forest"},
+    {da_handle_knn, "k-Nearest Neighbors"}};
 
 void options_print(da_handle_type htype) {
     da_handle handle = nullptr;

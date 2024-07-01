@@ -81,6 +81,7 @@ Library Reference Documentation
    nonlinear_models/nldf_intro
    trees_forests/df_intro
    metrics/metrics_intro
+   nearest_neighbors/knn_intro
 
 .. only:: internal
 

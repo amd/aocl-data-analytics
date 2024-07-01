@@ -39,6 +39,7 @@ extern "C" {
 #include "aoclda_error.h"
 #include "aoclda_handle.h"
 #include "aoclda_kmeans.h"
+#include "aoclda_knn.h"
 #include "aoclda_linmod.h"
 #include "aoclda_metrics.h"
 #include "aoclda_miscellaneous.h"

@@ -64,6 +64,8 @@ target_link_libraries(kmeans PRIVATE aocl-da)
 
 add_executable(metrics metrics.cpp)
 
+add_executable(knn knn.cpp)
+
 set(EXAMPLE_EXES
     nlls
     nlls_lanczos_fd
@@ -77,7 +79,8 @@ set(EXAMPLE_EXES
     datastore
     decision_tree
     random_forest
-    metrics)
+    metrics
+    knn)
 
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)

@@ -37,6 +37,7 @@
 #include "da_error.hpp"
 #include "decision_tree.hpp"
 #include "kmeans.hpp"
+#include "knn.hpp"
 #include "linear_model.hpp"
 #include "nlls.hpp"
 #include "pca.hpp"
@@ -67,6 +68,8 @@ struct _da_handle {
     da_random_forest::random_forest<float> *forest_s = nullptr;
     da_nlls::nlls<double> *nlls_d = nullptr;
     da_nlls::nlls<float> *nlls_s = nullptr;
+    da_knn::da_knn<double> *knn_d = nullptr;
+    da_knn::da_knn<float> *knn_s = nullptr;
 
     // Clear telemetry, for now it only clears the error stack
     // vector<>.clear() is linear in cost wrt the amount of elements to erase.

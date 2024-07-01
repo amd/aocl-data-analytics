@@ -53,6 +53,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/source/core/linear_model
   ${CMAKE_SOURCE_DIR}/source/core/optimization
   ${CMAKE_SOURCE_DIR}/source/core/nlls
+  ${CMAKE_SOURCE_DIR}/source/core/nearest_neighbors
   ${CMAKE_SOURCE_DIR}/source/core/utilities
   ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
   ${CMAKE_SOURCE_DIR}/external/RALFit
@@ -129,6 +130,9 @@ target_link_libraries(lbfgsb_rc PRIVATE aocl-da)
 add_executable(lbfgsb_fcomm lbfgsb_fcomm.cpp)
 target_link_libraries(lbfgsb_fcomm PRIVATE aocl-da)
 
+add_executable(knn_tests knn_tests.cpp)
+target_link_libraries(knn_tests PRIVATE aocl-da)
+
 add_executable(coord coord_tests.cpp)
 target_compile_definitions(
   coord
@@ -164,7 +168,8 @@ set(GTEST_EXES
     parallel_test
     miscellaneous_tests
     coord
-    nlls_tests)
+    nlls_tests
+    knn_tests)
 
 foreach(target ${GTEST_EXES})
   target_link_libraries(${target} PRIVATE aocl-da gtest_main gmock_main)

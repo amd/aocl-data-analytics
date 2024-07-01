@@ -63,6 +63,7 @@ typedef enum da_result_ {
     da_kmeans_cluster_centres =
         501, ///< Matrix of cluster centres computed in *k*-means clustering.
     da_kmeans_labels, ///< Labels of samples in the data matrix used to compute *k*-means clustering.
+    da_knn_model_params, ///< Model parameters for the trained and fitted kNN.
     // ...
 } da_result;
 

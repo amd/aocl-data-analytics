@@ -44,6 +44,7 @@ extern "C" {
 typedef enum da_metric_ {
     da_euclidean,   ///< Use euclidean distance.
     da_sqeuclidean, ///< Use squared euclidean distance.
+    da_minkowski,   ///< Use Minkowski distance.
     da_manhattan    ///< Use Manhattan distance.
 } da_metric;
 

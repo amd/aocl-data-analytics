@@ -40,6 +40,7 @@ set(DA_DATA
 set(DA_MISC core/utilities/miscellaneous.cpp)
 set(DA_METRICS core/metrics/pairwise_distances_public.cpp)
 set(DA_UTILS core/utilities/da_utils.cpp)
+set(DA_NEAREST_NEIGHBORS core/nearest_neighbors/knn_public.cpp)
 
 set(DA_CORE_SRC
     ${LINMOD_SRC}
@@ -54,7 +55,8 @@ set(DA_CORE_SRC
     ${NLLS_SRC}
     ${DA_MISC}
     ${DA_METRICS}
-    ${DA_UTILS})
+    ${DA_UTILS}
+    ${DA_NEAREST_NEIGHBORS})
 
 add_library(da_core OBJECT ${DA_CORE_SRC})
 target_include_directories(
@@ -72,6 +74,7 @@ target_include_directories(
           core/clustering
           core/decision_forest
           core/nlls
+          core/nearest_neighbors
           ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
           ${CMAKE_SOURCE_DIR}/external/RALFit
           ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include

@@ -145,6 +145,24 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             break;
         }
         break;
+    case da_handle_knn:
+        switch (precision) {
+        case da_double:
+            if (knn_d == nullptr)
+                return da_error(this->err, da_status_invalid_pointer, msg);
+            *opts = &knn_d->opts;
+            if (refresh)
+                knn_d->refresh();
+            break;
+        case da_single:
+            if (knn_s == nullptr)
+                return da_error(this->err, da_status_invalid_pointer, msg);
+            *opts = &knn_s->opts;
+            if (refresh)
+                knn_s->refresh();
+            break;
+        }
+        break;
     default:
         return da_error(this->err, da_status_handle_not_initialized,
                         "handle has not been initialized.");

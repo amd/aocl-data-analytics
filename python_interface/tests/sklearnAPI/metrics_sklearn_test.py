@@ -44,7 +44,9 @@ def test_metrics(precision, metric):
                   [5., 6.]], dtype=precision)
 
     Y = np.array([[7., 8. ],
-                  [9., 10.]], dtype=precision)
+                  [9., 10.],
+                  [11., 12.],
+                  [13., 14.]], dtype=precision)
 
     tol = np.finfo(precision).eps
 

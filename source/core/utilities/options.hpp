@@ -745,7 +745,7 @@ class OptionRegistry {
         }
         option_t otype = search->second->get_option_t();
         if (otype != get_type<U>()) {
-            errmsg = "Option setter for'" + oname + "' of type " + option_tl[otype] +
+            errmsg = "Option setter for '" + oname + "' of type " + option_tl[otype] +
                      ", was called with the wrong type: " + option_tl[get_type<U>()];
             return da_status_option_wrong_type;
         }

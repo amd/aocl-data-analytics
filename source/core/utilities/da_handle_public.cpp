@@ -73,6 +73,13 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
                 return status; // err already filled (FIXME do other handles also)
             }
             break;
+        case da_handle_knn:
+            (*handle)->knn_d = new da_knn::da_knn<double>(*(*handle)->err, status);
+            if (status != da_status_success) {
+                (*handle)->knn_d = nullptr;
+                return status;
+            }
+            break;
         default:
             break;
         }
@@ -123,6 +130,13 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             if (status != da_status_success) {
                 (*handle)->nlls_s = nullptr;
                 return status; // err already filled (FIXME do other handles also)
+            }
+            break;
+        case da_handle_knn:
+            (*handle)->knn_s = new da_knn::da_knn<float>(*(*handle)->err, status);
+            if (status != da_status_success) {
+                (*handle)->knn_s = nullptr;
+                return status;
             }
             break;
         default:
@@ -179,6 +193,10 @@ void da_handle_destroy(da_handle *handle) {
                 delete (*handle)->nlls_d;
             if ((*handle)->nlls_s)
                 delete (*handle)->nlls_s;
+            if ((*handle)->knn_d)
+                delete (*handle)->knn_d;
+            if ((*handle)->knn_s)
+                delete (*handle)->knn_s;
             if ((*handle)->err)
                 delete (*handle)->err;
         }
@@ -222,6 +240,8 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
         return handle->forest_d->get_result(query, dim, result);
     if (handle->nlls_d != nullptr)
         return handle->nlls_d->get_result(query, dim, result);
+    if (handle->knn_d != nullptr)
+        return handle->knn_d->get_result(query, dim, result);
 
     // handle was not initialized with
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -260,6 +280,8 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
         return handle->forest_s->get_result(query, dim, result);
     else if (handle->nlls_s != nullptr)
         return handle->nlls_s->get_result(query, dim, result);
+    else if (handle->knn_s != nullptr)
+        return handle->knn_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -303,6 +325,10 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
         return handle->kmeans_d->get_result(query, dim, result);
     else if (handle->kmeans_s != nullptr)
         return handle->kmeans_s->get_result(query, dim, result);
+    if (handle->knn_d != nullptr)
+        return handle->knn_d->get_result(query, dim, result);
+    else if (handle->knn_s != nullptr)
+        return handle->knn_s->get_result(query, dim, result);
     if (handle->nlls_d != nullptr)
         return handle->nlls_d->get_result(query, dim, result);
     else if (handle->nlls_s != nullptr)

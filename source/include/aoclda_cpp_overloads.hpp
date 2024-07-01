@@ -656,4 +656,65 @@ da_pairwise_distances(da_int m, da_int n, da_int k, const float *X, da_int ldx,
     return da_pairwise_distances_s(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
                                    force_all_finite);
 }
+
+/* kNN for classification functions */
+inline da_status da_knn_set_training_data(da_handle handle, da_int n_samples,
+                                          da_int n_features, const double *X_train,
+                                          da_int ldx_train, const da_int *y_train) {
+    return da_knn_set_training_data_d(handle, n_samples, n_features, X_train, ldx_train,
+                                      y_train);
+}
+inline da_status da_knn_set_training_data(da_handle handle, da_int n_samples,
+                                          da_int n_features, const float *X_train,
+                                          da_int ldx_train, const da_int *y_train) {
+    return da_knn_set_training_data_s(handle, n_samples, n_features, X_train, ldx_train,
+                                      y_train);
+}
+inline da_status da_knn_kneighbors(da_handle handle, da_int n_queries, da_int n_features,
+                                   const double *X_test, da_int ldx_test, da_int *n_ind,
+                                   double *n_dist, da_int k, da_int return_distance) {
+    return da_knn_kneighbors_d(handle, n_queries, n_features, X_test, ldx_test, n_ind,
+                               n_dist, k, return_distance);
+}
+
+inline da_status da_knn_kneighbors(da_handle handle, da_int n_queries, da_int n_features,
+                                   const float *X_test, da_int ldx_test, da_int *n_ind,
+                                   float *n_dist, da_int k, da_int return_distance) {
+    return da_knn_kneighbors_s(handle, n_queries, n_features, X_test, ldx_test, n_ind,
+                               n_dist, k, return_distance);
+}
+
+template <class T>
+da_status da_knn_classes(da_handle handle, da_int *n_classes, da_int *classes);
+template <>
+da_status da_knn_classes<double>(da_handle handle, da_int *n_classes, da_int *classes) {
+    return da_knn_classes_d(handle, n_classes, classes);
+}
+template <>
+da_status da_knn_classes<float>(da_handle handle, da_int *n_classes, da_int *classes) {
+    return da_knn_classes_s(handle, n_classes, classes);
+}
+
+inline da_status da_knn_predict_proba(da_handle handle, da_int n_queries,
+                                      da_int n_features, const double *X_test,
+                                      da_int ldx_test, double *proba) {
+    return da_knn_predict_proba_d(handle, n_queries, n_features, X_test, ldx_test, proba);
+}
+
+inline da_status da_knn_predict_proba(da_handle handle, da_int n_queries,
+                                      da_int n_features, const float *X_test,
+                                      da_int ldx_test, float *proba) {
+    return da_knn_predict_proba_s(handle, n_queries, n_features, X_test, ldx_test, proba);
+}
+
+inline da_status da_knn_predict(da_handle handle, da_int n_queries, da_int n_features,
+                                const double *X_test, da_int ldx_test, da_int *y_test) {
+    return da_knn_predict_d(handle, n_queries, n_features, X_test, ldx_test, y_test);
+}
+
+inline da_status da_knn_predict(da_handle handle, da_int n_queries, da_int n_features,
+                                const float *X_test, da_int ldx_test, da_int *y_test) {
+    return da_knn_predict_s(handle, n_queries, n_features, X_test, ldx_test, y_test);
+}
+
 #endif // AOCLDA_CPP_OVERLOADS
