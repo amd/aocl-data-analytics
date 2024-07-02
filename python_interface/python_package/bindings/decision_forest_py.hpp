@@ -117,6 +117,64 @@ class decision_tree : public pyda_handle {
         exception_check(status);
         return predictions;
     }
+
+    void get_rinfo(da_int &n_samples, da_int &n_features, da_int &n_obs, da_int &seed,
+                   da_int &depth, da_int &n_nodes, da_int &n_leaves) {
+        da_status status;
+
+        da_int dim = 10;
+
+        if (precision == da_single) {
+            float rinfo[10];
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            n_features = (da_int)rinfo[0];
+            n_samples = (da_int)rinfo[1];
+            n_obs = (da_int)rinfo[2];
+            seed = (da_int)rinfo[3];
+            depth = (da_int)rinfo[4];
+            n_nodes = (da_int)rinfo[5];
+            n_leaves = (da_int)rinfo[6];
+        } else {
+            double rinfo[10];
+            status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            n_features = (da_int)rinfo[0];
+            n_samples = (da_int)rinfo[1];
+            n_obs = (da_int)rinfo[2];
+            seed = (da_int)rinfo[3];
+            depth = (da_int)rinfo[4];
+            n_nodes = (da_int)rinfo[5];
+            n_leaves = (da_int)rinfo[6];
+        }
+
+        exception_check(status);
+    }
+
+    auto get_n_nodes() {
+
+        da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
+        } else {
+            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
+        }
+
+        return n_nodes;
+    }
+    auto get_n_leaves() {
+
+        da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
+        size_t stride_size;
+
+        if (precision == da_single) {
+            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
+        } else {
+            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
+        }
+
+        return n_leaves;
+    }
 };
 
 class decision_forest : public pyda_handle {

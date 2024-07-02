@@ -177,7 +177,7 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         raise RuntimeError("This feature is not implemented")
 
     def get_n_leaves(self):
-        raise RuntimeError("This feature is not implemented")
+        return self.decision_tree.n_leaves
 
     def get_params(self, deep=True):
         params = {'random_state': self.random_state,

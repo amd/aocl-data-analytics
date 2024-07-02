@@ -116,8 +116,6 @@ def test_decision_tree_errors():
     with pytest.raises(RuntimeError):
         clf.get_metadata_routing()
     with pytest.raises(RuntimeError):
-        clf.get_n_leaves()
-    with pytest.raises(RuntimeError):
         clf.predict_log_proba(1)
     with pytest.raises(RuntimeError):
         clf.predict_proba(1)

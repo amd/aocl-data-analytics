@@ -158,7 +158,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
     // tree structure
     // tree (vector): contains the all the nodes, each node stores the indices of its children
     // nodes_to_treat: double ended queue containing the indices of the nodes yet to be treated
-    da_int n_nodes = 0;
+    da_int n_nodes = 0, n_leaves = 0;
     std::vector<node<T>> tree;
     std::deque<da_int> nodes_to_treat;
 
@@ -232,6 +232,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
     void count_class_occurences(std::vector<da_int> &class_occ, da_int start_idx,
                                 da_int end_idx);
     void sort_samples(node<T> &node, da_int feat_idx);
+    void partition_samples(const node<T> &nd);
     da_status add_node(da_int parent_idx, bool is_left, T score, da_int split_idx);
     da_int get_next_node_idx(da_int build_order);
     void find_best_split(node<T> &current_node, T feat_thresh, T maximum_split_score,
@@ -292,7 +293,7 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
             "last call to the solver successful?");
     // Pointers were already tested in the generic get_result
 
-    da_int rinfo_size = 5;
+    da_int rinfo_size = 7;
     switch (query) {
     case da_result::da_rinfo:
         if (*dim < rinfo_size) {
@@ -307,6 +308,8 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
         result[2] = (T)n_obs;
         result[3] = (T)seed;
         result[4] = (T)depth;
+        result[5] = (T)n_nodes;
+        result[6] = (T)n_leaves;
         break;
     default:
         return da_warn_bypass(err, da_status_unknown_query,
@@ -429,6 +432,24 @@ da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
     n_nodes += 1;
 
     return da_status_success;
+}
+
+/* Partition samples_idx so that all the values below x_thresh are first */
+template <typename T> void decision_tree<T>::partition_samples(const node<T> &nd) {
+    da_int head_idx = nd.start_idx, tail_idx = nd.end_idx;
+    da_int start_col = ldx * nd.feature;
+    while (head_idx < tail_idx) {
+        da_int idx = samples_idx[head_idx];
+        T val = X[start_col + idx];
+        if (val < nd.x_threshold)
+            head_idx += 1;
+        else {
+            da_int aux = samples_idx[head_idx];
+            samples_idx[head_idx] = samples_idx[tail_idx];
+            samples_idx[tail_idx] = aux;
+            tail_idx -= 1;
+        }
+    }
 }
 
 template <class T> void decision_tree<T>::sort_samples(node<T> &nd, da_int feat_idx) {
@@ -669,7 +690,8 @@ template <typename T> da_status decision_tree<T>::fit() {
             current_node.x_threshold = best_split.threshold;
 
             // sort again the samples according to the chosen feature
-            sort_samples(current_node, current_node.feature);
+            // sort_samples(current_node, current_node.feature);
+            partition_samples(current_node);
 
             // add chilren nodes and push them into the queue
             // if potential for further improvements is still high enough
@@ -678,12 +700,17 @@ template <typename T> da_status decision_tree<T>::fit() {
                 tree[n_nodes - 1].n_samples >= min_node_sample &&
                 current_node.depth < max_depth - 1)
                 nodes_to_treat.push_back(n_nodes - 1);
+            else
+                n_leaves += 1;
             add_node(node_idx, true, best_split.left_score, best_split.samp_idx);
             if (best_split.left_score > min_split_score &&
                 tree[n_nodes - 1].n_samples >= min_node_sample &&
                 current_node.depth < max_depth - 1)
                 nodes_to_treat.push_back(n_nodes - 1);
-        }
+            else
+                n_leaves += 1;
+        } else
+            n_leaves += 1;
     }
 
     model_trained = true;

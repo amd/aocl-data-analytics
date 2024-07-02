@@ -252,7 +252,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("pybind_predict", &decision_tree::predict<double>, "Evaluate the model on X",
              "X"_a)
         .def("pybind_predict", &decision_tree::predict<float>, "Evaluate the model on X",
-             "X"_a);
+             "X"_a)
+        .def("get_n_nodes", &decision_tree::get_n_nodes)
+        .def("get_n_leaves", &decision_tree::get_n_leaves);
 
     /**********************************/
     /*       Decision Forests         */

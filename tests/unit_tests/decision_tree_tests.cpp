@@ -401,8 +401,12 @@ TYPED_TEST(decision_tree_test, get_results) {
               da_status_success);
     std::vector<TypeParam> rinfo_exp{(TypeParam)data.n_feat,
                                      (TypeParam)data.n_samples_train,
-                                     (TypeParam)data.n_samples_train, (TypeParam)seed};
-    EXPECT_ARR_NEAR(4, rinfo, rinfo_exp, 1.0e-10);
+                                     (TypeParam)data.n_samples_train,
+                                     (TypeParam)seed,
+                                     (TypeParam)3,
+                                     (TypeParam)5,
+                                     (TypeParam)3};
+    EXPECT_ARR_NEAR(7, rinfo, rinfo_exp, 1.0e-10);
 
     // Check that other queries fail
     EXPECT_EQ(

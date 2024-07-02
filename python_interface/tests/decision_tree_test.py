@@ -57,6 +57,8 @@ def test_decision_tree_functionality(da_precision, numpy_precision, numpy_order)
 
     assert pred[0] == 1
     assert score == 1.0
+    assert clf.n_nodes == 3
+    assert clf.n_leaves == 2
 
     print(f"predictions: [{pred[0]:d}]")
     print(f"score: {score:.3f}")

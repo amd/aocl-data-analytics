@@ -113,3 +113,13 @@ class decision_tree(pybind_decision_tree):
             the number of rows of ``X``.
         """
         return self.pybind_predict(X)
+
+    @property
+    def n_nodes(self):
+        """int: The number of nodes in the trained tree"""
+        return self.get_n_nodes()
+
+    @property
+    def n_leaves(self):
+        """int: The number of nodes in the trained tree"""
+        return self.get_n_leaves()
