@@ -49,7 +49,7 @@ class decision_forest(pybind_decision_forest):
         criterion (str, optional): Select scoring function to use. It can take the values
             'cross-entropy', 'gini', or 'misclassification'
 
-        max_depth (int, optional): Set the maximum depth of the trees. Default = 10.
+        max_depth (int, optional): Set the maximum depth of the trees. Default = 29.
 
         features_selection (str, optional): Select how many features to use for each split.
             It can take the values 'all', 'sqrt', 'log2', or 'custom'. If set to 'custom',
@@ -73,8 +73,37 @@ class decision_forest(pybind_decision_forest):
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
     """
+    def __init__(self,
+             n_trees = 100, criterion = 'gini',
+             seed = -1, max_depth = 29,
+             min_samples_split = 2, build_order = 'breadth first',
+             bootstrap = True, features_selection = 'sqrt',
+             max_features = 0, precision = 'double'):
+        super().__init__(n_trees = n_trees, criterion = criterion,
+             seed = seed, max_depth = max_depth,
+             min_samples_split = min_samples_split, build_order = build_order,
+             bootstrap = bootstrap, features_selection = features_selection,
+             max_features = max_features, precision = precision)
+        self.max_features = max_features
+        self.features_selection = features_selection
 
-    def fit(self, X, y, samples_factor=0.8, min_impurity_decrease=0.03, min_split_score=0.03,
+    @property
+    def max_features(self):
+        return self.max_features
+
+    @max_features.setter
+    def max_features(self, value):
+        self.set_max_features_opt(max_features=value)
+
+    @property
+    def features_selection(self):
+        return self.features_selection
+
+    @features_selection.setter
+    def features_selection(self, value):
+        self.set_features_selection_opt(features_selection=value)
+
+    def fit(self, X, y, samples_factor=0.8, min_impurity_decrease=0.0, min_split_score=0.0,
             feat_thresh=1.0e-06):
         """
         Computes the decision forest on the feature matrix ``X`` and response vector ``y``
@@ -90,10 +119,10 @@ class decision_forest(pybind_decision_forest):
             Default 0.8.
 
         min_impurity_decrease (float, optional): Minimum score improvement
-            needed to consider a split from the parent node. Default 0.03
+            needed to consider a split from the parent node. Default 0.0
 
         min_split_score (float, optional): Minimum score needed for a node
-            to be considered for splitting. Default 0.03.
+            to be considered for splitting. Default 0.0.
 
         feat_thresh (float, optional): Minimum difference in feature value
             required for splitting. Default 1.0e-06
@@ -133,3 +162,31 @@ class decision_forest(pybind_decision_forest):
                 where n_samples is the number of rows of X.
         """
         return self.pybind_predict(X)
+
+    def predict_proba(self, X):
+        """
+        Generate class probabilities using fitted decision forest on a new set of data ``X``.
+
+        Args:
+            X (numpy.ndarray): The feature matrix to evaluate the model on.
+                It must have n_features columns.
+
+        Returns:
+            numpy.ndarray of length n_samples: The prediction vector,
+                where n_samples is the number of rows of X.
+        """
+        return self.pybind_predict_proba(X)
+
+    def predict_log_proba(self, X):
+        """
+        Generate class log probabilities using fitted decision forest on a new set of data ``X``.
+
+        Args:
+            X (numpy.ndarray): The feature matrix to evaluate the model on.
+                It must have n_features columns.
+
+        Returns:
+            numpy.ndarray of length n_samples: The prediction vector,
+                where n_samples is the number of rows of X.
+        """
+        return self.pybind_predict_log_proba(X)

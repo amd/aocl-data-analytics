@@ -476,6 +476,37 @@ inline da_status da_tree_predict(da_handle handle, da_int n_samples, da_int n_fe
                                  float *X_test, da_int ldx_test, da_int *y_pred) {
     return da_tree_predict_s(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
+
+inline da_status da_tree_predict_proba(da_handle handle, da_int n_obs, da_int n_features,
+                                       double *X_test, da_int ldx_test, double *y_pred,
+                                       da_int n_class, da_int ldy) {
+    return da_tree_predict_proba_d(handle, n_obs, n_features, X_test, ldx_test, y_pred,
+                                   n_class, ldy);
+}
+
+inline da_status da_tree_predict_proba(da_handle handle, da_int n_obs, da_int n_features,
+                                       float *X_test, da_int ldx_test, float *y_pred,
+                                       da_int n_class, da_int ldy) {
+    return da_tree_predict_proba_s(handle, n_obs, n_features, X_test, ldx_test, y_pred,
+                                   n_class, ldy);
+}
+
+inline da_status da_tree_predict_log_proba(da_handle handle, da_int n_obs,
+                                           da_int n_features, double *X_test,
+                                           da_int ldx_test, double *y_pred,
+                                           da_int n_class, da_int ldy) {
+    return da_tree_predict_log_proba_d(handle, n_obs, n_features, X_test, ldx_test,
+                                       y_pred, n_class, ldy);
+}
+
+inline da_status da_tree_predict_log_proba(da_handle handle, da_int n_obs,
+                                           da_int n_features, float *X_test,
+                                           da_int ldx_test, float *y_pred, da_int n_class,
+                                           da_int ldy) {
+    return da_tree_predict_log_proba_s(handle, n_obs, n_features, X_test, ldx_test,
+                                       y_pred, n_class, ldy);
+}
+
 inline da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_features,
                                double *X_test, da_int ldx_test, da_int *y_test,
                                double *mean_accuracy) {
@@ -519,6 +550,39 @@ inline da_status da_forest_predict(da_handle handle, da_int n_samples, da_int n_
                                    float *X_test, da_int ldx_test, da_int *y_pred) {
     return da_forest_predict_s(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
+
+inline da_status da_forest_predict_proba(da_handle handle, da_int n_obs,
+                                         da_int n_features, double *X_test,
+                                         da_int ldx_test, double *y_pred, da_int n_class,
+                                         da_int ldy) {
+    return da_forest_predict_proba_d(handle, n_obs, n_features, X_test, ldx_test, y_pred,
+                                     n_class, ldy);
+}
+
+inline da_status da_forest_predict_proba(da_handle handle, da_int n_obs,
+                                         da_int n_features, float *X_test,
+                                         da_int ldx_test, float *y_pred, da_int n_class,
+                                         da_int ldy) {
+    return da_forest_predict_proba_s(handle, n_obs, n_features, X_test, ldx_test, y_pred,
+                                     n_class, ldy);
+}
+
+inline da_status da_forest_predict_log_proba(da_handle handle, da_int n_obs,
+                                             da_int n_features, double *X_test,
+                                             da_int ldx_test, double *y_pred,
+                                             da_int n_class, da_int ldy) {
+    return da_forest_predict_log_proba_d(handle, n_obs, n_features, X_test, ldx_test,
+                                         y_pred, n_class, ldy);
+}
+
+inline da_status da_forest_predict_log_proba(da_handle handle, da_int n_obs,
+                                             da_int n_features, float *X_test,
+                                             da_int ldx_test, float *y_pred,
+                                             da_int n_class, da_int ldy) {
+    return da_forest_predict_log_proba_s(handle, n_obs, n_features, X_test, ldx_test,
+                                         y_pred, n_class, ldy);
+}
+
 inline da_status da_forest_score(da_handle handle, da_int n_samples, da_int n_features,
                                  double *X_test, da_int ldx_test, da_int *y_test,
                                  double *mean_accuracy) {

@@ -33,5 +33,5 @@ fi
 echo clang-format-binary: `which clang-format`
 echo clang-format-version: `clang-format --version`
 
-find source tests \( -iname "*.c" -o -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" \) -type f -print -exec clang-format --style="file:.clang-format" -i '{}' \;
+find source tests python_interface/python_package/bindings \( -iname "*.c" -o -iname "*.cpp" -o -iname "*.h" -o -iname "*.hpp" \) -type f -print -exec clang-format --style="file:.clang-format" -i '{}' \;
 

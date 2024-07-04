@@ -36,7 +36,7 @@
 
 int main() {
     std::cout << "----------------------------------------" << std::endl;
-    std::cout << "Random forest model (double precision)" << std::endl;
+    std::cout << "Random forest model (single precision)" << std::endl;
     std::cout << "----------------------------------------" << std::endl;
     std::cout << std::fixed;
     std::cout.precision(5);
@@ -131,6 +131,19 @@ int main() {
     float mean_accuracy;
     status = da_forest_predict_s(forest_handle, n_samples, n_features, X_test.data(),
                                  n_samples, y_pred.data());
+    std::vector<float> y_proba(n_samples * n_class);
+    pass = da_forest_predict_proba_s(forest_handle, n_samples, n_features, X_test.data(),
+                                     n_samples, y_proba.data(), n_class,
+                                     n_samples) == da_status_success;
+
+    for (da_int i = 0; i < 5; i++) {
+        std::cout << "Class prediction: " << y_pred[i];
+        std::cout << ", Class probabilities: ";
+        for (da_int j = 0; j < n_class - 1; j++)
+            std::cout << y_proba[j * n_samples + i] << ", ";
+        std::cout << y_proba[(n_class - 1) * n_samples + i];
+        std::cout << std::endl;
+    }
     status = da_forest_score_s(forest_handle, n_samples, n_features, X_test.data(),
                                n_samples, y_test.data(), &mean_accuracy);
     std::cout << "Mean accuracy on the test data: " << mean_accuracy << std::endl;

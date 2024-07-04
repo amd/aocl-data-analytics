@@ -43,12 +43,15 @@ def test_decision_tree(precision):
     Y = np.array([0, 1], dtype=precision)
     Xp = np.array([[2., 2.]], dtype=precision)
 
+    tol = np.sqrt(np.finfo(precision).eps)
+
     # patch and import scikit-learn
     skpatch()
     from sklearn import tree
     clf = tree.DecisionTreeClassifier()
     clf = clf.fit(X, Y)
     da_yp = clf.predict( Xp )
+    da_yprob = clf.predict_proba( Xp )
     assert clf.aocl is True
 
     # unpatch and solve the same problem with sklearn
@@ -57,10 +60,12 @@ def test_decision_tree(precision):
     clf = tree.DecisionTreeClassifier()
     clf = clf.fit(X, Y)
     yp = clf.predict( Xp )
+    yprob = clf.predict_proba( Xp )
     assert not hasattr(clf, 'aocl')
 
     # Check results
     assert da_yp == yp
+    assert da_yprob == pytest.approx(yprob, tol)
 
     # print the results if pytest is invoked with the -rA option
     print("Components")
@@ -103,7 +108,7 @@ def test_decision_tree_errors():
         clf = tree.DecisionTreeClassifier(random_state = np.random.RandomState() )
 
     with pytest.warns(RuntimeWarning):
-        clf = tree.DecisionTreeClassifier(min_samples_split = 10)
+        clf = tree.DecisionTreeClassifier(min_samples_leaf = 10)
 
     clf = clf.fit(X, Y)
 
@@ -115,10 +120,6 @@ def test_decision_tree_errors():
         clf.get_depth()
     with pytest.raises(RuntimeError):
         clf.get_metadata_routing()
-    with pytest.raises(RuntimeError):
-        clf.predict_log_proba(1)
-    with pytest.raises(RuntimeError):
-        clf.predict_proba(1)
     with pytest.raises(RuntimeError):
         clf.set_fit_request()
     with pytest.raises(RuntimeError):

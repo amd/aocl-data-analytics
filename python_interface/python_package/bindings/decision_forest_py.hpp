@@ -40,9 +40,10 @@
 
 class decision_tree : public pyda_handle {
     da_precision precision = da_double;
+    da_int n_class;
 
   public:
-    decision_tree(da_int seed = -1, da_int max_depth = 10, da_int max_features = 0,
+    decision_tree(da_int seed = -1, da_int max_depth = 29, da_int max_features = 0,
                   std::string criterion = "gini", da_int min_samples_split = 2,
                   std::string build_order = "breadth first",
                   std::string prec = "double") {
@@ -69,9 +70,15 @@ class decision_tree : public pyda_handle {
     }
     ~decision_tree() { da_handle_destroy(&handle); }
 
+    void set_max_features_opt(da_int max_features = 0) {
+        da_status status;
+        status = da_options_set(handle, "maximum features", max_features);
+        exception_check(status);
+    }
+
     template <typename T>
     void fit(py::array_t<T, py::array::f_style> X, py::array_t<da_int> y,
-             T min_impurity_decrease = 0.03, T min_split_score = 0.03,
+             T min_impurity_decrease = 0.0, T min_split_score = 0.0,
              T feat_thresh = 0.0) {
         da_status status;
 
@@ -85,7 +92,11 @@ class decision_tree : public pyda_handle {
         exception_check(status);
 
         da_int n_samples = X.shape()[0], n_features = X.shape()[1];
-        status = da_tree_set_training_data(handle, n_samples, n_features, 0,
+        n_class = (da_int)(std::round(*std::max_element(y.mutable_data(),
+                                                        y.mutable_data() + n_samples)) +
+                           1);
+
+        status = da_tree_set_training_data(handle, n_samples, n_features, n_class,
                                            X.mutable_data(), n_samples, y.mutable_data());
         exception_check(status); // throw an exception if status is not success
 
@@ -116,6 +127,36 @@ class decision_tree : public pyda_handle {
                                  n_samples, predictions.mutable_data());
         exception_check(status);
         return predictions;
+    }
+
+    template <typename T>
+    py::array_t<T> predict_proba(py::array_t<T, py::array::f_style> X) {
+
+        da_status status;
+        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        size_t shape[2]{(size_t)n_samples, (size_t)n_class};
+        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+        auto proba = py::array_t<T>(shape, strides);
+        status =
+            da_tree_predict_proba(handle, n_samples, n_features, X.mutable_data(),
+                                  n_samples, proba.mutable_data(), n_class, n_samples);
+        exception_check(status);
+        return proba;
+    }
+
+    template <typename T>
+    py::array_t<T> predict_log_proba(py::array_t<T, py::array::f_style> X) {
+
+        da_status status;
+        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        size_t shape[2]{(size_t)n_samples, (size_t)n_class};
+        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+        auto proba = py::array_t<T>(shape, strides);
+        status = da_tree_predict_log_proba(handle, n_samples, n_features,
+                                           X.mutable_data(), n_samples,
+                                           proba.mutable_data(), n_class, n_samples);
+        exception_check(status);
+        return proba;
     }
 
     void get_rinfo(da_int &n_samples, da_int &n_features, da_int &n_obs, da_int &seed,
@@ -180,10 +221,11 @@ class decision_tree : public pyda_handle {
 class decision_forest : public pyda_handle {
 
     da_precision precision = da_double;
+    da_int n_class;
 
   public:
     decision_forest(da_int n_trees = 100, std::string criterion = "gini",
-                    da_int seed = -1, da_int max_depth = 10, da_int min_samples_split = 2,
+                    da_int seed = -1, da_int max_depth = 29, da_int min_samples_split = 2,
                     std::string build_order = "breadth first", bool bootstrap = true,
                     std::string features_selection = "sqrt", da_int max_features = 0,
                     std::string prec = "double") {
@@ -219,10 +261,22 @@ class decision_forest : public pyda_handle {
     }
     ~decision_forest() { da_handle_destroy(&handle); }
 
+    void set_features_selection_opt(std::string features_selection = "sqrt") {
+        da_status status;
+        status = da_options_set(handle, "features selection", features_selection.data());
+        exception_check(status);
+    }
+
+    void set_max_features_opt(da_int max_features = 0) {
+        da_status status;
+        status = da_options_set(handle, "maximum features", max_features);
+        exception_check(status);
+    }
+
     template <typename T>
     void fit(py::array_t<T, py::array::f_style> X, py::array_t<da_int> y,
-             T samples_factor = 0.8, T min_impurity_decrease = 0.03,
-             T min_split_score = 0.03, T feat_thresh = 0.03) {
+             T samples_factor = 0.8, T min_impurity_decrease = 0.0,
+             T min_split_score = 0.0, T feat_thresh = 0.03) {
         da_status status;
 
         // TODO options to constructor
@@ -237,6 +291,10 @@ class decision_forest : public pyda_handle {
         exception_check(status);
 
         da_int n_obs = X.shape()[0], n_features = X.shape()[1];
+        n_class = (da_int)(std::round(*std::max_element(y.mutable_data(),
+                                                        y.mutable_data() + n_obs)) +
+                           1);
+
         status = da_forest_set_training_data(handle, n_obs, n_features, 2,
                                              X.mutable_data(), n_obs, y.mutable_data());
         exception_check(status); // throw an exception if status is not success
@@ -268,6 +326,36 @@ class decision_forest : public pyda_handle {
                                    n_samples, predictions.mutable_data());
         exception_check(status);
         return predictions;
+    }
+
+    template <typename T>
+    py::array_t<T> predict_proba(py::array_t<T, py::array::f_style> X) {
+
+        da_status status;
+        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        size_t shape[2]{(size_t)n_samples, (size_t)n_class};
+        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+        auto proba = py::array_t<T>(shape, strides);
+        status =
+            da_forest_predict_proba(handle, n_samples, n_features, X.mutable_data(),
+                                    n_samples, proba.mutable_data(), n_class, n_samples);
+        exception_check(status);
+        return proba;
+    }
+
+    template <typename T>
+    py::array_t<T> predict_log_proba(py::array_t<T, py::array::f_style> X) {
+
+        da_status status;
+        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        size_t shape[2]{(size_t)n_samples, (size_t)n_class};
+        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+        auto proba = py::array_t<T>(shape, strides);
+        status = da_forest_predict_log_proba(handle, n_samples, n_features,
+                                             X.mutable_data(), n_samples,
+                                             proba.mutable_data(), n_class, n_samples);
+        exception_check(status);
+        return proba;
     }
 };
 

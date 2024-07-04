@@ -56,8 +56,16 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
         status = opts.register_opt(os);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "predict probabilities",
+            "evaluate class probabilities (in addition to class predictions)."
+            "Needs to be 1 if calls to predict_proba or predict_log_proba"
+            "are made after fit.",
+            0, lbound_t::greaterequal, 1, ubound_t::lessequal, 1));
+        status = opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "maximum depth", "Set the maximum depth of trees.", 1, lbound_t::greaterequal,
-            (da_int)(std::numeric_limits<da_int>::digits) - 2, ubound_t::lessequal, 10));
+            (da_int)(std::numeric_limits<da_int>::digits) - 2, ubound_t::lessequal, 29));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(

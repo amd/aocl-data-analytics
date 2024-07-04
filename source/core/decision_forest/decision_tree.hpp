@@ -138,6 +138,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_errors::da_error_t *err = nullptr;
 
     bool model_trained = false;
+    da_int predict_proba_opt = true;
 
     // user data. Never modified by the classifier
     // X[n_samples x n_features]: features -- floating point matrix, column major
@@ -157,9 +158,11 @@ template <typename T> class decision_tree : public basic_handle<T> {
 
     // tree structure
     // tree (vector): contains the all the nodes, each node stores the indices of its children
+    // class_props (vector):  contains the proportions in each class for each node
     // nodes_to_treat: double ended queue containing the indices of the nodes yet to be treated
     da_int n_nodes = 0, n_leaves = 0;
     std::vector<node<T>> tree;
+    std::vector<T> class_props;
     std::deque<da_int> nodes_to_treat;
 
     // All memory to compute scores
@@ -240,6 +243,10 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_status fit();
     da_status predict(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
                       da_int *y_pred);
+    da_status predict_proba(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
+                            T *y_pred, da_int n_class, da_int ldy);
+    da_status predict_log_proba(da_int nsamp, da_int n_features, const T *X_test,
+                                da_int ldx, T *y_pred, da_int n_class, da_int ldy);
     da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx,
                     da_int *y_test, T *accuracy);
     void clear_working_memory();
@@ -248,6 +255,17 @@ template <typename T> class decision_tree : public basic_handle<T> {
         model_trained = false;
         if (tree.capacity() > 0)
             tree = std::vector<node<T>>();
+    }
+
+    da_status resize_tree(size_t new_size) {
+        try {
+            tree.resize(new_size);
+            class_props.resize(new_size * this->n_class);
+            return da_status_success;
+        } catch (std::bad_alloc &) {                            // LCOV_EXCL_LINE
+            return da_error_bypass(err, da_status_memory_error, // LCOV_EXCL_LINE
+                                   "Memory allocation error");
+        }
     }
 
     da_status get_result(da_result query, da_int *dim, T *result);
@@ -400,13 +418,14 @@ da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
 
                                      da_int split_idx) {
 
+    da_status status = da_status_success;
     if (tree.size() <= n_nodes) {
-        try {
-            tree.resize(2 * tree.size() + 1);
-        } catch (std::bad_alloc &) {                            // LCOV_EXCL_LINE
-            return da_error_bypass(err, da_status_memory_error, // LCOV_EXCL_LINE
-                                   "Memory allocation error");
-        }
+        size_t new_size = 2 * tree.size() + 1;
+        // resize the tree and class_props arrays
+        if (predict_proba_opt)
+            status = resize_tree(new_size);
+        if (status != da_status_success)
+            return status;
     }
 
     if (is_left) {
@@ -429,9 +448,16 @@ da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
     tree[n_nodes].y_pred = (da_int)std::distance(
         count_classes.begin(),
         std::max_element(count_classes.begin(), count_classes.end()));
+    // prediction probability
+    if (predict_proba_opt) {
+        for (da_int i = 0; i < n_class; i++) {
+            T p = (T)count_classes[i] / (T)tree[n_nodes].n_samples;
+            class_props[n_nodes * n_class + i] = p;
+        }
+    }
     n_nodes += 1;
 
-    return da_status_success;
+    return status;
 }
 
 /* Partition samples_idx so that all the values below x_thresh are first */
@@ -556,6 +582,7 @@ void decision_tree<T>::find_best_split(node<T> &current_node, T feat_thresh,
 }
 
 template <typename T> da_status decision_tree<T>::fit() {
+    da_status status = da_status_success;
 
     if (model_trained)
         // Nothing to do, exit
@@ -567,6 +594,8 @@ template <typename T> da_status decision_tree<T>::fit() {
     if (read_public_options) {
         std::string opt_val;
         bool opt_pass = true;
+        opt_pass &=
+            opts.get("predict probabilities", predict_proba_opt) == da_status_success;
         opt_pass &= opts.get("maximum depth", max_depth) == da_status_success;
         opt_pass &= opts.get("scoring function", opt_val, method) == da_status_success;
         opt_pass &=
@@ -611,14 +640,13 @@ template <typename T> da_status decision_tree<T>::fit() {
     }
     mt_engine.seed(seed);
 
-    // Allocate the tree accounting for a full binary tree of depth 10 (or maximum depth)
-    try {
-        size_t init_capacity = ((da_int)1 << std::min(max_depth, (da_int)9)) + (da_int)1;
-        tree.resize(init_capacity);
-    } catch (std::bad_alloc &) {                            // LCOV_EXCL_LINE
-        return da_error_bypass(err, da_status_memory_error, // LCOV_EXCL_LINE
-                               "Memory allocation error");
-    }
+    // Allocate the tree and class_props arrays
+    // accounting for a full binary tree of depth 10 (or maximum depth)
+    size_t init_capacity = ((da_int)1 << std::min(max_depth, (da_int)9)) + (da_int)1;
+    if (predict_proba_opt)
+        status = resize_tree(init_capacity);
+    if (status != da_status_success)
+        return status;
 
     if (!bootstrap) {
         // take all the samples
@@ -650,6 +678,13 @@ template <typename T> da_status decision_tree<T>::fit() {
     tree[0].y_pred = (da_int)std::distance(
         count_classes.begin(),
         std::max_element(count_classes.begin(), count_classes.end()));
+    // prediction probability
+    if (predict_proba_opt) {
+        for (da_int i = 0; i < n_class; i++) {
+            T p = (T)count_classes[i] / (T)n_obs;
+            class_props[i] = p;
+        }
+    }
 
     // Insert the root node in the queue if the maximum depth is big enough
     // TODO/Discuss should we check for all memory reallocation??
@@ -718,7 +753,7 @@ template <typename T> da_status decision_tree<T>::fit() {
     // fit_time = duration_cast<duration<float>>(stop_clock_fit - start_clock_fit);
     // if (prn_times)
     //     print_timings();
-    return da_status_success;
+    return status;
 }
 
 template <typename T>
@@ -768,6 +803,97 @@ da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
     }
 
     return da_status_success;
+}
+
+template <typename T>
+da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X_test,
+                                          da_int ldx_test, T *y_proba_pred, da_int nclass,
+                                          da_int ldy) {
+    if (!predict_proba_opt) {
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "predict_proba must be set to 1");
+    }
+
+    if (X_test == nullptr || y_proba_pred == nullptr) {
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "Either X_test, or y_proba_pred are not valid pointers.");
+    }
+    if (nsamp <= 0) {
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "n_samples = " + std::to_string(nsamp) +
+                                   ", it must be greater than 0.");
+    }
+    if (nfeat != n_features) {
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "n_features = " + std::to_string(nfeat) +
+                                   " doesn't match the expected value " +
+                                   std::to_string(n_features) + ".");
+    }
+    if (ldx_test < nsamp) {
+        return da_error_bypass(
+            this->err, da_status_invalid_input,
+            "nsamp = " + std::to_string(nsamp) + ", ldx = " + std::to_string(ldx_test) +
+                ", the value of ldx needs to be at least as big as the value "
+                "of nsamp");
+    }
+    if (nclass != n_class) {
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "n_features = " + std::to_string(nclass) +
+                                   " doesn't match the expected value " +
+                                   std::to_string(nclass) + ".");
+    }
+    if (ldy < nsamp) {
+        return da_error_bypass(
+            this->err, da_status_invalid_input,
+            "nsamp = " + std::to_string(nsamp) + ", ldx = " + std::to_string(ldy) +
+                ", the value of ldy needs to be at least as big as the value "
+                "of nsamp");
+    }
+
+    if (!model_trained) {
+        return da_error_bypass(this->err, da_status_out_of_date,
+                               "The model has not yet been trained or the data it is "
+                               "associated with is out of date.");
+    }
+
+    // fill y_proba_pred with the values of all the requested samples
+    node<T> *current_node;
+    for (da_int i = 0; i < nsamp; i++) {
+        current_node = &tree[0];
+        da_int current_node_idx = 0;
+        while (!current_node->is_leaf) {
+            T feat_val = X_test[ldx_test * current_node->feature + i];
+            if (feat_val < current_node->x_threshold) {
+                current_node_idx = current_node->left_child_idx;
+                current_node = &tree[current_node_idx];
+            } else {
+                current_node_idx = current_node->right_child_idx;
+                current_node = &tree[current_node_idx];
+            }
+        }
+        for (da_int j = 0; j < n_class; j++)
+            y_proba_pred[ldy * j + i] = class_props[n_class * current_node_idx + j];
+    }
+
+    return da_status_success;
+}
+
+template <typename T>
+da_status decision_tree<T>::predict_log_proba(da_int nsamp, da_int nfeat, const T *X_test,
+                                              da_int ldx_test, T *y_log_proba,
+                                              da_int nclass, da_int ldy) {
+    da_status status = da_status_success;
+
+    status = predict_proba(nsamp, nfeat, X_test, ldx_test, y_log_proba, n_class, ldy);
+    if (status != da_status_success)
+        return status;
+
+    for (da_int j = 0; j < nsamp; j++) {
+        for (da_int i = 0; i < nclass; i++) {
+            y_log_proba[ldy * j + i] = log(y_log_proba[ldy * j + i]);
+        }
+    }
+    return status;
 }
 
 template <typename T>

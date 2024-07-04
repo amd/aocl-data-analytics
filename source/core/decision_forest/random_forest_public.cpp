@@ -133,6 +133,81 @@ da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_featu
     return handle->forest_s->predict(n_samples, n_features, X_test, ldx_test, y_pred);
 }
 
+da_status da_forest_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
+                                    double *X_test, da_int ldx_test, double *y_pred,
+                                    da_int n_class, da_int ldy) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+    if (handle->precision != da_double)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
+    if (handle->forest_d == nullptr)
+        return da_error(
+            handle->err, da_status_invalid_handle_type,
+            "handle was not initialized with handle_type=da_handle_decision_forest or "
+            "handle is invalid.");
+    return handle->forest_d->predict_proba(n_samples, n_features, X_test, ldx_test,
+                                           y_pred, n_class, ldy);
+}
+da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
+                                    float *X_test, da_int ldx_test, float *y_pred,
+                                    da_int n_class, da_int ldy) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+    if (handle->precision != da_single)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
+    if (handle->forest_s == nullptr)
+        return da_error(
+            handle->err, da_status_invalid_handle_type,
+            "handle was not initialized with handle_type=da_handle_decision_forest or "
+            "handle is invalid.");
+    return handle->forest_s->predict_proba(n_samples, n_features, X_test, ldx_test,
+                                           y_pred, n_class, ldy);
+}
+
+da_status da_forest_predict_log_proba_d(da_handle handle, da_int n_obs, da_int n_features,
+                                        double *X_test, da_int ldx_test, double *y_pred,
+                                        da_int n_class, da_int ldy) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+    if (handle->precision != da_double)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
+    if (handle->forest_d == nullptr)
+        return da_error(
+            handle->err, da_status_invalid_handle_type,
+            "handle was not initialized with handle_type=da_handle_decision_forest or "
+            "handle is invalid.");
+    return handle->forest_d->predict_log_proba(n_obs, n_features, X_test, ldx_test,
+                                               y_pred, n_class, ldy);
+}
+
+da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_obs, da_int n_features,
+                                        float *X_test, da_int ldx_test, float *y_pred,
+                                        da_int n_class, da_int ldy) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // clean up handle logs
+    if (handle->precision != da_single)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
+    if (handle->forest_s == nullptr)
+        return da_error(
+            handle->err, da_status_invalid_handle_type,
+            "handle was not initialized with handle_type=da_handle_decision_forest or "
+            "handle is invalid.");
+    return handle->forest_s->predict_log_proba(n_obs, n_features, X_test, ldx_test,
+                                               y_pred, n_class, ldy);
+}
+
 da_status da_forest_score_d(da_handle handle, da_int n_samples, da_int n_features,
                             double *X_test, da_int ldx_test, da_int *y_test,
                             double *mean_accuracy) {

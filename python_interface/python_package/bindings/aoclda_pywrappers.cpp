@@ -237,15 +237,15 @@ PYBIND11_MODULE(_aoclda, m) {
     py::class_<decision_tree, pyda_handle>(m_decision_tree, "pybind_decision_tree")
         .def(py::init<da_int, da_int, da_int, std::string, da_int, std::string,
                       std::string &>(),
-             py::arg("seed") = -1, py::arg("max_depth") = 10, py::arg("max_features") = 0,
+             py::arg("seed") = -1, py::arg("max_depth") = 29, py::arg("max_features") = 0,
              py::arg("criterion") = "gini", py::arg("min_samples_split") = 2,
              py::arg("build_order") = "breadth first", py::arg("precision") = "double")
         .def("pybind_fit", &decision_tree::fit<float>, "Fit the decision tree", "X"_a,
-             "y"_a, py::arg("min_impurity_decrease") = 0.03,
-             py::arg("min_split_score") = 0.03, py::arg("feat_thresh") = 0.0)
+             "y"_a, py::arg("min_impurity_decrease") = 0.0,
+             py::arg("min_split_score") = 0.0, py::arg("feat_thresh") = 0.0)
         .def("pybind_fit", &decision_tree::fit<double>, "Fit the decision tree", "X"_a,
-             "y"_a, py::arg("min_impurity_decrease") = 0.03,
-             py::arg("min_split_score") = 0.03, py::arg("feat_thresh") = 0.0)
+             "y"_a, py::arg("min_impurity_decrease") = 0.0,
+             py::arg("min_split_score") = 0.0, py::arg("feat_thresh") = 0.0)
         .def("pybind_score", &decision_tree::score<float>, "Score the decision tree",
              "X_test"_a, "y_test"_a)
         .def("pybind_score", &decision_tree::score<double>, "Score the decision tree",
@@ -254,8 +254,18 @@ PYBIND11_MODULE(_aoclda, m) {
              "X"_a)
         .def("pybind_predict", &decision_tree::predict<float>, "Evaluate the model on X",
              "X"_a)
+        .def("pybind_predict_proba", &decision_tree::predict_proba<double>,
+             "Evaluate the model on X", "X"_a)
+        .def("pybind_predict_proba", &decision_tree::predict_proba<float>,
+             "Evaluate the model on X", "X"_a)
+        .def("pybind_predict_log_proba", &decision_tree::predict_log_proba<double>,
+             "Evaluate the model on X", "X"_a)
+        .def("pybind_predict_log_proba", &decision_tree::predict_log_proba<float>,
+             "Evaluate the model on X", "X"_a)
         .def("get_n_nodes", &decision_tree::get_n_nodes)
-        .def("get_n_leaves", &decision_tree::get_n_leaves);
+        .def("get_n_leaves", &decision_tree::get_n_leaves)
+        .def("set_max_features_opt", &decision_tree::set_max_features_opt,
+             "Set options for feature selection", py::arg("max_features") = 0);
 
     /**********************************/
     /*       Decision Forests         */
@@ -265,7 +275,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string, bool,
                       std::string, da_int, std::string &>(),
              py::arg("n_trees") = 100, py::arg("criterion") = "gini",
-             py::arg("seed") = -1, py::arg("max_depth") = 10,
+             py::arg("seed") = -1, py::arg("max_depth") = 29,
              py::arg("min_samples_split") = 2, py::arg("build_order") = "breadth first",
              py::arg("bootstrap") = true, py::arg("features_selection") = "sqrt",
              py::arg("max_features") = 0, py::arg("precision") = "double")
@@ -284,7 +294,19 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("pybind_predict", &decision_forest::predict<double>,
              "Evaluate the model on X", "X"_a)
         .def("pybind_predict", &decision_forest::predict<float>,
-             "Evaluate the model on X", "X"_a);
+             "Evaluate the model on X", "X"_a)
+        .def("pybind_predict_proba", &decision_forest::predict_proba<double>,
+             "Evaluate the model on X", "X"_a)
+        .def("pybind_predict_proba", &decision_forest::predict_proba<float>,
+             "Evaluate the model on X", "X"_a)
+        .def("pybind_predict_log_proba", &decision_forest::predict_log_proba<double>,
+             "Evaluate the model on X", "X"_a)
+        .def("pybind_predict_log_proba", &decision_forest::predict_log_proba<float>,
+             "Evaluate the model on X", "X"_a)
+        .def("set_max_features_opt", &decision_forest::set_max_features_opt,
+             "Set options for feature selection", py::arg("max_features") = 0)
+        .def("set_features_selection_opt", &decision_forest::set_features_selection_opt,
+             "Set options for feature selection", py::arg("features_selection") = "sqrt");
 
     /**********************************/
     /*     Nonlinear Data Fitting     */

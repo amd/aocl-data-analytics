@@ -34,7 +34,8 @@ import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_decision_forest(precision):
+@pytest.mark.parametrize("bootstrap", [True, False])
+def test_decision_forest(precision, bootstrap):
     """
     Basic problem with 2 observations and 2 features
     """
@@ -43,30 +44,41 @@ def test_decision_forest(precision):
     Y = np.array([0, 1], dtype=precision)
     Xp = np.array([[2., 2.]], dtype=precision)
 
+    tol = np.sqrt(np.finfo(precision).eps)
+
     # patch and import scikit-learn
     skpatch()
     from sklearn import ensemble
-    clf = ensemble.RandomForestClassifier()
+    clf = ensemble.RandomForestClassifier(n_estimators=4000, bootstrap=bootstrap)
     clf = clf.fit(X, Y)
     da_yp = clf.predict( Xp )
+    da_yprob = clf.predict_proba( Xp )
+    da_ylogprob = clf.predict_log_proba( Xp )
     assert clf.aocl is True
 
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn import ensemble
-    clf = ensemble.RandomForestClassifier()
+    clf = ensemble.RandomForestClassifier(n_estimators=4000, bootstrap=bootstrap)
     clf = clf.fit(X, Y)
     yp = clf.predict( Xp )
+    yprob = clf.predict_proba( Xp )
+    ylogprob = clf.predict_log_proba( Xp )
     assert not hasattr(clf, 'aocl')
 
     # Check results
     assert da_yp == yp
+    assert da_yprob == pytest.approx(yprob, abs=0.05)
+    assert da_ylogprob == pytest.approx(ylogprob, abs=0.1)
 
     # print the results if pytest is invoked with the -rA option
-    print("Components")
+    print("Predictions")
     print("    aoclda: \n", da_yp)
     print("   sklearn: \n", yp)
 
+    print("Probabilities")
+    print("    aoclda: \n", da_yprob[0,0], ", ", da_yprob[0,1])
+    print("   sklearn: \n", yprob[0,0], ", ", yprob[0,1])
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
 def test_double_solve(precision):
@@ -98,7 +110,7 @@ def test_decision_forest_errors():
         clf = ensemble.RandomForestClassifier(random_state = np.random.RandomState() )
 
     with pytest.warns(RuntimeWarning):
-        clf = ensemble.RandomForestClassifier(min_samples_split = 10)
+        clf = ensemble.RandomForestClassifier(min_samples_leaf = 10)
 
     clf = clf.fit(X, Y)
 
@@ -108,10 +120,6 @@ def test_decision_forest_errors():
         clf.decision_path(1)
     with pytest.raises(RuntimeError):
         clf.get_metadata_routing()
-    with pytest.raises(RuntimeError):
-        clf.predict_log_proba(1)
-    with pytest.raises(RuntimeError):
-        clf.predict_proba(1)
     with pytest.raises(RuntimeError):
         clf.set_fit_request()
     with pytest.raises(RuntimeError):
@@ -123,5 +131,5 @@ def test_decision_forest_errors():
     assert clf.feature_importances_ is None
 
 if __name__ == "__main__":
-    test_decision_forest()
+    test_decision_forest(precision=np.float64, bootstrap=True)
     test_decision_forest_errors()

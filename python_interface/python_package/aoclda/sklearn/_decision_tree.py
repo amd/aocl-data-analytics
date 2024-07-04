@@ -30,6 +30,7 @@ Patching scikit learn tree: DecisionTreeClassifier
 # pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, too-many-instance-attributes, too-many-arguments
 
 import warnings
+import math
 from aoclda.decision_tree import decision_tree as decision_tree_da
 from sklearn.tree import DecisionTreeClassifier as DecisionTreeClassifier_sklearn
 
@@ -70,6 +71,8 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         self.monotonic_cst = monotonic_cst
         self.precision = "double"
 
+        self.da_max_features = 0
+
         if criterion in ('log_loss', 'entropy'):
             score_criteria = "cross-entropy"
         elif criterion == "gini":
@@ -83,14 +86,14 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
             raise ValueError("splitter must be set to best")
 
         if max_depth is None:
-            depth = 10
+            depth = 29
         else:
             depth = max_depth
 
-        # if max_features is None:
-        #     raise ValueError("max_features must be an int and > 0")
-        # else:
-        #     n_features_to_select = max_features
+        if isinstance(max_features, str):
+            self.features_selection = max_features
+
+
 
         if random_state is None:
             seed = -1
@@ -99,31 +102,31 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         else:
             seed = random_state
 
-        if (min_samples_split != 2 or
-            min_samples_leaf != 1 or
+        if (min_samples_leaf != 1 or
             min_weight_fraction_leaf != 0.0 or
             max_leaf_nodes is not None or
-            min_impurity_decrease != 0.0 or
             class_weight is not None or
             ccp_alpha != 0.0 or
             monotonic_cst is not None):
             warnings.warn(
-                "The parameters min_samples_split, min_samples_leaf, max_leaf_nodes, "
-                "min_impurity_decrease, class_weight, ccp_alpha and monotonic_cst"
+                "The parameters min_samples_leaf, max_leaf_nodes, "
+                "class_weight, ccp_alpha and monotonic_cst"
                 "are not supported and have been ignored.", category=RuntimeWarning)
 
         # new internal attributes
         self.aocl = True
 
-        self.decision_tree_double = decision_tree_da(seed = seed,
-                                              criterion = score_criteria,
-                                              max_depth = depth,
-                                              precision = "double")
+        self.decision_tree_double = decision_tree_da(criterion = score_criteria,
+                                                     max_depth = depth,
+                                                     min_samples_split = min_samples_split,
+                                                     seed = seed,
+                                                     precision = "double")
 
-        self.decision_tree_single = decision_tree_da(seed = seed,
-                                              criterion = score_criteria,
-                                              max_depth = depth,
-                                              precision = "single")
+        self.decision_tree_single = decision_tree_da(criterion = score_criteria,
+                                                     max_depth = depth,
+                                                     min_samples_split = min_samples_split,
+                                                     seed = seed,
+                                                     precision = "single")
 
         self.decision_tree = self.decision_tree_double
 
@@ -142,7 +145,24 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
             self.decision_tree = self.decision_tree_single
             self.decision_tree_double = None
 
-        self.decision_tree.fit(X, y)
+        n_features = X.shape[1]
+        if isinstance(self.max_features, str):
+            if self.max_features == "sqrt":
+                self.da_max_features = math.sqrt(n_features)
+            if self.max_features == "log2":
+                self.da_max_features = math.log2(n_features)
+        if isinstance(self.max_features, int):
+            self.da_max_features = self.max_features
+        elif isinstance(self.max_features, float):
+            self.da_max_features = int(n_features * self.max_features)
+        elif self.max_features is None:
+            self.da_max_features = n_features
+        else:
+            self.da_max_features = 0
+
+        self.decision_tree.max_features = self.da_max_features
+        self.decision_tree.fit(X, y,
+                               min_impurity_decrease = self.min_impurity_decrease)
 
         return self
 
@@ -186,10 +206,10 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         return params
 
     def predict_log_proba(self, X):
-        raise RuntimeError("This feature is not implemented")
+        return self.decision_tree.predict_log_proba(X)
 
     def predict_proba(self, X, check_input=True):
-        raise RuntimeError("This feature is not implemented")
+        return self.decision_tree.predict_proba(X)
 
     def set_fit_request(self):
         raise RuntimeError("This feature is not implemented")

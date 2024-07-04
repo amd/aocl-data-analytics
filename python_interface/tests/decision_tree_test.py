@@ -53,6 +53,7 @@ def test_decision_tree_functionality(da_precision, numpy_precision, numpy_order)
     clf.fit(X_train, y_train)
 
     pred = clf.predict(X_test)
+    proba = clf.predict_proba(X_test)
     score = clf.score(X_test, y_test)
 
     assert pred[0] == 1
@@ -61,5 +62,5 @@ def test_decision_tree_functionality(da_precision, numpy_precision, numpy_order)
     assert clf.n_leaves == 2
 
     print(f"predictions: [{pred[0]:d}]")
+    print(f"probabilities: [{proba[0,0]:.3f}, {proba[0,1]:.3f}]")
     print(f"score: {score:.3f}")
-

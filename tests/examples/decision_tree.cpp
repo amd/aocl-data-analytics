@@ -36,7 +36,7 @@
 
 int main() {
     std::cout << "----------------------------------------" << std::endl;
-    std::cout << "Decision tree model (double precision)" << std::endl;
+    std::cout << "Decision tree model (single precision)" << std::endl;
     std::cout << "----------------------------------------" << std::endl;
     std::cout << std::fixed;
     std::cout.precision(3);
@@ -124,6 +124,19 @@ int main() {
     std::vector<da_int> y_pred(n_samples);
     pass = da_tree_predict_s(tree_handle, n_samples, n_features, X_test.data(), n_samples,
                              y_pred.data()) == da_status_success;
+    std::vector<float> y_proba(n_samples * n_class);
+    pass = da_tree_predict_proba_s(tree_handle, n_samples, n_features, X_test.data(),
+                                   n_samples, y_proba.data(), n_class,
+                                   n_samples) == da_status_success;
+
+    for (da_int i = 0; i < 5; i++) {
+        std::cout << "Class prediction: " << y_pred[i];
+        std::cout << ", Class probabilities: ";
+        for (da_int j = 0; j < n_class - 1; j++)
+            std::cout << y_proba[j * n_samples + i] << ", ";
+        std::cout << y_proba[(n_class - 1) * n_samples + i];
+        std::cout << std::endl;
+    }
     float mean_accuracy;
     pass &= da_tree_score_s(tree_handle, n_samples, n_features, X_test.data(), n_samples,
                             y_test.data(), &mean_accuracy);

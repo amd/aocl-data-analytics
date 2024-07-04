@@ -183,6 +183,80 @@ da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_feature
 /** \} */
 
 /** \{
+ * @brief Generate class probabilities using fitted decision tree on a new set of data @p X_test.
+ *
+ * @rst
+ * After a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
+ * function returns the decision tree class probabilities in the array ``y_pred``.
+ *
+ * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class probability
+ * according to the decision tree,
+ * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * @endrst
+ *
+ * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[in] n_samples - number of observations in \p X_test
+ * @param[in] n_features - number of features in \p X_test
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[out] y_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class probabilities
+ * @param[in] n_class - number of classes in \p y_proba
+ * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @return da_status
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
+ *   initialization.
+ * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
+ * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
+ *   @ref da_handle_print_error_message.
+ * - @ref da_status_out_of_date - the model has not been trained yet.
+ */
+da_status da_tree_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
+                                  double *X_test, da_int ldx_test, double *y_proba,
+                                  da_int n_class, da_int ldy);
+da_status da_tree_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
+                                  float *X_test, da_int ldx_test, float *y_proba,
+                                  da_int n_class, da_int ldy);
+/** \} */
+
+/** \{
+ * @brief Generate class log probabilities using fitted decision tree on a new set of data @p X_test.
+ *
+ * @rst
+ * After a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
+ * function returns the decision tree class log probabilities in the array ``y_pred``.
+ *
+ * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class log probability
+ * according to the decision tree,
+ * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * @endrst
+ *
+ * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[in] n_samples - number of observations in \p X_test
+ * @param[in] n_features - number of features in \p X_test
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[out] y_log_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class log probabilities
+ * @param[in] n_class - number of classes in \p y_log_proba
+ * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @return da_status
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
+ *   initialization.
+ * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
+ * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
+ *   @ref da_handle_print_error_message.
+ * - @ref da_status_out_of_date - the model has not been trained yet.
+ */
+da_status da_tree_predict_log_proba_d(da_handle handle, da_int n_samples,
+                                      da_int n_features, double *X_test, da_int ldx_test,
+                                      double *y_log_proba, da_int n_class, da_int ldy);
+da_status da_tree_predict_log_proba_s(da_handle handle, da_int n_samples,
+                                      da_int n_features, float *X_test, da_int ldx_test,
+                                      float *y_log_proba, da_int n_class, da_int ldy);
+/** \} */
+
+/** \{
  * @brief Generate labels using fitted decision forest on a new set of data @p X_test.
  *
  * @rst
@@ -213,6 +287,81 @@ da_status da_forest_predict_d(da_handle handle, da_int n_samples, da_int n_featu
                               double *X_test, da_int ldx_test, da_int *y_pred);
 da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_features,
                               float *X_test, da_int ldx_test, da_int *y_pred);
+/** \} */
+
+/** \{
+ * @brief Generate class probabilities using fitted decision forest on a new set of data @p X_test.
+ *
+ * @rst
+ * After a model has been fitted using :ref:`da_forest_fit_? <da_forest_fit>`, it can be used to generate predicted labels on new data. This
+ * function returns the decision forest class probabilities in the array ``y_pred``.
+ *
+ * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class probability
+ * according to the decision forest,
+ * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * @endrst
+ *
+ * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
+ * @param[in] n_samples - number of observations in \p X_test
+ * @param[in] n_features - number of features in \p X_test
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[out] y_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class probabilities
+ * @param[in] n_class - number of classes in \p y_proba
+ * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @return da_status
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
+ *   initialization.
+ * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
+ * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
+ *   @ref da_handle_print_error_message.
+ * - @ref da_status_out_of_date - the model has not been trained yet.
+ */
+da_status da_forest_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
+                                    double *X_test, da_int ldx_test, double *y_proba,
+                                    da_int n_class, da_int ldy);
+da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
+                                    float *X_test, da_int ldx_test, float *y_proba,
+                                    da_int n_class, da_int ldy);
+/** \} */
+
+/** \{
+ * @brief Generate class log probabilities using fitted decision forest on a new set of data @p X_test.
+ *
+ * @rst
+ * After a model has been fitted using :ref:`da_forest_fit_? <da_forest_fit>`, it can be used to generate predicted labels on new data. This
+ * function returns the decision forest class log probabilities in the array ``y_pred``.
+ *
+ * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class log probability
+ * according to the decision forest,
+ * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * @endrst
+ *
+ * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
+ * @param[in] n_samples - number of observations in \p X_test
+ * @param[in] n_features - number of features in \p X_test
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
+ * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[out] y_log_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class log probabilities
+ * @param[in] n_class - number of classes in \p y_log_proba
+ * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @return da_status
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
+ *   initialization.
+ * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
+ * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
+ *   @ref da_handle_print_error_message.
+ * - @ref da_status_out_of_date - the model has not been trained yet.
+ */
+da_status da_forest_predict_log_proba_d(da_handle handle, da_int n_samples,
+                                        da_int n_features, double *X_test,
+                                        da_int ldx_test, double *y_log_proba,
+                                        da_int n_class, da_int ldy);
+da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_samples,
+                                        da_int n_features, float *X_test, da_int ldx_test,
+                                        float *y_log_proba, da_int n_class, da_int ldy);
 /** \} */
 
 /** \{

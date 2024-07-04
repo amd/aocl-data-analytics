@@ -41,7 +41,7 @@ class decision_tree(pybind_decision_tree):
             the resulting classification will create non-reproducible results.
             Default = -1.
 
-        max_depth (int, optional): Set the maximum depth of the tree. Default = 10.
+        max_depth (int, optional): Set the maximum depth of the tree. Default = 29.
 
         max_features (int, optional): Set the number of features to consider when
             splitting a node. 0 means take all the features. Default 0.
@@ -59,8 +59,26 @@ class decision_tree(pybind_decision_tree):
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
     """
+    def __init__(self,
+             criterion = 'gini',
+             seed = -1, max_depth = 29,
+             min_samples_split = 2, build_order = 'breadth first',
+             max_features = 0, precision = 'double'):
+        super().__init__(criterion = criterion,
+             seed = seed, max_depth = max_depth,
+             min_samples_split = min_samples_split, build_order = build_order,
+             max_features = max_features, precision = precision)
+        self.max_features = max_features
 
-    def fit(self, X, y, min_impurity_decrease=0.03, min_split_score=0.03, feat_thresh=1.0e-06):
+    @property
+    def max_features(self):
+        return self.max_features
+        
+    @max_features.setter
+    def max_features(self, value):
+        self.set_max_features_opt(max_features=value)
+
+    def fit(self, X, y, min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-06):
         """
         Computes the decision tree on the feature matrix ``X`` and response vector ``y``
 
@@ -71,10 +89,10 @@ class decision_tree(pybind_decision_tree):
             y (numpy.ndarray): The response vector. Its shape is (n_samples).
 
             min_impurity_decrease (float, optional): Minimum score improvement
-                needed to consider a split from the parent node. Default 0.03
+                needed to consider a split from the parent node. Default 0.0
 
             min_split_score (float, optional): Minimum score needed for a node
-                to be considered for splitting. Default 0.03.
+                to be considered for splitting. Default 0.0.
 
             feat_thresh (float, optional): Minimum difference in feature value
                 required for splitting. Default 1.0e-06
@@ -113,6 +131,34 @@ class decision_tree(pybind_decision_tree):
             the number of rows of ``X``.
         """
         return self.pybind_predict(X)
+
+    def predict_proba(self, X):
+        """
+        Generate class probabilities using fitted decision forest on a new set of data ``X``.
+
+        Args:
+            X (numpy.ndarray): The feature matrix to evaluate the model on. It must have
+            n_features columns.
+
+        Returns:
+            numpy.ndarray of length n_samples: The prediction vector, where n_samples is
+            the number of rows of ``X``.
+        """
+        return self.pybind_predict_proba(X)
+
+    def predict_log_proba(self, X):
+        """
+        Generate class log probabilities using fitted decision forest on a new set of data ``X``.
+
+        Args:
+            X (numpy.ndarray): The feature matrix to evaluate the model on.
+                It must have n_features columns.
+
+        Returns:
+            numpy.ndarray of length n_samples: The prediction vector,
+                where n_samples is the number of rows of X.
+        """
+        return self.pybind_predict_log_proba(X)
 
     @property
     def n_nodes(self):

@@ -59,7 +59,7 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "maximum depth", "Set the maximum depth of trees.", 1, lbound_t::greaterequal,
-            (da_int)(std::numeric_limits<da_int>::digits) - 2, ubound_t::lessequal, 10));
+            (da_int)(std::numeric_limits<da_int>::digits) - 2, ubound_t::lessequal, 29));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(

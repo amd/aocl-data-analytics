@@ -72,8 +72,8 @@ py_da_pairwise_distances(py::array_t<T, py::array::f_style> X,
     } else if (metric == "sqeuclidean") {
         metric_enum = da_sqeuclidean;
     } else {
-        throw std::invalid_argument(
-            "Given metric does not exist. Available choices are: 'euclidean', 'sqeuclidean'.");
+        throw std::invalid_argument("Given metric does not exist. Available choices are: "
+                                    "'euclidean', 'sqeuclidean'.");
     }
     da_data_types force_all_finite_enum;
     if (force_all_finite == "allow_infinite") {
