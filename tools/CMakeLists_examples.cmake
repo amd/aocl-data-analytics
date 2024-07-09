@@ -29,7 +29,7 @@ project(aocl-da_examples LANGUAGES CXX)
 # ##############################################################################
 # options
 option(BUILD_ILP64 "ILP64 support" OFF)
-option(BUILD_SMP "Enable Shared Memory parallelism" ON)
+# option(BUILD_SMP "Enable Shared Memory parallelism" ON)
 
 # Set paths to AOCLUTILS, BLAS and LAPACK installations.
 set(CMAKE_AOCL_ROOT $ENV{AOCL_ROOT} CACHE STRING "AOCL_ROOT directory to be used to find AOCL BLAS/LAPACK/SPARSE/UTILS libraries")
@@ -69,13 +69,8 @@ find_path(
 if(WIN32)
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
-  if(BUILD_SMP)
-    set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
-    set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
-  else()
-    set(BLAS_NAME "AOCL-LibBlis-Win-dll")
-    set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
-  endif()
+  set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
+  set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
   set(UTILS_NAME "libaoclutils")
   set(SPARSE_NAME "aoclsparse")
 
@@ -84,11 +79,7 @@ if(WIN32)
   set(UTILS_PATH "${CMAKE_AOCL_ROOT}/amd-utils/lib")
   set(SPARSE_PATH "${CMAKE_AOCL_ROOT}/amd-sparse/lib/${INT_LIB}/shared")
 else() # Linux
-  if(BUILD_SMP)
-    set(BLAS_NAME "blis-mt")
-  else()
-    set(BLAS_NAME "blis")
-  endif()
+  set(BLAS_NAME "blis-mt")
   set(LAPACK_NAME "flame")
   set(UTILS_NAME "aoclutils")
   set(SPARSE_NAME "aoclsparse")

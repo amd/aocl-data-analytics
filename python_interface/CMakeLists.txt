@@ -35,8 +35,17 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 # CMAKE_PREFIX_PATH=C:\Users\ehopkins\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pybind11\share\cmake\pybind11;%CMAKE_PREFIX_PATH%
 
 # Install the full python package as well as all the dependent libraries in
-# python_package/aoclda
-set(BASE_DEP_LIBS ${BLAS} ${LAPACK} ${SPARSE} ${UTILS})
+# python_package/aoclda. The BLAS_SERIAL and LAPACK_SERIAL variables are only
+# set in Windows SMP builds to allow aoclsparse to have its dependent libraries
+set(BASE_DEP_LIBS
+    ${BLAS}
+    ${LAPACK}
+    ${BLAS_SERIAL}
+    ${LAPACK_SERIAL}
+    ${SPARSE}
+    ${UTILS}
+    ${UTILS_CORE}
+    ${UTILS_CPUID})
 set(DEP_LIBS "")
 
 if(WIN32)

@@ -113,12 +113,17 @@ set(SPARSE_LIB
 set(UTILS_LIB
     ""
     CACHE STRING "Path to AOCL-UTILS library")
+set(UTILS_CPUID_LIB
+    ""
+    CACHE STRING "Path to AU-CPUID library")
+set(UTILS_CORE_LIB
+    ""
+    CACHE STRING "Path to AU_CORE library")
 
 if(BUILD_SMP OR UNIX)
-  # On Linux, even serial builds need an OpenMP runtime to enable correct
-  # LibFlame linking
+  # Even serial builds need an OpenMP runtime to enable correct LibFlame linking
   find_package(OpenMP REQUIRED)
-  if((NOT WIN32))# AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
+  if((NOT WIN32)) # AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   endif()
@@ -301,7 +306,8 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   endif()
 
   # Release flags
-  set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;")
+  set(COMPILER_FLAGS_RELEASE
+      "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;")
 
   if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
@@ -376,7 +382,7 @@ add_subdirectory(source)
 # Put all custom configuration BEFORE including "CTest"
 if(VALGRIND)
   set(MEMORYCHECK_COMMAND_OPTIONS
-      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" #  --gen-suppressions=all
+      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" # --gen-suppressions=all
   )
   set(MEMORYCHECK_TYPE "valgrind")
   set(MEMORYCHECK_SUPPRESSIONS_FILE
@@ -442,12 +448,16 @@ message(NOTICE "Architecture flag         ARCH_FLAG............: ${ARCH_FLAG}")
 message(NOTICE "Building with ASan        ASAN.................: ${ASAN}")
 message(NOTICE "Building docs             BUILD_DOC............: ${BUILD_DOC}")
 if(INTERNAL_DOC)
-  message(NOTICE "Build internal docs       INTERNAL_DOC.........: ${INTERNAL_DOC}")
+  message(NOTICE
+          "Build internal docs       INTERNAL_DOC.........: ${INTERNAL_DOC}")
 endif()
-message(NOTICE "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
-message(NOTICE "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
+message(NOTICE
+        "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
+message(NOTICE
+        "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
 message(NOTICE "Building with OpenMP      BUILD_SMP............: ${BUILD_SMP}")
-message(NOTICE "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")
+message(NOTICE
+        "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")
 message(NOTICE "Building with Coverage    COVERAGE.............: ${COVERAGE}")
 message(NOTICE "Debug printing            DA_LOGGING...........: ${DA_LOGGING}")
 message(NOTICE "Building with MemSan      MEMSAN...............: ${MEMSAN}")
@@ -460,11 +470,15 @@ if(${VALGRIND})
   message(NOTICE
           "         Valgrind suppression: ${MEMORYCHECK_SUPPRESSIONS_FILE}")
 endif()
-message(NOTICE "Vectorization reports     VECTORIZATION_REPORTS: ${VECTORIZATION_REPORTS}")
+message(
+  NOTICE
+  "Vectorization reports     VECTORIZATION_REPORTS: ${VECTORIZATION_REPORTS}")
 
 message(NOTICE "\nTARGETS")
-message(NOTICE "Build the EXAMPLE programs  BUILD_EXAMPLES.....: ${BUILD_EXAMPLES}")
-message(NOTICE "Build GTEST unit-tests      BUILD_GTEST........: ${BUILD_GTEST}")
+message(NOTICE
+        "Build the EXAMPLE programs  BUILD_EXAMPLES.....: ${BUILD_EXAMPLES}")
+message(NOTICE
+        "Build GTEST unit-tests      BUILD_GTEST........: ${BUILD_GTEST}")
 
 message(NOTICE "\nDEPENDENT LIBRARIES")
 message(NOTICE "BLAS         BLAS=${BLAS}")
