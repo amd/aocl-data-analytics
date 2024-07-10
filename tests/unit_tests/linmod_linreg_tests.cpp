@@ -1014,7 +1014,7 @@ const linregParam linregParamPos[] = {
     //
     // NONE SCALING (coord incompatible)
     // NORMAL
-    // NO INTERCEPT 
+    // NO INTERCEPT
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      OK    OK    OK   OK   NA    OK
     // tall-thin      OK    OK    OK   OK   NA    OK
@@ -1043,7 +1043,7 @@ const linregParam linregParamPos[] = {
     //
     // CENTERING (coord incompatible)
     // NORMAL
-    // NO INTERCEPT 
+    // NO INTERCEPT
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      OK    OK    OK   OK   NA    OK
     // tall-thin      OK    OK    OK   OK   NA    OK
@@ -1067,7 +1067,7 @@ const linregParam linregParamPos[] = {
     //
     // SCALE ONLY
     // NORMAL
-    // NO INTERCEPT 
+    // NO INTERCEPT
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      OK    OK    OK   OK   OK*   OK
     // tall-thin      OK    OK    OK   OK   OK    OK
@@ -1083,7 +1083,7 @@ const linregParam linregParamPos[] = {
     // matrix size   lbfgs  svd  chol  cg  coord  qr
     // short-fat      NA    NA    NA   NA   OK    NA
     // tall-thin      NA    NA    NA   NA   OK    NA
-    // tall-fat       NA    NA    NA   NA   OK    NA 
+    // tall-fat       NA    NA    NA   NA   OK    NA
     //
     // RIDGE (BOTH INTERCEPT AND NO INTERCEPT)
     // matrix size   lbfgs  svd  chol  cg  coord  qr
@@ -1375,7 +1375,7 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-13}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",1.0}},
                                      true, false
                                      },
-    
+
     /* CENTERING */
     /* NORMAL TESTS */
     /* NO INTERCEPT */
@@ -1474,7 +1474,7 @@ const linregParam linregParamPos[] = {
                                      },
     /* INTERCEPT */
     /* SHORT FAT */
-    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
         conditional number which makes the solution unstable and difficult to compare between each other */
     {"ShortFat/norm/lbfgs/1/c", "short_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}, {"scaling", "centering"}},
@@ -1533,7 +1533,7 @@ const linregParam linregParamPos[] = {
                                      true, false
                                      },
     /* TALL FAT */
-    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
         conditional number which makes the solution unstable and difficult to compare between each other */
     {"TallFat/norm/lbfgs/1/c", "tall_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}, {"scaling", "centering"}},
@@ -1877,7 +1877,7 @@ const linregParam linregParamPos[] = {
                                      {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",0.1f}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
-                                     true, false
+                                     true, false, 1.5f
                                      },
     {"TallThin/norm/svd/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "svd"}, {"scaling", "scale only"}},
@@ -2122,7 +2122,7 @@ const linregParam linregParamPos[] = {
                                      {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.5f},{"alpha",0.0f}, {"optim progress factor",0.1f}},
                                      {{"optim convergence tol",1.e-14}, {"lambda",0.5},{"alpha",0.0}, {"optim progress factor",10.0}},
-                                     true, false
+                                     true, false, 1.5f
                                      },
     {"TallThin/L2/svd/1/s", "tall_thinl2", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "svd"}, {"scaling", "scale only"}},
@@ -2179,7 +2179,7 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-13}, {"lambda",0.5},{"alpha",0.0}},
                                      true, false
                                      },
-    
+
     /* ELASTIC NET TESTS */
     /* OUTPUT HERE IS COMPARED TO GLMNET INSTEAD OF SKLEARN */
     /* NO INTERCEPT */
@@ -2227,7 +2227,7 @@ const linregParam linregParamPos[] = {
                                      true, false
                                      },
 
-    /* STANDARDISE (HERE WE COMPARING TO GLMNET OUTPUT) */ 
+    /* STANDARDISE (HERE WE COMPARING TO GLMNET OUTPUT) */
     /* NORMAL TESTS */
     /* NO INTERCEPT */
     /* SHORT FAT */
@@ -2335,7 +2335,7 @@ const linregParam linregParamPos[] = {
                                      },
     /* INTERCEPT */
     /* SHORT FAT */
-    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
         conditional number which makes the solution unstable and difficult to compare between each other */
     {"ShortFat/norm/lbfgs/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
@@ -2407,7 +2407,7 @@ const linregParam linregParamPos[] = {
                                      true, false
                                      },
     /* TALL FAT */
-    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high 
+    /* Tricky situation, calculating solution to undetermined system with intercept in unregularised case leads to dealing with matrix with very high
         conditional number which makes the solution unstable and difficult to compare between each other */
     {"TallFat/norm/lbfgs/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
                                      {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
@@ -2721,7 +2721,7 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
-    
+
     // 96 scikit-learn sparse signal example LASSO
     {"signal-l1+1/Coord/s", "signal-scikit", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
