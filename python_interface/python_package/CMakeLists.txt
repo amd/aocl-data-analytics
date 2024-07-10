@@ -32,7 +32,7 @@ option(BUILD_ILP64 "ILP64 Support" OFF)
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 # On linux, pybind11_DIR needs to be defined. pybind11-config gives the correct
-# value for the system install of pybind11 Also serves as a check that pybind11
+# value for the system install of pybind11. Also serves as a check that pybind11
 # is correctly installed
 if(NOT WIN32)
   execute_process(

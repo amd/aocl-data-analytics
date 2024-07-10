@@ -86,19 +86,21 @@ function(linalg_libs)
     if(BUILD_SMP)
       set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
       set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
-      # On Windows SMP builds we need both serial and threaded versions in order
-      # to build the Python wheel, since aoclsparse requires serial and flame
-      # requires threaded
-      set(BLAS_NAME_SERIAL "AOCL-LibBlis-Win-dll")
-      set(LAPACK_NAME_SERIAL "AOCL-LibFlame-Win-dll")
-      find_library(
-        BLAS_SERIAL name ${BLAS_NAME_SERIAL}
-        PATHS ${BLAS_LIB_DIR} REQUIRED
-        NO_DEFAULT_PATH)
-      find_library(
-        LAPACK_SERIAL name ${LAPACK_NAME_SERIAL}
-        PATHS ${LAPACK_LIB_DIR} REQUIRED
-        NO_DEFAULT_PATH)
+      if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+        # On Windows Clang SMP builds we need both serial and threaded versions in
+        # order to build the Python wheel, since aoclsparse requires serial and
+        # flame requires threaded
+        set(BLAS_NAME_SERIAL "AOCL-LibBlis-Win-dll")
+        set(LAPACK_NAME_SERIAL "AOCL-LibFlame-Win-dll")
+        find_library(
+          BLAS_SERIAL name ${BLAS_NAME_SERIAL}
+          PATHS ${BLAS_LIB_DIR} REQUIRED
+          NO_DEFAULT_PATH)
+        find_library(
+          LAPACK_SERIAL name ${LAPACK_NAME_SERIAL}
+          PATHS ${LAPACK_LIB_DIR} REQUIRED
+          NO_DEFAULT_PATH)
+      endif()
     else()
       set(BLAS_NAME "AOCL-LibBlis-Win-dll")
       set(LAPACK_NAME "AOCL-LibFlame-Win-dll")
