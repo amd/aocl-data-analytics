@@ -71,7 +71,7 @@ Building on Linux
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>` to specify the install path for the library
 
-   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
+   * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CORE_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
    **Note** that not all the options available in `Release` build mode.
 

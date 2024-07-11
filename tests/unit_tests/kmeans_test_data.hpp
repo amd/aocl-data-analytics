@@ -60,11 +60,11 @@ template <typename T> struct KMeansParamType {
     da_int ldy = 0;
     std::vector<da_int> Y_labels;
 
-    da_int n_clusters;
-    da_int n_init;
-    da_int max_iter;
-    da_int seed;
-    T convergence_tolerance;
+    da_int n_clusters = 1;
+    da_int n_init = 1;
+    da_int max_iter = 50;
+    da_int seed = 0;
+    T convergence_tolerance = (T)1e-4;
     std::string initialization_method;
     std::string algorithm;
 
@@ -76,7 +76,7 @@ template <typename T> struct KMeansParamType {
 
     da_status expected_status = da_status_success;
     T tol = 10 * std::numeric_limits<T>::epsilon();
-    T max_allowed_inertia;
+    T max_allowed_inertia = (T)0.0;
 };
 
 template <typename T> void Get1by1BaseData(KMeansParamType<T> &param) {

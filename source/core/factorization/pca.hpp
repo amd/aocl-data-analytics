@@ -530,7 +530,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
     // If necessary, perform a QR decomposition before the SVD
     std::vector<T> tau, R_blocked, tau_R_blocked, R;
-    da_int n_blocks, block_size, final_block_size;
+    da_int n_blocks = 0, block_size = 0, final_block_size = 0;
     if (solver != solver_syevd && (T)n / (T)p > 1.2) {
         // The factor is a heuristic based on flop counts of QR and SVD routines
         qr = true;
