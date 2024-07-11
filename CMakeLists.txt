@@ -230,7 +230,7 @@ if(WIN32)
       file(TO_CMAKE_PATH $ENV{FLANG_COMPILER} FLANG_PATH)
       set(CMAKE_Fortran_COMPILER "${FLANG_PATH}/bin/flang.exe")
       set(FLANG_LIBS "${FLANG_PATH}/lib")
-      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib")
+      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib" "${FLANG_LIBS}/libpgmath.lib")
     else()
       set(IFORT_LIBS
           "$ENV{LIB}"
@@ -481,7 +481,8 @@ message(NOTICE
         "Build GTEST unit-tests      BUILD_GTEST........: ${BUILD_GTEST}")
 
 message(NOTICE "\nDEPENDENT LIBRARIES")
-message(NOTICE "BLAS         BLAS=${BLAS}")
-message(NOTICE "LAPACK       LAPACK=${LAPACK}")
-message(NOTICE "AOCL-Sparse  SPARSE=${SPARSE}")
-message(NOTICE "AOCL-Utils   UTILS=${UTILS}")
+message(NOTICE "BLAS             BLAS=${BLAS}")
+message(NOTICE "LAPACK           LAPACK=${LAPACK}")
+message(NOTICE "AOCL-Sparse      SPARSE=${SPARSE}")
+message(NOTICE "AOCL-Utils       UTILS=${UTILS}")
+message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")

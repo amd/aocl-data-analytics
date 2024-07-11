@@ -82,21 +82,26 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     # Install Fortran runtimes
     set(RUNTIME_LIBS
         flang.lib
-        flang.dll
         flangrti.lib
-        flangrti.dll
         libomp.lib
-        libomp.dll
         ompstub.lib
+        libpgmath.lib)
+	set(RUNTIME_DLLS
+        flang.dll
+        flangrti.dll
+        libomp.dll
         ompstub.dll
-        pgmath.lib
         pgmath.dll)
     foreach(LIB ${RUNTIME_LIBS})
       install(FILES "$ENV{FLANG_COMPILER}/lib/${LIB}"
               DESTINATION python_package/aoclda)
     endforeach()
+	foreach(DLL ${RUNTIME_DLLS})
+      install(FILES "$ENV{FLANG_COMPILER}/bin/${DLL}"
+              DESTINATION python_package/aoclda)
+    endforeach()
   else()
-    # Fine where the Flang runtime folder is
+    # Find where the Flang runtime folder is
     string(REPLACE ":" ";" LD_LIBRARY_PATH_LIST $ENV{LD_LIBRARY_PATH})
     find_path(
       FLANG_RUNTIME_DIR

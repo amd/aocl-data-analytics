@@ -107,6 +107,7 @@ function(linalg_libs)
     endif()
     set(SPARSE_NAME "aoclsparse")
     set(UTILS_NAME "libaoclutils")
+	# Additional utils libs since 24/06
     set(UTILS_CPUID_NAME "au_cpuid")
     set(UTILS_CORE_NAME "au_core")
   else(WIN32) # linux
@@ -190,7 +191,7 @@ function(linalg_libs)
       PATHS ${UTILS_LIB_DIR} REQUIRED
       NO_DEFAULT_PATH)
   else()
-    set(UTILS_CPUID
+    set(UTILS_CORE
         ${UTILS_CORE_LIB}
         PARENT_SCOPE)
   endif()
