@@ -1,5 +1,4 @@
-/*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -31,6 +30,7 @@
 
 #include "aoclda.h"
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -109,18 +109,15 @@ da_int eval_J(da_int n_coef, da_int n_res, void *udata, double const *x, double 
     return 0;
 }
 int main(void) {
-    std::cout << "----------------------------------------" << std::endl;
+    std::cout << " ----------------------------------------" << std::endl;
     std::cout << "     Nonlinear Least-Squares example" << std::endl;
-    std::cout << "----------------------------------------" << std::endl;
+    std::cout << " ----------------------------------------" << std::endl;
 
     const da_int n_coef = 6; /* vector (a, b, Al, mu, sigma, Ag) */
     const da_int n_res = 64;
-    double coef[n_coef]{1.65, 0.9, 1.0, 30.0, 1.5, 0.25};
-    const double coef_exp[n_coef]{1.99, 1.37, 0.68, 36.6, 7.08, 0.34};
+    std::vector<double> coef({1.65, 0.9, 1.0, 30.0, 1.5, 0.25});
+    const double coef_exp[n_coef]{1.99, 1.37, 0.68, 36.64, 7.08, 0.34};
 
-    double blx[2]{0.0, 1.0};
-    double bux[2]{1.0, 10.0};
-    double w[5]{1.0, 1.0, 1.0, 1.0, 1.0};
     const double tol{1.0e-2};
     std::vector<double> lower_bounds(n_res, 0.0);
     std::vector<double> weights(n_res, 1.0);
@@ -148,28 +145,41 @@ int main(void) {
         da_handle_destroy(&handle);
         return 1;
     }
-    pass &= da_options_set_int(handle, "print level", (da_int)0) == da_status_success;
+    pass &= da_options_set_int(handle, "print level", (da_int)2) == da_status_success;
+    da_options_set_real_d(handle, "finite differences step", 1e-7) == da_status_success;
+    pass &= pass &=
+        da_options_set_real_d(handle, "derivative test tol", 1e-3) == da_status_success;
+    pass &=
+        da_options_set_string(handle, "check derivatives", "yes") == da_status_success;
     if (!pass) {
         std::cout << "Something unexpected happened while setting options\n";
         da_handle_destroy(&handle);
         return 2;
     }
 
+    std::cout << "\n ** Computing regression with exact first derivatives **\n"
+              << std::endl;
     // compute regression
     da_status status;
-    status = da_nlls_fit_d(handle, n_coef, coef, (void *)&udata);
+    status = da_nlls_fit_d(handle, n_coef, coef.data(), (void *)&udata);
     bool ok{false};
+    const auto default_precision{std::cout.precision()};
     if (status == da_status_success) {
         std::cout << "Regression computed successfully!" << std::endl;
-        std::cout << "Coefficients: " << coef[0] << " " << coef[1];
-        std::cout << " " << coef[2] << " " << coef[3];
-        std::cout << " " << coef[4] << " " << coef[5] << std::endl;
-        ok = std::max(std::abs(coef[0] - coef_exp[0]), std::abs(coef[1] - coef_exp[1])) <=
-             tol;
-        ok = std::max(std::abs(coef[2] - coef_exp[2]), std::abs(coef[3] - coef_exp[3])) <=
-             tol;
-        ok = std::max(std::abs(coef[4] - coef_exp[4]), std::abs(coef[5] - coef_exp[5])) <=
-             tol;
+        std::cout << "Coefficients: Idx           x            x*\n";
+        ok = true;
+        for (auto i = 0; i < n_coef; ++i) {
+            double gap = std::abs(coef[i] - coef_exp[i]);
+            bool oki = gap <= tol;
+            ok &= oki;
+            std::cout << std::setprecision(6);
+            std::cout << "                " << i << std::setw(12) << coef[i] << " "
+                      << std::setw(1) << " " << std::setw(12) << coef_exp[i]
+                      << std::setw(8) << (oki ? "PASS (" : "FAIL (") << std::setw(8)
+                      << std::setprecision(3) << gap << std::setw(1) << ")\n";
+        }
+        std::cout << std::setprecision(3);
+        std::cout << std::setprecision(default_precision);
     } else {
         std::cout << "Something wrong happened during the fit. Terminating. Message:"
                   << std::endl;
@@ -194,7 +204,59 @@ int main(void) {
         std::cout << "Norm of residual gradient: " << info[1] << std::endl;
     }
 
+    // Now we solve again using FD
+    std::cout << "\n\n ** Computing regression with finite differences **\n" << std::endl;
+    coef.assign({1.65, 0.9, 1.0, 30.0, 1.5, 0.25});
+    pass &= da_nlls_define_residuals_d(handle, n_coef, n_res, eval_r, nullptr, nullptr,
+                                       nullptr) == da_status_success;
+    if (!pass) {
+        std::cout << "Something unexpected happened while defining residuals\n";
+        da_handle_destroy(&handle);
+        return 5;
+    }
+    status = da_nlls_fit_d(handle, n_coef, coef.data(), (void *)&udata);
+    if (status == da_status_success) {
+        const auto default_precision{std::cout.precision()};
+        std::cout << "Regression computed successfully!" << std::endl;
+        std::cout << "Coefficients: Idx           x            x*\n";
+        for (auto i = 0; i < n_coef; ++i) {
+            double gap = std::abs(coef[i] - coef_exp[i]);
+            bool oki = gap <= tol;
+            ok &= oki;
+            std::cout << std::setprecision(6);
+            std::cout << "                " << i << std::setw(12) << coef[i] << " "
+                      << std::setw(1) << " " << std::setw(12) << coef_exp[i]
+                      << std::setw(8) << (oki ? "PASS (" : "FAIL (") << std::setw(8)
+                      << std::setprecision(3) << gap << std::setw(1) << ")\n";
+        }
+        std::cout << std::setprecision(3);
+        std::cout << std::setprecision(default_precision);
+    } else {
+        std::cout << "Something wrong happened during the fit. Terminating. Message:"
+                  << std::endl;
+        char *mesg{nullptr};
+        da_handle_get_error_message(handle, &mesg);
+        std::cout << mesg << std::endl;
+        free(mesg);
+        da_handle_destroy(&handle);
+        return 6;
+    }
+
+    // Get info out of handle
+    status = da_handle_get_result_d(handle, da_result::da_rinfo, &size, info.data());
+    if (status == da_status_operation_failed) {
+        info.resize(size);
+    }
+    status = da_handle_get_result_d(handle, da_result::da_rinfo, &size, info.data());
+    if (status == da_status_success) {
+        std::cout << "Fit error                : " << info[0] << std::endl;
+        std::cout << "Norm of residual gradient: " << info[1] << std::endl;
+    }
+
     da_handle_destroy(&handle);
+
+    std::cout << "Regressions were computed " << (ok ? "SUCCESSFULLY" : "with errors")
+              << std::endl;
 
     return ok ? 0 : 4;
 }

@@ -266,7 +266,7 @@ class nlls : public pyda_handle {
          std::string order = "c", std::string prec = "double",
          std::string model = "hybrid", std::string method = "galahad",
          std::string glob_strategy = "tr", std::string reg_power = "quadratic",
-         da_int verbose = (da_int)0) {
+         std::string check_derivatives = "no", da_int verbose = (da_int)0) {
 
         da_status status{da_status_success};
         // prep precision string
@@ -329,6 +329,8 @@ class nlls : public pyda_handle {
             da_options_set(handle, "ralfit globalization method", glob_strategy.c_str());
         exception_check(status, mesg);
         status = da_options_set(handle, "regularization power", reg_power.c_str());
+        exception_check(status, mesg);
+        status = da_options_set(handle, "check derivatives", check_derivatives.c_str());
         exception_check(status, mesg);
         if (verbose < 0 || verbose > 5) {
             status = da_status_option_invalid_value;
@@ -469,7 +471,8 @@ class nlls : public pyda_handle {
              std::optional<nlls_cb::py_cb2_t<T>> hes,
              std::optional<nlls_cb::py_cb2_t<T>> hp, std::optional<py::object> data,
              T ftol = 1.0e-8, T abs_ftol = 1.0e-8, T gtol = 1.0e-8, T abs_gtol = 1.0e-5,
-             T xtol = 2.22e-16, T reg_term = 0.0, da_int maxit = da_int(100)) {
+             T xtol = 2.22e-16, T reg_term = 0.0, da_int maxit = da_int(100),
+             T fd_step = 1.0e-7, T fd_ttol = 1.0e-4) {
 
         da_status status{da_status_success};
         std::string mesg{""};
@@ -553,6 +556,10 @@ class nlls : public pyda_handle {
         exception_check(status, mesg);
         status = da_options_set(handle, "regularization term", reg_term);
         exception_check(status, mesg);
+        status = da_options_set(handle, "finite differences step", fd_step);
+        exception_check(status, mesg);
+        status = da_options_set(handle, "derivative test tol", fd_ttol);
+        exception_check(status, mesg);
 
         callbacks.set(fun, py_jac, py_hf, py_hp);
         callbacks.storage_scheme_c = this->storage_scheme_c;
@@ -572,10 +579,10 @@ class nlls : public pyda_handle {
                std::optional<nlls_cb::py_cb2_t<double>> hp,
                std::optional<py::object> data, double ftol = 1.0e-8,
                double abs_ftol = 1.0e-8, double gtol = 1.0e-8, double abs_gtol = 1.0e-5,
-               double xtol = 2.22e-16, double reg_term = 0.0,
-               da_int maxit = da_int(100)) {
+               double xtol = 2.22e-16, double reg_term = 0.0, da_int maxit = da_int(100),
+               double fd_step = 1.0e-7, double fd_ttol = 1.0e-4) {
         fit<double>(x, fun, jac, hes, hp, data, ftol, abs_ftol, gtol, abs_gtol, xtol,
-                    reg_term, maxit);
+                    reg_term, maxit, fd_step, fd_ttol);
     }
 
     void fit_s(py::array_t<float> x, nlls_cb::py_cb1_t<float> &fun,
@@ -584,15 +591,16 @@ class nlls : public pyda_handle {
                std::optional<nlls_cb::py_cb2_t<float>> hp, std::optional<py::object> data,
                float ftol = 1.0e-8f, float abs_ftol = 1.0e-8f, float gtol = 1.0e-8f,
                float abs_gtol = 1.0e-5f, float xtol = 2.22e-16f, float reg_term = 0.0,
-               da_int maxit = da_int(100)) {
+               da_int maxit = da_int(100), float fd_step = 1.0e-7f,
+               float fd_ttol = 1.0e-4f) {
         fit<float>(x, fun, jac, hes, hp, data, ftol, abs_ftol, gtol, abs_gtol, xtol,
-                   reg_term, maxit);
+                   reg_term, maxit, fd_step, fd_ttol);
     }
 
     // Query handle for information
     template <typename T>
     void get_info(da_int &iter, da_int &f_eval, da_int &g_eval, da_int &h_eval,
-                  da_int &hp_eval, T &obj, T &norm_g, T &scaled_g) {
+                  da_int &hp_eval, T &obj, T &norm_g, T &scaled_g, da_int &fd_f_eval) {
         da_status status;
         da_int dim = 100;
         T info[100];
@@ -604,6 +612,7 @@ class nlls : public pyda_handle {
         g_eval = da_int(info[da_optim_info_t::info_nevalg]);
         h_eval = da_int(info[da_optim_info_t::info_nevalh]);
         hp_eval = da_int(info[da_optim_info_t::info_nevalhp]);
+        fd_f_eval = da_int(info[da_optim_info_t::info_nevalfd]);
         obj = info[da_optim_info_t::info_objective];
         norm_g = info[da_optim_info_t::info_grad_norm];
         scaled_g = info[da_optim_info_t::info_scl_grad_norm];
@@ -611,46 +620,54 @@ class nlls : public pyda_handle {
 
     // Getters for info
     auto get_info_iter() {
-        da_int iter, f_eval, g_eval, h_eval, hp_eval;
+        da_int iter, f_eval, g_eval, h_eval, hp_eval, fd_f_eval;
         if (precision == da_single) {
             using T = float;
             T obj, norm_g, scaled_g;
-            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g);
+            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
+                     fd_f_eval);
         } else {
             using T = double;
             T obj, norm_g, scaled_g;
-            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g);
+            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
+                     fd_f_eval);
         }
         return iter;
     }
     auto get_info_evals() {
-        da_int iter, f_eval, g_eval, h_eval, hp_eval;
+        da_int iter, f_eval, g_eval, h_eval, hp_eval, fd_f_eval;
         if (precision == da_single) {
             using T = float;
             T obj, norm_g, scaled_g;
-            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g);
-            return py::dict("f"_a = f_eval, "j"_a = g_eval, "h"_a = h_eval,
-                            "hp"_a = hp_eval);
+            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
+                     fd_f_eval);
+            return py::dict("f"_a = da_int(f_eval), "j"_a = da_int(g_eval),
+                            "h"_a = da_int(h_eval), "hp"_a = da_int(hp_eval),
+                            "fd_f"_a = da_int(fd_f_eval));
         } else {
             using T = double;
             T obj, norm_g, scaled_g;
-            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g);
+            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
+                     fd_f_eval);
             return py::dict("f"_a = da_int(f_eval), "j"_a = da_int(g_eval),
-                            "h"_a = da_int(h_eval), "hp"_a = da_int(hp_eval));
+                            "h"_a = da_int(h_eval), "hp"_a = da_int(hp_eval),
+                            "fd_f"_a = da_int(fd_f_eval));
         }
     }
     auto get_info_optim() {
-        da_int iter, f_eval, g_eval, h_eval, hp_eval;
+        da_int iter, f_eval, g_eval, h_eval, hp_eval, fd_f_eval;
         if (precision == da_single) {
             using T = float;
             T obj, norm_g, scaled_g;
-            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g);
+            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
+                     fd_f_eval);
             return py::dict("obj"_a = obj, "norm_g"_a = norm_g,
                             "scl_norm_g"_a = scaled_g);
         } else {
             using T = double;
             T obj, norm_g, scaled_g;
-            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g);
+            get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
+                     fd_f_eval);
             return py::dict("obj"_a = obj, "norm_g"_a = norm_g,
                             "scl_norm_g"_a = scaled_g);
         }

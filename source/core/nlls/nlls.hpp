@@ -173,9 +173,6 @@ da_status nlls<T>::define_callbacks(resfun_t<T> resfun, resgrd_t<T> resgrd,
     if (!resfun)
         return da_error(this->err, da_status_invalid_input,
                         "resfun must point to the residual function.");
-    if (!resgrd)
-        return da_error(this->err, da_status_invalid_input,
-                        "resgrd must point to the residual Jacobian function.");
 
     this->resfun = resfun;
     this->resgrd = resgrd;

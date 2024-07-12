@@ -1,3 +1,6 @@
+// Copyright (c) 2016, The Science and Technology Facilities Council (STFC)
+// All rights reserved.
+// Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 #include <Python.h>
@@ -25,7 +28,7 @@ struct callback_data {
 };
 
 ///
-/// get the argument list of a  
+/// get the argument list of a
 ///
 static
 PyObject* build_arglist(Py_ssize_t sz, PyObject* extra) {
@@ -262,7 +265,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
    PyObject *key, *value;
    Py_ssize_t pos = 0;
    const char* key_name;
-   
+
    while(PyDict_Next(pyoptions, &pos, &key, &value)) {
      if (PyUnicode_Check(key)){
        // change key from Unicode to ascii
@@ -349,7 +352,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
          continue;
       }
       // bool: allow_fallback_method
-      
+
       if(strcmp(key_name, "allow_fallback_method")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
 	printf("%d\n",vint);
@@ -392,7 +395,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
          continue;
       }
 
-      
+
       if(strcmp(key_name, "stop_f_absolute")==0) {
 	double v = PyFloat_AsDouble(value);
 	if(v==-1.0 && PyErr_Occurred()) {
@@ -402,7 +405,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->stop_f_absolute = v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "stop_f_relative")==0) {
 	double v = PyFloat_AsDouble(value);
 	if(v==-1.0 && PyErr_Occurred()) {
@@ -412,7 +415,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->stop_f_relative = v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "stop_s")==0) {
 	double v = PyFloat_AsDouble(value);
 	if(v==-1.0 && PyErr_Occurred()) {
@@ -422,7 +425,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->stop_s = v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "relative_tr_radius")==0) {
 	long v = PyInt_AsLong(value);
 	if(v==-1 && PyErr_Occurred()) {
@@ -461,7 +464,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	continue;
       }
 
-      
+
       if(strcmp(key_name, "regularization")==0) {
 	long v = PyInt_AsLong(value);
 	if(v==-1 && PyErr_Occurred()) {
@@ -472,7 +475,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	continue;
       }
 
-      
+
       if(strcmp(key_name, "regularization_term")==0) {
 	double v = PyFloat_AsDouble(value);
 	if(v==-1.0 && PyErr_Occurred()) {
@@ -483,7 +486,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	continue;
       }
 
-      
+
       if(strcmp(key_name, "regularization_power")==0) {
 	double v = PyFloat_AsDouble(value);
 	if(v==-1.0 && PyErr_Occurred()) {
@@ -493,7 +496,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->regularization_power = v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "maximum_radius")==0) {
          double v = PyFloat_AsDouble(value);
          if(v==-1.0 && PyErr_Occurred()) {
@@ -575,7 +578,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->tr_update_strategy = (int) v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "hybrid_switch")==0) {
          double v = PyFloat_AsDouble(value);
          if(v==-1.0 && PyErr_Occurred()) {
@@ -612,7 +615,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	}
 	continue;
       }
-     
+
       if(strcmp(key_name, "scale")==0) {
 	long v = PyInt_AsLong(value);
 	if(v==-1 && PyErr_Occurred()) {
@@ -622,7 +625,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->scale = v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "scale_max")==0) {
          double v = PyFloat_AsDouble(value);
          if(v==-1.0 && PyErr_Occurred()) {
@@ -644,7 +647,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 
       if(strcmp(key_name, "scale_trim_max")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
-	
+
 	if (vint == 1){
 	  options->scale_trim_max=true;
 	}else if (vint == 0){
@@ -655,10 +658,10 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	}
 	continue;
       }
-      
+
       if(strcmp(key_name, "scale_trim_min")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
-	
+
 	if (vint == 1){
 	  options->scale_trim_min=true;
 	}else if (vint == 0){
@@ -668,11 +671,11 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	  return false;
 	}
 	continue;
-      }     
-      
+      }
+
       if(strcmp(key_name, "scale_require_increase")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
-	
+
 	if (vint == 1){
 	  options->scale_require_increase=true;
 	}else if (vint == 0){
@@ -684,10 +687,10 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	continue;
       }
 
-           
+
       if(strcmp(key_name, "setup_workspaces")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
-	
+
 	if (vint == 1){
 	  options->setup_workspaces=true;
 	}else if (vint == 0){
@@ -699,10 +702,10 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	continue;
       }
 
-      
+
       if(strcmp(key_name, "remove_workspaces")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
-	
+
 	if (vint == 1){
 	  options->remove_workspaces=true;
 	}else if (vint == 0){
@@ -713,7 +716,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	}
 	continue;
       }
-      
+
       if(strcmp(key_name, "more_sorensen_maxits")==0) {
 	long v = PyInt_AsLong(value);
 	if(v==-1 && PyErr_Occurred()) {
@@ -768,7 +771,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->hybrid_switch_its = (int) v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "reg_order")==0) {
 	double v = PyFloat_AsDouble(value);
 	if(v==-1.0 && PyErr_Occurred()) {
@@ -778,7 +781,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->reg_order = v;
 	continue;
       }
-      
+
       if(strcmp(key_name, "inner_method")==0) {
 	long v = PyInt_AsLong(value);
 	if(v==-1 && PyErr_Occurred()) {
@@ -789,10 +792,10 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	continue;
       }
 
-      
+
       if(strcmp(key_name, "output_progress_vectors")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
-	
+
 	if (vint == 1){
 	  options->output_progress_vectors=true;
 	}else if (vint == 0){
@@ -803,7 +806,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	}
 	continue;
       }
-            
+
       // bool: Fortran_Jacobian
       if(strcmp(key_name, "Fortran_Jacobian")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
@@ -833,7 +836,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	continue;
       }
 
-      
+
       /* 	real(wp) :: box_gamma */
       if(strcmp(key_name, "box_gamma")==0) {
 	double v = PyFloat_AsDouble(value);
@@ -854,7 +857,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_decmin = v;
 	continue;
       }
-      
+
       /* 	real(wp) :: box_bigbnd */
       if(strcmp(key_name, "box_bigbnd")==0) {
 	double v = PyFloat_AsDouble(value);
@@ -885,7 +888,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_wolfe_curvature = v;
 	continue;
       }
-      
+
       /* 	real(wp) :: box_kanzow_power */
       if(strcmp(key_name, "box_kanzow_power")==0) {
 	double v = PyFloat_AsDouble(value);
@@ -906,7 +909,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_kanzow_descent = v;
 	continue;
       }
-      
+
       /* 	real(wp) :: box_quad_model_descent */
       if(strcmp(key_name, "box_quad_model_descent")==0) {
 	double v = PyFloat_AsDouble(value);
@@ -917,7 +920,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_quad_model_descent = v;
 	continue;
       }
-      
+
       /* 	Logical(c_bool):: box_tr_test_step */
       if(strcmp(key_name, "box_tr_test_step")==0) {
 	int vint = PyObject_IsTrue(value); // 1 if true, 0 otherwise
@@ -958,7 +961,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_tau_descent = v;
 	continue;
       }
-      
+
       /* 	integer(c_int):: box_max_ntrfail */
       if(strcmp(key_name, "box_max_ntrfail")==0) {
 	long v = PyInt_AsLong(value);
@@ -991,7 +994,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_alpha_scale = v;
 	continue;
       }
-	    
+
       /* 	real(wp) :: box_Delta_scale */
       if(strcmp(key_name, "box_Delta_scale")==0) {
 	double v = PyFloat_AsDouble(value);
@@ -1002,7 +1005,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_Delta_scale = v;
 	continue;
       }
-      
+
       /* 	real(wp) :: box_tau_min */
       if(strcmp(key_name, "box_tau_min")==0) {
 	double v = PyFloat_AsDouble(value);
@@ -1013,7 +1016,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
          options->box_tau_min = v;
          continue;
       }
-      
+
       /* 	integer(c_int):: box_ls_step_maxit */
       if(strcmp(key_name, "box_ls_step_maxit")==0) {
 	long v = PyInt_AsLong(value);
@@ -1024,7 +1027,7 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_ls_step_maxit = (int) v;
 	continue;
       }
-      
+
       /* 	integer(c_int):: box_linesearch_type */
       if(strcmp(key_name, "box_linesearch_type")==0) {
 	long v = PyInt_AsLong(value);
@@ -1035,7 +1038,40 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
 	options->box_linesearch_type = (int) v;
 	continue;
       }
-      
+
+      /* 	real(wp) :: fd_step */
+      if(strcmp(key_name, "fd_step")==0) {
+	     double v = PyFloat_AsDouble(value);
+	     if(v<=0 || PyErr_Occurred()) {
+            PyErr_SetString(PyExc_RuntimeError, "options['fd_step'] must be a positve float.");
+            return false;
+	     }
+         options->fd_step = v;
+         continue;
+      }
+
+     /* Integer       :: check_derivatives = 0 */
+      if(strcmp(key_name, "check_derivatives")==0) {
+	    long v = PyInt_AsLong(value);
+	       if(v==-1 && PyErr_Occurred()) {
+	          PyErr_SetString(PyExc_RuntimeError, "options['check_derivatives'] must be an integer.");
+	          return false;
+	       }
+	    options->check_derivatives = (int) v;
+	    continue;
+      }
+
+     /* Real(Kind=wp) :: derivative_test_tol = 1.0e-4_wp */
+      if(strcmp(key_name, "derivative_test_tol")==0) {
+	     double v = PyFloat_AsDouble(value);
+	     if(v<=0 || PyErr_Occurred()) {
+            PyErr_SetString(PyExc_RuntimeError, "options['derivative_test_tol'] must be a positve float.");
+            return false;
+	     }
+         options->derivative_test_tol = v;
+         continue;
+      }
+
       // If we reach this point, unrecognised option
       char errmsg[200];
       snprintf(errmsg, 200, "Bad key options['%s']\n", key_name);
@@ -1076,6 +1112,7 @@ make_info_dict(const struct ral_nlls_inform *inform) {
    PyDict_SetItemString(pyinfo, "pg_step_iter", PyInt_FromLong(inform->pg_step_iter));
    PyDict_SetItemString(pyinfo, "f_eval_pg", PyInt_FromLong(inform->f_eval_pg));
    PyDict_SetItemString(pyinfo, "g_eval_pg", PyInt_FromLong(inform->g_eval_pg));
+   PyDict_SetItemString(pyinfo, "fd_f_eval", PyInt_FromLong(inform->fd_f_eval));
 
    return pyinfo;
 }
@@ -1083,7 +1120,7 @@ make_info_dict(const struct ral_nlls_inform *inform) {
 
 ///
 /// call the solve routine
-/// 
+///
 
 
 /*
@@ -1101,14 +1138,14 @@ ral_nlls_solve(PyObject* self, PyObject* args, PyObject* keywds)
   PyArrayObject *weights=NULL, *lower_bounds=NULL, *upper_bounds=NULL;
 
   double *weights_val, *lower_bounds_val, *upper_bounds_val;
-  
+
   struct callback_data data;
   data.f = NULL;
   data.J = NULL;
   data.Hr = NULL;
   data.params = NULL;
   data.Hp = NULL;
-  
+
   static char *kwlist[] = {"x0",
 			   "r",
 			   "J",
@@ -1138,7 +1175,7 @@ ral_nlls_solve(PyObject* self, PyObject* args, PyObject* keywds)
 				  )
      )
     return NULL;
-  
+
   /* x0 */
   x0 = (PyArrayObject*) PyArray_FROM_OTF(x0ptr, NPY_FLOAT64, NPY_ARRAY_IN_ARRAY);
   if(x0 == NULL) return NULL;
@@ -1148,7 +1185,7 @@ ral_nlls_solve(PyObject* self, PyObject* args, PyObject* keywds)
   }
   npy_intp* xdim = PyArray_DIMS(x0);
   int n = xdim[0];
-  
+
   /* weights */
   if (weightsptr == NULL) {
     weights_val = NULL;
@@ -1256,7 +1293,7 @@ ral_nlls_solve(PyObject* self, PyObject* args, PyObject* keywds)
    Py_DECREF(x0); x0=NULL;
    PyObject *pyinfo = make_info_dict(&inform);
    return Py_BuildValue("(OO)", x, pyinfo);
-   
+
  fail:
    Py_XDECREF(arglist); Py_XDECREF(result);
    Py_XDECREF(x0); Py_XDECREF(f); Py_XDECREF(x);
@@ -1305,7 +1342,7 @@ PyInit_ral_nlls(void)
 
 #else
 #define INITERROR return
-  
+
 void
 initral_nlls(void)
 #endif

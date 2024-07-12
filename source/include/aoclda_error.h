@@ -61,6 +61,7 @@ typedef enum da_status_ {
     da_status_maxit,            ///< Iteration limit reached without converging
     da_status_maxtime,          ///< Time limit reached without converging
     da_status_numerical_difficulties, ///< Numerical difficulties
+    da_status_bad_derivatives, ///< Likely errors are detected in the user-supplied derivatives
 
     // CSV errors 100-199
     da_status_file_reading_error = 100, ///< An error occurred when reading a CSV file

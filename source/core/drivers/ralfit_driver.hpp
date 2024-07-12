@@ -40,11 +40,12 @@ namespace ralfit {
 
 using namespace std::literals::string_literals;
 
-const da_int RAL_NLLS_CB_DUMMY{-2024};
+const da_int RAL_NLLS_CB_DUMMY{-3024};
+const da_int RAL_NLLS_CB_FD{-45544554};
 // Dummy call-backs headers
 template <typename T>
 da_int da_nlls_eval_j_dummy(da_int n, da_int m, void *params, const T *x, T *j) {
-    return RAL_NLLS_CB_DUMMY;
+    return RAL_NLLS_CB_FD;
 }
 template <typename T>
 da_int da_nlls_eval_hf_dummy(da_int n, da_int m, void *params, const T *x, const T *f,
@@ -60,6 +61,7 @@ void copy_inform(struct ral_nlls_inform &inform, std::vector<T> &info) {
     info[da_optim_info_t::info_nevalg] = T(inform.g_eval);
     info[da_optim_info_t::info_nevalh] = T(inform.h_eval);
     info[da_optim_info_t::info_nevalhp] = T(inform.hp_eval);
+    info[da_optim_info_t::info_nevalfd] = T(inform.fd_f_eval);
     info[da_optim_info_t::info_objective] = T(inform.obj);
     info[da_optim_info_t::info_grad_norm] = T(inform.norm_g);
     info[da_optim_info_t::info_scl_grad_norm] = T(inform.scaled_g);
@@ -87,10 +89,10 @@ da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t 
         warn = true;
         break;
     case -2:
+    case -4:
         status = da_status_optimization_usrstop;
         warn = true;
         break;
-    case -4:
     case -7:
     case -8:
     case -11:
@@ -120,6 +122,12 @@ da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t 
         break;
     case -18:
         status = da_status_option_invalid_bounds;
+        break;
+    case -19:
+        status = da_status_bad_derivatives;
+        break;
+    case -20:
+        status = da_status_invalid_input;
         break;
     case -6:
     case -13:
@@ -183,6 +191,20 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     // ===========================================================================
     // REAL OPTIONS
     // ===========================================================================
+    T derivative_test_tol;
+    status = opts.get("derivative test tol", derivative_test_tol);
+    if (status != da_status_success) {
+        return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
+                        "<derivative test tol>"s + msg);
+    }
+    options.derivative_test_tol = derivative_test_tol;
+    T fd_step;
+    status = opts.get("finite differences step", fd_step);
+    if (status != da_status_success) {
+        return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
+                        "<finite differences step>"s + msg);
+    }
+    options.fd_step = fd_step;
     T bigbnd;
     status = opts.get("infinite bound size", bigbnd);
     if (status != da_status_success) {
@@ -242,6 +264,15 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     // ===========================================================================
     // STRING OPTIONS
     // ===========================================================================
+    std::string chkder;
+    da_int ichkder;
+    status = opts.get("check derivatives", chkder, ichkder);
+    if (status != da_status_success) {
+        return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
+                        "<check derivatives>"s + msg);
+    }
+    options.check_derivatives = ichkder;
+
     std::string model;
     da_int imodel;
     status = opts.get("ralfit model", model, imodel);
@@ -308,8 +339,6 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
 
     // Exact second derivative -> user provided HF?
     options.exact_second_derivatives = ok_eval_HF;
-
-    // FIXME option for Finite-Differences -> user provided eval_J?
 
     return da_status_success;
 }

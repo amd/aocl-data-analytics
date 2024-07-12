@@ -80,8 +80,10 @@ def nlls_example():
     w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=np.float64)
     blx = np.array([0.0,  0.0], dtype=np.float64)
     bux = np.array([5.0,  3.0], dtype=np.float64)
-    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux)
-    ndf.fit(x, res, jac, hes, data=(t, y), abs_gtol=1e-7, gtol=1.e-9, maxit=20)
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
+               check_derivatives='yes', verbose=3)
+    ndf.fit(x, res, jac, hes, data=(t, y), abs_gtol=1e-7, gtol=1.e-9,
+            fd_ttol=1.1e-4, maxit=20)
 
     print(f"Solution found in {ndf.n_iter} iterations")
     print(f"Residual norm at solution: {ndf.metrics['obj']:.4f}")

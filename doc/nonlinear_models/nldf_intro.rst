@@ -71,9 +71,86 @@ the pair :math:`(t, y)` are the data points used to evaluate the model's residua
 To train the model, the optimizer requires to make calls to the residual function which is
 `defined` using the  :cpp:func:`da_nlls_define_residuals<da_nlls_define_residuals_s>`.
 Some solvers require further information such as the
-first order derivatives or even second order ones, these are also defined with this function.
+first order derivatives (residual Jacobian matrix) or even second order ones,
+these are also defined with this function.
 Refer to :ref:`nonlinear least-squares callbacks<da_nlls_callbacks>` for further details on the
 residual functions signatures.
+
+**Derivatives**
+
+A key requirement of this iterative optimizer is to have access to first order derivatives (residual Jacobian matrix)
+in order to calculate an improved solution.
+There is a strong relationship between the quality of the derivatives and the
+performance of the solver. If the user does not provide a call-back derivative function,
+either because it is not available or by choice, then the solver will approximate the derivatives matrix using
+single-sided finite-differences method.
+
+.. collapse:: Details
+
+    Finite-differences is a well established and numerically effective method to estimate missing derivatives.
+    The method is expensive requiring a number of residual function calls proportional to the number of
+    variables (coefficients) in the model.
+
+    The implementation provides a single optional parameter (``'finite differences step'``) that defines the perturbation step used
+    to estimate a derivative. The value of this step plays a crucial role in the quality of the approximation. The default
+    is a judicious value that works for most applications.
+
+It is strongly recommended to relax the convergence tolerances (see options) when approximating derivatives. If it is
+observed that solver "stagnates" or fails during the optimization process, tweaking the step value is encouraged.
+
+
+**Verifying derivatives**
+
+One of the most common problems while trying to train a model is having wrong derivatives.
+Writing the derivative call-back function is error-prone and to address this, a **derivative
+checker** can be activated (set option ``'Check derivatives'`` to ``'yes'``) for checking the
+derivatives provided by the call-back. The checker produces a table similar to
+
+.. code::
+
+    Begin Derivative Checker
+
+       Jacobian storage scheme (Fortran_Jacobian) = C (row-major)
+
+       Jac[     0,     0] =  -1.681939915944E-01 ~  -1.681939717973E-01  [ 1.177E-07], ( 0.165E-06)
+       Jac[     2,     5] =   1.000000000000E+01 ~  -1.318047255339E+02  [ 1.076E+00], ( 0.100E-06)  XT
+       ...
+       Jac[     3,    40] =  -1.528131154992E+02 ~  -1.597095836470E+02  [ 4.318E-02], ( 0.100E-06)  XT   Skip
+
+       Derivative checker detected    106 likely error(s)
+
+       Note: derivative checker detected that     66 entries may correspond to the transpose.
+       Verify the Jacobian storage ordering is correct.
+
+    End Derivative Checker
+
+.. collapse:: Details
+
+    The reported table has few sections. The first column after the equal sign (``=``), is the derivative
+    returned by the user-supplied call-back, the column after the ``~`` sign is the approximated finite-difference
+    derivative, the value inside the brackets is the relative threshold
+    :math:`\frac{|\mathrm{approx} - \mathrm{exact}|}{\max(|\mathrm{approx}|,\; \mathrm{fd_ttol})}`,
+    (``fd_ttol`` is defined by the option ``Derivative test tol``). The value inside the parenthesis is the relative tolerance
+    to compare the relative threshold against.
+    The last column provides some flags: ``X`` to indicate that the threshold is larger than the tolerance and is deemed likely
+    to be wrong. ``T`` indicates that the value stored in :math:`J(i,j)` corresponds the to the value belonging to the transposed Jacobian matrix,
+    providing a hint that possibly the storage sequence is likely wrong. It also hints to check that the matrix is being stored row-major and that
+    the solver option ``'Storage scheme'`` is set to column-major or vice-versa. Finally, ``Skip`` indicates that either the
+    associated variable is fixed (constrained to a fixed value) or the bounds on it are too tight to perform a finite-difference
+    approximation and thus the check for this entry cannot be checked and is skipped.
+
+    The derivative checker uses finite-differences to compare with the user provided derivatives and such the
+    quality of the approximation depends on the finite-difference step used (see option ``'Finite difference step'``).
+
+    The option ``'Derivative test tol'`` is involved in defining the relative tolerance to decide if the user-supplied
+    derivative is correct,  a smaller value implies a more stringent test.
+
+    Under certain circumstances the checker may signal false-positives, tweaking the options ``'Finite difference step'``
+    and ``'Derivative test tol'`` can help from this to happen.
+
+It is highly recommended that during the writing or development of the derivative call-back, to set the option
+``'Check derivatives'`` to ``'yes'``.
+After validating residual Jacobian matrix and to avoid performance impact, the option can be reset to ``'no'``.
 
 **Residual weights**
 
@@ -141,7 +218,7 @@ The standard way of computing a linear model using AOCL-DA is as follows.
             * info[1] gradient norm of objective,
             * info[2] number of iterations,
             * info[3] reserved for future use,
-            * info[4] number of function callback evaluations,
+            * info[4] number of function callback evaluations (includes ``info[12]``),
             * info[5] reserved for future use,
             * info[6] reserved for future use,
             * info[7] reserved for future use,
@@ -149,7 +226,9 @@ The standard way of computing a linear model using AOCL-DA is as follows.
             * info[9] number of Hessian callback evaluations,
             * info[10] number of Hessian-vector callback evaluations,
             * info[11] scaled gradient norm of objective,
-            * info[12-99]: reserved for future use.
+            * info[12] number of objective function callback evaluations used
+              for approximating the derivatives or due to derivative checker,
+            * info[13-99]: reserved for future use.
 
 .. _nlls_options:
 
@@ -189,6 +268,10 @@ Nonlinear Least-Squares Options
          "print level", "integer", ":math:`i=1`", "set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
          "print options", "string", ":math:`s=` `no`", "Print options list", ":math:`s=` `no`, or `yes`."
          "storage scheme", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`."
+         "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "size of step to use for estimating derivatives using finite-differences", ":math:`0 < r < 10`"
+         "derivative test tol", "real", ":math:`r=10^{-4}`", "tolerance used to check user-provided derivatives by finite-differences.If <print level> is 1 then only the entries with larger discrepancy are reported, and if the print level is greater or equal to 2, then all entries are printed", ":math:`0 < r \le 10`"
+
 
 Examples
 ========
@@ -206,6 +289,12 @@ Examples
               :language: Python
               :linenos:
 
+      .. collapse:: Nonlinear Data Fitting Example (using finite-differences)
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/nlls_fd_ex.py
+              :language: Python
+              :linenos:
+
    .. tab-item:: C
       :sync: C
 
@@ -217,6 +306,12 @@ Examples
               :language: C++
               :linenos:
 
+      .. collapse:: Nonlinear Data Fitting Example (Lanczos)
+
+          .. literalinclude:: ../../tests/examples/nlls_lanczos_fd.cpp
+              :language: C++
+              :linenos:
+
 
 
 Further Reading
@@ -224,7 +319,7 @@ Further Reading
 
 An introduction to nonlinear least-squares methods can be found in
 :cite:t:`NocWri06NumOpt`.
-Indepth literature on modern trust-region solvers can be reviewed in:
+In-depth literature on modern trust-region solvers can be reviewed in:
 :cite:t:`ralfit`,
 :cite:t:`kanzow`,
 :cite:t:`adachi`,

@@ -1,5 +1,6 @@
 /* COPYRIGHT (c) 2015 Science and Technology Facilities Council (STFC)
  * All rights reserved
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  */
 #ifdef __cplusplus
 extern "C" {
@@ -105,6 +106,9 @@ struct ral_nlls_options_d {
   ral_nllspkgtype_d_ box_tau_min;
   ral_int box_ls_step_maxit;
   ral_int box_linesearch_type;
+  ral_nllspkgtype_d_ fd_step;
+  ral_int check_derivatives;
+  ral_nllspkgtype_d_ derivative_test_tol;
 };
 
 struct ral_nlls_inform_d {
@@ -130,12 +134,13 @@ struct ral_nlls_inform_d {
   ral_int external_return;
   char external_name[81];
   ral_nllspkgtype_d_ step;
-  ral_nllspkgtype_d_ ls_step_iter;
-  ral_nllspkgtype_d_ f_eval_ls;
-  ral_nllspkgtype_d_ g_eval_ls;
-  ral_nllspkgtype_d_ pg_step_iter;
-  ral_nllspkgtype_d_ f_eval_pg;
-  ral_nllspkgtype_d_ g_eval_pg;
+  ral_int ls_step_iter;
+  ral_int f_eval_ls;
+  ral_int g_eval_ls;
+  ral_int pg_step_iter;
+  ral_int f_eval_pg;
+  ral_int g_eval_pg;
+  ral_int fd_f_eval;
 };
 
 /* Set default values of options */

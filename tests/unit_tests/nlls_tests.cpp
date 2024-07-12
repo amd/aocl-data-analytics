@@ -41,6 +41,57 @@ namespace {
 // FIXME ADD Float version of the tests
 
 /* RALFit examples as test of interface */
+TEST(nlls, template_double_nlls_example_box_2d) {
+    using namespace template_nlls_example_box_fortran;
+    const double t[5]{1.0, 2.0, 4.0, 5.0, 8.0};
+    const double y[5]{3.0, 4.0, 6.0, 11.0, 20.0};
+    const struct udata_t udata = {t, y};
+
+    const da_int n_coef = 2;
+    const da_int n_res = 5;
+    double coef[n_coef]{1.0, 0.15};
+    const double coef_exp[n_coef]{2.541046, 0.2595048};
+
+    double blx[2]{0.0, 0.0};
+    double bux[2]{3.0, 10.0};
+    const double tol{1.0e-2};
+
+    // Initialize handle for nonlinear regression
+    da_handle handle = nullptr;
+
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_nlls), da_status_success);
+    EXPECT_EQ(da_nlls_define_residuals_d(handle, n_coef, n_res, eval_r, nullptr, nullptr,
+                                         nullptr),
+              da_status_success);
+    EXPECT_EQ(da_nlls_define_bounds_d(handle, n_coef, blx, bux), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "print options", "yes"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "storage scheme", "fortran"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "print level", (da_int)3), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "ralfit iteration limit", (da_int)200),
+              da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle, "finite differences step", 1e-6),
+              da_status_success);
+
+    EXPECT_EQ(da_nlls_fit_d(handle, n_coef, coef, (void *)&udata), da_status_success);
+
+    EXPECT_NEAR(coef[0], coef_exp[0], tol);
+    EXPECT_NEAR(coef[1], coef_exp[1], tol);
+
+    // Get info out of handle
+    std::vector<double> info(100);
+    da_int size = info.size();
+    EXPECT_EQ(da_handle_get_result_d(handle, da_result::da_rinfo, &size, info.data()),
+              da_status_success);
+
+    EXPECT_LT(info[0], 2.3);
+    EXPECT_LT(info[1], 1.0e-4);
+    EXPECT_GT(info[4], 1);
+    EXPECT_GT(info[12], 3);
+
+    da_handle_destroy(&handle);
+}
+
 TEST(nlls, template_double_nlls_example_box_c) {
     using namespace template_nlls_example_box_c;
     using T = double;
@@ -191,6 +242,8 @@ TEST(nlls, template_double_lm_example_c) {
               da_status_success);
     EXPECT_EQ(da_options_set(handle, "Storage Scheme", "C"), da_status_success);
     EXPECT_EQ(da_options_set(handle, "print level", da_int(2)), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "derivative test tol", 9.0e-5), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
     // Check output
     std::vector<T> info(100);
@@ -218,7 +271,66 @@ TEST(nlls, template_double_lm_example_c) {
     EXPECT_LE(std::abs(x[2] - intercept), 0.1);
 
     // solve again without initial guess
+    EXPECT_EQ(da_options_set(handle, "check derivatives", "no"), da_status_success);
     EXPECT_EQ(da_nlls_fit_d(handle, 0, nullptr, &params), da_status_success);
+
+    // solve again using fd
+    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r, nullptr, nullptr, nullptr),
+              da_status_success);
+    x[0] = 1.0;
+    x[1] = 0.0;
+    x[2] = 0.0;
+    EXPECT_EQ(da_options_set(handle, "finite differences step", 1.0e-7),
+              da_status_success);
+    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
+    // Check output
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
+              da_status_success);
+
+    EXPECT_GE(info[da_optim_info_t::info_iter], 5.0);
+    EXPECT_LE(info[da_optim_info_t::info_objective], 25.0);
+    EXPECT_LE(info[da_optim_info_t::info_grad_norm], 1.0e-3);
+
+    // Check solution point
+    std::cout << "FD: Amplitude A  = " << x[0] << std::endl;
+    std::cout << "FD: sigma/lambda = " << x[1] << std::endl;
+    std::cout << "FD: intercept b  = " << x[2] << std::endl;
+
+    EXPECT_LE(std::abs(x[0] - Amplitude), 0.1);
+    EXPECT_LE(std::abs(x[1] - lambda), 0.01);
+    EXPECT_LE(std::abs(x[2] - intercept), 0.1);
+
+    // solve again using fd (with Fortran storage scheme)
+    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r, nullptr, nullptr, nullptr),
+              da_status_success);
+    x[0] = 1.0;
+    x[1] = 0.0;
+    x[2] = 0.0;
+    EXPECT_EQ(da_options_set(handle, "storage scheme", "Fortran"), da_status_success);
+    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
+    // Check output
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
+              da_status_success);
+
+    EXPECT_GE(info[da_optim_info_t::info_iter], 5.0);
+    EXPECT_LE(info[da_optim_info_t::info_objective], 25.0);
+    EXPECT_LE(info[da_optim_info_t::info_grad_norm], 1.0e-3);
+
+    // Check solution point
+    std::cout << "F/FD: Amplitude A  = " << x[0] << std::endl;
+    std::cout << "F/FD: sigma/lambda = " << x[1] << std::endl;
+    std::cout << "F/FD: intercept b  = " << x[2] << std::endl;
+
+    EXPECT_LE(std::abs(x[0] - Amplitude), 0.1);
+    EXPECT_LE(std::abs(x[1] - lambda), 0.01);
+    EXPECT_LE(std::abs(x[2] - intercept), 0.1);
+
+    // Check for errors in eval_j
+    EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
+    EXPECT_EQ(
+        da_nlls_define_residuals(handle, n, m, eval_r, eval_J_bad, nullptr, nullptr),
+        da_status_success);
+    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_bad_derivatives);
 
     da_handle_destroy(&handle);
 }
@@ -262,7 +374,7 @@ TEST(nlls, ifaceChecks) {
     m = 5;
     EXPECT_EQ(
         da_nlls_define_residuals(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
-        da_status_invalid_input);
+        da_status_success);
     n = 2;
     EXPECT_EQ(
         da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
@@ -317,6 +429,22 @@ TEST(nlls, solverCheckX0Rubbish) {
                                        nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, nullptr), da_status_operation_failed);
+
+    T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
+    T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
+
+    struct params_type<T> params {
+        t, y, 0
+    };
+    n = 2;
+    m = 5;
+    T x2[2]{0, 0};
+    EXPECT_EQ(da_nlls_define_residuals(
+                  handle, n, m, template_nlls_example_box_c::eval_r<T>,
+                  template_nlls_example_box_c::eval_J_wrong<T>, eval_HF<T>, nullptr),
+              da_status_success);
+    EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
+    EXPECT_EQ(da_nlls_fit(handle, n, x2, &params), da_status_operation_failed);
     da_handle_destroy(&handle);
 }
 
@@ -357,7 +485,7 @@ TEST(nlls, solverCheckUsrStop) {
     T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
     T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
     struct params_type<T> params {
-        t, y
+        t, y, 2, 1
     };
 
     // Call fitting routine
@@ -379,6 +507,12 @@ TEST(nlls, solverCheckUsrStop) {
     EXPECT_EQ(da_options_set(handle, "ralfit iteration limit", da_int(10)),
               da_status_success);
     EXPECT_EQ(da_options_set(handle, "Storage Scheme", "Fortran"), da_status_success);
+    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_optimization_usrstop);
+
+    // Check during FD check derivatives
+    params.fcnt = 1;
+    params.jcnt = 1;
+    EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_optimization_usrstop);
     da_handle_destroy(&handle);
 }

@@ -262,8 +262,8 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_decision_forest = m.def_submodule("decision_forest", "Decision forests.");
     py::class_<decision_forest, pyda_handle>(m_decision_forest, "pybind_decision_forest")
-        .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string,
-                      bool, std::string, da_int, std::string &>(),
+        .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string, bool,
+                      std::string, da_int, std::string &>(),
              py::arg("n_trees") = 100, py::arg("criterion") = "gini",
              py::arg("seed") = -1, py::arg("max_depth") = 10,
              py::arg("min_samples_split") = 2, py::arg("build_order") = "breadth first",
@@ -293,25 +293,27 @@ PYBIND11_MODULE(_aoclda, m) {
     py::class_<nlls, pyda_handle>(m_nlls, "pybind_nlls")
         .def(py::init<da_int, da_int, std::optional<py::array>, std::optional<py::array>,
                       std::optional<py::array>, std::string, std::string, std::string,
-                      std::string, std::string, std::string, da_int>(),
+                      std::string, std::string, std::string, std::string, da_int>(),
              py::arg("n_coef"), py::arg("n_res"), py::arg("weights") = py::none(),
              py::arg("lower_bounds") = py::none(), py::arg("upper_bounds") = py::none(),
              py::arg("order") = "c", py::arg("prec") = "double",
              py::arg("model") = "hybrid", py::arg("method") = "galahad",
              py::arg("glob_strategy") = "tr", py::arg("reg_power") = "quadratic",
-             py::arg("verbose") = (da_int)0)
+             py::arg("check_derivatives") = "no", py::arg("verbose") = (da_int)0)
         .def("fit_d", &nlls::fit<double>, "Fit data and train the model", "x"_a, "fun"_a,
              "jac"_a, "hes"_a = py::none(), "hep"_a = py::none(), "data"_a = py::none(),
              py::arg("ftol") = (double)1.0e-8, py::arg("abs_ftol") = (double)1.0e-8,
              py::arg("gtol") = (double)1.0e-8, py::arg("abs_gtol") = (double)1.0e-5,
              py::arg("xtol") = (double)2.22e-16, py::arg("reg_term") = (double)0.0,
-             py::arg("maxit") = (da_int)100)
+             py::arg("maxit") = (da_int)100, py::arg("fd_step") = (double)1.0e-7,
+             py::arg("fd_ttol") = (double)1.0e-4)
         .def("fit_s", &nlls::fit<float>, "Fit data and train the model", "x"_a, "fun"_a,
              "jac"_a, "hes"_a = py::none(), "hep"_a = py::none(), "data"_a = py::none(),
              py::arg("ftol") = (float)1.0e-8, py::arg("abs_ftol") = (float)1.0e-8,
              py::arg("gtol") = (float)1.0e-8, py::arg("abs_gtol") = (float)1.0e-5,
              py::arg("xtol") = (float)2.22e-16, py::arg("reg_term") = (float)0.0,
-             py::arg("maxit") = (da_int)100)
+             py::arg("maxit") = (da_int)100, py::arg("fd_step") = (float)1.0e-7,
+             py::arg("fd_ttol") = (float)1.0e-4)
         // hidden @properties
         .def("_get_precision", &nlls::get_precision) // -> string
         // @properties
@@ -321,6 +323,7 @@ PYBIND11_MODULE(_aoclda, m) {
         // info[da_optim_info_t::info_nevalg] = T(inform.g_eval);
         // info[da_optim_info_t::info_nevalh] = T(inform.h_eval);
         // info[da_optim_info_t::info_nevalhp] = T(inform.hp_eval);
+        // info[da_optim_info_t::info_nevalfd] = T(inform.fd_f_eval);
         .def("get_info_evals", &nlls::get_info_evals) // -> dict
         // info[da_optim_info_t::info_objective] = T(inform.obj);
         // info[da_optim_info_t::info_grad_norm] = T(inform.norm_g);

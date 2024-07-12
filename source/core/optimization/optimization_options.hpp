@@ -47,6 +47,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // INTEGER OPTIONS
         // ===========================================================================
         std::shared_ptr<OptionNumeric<da_int>> oi;
+        // ---
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("coord skip min",
                                   "Minimum times a coordinate change is smaller than "
@@ -115,6 +116,22 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // Tolerance based on sqrt(safe_epsilon)
         da_options::safe_tol<T> tol;
         std::shared_ptr<OptionNumeric<T>> oT;
+        // ---
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "derivative test tol",
+            "tolerance used to check user-provided derivatives by finite-differences."
+            "If <print level> is 1 then only the entries with larger discrepancy are "
+            "reported, and if the print level is greater or equal to 2, then all entries "
+            "are printed",
+            0.0, da_options::lbound_t::greaterthan, 10.0, da_options::ubound_t::lessequal,
+            1.0e-4, "10^{-4}"));
+        opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "finite differences step",
+            "size of step to use for estimating derivatives using finite-differences",
+            0.0, da_options::lbound_t::greaterthan, 10.0, da_options::ubound_t::lessthan,
+            tol.safe_eps(10), tol.safe_eps_latex(10)));
+        opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("time limit", "maximum time allowed to run (in seconds)",
                              0.0, da_options::lbound_t::greaterthan, 0,
@@ -225,8 +242,15 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // STRING OPTIONS
         // ===========================================================================
         std::shared_ptr<OptionString> os;
+        // ---
         os = std::make_shared<OptionString>(OptionString(
             "print options", "Print options list", {{"yes", 1}, {"no", 0}}, "no"));
+        opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(
+            OptionString("check derivatives",
+                         "Check user-provided derivatives using finite-differences.",
+                         {{"yes", 1}, {"no", 0}}, "no"));
         opts.register_opt(os);
 
         os = std::make_shared<OptionString>(

@@ -118,21 +118,34 @@ def test_functionality(opt_params):
             "Did not catch the expected exception for FLOAT test")
 
 
-@pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_fuctionality_order(numpy_order):
+@pytest.mark.parametrize("numpy_order, use_fd", [("C", False), ("C", True), ("F", False)])
+def test_fuctionality_order(numpy_order, use_fd):
     """Test correct functionality while solving a simple problem"""
-    tol = 1e-7
+    if use_fd:
+        tol = 1e-4
+        abs_gtol = 1e-7
+        gtol = 1.e-7
+        maxit = 20
+    else:
+        tol = 1e-7
+        abs_gtol = 1e-7
+        gtol = 1.e-9
+        maxit = 20
     n_coef = 2
     n_res = 5
-    xexp = np.array([2.54104549, 0.25950481])
+    expected_x = np.array([2.54104549, 0.25950481])
     x = np.array([2.5, 0.25])
     w = 0.12 * np.array([1, 1, 1, 1, 1])
     blx = np.array([0.0,  0.0])
     bux = np.array([5.0,  3.0])
     ndf = nlls(n_coef, n_res, prec='double', weights=w, lower_bounds=blx, upper_bounds=bux,
-               order=numpy_order)
-    ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
-            abs_gtol=1e-7, gtol=1.e-9, maxit=20)
+               order=numpy_order, verbose=0, check_derivatives='yes')
+    if use_fd:
+        ndf.fit(x, exp_r, data=exp_data,
+                abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    else:
+        ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
+                abs_gtol=abs_gtol, gtol=gtol, maxit=maxit)
 
     # check expected results
     expected_x = np.array([2.5410455, 0.25950481])
@@ -140,13 +153,40 @@ def test_fuctionality_order(numpy_order):
     assert norm < tol
 
     # check the @properties
-    assert ndf.n_iter == 17
-    assert ndf.n_eval == {'f': 18, 'j': 18, 'h': 17, 'hp': 0}
+    if use_fd:
+        assert ndf.n_eval['fd_f'] >= 10
+    else:
+        assert ndf.n_iter == 17
+        assert ndf.n_eval == {'f': 20, 'j': 18, 'h': 17, 'hp': 0, 'fd_f': 2}
+
     assert ndf.metrics['obj'] < 0.04
     assert ndf.metrics['norm_g'] < 1e-6
     assert ndf.metrics['scl_norm_g'] < 1e-6
 
 # Iterface checks
+
+
+def test_iface_too_tight():
+    """Finite difference test tolerance too tight"""
+    tol = 1e-10
+    n_coef = 2
+    n_res = 5
+    x = np.array([2.5, 0.25])
+    w = 0.12 * np.array([1, 1, 1, 1, 1])
+    ndf = nlls(n_coef, n_res, prec='double', weights=w, verbose=0,
+               check_derivatives='yes')
+    try:
+        ndf.fit(x, exp_r, exp_J, data=exp_data, fd_ttol=tol)
+
+    # check expected results
+    except RuntimeError as e:
+        print('Ok')
+    except Exception as e:
+        raise AssertionError(
+            "Did not catch the expected exception for FLOAT test") from e
+    else:
+        raise AssertionError(
+            "Did not catch the expected exception for FLOAT test")
 
 
 def test_iface_weights():
@@ -158,6 +198,24 @@ def test_iface_weights():
     try:
         ndf = nlls(n_coef, n_res, weights=w,
                    lower_bounds=blx, upper_bounds=bux)
+    except RuntimeError as e:
+        print('Ok')
+    except Exception as e:
+        raise AssertionError(
+            "Did not catch the expected exception for FLOAT test") from e
+    else:
+        raise AssertionError(
+            "Did not catch the expected exception for FLOAT test")
+
+
+def test_iface_bad_weights():
+    n_coef = 2
+    n_res = 5
+    x = np.array([2.5, 0.25])
+    w = -0.12 * np.array([1, 1, 1, 1, 1], dtype=np.float64)
+    ndf = nlls(n_coef, n_res, prec='double', weights=w)
+    try:
+        ndf.fit(x, exp_r, data=exp_data)
     except RuntimeError as e:
         print('Ok')
     except Exception as e:

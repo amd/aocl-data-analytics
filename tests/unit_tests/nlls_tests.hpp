@@ -42,6 +42,7 @@ namespace template_nlls_example_box_c {
 template <typename T> struct params_type {
     T *t; // The m data points t_i
     T *y; // The m data points y_i
+    da_int fcnt{100000}, jcnt{100000};
 };
 
 // Calculate r_i(x; t_i, y_i) = x_1 e^(x_2 * t_i) - y_i
@@ -50,7 +51,16 @@ template <typename T> da_int eval_r(da_int n, da_int m, void *params, T const *x
     T x2 = x[1];
     T const *t = ((struct params_type<T> *)params)->t;
     T const *y = ((struct params_type<T> *)params)->y;
+    static da_int count_down{0};
+    da_int fcnt = ((struct params_type<T> *)params)->fcnt;
 
+    if (fcnt >= 0) {
+        count_down = fcnt;
+        ((struct params_type<T> *)params)->fcnt = -1;
+    }
+    if (count_down-- <= 0) {
+        return 1;
+    }
     for (da_int i = 0; i < m; i++)
         r[i] = x1 * exp(x2 * t[i]) - y[i];
 
@@ -79,9 +89,16 @@ da_int eval_J_wrong(da_int n, da_int m, void *params, T const *x, T *J) {
     T x1 = x[0];
     T x2 = x[1];
     T const *t = ((struct params_type<T> *)params)->t;
-    static da_int count_down{5};
-    if (count_down-- <= 0)
+    static da_int count_down{0};
+    da_int jcnt = ((struct params_type<T> *)params)->jcnt;
+
+    if (jcnt >= 0) {
+        count_down = jcnt;
+        ((struct params_type<T> *)params)->jcnt = -1;
+    }
+    if (count_down-- <= 0) {
         return 1;
+    }
     for (da_int i = 0; i < m; i++) {
         J[0 * m + i] = exp(x2 * t[i]);
         J[1 * m + i] = t[i] * x1 * exp(x2 * t[i]);
@@ -168,4 +185,43 @@ da_int eval_J(da_int n, da_int m, void *params, double const *x, double *J) {
     }
     return 0;
 }
+
+da_int eval_J_bad(da_int n, da_int m, void *params, double const *x, double *J) {
+    double *sigma = ((struct usertype *)params)->sigma;
+    double A{x[0]};
+    double lambda{x[1]};
+
+    for (da_int i = 0; i < m; i++) {
+        /* Jacobian matrix J(i,j) = dfi / dxj, */
+        /* where fi = (Yi - yi)/sigma[i],      */
+        /*       Yi = A * exp(-lambda * i) + b  */
+        /* and the xj are the parameters (A,lambda,b) */
+        double t = i;
+        double s = sigma[i];
+        double e = exp(-lambda * t);
+        J[n * i + 0] = -e / s;
+        J[n * i + 1] = -t * A * e / s;
+        J[n * i + 2] = 1 / s;
+    }
+    return 0;
+}
 } // namespace template_lm_example_c
+
+namespace template_nlls_example_box_fortran {
+struct udata_t {
+    const double *t;
+    const double *y;
+};
+
+da_int eval_r(da_int n_coef, da_int n_res, void *udata, double const *x, double *r) {
+    double x1 = x[0];
+    double x2 = x[n_coef - 1];
+    double const *t = ((struct udata_t *)udata)->t;
+    double const *y = ((struct udata_t *)udata)->y;
+
+    for (da_int i = 0; i < n_res; i++)
+        r[i] = x1 * exp(x2 * t[i]) - y[i];
+
+    return 0;
+}
+} // namespace template_nlls_example_box_fortran

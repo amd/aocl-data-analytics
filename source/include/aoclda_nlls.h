@@ -206,7 +206,8 @@ typedef da_int da_reshp_t_d(da_int n_coef, da_int n_res, const double *x, const 
  * \param[in] resfun function callback to provide residual
  *             vector for the model evaluated at \p x.
  * \param[in] resgrd function callback to provide the Jacobian matrix (first derivatives) of
- *             the residual function evaluated at \p x.
+ *             the residual function evaluated at \p x. If not available set to \p NULL. See
+ *             information on estimating derivatives in chapter introduction.
  * \param[in] reshes function callback to evaluate residual Hessian matrices (second derivatives of
  *             the residual function) evaluated at \p x. Optionally can be passed as \p NULL.
  * \param[in] reshp function callback to evaluate the residual Hessians evaluated at \p x and perform
@@ -396,6 +397,8 @@ typedef enum da_optim_info_t_ {
     info_nevalh = 9,         ///< number of Hessian callback evaluations
     info_nevalhp = 10,       ///< number of Hessian-vector callback evaluations
     info_scl_grad_norm = 11, ///< scaled gradient norm of objective
+    info_nevalfd = 12, ///< number of objective function callback evaluations used for
+                       ///< approximating the derivatives or due to derivative checker
 
     info_number ///< for internal use
 } da_optim_info_t;

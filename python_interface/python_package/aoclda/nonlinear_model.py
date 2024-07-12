@@ -23,7 +23,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable=import-error, invalid-name, too-many-arguments, missing-module-docstring
+# pylint: disable=import-error, invalid-name, too-many-arguments, missing-module-docstring,too-many-locals
 from inspect import signature
 from ._aoclda.nlls import pybind_nlls
 
@@ -106,7 +106,6 @@ class nlls(pybind_nlls):
 
             Refer to :cite:p:`ralfit` for details on these subproblem solvers.
 
-
         reg_power (str, optional): Regularization power (p).  Default = ``'quadratic'``.
             This option is only relevant if the `regularization term` (parameter ``reg_term`` in
             :py:meth:`~nlls.fit`) is positive.
@@ -114,20 +113,57 @@ class nlls(pybind_nlls):
             - ``'quadratic'`` uses second order regularization,
             - ``'cubic'`` uses third order regularization.
 
+        check_derivatives (str, optional): Verify the user-supplied jacobian
+            derivatives using finite-differences method.
+
+            - ``'no'``  will not perform any verifiations
+            - ``'yes'`` will trigger the verification on each element of the
+              Jacobian matrix. The verification requires one call to the
+              residual function for each column of the Jacobian.
+              The verification process will print one line for each Jacobian
+              entry that is deemed to be wrong in a similar format to
+
+              ``Jac[2,6] =   1.28402 ~ 1.582  [ 2.097E-01], ( 0.250E-06) XT``
+
+              informing with an ``X`` that the entry is likely to be wrong.
+              It also informs with a ``T`` that the entry at ``Jac[2,6]``
+              matches the correct value in the transposed Jacobian,
+              indicating that the storage scheme should be reviewed (storing
+              Fortran format instead of C format, or vice-versa).
+              Storage scheme is defined with the ``order`` argument and
+              defaults to ``c``.
+              The If verbose level is high then one line for each entry
+              of the whole Jacobian is printed regardless of its correctness.
+
+              The finite-difference and derivative checker machinery
+              is controlled via two arguments of the fit function:
+
+              ``fd_step`` which defines the overall step size for the
+              finite-difference approximation, and
+
+              ``fd_ttol`` the derivative test tolerance which sets the
+              threshold for deciding if a user-supplied derivative is
+              close to the finite-difference approximation.
+
+              If false positives are reported by the derivative checker or if
+              the optimization process fails, then trialing
+              different values for this parameter may help.
+
         verbose (int, optional): Set verbosity level (0 to 3) of the solver. Default = 0.
     """
 
     def __init__(self, n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None,
                  order='c', prec='double', model='hybrid', method='galahad', glob_strategy='tr',
-                 reg_power='quadratic', verbose=0):
+                 reg_power='quadratic', check_derivatives='no', verbose=0):
         super().__init__(n_coef=n_coef, n_res=n_res, weights=weights,
                          lower_bounds=lower_bounds, upper_bounds=upper_bounds,
                          order=order, prec=prec, model=model, method=method,
                          glob_strategy=glob_strategy, reg_power=reg_power,
-                         verbose=verbose)
+                         check_derivatives=check_derivatives, verbose=verbose)
 
-    def fit(self, x, fun, jac, hes=None, hep=None, data=None, ftol=1.0e-8, abs_ftol=1.0e-8,
-            gtol=1.0e-8, abs_gtol=1.0e-5, xtol=2.22e-16, reg_term=0, maxit=100):
+    def fit(self, x, fun, jac=None, hes=None, hep=None, data=None, ftol=1.0e-8, abs_ftol=1.0e-8,
+            gtol=1.0e-8, abs_gtol=1.0e-5, xtol=2.22e-16, reg_term=0, maxit=100,
+            fd_step=1.0e-7, fd_ttol=1.0e-4):
         """
         Fit data to a nonlinear model using regularized least-squares.
 
@@ -257,6 +293,15 @@ class nlls(pybind_nlls):
             maxit (int, optional): Defines the iteration limit.
                 Default = 100.
 
+            fd_step (float, optional): Defines the overall step size to use in
+            the finite-difference approximation. If the optimization process
+            stagnates or fails, then trialing different values for this
+            parameter may help.
+
+            fd_ttol (float, optional): Derivative test tolerance, sets the
+            threshold for deciding if a user-supplied derivative is acceptably
+            close to the finite-difference approximation.
+
         Returns:
             self (object): Returns the fitted model, instance itself.
         """
@@ -274,12 +319,14 @@ class nlls(pybind_nlls):
             pybind_nlls.fit_d(self, x=x, fun=fun, jac=jac, hes=hes,
                               hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
                               gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
-                              reg_term=reg_term, maxit=maxit)
+                              reg_term=reg_term, maxit=maxit, fd_step=fd_step,
+                              fd_ttol=fd_ttol)
         else:
             pybind_nlls.fit_s(self, x=x, fun=fun, jac=jac, hes=hes,
                               hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
                               gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
-                              reg_term=reg_term, maxit=maxit)
+                              reg_term=reg_term, maxit=maxit, fd_step=fd_step,
+                              fd_ttol=fd_ttol)
         return self
 
     @property
@@ -292,13 +339,14 @@ class nlls(pybind_nlls):
     @property
     def n_eval(self):
         """
-        (dict) [nevalf, nevalg, nevalh, nevalhp]: dictionary with the
+        (dict) [nevalf, nevalg, nevalh, nevalhp, nevalfd]: dictionary with the
         number of function calls for:
 
-        - ``nevalf`` (int): Residual function ``fun``.
-        - ``nevalg`` (int): Gradient function ``jac``.
-        - ``nevalh`` (int): Hessian function ``hes``.
-        - ``nevalhp`` (int): Hessian-vector product function ``hep``.
+        - ``f`` (int): Residual function ``fun`` (includes ``fd_f`` count as well).
+        - ``j`` (int): Gradient function ``jac``.
+        - ``h`` (int): Hessian function ``hes``.
+        - ``hp`` (int): Hessian-vector product function ``hep``.
+        - ``fd_f`` (int): Residual function ``fun`` due to finite-differences or derivative checker.
         """
         return pybind_nlls.get_info_evals(self)
 
@@ -308,8 +356,8 @@ class nlls(pybind_nlls):
         (dict) [obj, nrmg, sclg]: dictionary with the metrics:
 
         - ``obj`` (float): Objective value at iterate ``x``.
-        - ``nrmg`` (float): Norm of the residual gradient at iterate ``x``.
-        - ``sclg`` (float): Norm of the scaled residual gradient at ``x``.
+        - ``norm_g`` (float): Norm of the residual gradient at iterate ``x``.
+        - ``scl_norm_g`` (float): Norm of the scaled residual gradient at ``x``.
         """
         return pybind_nlls.get_info_optim(self)
 

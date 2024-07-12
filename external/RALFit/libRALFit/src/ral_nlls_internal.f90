@@ -1,3 +1,7 @@
+! Copyright (c) 2020, The Science and Technology Facilities Council (STFC)
+! All rights reserved.
+! Copyright (C) 2020 Numerical Algorithms Group (NAG). All rights reserved.
+! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 ! ral_nlls_internal :: internal subroutines for ral_nlls
 
 module ral_nlls_internal
@@ -74,6 +78,7 @@ module ral_nlls_internal
     public :: solve_LLS, shift_matrix
     public :: dogleg, more_sorensen, generate_scaling, solve_newton_tensor, aint_tr
     public :: switch_to_quasi_newton, evaltensor_J
+    public :: setup_iparams_type, free_iparams_type
 
 contains
 
@@ -98,17 +103,18 @@ contains
 !                         Jennifer Scott)
 !  -----------------------------------------------------------------------------
     Use nag_export_mod, Only: calculate_covm
+    Use ral_nlls_fd, Only: eval_f_wrap, eval_j_wrap, eval_hf_wrap
 !   Dummy arguments
     implicit none
 
     INTEGER, INTENT( IN ) :: n, m
     REAL( wp ), DIMENSION( n ), INTENT( INOUT ) :: X
-    TYPE( NLLS_inform ), INTENT( OUT ) :: inform
-    TYPE( NLLS_options ), INTENT( IN ) :: options
+    TYPE( NLLS_inform ), TARGET, INTENT( OUT ) :: inform
+    TYPE( NLLS_options ), TARGET, INTENT( IN ) :: options
     procedure( eval_f_type ) :: eval_F
     procedure( eval_j_type ) :: eval_J
     procedure( eval_hf_type ) :: eval_HF
-    class( params_base_type ), intent(inout) :: params
+    class( params_base_type ), target, intent(inout) :: params
     real( wp ), dimension( m ), intent(in), optional :: weights
     procedure( eval_hp_type ), optional :: eval_HP
     real( wp ), dimension( n ), intent(inout), optional :: lower_bounds
@@ -117,8 +123,11 @@ contains
     integer  :: i, nrec
     Character(Len=80) :: rec(3)
 
-    type ( NLLS_workspace ) :: w
+    type ( NLLS_workspace ), target :: w
     Type ( NLLS_workspace ), target :: inner_workspace
+    ! internal envelope params
+    Type ( params_internal_type ) :: iparams
+
 !   Link the inner_workspace to the main workspace
     w%iw_ptr => inner_workspace
 !   Self reference inner workspace so recursive call does not fail
@@ -128,7 +137,7 @@ contains
     If (inform%status/=0) Then
        Go To 100
     End If
-    
+
     If (buildmsg(1, .False., options)) Then
       Write(rec(1),Fmt=6000)
       Write(rec(2),Fmt=6001)
@@ -142,12 +151,16 @@ contains
       Call print_options(options)
     End If
 
+    call setup_iparams_type(m, iparams, params, eval_F, eval_J, eval_HF, &
+            inform, options, w%box_ws, x)
+
     main_loop: do i = 1,options%maxit
-       call nlls_iterate(n, m, X,                                 &
-            w,                                                    &
-            eval_F, eval_J, eval_HF,                              &
-            params,                                               &
-            inform, options, weights=weights,eval_HP=eval_HP,     &
+       call nlls_iterate(n, m, X,                                     &
+            w,                                                        &
+            eval_F_wrap, eval_J_wrap, eval_HF_wrap,                   &
+            iparams,                                                  &
+            inform, options, weights=weights,                         &
+            eval_HP=eval_HP,                                          &
             lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
        ! test the returns to see if we've converged
@@ -173,6 +186,8 @@ contains
        call calculate_covm(m, n, w%j, inform, options, options%save_covm)
      end if
 
+     ! Free iparams and get save info
+     call free_iparams_type(iparams)
      call nlls_finalize(w,options,inform)
      If (inform%status /= 0) then
        call nlls_strerror(inform)
@@ -199,12 +214,13 @@ contains
                           inform, options, weights,  &
                           eval_HP,                   &
                           lower_bounds, upper_bounds)
+    Use ral_nlls_fd, Only: eval_hp_wrap, check_jacobian
     implicit none
     INTEGER, INTENT( IN ) :: n, m
     REAL( wp ), DIMENSION( n ), INTENT( INOUT ) :: X
     TYPE( nlls_inform ), INTENT( INOUT ) :: inform
     TYPE( nlls_options ), INTENT( IN ) :: options
-    type( NLLS_workspace ), INTENT( INOUT ) :: w
+    type( NLLS_workspace ), TARGET, INTENT( INOUT ) :: w
     procedure( eval_f_type ) :: eval_F
     procedure( eval_j_type ) :: eval_J
     procedure( eval_hf_type ) :: eval_HF
@@ -230,7 +246,7 @@ contains
     Real(Kind=wp) :: tau, gtd_new, pgtd, wgtd
     Logical       :: takestep, wolfe
     Integer       :: ntrfail, nlab, lstype
-    
+
     ! todo: make max_tr_decrease a control variable
     max_tr_decrease = 100
     num_successful_steps = 0
@@ -273,8 +289,15 @@ contains
 
        ! if needed, setup assign eval_Hp
        if (options%model==4 .and. present(eval_HP)) then
-          w%calculate_step_ws%solve_newton_tensor_ws%tparams%eval_HP => eval_HP
           w%calculate_step_ws%solve_newton_tensor_ws%tparams%eval_hp_provided = .true.
+          ! assign wrapper for eval_HP depending on class of params
+          select type (params)
+            type is (params_internal_type)
+              w%calculate_step_ws%solve_newton_tensor_ws%tparams%eval_HP => eval_HP_wrap
+              params%user%eval_HP => eval_HP
+            class is (params_base_type)
+              w%calculate_step_ws%solve_newton_tensor_ws%tparams%eval_HP => eval_HP
+          end select
        else
           w%calculate_step_ws%solve_newton_tensor_ws%tparams%eval_hp_provided = .false.
        end if
@@ -288,7 +311,7 @@ contains
           ! make initial point feasible by projecting into the box
           Call box_proj(w%box_ws, n, x)
        end if
-              
+
        ! evaluate the residual
        ! Note: Assumes X is x0 and is feasible
        call eval_F(inform%external_return, n, m, X, w%f, params)
@@ -299,7 +322,18 @@ contains
          inform%status = NLLS_ERROR_INITIAL_GUESS
          goto 100
        End If
+
+       ! Store a copy of f (before applying weights)
+       call iparams_set(params, x=x, f=w%f, check=.False.)
+
        if ( present(weights)) then
+          ! check that weights are positive
+          Do i = 1, m
+            if (weights(i) < 1.0e-8_wp) then
+                inform%status = NLLS_ERROR_BAD_WEIGHTS
+                goto 100
+            end if
+          End Do
           ! set f -> Wf
           w%f(1:m) = weights(1:m)*w%f(1:m)
           w%Wf(1:m) = weights(1:m)*w%f(1:m)
@@ -319,6 +353,7 @@ contains
        End If
 !      save objective
        inform%obj = 0.5_wp * ( w%normF**2 )
+
 !      and evaluate the jacobian
        call eval_J(inform%external_return, n, m, X, w%J, params)
        inform%g_eval = inform%g_eval + 1
@@ -328,6 +363,22 @@ contains
          inform%status = NLLS_ERROR_INITIAL_GUESS
          goto 100
        End If
+
+       select type (params)
+          type is (params_internal_type)
+!            Is user requesting to check the Jacobian derivatives and fd not activated
+             If (options%check_derivatives /= 0 .And. params%fd_type == 'N') Then
+                call check_jacobian(n, m, w%J, params)
+                If (params%inform%status /= 0) Then
+                   goto 100
+                End if
+             End If
+             if (params%fd_type == 'N') then
+                ! no FD -> free auxiliary storage
+                if (allocated(params%f)) deallocate(params%f)
+             end if
+       end select
+
        if ( present(weights) ) then
           call scale_J_by_weights(w%J,n,m,weights,options)
        end if
@@ -364,7 +415,7 @@ contains
          inform%status = NLLS_ERROR_INITIAL_GUESS
          Go To 100
        End If
-          
+
        ! save some data
        if ( w%box_ws%has_box ) then
           ! store current merit, used to see how well a quadratic fits
@@ -626,7 +677,7 @@ lp: do while (.not. success)
               End Do
            End If
         End If
-        
+
        !++++++++++++++++++!
        ! Accept the step? !
        !++++++++++++++++++!
@@ -637,6 +688,8 @@ lp: do while (.not. success)
          rho = -1.0_wp
          num_successful_steps = 0
        Else
+         ! Inform FD machinery to use xnew and copy fnew(:) before weights
+         call iparams_set(params, x=w%Xnew, f=w%fnew)
          if ( present(weights) ) then
            ! set f -> Wf
            w%fnew(1:m) = weights(1:m)*w%fnew(1:m)
@@ -748,7 +801,7 @@ lp: do while (.not. success)
        call update_trust_region_radius(rho,options,inform,w)
        if (inform%status /= 0) goto 100
 
-       if (w%box_ws%has_box) then 
+       if (w%box_ws%has_box) then
           ! Only run the box logic if the projected TR step differs from
           ! the unconstrained step
           If (w%box_ws%prjchd) Then
@@ -845,7 +898,7 @@ lp: do while (.not. success)
        end if
     end do lp
 
-    if( w%box_ws%has_box ) then  
+    if( w%box_ws%has_box ) then
        If (takestep .And. .Not. success) Then
           ! We need to take the projected TR step but
           ! gradient is not available
@@ -854,6 +907,8 @@ lp: do while (.not. success)
              call mult_Jt(w%J,n,m,w%fnew,w%g_mixed,options%Fortran_Jacobian)
              w%g_mixed(:) = -w%g_mixed(:)
           end if
+
+          ! iparams_set(x=w%new f=w%fnew) already set in the previous call
           ! evaluate J
           call eval_J(inform%external_return, n, m, w%Xnew(1:n), w%J, params)
           inform%g_eval = inform%g_eval + 1
@@ -875,7 +930,7 @@ lp: do while (.not. success)
             takestep = .False.
          end if
       End If
-      
+
       If (.Not. takestep) Then
          If (present(weights)) Then
             Call linesearch_steps(n,m,success,tau,X,normX,normFnew,normJFnew,eval_F,   &
@@ -888,7 +943,7 @@ lp: do while (.not. success)
             goto 100
          End If
       End If
-      
+
       ! update LS metrics if actual box is finite
       w%box_ws%normFold = w%normF
       w%box_ws%nFref = max(1, min(w%box_ws%nFref + 1, options%box_nFref_max))
@@ -1160,7 +1215,7 @@ lp: do while (.not. success)
           bad_allocate = .true.
        end if
     end if
-    
+
     if ( (.not.bad_allocate) .And. allocated(w%gradvec)) then
        if (allocated(inform%gradvec)) deallocate(inform%gradvec, stat=ierr_dummy)
        allocate(inform%gradvec(w%iter + 1), stat = inform%alloc_status)
@@ -1253,8 +1308,12 @@ lp: do while (.not. success)
        inform%error_message = 'Linesearch in projected gradient direction failed'
     elseif ( inform%status == NLLS_ERROR_UNSUPPORTED_LINESEARCH ) then
        inform%error_message = 'Unsupported value of linesearch type (box_linesearch_type)'
+    elseif ( inform%status ==  NLLS_ERROR_BAD_JACOBIAN) then
+       inform%error_message = 'One or more elements in the Jacobian appear to be wrong'
     elseif ( inform%status ==  NLLS_ERROR_UNEXPECTED) then
        inform%error_message = 'Unexpected error occured'
+    elseif ( inform%status == NLLS_ERROR_BAD_WEIGHTS ) then
+       inform%error_message = 'Weights vector must be sufficiently positive'
     else
        inform%error_message = 'Unknown error number'
     end if
@@ -1478,7 +1537,7 @@ lp: do while (.not. success)
                    call setup_workspace_more_sorensen(n,m,w%more_sorensen_ws, &
                         options, inform)
                 end if
-                subproblem_method = 4 ! try gltr next 
+                subproblem_method = 4 ! try gltr next
 
                 call more_sorensen(w%A,w%v,n,m,Delta,d,norm_S_d, &
                      options,inform,w%more_sorensen_ws)
@@ -1492,7 +1551,7 @@ lp: do while (.not. success)
                 if (use_second_derivatives) then
                    subproblem_method = 2 ! try aint next
                    ! dogleg doesn't work with Hessians...
-                else 
+                else
                    subproblem_method = 1 ! try dogleg next
                 end if
                 if (.not. w%solve_galahad_ws%allocated) then
@@ -1511,7 +1570,7 @@ lp: do while (.not. success)
                 goto 100
              end select ! nlls_method
           elseif (options%type_of_method == 2) then
-             
+
              select case (subproblem_method)
              case (3) ! home-rolled regularization solver
                 If (buildmsg(5,.False.,options)) Then
@@ -1521,14 +1580,14 @@ lp: do while (.not. success)
                 if (.not. w%regularization_solver_ws%allocated) then
                    call setup_workspace_regularization_solver(n,m, &
                         w%regularization_solver_ws, options, inform)
-                end if               
+                end if
                 subproblem_method = 4
-                
+
                 call regularization_solver(w%A,w%v,n,m,Delta,      &
                      num_successful_steps, d,norm_S_d,w%reg_order, &
                      options,inform,w%regularization_solver_ws)
                 if (inform%status == 0) subproblem_success = .true.
-                
+
              case(4) ! Galahad
                 If (buildmsg(5,.False.,options)) Then
                    Write(rec(1), Fmt=3020) 'Galahad DRQS'
@@ -1539,7 +1598,7 @@ lp: do while (.not. success)
                         w%solve_galahad_ws, options, inform)
                 end if
                 subproblem_method = 3
-                
+
                 call solve_galahad(w%A,w%v,n,m,Delta,num_successful_steps, &
                      d,norm_S_d,w%reg_order,options,inform,w%solve_galahad_ws)
                 if (inform%status == 0) subproblem_success = .true.
@@ -1550,16 +1609,16 @@ lp: do while (.not. success)
                 inform%status = NLLS_ERROR_UNSUPPORTED_METHOD
                 goto 100
              end select ! nlls_method
-             
+
           else
              inform%status = NLLS_ERROR_UNSUPPORTED_TYPE_METHOD
              goto 100
           end if ! type_of_method
-          if (.not. subproblem_success) then 
+          if (.not. subproblem_success) then
              num_methods_tried = num_methods_tried + 1
           end if
        end do
-       
+
         ! reverse the scaling on the step
         if ( (scaling_used) ) then
            ! recalculate ||d||
@@ -3498,6 +3557,8 @@ lp:  do i = 1, options%more_sorensen_maxits
        integer :: i
        real (wp) :: normjfnew
 
+       ! Inform FD machinery to use x and f
+       call iparams_set(params, x=x, f=w%f)
 
        call eval_J(inform%external_return, n, m, X(1:n), w%J, params)
        inform%g_eval = inform%g_eval + 1
@@ -3639,7 +3700,7 @@ lp:  do i = 1, options%more_sorensen_maxits
        ! Calculates norm_A_x = ||x||_A = sqrt(x'*A*x)
        ! assumes dimension match !
        ! norm_A_x = sqrt(dot_product(x,matmul(A,x)))
-       ! trivial version that does not trigger automatic 
+       ! trivial version that does not trigger automatic
        ! array allocation for MV product, can be done better...
        n = size(x)
        norm_A_x = 0.0_wp
@@ -4185,17 +4246,17 @@ lp:    do i = 1, w%tensor_options%maxit
             if (params%extra == 1) then
                ! we're passing in the regularization via the function/Jacobian
                v = sqrt(1.0_wp/params%Delta)
-               
+
                do ii = 1,n ! loop over the columns...
                   J(m*(ii-1) + params%m + ii) = v
                end do
             elseif (params%extra == 2) then
-               
+
                v = sqrt( (params%p)/(2.0_wp * params%Delta) ) *                &
                     (norm2(s(1:n))**( (params%p/2.0_wp) - 2.0_wp))
                ! J(m*(ii-1) + params%m + ii) = v * s(ii)
-               call dcopy(n, s, 1, J(m), m) 
-               call dscal(n, v, J(m), m ) 
+               call dcopy(n, s, 1, J(m), m)
+               call dscal(n, v, J(m), m )
             end if
           else
              ! Jacobian is provided row-wise
@@ -4204,7 +4265,7 @@ lp:    do i = 1, w%tensor_options%maxit
              !End Do
              call dcopy(n*params%m,params%J,1,J,1)
              call daxpy(n*params%m, 1.0_wp, params%tenJ%Hs(1,1),1, J, 1)
-           
+
             if (params%extra == 1) then
                ! we're passing in the regularization via the function/Jacobian
                ! Update the diagonal of the last nxn block
@@ -4218,8 +4279,8 @@ lp:    do i = 1, w%tensor_options%maxit
                     (norm2(s(1:n))**( (params%p/2.0_wp) - 2.0_wp))
               ! avoid auto allocation
               ! J((m-1)*n+1 : m*n) = v * s(1:n)
-              call dcopy(n, s, 1, J((m-1)*n+1), 1 ) 
-              call dscal(n, v, J((m-1)*n+1), 1 ) 
+              call dcopy(n, s, 1, J((m-1)*n+1), 1 )
+              call dscal(n, v, J((m-1)*n+1), 1 )
             end if
           end if
 
@@ -4347,9 +4408,9 @@ lp:    do i = 1, w%tensor_options%maxit
       Logical                          :: take_pg_step
       Integer                          :: ierr
       Real(Kind=wp)                    :: alpha
-      
+
       Continue
-      
+
       take_pg_step = .True.
 
 !       Box descent conditions were not met.
@@ -4411,7 +4472,7 @@ lp:    do i = 1, w%tensor_options%maxit
             Go To 100
           End If
        End If
-       
+
        If (take_pg_step) Then
           !         Nonmonotone Projected Gradient Linesearch ----------------------------
           lstype = lstype + 2
@@ -4433,7 +4494,7 @@ lp:    do i = 1, w%tensor_options%maxit
        !       Update TR radius with LS/PG step !
        !       ---------------------------------!
        w%Delta = options%box_delta_scale*w%norm_2_d
-       
+
 100    Continue
 
 
@@ -4457,7 +4518,7 @@ lp:    do i = 1, w%tensor_options%maxit
                                           steptl
         Real (Kind=wp), Intent (Inout) :: x(n), xpls(n), fpls, fnew(m),alpha
         type (box_type), intent (inout) :: box_ws
-        Real (Kind=wp), Intent (In), Optional :: weights(n), sx(n)
+        Real (Kind=wp), Intent (In), Optional :: weights(m), sx(n)
         Logical, Intent (Out)          :: mxtake
         Class (params_base_type), Intent (InOut) :: params
         Type (nlls_inform), Intent (Inout) :: inform
@@ -4518,7 +4579,7 @@ lp:    do i = 1, w%tensor_options%maxit
         Do j = 1, options%box_ls_step_maxit
            ! xpls(i) = P(x(i) + alpha*scl*p(i))
            Call box_proj(box_ws, n, x, xpls, p, alpha*scl)
-           
+
 !         evaluate function at new point */
           If (.Not. present(sx)) Then
             Call eval_f(inform%external_return,n,m,xpls,fnew,params)
@@ -4690,13 +4751,16 @@ lp:    do i = 1, w%tensor_options%maxit
         normfnew = sqrt(2.0_wp*fpls)
 
         ! step seems to be good -- calculate the Jacobian
-        if (.not. options%exact_second_derivatives) then 
+        if (.not. options%exact_second_derivatives) then
            ! save the value of g_mixed, which is needed for
            ! call to rank_one_update
            ! g_mixed = -J_k^T r_{k+1}
            call mult_Jt(w%J,n,m,w%fnew,w%g_mixed,options%Fortran_Jacobian)
            w%g_mixed(:) = -w%g_mixed(:)
         end if
+
+        ! Inform FD machinery to use xnew and fnew: fnew has weights applied
+        call iparams_set(params, x=w%Xnew, f=w%fnew, weights=weights)
 
         ! evaluate J and hf at the new point
         call eval_J(inform%external_return, n, m, w%Xnew(1:n), w%J, params)
@@ -4808,6 +4872,10 @@ lp:    do i = 1, w%tensor_options%maxit
               call mult_Jt(w%J,n,m,w%fnew,w%g_mixed,options%Fortran_Jacobian)
               w%g_mixed(:) = -w%g_mixed(:)
             end if
+
+            ! Inform FD machinery to use xnew and fnew: fnew has weights applied
+            call iparams_set(params, x=w%Xnew, f=w%fnew, weights=weights)
+
             ! evaluate J and hf at the new point
             call eval_J(inform%external_return, n, m, w%Xnew(1:n), w%J, params)
             inform%g_eval = inform%g_eval + 1

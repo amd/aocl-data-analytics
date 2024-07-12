@@ -303,23 +303,17 @@ template <typename T> da_status da_optimization<T>::add_resfun(resfun_t<T> resfu
 }
 
 template <typename T> da_status da_optimization<T>::add_resgrd(resgrd_t<T> resgrd) {
-    if (resgrd)
-        this->resgrd = resgrd;
-
+    this->resgrd = resgrd;
     return da_status_success;
 }
 
 template <typename T> da_status da_optimization<T>::add_reshes(reshes_t<T> reshes) {
-    if (reshes)
-        this->reshes = reshes;
-
+    this->reshes = reshes;
     return da_status_success;
 }
 
 template <typename T> da_status da_optimization<T>::add_reshp(reshp_t<T> reshp) {
-    if (reshp)
-        this->reshp = reshp;
-
+    this->reshp = reshp;
     return da_status_success;
 }
 
