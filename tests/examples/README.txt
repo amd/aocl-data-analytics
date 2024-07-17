@@ -9,25 +9,27 @@ INT_LIB is either LP64 or ILP64 for 32 and 64 bit integers. If ILP64 libraries a
 To compile and link to static AOCL libraries using g++:
 
 g++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
-    /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a /<path to libflame>/lib_<INT_LIB>/libflame.a
-    /<path to blis>/lib_<INT_LIB>/libblis-mt.a -lgfortran -lgomp
+    /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a /<path to libaoclsparse>/lib_<INT_LIB>/libaoclsparse.a
+    /<path to libflame>/lib_<INT_LIB>/libflame.a /<path to blis>/lib_<INT_LIB>/libblis-mt.a
+    /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lgfortran -lgomp
 
 To compile and link to static AOCL libraries using clang++:
 
 clang++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
-    /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a /<path to libflame>/lib_<INT_LIB>/libflame.a
-    /<path to blis>/lib_<INT_LIB>/libblis-mt.a -lflang -lomp
+    /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a /<path to libaoclsparse>/lib_<INT_LIB>/libaoclsparse.a
+    /<path to libflame>/lib_<INT_LIB>/libflame.a /<path to blis>/lib_<INT_LIB>/libblis-mt.a
+    /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp
 
 To compile and link to dynamic AOCL libraries using g++:
 
 g++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
-    -L/<path to aocl-da and similarly for blis and flame>/lib_<INT_LIB> -laocl-da -lflame -lblis-mt
+    -L/<path to aocl-da and similarly for aoclutils, blis, flame, aoclsparse>/lib_<INT_LIB> -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
     -lgfortran -lgomp
 
 To compile and link to dynamic AOCL libraries using clang++:
 
 clang++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
-    -L/<path to aocl-da and similarly for blis and flame>/lib_<INT_LIB> -laocl-da -lflame -lblis-mt
+    -L/<path to aocl-da and similarly for aoclutils, blis, flame, aoclsparse>/lib_<INT_LIB> -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
     -lflang -lomp
 
 (note that for dynamic linking you will need to update LD_LIBRARY_PATH e.g. export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>)
@@ -41,10 +43,12 @@ AOCL-DA requires Fortran runtime libraries for linking, so prior to compiling th
 
 cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
    \<path to>\aocl-da\lib\<INT_LIB>\aocl-da.lib
+   \<path to>\amd-sparse\lib\<INT_LIB>\aoclsparse.lib
    \<path to>\amd-libflame\lib\<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
-   \<path to>\amd-blis\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib /openmp:llvm
+   \<path to>\amd-blis\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
+   \<path to>\amd-utils\lib\libaoclutils.lib /openmp:llvm
 
-The same command should work with cl replaced by clang-cl (in whcih case simply use /openmp) and linking statically using /MT
+The same command should work with cl replaced by clang-cl (in which case simply use /openmp) and linking statically using /MT
 
 (note that you should ensure the folders containing the libraries to be linked are on your Windows PATH e.g. using set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>)
 

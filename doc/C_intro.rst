@@ -84,18 +84,22 @@ To compile and link to static AOCL libraries using ``g++``:
 .. code-block::
 
     g++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
-        /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
-        /<path to amd-libflame>/lib_<INT_LIB>/libflame.a /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-        -lgfortran -lgomp
+        /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a
+        /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
+        /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
+        /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
+        /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lgfortran -lgomp
 
 To compile and link to static AOCL libraries using ``clang++``:
 
 .. code-block::
 
     clang++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
-            /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
-            /<path to amd-libflame>/lib_<INT_LIB>/libflame.a /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-            -lflang -lomp
+            /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a
+            /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
+            /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
+            /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
+            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp
 
 To compile and link to dynamic AOCL libraries using ``g++``:
 
@@ -104,7 +108,8 @@ To compile and link to dynamic AOCL libraries using ``g++``:
     g++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
         -L /<path to aocl-da>/lib_<INT_LIB> -L /<path to amd-sparse>/lib_<INT_LIB>
         -L /<path to amd-libflame>/lib_<INT_LIB> -L /<path to amd-blis>/lib_<INT_LIB>
-        -laocl-da -laoclsparse -lflame -lblis-mt -lgfortran -lgomp
+        -L /<path to amd-utils>/lib -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
+        -lgfortran -lgomp
 
 To compile and link to dynamic AOCL libraries using ``clang++``:
 
@@ -113,7 +118,8 @@ To compile and link to dynamic AOCL libraries using ``clang++``:
     clang++ <your_source_code>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
             -L /<path to aocl-da>/lib_<INT_LIB> -L /<path to amd-sparse>/lib_<INT_LIB>
             -L /<path to amd-libflame>/lib_<INT_LIB> -L /<path to amd-blis>/lib_<INT_LIB>
-            -laocl-da -laoclsparse -lflame -lblis-mt -lflang -lomp
+            -L /<path to amd-utils>/lib -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
+            -lflang -lomp
 
 Note that for dynamic linking you will need to update your ``LD_LIBRARY_PATH`` environment
 variable e.g. ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>``.
@@ -133,7 +139,8 @@ for 32 and 64 bit integers respectively.
        \<path to aocl-da>\lib\<INT_LIB>\aocl-da.lib
        \<path to amd-sparse>\lib\<INT_LIB>\shared\aoclsparse.lib
        \<path to amd-libflame>\lib\<INT_LIB>\AOCL-LibFlame-Win-MT-dll.lib
-       \<path to amd-blis>\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib /openmp:llvm
+       \<path to amd-blis>\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
+       \<path to amd-utils>\lib\libaoclutils.lib /openmp:llvm
 
 The same command should work with ``cl`` replaced by ``clang-cl`` (in which case, simply use ``/openmp``) and linking statically using ``/MT``.
 
