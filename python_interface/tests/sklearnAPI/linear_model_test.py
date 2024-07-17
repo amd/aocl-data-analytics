@@ -181,7 +181,7 @@ def test_lasso(precision):
     # remove check on value for now:
     # Internal standardization is not the same et between sklearn and DA
     # assert da_coef == pytest.approx(coef, 1.0e-08)
-    assert da_intercept == pytest.approx(intercept, tol)
+    assert da_intercept == pytest.approx(intercept, abs=tol)
 
     # print the results if pytest is invoked with the -rA option
     print("coefficients")

@@ -393,7 +393,8 @@ template <typename T> da_status da_pca<T>::compute() {
         iwork_size = 12 * std::min(n, p);
         u_size = (store_U) ? n * npc : 0;
         ldvt = npc;
-        sigma_size = 2 * std::min(n, p) + 1; // TODO bug in gesvdx being fixed at 4.2
+        sigma_size = 2 * std::min(n, p) +
+                     1; // to allow for larger workspace requirement for AOCL-LAPACK < 4.2
         A_copy_size = n * p;
     } else if (solver == solver_gesvd) {
         iwork_size = 0;
@@ -677,6 +678,7 @@ template <typename T> da_status da_pca<T>::compute() {
         char JOB = 'V';
         char UPLO = 'U';
         da_int liwork = -1;
+        da_int lwork = -1;
         da_int estiworkspace[1];
 
         // Query syevd for workspace requirements
@@ -693,7 +695,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
         // Allocate the workspace required
         lwork = (da_int)estworkspace[0];
-        liwork = estiworkspace[0];
+        liwork = 3 + 5 * p; //estiworkspace[0], pending xSYEVD fix;
         try {
             work.resize(lwork);
             iwork.resize(liwork);

@@ -30,7 +30,7 @@ AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
 Building on Linux
 -----------------
 
-1. You will need to have BLAS and LAPACK installed.
+1. You will need to have BLAS, LAPACK, AOCL-Sparse and AOCL-Utils installed.
 
 2. Make sure you have set the environment variable `$AOCL_ROOT` to where the AOCL libraries are
    installed e.g. `/home/username/amd/aocl/4.0`.
