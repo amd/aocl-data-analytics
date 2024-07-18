@@ -695,7 +695,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
         // Allocate the workspace required
         lwork = (da_int)estworkspace[0];
-        liwork = 3 + 5 * p; //estiworkspace[0], pending xSYEVD fix;
+        liwork = estiworkspace[0];
         try {
             work.resize(lwork);
             iwork.resize(liwork);
