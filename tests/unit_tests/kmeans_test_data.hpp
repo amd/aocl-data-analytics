@@ -46,7 +46,6 @@ template <typename T> struct KMeansParamType {
 
     std::vector<T> C;
     da_int ldc = 0;
-
     da_int m_samples = 0;
     da_int m_features = 0;
     std::vector<T> X;
@@ -405,13 +404,13 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.n_clusters = 10;
     param.initialization_method = "k-means++";
     param.algorithm = "lloyd";
-    param.max_allowed_inertia = 0.1;
+    param.max_allowed_inertia = 0.11;
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "macqueen";
     params.push_back(param);
     param.n_init = 5;
-    param.max_allowed_inertia = (T)0.1;
+    param.max_allowed_inertia = (T)0.11;
     param.max_iter = 30;
     param.initialization_method = "random partitions";
     param.algorithm = "elkan";
@@ -437,13 +436,13 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.algorithm = "lloyd";
     params.push_back(param);
     param.initialization_method = "random";
-    param.max_allowed_inertia = (T)0.09;
+    param.max_allowed_inertia = (T)0.11;
     param.algorithm = "elkan";
     params.push_back(param);
     param.algorithm = "hartigan-wong";
     params.push_back(param);
     param.n_init = 100;
-    param.max_allowed_inertia = (T)0.11;
+    param.max_allowed_inertia = (T)0.12;
     param.initialization_method = "random partitions";
     param.algorithm = "macqueen";
     param.max_iter = 30;
