@@ -112,9 +112,12 @@ class LinearRegression(LinearRegression_sklearn):
     @property
     def coef_(self):
         coef = self.lmod.get_coef()
-        if self.intercept_val is None:
-            self.intercept_val = coef[-1]
-        return coef[:-1]
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                self.intercept_val = coef[-1]
+            return coef[:-1]
+        else:
+            return coef
 
     @property
     def rank_(self):
@@ -128,10 +131,13 @@ class LinearRegression(LinearRegression_sklearn):
 
     @property
     def intercept_(self):
-        if self.intercept_val is None:
-            coef = self.lmod.get_coef()
-            self.intercept_val = coef[-1]
-        return self.intercept_val
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                coef = self.lmod.get_coef()
+                self.intercept_val = coef[-1]
+            return self.intercept_val
+        else:
+            return 0.0
 
     @property
     def n_features_in_(self):
@@ -238,9 +244,12 @@ class Ridge(Ridge_sklearn):
     @property
     def coef_(self):
         coef = self.lmod.get_coef()
-        if self.intercept_val is None:
-            self.intercept_val = coef[-1]
-        return coef[:-1]
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                self.intercept_val = coef[-1]
+            return coef[:-1]
+        else:
+            return coef
 
     @property
     def n_iter_(self):
@@ -259,10 +268,13 @@ class Ridge(Ridge_sklearn):
 
     @property
     def intercept_(self):
-        if self.intercept_val is None:
-            coef = self.lmod.get_coef()
-            self.intercept_val = coef[-1]
-        return self.intercept_val
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                coef = self.lmod.get_coef()
+                self.intercept_val = coef[-1]
+            return self.intercept_val
+        else:
+            return 0.0
 
     @property
     def solver_(self):
@@ -364,9 +376,12 @@ class Lasso(Lasso_sklearn):
     @property
     def coef_(self):
         coef = self.lmod.get_coef()
-        if self.intercept_val is None:
-            self.intercept_val = coef[-1]
-        return coef[:-1]
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                self.intercept_val = coef[-1]
+            return coef[:-1]
+        else:
+            return coef
 
     @property
     def n_iter_(self):
@@ -385,10 +400,13 @@ class Lasso(Lasso_sklearn):
 
     @property
     def intercept_(self):
-        if self.intercept_val is None:
-            coef = self.lmod.get_coef()
-            self.intercept_val = coef[-1]
-        return self.intercept_val
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                coef = self.lmod.get_coef()
+                self.intercept_val = coef[-1]
+            return self.intercept_val
+        else:
+            return 0.0
 
     @property
     def dual_gap_(self):
@@ -505,9 +523,12 @@ class ElasticNet(ElasticNet_sklearn):
     @property
     def coef_(self):
         coef = self.lmod.get_coef()
-        if self.intercept_val is None:
-            self.intercept_val = coef[-1]
-        return coef[:-1]
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                self.intercept_val = coef[-1]
+            return coef[:-1]
+        else:
+            return coef
 
     @property
     def n_iter_(self):
@@ -536,10 +557,13 @@ class ElasticNet(ElasticNet_sklearn):
 
     @property
     def intercept_(self):
-        if self.intercept_val is None:
-            coef = self.lmod.get_coef()
-            self.intercept_val = coef[-1]
-        return self.intercept_val
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                coef = self.lmod.get_coef()
+                self.intercept_val = coef[-1]
+            return self.intercept_val
+        else:
+            return 0.0
 
 
 class LogisticRegression(LogisticRegression_sklearn):
@@ -700,16 +724,22 @@ class LogisticRegression(LogisticRegression_sklearn):
     @property
     def coef_(self):
         coef = self.lmod.get_coef()
-        if self.intercept_val is None:
-            self.intercept_val = coef[-1]
-        return coef[:-1]
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                self.intercept_val = coef[-1]
+            return coef[:-1]
+        else:
+            return coef
 
     @property
     def intercept_(self):
-        if self.intercept_val is None:
-            coef = self.lmod.get_coef()
-            self.intercept_val = coef[-1]
-        return self.intercept_val
+        if self.fit_intercept:
+            if self.intercept_val is None:
+                coef = self.lmod.get_coef()
+                self.intercept_val = coef[-1]
+            return self.intercept_val
+        else:
+            return 0.0
 
     @property
     def n_features_in_(self):

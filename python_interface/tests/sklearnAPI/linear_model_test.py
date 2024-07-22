@@ -36,9 +36,9 @@ from aoclda.sklearn import skpatch, undo_skpatch
 import pytest
 from sklearn.datasets import make_regression, make_classification
 
-
+@pytest.mark.parametrize("intercept", [True, False])
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_linear_regression(precision):
+def test_linear_regression(intercept, precision):
     """
     Vanilla linear regression
     """
@@ -50,7 +50,7 @@ def test_linear_regression(precision):
     # patch and import scikit-learn
     skpatch()
     from sklearn.linear_model import LinearRegression
-    linreg_da = LinearRegression()
+    linreg_da = LinearRegression(fit_intercept=intercept)
     linreg_da.fit(X, y)
     da_coef = linreg_da.coef_
     da_intercept = linreg_da.intercept_
@@ -59,7 +59,7 @@ def test_linear_regression(precision):
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn.linear_model import LinearRegression
-    linreg = LinearRegression()
+    linreg = LinearRegression(fit_intercept=intercept)
     linreg.fit(X, y)
     coef = linreg.coef_
     intercept = linreg.intercept_
@@ -90,9 +90,9 @@ def test_double_solve_linreg(precision):
     linreg_da.fit(X, y)
     linreg_da.fit(X, y)
 
-
+@pytest.mark.parametrize("intercept", [True, False])
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_ridge(precision):
+def test_ridge(intercept, precision):
     """
     Ridge regression using LBFGS
     """
@@ -103,7 +103,7 @@ def test_ridge(precision):
 
     skpatch()
     from sklearn.linear_model import Ridge
-    ridge_da = Ridge()
+    ridge_da = Ridge(fit_intercept=intercept)
     ridge_da.fit(X, y)
     da_coef = ridge_da.coef_
     # da_intercept = ridge_da.intercept_
@@ -112,7 +112,7 @@ def test_ridge(precision):
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn.linear_model import Ridge
-    ridge = Ridge(solver='lbfgs', positive=True)
+    ridge = Ridge(fit_intercept=intercept, solver='lbfgs', positive=True)
     ridge.fit(X, y)
     coef = ridge.coef_
     # intercept = ridge.intercept_
@@ -148,9 +148,9 @@ def test_double_solve_ridge(precision):
     ridge_da.fit(X, y)
     ridge_da.fit(X, y)
 
-
+@pytest.mark.parametrize("intercept", [True, False])
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_lasso(precision):
+def test_lasso(intercept, precision):
     """
     Lasso
     """
@@ -162,7 +162,7 @@ def test_lasso(precision):
 
     skpatch()
     from sklearn.linear_model import Lasso
-    lasso_da = Lasso(alpha=0.1)
+    lasso_da = Lasso(fit_intercept=intercept, alpha=0.1)
     lasso_da.fit(X, y)
     # da_coef = lasso_da.coef_
     da_intercept = lasso_da.intercept_
@@ -171,7 +171,7 @@ def test_lasso(precision):
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn.linear_model import Lasso
-    lasso = Lasso(alpha=0.1)
+    lasso = Lasso(fit_intercept=intercept, alpha=0.1)
     lasso.fit(X, y)
     # coef = lasso.coef_
     intercept = lasso.intercept_
@@ -207,9 +207,9 @@ def test_double_solve_lasso(precision):
     lasso_da.fit(X, y)
     lasso_da.fit(X, y)
 
-
+@pytest.mark.parametrize("intercept", [True, False])
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_logistic(precision):
+def test_logistic(intercept, precision):
     """
     Logistic Regression
     """
@@ -220,7 +220,7 @@ def test_logistic(precision):
 
     skpatch()
     from sklearn.linear_model import LogisticRegression
-    lg_da = LogisticRegression()
+    lg_da = LogisticRegression(fit_intercept=intercept)
     lg_da.fit(X, y)
     da_coef = lg_da.coef_
     assert lg_da.aocl is True
@@ -228,7 +228,7 @@ def test_logistic(precision):
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn.linear_model import LogisticRegression
-    lg = LogisticRegression()
+    lg = LogisticRegression(fit_intercept=intercept)
     lg.fit(X, y)
     coef = lg.coef_
     assert not hasattr(lg, 'aocl')
