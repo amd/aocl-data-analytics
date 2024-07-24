@@ -31,7 +31,7 @@
 #include <vector>
 
 #ifndef DATA_DIR
-#define DATA_DIR "data"
+#define DATA_DIR "data/df_data"
 #endif
 
 int main() {
