@@ -1876,8 +1876,8 @@ const linregParam linregParamPos[] = {
     {"TallThin/norm/lbfgs/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",0.1f}},
-                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
-                                     true, false, 2.5f
+                                     {{"optim convergence tol",1.e-10}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",0.1}},
+                                     true, false, 1.5f
                                      },
     {"TallThin/norm/svd/1/s", "tall_thin", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "svd"}, {"scaling", "scale only"}},

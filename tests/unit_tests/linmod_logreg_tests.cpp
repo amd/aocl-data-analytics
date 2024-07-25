@@ -44,21 +44,34 @@ typedef struct {
 // clang-format off
 // Test parameters for the logistic retgression
 const logregParam logregPosValuesD[] = {
+    // Two class tests
     {"lrsetNoIntercept", "lrset", {}, {}, {}, {}},
     {"lrsetIntercept", "lrset", {{"intercept", 1}}, {}, {}, {}},
     {"studyNoIntercept", "study", {}, {}, {}, {}},
     {"studyIntercept", "study", {{"intercept", 1}}, {}, {}, {}},
-    {"multinomialNoIntercept", "multinomial", {}, {}, {}, {}},
-    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {}, {}, {}},
     {"usrdataIntercept", "usrdata", {{"intercept", 1}}, {}, {}, {}},
-    {"sep_data_4_4", "sep_classes_4_4", {{"intercept", 1}}, {}, {}, {}},
-    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {}, {}, {{"lambda", 1.0}}},
-    {"sep_data_big_scale", "sep_classes_big_scale", {{"intercept", 1}}, {}, {}, {{"lambda", 1.0}}},
+    // Multinomial RSC tests
+    {"multinomialNoInterceptRSC", "multinomial", {}, {{"logistic constraint", "rsc"}}, {}, {}},
+    {"multinomialInterceptRSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
+    {"sep_data_4_4RSC", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
+    {"sep_data_8_5_indep1RSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
+    {"sep_data_big_scaleRSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
+    // Multinomial SSC tests
+    {"multinomialNoInterceptSSC", "multinomial", {}, {{"logistic constraint", "ssc"}}, {}, {}},
+    {"multinomialInterceptSSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
+    {"sep_data_4_4SSC", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
+    {"sep_data_8_5_indep1SSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
+    {"sep_data_big_scaleSSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
 };
 const logregParam logregPosValuesF[] = {
-    {"multinomialNoIntercept", "multinomial", {}, {}, {}, {}},
-    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {}, {}, {}},
-    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {}, {}, {{"lambda", 1.0}}},
+    // Multinomial RSC tests
+    {"multinomialNoIntercept", "multinomial", {}, {{"logistic constraint", "rsc"}}, {}, {}},
+    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
+    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
+    // Multinomial SSC tests
+    {"multinomialNoIntercept", "multinomial", {}, {{"logistic constraint", "ssc"}}, {}, {}},
+    {"multinomialIntercept", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
+    {"sep_data_8_5_indep1", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
 };
 // clang-format on
 

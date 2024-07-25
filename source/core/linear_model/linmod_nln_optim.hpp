@@ -72,18 +72,22 @@ template <class T> class usrdata_base {
 template <class T> class cb_usrdata_logreg : public usrdata_base<T> {
   public:
     da_int nclass;
-    /* Add 2 working memory arrays
+    /* Add 4 working memory arrays
      * maxexp[nsamples]: used to store the maximum values of each X_k beta_k (k as class index) for the logsumexp trick
-     * lincomb[nsamples*(nclass-1)]: used to store all the X_k beta_k values
+     * sumexp[nsamples]: used to store the sum of exponenents of each X_k beta_k (k as class index) for the logsumexp trick
+     * lincomb[nsamples*(nclass-1) OR nsamples*nclass]: used to store all the X_k beta_k values
+     * gradients_p[nsamples*(nclass-1) OR nsamples*nclass]: used to store all the pointwise gradients
      */
-    std::vector<T> maxexp, lincomb;
+    std::vector<T> maxexp, sumexp, lincomb, gradients_p;
 
     cb_usrdata_logreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                      bool intercept, T lambda, T alpha, da_int nclass)
+                      bool intercept, T lambda, T alpha, da_int nclass, da_int nparam)
         : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha),
           nclass(nclass) {
         maxexp.resize(nsamples);
-        lincomb.resize(nsamples * (nclass - 1));
+        sumexp.resize(nsamples);
+        lincomb.resize(nsamples * nparam);
+        gradients_p.resize(nsamples * nparam);
     }
     ~cb_usrdata_logreg() {}
 };
@@ -193,7 +197,7 @@ template <typename T> void reggrd(da_int n, T const *x, T l1reg, T l2reg, T *gra
  * and its gradient as defined in Elements of Statistical Learning (Hastie & all)
  */
 template <typename T>
-da_int objfun_logistic([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
+da_int objfun_logistic_rsc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
 
     // All data related to the regression problem is stored in the udata pointer
     // multinomial problem with K (nclass) classes (indexed in [0, K-1]), nfeat features and nsamples samples.
@@ -247,8 +251,8 @@ da_int objfun_logistic([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
 }
 
 template <typename T>
-da_int objgrd_logistic(da_int n, T *x, T *grad, void *udata,
-                       [[maybe_unused]] da_int xnew) {
+da_int objgrd_logistic_rsc(da_int n, T *x, T *grad, void *udata,
+                           [[maybe_unused]] da_int xnew) {
 
     cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)udata;
     std::vector<T> &maxexp = data->maxexp;
@@ -305,6 +309,240 @@ da_int objgrd_logistic(da_int n, T *x, T *grad, void *udata,
 
     // Add regularization (exclude intercept)
     reggrd(data->nfeat, x, data->l1reg, data->l2reg, grad);
+
+    return 0;
+}
+
+template <typename T>
+da_int objfun_logistic_two_class([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
+
+    // All data related to the regression problem is stored in the udata pointer
+    // two class problem indexed as 0 and 1, nfeat features and nsamples samples.
+    // x is of size (nfeat+itpt)
+    // where itpt is 1 if the intercept is required and 0 otherwise
+
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)udata;
+    std::vector<T> &lincomb = data->lincomb;
+    T *lincomb_ptr = data->lincomb.data();
+    const T *y = data->y;
+    da_int nfeat = data->nfeat;
+    da_int nsamples = data->nsamples;
+    da_int nmod = data->intercept ? nfeat + 1 : nfeat;
+
+    // Loss value
+    *f = 0;
+
+    // lincomb is of size nsamples
+    // Calculate licomb as X * Beta + Beta_0
+    eval_feature_matrix(nmod, x, nsamples, data->X, lincomb_ptr, data->intercept);
+
+    // Loss is sum of log(1+exp(lincomb[i])) - y_i*lincomb[i]
+    // If-else codepath to avoid overflow (TODO: Look at further split for more optimal computation)
+    // ln(1+exp(b^Tx)) = ln(exp(b^TX)[exp(-b^TX) + 1]) = b^TX + ln(1+exp(-b^TX))
+    // look at private and shared variables
+    // #pragma omp parallel for
+    for (da_int i = 0; i < nsamples; i++) {
+        // #pragma omp atomic update
+        if (lincomb[i] < 0)
+            *f += log(1 + exp(lincomb[i])) - std::round(y[i]) * lincomb[i];
+        else
+            *f += log(1 + exp(-lincomb[i])) + (1 - std::round(y[i])) * lincomb[i];
+    }
+
+    // Add regularization (exclude intercept)
+    *f += regfun(nfeat, x, data->l1reg, data->l2reg);
+
+    return 0;
+}
+
+template <typename T>
+da_int objgrd_logistic_two_class(da_int n, T *x, T *grad, void *udata,
+                                 [[maybe_unused]] da_int xnew) {
+
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)udata;
+    const T *y = data->y;
+    std::vector<T> &lincomb = data->lincomb;
+    std::vector<T> &gradients_p = data->gradients_p;
+    T *lincomb_ptr = data->lincomb.data();
+    da_int nsamples = data->nsamples;
+    const T *X = data->X;
+    da_int nfeat = data->nfeat;
+    da_int nmod = data->intercept ? data->nfeat + 1 : data->nfeat;
+    T sum_of_gradients;
+
+    if (xnew) {
+        // Calculate licomb as X * Beta + Beta_0
+        eval_feature_matrix(nmod, x, nsamples, data->X, lincomb_ptr, data->intercept);
+    }
+
+    // compute for all samples i and all variables j with k being the class of sample i:
+    // A_ij^T * (sigma(Beta*x)-y_i)
+    std::fill(grad, grad + n, 0);
+    sum_of_gradients = 0;
+
+    // Trick to avoid overflow uses fact that:
+    // sigma(x) = 1/(1+exp(-x)) = exp(x)/1+exp(x)
+    // Potential TODO: there can be smarter bounds and shorthands to save computation (f.e setting to -1 with no computation for very small lincomb[i])
+    for (da_int i = 0; i < nsamples; i++) {
+        if (lincomb[i] < 0)
+            gradients_p[i] = exp(lincomb[i]) / (1 + exp(lincomb[i])) - std::round(y[i]);
+        else
+            gradients_p[i] = 1 / (1 + exp(-lincomb[i])) - std::round(y[i]);
+        sum_of_gradients += gradients_p[i];
+    }
+
+    da_blas::cblas_gemv(CblasColMajor, CblasTrans, nsamples, nfeat, 1.0, data->X,
+                        nsamples, gradients_p.data(), 1, 1.0, grad, 1);
+
+    if (data->intercept) {
+        grad[n - 1] = sum_of_gradients;
+    }
+    // Add regularization (exclude intercept)
+    reggrd(nfeat, x, data->l1reg, data->l2reg, grad);
+
+    return 0;
+}
+
+template <typename T>
+da_int objfun_logistic_ssc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
+
+    // All data related to the regression problem is stored in the udata pointer
+    // multinomial problem with K (nclass) classes (indexed in [0, K-1]), nfeat features and nsamples samples.
+    // x is of size (nfeat+itpt)*(K)
+    // where itpt is 1 if the intercept is required and 0 otherwise
+    // with nmod = (nfeat+itpt), the parameters corresponding to the class k (k in 0,..,K-1)
+
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)udata;
+    std::vector<T> &maxexp = data->maxexp;
+    std::vector<T> &sumexp = data->sumexp;
+    std::vector<T> &lincomb = data->lincomb;
+    T *lincomb_ptr = data->lincomb.data();
+    const T *y = data->y;
+    da_int nclass = data->nclass;
+    da_int nfeat = data->nfeat;
+    da_int nsamples = data->nsamples;
+    da_int nmod = data->intercept ? nfeat + 1 : nfeat;
+
+    // lincomb is of size nsamples*nclass
+    // Store in lincomb[:,k] the Beta_k^T * x for the nsamples samples in the input matrix
+    // Store in maxexp the max of lincomb for each sample
+    *f = 0;
+    std::fill(maxexp.begin(), maxexp.end(), 0.);
+    std::fill(sumexp.begin(), sumexp.end(), 0.);
+    if (data->intercept) {
+        for (da_int k = 0; k < nclass; k++) {
+            std::fill(lincomb.begin() + k * nsamples,
+                      lincomb.begin() + (k + 1) * nsamples, x[n - (nclass - k)]);
+        }
+    } else {
+        std::fill(lincomb.begin(), lincomb.end(), 0.);
+    }
+
+    // Calculate licomb as X * Beta + Beta_0
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, nsamples, nclass, nfeat,
+                        1.0, data->X, nsamples, x, nclass, 1.0, lincomb_ptr, nsamples);
+
+    // look at private and shared variables
+    // #pragma omp parallel for
+    for (da_int i = 0; i < nsamples; i++) {
+        for (da_int k = 0; k < nclass; k++) {
+            // Find maxexp
+            if (maxexp[i] < lincomb[k * nsamples + i]) {
+                maxexp[i] = lincomb[k * nsamples + i];
+            }
+            // Substract the residual of correct class
+            if (std::round(y[i]) == k)
+                // #pragma omp atomic update
+                *f -= lincomb[k * nsamples + i];
+        }
+        // Compute for each sample i ln(sum_{k=0}^{K-1} exp(lincomb[i][k]))
+        // use logsumexp trick to avoid overflow
+        sumexp[i] = 0;
+        for (da_int k = 0; k < nclass; k++) {
+            sumexp[i] += exp(lincomb[k * nsamples + i] - maxexp[i]);
+        }
+        // #pragma omp atomic update
+        *f += maxexp[i] + log(sumexp[i]);
+    }
+
+    // Add regularization (exclude intercept)
+    *f += regfun(nfeat * nclass, x, data->l1reg, data->l2reg);
+
+    return 0;
+}
+
+template <typename T>
+da_int objgrd_logistic_ssc(da_int n, T *x, T *grad, void *udata,
+                           [[maybe_unused]] da_int xnew) {
+
+    cb_usrdata_logreg<T> *data = (cb_usrdata_logreg<T> *)udata;
+    std::vector<T> &maxexp = data->maxexp;
+    std::vector<T> &sumexp = data->sumexp;
+    std::vector<T> &gradients_p = data->gradients_p;
+    const T *y = data->y;
+    std::vector<T> &lincomb = data->lincomb;
+    T *lincomb_ptr = data->lincomb.data();
+    da_int nsamples = data->nsamples;
+    const T *X = data->X;
+    da_int idc = data->intercept ? 1 : 0;
+    da_int nclass = data->nclass;
+    da_int nfeat = data->nfeat;
+    da_int nmod = data->intercept ? data->nfeat + 1 : data->nfeat;
+
+    if (xnew) {
+        std::fill(maxexp.begin(), maxexp.end(), 0.);
+        if (data->intercept) {
+            for (da_int k = 0; k < nclass; k++) {
+                std::fill(lincomb.begin() + k * nsamples,
+                          lincomb.begin() + (k + 1) * nsamples, x[n - (nclass - k)]);
+            }
+        } else {
+            std::fill(lincomb.begin(), lincomb.end(), 0.);
+        }
+        // Calculate licomb as X * Beta + Beta_0
+        da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, nsamples, nclass,
+                            nfeat, 1.0, data->X, nsamples, x, nclass, 1.0, lincomb_ptr,
+                            nsamples);
+        for (da_int i = 0; i < nsamples; i++) {
+            for (da_int k = 0; k < nclass; k++) {
+                // Find maxexp
+                if (maxexp[i] < lincomb[k * nsamples + i]) {
+                    maxexp[i] = lincomb[k * nsamples + i];
+                }
+            }
+            // Compute sumexp
+            sumexp[i] = exp(-maxexp[i]);
+            for (da_int k = 0; k < nclass; k++) {
+                sumexp[i] += exp(lincomb[k * nsamples + i] - maxexp[i]);
+            }
+        }
+    }
+
+    // compute for all samples i and all variables j with k being the class of sample i:
+    // A_ij * (prob(x_i=k|Beta) - indicator(i, k))
+    std::fill(grad, grad + n, 0);
+    for (da_int i = 0; i < nsamples; i++) {
+        // sumexp[i] = maxexp[i] + log(sumexp[i]);
+        for (da_int k = 0; k < nclass; k++) {
+            gradients_p[k * nsamples + i] =
+                exp(lincomb[k * nsamples + i] - maxexp[i]) / sumexp[i];
+            if (std::round(y[i]) == k)
+                gradients_p[k * nsamples + i] -= 1;
+        }
+    }
+    da_blas::cblas_gemm(CblasColMajor, CblasTrans, CblasNoTrans, nclass, nfeat, nsamples,
+                        1.0, gradients_p.data(), nsamples, data->X, nsamples, 0.0, grad,
+                        nclass);
+    if (data->intercept) {
+        for (da_int i = 0; i < nclass; i++) {
+            T sum = 0;
+            for (da_int j = 0; j < nsamples; j++)
+                sum += gradients_p[j + i * nsamples];
+            grad[n - (nclass - i)] = sum;
+        }
+    }
+    // Add regularization (exclude intercept)
+    reggrd(nfeat * nclass, x, data->l1reg, data->l2reg, grad);
 
     return 0;
 }

@@ -152,6 +152,21 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
              {"centering", scaling_t::centering}},
             "auto"));
         opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "logistic constraint",
+            "Affects only multinomial logistic regression. Type of constraint put on "
+            "coefficients. This will affect number of coefficients returned. RSC - means "
+            "we choose a reference catergory whose coefficients will be set to all 0. "
+            "This results in K-1 class coefficients for K class problems. SSC - means "
+            "the sum of coefficients class-wise for each feature is 0. It will result in "
+            "K class coefficients for K class problem.",
+            {{"rsc", logistic_constraint::rsc},
+             {"reference category", logistic_constraint::rsc},
+             {"ssc", logistic_constraint::ssc},
+             {"symmetric side", logistic_constraint::ssc},
+             {"symmetric", logistic_constraint::ssc}},
+            "ssc"));
+        opts.register_opt(os);
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     } catch (...) {                    // LCOV_EXCL_LINE

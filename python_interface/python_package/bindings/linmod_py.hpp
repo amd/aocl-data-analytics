@@ -44,12 +44,13 @@ class linmod : public pyda_handle {
     da_int n_samples, n_feat, n_class;
     bool intercept;
     linmod_model mod_enum;
+    std::string logreg_constraint_str;
 
   public:
     linmod(std::string mod, std::optional<da_int> max_iter, bool intercept = false,
            std::string solver = "auto", std::string scaling = "auto",
-           std::string prec = "double")
-        : intercept(intercept) {
+           std::string constraint = "ssc", std::string prec = "double")
+        : intercept(intercept), logreg_constraint_str(constraint) {
         da_status status;
         if (mod == "mse") {
             mod_enum = linmod_model_mse;
@@ -73,6 +74,8 @@ class linmod : public pyda_handle {
         status = da_options_set_string(handle, "optim method", solver.c_str());
         exception_check(status);
         status = da_options_set_string(handle, "scaling", scaling.c_str());
+        exception_check(status);
+        status = da_options_set_string(handle, "logistic constraint", constraint.c_str());
         exception_check(status);
         if (max_iter.has_value()) {
             status =
@@ -151,9 +154,18 @@ class linmod : public pyda_handle {
             dim = intercept ? n_feat + 1 : n_feat;
             break;
         case linmod_model_logistic:
-            dim = (n_class - 1) * n_feat;
-            if (intercept)
-                dim += n_class - 1;
+            if (logreg_constraint_str == "rsc" ||
+                logreg_constraint_str == "reference category" || n_class == 2) {
+                dim = (n_class - 1) * n_feat;
+                if (intercept)
+                    dim += n_class - 1;
+            } else if (logreg_constraint_str == "ssc" ||
+                       logreg_constraint_str == "symmetric side" ||
+                       logreg_constraint_str == "symmetric") {
+                dim = n_class * n_feat;
+                if (intercept)
+                    dim += n_class;
+            }
             break;
         }
         // define the output vector

@@ -234,8 +234,7 @@ def test_logistic(intercept, precision):
     assert not hasattr(lg, 'aocl')
 
     # Check results
-    # TODO: investigate reason for multiplying by -1, also sklearn returns array of arrays hence need to access [0]
-    assert da_coef == pytest.approx(coef[0]*-1, 1.0e-01)
+    assert da_coef == pytest.approx(coef, 1.0e-01)
 
     # print the results if pytest is invoked with the -rA option
     print("coefficients")

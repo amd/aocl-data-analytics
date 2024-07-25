@@ -55,6 +55,20 @@ enum scaling_t : da_int {
     standardize,
     centering,
 };
+
+/* Affects only multinomial logistic regression. Type of constraint put on coefficients. 
+   This will affect number of coefficients returned. RSC - means we choose a 
+   reference catergory whose coefficients will be set to all 0. This results 
+   in K-1 class coefficients for K class problem. SSC - sum of coefficients
+   class-wise for each feature is 0. It will result in K class coefficients
+   for K class problem.
+   https://epub.ub.uni-muenchen.de/11001/1/tr067.pdf
+   */
+enum logistic_constraint {
+    no = 0,
+    rsc = 1, // Reference category constraint
+    ssc = 2, // Symmetric side constraint
+};
 } // namespace da_linmod
 
 #endif //LINMOD_TYPES_HPP

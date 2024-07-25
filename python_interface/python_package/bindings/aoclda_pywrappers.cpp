@@ -145,10 +145,11 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
         .def(py::init<std::string, std::optional<da_int>, bool, std::string, std::string,
-                      std::string &>(),
+                      std::string, std::string &>(),
              py::arg("mod"), py::arg("max_iter") = py::none(),
              py::arg("intercept") = false, py::arg("solver") = "auto",
-             py::arg("scaling") = "auto", py::arg("precision") = "double")
+             py::arg("scaling") = "auto", py::arg("constraint") = "ssc",
+             py::arg("precision") = "double")
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
              py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,

@@ -81,6 +81,17 @@ class linmod(pybind_linmod):
             solvers: 'sparse_cg', 'coord', 'lbfgs'. Default value depends on a solver. For \
             'sparse_cg' it is 500, for 'lbfgs' and 'coord' it is 10000.
 
+        constraint (str, optional): Affects only multinomial logistic regression. \
+            Type of constraint put on coefficients. This will affect number of \
+            coefficients returned. 
+
+            - ``'rsc'`` means we choose a reference catergory whose coefficients \
+                will be set to all 0. This results in K-1 class coefficients for K \
+                class problems. 
+            
+            - ``'ssc'`` means the sum of coefficients class-wise for each feature \
+                is 0. It will result in K class coefficients for K class problems.
+
         precision (str, optional): Whether to compute the linear model in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
@@ -94,12 +105,14 @@ class linmod(pybind_linmod):
                  solver='auto',
                  scaling='auto',
                  max_iter=None,
+                 constraint='ssc',
                  precision='double'):
         super().__init__(mod=mod,
                          max_iter=max_iter,
                          intercept=intercept,
                          solver=solver,
                          scaling=scaling,
+                         constraint=constraint,
                          precision=precision)
 
     def fit(self,
@@ -133,14 +146,18 @@ class linmod(pybind_linmod):
 
             progress_factor (float, optional): Applies only to 'lbfgs' and 'coord' solver. \
                 Factor used to detect convergence of the iterative optimization step.
+
+        Returns:
+            self (object): Returns the instance itself.
         """
-        return self.pybind_fit(X,
-                               y,
-                               x0=x0,
-                               progress_factor=progress_factor,
-                               reg_lambda=reg_lambda,
-                               reg_alpha=reg_alpha,
-                               tol=tol)
+        self.pybind_fit(X,
+                        y,
+                        x0=x0,
+                        progress_factor=progress_factor,
+                        reg_lambda=reg_lambda,
+                        reg_alpha=reg_alpha,
+                        tol=tol)
+        return self
 
     def predict(self, X):
         """

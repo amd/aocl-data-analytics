@@ -28,7 +28,7 @@ Patching scikit learn linear models: LinearRegression, Ridge, Lasso
 # pylint: disable = super-init-not-called, too-many-ancestors, missing-function-docstring, useless-return
 
 import warnings
-from numpy import ndarray, unique
+import numpy as np
 from sklearn.linear_model import LinearRegression as LinearRegression_sklearn
 from sklearn.linear_model import Ridge as Ridge_sklearn
 from sklearn.linear_model import Lasso as Lasso_sklearn
@@ -82,7 +82,7 @@ class LinearRegression(LinearRegression_sklearn):
         self.lmod.fit(X, y)
         return self
 
-    def predict(self, X) -> ndarray:
+    def predict(self, X) -> np.ndarray:
         return self.lmod.predict(X)
 
     def get_metadata_routing(self):
@@ -211,7 +211,7 @@ class Ridge(Ridge_sklearn):
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=0.0, tol=self.tol)
         return self
 
-    def predict(self, X) -> ndarray:
+    def predict(self, X) -> np.ndarray:
         return self.lmod.predict(X)
 
     def get_metadata_routing(self):
@@ -341,7 +341,7 @@ class Lasso(Lasso_sklearn):
         self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=1.0, tol=self.tol)
         return self
 
-    def predict(self, X) -> ndarray:
+    def predict(self, X) -> np.ndarray:
         return self.lmod.predict(X)
 
     def get_metadata_routing(self):
@@ -487,7 +487,7 @@ class ElasticNet(ElasticNet_sklearn):
                       tol=self.tol)
         return self
 
-    def predict(self, X) -> ndarray:
+    def predict(self, X) -> np.ndarray:
         return self.lmod.predict(X)
 
     def get_metadata_routing(self):
@@ -589,7 +589,8 @@ class LogisticRegression(LogisticRegression_sklearn):
         warm_start=False,
         n_jobs=None,
         l1_ratio=0.0,
-        progress_factor=None
+        progress_factor=None,
+        constraint="ssc"
     ):
         # supported attributes
         self.tol = tol
@@ -646,7 +647,7 @@ class LogisticRegression(LogisticRegression_sklearn):
             warnings.warn(
                 "random_state argument is not supported and will be ignored")
 
-        if self.n_jobs != None:
+        if self.n_jobs is not None:
             warnings.warn(
                 "n_jobs argument is not supported and will be ignored")
 
@@ -654,24 +655,32 @@ class LogisticRegression(LogisticRegression_sklearn):
         self.aocl = True
         self.intercept_val = None
         self.progress_factor = progress_factor
-        self.reg_lambda = 1/self.C
+        self.constraint = constraint
+        if self.penalty == 'l2':
+            self.reg_lambda = 1/self.C
+        elif self.penalty is None:
+            self.reg_lambda = 0
+        self.n_class = None
 
         # Initialize aoclda object
         self.lmod_double = linmod_da("logistic",
                                      intercept=self.fit_intercept,
                                      max_iter=self.max_iter,
+                                     constraint=self.constraint,
                                      precision="double")
         self.lmod_single = linmod_da("logistic",
                                      intercept=self.fit_intercept,
                                      max_iter=self.max_iter,
+                                     constraint=self.constraint,
                                      precision="single")
         self.lmod = self.lmod_double
 
     def fit(self, X, y, sample_weight=None, check_input=True):
-        if len(unique(y)) > 2:
-            raise ValueError("Multi class is currently not supported")
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
+        self.n_class = len(np.unique(y))
+        if self.n_class == 2:
+            self.n_class = 1
         # If data matrix is in single precision switch internally
         if X.dtype == "float32":
             self.precision = "single"
@@ -685,7 +694,7 @@ class LogisticRegression(LogisticRegression_sklearn):
                       progress_factor=self.progress_factor)
         return self
 
-    def predict(self, X) -> ndarray:
+    def predict(self, X) -> np.ndarray:
         return self.lmod.predict(X)
 
     def decision_fuction(self, X):
@@ -724,22 +733,39 @@ class LogisticRegression(LogisticRegression_sklearn):
     @property
     def coef_(self):
         coef = self.lmod.get_coef()
-        if self.fit_intercept:
-            if self.intercept_val is None:
-                self.intercept_val = coef[-1]
-            return coef[:-1]
-        else:
-            return coef
+        # We are returning a ndarray of shape (n_class-1, n_feat)
+        if self.constraint == 'rsc':
+            if self.fit_intercept:
+                if self.intercept_val is None:
+                    self.intercept_val = coef[-(self.n_class-1):]
+                return np.reshape(coef[:-(self.n_class-1)], (self.n_class-1, -1), order="F")
+            return np.reshape(coef, (self.n_class-1, -1), order="F")
+        # We are returning a ndarray of shape (n_class, n_feat)
+        elif self.constraint == 'ssc':
+            if self.fit_intercept:
+                if self.intercept_val is None:
+                    self.intercept_val = coef[-self.n_class:]
+                return np.reshape(coef[:-self.n_class], (self.n_class, -1), order="F")
+            return np.reshape(coef, (self.n_class, -1), order="F")
 
     @property
     def intercept_(self):
-        if self.fit_intercept:
-            if self.intercept_val is None:
-                coef = self.lmod.get_coef()
-                self.intercept_val = coef[-1]
-            return self.intercept_val
-        else:
-            return 0.0
+        if self.constraint == 'rsc':
+            if self.fit_intercept:
+                if self.intercept_val is None:
+                    coef = self.lmod.get_coef()
+                    self.intercept_val = coef[-(self.n_class-1):]
+                return self.intercept_val
+            else:
+                return np.zeros(self.n_class-1)
+        elif self.constraint == 'ssc':
+            if self.fit_intercept:
+                if self.intercept_val is None:
+                    coef = self.lmod.get_coef()
+                    self.intercept_val = coef[-self.n_class:]
+                return self.intercept_val
+            else:
+                return np.zeros(self.n_class)
 
     @property
     def n_features_in_(self):

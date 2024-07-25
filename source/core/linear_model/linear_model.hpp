@@ -79,6 +79,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     /* type of the model, has to de set at initialization phase */
     linmod_model mod = linmod_model_undefined;
     da_int method_id = linmod_method::undefined;
+    logistic_constraint logistic_constraint_model = logistic_constraint::no;
 
     /* pointer to error trace */
     da_errors::da_error_t *err = nullptr;
@@ -604,7 +605,7 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
     T alpha = 1.0, beta = 0.0;
     T aux;
     da_int nmod;
-    std::vector<T> log_proba(0);
+    std::vector<T> log_proba(0), scores(0);
     switch (mod) {
     case linmod_model_mse:
         // Call loss_mse
@@ -619,38 +620,73 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
         nmod = intercept ? nfeat + 1 : nfeat;
         try {
             log_proba.resize(nsamples * nclass, 0);
+            if (nclass == 2)
+                scores.resize(nsamples, 0);
+            else
+                scores.resize(nsamples * nclass, 0);
+
         } catch (std::bad_alloc const &) {
             return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
         std::fill(predictions, predictions + nsamples, T(0));
         //FIXME: move this to nln_optim header
-        std::fill(log_proba.begin() + nsamples * (nclass - 1), log_proba.end(), T(1));
-        for (da_int k = 0; k < nclass - 1; k++) {
-            da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, nfeat, alpha, X,
-                                nsamples, &coef[k * nmod], 1, beta,
-                                &log_proba[k * nsamples], 1);
-            if (intercept) {
+        if (nclass == 2) {
+            eval_feature_matrix(nmod, this->coef.data(), nsamples, X, scores.data(),
+                                this->intercept, false);
+            for (da_int i = 0; i < nsamples; i++)
+                scores[i] > 0 ? predictions[i] = 1 : predictions[i] = 0;
+        } else if (logistic_constraint_model == logistic_constraint::rsc) {
+            std::fill(log_proba.begin() + nsamples * (nclass - 1), log_proba.end(), T(1));
+            for (da_int k = 0; k < nclass - 1; k++) {
+                da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, nfeat, alpha,
+                                    X, nsamples, &coef[k * nmod], 1, beta,
+                                    &log_proba[k * nsamples], 1);
+                if (intercept) {
+                    for (i = 0; i < nsamples; i++)
+                        log_proba[k * nsamples + i] += coef[(k + 1) * nmod - 1];
+                }
                 for (i = 0; i < nsamples; i++)
-                    log_proba[k * nsamples + i] += coef[(k + 1) * nmod - 1];
+                    log_proba[k * nsamples + i] = exp(log_proba[k * nsamples + i]);
             }
-            for (i = 0; i < nsamples; i++)
-                log_proba[k * nsamples + i] = exp(log_proba[k * nsamples + i]);
-        }
-        for (i = 0; i < nsamples; i++) {
-            aux = 0;
-            for (da_int k = 0; k < nclass; k++) {
-                aux += log_proba[k * nsamples + i];
+            for (i = 0; i < nsamples; i++) {
+                aux = 0;
+                for (da_int k = 0; k < nclass; k++) {
+                    aux += log_proba[k * nsamples + i];
+                }
+                for (da_int k = 0; k < nclass; k++)
+                    log_proba[k * nsamples + i] /= aux;
             }
-            for (da_int k = 0; k < nclass; k++)
-                log_proba[k * nsamples + i] /= aux;
-        }
-        for (i = 0; i < nsamples; i++) {
-            aux = 0.0;
-            for (da_int k = 0; k < nclass; k++) {
-                if (log_proba[k * nsamples + i] > aux) {
-                    aux = log_proba[k * nsamples + i];
-                    predictions[i] = (T)k;
+            for (i = 0; i < nsamples; i++) {
+                aux = 0.0;
+                for (da_int k = 0; k < nclass; k++) {
+                    if (log_proba[k * nsamples + i] > aux) {
+                        aux = log_proba[k * nsamples + i];
+                        predictions[i] = (T)k;
+                    }
+                }
+            }
+        } else if (logistic_constraint_model == logistic_constraint::ssc) {
+            // Add the intercept at this stage so that no need to loop later
+            if (intercept) {
+                for (da_int k = 0; k < nclass; k++) {
+                    std::fill(scores.begin() + k * nsamples,
+                              scores.begin() + (k + 1) * nsamples,
+                              coef[ncoef - (nclass - k)]);
+                }
+            }
+            // Compute raw prediction = X*beta^T+intercept
+            da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, nsamples, nclass,
+                                nfeat, 1.0, X, nsamples, this->coef.data(), nclass, 1.0,
+                                scores.data(), nsamples);
+            // Iterate over predictions to pick argmax between each class
+            for (da_int i = 0; i < nsamples; i++) {
+                aux = 0.0;
+                for (da_int k = 0; k < nclass; k++) {
+                    if (scores[k * nsamples + i] > aux) {
+                        aux = scores[k * nsamples + i];
+                        predictions[i] = (T)k;
+                    }
                 }
             }
         }
@@ -670,8 +706,8 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     if (model_trained)
         return da_status_success;
 
-    da_int prn, intercept_int, scalingint, dbg{0};
-    std::string val, method, scalingstr;
+    da_int prn, intercept_int, scalingint, logistic_constraint_int, dbg{0};
+    std::string val, method, scalingstr, logistic_constraint_str;
     da_status status;
     auto clock = std::chrono::system_clock::now();
 
@@ -917,15 +953,34 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         break;
 
     case linmod_model_logistic:
-
+        // Get option determining if the output will have K classes or K-1 classes
+        if (opts.get("logistic constraint", logistic_constraint_str,
+                     logistic_constraint_int) != da_status_success) {
+            return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "Unexpectedly <logistic constraint> option not "
+                            "found in the linear model "
+                            "option registry.");
+        }
+        logistic_constraint_model = logistic_constraint(logistic_constraint_int);
         // y rhs is assumed to only contain values from 0 to K-1 (K being the number of classes)
         nclass = (da_int)(std::round(*std::max_element(y, y + nsamples)) + 1);
+        // Check for invalid values
         if (nclass < 2)
             return da_error(this->err, da_status_invalid_input,
                             "This solver needs at least two classes.");
-        ncoef = (nclass - 1) * nfeat;
-        if (intercept)
-            ncoef += nclass - 1;
+        if (logistic_constraint_model == logistic_constraint::rsc || nclass == 2) {
+            ncoef = (nclass - 1) * nfeat;
+            if (intercept)
+                ncoef += nclass - 1;
+        } else if (logistic_constraint_model == logistic_constraint::ssc) {
+            ncoef = nclass * nfeat;
+            if (intercept)
+                ncoef += nclass;
+        } else {
+            return da_error( // LCOV_EXCL_LINE
+                err, da_status_internal_error,
+                "Unexpectedly undefined logistic model constraint was requested.");
+        }
         copycoefs = (coefs != nullptr) && (usr_ncoefs >= ncoef);
 
         try {
@@ -1034,24 +1089,45 @@ template <class T> da_status linear_model<T>::fit_linreg_lbfgs() {
 /* fit a logistic regression model with the lbfgs method */
 template <class T> da_status linear_model<T>::fit_logreg_lbfgs() {
     da_status status = da_status_success;
+    da_int
+        nparam; // Only used to determine size of lincomb array in cb_usrdata_logreg constructor
+    objfun_t<T> l_func;
+    objgrd_t<T> g_func;
     status = init_opt_method(linmod_method::lbfgsb);
     if (status != da_status_success) {
         return status; // Error message already loaded
     }
+    if (nclass == 2) {
+        nparam = 1;
+        l_func = objfun_logistic_two_class<T>;
+        g_func = objgrd_logistic_two_class<T>;
+    } else if (logistic_constraint_model == logistic_constraint::rsc) {
+        nparam = nclass - 1;
+        l_func = objfun_logistic_rsc<T>;
+        g_func = objgrd_logistic_rsc<T>;
+    } else if (logistic_constraint_model == logistic_constraint::ssc) {
+        nparam = nclass;
+        l_func = objfun_logistic_ssc<T>;
+        g_func = objgrd_logistic_ssc<T>;
+    } else {
+        return da_error(
+            err, da_status_internal_error, // LCOV_EXCL_LINE
+            "Unexpectedly undefined logistic model constraint was requested.");
+    }
     try {
         udata = new cb_usrdata_logreg<T>(X, y, nsamples, nfeat, intercept, lambda, alpha,
-                                         nclass);
+                                         nclass, nparam);
     } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
 
-    if (opt->add_objfun(objfun_logistic<T>) != da_status_success) {
+    if (opt->add_objfun(l_func) != da_status_success) {
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly linear model provided an invalid objective "
                         "function pointer.");
     }
-    if (opt->add_objgrd(objgrd_logistic<T>) != da_status_success) {
+    if (opt->add_objgrd(g_func) != da_status_success) {
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly linear model provided an invalid objective "
                         "gradient function pointer.");
