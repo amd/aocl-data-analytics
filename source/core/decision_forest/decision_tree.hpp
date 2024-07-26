@@ -106,9 +106,9 @@ template <class T>
 T gini_score(da_int n_samples, da_int n_class, std::vector<da_int> &count_classes) {
     T score = 0.0;
     for (da_int c = 0; c < n_class; c++) {
-        score += count_classes[c] * count_classes[c];
+        score += (T)count_classes[c] * (T)count_classes[c];
     }
-    score = (T)1.0 - score / (n_samples * n_samples);
+    score = (T)1.0 - score / ((T)n_samples * (T)n_samples);
     return score;
 }
 
@@ -415,7 +415,6 @@ void decision_tree<T>::count_class_occurences(std::vector<da_int> &class_occ,
  */
 template <class T>
 da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
-
                                      da_int split_idx) {
 
     da_status status = da_status_success;

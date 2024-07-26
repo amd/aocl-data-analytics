@@ -121,7 +121,7 @@ class decision_tree : public pyda_handle {
         da_status status;
         da_int n_samples = X.shape()[0], n_features = X.shape()[1];
         size_t shape[1]{(size_t)n_samples};
-        size_t strides[1]{sizeof(T)};
+        size_t strides[1]{sizeof(da_int)};
         auto predictions = py::array_t<da_int>(shape, strides);
         status = da_tree_predict(handle, n_samples, n_features, X.mutable_data(),
                                  n_samples, predictions.mutable_data());
@@ -320,7 +320,7 @@ class decision_forest : public pyda_handle {
         da_status status;
         da_int n_samples = X.shape()[0], n_features = X.shape()[1];
         size_t shape[1]{(size_t)n_samples};
-        size_t strides[1]{sizeof(T)};
+        size_t strides[1]{sizeof(da_int)};
         auto predictions = py::array_t<da_int>(shape, strides);
         status = da_forest_predict(handle, n_samples, n_features, X.mutable_data(),
                                    n_samples, predictions.mutable_data());
