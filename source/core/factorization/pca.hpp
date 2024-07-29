@@ -695,7 +695,8 @@ template <typename T> da_status da_pca<T>::compute() {
 
         // Allocate the workspace required
         lwork = (da_int)estworkspace[0];
-        liwork = estiworkspace[0];
+        // a bug sometimes occurs with 64 bits integers: Add explicit estimations
+        liwork = 5 * p + 3; // estiworkspace[0];
         try {
             work.resize(lwork);
             iwork.resize(liwork);
