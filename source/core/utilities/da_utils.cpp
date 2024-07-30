@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,29 +25,26 @@
  *
  */
 
-#ifndef DECISION_TREE_TYPES
-#define DECISION_TREE_TYPES
+#include "da_utils.hpp"
+#include "aoclda.h"
+#include "da_omp.hpp"
+#include <algorithm>
 
-#define DF_BLOCK_SIZE da_int(256)
+namespace da_utils {
+void blocking_scheme(da_int n_samples, da_int block_size, da_int &n_blocks,
+                     da_int &block_rem) {
+    n_blocks = n_samples / block_size;
+    block_rem = n_samples % block_size;
+    // Count the remainder in the number of blocks
+    if (block_rem > 0)
+        n_blocks += 1;
+}
 
-namespace da_decision_tree {
-enum score_method {
-    gini = 0,
-    cross_entropy,
-    misclassification,
-};
+/* Return the number of threads use in a parallel region containing a loop*/
+da_int get_n_threads_loop(da_int loop_size) {
+    if (omp_get_max_active_levels() == omp_get_level())
+        return (da_int)1;
 
-enum tree_order {
-    depth_first = 0,
-    breadth_first,
-};
-
-enum feat_selection {
-    all = 0,
-    sqrt,
-    log2,
-    custom,
-};
-} // namespace da_decision_tree
-
-#endif
+    return std::min((da_int)omp_get_max_threads(), loop_size);
+}
+} // namespace da_utils

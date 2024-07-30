@@ -392,6 +392,15 @@ const forest_param_t forest_param_pos[] = {
         {{"number of trees", 25}, {"maximum depth", 20}, {"seed", 42}, {"maximum features", 7}},
         {{"scoring function", "gini"}}, {}, {}, 0.9},
 
+    // Test parallel inference
+    {"inference_1_block", "gen_200x10_3class", {{"number of trees", 25},
+        {"seed", 42}, {"block size", 400}}, {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
+    {"inference_2_blocks", "gen_200x10_3class", {{"number of trees", 25},
+        {"seed", 42}, {"block size", 200}}, {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
+    {"inference_400_blocks", "gen_200x10_3class", {{"number of trees", 25},
+        {"seed", 42}, {"block size", 1}}, {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
+    {"inference_37_blocks", "gen_200x10_3class", {{"number of trees", 25},
+        {"seed", 42}, {"block size", 37}}, {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
 
 };
 // clang-format on

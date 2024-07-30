@@ -136,6 +136,11 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
             0.0, lbound_t::greaterequal, rmax, ubound_t::p_inf, (T)0.03));
         status = opts.register_opt(oT);
 
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "block size", "Set the size of the blocks for parallel computations.", 1,
+            lbound_t::greaterequal, max_da_int, ubound_t::lessequal, DF_BLOCK_SIZE));
+        status = opts.register_opt(oi);
+
         // os = std::make_shared<OptionString>(
         //     OptionString("print timings",
         //                  "Print the timings of different parts of the fitting process.",

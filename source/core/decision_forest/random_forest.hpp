@@ -31,9 +31,9 @@
 #include "aoclda.h"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_utils.hpp"
 #include "decision_tree.hpp"
 #include "random_forest_options.hpp"
-// #include <memory>
 
 namespace da_random_forest {
 using namespace da_decision_tree;
@@ -58,6 +58,7 @@ template <typename T> class random_forest : public basic_handle<T> {
     // options
     da_int n_tree = 0;
     da_int seed, n_obs;
+    da_int block_size;
 
     // model data
     std::vector<std::unique_ptr<decision_tree<T>>> forest;
@@ -72,6 +73,11 @@ template <typename T> class random_forest : public basic_handle<T> {
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
                                 da_int ldx, const da_int *y, da_int n_class = 0);
     da_status fit();
+    void parallel_count_classes(const T *X_test, da_int ldx_test, const da_int &n_blocks,
+                                const da_int &block_size, const da_int &block_rem,
+                                const da_int &n_threads,
+                                std::vector<da_int> &count_classes,
+                                std::vector<da_int> &y_pred_tree);
     da_status predict(da_int nn_samples, da_int n_features, const T *X, da_int ldx,
                       da_int *y_pred);
     da_status predict_proba(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test,
@@ -181,6 +187,7 @@ template <typename T> da_status random_forest<T>::fit() {
         opts.get("minimum split improvement", min_improvement) == da_status_success;
     opt_pass &= opts.get("bootstrap", opt_val, bootstrap_opt) == da_status_success;
     opt_pass &= opts.get("bootstrap samples factor", prop) == da_status_success;
+    opt_pass &= opts.get("block size", block_size) == da_status_success;
     if (!opt_pass)
         return da_error_trace(err, da_status_internal_error, // LCOV_EXCL_LINE
                               "Unexpected error while reading the optional parameters.");
@@ -271,6 +278,35 @@ template <typename T> da_status random_forest<T>::fit() {
 }
 
 template <typename T>
+void random_forest<T>::parallel_count_classes(
+    const T *X_test, da_int ldx_test, const da_int &n_blocks, const da_int &block_size,
+    const da_int &block_rem, const da_int &n_threads, std::vector<da_int> &count_classes,
+    std::vector<da_int> &y_pred_tree) {
+
+#pragma omp parallel for collapse(2)                                                     \
+    shared(n_blocks, forest, y_pred_tree, n_features, X_test, ldx_test, count_classes,   \
+               block_rem, block_size) default(none)
+    for (da_int i_block = 0; i_block < n_blocks; i_block++) {
+        for (auto &tree : forest) {
+            da_int start_idx = i_block * block_size;
+            da_int thread_id = (da_int)omp_get_thread_num();
+            da_int start_pred_idx = thread_id * block_size;
+            da_int n_elem = block_size;
+            if (i_block == n_blocks - 1 && block_rem > 0) {
+                n_elem = block_rem;
+            }
+            tree->predict(n_elem, n_features, &X_test[start_idx], ldx_test,
+                          &(y_pred_tree.data()[start_pred_idx]));
+            for (da_int i = 0; i < n_elem; i++) {
+                da_int c = y_pred_tree[start_pred_idx + i];
+#pragma omp atomic update
+                count_classes[(start_idx + i) * n_class + c] += 1;
+            }
+        }
+    }
+}
+
+template <typename T>
 da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                                     da_int ldx_test, da_int *y_pred) {
     if (X_test == nullptr || y_pred == nullptr) {
@@ -302,27 +338,28 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                         "associated with is out of date.");
     }
 
+    if (opts.get("block size", block_size) != da_status_success)
+        return da_error_trace( // LCOV_EXCL_LINE
+            err, da_status_internal_error,
+            "Unexpected error while reading the optional parameter 'block size' .");
+
+    // Set up the parallel tasks and data. X is divided into blocks of small size
+    // evaluating 1 tree on one of X's blocks is considered an independent task that
+    // can be evaluated in parallel.
     std::vector<da_int> count_classes, y_pred_tree;
+    da_int n_blocks, block_rem;
+    da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
+    da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
+    // we need n_threads arrays of size block_size
     try {
-        count_classes.resize(n_class * nsamp);
-        y_pred_tree.resize(nsamp);
+        y_pred_tree.resize(n_threads * block_size);
+        count_classes.resize(n_class * nsamp, 0);
     } catch (std::bad_alloc const &) {               // LCOV_EXCL_LINE
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-
-    // #pragma omp parallel shared(count_classes, nsamp, nfeat, X_test, ldx_test) default(none)
-    {
-        // #pragma omp for schedule(dynamic)
-        for (auto &tree : forest) {
-            tree->predict(nsamp, nfeat, X_test, ldx_test, y_pred_tree.data());
-            for (da_int i = 0; i < nsamp; i++) {
-                da_int c = y_pred_tree[i];
-                // #pragma omp critical
-                { count_classes[i * n_class + c] += 1; }
-            }
-        }
-    }
+    parallel_count_classes(X_test, ldx_test, n_blocks, block_size, block_rem, n_threads,
+                           count_classes, y_pred_tree);
 
 #pragma omp parallel for shared(nsamp, n_class, y_pred, count_classes) default(none)
     for (da_int i = 0; i < nsamp; i++) {
@@ -470,30 +507,27 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
                         "The model has not yet been trained or the data it is "
                         "associated with is out of date.");
     }
+
+    if (opts.get("block size", block_size) != da_status_success)
+        return da_error_trace( // LCOV_EXCL_LINE
+            err, da_status_internal_error,
+            "Unexpected error while reading the optional parameter 'block size' .");
+
     std::vector<da_int> count_classes, y_pred_tree;
+    da_int n_blocks, block_rem;
+    da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
+    da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
+    // we need n_threads arrays of size block_size
     try {
-        count_classes.resize(n_class * nsamp);
-        y_pred_tree.resize(nsamp);
+        y_pred_tree.resize(n_threads * block_size);
+        count_classes.resize(n_class * nsamp, 0);
     } catch (std::bad_alloc const &) {               // LCOV_EXCL_LINE
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
+    parallel_count_classes(X_test, ldx_test, n_blocks, block_size, block_rem, n_threads,
+                           count_classes, y_pred_tree);
 
-    // Count the class predictions of each sample
-    // #pragma omp parallel shared(count_classes, nsamp, nfeat, X_test, ldx_test) default(none)
-    {
-        // #pragma omp for schedule(dynamic)
-        for (auto &tree : forest) {
-            tree->predict(nsamp, nfeat, X_test, ldx_test, y_pred_tree.data());
-            for (da_int i = 0; i < nsamp; i++) {
-                da_int c = y_pred_tree[i];
-                // #pragma omp critical
-                { count_classes[i * n_class + c] += 1; }
-            }
-        }
-    }
-
-    // For each sample
     *score = 0;
 #pragma omp parallel for shared(nsamp, n_class, y_test, count_classes,                   \
                                     score) default(none)
@@ -506,7 +540,7 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
             }
         }
         if (class_i == y_test[i]) {
-#pragma omp atomic
+#pragma omp atomic update
             (*score)++;
         }
     }

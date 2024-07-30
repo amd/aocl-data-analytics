@@ -39,6 +39,7 @@ set(DA_DATA
     core/data_management/data_store.cpp)
 set(DA_MISC core/utilities/miscellaneous.cpp)
 set(DA_METRICS core/metrics/pairwise_distances_public.cpp)
+set(DA_UTILS core/utilities/da_utils.cpp)
 
 set(DA_CORE_SRC
     ${LINMOD_SRC}
@@ -52,7 +53,8 @@ set(DA_CORE_SRC
     ${DA_DECISION_FOREST}
     ${NLLS_SRC}
     ${DA_MISC}
-    ${DA_METRICS})
+    ${DA_METRICS}
+    ${DA_UTILS})
 
 add_library(da_core OBJECT ${DA_CORE_SRC})
 target_include_directories(

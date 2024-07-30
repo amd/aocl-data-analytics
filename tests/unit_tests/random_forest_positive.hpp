@@ -148,6 +148,18 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_GT(accuracy, target_score);
     std::cout << "Accuracy on the test data: " << accuracy << std::endl;
 
+    // Check that the prediction finds the same score
+    std::vector<da_int> y_pred(nsamples);
+    EXPECT_EQ(da_forest_predict(forest_handle, nsamples, nfeat, X_test.data(), nsamples,
+                                y_pred.data()),
+              da_status_success);
+    da_int count_correct = 0;
+    for (da_int i = 0; i < nsamples; i++) {
+        if (y_pred[i] == y_test[i])
+            count_correct++;
+    }
+    EXPECT_NEAR((T)count_correct / (T)nsamples, accuracy, (T)1.0e-05);
+
     //////////////
     // Print rinfo
     //////////////

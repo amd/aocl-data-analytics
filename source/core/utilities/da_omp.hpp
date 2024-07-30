@@ -42,6 +42,7 @@ inline void omp_init_lock(omp_lock_t *lock) {};
 inline void omp_destroy_lock(omp_lock_t *lock) {};
 inline void omp_set_lock(omp_lock_t *lock) {};
 inline void omp_unset_lock(omp_lock_t *lock) {};
+inline void omp_set_num_threads(int num_threads) {};
 #endif
 
 #endif

@@ -52,6 +52,11 @@ constexpr da_status convert_num_to_char(T num, char character[U]) {
     return da_status_success;
 }
 
+void blocking_scheme(da_int n_samples, da_int block_size, da_int &n_blocks,
+                     da_int &block_rem);
+
+da_int get_n_threads_loop(da_int loop_size);
+
 } // namespace da_utils
 
 #endif
