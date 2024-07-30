@@ -186,7 +186,7 @@ TYPED_TEST(decision_tree_test, sort_samples) {
     decision_tree<TypeParam> df(err);
     df.set_training_data(data.n_samples_train, data.n_feat, data.X_train.data(),
                          data.n_samples_train, data.y_train.data(), 2);
-    EXPECT_EQ(df.opts.set("maximum depth", (da_int)1), da_status_success);
+    EXPECT_EQ(df.opts.set("maximum depth", (da_int)0), da_status_success);
     df.fit();
 
     // Create a node with all the samples
@@ -254,7 +254,7 @@ TYPED_TEST(decision_tree_test, individual_splits) {
     TypeParam tol = 1.0e-05;
 
     // Set maximum depth to 1 to only have 1 node.
-    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)1), da_status_success);
+    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)0), da_status_success);
     EXPECT_EQ(tree.opts.set("scoring function", "gini"), da_status_success);
     tree.fit();
     // Check that no nodes were added
@@ -262,7 +262,7 @@ TYPED_TEST(decision_tree_test, individual_splits) {
     EXPECT_EQ(tree.get_tree()[0].right_child_idx, -1);
 
     // Only one level of children
-    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)2), da_status_success);
+    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)1), da_status_success);
     tree.refresh();
     tree.fit();
     EXPECT_EQ(tree.get_tree()[0].left_child_idx, 2);
@@ -403,7 +403,7 @@ TYPED_TEST(decision_tree_test, get_results) {
                                      (TypeParam)data.n_samples_train,
                                      (TypeParam)data.n_samples_train,
                                      (TypeParam)seed,
-                                     (TypeParam)3,
+                                     (TypeParam)2,
                                      (TypeParam)5,
                                      (TypeParam)3};
     EXPECT_ARR_NEAR(7, rinfo, rinfo_exp, 1.0e-10);
@@ -600,7 +600,7 @@ TYPED_TEST(decision_tree_test, multiple_solve) {
     EXPECT_EQ(tree.fit(), da_status_success);
 
     // Change an option and solve again
-    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)3), da_status_success);
+    EXPECT_EQ(tree.opts.set("maximum depth", (da_int)2), da_status_success);
     tree.refresh(); // refressh is only called by the public interfaces
     EXPECT_EQ(tree.model_is_trained(), false);
     EXPECT_EQ(tree.fit(), da_status_success);
@@ -641,44 +641,44 @@ const dectree_param_t dectree_param_pos[] = {
 
 
     // maximum splits
-    {"gen_200x10_maxsplit", "gen_200x10_3class", {{"maximum depth", 20}}, {{"scoring function", "gini"}},
+    {"gen_200x10_maxsplit", "gen_200x10_3class", {{"maximum depth", 19}}, {{"scoring function", "gini"}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}}, 0.9},
-    {"gen_500x20_maxsplit", "gen_500x20_4class", {{"maximum depth", 20}}, {{"scoring function", "misclass"}},
+    {"gen_500x20_maxsplit", "gen_500x20_4class", {{"maximum depth", 19}}, {{"scoring function", "misclass"}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}}, 0.88},
 
     // Test identical train and test sets
-    {"overfit_gini", "overfit", {{"maximum depth", 25}}, {{"scoring function", "gini"}},
+    {"overfit_gini", "overfit", {{"maximum depth", 24}}, {{"scoring function", "gini"}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}}, 0.99},
-    {"overfit_misclass", "overfit", {{"maximum depth", 25}}, {{"scoring function", "misclass"}},
+    {"overfit_misclass", "overfit", {{"maximum depth", 24}}, {{"scoring function", "misclass"}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}}, 0.99},
-    {"overfit_entropy", "overfit", {{"maximum depth", 25}}, {{"scoring function", "entropy"}},
+    {"overfit_entropy", "overfit", {{"maximum depth", 24}}, {{"scoring function", "entropy"}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}},
                             {{"Minimum split score", 0.0}, {"Minimum split improvement", 0.0}}, 0.99},
-    {"overfit_prune05", "overfit", {{"maximum depth", 25}}, {{"scoring function", "gini"}},
+    {"overfit_prune05", "overfit", {{"maximum depth", 24}}, {{"scoring function", "gini"}},
                             {{"Minimum split score", 0.05}, {"Minimum split improvement", 0.05}},
                             {{"Minimum split score", 0.05}, {"Minimum split improvement", 0.05}}, 0.97},
-    {"overfit_prune1", "overfit", {{"maximum depth", 25}}, {{"scoring function", "gini"}},
+    {"overfit_prune1", "overfit", {{"maximum depth", 24}}, {{"scoring function", "gini"}},
                             {{"Minimum split score", 0.1}, {"Minimum split improvement", 0.1}},
                             {{"Minimum split score", 0.1}, {"Minimum split improvement", 0.1}}, 0.97},
 
 
     // splits on fewer than all the features
-    {"gen_200x10_split4", "gen_200x10_3class", {{"maximum depth", 20}, {"seed", 42}, {"maximum features", 4}},
+    {"gen_200x10_split4", "gen_200x10_3class", {{"maximum depth", 19}, {"seed", 42}, {"maximum features", 4}},
       {{"scoring function", "entropy"}}, {}, {}, 0.88},
-    {"iris_split2", "iris", {{"maximum depth", 20}, {"seed", 42}, {"maximum features", 2}}, {{"scoring function", "gini"}}, {}, {}, 0.95},
-    {"gen_500x20_split6", "gen_500x20_4class", {{"maximum depth", 20}, {"seed", 42}, {"maximum features", 7}},
+    {"iris_split2", "iris", {{"maximum depth", 19}, {"seed", 42}, {"maximum features", 2}}, {{"scoring function", "gini"}}, {}, {}, 0.95},
+    {"gen_500x20_split6", "gen_500x20_4class", {{"maximum depth", 19}, {"seed", 42}, {"maximum features", 7}},
       {{"scoring function", "gini"}}, {}, {}, 0.8},
 
 
     // smaller tree depth
-    {"iris_depth2", "iris", {{"maximum depth", 2}}, {{"scoring function", "gini"}}, {}, {}, 0.6},
-    {"gen1_depth2", "gen1", {{"maximum depth", 2}}, {{"scoring function", "entropy"}}, {}, {}, 0.9},
-    {"gen200x10_depth2", "gen_200x10_3class", {{"maximum depth", 2}}, {{"scoring function", "gini"}}, {}, {}, 0.6},
-    {"gen_500x20_depth3", "gen_500x20_4class", {{"maximum depth", 3}}, {{"scoring function", "gini"}}, {}, {}, 0.7},
+    {"iris_depth2", "iris", {{"maximum depth", 1}}, {{"scoring function", "gini"}}, {}, {}, 0.6},
+    {"gen1_depth2", "gen1", {{"maximum depth", 1}}, {{"scoring function", "entropy"}}, {}, {}, 0.9},
+    {"gen200x10_depth2", "gen_200x10_3class", {{"maximum depth", 1}}, {{"scoring function", "gini"}}, {}, {}, 0.6},
+    {"gen_500x20_depth3", "gen_500x20_4class", {{"maximum depth", 2}}, {{"scoring function", "gini"}}, {}, {}, 0.7},
 
 };
 // clang-format on

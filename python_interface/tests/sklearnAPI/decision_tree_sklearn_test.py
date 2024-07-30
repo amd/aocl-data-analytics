@@ -52,6 +52,7 @@ def test_decision_tree(precision):
     clf = clf.fit(X, Y)
     da_yp = clf.predict( Xp )
     da_yprob = clf.predict_proba( Xp )
+    da_n_leaves = clf.get_n_leaves()
     assert clf.aocl is True
 
     # unpatch and solve the same problem with sklearn
@@ -61,16 +62,18 @@ def test_decision_tree(precision):
     clf = clf.fit(X, Y)
     yp = clf.predict( Xp )
     yprob = clf.predict_proba( Xp )
+    n_leaves = clf.get_n_leaves()
     assert not hasattr(clf, 'aocl')
 
     # Check results
     assert da_yp == yp
     assert da_yprob == pytest.approx(yprob, tol)
+    assert da_n_leaves == n_leaves
 
     # print the results if pytest is invoked with the -rA option
-    print("Components")
-    print("    aoclda: \n", da_yp)
-    print("   sklearn: \n", yp)
+    print("Predictions, Leaves")
+    print("    aoclda: \n", da_yp, "\n", da_n_leaves)
+    print("   sklearn: \n", yp, "\n", n_leaves)
 
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
@@ -132,8 +135,3 @@ def test_decision_tree_errors():
         clf.set_score_request()
 
     assert clf.feature_importances_ is None
-
-if __name__ == "__main__":
-    test_decision_tree()
-    test_double_solve()
-    test_decision_tree_errors()

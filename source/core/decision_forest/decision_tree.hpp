@@ -666,11 +666,14 @@ template <typename T> da_status decision_tree<T>::fit() {
         }
     }
 
+    // reset number of leaves (if calling fit multiple times)
+    n_leaves = 0;
+
     // Initialize the root node
     n_nodes = 1;
     tree[0].start_idx = 0;
     tree[0].end_idx = n_obs - 1;
-    tree[0].depth = 1;
+    tree[0].depth = 0;
     tree[0].n_samples = n_obs;
     count_class_occurences(count_classes, 0, n_obs - 1);
     tree[0].score = score_function(n_obs, n_class, count_classes);
@@ -687,7 +690,7 @@ template <typename T> da_status decision_tree<T>::fit() {
 
     // Insert the root node in the queue if the maximum depth is big enough
     // TODO/Discuss should we check for all memory reallocation??
-    if (max_depth > 1)
+    if (max_depth > 0)
         nodes_to_treat.push_back(0);
 
     // hr_clock::time_point stop_clock_setup = hr_clock::now();
@@ -732,14 +735,14 @@ template <typename T> da_status decision_tree<T>::fit() {
             add_node(node_idx, false, best_split.right_score, best_split.samp_idx);
             if (best_split.right_score > min_split_score &&
                 tree[n_nodes - 1].n_samples >= min_node_sample &&
-                current_node.depth < max_depth - 1)
+                tree[n_nodes - 1].depth < max_depth)
                 nodes_to_treat.push_back(n_nodes - 1);
             else
                 n_leaves += 1;
             add_node(node_idx, true, best_split.left_score, best_split.samp_idx);
             if (best_split.left_score > min_split_score &&
                 tree[n_nodes - 1].n_samples >= min_node_sample &&
-                current_node.depth < max_depth - 1)
+                tree[n_nodes - 1].depth < max_depth)
                 nodes_to_treat.push_back(n_nodes - 1);
             else
                 n_leaves += 1;

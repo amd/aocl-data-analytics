@@ -384,12 +384,12 @@ const forest_param_t forest_param_pos[] = {
 
     // splits on fewer than all the features
     {"gen_200x10_split4", "gen_200x10_3class",
-        {{"number of trees", 25}, {"maximum depth", 20}, {"seed", 42}, {"maximum features", 4}},
+        {{"number of trees", 25}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 4}},
         {{"scoring function", "entropy"}}, {}, {}, 0.93},
-    {"iris_split2", "iris", {{"number of trees", 25}, {"maximum depth", 20}, {"seed", 42}, {"maximum features", 2}},
+    {"iris_split2", "iris", {{"number of trees", 25}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 2}},
         {{"scoring function", "gini"}}, {}, {}, 0.95},
     {"gen_500x20_split6", "gen_500x20_4class",
-        {{"number of trees", 25}, {"maximum depth", 20}, {"seed", 42}, {"maximum features", 7}},
+        {{"number of trees", 25}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 7}},
         {{"scoring function", "gini"}}, {}, {}, 0.9},
 
     // Test parallel inference
