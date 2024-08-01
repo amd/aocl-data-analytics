@@ -160,6 +160,28 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     }
     EXPECT_NEAR((T)count_correct / (T)nsamples, accuracy, (T)1.0e-05);
 
+    // Check log_proba is consisten with predict
+    da_int nclass = *std::max_element(y.begin(), y.end()) + 1;
+    std::vector<T> y_proba(nsamples * nclass);
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, nsamples, nfeat, X_test.data(),
+                                      nsamples, y_proba.data(), nclass, nsamples),
+              da_status_success);
+    count_correct = 0;
+    for (da_int i = 0; i < nsamples; i++) {
+        T max_prob = 0.0;
+        da_int best_class = -1;
+        for (da_int j = 0; j < nclass; j++) {
+            if (y_proba[j * nsamples + i] > max_prob) {
+                max_prob = y_proba[j * nsamples + i];
+                best_class = j;
+            }
+        }
+        if (best_class == y_pred[i])
+            count_correct += 1;
+    }
+    // TODO change when predict is re-worked
+    EXPECT_GT((T)count_correct / (T)nsamples, (T)0.9);
+
     //////////////
     // Print rinfo
     //////////////

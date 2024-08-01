@@ -189,7 +189,7 @@ da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_feature
  * After a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
  * function returns the decision tree class probabilities in the array ``y_pred``.
  *
- * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class probability
+ * For each data point ``i``, and class ``j``, ``y_proba[i + j*ldy]`` will contain the class probability
  * according to the decision tree,
  * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
  * @endrst
@@ -226,7 +226,7 @@ da_status da_tree_predict_proba_s(da_handle handle, da_int n_samples, da_int n_f
  * After a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
  * function returns the decision tree class log probabilities in the array ``y_pred``.
  *
- * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class log probability
+ * For each data point ``i``, and class ``j``, ``y_proba[i + j*ldy]`` will contain the class log probability
  * according to the decision tree,
  * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
  * @endrst

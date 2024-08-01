@@ -404,16 +404,16 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
     }
     if (nclass != n_class) {
         return da_error_bypass(this->err, da_status_invalid_input,
-                               "n_features = " + std::to_string(nclass) +
+                               "n_class = " + std::to_string(nclass) +
                                    " doesn't match the expected value " +
-                                   std::to_string(nclass) + ".");
+                                   std::to_string(n_class) + ".");
     }
     if (ldy < nsamp) {
         return da_error_bypass(
             this->err, da_status_invalid_input,
-            "nsamp = " + std::to_string(nsamp) + ", ldy = " + std::to_string(ldy) +
+            "n_samples = " + std::to_string(nsamp) + ", ldy = " + std::to_string(ldy) +
                 ", the value of ldy needs to be at least as big as the value "
-                "of nsamp");
+                "of n_samples");
     }
 
     if (!model_trained) {
@@ -423,23 +423,37 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
     }
 
     std::vector<T> sum_proba, y_proba_tree;
+    da_int n_blocks, block_rem;
+    da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
+    da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
     try {
         sum_proba.resize(n_class * nsamp);
-        y_proba_tree.resize(n_class * nsamp);
+        y_proba_tree.resize(n_threads * n_class * block_size);
     } catch (std::bad_alloc const &) {               // LCOV_EXCL_LINE
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
-    // #pragma omp parallel shared(sum_proba, nsamp, nfeat, X_test, ldx_test) default(none)
-    {
-        // #pragma omp for schedule(dynamic)
+#pragma omp parallel for collapse(2)                                                     \
+    shared(sum_proba, nsamp, nfeat, X_test, ldx_test, n_blocks, block_rem, y_proba_tree, \
+               ldy, n_threads) default(none)
+    for (da_int i_block = 0; i_block < n_blocks; i_block++) {
         for (auto &tree : forest) {
-            tree->predict_proba(nsamp, nfeat, X_test, ldx_test, y_proba_tree.data(),
-                                n_class, ldy);
-            for (da_int i = 0; i < nsamp; i++) {
+            da_int start_idx = i_block * block_size;
+            da_int thread_id = (da_int)omp_get_thread_num();
+            da_int start_pred_idx = thread_id * block_size;
+            da_int n_elem = block_size;
+            if (i_block == n_blocks - 1 && block_rem > 0) {
+                n_elem = block_rem;
+            }
+            tree->predict_proba(n_elem, n_features, &X_test[start_idx], ldx_test,
+                                &y_proba_tree.data()[start_pred_idx], n_class,
+                                n_threads * block_size);
+            for (da_int i = 0; i < n_elem; i++) {
                 for (da_int j = 0; j < n_class; j++) {
-                    sum_proba[j * nsamp + i] += y_proba_tree[j * nsamp + i];
+#pragma omp atomic update
+                    sum_proba[j * nsamp + start_idx + i] +=
+                        y_proba_tree[start_pred_idx + j * n_threads * block_size + i];
                 }
             }
         }
