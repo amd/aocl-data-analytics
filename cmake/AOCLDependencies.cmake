@@ -109,7 +109,6 @@ function(linalg_libs)
     set(UTILS_NAME "libaoclutils")
 	# Additional utils libs since 24/06
     set(UTILS_CPUID_NAME "au_cpuid")
-    set(UTILS_CORE_NAME "au_core")
   else(WIN32) # linux
     set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
     if(NOT BUILD_SHARED_LIBS)
@@ -127,7 +126,6 @@ function(linalg_libs)
     set(UTILS_NAME "aoclutils")
     # Additional utils libs since 24/06
     set(UTILS_CPUID_NAME "au_cpuid")
-    set(UTILS_CORE_NAME "au_core")
   endif()
 
   if(BLAS_LIB STREQUAL "")
@@ -185,17 +183,6 @@ function(linalg_libs)
         PARENT_SCOPE)
   endif()
 
-  if(UTILS_CORE_LIB STREQUAL "")
-    find_library(
-      UTILS_CORE name ${UTILS_CORE_NAME}
-      PATHS ${UTILS_LIB_DIR} REQUIRED
-      NO_DEFAULT_PATH)
-  else()
-    set(UTILS_CORE
-        ${UTILS_CORE_LIB}
-        PARENT_SCOPE)
-  endif()
-
   include_directories(${LAPACK_INCLUDE_DIR})
   include_directories(${BLAS_INCLUDE_DIR})
   include_directories(${SPARSE_INCLUDE_DIR})
@@ -217,6 +204,5 @@ set(LAPACK)
 set(SPARSE)
 set(UTILS)
 set(UTILS_CPUID)
-set(UTILS_CORE)
 
 linalg_libs()

@@ -44,7 +44,6 @@ set(BASE_DEP_LIBS
     ${LAPACK_SERIAL}
     ${SPARSE}
     ${UTILS}
-    ${UTILS_CORE}
     ${UTILS_CPUID})
 set(DEP_LIBS "")
 
