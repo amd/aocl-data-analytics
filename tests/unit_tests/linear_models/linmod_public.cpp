@@ -177,7 +177,7 @@ TEST(linmod, invalidInput) {
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, nullptr, pred),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, X, nullptr),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 0, n, X, pred),
               da_status_invalid_array_dimension);
     float Xs[2] = {1., 2.};
@@ -187,7 +187,7 @@ TEST(linmod, invalidInput) {
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, nullptr, preds),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, Xs, nullptr),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 0, n, Xs, preds),
               da_status_invalid_array_dimension);
 

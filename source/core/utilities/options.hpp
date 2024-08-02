@@ -378,7 +378,7 @@ template <typename T> class OptionNumeric : public OptionBase {
             rec << " * | " << desc << "|||" << endl;
 
             if (lbound == m_inf && ubound == p_inf) {
-                rec << " * | There are no constraints on \\f$" << t << "\\f$. |||"
+                rec << " * | There are no constraints on \\f$" << t << "\\f$.\" |||"
                     << endl;
             } else {
                 if (otype == option_t::opt_bool) {
@@ -418,7 +418,7 @@ template <typename T> class OptionNumeric : public OptionBase {
             }
 
             if (lbound == m_inf && ubound == p_inf) {
-                rec << "There are no constraints on :math:`" << t << "`." << endl;
+                rec << "There are no constraints on :math:`" << t << "`.\"" << endl;
             } else {
                 if (otype == option_t::opt_bool) {
                     rec << "true, or false.";

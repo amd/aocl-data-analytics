@@ -116,6 +116,14 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
+        case da_handle_svm:
+            (*handle)->alg_handle_d = new da_svm::svm<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_d = nullptr;
+                return status;
+            }
+            break;
         default:
             break;
         }
@@ -204,6 +212,14 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             break;
         case da_handle_knn:
             (*handle)->alg_handle_s = new da_knn::da_knn<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_s = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_svm:
+            (*handle)->alg_handle_s = new da_svm::svm<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_s = nullptr;

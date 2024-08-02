@@ -605,7 +605,7 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, const T
                             std::to_string(this->nfeat) + ".");
 
     if (predictions == nullptr)
-        return da_error(this->err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_pointer,
                         "predictions is a null pointer.");
     if (!model_trained)
         return da_error(this->err, da_status_out_of_date,

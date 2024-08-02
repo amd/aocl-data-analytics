@@ -55,6 +55,7 @@ const static std::map<da_handle_type, std::string> htypes{
     {da_handle_decision_forest, "decision forests"},
     {da_handle_knn, "k-nearest neighbors"},
     {da_handle_nlls, "nonlinear least squares"},
+    {da_handle_svm, "Support Vector Machines"},
 };
 
 void options_print(da_handle_type htype) {

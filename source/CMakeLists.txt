@@ -42,6 +42,8 @@ set(DA_METRICS core/metrics/pairwise_distances_public.cpp)
 set(DA_UTILS_INTERNAL core/utilities/da_utils.cpp)
 set(DA_UTILS core/utilities/utils_public.cpp core/utilities/aoclda_cpp_overloads.cpp)
 set(DA_NEAREST_NEIGHBORS core/nearest_neighbors/knn_public.cpp)
+set(DA_SVM core/svm/svm_public.cpp)
+set(DA_KERNEL_FUNCTION core/kernel_function/kernel_function_public.cpp)
 
 set(DA_CORE_SRC
     ${LINMOD_SRC}
@@ -58,7 +60,9 @@ set(DA_CORE_SRC
     ${DA_METRICS}
     ${DA_UTILS_INTERNAL}
     ${DA_UTILS}
-    ${DA_NEAREST_NEIGHBORS})
+    ${DA_NEAREST_NEIGHBORS}
+    ${DA_SVM}
+    ${DA_KERNEL_FUNCTION})
 
 add_library(da_core OBJECT ${DA_CORE_SRC})
 target_include_directories(
@@ -77,6 +81,8 @@ target_include_directories(
           core/decision_forest
           core/nlls
           core/nearest_neighbors
+          core/svm
+          core/kernel_function
           ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
           ${CMAKE_SOURCE_DIR}/external/RALFit
           ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include

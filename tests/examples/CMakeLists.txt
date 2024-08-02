@@ -71,6 +71,12 @@ add_executable(metrics metrics.cpp)
 
 add_executable(knn knn.cpp)
 
+add_executable(kernel_functions kernel_functions.cpp)
+
+add_executable(svc svc.cpp)
+
+add_executable(nusvr nusvr.cpp)
+
 set(EXAMPLE_EXES
     nlls
     nlls_single
@@ -87,7 +93,10 @@ set(EXAMPLE_EXES
     decision_tree
     random_forest
     metrics
-    knn)
+    knn
+    svc
+    nusvr
+    kernel_functions)
 
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)

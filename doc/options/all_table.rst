@@ -251,6 +251,31 @@ The following options are supported.
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 
+.. _opts_supportvectormachines:
+
+Support Vector Machines
+==============================================
+
+The following options are supported.
+
+.. csv-table:: :strong:`Table of options for Support Vector Machines.`
+   :escape: ~
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   
+   "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`."
+   "coef0", "real (double)", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`."
+   "gamma", "real (double)", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`"
+   "epsilon", "real (double)", ":math:`r=0.1`", "Epsilon in the SVR model. Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized.", ":math:`0 \le r`"
+   "tau", "real (double)", ":math:`r=10^{-12}`", "Parameter used in working set selection.", ":math:`0 \le r`"
+   "tolerance", "real (double)", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`"
+   "nu", "real (double)", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors.", ":math:`0 < r \le 1`"
+   "max_iter", "integer", ":math:`i=-1`", "Maximum number of iterations. If the value is -1, it is set to infinity.", ":math:`-1 \le i`"
+   "c", "real (double)", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. The larger value means higher penalty to the loss function on misclassified observations.", ":math:`0 < r`"
+   "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
+
 .. _opts_datastore:
 
 Datastore handle :cpp:type:`da_datastore`

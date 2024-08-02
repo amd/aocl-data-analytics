@@ -123,7 +123,7 @@ Building the Python interfaces
 ------------------------------
 
 To build the Python interfaces, use `-DBUILD_PYTHON=On` (note that this will only work with shared library builds).
-You will need PyBind11, which can be installed using `pip install pybind11`.
+You will need to install the required Python packages listed in the `requirements.txt` file inside of `python_interface` directory.
 On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the location of you pybind11 installation, e.g.  `C:\path\to\your\python-environment\site-packages\pybind11\share\cmake\pybind11`
 By default, cmake will compile the bindings but will not install them.
 If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.

@@ -327,6 +327,11 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   # Release flags
   set(COMPILER_FLAGS_RELEASE
       "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;")
+  
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};-fveclib=AMDLIBM")
+    link_libraries("-lamdlibm")
+  endif()
 
   if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")

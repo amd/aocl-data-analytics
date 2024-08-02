@@ -63,7 +63,9 @@ set(INTERNAL_INC_DIRS ${CMAKE_SOURCE_DIR}/source/core/csv
                       ${CMAKE_SOURCE_DIR}/source/core/decision_forest
                       ${CMAKE_SOURCE_DIR}/source/core/metrics
                       ${CMAKE_SOURCE_DIR}/source/core/linear_model
-                      ${CMAKE_SOURCE_DIR}/source/core/basic_statistics)
+                      ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
+                      ${CMAKE_SOURCE_DIR}/source/core/kernel_function
+                      ${CMAKE_SOURCE_DIR}/source/core/svm)
 
 set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
@@ -203,6 +205,23 @@ add_executable(interval_set_internal data_management/interval_set_internal.cpp)
 add_executable(knn_public knn/knn_public.cpp)
 target_link_libraries(knn_public PRIVATE aocl-da ${BLAS})
 
+######################################
+########## Kernel function ###########
+######################################
+add_executable(kernel_function_public kernel_function/kernel_function_public.cpp)
+
+######################################
+################ SVM #################
+######################################
+add_executable(svm_internal svm/svm_internal.cpp)
+target_link_libraries(svm_internal PRIVATE ${BLAS})
+
+add_executable(svm_public svm/svm_public.cpp)
+target_compile_definitions(
+  svm_public
+  PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(svm_public PRIVATE ${BLAS})
+
 set(GTEST_INTERNAL
     csv_internal
     linmod_internal
@@ -216,6 +235,7 @@ set(GTEST_INTERNAL
     doc_internal
     coord_internal
     nlls_internal
+    svm_internal
     miscellaneous_internal
     da_vector_internal
     dbscan_internal)
@@ -242,7 +262,9 @@ set(GTEST_PUBLIC
     parallel_public
     utilities_public
     nlls_public
-    knn_public)
+    knn_public
+    kernel_function_public
+    svm_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)
 set(PUBLIC_UTESTS ${GTEST_PUBLIC} ${INDEP_PUBLIC})
 

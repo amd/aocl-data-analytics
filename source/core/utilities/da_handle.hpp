@@ -44,6 +44,7 @@
 #include "nlls.hpp"
 #include "pca.hpp"
 #include "random_forest.hpp"
+#include "svm.hpp"
 
 /**
  * @brief Handle structure containing input / output data required for functions such as fit and predict

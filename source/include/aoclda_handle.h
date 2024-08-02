@@ -68,6 +68,9 @@ enum da_handle_type_ {
     da_handle_knn,  ///< @rst
                     ///< the handle is to be used with functions from the :ref:`k-nearest neighbors for classification <knn_intro>`.
                     ///< @endrst
+    da_handle_svm , ///< @rst
+                     ///< the handle is to be used with functions from the :ref:`svm chapter <chapter_svm>`.
+                     ///< @endrst
 };
 // clang-format on
 
