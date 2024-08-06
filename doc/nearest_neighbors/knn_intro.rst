@@ -58,6 +58,16 @@ The standard way of computing the *k*-nearest neighbors using AOCL-DA is as foll
 
 .. tab-set::
 
+   .. tab-item:: Python
+      :sync: Python
+
+      1. Initialize a :func:`aoclda.nearest_neighbors.knn_classifier` object with options set in the class constructor.
+      2. Fit the *k*-NN for your training data set using :func:`aoclda.nearest_neighbors.knn_classifier.fit`.
+      3. Compute the indices of the nearest neighbors and optionally the corresponding distances using :func:`aoclda.nearest_neighbors.knn_classifier.kneighbors`.
+      4. If only the labels of the test data are required, use :func:`aoclda.nearest_neighbors.knn_classifier.predict`. Note that a previous call to :func:`aoclda.nearest_neighbors.knn_classifier.kneighbors` is not required.
+      5. If the probability estimates for each label are required, use :func:`aoclda.nearest_neighbors.knn_classifier.predict_proba`. Note that a previous call to :func:`aoclda.nearest_neighbors.knn_classifier.kneighbors` is not required.
+
+
    .. tab-item:: C
       :sync: C
 
@@ -75,6 +85,11 @@ Options
 
 .. tab-set::
 
+   .. tab-item:: Python
+      :sync: Python
+
+      The available Python options are detailed in the :func:`aoclda.nearest_neighbors.knn_classifier` class constructor.
+
    .. tab-item:: C
       :sync: C
 
@@ -84,6 +99,17 @@ Examples
 ========
 
 .. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+      .. collapse:: k-NN Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/knn_ex.py
+              :language: Python
+              :linenos:
 
    .. tab-item:: C
       :sync: C

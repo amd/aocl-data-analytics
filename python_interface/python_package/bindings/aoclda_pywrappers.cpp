@@ -33,6 +33,7 @@
 #include "kmeans_py.hpp"
 #include "linmod_py.hpp"
 #include "metrics_py.hpp"
+#include "nearest_neighbors_py.hpp"
 #include "nlls_py.hpp"
 #include "utilities_py.hpp"
 #include <iostream>
@@ -352,6 +353,45 @@ PYBIND11_MODULE(_aoclda, m) {
         // info[da_optim_info_t::info_grad_norm] = T(inform.norm_g);
         // info[da_optim_info_t::info_scl_grad_norm] = T(inform.scaled_g);
         .def("get_info_optim", &nlls::get_info_optim); // -> dict
+
+    /**********************************/
+    /*         kNN Classifier         */
+    /**********************************/
+    auto m_knn_classifier =
+        m.def_submodule("nearest_neighbors", "k-Nearest Neighbors for classification");
+    py::class_<knn_classifier, pyda_handle>(m_knn_classifier, "pybind_knn_classifier")
+        .def(py::init<da_int, std::string, std::string, std::string, std::string &>(),
+             py::arg("n_neighbors") = (da_int)5, py::arg("weights") = "uniform",
+             py::arg("algorithm") = "brute", py::arg("metric") = "euclidean",
+             py::arg("precision") = "double")
+        .def("pybind_fit", &knn_classifier::fit<float>, "Fit the knn classifier", "X"_a,
+             "y"_a)
+        .def("pybind_fit", &knn_classifier::fit<double>, "Fit the knn classifier", "X"_a,
+             "y"_a)
+        .def("pybind_kneighbors_indices", &knn_classifier::kneighbors_indices<float>,
+             "Compute the indices of the k-nearest neighbors", "X"_a,
+             py::arg("n_neighbors") = (da_int)0)
+        .def("pybind_kneighbors_indices", &knn_classifier::kneighbors_indices<double>,
+             "Compute the indices of the k-nearest neighbors", "X"_a,
+             py::arg("n_neighbors") = (da_int)0)
+        .def("pybind_kneighbors", &knn_classifier::kneighbors<float>,
+             "Compute the indices of the k-nearest neighbors and the corresponding "
+             "distances",
+             "X"_a, py::arg("n_neighbors") = (da_int)0)
+        .def("pybind_kneighbors", &knn_classifier::kneighbors<double>,
+             "Compute the indices of the k-nearest neighbors and the corresponding "
+             "distances",
+             "X"_a, py::arg("n_neighbors") = (da_int)0)
+        // Definition for float type needs to be before double type, otherwise this gives
+        // "RuntimeError: The handle was initialized with a different precision type than double."
+        .def("pybind_predict_proba", &knn_classifier::predict_proba<float>,
+             "Compute the probabilities estimates for the test data", "X"_a)
+        .def("pybind_predict_proba", &knn_classifier::predict_proba<double>,
+             "Compute the probabilities estimates for the test data", "X"_a)
+        .def("pybind_predict", &knn_classifier::predict<float>,
+             "Compute the predicted labels for the test data", "X"_a)
+        .def("pybind_predict", &knn_classifier::predict<double>,
+             "Compute the predicted labels for the test data", "X"_a);
 
     /**********************************/
     /*         Pairwise Distances     */

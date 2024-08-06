@@ -32,6 +32,11 @@
 ========================================
 .. tab-set::
 
+   .. tab-item:: Python
+
+      .. autoclass:: aoclda.nearest_neighbors.knn_classifier(n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean', precision='double')
+         :members:
+
    .. tab-item:: C
 
       .. _da_knn_set_training_data:

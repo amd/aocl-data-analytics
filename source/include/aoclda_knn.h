@@ -88,7 +88,7 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
  * \brief Compute <i>k</i>-Nearest Neighbors (<i>k</i>-NN)
  *
  * @rst
- * Compute the <i>k</i>-NN of a test data \p X_test with respect to the data matrix
+ * Compute the *k*-NN of a test data :math:`X_{test}` with respect to the data matrix
  * previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
  * @endrst
  *
@@ -142,7 +142,7 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
  * \brief Compute probability estimates using <i>k</i>-Nearest Neighbors
  *
  * @rst
- * Compute the probability estimates for the different classes based on the <i>k</i>-NN of a test data \p X_test with respect to the data matrix
+ * Compute the probability estimates for the different classes based on the *k*-NN of a test data :math:`X_{test}` with respect to the data matrix
  * data matrix previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
  * @endrst
  *
@@ -169,7 +169,7 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
  * \brief Compute estimated labels of a data set using <i>k</i>-Nearest Neighbors
  *
  * @rst
- * Compute the estimated labels based on the <i>k</i>-NN of a test data \p X_test with respect to the data matrix
+ * Compute the estimated labels based on the *k*-NN of a test data :math:`X_{test}` with respect to the data matrix
  * data matrix previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
  * @endrst
  *

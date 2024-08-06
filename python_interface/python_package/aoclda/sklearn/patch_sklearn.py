@@ -36,6 +36,7 @@ import sklearn.cluster as clustering_sklearn
 import sklearn.tree as decision_tree_sklearn
 import sklearn.ensemble as decision_forest_sklearn
 import sklearn.metrics.pairwise as pairwise_sklearn
+import sklearn.neighbors as knn_sklearn
 from ._pca import PCA as PCA_da
 from ._kmeans import kmeans as kmeans_da
 from ._linear_model import LinearRegression as LinearRegression_da
@@ -46,6 +47,7 @@ from ._linear_model import LogisticRegression as LogisticRegression_da
 from ._decision_tree import DecisionTreeClassifier as DecisionTreeClassifier_da
 from ._decision_forest import RandomForestClassifier as RandomForestClassifier_da
 from ._metrics import pairwise_distances as pairwise_distances_da
+from ._nearest_neighbors import KNeighborsClassifier as KNeighborsClassifier_da
 # Check if we should be using Intel's Scikit-learn extension
 try:
     USE_INTEL_SKLEARNEX = int(os.environ.get('USE_INTEL_SKLEARNEX'))
@@ -99,6 +101,9 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                 'pairwise_distances': {'pack': pairwise_sklearn,
                                 'sk_sym': getattr(pairwise_sklearn, "pairwise_distances"),
                                 'da_sym': pairwise_distances_da},
+                'KNeighborsClassifier': {'pack': knn_sklearn,
+                                          'sk_sym': getattr(knn_sklearn, 'KNeighborsClassifier'),
+                                          'da_sym': KNeighborsClassifier_da},
                }
 
 # List of symbols where AMD is chosen over Intel
