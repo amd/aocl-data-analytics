@@ -633,9 +633,9 @@ inline da_status da_nlls_fit(da_handle handle, da_int n_coef, double *coef, void
     return da_nlls_fit_d(handle, n_coef, coef, udata);
 }
 
-inline da_status da_nlls_fit(da_handle hasdle, da_int n_coefs, float *coefs,
+inline da_status da_nlls_fit(da_handle handle, da_int n_coefs, float *coefs,
                              void *udata) {
-    return da_nlls_fit_s(hasdle, n_coefs, coefs, udata);
+    return da_nlls_fit_s(handle, n_coefs, coefs, udata);
 }
 
 /* Pairwise distances overloaded functions */
@@ -657,7 +657,7 @@ da_pairwise_distances(da_int m, da_int n, da_int k, const float *X, da_int ldx,
                                    force_all_finite);
 }
 
-/* kNN for classification functions */
+/* k-NN for classification functions */
 inline da_status da_knn_set_training_data(da_handle handle, da_int n_samples,
                                           da_int n_features, const double *X_train,
                                           da_int ldx_train, const da_int *y_train) {

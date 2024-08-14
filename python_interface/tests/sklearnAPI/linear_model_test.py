@@ -178,7 +178,6 @@ def test_lasso(intercept, precision):
     assert not hasattr(lasso, 'aocl')
 
     # Check results
-    # remove check on value for now:
     # Internal standardization is not the same et between sklearn and DA
     # assert da_coef == pytest.approx(coef, 1.0e-08)
     assert da_intercept == pytest.approx(intercept, abs=tol)

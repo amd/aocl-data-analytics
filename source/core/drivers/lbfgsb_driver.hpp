@@ -126,7 +126,7 @@ da_status lbfgsb_work<T>::add_bounds(size_t nvar, const std::vector<T> &l,
         for (i = 0; i < nvar; i++)
             this->nbd[i] = 0;
     } else if (l.size() == 0) {
-        // Only upper bounds, set lower to -infity
+        // Only upper bounds, set lower to -infinity
         for (i = 0; i < nvar; i++) {
             if (u[i] < bigbnd)
                 this->nbd[i] = 3;
@@ -134,7 +134,7 @@ da_status lbfgsb_work<T>::add_bounds(size_t nvar, const std::vector<T> &l,
                 this->nbd[i] = 0;
         }
     } else if (u.size() == 0) {
-        // Only lower bounds, set lower to -infity
+        // Only lower bounds, set lower to -infinity
         for (i = 0; i < nvar; i++) {
             if (l[i] > -bigbnd)
                 this->nbd[i] = 1;
@@ -174,8 +174,6 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
         return da_error(
             &err, da_status_invalid_pointer,
             "NLP solver requires a valid pointer to the objective function call-back");
-    // FIXME-FUTURE: Finite-Differences for the gradient is passed as an option to
-    // the solver. For now it fails with not implemented
     if (!objgrd)
         return da_error(&err, da_status_not_implemented,
                         "NLP solver requires a valid pointer to the objective gradient "
@@ -209,7 +207,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
         return da_error(&err, da_status_internal_error,
                         "expected option not found: lbfgsb iteration limit");
     da_int mon = 0;
-    if (monit) // monitor provided
+    if (monit) // Monitor provided
         if (opts.get("monitoring frequency", mon))
             return da_error(&err, da_status_internal_error,
                             "expected option not found: monitoring frequency");
@@ -282,7 +280,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
                 if (iter % mon == 0) {
                     // Call monitor
                     if (monit(n, &x[0], &g[0], &info[0], usrdata) != 0) {
-                        // user request to stop
+                        // User request to stop
                         itask = 3;
                     }
                 }
@@ -290,7 +288,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
 
             if (maxtime > 0) {
                 if (info[da_optim_info_t::info_time] > maxtime) {
-                    // run out of time
+                    // Run out of time
                     itask = 101;
                 }
             }
@@ -302,12 +300,10 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
             ++info[da_optim_info_t::info_nevalf];
             if (objfun(n, &x[0], f, usrdata) != 0) {
                 // This solver does not have recovery, stop
-                // FIXME-FUTURE: restore last valid x (and stats?)
                 itask = 120;
             }
             if (objgrd(n, &x[0], &g[0], usrdata, 0)) {
                 // This solver does not have recovery, stop
-                // FIXME-FUTURE: restore last valid x and grad (and stats?)
                 itask = 121;
             }
         }
@@ -318,11 +314,11 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
     // Select correct exit status
     switch (itask) {
     case 6:
-        // 'CONVERGENCE', 6 out:sucess
+        // 'CONVERGENCE', 6 out:success
     case 7:
-        // 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL', 7 out:sucess
+        // 'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL', 7 out:success
     case 8:
-        // 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH', 8 out:sucess
+        // 'CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH', 8 out:success
         return da_status_success;
         break;
     case 3:
@@ -389,7 +385,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
     case 28: // This can't happen due to options range check
         return da_error(
             &err, da_status_internal_error,
-            "Limited memory ammount must be zero or more. Recommended limit is 11");
+            "Limited memory amount must be zero or more. Recommended limit is 11");
         break;
     case 100: // This is external to LBFGSB: max it
         return da_warn(&err, da_status_maxit,
@@ -414,9 +410,9 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
 
     case 1:  // 'NEW_X', 1  action: monitor => possible user request to stop
     case 2:  // 'START', 2  action: 1st iteration
-    case 4:  // 'FG',    4  action: evaluage f+g
-    case 20: // 'FG_LNSRCH', 20 action: evaluage f+g
-    case 21: // 'FG_START', 21 action: evaluage f+g
+    case 4:  // 'FG',    4  action: evaluate f+g
+    case 20: // 'FG_LNSRCH', 20 action: evaluate f+g
+    case 21: // 'FG_START', 21 action: evaluate f+g
     case 22: // 'ERROR: XTOL .LT. ZERO', 22 internal use only -> NEW_X
     default:
         return da_error(&err, da_status_internal_error,

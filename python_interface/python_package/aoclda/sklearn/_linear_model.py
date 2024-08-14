@@ -23,7 +23,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 """
-Patching scikit learn linear models: LinearRegression, Ridge, Lasso
+Patching scikit-learn linear models: LinearRegression, Ridge, Lasso, ElasticNet, LogisticRegression
 """
 # pylint: disable = super-init-not-called, too-many-ancestors, missing-function-docstring, useless-return
 
@@ -39,7 +39,7 @@ from aoclda.linear_model import linmod as linmod_da
 
 class LinearRegression(LinearRegression_sklearn):
     """
-    Overwrite sklearn LinearRegression to call DA library
+    Overwrite scikit-learn LinearRegression to call AOCL-DA library
     """
 
     def __init__(self,
@@ -152,7 +152,7 @@ class LinearRegression(LinearRegression_sklearn):
 
 class Ridge(Ridge_sklearn):
     """
-    Overwrite sklearn Ridge to call DA library
+    Overwrite scikit-learn Ridge to call AOCL-DA library
     """
 
     def __init__(self,
@@ -283,7 +283,7 @@ class Ridge(Ridge_sklearn):
 
 class Lasso(Lasso_sklearn):
     """
-    Overwrite sklearn Lasso to call DA library
+    Overwrite scikit-learn Lasso to call AOCL-DA library
     """
 
     def __init__(self,
@@ -421,7 +421,7 @@ class Lasso(Lasso_sklearn):
 
 class ElasticNet(ElasticNet_sklearn):
     """
-    Overwrite sklearn ElasticNet to call DA library
+    Overwrite scikit-learn ElasticNet to call AOCL-DA library
     """
 
     def __init__(
@@ -568,7 +568,7 @@ class ElasticNet(ElasticNet_sklearn):
 
 class LogisticRegression(LogisticRegression_sklearn):
     """
-    Overwrite sklearn LogisticRegression to call DA library
+    Overwrite scikit-learn LogisticRegression to call AOCL-DA library
     """
 
     def __init__(

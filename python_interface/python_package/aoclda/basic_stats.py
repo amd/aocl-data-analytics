@@ -49,8 +49,8 @@ def mean(X, axis="col"):
             axis (str, optional): axis over which means are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated means. 
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
+                (n_features, ) or (1, ): Calculated means.
         """
     return pybind_mean(X, axis)
 
@@ -70,7 +70,7 @@ def harmonic_mean(X, axis="col"):
             axis (str, optional): axis over which means are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
                 (n_features, ) or (1, ): Calculated harmonic means.
         """
     return pybind_harmonic_mean(X, axis)
@@ -84,7 +84,7 @@ def geometric_mean(X, axis="col"):
         :math:`\\bar{x}_{geom}`, is defined as
 
         .. math::
-            \\bar{x}_{geom} = \left(\prod_{i=1}^n x_i\\right)^{\\frac{1}{n}} 
+            \\bar{x}_{geom} = \left(\prod_{i=1}^n x_i\\right)^{\\frac{1}{n}}
             \equiv \exp\left(\\frac{1}{n}\sum_{i=1}^n\ln x_i\\right).
 
         Args:
@@ -92,7 +92,7 @@ def geometric_mean(X, axis="col"):
             axis (str, optional): axis over which means are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
                 (n_features, ) or (1, ): Calculated geometric means.
         """
     return pybind_geometric_mean(X, axis)
@@ -110,7 +110,7 @@ def variance(X, dof=0, axis="col"):
         where dof is the number of degrees of freedom. Setting :math:`\\text{dof} = n` \
         gives the sample variance, whereas setting :math:`\\text{dof}=n-1` \
         gives an unbiased estimate of the population variance.
-        
+
         Args:
             X (numpy.ndarray): data matrix of shape (n_samples, n_features).
             dof (int, optional): number of degrees of freedom used to compute the variance
@@ -127,7 +127,7 @@ def variance(X, dof=0, axis="col"):
             axis (str, optional): The axis over which variances are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
                 (n_features, ) or (1, ): Calculated variances.
         """
     return pybind_variance(X, dof, axis)
@@ -152,7 +152,7 @@ def skewness(X, axis="col"):
             axis (str, optional): axis over which skewnesses are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
                 (n_features, ) or (1, ): Calculated skewnesses.
         """
     return pybind_skewness(X, axis)
@@ -178,7 +178,7 @@ def kurtosis(X, axis="col"):
             axis (str, optional): axis over which kurtoses are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
                 (n_features, ) or (1, ): Calculated kurtoses.
         """
     return pybind_kurtosis(X, axis)
@@ -197,7 +197,7 @@ def moment(X, k, mean=None, axis="col"):
         Here, the moments are scaled by the number of observations along the specified axis. \
         The function gives you the option of supplying precomputed means (via the argument \
         ``mean``) about which the moments are computed. Otherwise it will compute the means itself.
-            
+
         Args:
             X (numpy.ndarray): data matrix of shape (n_samples, n_features).
             k (int): the order of the moment to be computed.
@@ -205,7 +205,7 @@ def moment(X, k, mean=None, axis="col"):
             axis (str, optional): axis over which moments are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
             (n_features, ) or (1, ): Calculated moments.
         """
     return pybind_moment(X, k, mean, axis)
@@ -225,7 +225,7 @@ def quantile(X, q, method="linear", axis="col"):
         Note:
 
             - Methods ``'inverted_cdf'``, ``'averaged_inverted_cdf'`` and \
-                ``'closest_observation'`` give discountinuous results.
+                ``'closest_observation'`` give discontinuous results.
 
             - Method ``'median_unbiased'`` is recommended if the sample distribution \
                 function is unknown.
@@ -279,7 +279,7 @@ def quantile(X, q, method="linear", axis="col"):
             axis (str, optional): The axis over which quantiles are calculated.
 
         Returns:
-            numpy.ndarray. Depending on an ``axis`` can have shape (n_samples, ), \
+            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
                 (n_features, ) or (1, ): Calculated quantiles.
         """
     return pybind_quantile(X, q, method, axis)
@@ -298,7 +298,7 @@ def five_point_summary(X, axis="col"):
                 times because it uses partly sorted arrays after each stage.
 
             - The ``'weibull'`` definition of quantiles is used to calculate the statistics.
-            
+
         Args:
             X (numpy.ndarray): data matrix of shape (n_samples, n_features).
             axis (str, optional): axis over which summary is calculated.
@@ -335,7 +335,7 @@ def standardize(X,
                 the other will be used (so that the data is only shifted or only scaled).
 
             In each case, if a 0 scaling factor is encountered then it will not be used.
-        
+
         An additional computational mode is available by setting ``reverse = True``. In this \
         case the standardization is reversed, so that the data matrix is multiplied by the \
         values in scale before adding the values in shift. This enables users to undo the \
@@ -348,8 +348,8 @@ def standardize(X,
 
         Args:
             X (numpy.ndarray): data matrix of shape (n_samples, n_features).
-            shift (numpy.ndarray, optional): 1D array of values for shifting the data. 
-            scale (numpy.ndarray, optional): 1D array of values for scaling the data.
+            shift (numpy.ndarray, optional): 1D array of values used for shifting the data.
+            scale (numpy.ndarray, optional): 1D array of values used for scaling the data.
             dof (int, optional): number of degrees of freedom used to compute standard deviations
 
                 - If ``dof`` < 0 - the degrees of freedom will be set to the number \

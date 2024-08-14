@@ -24,7 +24,7 @@
 #
 
 """
-Patching scikit learn metrics: pairwise_distances
+Patching scikit-learn metrics: pairwise_distances
 """
 # pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
 
@@ -34,7 +34,7 @@ from aoclda.metrics import pairwise_distances as pairwise_distances_da
 
 def pairwise_distances(X, Y=None, metric='euclidean', n_jobs=None, force_all_finite=True, **kwds):
     """
-    Overwrite sklearn.metrics.pairwise_distances to call DA library
+    Overwrite sklearn.metrics.pairwise_distances to call AOCL-DA library
     """
 
     # Check for unsupported attributes

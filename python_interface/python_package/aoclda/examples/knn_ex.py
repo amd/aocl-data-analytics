@@ -24,7 +24,7 @@
 #
 
 """
-kNN Classifier example Python script
+k-nearest neighbors classification example Python script
 """
 
 import sys
@@ -53,6 +53,7 @@ def knn_classifier_example():
     print("\nk-nearest neighbors for a small data matrix\n")
     knn = knn_classifier()
     knn.fit(x_train, y_train)
+    print(x_train)
     k_dist, k_ind = knn.kneighbors(x_test, n_neighbors=3, return_distance=True)
     proba = knn.predict_proba(x_test)
     y_test = knn.predict(x_test)

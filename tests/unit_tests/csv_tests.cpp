@@ -42,7 +42,7 @@
 #include <list>
 #include <string>
 
-// Overload some EXPECTs nan checks and free'ing functions for potential char* data
+// Overload some EXPECTs nan checks and freeing functions for potential char* data
 template <typename T> void EXPECT_EQ_overload(T d1, T d2) { EXPECT_EQ(d1, d2); }
 
 void EXPECT_EQ_overload(const char *d1, const char *d2) { EXPECT_STREQ(d1, d2); }

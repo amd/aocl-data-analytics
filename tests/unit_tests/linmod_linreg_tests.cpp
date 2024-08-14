@@ -410,7 +410,7 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-7f},{"lambda",22.0f*100.0f/8.71398621795f},{"alpha",0.0f},{"optim progress factor", 10.0}},
                                      {{"optim convergence tol",1.e-10},{"lambda",22.0*100.0/8.71398621795},{"alpha",0.0},{"optim progress factor", 10.0}}
                                      },
-    // same problems 44-59 solved with QR - selectinh only NOREG
+    // same problems 44-59 solved with QR - selecting only NOREG
     // 60 models y ~ X + 0, y ~ X + 1, no-reg, scaling only OR standardize
     {"QRStdNoReg+1", "trivial",      {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
                                      {{"optim method", "qr"}, {"scaling", "standardise"}},
@@ -1097,7 +1097,7 @@ const linregParam linregParamPos[] = {
     // tall-thin      NA    NA   NA    NA   OK    NA
     // tall-fat       NA    NA   NA    NA   OK    NA
     //
-    // STANDARDISE (HERE DATA PASSED IS PRESCALED TO HAVE VARIANCE=1 AND MEAN=0 IN EACH COLUMN AND OUTPUT IS BEING COMPARED TO GLMNET)
+    // STANDARDIZE (HERE DATA PASSED IS PRESCALED TO HAVE VARIANCE=1 AND MEAN=0 IN EACH COLUMN AND OUTPUT IS BEING COMPARED TO GLMNET)
     // QR UNAVAIL BECAUSE PRESCALING UNDERDETERMINED PROBLEM MAKES MATRIX LOW-RANK
     // NORMAL
     // NO INTERCEPT
@@ -2227,7 +2227,7 @@ const linregParam linregParamPos[] = {
                                      true, false
                                      },
 
-    /* STANDARDISE (HERE WE COMPARING TO GLMNET OUTPUT) */
+    /* STANDARDIZE (HERE WE COMPARING TO GLMNET OUTPUT) */
     /* NORMAL TESTS */
     /* NO INTERCEPT */
     /* SHORT FAT */

@@ -25,7 +25,7 @@
  *
  */
 
-/* UT are not for the solver but rather to exersize the interface */
+/* UT are not for the solver but rather to exercise the interface */
 
 #include "nlls_tests.hpp"
 #include "aoclda.h"
@@ -37,8 +37,6 @@
 #include <vector>
 
 namespace {
-
-// FIXME ADD Float version of the tests
 
 /* RALFit examples as test of interface */
 TEST(nlls, template_double_nlls_example_box_2d) {
@@ -341,7 +339,7 @@ TEST(nlls, ifaceChecks) {
     da_handle handle{nullptr};
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
-    // exersize define_residuals
+    // exercise define_residuals
     da_int n = 1;
     da_int m = 1;
     EXPECT_EQ(
@@ -380,7 +378,7 @@ TEST(nlls, ifaceChecks) {
         da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
         da_status_success);
 
-    // exersize define bounds
+    // exercise define bounds
     std::vector<T> lower_bounds = {0.0, -1.0}, upper_bounds = {1.0, 2.0};
     EXPECT_EQ(da_nlls_define_bounds(nullptr, n, lower_bounds.data(), upper_bounds.data()),
               da_status_handle_not_initialized);
@@ -397,7 +395,7 @@ TEST(nlls, ifaceChecks) {
               da_status_success);
 
     T weights[5];
-    // Exersize weights
+    // Exercise weights
     EXPECT_EQ(da_nlls_define_weights(nullptr, m, weights),
               da_status_handle_not_initialized);
     m = 2; // wrong nsamples
@@ -421,7 +419,7 @@ TEST(nlls, solverCheckX0Rubbish) {
     da_handle handle{nullptr};
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
-    // exersize define_residuals
+    // exercise define_residuals
     da_int n = 1;
     da_int m = 1;
     T x[1]{0};

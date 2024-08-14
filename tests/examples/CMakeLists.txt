@@ -96,8 +96,8 @@ foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
 endforeach()
 
-# For Windows shared library builds copying some relevant DLLs into the examples
-# bin folder enables ctest to run without needing to update PATH
+# For Windows shared library builds, copying the relevant DLLs into the examples
+# bin folder enables ctest to run without needing to update PATH.
 if(WIN32 AND BUILD_SHARED_LIBS)
   foreach(EXAMPLE_EXE ${EXAMPLE_EXES})
     add_custom_command(

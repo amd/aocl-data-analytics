@@ -43,7 +43,7 @@
  *
  * \param[in,out] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
- * \param[out] A a pointer to the size \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column major order, unless you have set the <em>CSV data storage</em> option to <em>row major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
+ * \param[out] A a pointer to the \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column major order, unless you have set the <em>CSV data storage</em> option to <em>row major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
  * \param[out] n_cols the number of columns loaded.
  * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>CSV use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. It is your responsibility to deallocate this memory.
@@ -71,7 +71,7 @@ da_status da_read_csv_int(da_datastore store, const char *filename, da_int **A,
  *
  * \param[in,out] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
- * \param[out] A a pointer to the size \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column major order, unless you have set the <em>CSV data storage</em> option to <em>row major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
+ * \param[out] A a pointer to the \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column major order, unless you have set the <em>CSV data storage</em> option to <em>row major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
  * \param[out] n_cols the number of columns loaded.
  * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>CSV use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. It is your responsibility to deallocate this memory.
@@ -92,7 +92,7 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
  *
  * \param[in,out] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
- * \param[out] A a pointer to the size \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column major order, unless you have set the <em>CSV data storage</em> option to <em>row major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
+ * \param[out] A a pointer to the \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column major order, unless you have set the <em>CSV data storage</em> option to <em>row major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
  * \param[out] n_cols the number of columns loaded.
  * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>CSV use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. It is your responsibility to deallocate this memory.

@@ -25,7 +25,7 @@
 # pylint: disable = invalid-name, import-error, unused-argument, missing-function-docstring, unused-variable
 
 """
-Nonlinear Data Fitting example Python script
+Nonlinear data fitting example Python script
 """
 
 import sys
@@ -38,6 +38,7 @@ def res(x, residuals, data=None) -> int:
     x2 = x[1]
     residuals[:] = x1 * np.exp(x2 * t) - y
     return 0
+
 
 def jac(x, jacobian, data) -> int:
     x1 = x[0]
@@ -64,7 +65,7 @@ def hes(x, r, Hr, data) -> int:
 
 def nlls_example():
     """
-    Nonlinear Data Fitting of a convolution model, the solution
+    Nonlinear data fitting of a convolution model, the solution
     provides the isolated parameters for the model:
         yi = x1 e^(x2 ti)
     for data vectors y : yi and t : ti (i=1:5)

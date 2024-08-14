@@ -34,7 +34,7 @@ da_status da_options_set_int(da_handle handle, const char *option, da_int value)
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts, true);
@@ -54,7 +54,7 @@ da_status da_options_set_string(da_handle handle, const char *option, const char
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts, true);
@@ -74,7 +74,7 @@ da_status da_options_set_real_s(da_handle handle, const char *option, float valu
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     if (handle->precision != da_single)
         return da_error(
@@ -99,7 +99,7 @@ da_status da_options_set_real_d(da_handle handle, const char *option, double val
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     if (handle->precision != da_double)
         return da_error(
@@ -124,7 +124,7 @@ da_status da_options_get_int(da_handle handle, const char *option, da_int *value
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
@@ -145,7 +145,7 @@ da_status da_options_get_string(da_handle handle, const char *option, char *valu
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
@@ -180,7 +180,7 @@ da_status da_options_get_string_key(da_handle handle, const char *option, char *
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     da_options::OptionRegistry *opts;
     status = handle->get_current_opts(&opts);
@@ -214,7 +214,7 @@ da_status da_options_get_real_s(da_handle handle, const char *option, float *val
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     if (handle->precision != da_single)
         return da_error(
@@ -239,7 +239,7 @@ da_status da_options_get_real_d(da_handle handle, const char *option, double *va
 
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     if (handle->precision != da_double)
         return da_error(
@@ -269,7 +269,7 @@ da_status da_options_print(da_handle handle) {
         return status; // Error message already loaded
 
     opts->print_details();
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     return da_status_success;
 }
 
@@ -279,7 +279,7 @@ da_status da_datastore_options_set_int(da_datastore store, const char *option,
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
     if (status != da_status_success) {
@@ -295,7 +295,7 @@ da_status da_datastore_options_set_string(da_datastore store, const char *option
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
     if (status != da_status_success) {
@@ -311,7 +311,7 @@ da_status da_datastore_options_set_real_s(da_datastore store, const char *option
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
     if (status != da_status_success) {
@@ -327,7 +327,7 @@ da_status da_datastore_options_set_real_d(da_datastore store, const char *option
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     status = store->opts->set(option, value, da_options::user);
     if (status != da_status_success) {
@@ -343,7 +343,7 @@ da_status da_datastore_options_get_int(da_datastore store, const char *option,
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     status = store->opts->get(option, *value);
     if (status != da_status_success) {
@@ -359,7 +359,7 @@ da_status da_datastore_options_get_string(da_datastore store, const char *option
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     std::string svalue;
     status = store->opts->get(option, svalue);
@@ -389,7 +389,7 @@ da_status da_datastore_options_get_real_s(da_datastore store, const char *option
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     status = store->opts->get(option, *value);
     if (status != da_status_success) {
@@ -405,7 +405,7 @@ da_status da_datastore_options_get_real_d(da_datastore store, const char *option
 
     if (!store)
         return da_status_store_not_initialized;
-    store->clear(); // clean up store logs
+    store->clear(); // Clean up store logs
 
     status = store->opts->get(option, *value);
     if (status != da_status_success) {
@@ -420,7 +420,7 @@ da_status da_datastore_options_print(da_datastore store) {
         return da_status_store_not_initialized;
     if (store->opts) {
         store->opts->print_details();
-        store->clear(); // clean up store logs
+        store->clear(); // Clean up store logs
         return da_status_success;
     } else {
         return da_error(store->err, da_status_internal_error, "store is invalid?");

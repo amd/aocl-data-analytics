@@ -117,7 +117,7 @@ int main() {
            (da_handle_get_result_d(handle, da_pca_total_variance, &total_variance_dim,
                                    total_variance) == da_status_success);
 
-    // If succesful, print and check the results
+    // If successful, print and check the results
     if (pass) {
         // Print principal components
         std::cout << "Principal components:" << std::endl << std::endl;

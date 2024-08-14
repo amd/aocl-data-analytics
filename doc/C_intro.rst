@@ -63,7 +63,7 @@ The intended workflow for using the AOCL-DA C APIs is as follows:
     algorithmic information;
   * pass arrays of data, or data extracted from a :cpp:type:`da_datastore` to the
     handle (for best possible
-    performance, algorithmic functions typically operate on two-dimension arrays
+    performance, algorithmic functions typically operate on two-dimensional arrays
     stored in column major format);
   * computation (e.g. clustering, linear model, principal component analysis);
   * extract results from the :cpp:type:`da_handle`.
@@ -99,7 +99,7 @@ To compile and link to static AOCL libraries using ``clang++``:
             /<path to amd-sparse>/lib_<INT_LIB>/libaoclsparse.a
             /<path to amd-libflame>/lib_<INT_LIB>/libflame.a
             /<path to amd-blis>/lib_<INT_LIB>/libblis-mt.a
-            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp
+            /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp -lpgmath
 
 To compile and link to dynamic AOCL libraries using ``g++``:
 
@@ -119,10 +119,10 @@ To compile and link to dynamic AOCL libraries using ``clang++``:
             -L /<path to aocl-da>/lib_<INT_LIB> -L /<path to amd-sparse>/lib_<INT_LIB>
             -L /<path to amd-libflame>/lib_<INT_LIB> -L /<path to amd-blis>/lib_<INT_LIB>
             -L /<path to amd-utils>/lib -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
-            -lflang -lomp
+            -lflang -lomp -lpgmath
 
 Note that for dynamic linking you will need to update your ``LD_LIBRARY_PATH`` environment
-variable e.g. ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>``.
+variable, e.g. ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>``.
 
 If you wish to call AOCL-DA from a C code, then you should compile using your C compiler
 (e.g. ``gcc``), but link separately, using a C++ linker (e.g. ``g++``).
@@ -165,7 +165,6 @@ To configure cmake and compile, you can then use commands similar to:
     cmake -G Ninja -DCMAKE_CXX_COMPILER=clang-cl ..
     cmake --build .
 
-
 Miscellaneous Topics
 ====================
 
@@ -175,9 +174,9 @@ Data Types in AOCL-DA
 .. _da_int:
 
 AOCL-DA uses the ``da_int`` integer type throughout the library.
-For the 32-bit integer library (``LP64``) this is defined to be a 32-bit signed integer.
-For the 64-bit integer library (``ILP64``, compiled with the CMake flag ``-DBUILD_ILP64=On``) this is defined to be a 64-bit signed integer.
-When compiling your own code to use the 64-bit integer library, you must ensure that the ``AOCLDA_ILP64`` build variable is set.
+For the 32 bit integer library (``LP64``) this is defined to be a 32 bit signed integer.
+For the 64 bit integer library (``ILP64``, compiled with the CMake flag ``-DBUILD_ILP64=On``) this is defined to be a 64 bit signed integer.
+When compiling your own code to use the 64 bit integer library, you must ensure that the ``AOCLDA_ILP64`` build variable is set.
 
 .. _da_real_prec:
 
@@ -185,7 +184,7 @@ Algorithmic routines operating on floating-point data are typically available in
 single and double precision.
 Routines expecting single precision data have ``_s`` appended onto their names.
 Routines expecting double precision data have ``_d`` appended onto their names.
-Some routines (such as option setting routines) may expect other data types, and will have ``_int``or ``_string``` appended onto their names accordingly.
+Some routines (such as option setting routines) may expect other data types, and will have ``_int`` or ``_string`` appended onto their names accordingly.
 In this documentation we frequently use ``_?`` at the end of routine names to indicate a suite of routines that differ only in the expected data type.
 
 Array Storage

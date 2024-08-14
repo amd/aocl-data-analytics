@@ -40,14 +40,14 @@ enum linmod_method {
     cg = 32,
     qr = 33
 };
-// static struct see if a method is iterative
+// Static struct see if a method is iterative
 struct linmod_method_type {
     static bool is_iterative(linmod_method mid) {
         return mid == linmod_method::lbfgsb || mid == linmod_method::coord || mid == cg;
     }
 };
 
-/* type of scaling to perform */
+/* Type of scaling to perform */
 enum scaling_t : da_int {
     none = 0 /* must be zero */,
     automatic,
@@ -56,9 +56,9 @@ enum scaling_t : da_int {
     centering,
 };
 
-/* Affects only multinomial logistic regression. Type of constraint put on coefficients. 
-   This will affect number of coefficients returned. RSC - means we choose a 
-   reference catergory whose coefficients will be set to all 0. This results 
+/* Affects only multinomial logistic regression. Type of constraint put on coefficients.
+   This will affect number of coefficients returned. RSC - means we choose a
+   reference category whose coefficients will be set to all 0. This results
    in K-1 class coefficients for K class problem. SSC - sum of coefficients
    class-wise for each feature is 0. It will result in K class coefficients
    for K class problem.

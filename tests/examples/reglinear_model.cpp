@@ -31,7 +31,7 @@
 
 /* Linear least-squares with ridge term regression example
  *
- * This exampls fits a small dataset
+ * This example fits a small dataset
  * to a gaussian model with ridge regularization
  */
 

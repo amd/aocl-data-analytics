@@ -369,9 +369,7 @@ template <typename T> da_status da_pca<T>::compute() {
     std::string svd_routine;
     this->opts.get("svd solver", svd_routine, solver);
     if (solver == solver_auto) {
-        solver = (n > 3 * p && !(store_U))
-                     ? solver_syevd
-                     : solver_gesdd; // TODO switch where appropriate
+        solver = (n > 3 * p && !(store_U)) ? solver_syevd : solver_gesdd;
     }
     if (solver == solver_syevd && store_U) {
         return da_error(err, da_status_incompatible_options,
@@ -394,7 +392,7 @@ template <typename T> da_status da_pca<T>::compute() {
         u_size = (store_U) ? n * npc : 0;
         ldvt = npc;
         sigma_size = 2 * std::min(n, p) +
-                     1; // to allow for larger workspace requirement for AOCL-LAPACK < 4.2
+                     1; // To allow for larger workspace requirement for AOCL-LAPACK < 4.2
         A_copy_size = n * p;
     } else if (solver == solver_gesvd) {
         iwork_size = 0;
@@ -586,7 +584,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
         INFO = 0;
 
-        /*Call gesvdx*/
+        // Call gesvdx
         da::gesvdx(&JOBU, &JOBVT, &RANGE, &m_svd, &n_svd, A_svd, &m_svd, &vl, &vu, &il,
                    &iu, &ns, sigma.data(), u.data(), &ldu, vt.data(), &ldvt, work.data(),
                    &lwork, iwork.data(), &INFO);
@@ -620,7 +618,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
         INFO = 0;
 
-        /*Call gesvd*/
+        // Call gesvd
         da::gesvd(&JOBU, &JOBVT, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(),
                   &ldu, vt.data(), &ldvt, work.data(), &lwork, &INFO);
 
@@ -659,7 +657,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
         INFO = 0;
 
-        /*Call gesdd*/
+        // Call gesdd
         da::gesdd(&JOBZ, &m_svd, &n_svd, A_svd, &m_svd, sigma.data(), u.data(), &ldu,
                   vt.data(), &ldvt, work.data(), &lwork, iwork.data(), &INFO);
 
@@ -695,8 +693,7 @@ template <typename T> da_status da_pca<T>::compute() {
 
         // Allocate the workspace required
         lwork = (da_int)estworkspace[0];
-        // a bug sometimes occurs with 64 bits integers: Add explicit estimations
-        liwork = 5 * p + 3; // estiworkspace[0];
+        liwork = 5 * p + 3;
         try {
             work.resize(lwork);
             iwork.resize(liwork);
@@ -882,7 +879,7 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
                        "da_pca_compute_d.");
     }
 
-    /* Check for illegal arguments */
+    // Check for illegal arguments
     if (k < 1)
         return da_error(err, da_status_invalid_input,
                         "The function was called with k_samples = " + std::to_string(k) +

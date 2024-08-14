@@ -277,7 +277,7 @@ TEST(linmod, incompatibleOptions) {
               da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
-    // lbfgs  with logistic 1-norm term
+    // lbfgs with logistic 1-norm term
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "lbfgsb"),
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", 1.0), da_status_success);
@@ -334,7 +334,7 @@ TEST(linmod, incompatibleOptions) {
     EXPECT_EQ(da_options_set_string(handle_d, "scaling", "centering"), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
-    // QR solver with regularisation
+    // QR solver with regularization
     EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", 1.0), da_status_success);
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
@@ -359,7 +359,7 @@ TEST(linmod, wideMatrixProblems) {
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
-    // Can't fit QR solver on underdetermined problem with standardisation
+    // Can't fit QR solver on underdetermined problem with standardization
     EXPECT_EQ(da_options_set_string(handle_d, "scaling", "standardize"),
               da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "intercept", 0), da_status_success);

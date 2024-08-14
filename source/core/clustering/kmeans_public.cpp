@@ -29,7 +29,7 @@ da_status da_kmeans_set_data_d(da_handle handle, da_int n_samples, da_int n_feat
                                const double *A, da_int lda) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -39,7 +39,6 @@ da_status da_kmeans_set_data_d(da_handle handle, da_int n_samples, da_int n_feat
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_d->set_data(n_samples, n_features, A, lda);
 }
 
@@ -47,7 +46,7 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
                                const float *A, da_int lda) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -57,14 +56,13 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_s->set_data(n_samples, n_features, A, lda);
 }
 
 da_status da_kmeans_set_init_centres_d(da_handle handle, const double *C, da_int ldc) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -74,14 +72,13 @@ da_status da_kmeans_set_init_centres_d(da_handle handle, const double *C, da_int
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_d->set_init_centres(C, ldc);
 }
 
 da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int ldc) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -91,14 +88,13 @@ da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int 
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_s->set_init_centres(C, ldc);
 }
 
 da_status da_kmeans_compute_d(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -114,7 +110,7 @@ da_status da_kmeans_compute_d(da_handle handle) {
 da_status da_kmeans_compute_s(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -132,7 +128,7 @@ da_status da_kmeans_transform_s(da_handle handle, da_int m_samples, da_int m_fea
                                 da_int ldx_transform) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -151,7 +147,7 @@ da_status da_kmeans_transform_d(da_handle handle, da_int m_samples, da_int m_fea
                                 da_int ldx_transform) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -161,7 +157,6 @@ da_status da_kmeans_transform_d(da_handle handle, da_int m_samples, da_int m_fea
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_d->transform(m_samples, m_features, X, ldx, X_transform,
                                        ldx_transform);
 }
@@ -170,7 +165,7 @@ da_status da_kmeans_predict_s(da_handle handle, da_int k_samples, da_int k_featu
                               const float *Y, da_int ldy, da_int *Y_labels) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -180,7 +175,6 @@ da_status da_kmeans_predict_s(da_handle handle, da_int k_samples, da_int k_featu
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_s->predict(k_samples, k_features, Y, ldy, Y_labels);
 }
 
@@ -188,7 +182,7 @@ da_status da_kmeans_predict_d(da_handle handle, da_int k_samples, da_int k_featu
                               const double *Y, da_int ldy, da_int *Y_labels) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -198,6 +192,5 @@ da_status da_kmeans_predict_d(da_handle handle, da_int k_samples, da_int k_featu
                         "handle was not initialized with handle_type=da_handle_kmeans or "
                         "handle is invalid.");
 
-    /*Initialize*/
     return handle->kmeans_d->predict(k_samples, k_features, Y, ldy, Y_labels);
 }

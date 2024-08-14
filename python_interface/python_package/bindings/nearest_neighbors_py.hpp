@@ -57,9 +57,7 @@ class knn_classifier : public pyda_handle {
         } else if (prec == "single") {
             status = da_handle_init<float>(&handle, da_handle_knn);
             precision = da_single;
-        } /*else {
-            status = da_status_handle_not_initialized;
-        }*/
+        }
         exception_check(status);
         status = da_options_set(handle, "number of neighbors", n_neighbors);
         exception_check(status);
@@ -83,7 +81,7 @@ class knn_classifier : public pyda_handle {
         exception_check(status); // throw an exception if status is not success
 
         // Store the pointers since they can be temporary so that memory is not
-        // free'd and reused later.
+        // freed and reused later.
         if constexpr (std::is_same_v<T, double>) {
             Xd_internal = std::move(X);
         } else if (std::is_same_v<T, float>) {

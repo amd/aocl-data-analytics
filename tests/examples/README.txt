@@ -18,7 +18,7 @@ To compile and link to static AOCL libraries using clang++:
 clang++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
     /<path to aocl-da>/lib_<INT_LIB>/libaocl-da.a /<path to libaoclsparse>/lib_<INT_LIB>/libaoclsparse.a
     /<path to libflame>/lib_<INT_LIB>/libflame.a /<path to blis>/lib_<INT_LIB>/libblis-mt.a
-    /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp
+    /<path to libaoclutils>/lib_<INT_LIB>/libaoclutils.a -lflang -lomp -lpgmath
 
 To compile and link to dynamic AOCL libraries using g++:
 
@@ -30,7 +30,7 @@ To compile and link to dynamic AOCL libraries using clang++:
 
 clang++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
     -L/<path to aocl-da and similarly for aoclutils, blis, flame, aoclsparse>/lib_<INT_LIB> -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
-    -lflang -lomp
+    -lflang -lomp -lpgmath
 
 (note that for dynamic linking you will need to update LD_LIBRARY_PATH e.g. export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>)
 

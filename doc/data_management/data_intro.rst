@@ -35,8 +35,8 @@ Data Management
 Introduction
 ============
 
-The AOCL-DA C API contains a suite of functions designed to allow loading and manipulating data in a straightforward
-manner before calling the algorithms of the library. All functions in this suite use the :cpp:type:`da_datastore` structure to store and manipulate data.
+The AOCL-DA C API contains a suite of functions for loading and manipulating data in a straightforward
+manner before calling the library's algorithmic routines. All functions in this suite use the :cpp:type:`da_datastore` structure to store and manipulate data.
 
 There are two ways to load data in the library:
 
@@ -44,14 +44,14 @@ There are two ways to load data in the library:
 
 - into a :ref:`data store <datastores_intro>`, which contains functionality for cleaning and manipulating data.
 
-At the current version of AOCL-DA, the only supported format to load data from hard memory is CSV (comma separated
+Currently, the only supported format for loading data from hard memory is CSV (comma separated
 values).
 
 
 .. _data_array_intro:
 
-Loading data from hard memory to dense arrays
-=============================================
+Loading data from hard memory into dense arrays
+===============================================
 
 CSV files
 ---------
@@ -68,21 +68,21 @@ If the `CSV data storage` option is set to `row major` then data is stored in ro
 
 For more details on each of the available functions, see the :ref:`API documentation. <csv_api>`
 
-Note: if you wish to load data directly from the CSV file to the
-:cpp:type:`da_datastore` struct, then use :cpp:func:`da_data_load_from_csv`.
+.. note::
+   If you wish to load data directly from the CSV file to the :cpp:type:`da_datastore` struct, then use :cpp:func:`da_data_load_from_csv`.
 
 .. _datastores_intro:
 
-Data manipulation : Data stores
-===============================
+Data manipulation
+==================
 
 The :cpp:type:`da_datastore` structure can also be used to load and manipulate data. The life cycle of a data store typically follows these steps:
 
-- :ref:`Initialize <api_init>` the data store structures.
-- :ref:`Load <api_load_data>` data into the data stores, from pre-allocated memory, CSV files or other data stores.
+- :ref:`Initialize <api_init>` the data store structure.
+- :ref:`Load <api_load_data>` data into the data store, from pre-allocated memory, CSV files or other data stores.
 - :ref:`Edit the data <api_data_edition>`.
 - :ref:`Select <api_data_selection>` a subsection of the store.
-- :ref:`Extract data <api_data_extraction>`, either columns or specific selections.
+- :ref:`Extract data <api_data_extraction>`, either columns/rows or specific selections.
 - :ref:`Cleanly destroy <api_init>` the structure.
 
 For more details on each of the available functions, see the :ref:`API documentation. <datastore_api>`
@@ -91,25 +91,27 @@ For more details on each of the available functions, see the :ref:`API documenta
 Loading data into a :cpp:type:`da_datastore`
 --------------------------------------------
 
-Loading data into a :cpp:type:`da_datastore` can be done by adding blocks from different sources. A typical example would be to load data from a file and add columns that were allocated dynamically in your program. This can be achieved by calling :cpp:func:`da_data_load_from_csv` and :cpp:func:`da_data_load_col_int` consecutively for example.
+Data can be loaded into a :cpp:type:`da_datastore` by adding blocks of data from different sources.
+A typical example is to load data from a file and add columns that were allocated dynamically in your program.
+This can be achieved by calling :cpp:func:`da_data_load_from_csv` and :cpp:func:`da_data_load_col_int` consecutively, for example.
 
 When calling any of the :ref:`da_data_load_row_? <da_data_load_row>` or :ref:`da_data_load_col_? <da_data_load_col>` functions on a :cpp:type:`da_datastore` that is not empty, certain constraints must be
-respected:
+respected.
 
 - While adding columns, the number of rows in the block to be added must match the current number of rows present in the :cpp:type:`da_datastore` (:cpp:func:`da_data_get_num_rows` can be used to query the dimension).
 
 - New rows can be added in several sub-blocks. However:
-    - the :cpp:type:`da_datastore` will be locked until the current number of columns in the store matches the number of columns of the new block
-    - Each sub-block has a minimum column size determined by the number of consecutive columns of the same type in the store. For example, if a given store already has 2 integer columns and a float column, new rows can be added in 2 sub-blocks (one with 2 integer columns and one with the remaining float column).
+    - the :cpp:type:`da_datastore` will be locked until the current number of columns in the store matches the number of columns of the new block;
+    - each sub-block has a minimum column size determined by the number of consecutive columns of the same type in the store. For example, if a given store already has two integer columns and a float column, new rows can be added in two sub-blocks (one with two integer columns and one with the remaining float column).
 
-The last way to load data into a given store is from another :cpp:type:`da_datastore`. Calling :cpp:func:`da_data_hconcat` will
-concatenate horizontally 2 :cpp:type:`da_datastore` with matching number of rows.
+The final way to load data into a data store is from another :cpp:type:`da_datastore`. Calling :cpp:func:`da_data_hconcat` will
+horizontally concatenate two :cpp:type:`da_datastore` objects with matching numbers of rows.
 
 
 Selecting and extracting data
 -----------------------------
 
-The :cpp:type:`da_datastore` structure uses *selections* to select and or extract a subset of the data it contains. Note that column and row indices are always zero-based, meaning the first index is 0 and the indices of the last column and row are ``n_cols-1`` and ``n_rows-1`` respectively.
+The :cpp:type:`da_datastore` structure uses *selections* to select and extract subsets of the data. Note that column and row indices are always zero-based, meaning the first index is 0 and the indices of the last column and row are ``n_cols-1`` and ``n_rows-1`` respectively.
 
 **Selections**
 
@@ -119,7 +121,7 @@ The :cpp:type:`da_datastore` structure uses *selections* to select and or extrac
 
 **Extraction**
 
-Once the data is fully loaded, one may want to extract it into dense blocks of contiguous memory suitable for the various algorithms of AOCL-DA. There are two ways to :ref:`extract data<api_data_extraction>` from a :cpp:type:`da_datastore`:
+Once the data is loaded into a data store, it can be extracted into dense blocks of contiguous memory suitable for the various algorithms of AOCL-DA. There are two ways to :ref:`extract data<api_data_extraction>` from a :cpp:type:`da_datastore`:
 
 - Extract a specific column with one of the :ref:`da_data_extract_column_? <da_data_extract_column>` functions.
 - Extract a selection with a given label by calling one of the :ref:`da_data_extract_selection_? <da_data_extract_selection>` functions.
@@ -132,7 +134,7 @@ Options
 =======
 
 Various options can be set to customize the behavior of the data loading functions by calling one of these
-:ref:`functions <api_datastore_options>`. The following table details the available options
+:ref:`functions <api_datastore_options>`. The following table details the available options.
 
 .. _csv_options:
 

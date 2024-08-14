@@ -35,20 +35,19 @@ This section contains general instructions for calling AOCL-DA using the Python 
 Installation
 =============
 
-Your AOCL-DA package comes bundled with Python wheel, ``aoclda-*.whl``, where ``*`` depends on your particular system.
-To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.whl``.
+Your AOCL-DA package comes bundled with a Python wheel, ``aoclda-*.whl``, where ``*`` depends on your particular system.
+To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.whl``. This will install the necessary libraries and dependencies.
 
-The wheel, ``aoclda-*.whl``, will install the necessary libraries and dependencies.
-
-Note that Python support on Windows is currently experimental. A Fortran runtime library ``libifcore-mt.lib`` is required, so you will need to install the Intel Fortran compiler and set the environment variable ``FORTRAN_RUNTIME`` to point to the directory containing the corresponding DLL.
-You may also need to install an OpenMP runtime and add it to your Windows environment. If you encounter issues using the Python wheel on Windows, please e-mail us on
-toolchainsupport@amd.com.
+.. note::
+   Python support on Windows is currently experimental. A Fortran runtime library ``libifcore-mt.lib`` is required, so you will need to install the Intel Fortran compiler and set the environment variable ``FORTRAN_RUNTIME`` to point to the directory containing the corresponding DLL.
+   You may also need to install an OpenMP runtime and add it to your Windows environment. If you encounter issues using the Python wheel on Windows, please e-mail us on
+   toolchainsupport@amd.com.
 
 NumPy Arrays
 =============
 
 AOCL-DA Python interfaces typically expect data to be supplied as NumPy arrays. These can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
-The interface will convert C-style numpy arrays to Fortran style, so for best performance, it is recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions.
+The AOCL-DA interface will convert C-style numpy arrays to Fortran style, so for best performance, it is recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions.
 
 .. _python_examples:
 

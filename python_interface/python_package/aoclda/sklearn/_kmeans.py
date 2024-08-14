@@ -25,7 +25,7 @@
 
 
 """
-Patching scikit learn clustering: kmeans
+Patching scikit-learn clustering: kmeans
 """
 # pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, no-member
 
@@ -37,7 +37,7 @@ import numpy as np
 
 class kmeans(kmeans_sklearn):
     """
-    Overwrite sklearn kmeans to call DA library
+    Overwrite scikit-learn kmeans to call AOCL-DA library
     """
 
     def __init__(self, n_clusters=8, *, init='k-means++', n_init='auto', max_iter=300, tol=0.0001,

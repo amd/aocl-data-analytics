@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -135,7 +135,6 @@ da_status da_five_point_summary_s(da_axis axis, da_int n_rows, da_int n_cols,
         axis, n_rows, n_cols, X, ldx, minimum, lower_hinge, median, upper_hinge, maximum);
 }
 
-/* Shift by a constant amount and scale */
 da_status da_standardize_d(da_axis axis, da_int n_rows, da_int n_cols, double *X,
                            da_int ldx, da_int dof, da_int mode, double *shift,
                            double *scale) {

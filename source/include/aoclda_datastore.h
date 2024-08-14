@@ -38,7 +38,7 @@
 
 /**
  * @brief The main structure used by AOCL-DA to store data.
- * All functions of this chapter operate on this internal data structure.
+ * All functions on this page operate on this data structure.
  */
 typedef struct _da_datastore *da_datastore;
 
@@ -89,7 +89,7 @@ da_status da_data_print_options(da_datastore store);
  *
  * The two data stores must have a matching number of rows to successfully perform this operation.
  *
- * If successful, on output, @p store1 will contain the concatenation of the 2 stores and store 2 will be empty.
+ * If successful, on output, @p store1 will contain the concatenation of the two stores and @p store2 will be empty.
  * No copy of the data is performed when this function is called.
  *
  * @param store1 the @ref da_datastore that will contain the concatenation on output.
@@ -108,7 +108,7 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * @brief Load new columns into a @ref da_datastore from a dense matrix.
  * The last suffix of the function name marks the type of the data to add.
  *
- * The *da_data_load_col_X* routines will try to add columns to the right of the @ref da_datastore passed in argument.
+ * The @p da_data_load_col_? routines will try to add columns to the right of the @ref da_datastore passed in argument.
  * If data was already loaded in the store, the number of rows of the new block must match
  * with the number of rows already present.
  *
@@ -148,7 +148,7 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
 /** \{
  * @brief Load new columns into a @ref da_datastore from a dense matrix.
  *
- * The *da_data_load_col_str* routine will try to add columns to the right of the @ref da_datastore passed in argument.
+ * The ``da_data_load_col_str`` routine will try to add columns to the right of the data store passed in argument.
  * If data was already loaded in the store, the number of rows of the new block must match
  * with the number of rows already present.
  *
@@ -177,7 +177,7 @@ da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
  * The last suffix of the function name marks the type of the data to add.
  *
  * @rst
- * The *da_data_load_row_X* routines will try to add rows at the bottom of the @ref da_datastore passed in the argument.
+ * The ``da_data_load_row_?`` routines will try to add rows at the bottom of the data store passed in the argument.
  * If data was already loaded in the store, the routines must be called repeatedly until the columns of the new blocks
  * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the stores structure).
  * @endrst
@@ -219,7 +219,7 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * @brief Load new rows into a @ref da_datastore from a dense matrix.
  *
  * @rst
- * The *da_data_load_row_str* routine will try to add rows at the bottom of the @ref da_datastore passed in the argument.
+ * The ``da_data_load_row_str`` routine will try to add rows at the bottom of the data store passed in the argument.
  * If data was already loaded in the store, the routines must be called repeatedly until the columns of the new blocks
  * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the stores structure).
  * @endrst
@@ -252,7 +252,7 @@ da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
  * The following additional options can be set:
  *
  \rst
- .. csv-table:: @ref da_datastore file reading options
+ .. csv-table::
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
    "CSV integers as floats", "da_int", ":math:`i = 0`", "Whether or not to interpret integers as floating point numbers when using autodetection", ":math:`0 \le i \le 1`"
@@ -274,7 +274,7 @@ da_status da_data_load_from_csv(da_datastore store, const char *filename);
 /* *********************************************************************************** */
 /**
  * @brief Select all columns indexed between the values @p lbound and @p ubound in the selection labeled by @p key.
- * Column indices are zero-based, meaning the index of the first column is 0 and the index of the last one is n_cols-1.
+ * Column indices are zero-based, meaning the index of the first column is 0 and the index of the last one is @p n_cols-1.
  *
  * Overlapping columns cannot be selected at this time.
  *
@@ -292,7 +292,7 @@ da_status da_data_select_columns(da_datastore store, const char *key, da_int lbo
                                  da_int ubound);
 /**
  * @brief Select all rows indexed between the values @p lbound and @p ubound in the selection labeled by @p key.
- * Row indices are zero-based, meaning the index of the first row is 0 and the index of the last one is n_rows-1.
+ * Row indices are zero-based, meaning the index of the first row is 0 and the index of the last one is @p n_rows-1.
  *
  * @param[inout] store the main data structure.
  * @param[in] key label of the selection.
@@ -348,7 +348,7 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
  * @brief Remove the columns indexed by the values between @p lbound and @p ubound from an existing
  * selection.
  * Column indices are zero-based, meaning the index of the first column is 0 and the index of
- * the last one is n_rows-1.
+ * the last one is @p n_rows-1.
  *
  * A warning @ref da_status_invalid_input is returned if @p key does not designate a valid
  * selection.
@@ -369,7 +369,7 @@ da_status da_data_select_remove_columns(da_datastore store, const char *key,
  * @brief Remove the rows indexed by the values between @p lbound and @p ubound from an existing
  * selection.
  * Row indices are zero-based, meaning the index of the first row is 0 and the index of
- * the last one is n_rows-1.
+ * the last one is @p n_rows-1.
  *
  * A warning @ref da_status_invalid_input is returned if @p key does not designate a valid
  * selection.

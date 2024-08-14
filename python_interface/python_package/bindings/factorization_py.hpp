@@ -39,7 +39,6 @@
 #include <stdexcept>
 
 class pca : public pyda_handle {
-    //da_handle handle = nullptr;
     da_precision precision = da_double;
 
   public:

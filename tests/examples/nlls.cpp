@@ -24,7 +24,7 @@
  *
  */
 
-/* Fit the convolution model y_i = [Al * lognorma(a, b)]_i + [Ag * normal(mu, sigma)]_i
+/* Fit the convolution model y_i = [Al * lognormal(a, b)]_i + [Ag * normal(mu, sigma)]_i
  * given the density observations at the measured diameter sizes.
  */
 

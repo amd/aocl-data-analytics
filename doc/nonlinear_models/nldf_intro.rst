@@ -31,7 +31,7 @@ Nonlinear Data Fitting
 **********************
 
 The topic of nonlinear data fitting encompasses a range of commonly used statistical models and fitting algorithms, including
-Nonlinear Least-Squares and its variations.
+nonlinear least-squares and its variations.
 
 The general form of a nonlinear least-squares fitting problem is as follows:
 
@@ -62,17 +62,17 @@ initial guess at every iteration.
 Defining a Nonlinear Model
 --------------------------
 
-A model is defined inside a :ref:`handle<intro_handle>`, in it all the components of the model are configured.
+A model is defined inside a :ref:`handle<intro_handle>`, in which all the components of the model are configured.
 In particular, any model is defined via the residual function, :math:`r(x) = \theta(t, x) - y`, where
 the pair :math:`(t, y)` are the data points used to evaluate the model's residual vector.
 
 **Residual functions**
 
-To train the model, the optimizer requires to make calls to the residual function which is
-`defined` using the  :cpp:func:`da_nlls_define_residuals<da_nlls_define_residuals_s>`.
+To train the model, the optimizer needs to make calls to the residual function which is
+`defined` using :cpp:func:`da_nlls_define_residuals<da_nlls_define_residuals_s>`.
 Some solvers require further information such as the
-first order derivatives (residual Jacobian matrix) or even second order ones,
-these are also defined with this function.
+first order derivatives (residual Jacobian matrix) or even second order ones.
+These are also defined with this function.
 Refer to :ref:`nonlinear least-squares callbacks<da_nlls_callbacks>` for further details on the
 residual functions signatures.
 
@@ -82,7 +82,7 @@ A key requirement of this iterative optimizer is to have access to first order d
 in order to calculate an improved solution.
 There is a strong relationship between the quality of the derivatives and the
 performance of the solver. If the user does not provide a call-back derivative function,
-either because it is not available or by choice, then the solver will approximate the derivatives matrix using
+either because it is not available or by choice, then the solver will approximate the derivatives matrix using the
 single-sided finite-differences method.
 
 .. collapse:: Details
@@ -101,7 +101,7 @@ observed that solver "stagnates" or fails during the optimization process, tweak
 
 **Verifying derivatives**
 
-One of the most common problems while trying to train a model is having wrong derivatives.
+One of the most common problems while trying to train a model is having incorrect derivatives.
 Writing the derivative call-back function is error-prone and to address this, a **derivative
 checker** can be activated (set option ``'Check derivatives'`` to ``'yes'``) for checking the
 derivatives provided by the call-back. The checker produces a table similar to
@@ -126,38 +126,38 @@ derivatives provided by the call-back. The checker produces a table similar to
 
 .. collapse:: Details
 
-    The reported table has few sections. The first column after the equal sign (``=``), is the derivative
-    returned by the user-supplied call-back, the column after the ``~`` sign is the approximated finite-difference
-    derivative, the value inside the brackets is the relative threshold
+    The reported table has a few sections. The first column after the equal sign (``=``), is the derivative
+    returned by the user-supplied call-back. The column after the ``~`` sign is the approximated finite-difference
+    derivative. The value inside the brackets is the relative threshold
     :math:`\frac{|\mathrm{approx} - \mathrm{exact}|}{\max(|\mathrm{approx}|,\; \mathrm{fd_ttol})}`,
     (``fd_ttol`` is defined by the option ``Derivative test tol``). The value inside the parenthesis is the relative tolerance
     to compare the relative threshold against.
     The last column provides some flags: ``X`` to indicate that the threshold is larger than the tolerance and is deemed likely
     to be wrong. ``T`` indicates that the value stored in :math:`J(i,j)` corresponds the to the value belonging to the transposed Jacobian matrix,
-    providing a hint that possibly the storage sequence is likely wrong. It also hints to check that the matrix is being stored row-major and that
+    providing a hint that possibly the storage sequence is incorrect. This implies that you should check in case the matrix is being stored in row-major format and that
     the solver option ``'Storage scheme'`` is set to column-major or vice-versa. Finally, ``Skip`` indicates that either the
     associated variable is fixed (constrained to a fixed value) or the bounds on it are too tight to perform a finite-difference
-    approximation and thus the check for this entry cannot be checked and is skipped.
+    approximation and thus the check for this entry cannot be performed and is skipped.
 
-    The derivative checker uses finite-differences to compare with the user provided derivatives and such the
+    The derivative checker uses finite-differences to compare with the user-provided derivatives and as such the
     quality of the approximation depends on the finite-difference step used (see option ``'Finite difference step'``).
 
     The option ``'Derivative test tol'`` is involved in defining the relative tolerance to decide if the user-supplied
-    derivative is correct,  a smaller value implies a more stringent test.
+    derivative is correct. A smaller value implies a more stringent test.
 
-    Under certain circumstances the checker may signal false-positives, tweaking the options ``'Finite difference step'``
-    and ``'Derivative test tol'`` can help from this to happen.
+    Under certain circumstances the checker may signal false-positives. Tweaking the options ``'Finite difference step'``
+    and ``'Derivative test tol'`` can help prevent this.
 
-It is highly recommended that during the writing or development of the derivative call-back, to set the option
+It is highly recommended that during the writing or development of the derivative call-back, you set the option
 ``'Check derivatives'`` to ``'yes'``.
-After validating residual Jacobian matrix and to avoid performance impact, the option can be reset to ``'no'``.
+After validating the residual Jacobian matrix, and to avoid performance impact, the option can then be reset to ``'no'``.
 
 **Residual weights**
 
-Under certain circumstances it is known that some residuals are more `reliable` then others in such cases it is
+Under certain circumstances it is known that some residuals are more `reliable` than others. In such cases it is
 desirable to give more `importance` to these. This is done by :ref:`defining the weighting matrix<da_nlls_define_weights>`, :math:`W`, using
 :cpp:func:`da_nlls_define_weights<da_nlls_define_weights_s>`. Note that  :math:`W` is a diagonal matrix with
-positive elements, these elements
+positive elements. These elements
 should `correspond` to the inverse of the variance of each residual.
 
 **Constraining the model**
@@ -165,31 +165,31 @@ should `correspond` to the inverse of the variance of each residual.
 Some models aim to explain real-life phenomena where some coefficients may not make physical sense if
 they take certain invalid
 values, e.g. coefficient :math:`x_j` representing a distance may not take negative values. For these cases, parameter
-optimization needs to be constrained to valid values, in the previous distance example, the coefficient would be
+optimization needs to be constrained to valid values. In the previous distance example, the coefficient would be
 `bound constrained` to the non-negative real half-space: :math:`0 \le x_j`.
-These constrains are defined into the model using :cpp:func:`da_nlls_define_bounds<da_nlls_define_bounds_s>`.
+These constraints are added to the model using :cpp:func:`da_nlls_define_bounds<da_nlls_define_bounds_s>`.
 
 **Adding regularization**
 
 Nonlinear models can have multiple local-minima that are undesirable, provide a biased solution or
 even show signs of overfitting.
-A practical way to tackle these scenarios is to introduce regularization,
-typically quadratic or cubic (i.e., :math:`p=2, 3`) yield best results. Note that :math:`\sigma` and
-:math:`p` are hyper-parameters and are not optimized by this model, they have to be provided by the caller.
+A practical way to tackle these scenarios is to introduce regularization.
+Typically quadratic or cubic regularization (i.e., :math:`p=2, 3`) yield best results. Note that :math:`\sigma` and
+:math:`p` are hyperparameters and are not optimized by this model, so they have to be provided by the caller.
 :math:`\sigma` provides a transition between an unregularized local solution (:math:`\sigma=0`) and the
-zero-coefficient vector (:math:`\sigma \gg 0`). Striking the correct ballance may require trial-and-error
-or have a good understanding of the underlying model. Regularization is added by using the
+zero-coefficient vector (:math:`\sigma \gg 0`). Striking the correct balance may require trial and error
+or a good understanding of the underlying model. Regularization is added by using the
 optional parameters ``Regularization term`` (:math:`\sigma`) and ``Regularization power`` (:math:`p`),
-see :ref:`nlls_options`
+see :ref:`nlls_options`.
 
 **Training the model**
 
-Once the model has been setup, the iterative training process is done by calling the optimizer :cpp:func:`da_nlls_fit<da_nlls_fit_s>`.
+Once the model has been set up, the iterative training process is performed by calling the optimizer :cpp:func:`da_nlls_fit<da_nlls_fit_s>`.
 
-Typical workflow for linear models
-==================================
+Typical workflow for nonlinear models
+=====================================
 
-The standard way of computing a linear model using AOCL-DA is as follows.
+The standard way of computing a nonlinear model using AOCL-DA is as follows.
 
 .. tab-set::
 
@@ -206,7 +206,7 @@ The standard way of computing a linear model using AOCL-DA is as follows.
       :sync: C
 
       1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_nlls``.
-      2. Pass model to the handle using :ref:`da_nlls_define_residuals_? <da_nlls_define_residuals>`.
+      2. Pass the model to the handle using :ref:`da_nlls_define_residuals_? <da_nlls_define_residuals>`.
       3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <nlls_options>` for a list of the available options).
       4. Train the nonlinear model using :ref:`da_nlls_fit_? <da_nlls_fit>` (you will have to provide an initial guess).
       5. Optimized coefficients :math:`x` are returned on the interface.

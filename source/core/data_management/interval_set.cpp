@@ -52,7 +52,7 @@ da_status interval_set::insert(interval bounds) {
         (it_upper != iset.end() && it_upper->lower <= lb && it_upper->upper >= ub))
         return da_status_success;
 
-    // every interval between it_lower and it_upper in included in the inserted interval
+    // Every interval between it_lower and it_upper in included in the inserted interval
     inter_set::iterator it = it_lower;
     if (it != iset.end())
         it++;
@@ -128,7 +128,7 @@ da_status interval_set::erase(interval bounds) {
     if (it_lower != iset.end() && it_lower->lower > lb)
         it_lower = iset.end();
 
-    // every interval between it_lower and it_upper in included in the inserted interval
+    // Every interval between it_lower and it_upper in included in the inserted interval
     bool is_included = it_lower == it_upper;
     if (!is_included) {
         inter_set::iterator it = it_lower;
@@ -141,7 +141,7 @@ da_status interval_set::erase(interval bounds) {
         }
     }
 
-    // remove bounds from the lower and upper interval
+    // Remove bounds from the lower and upper interval
     da_int new_lb, new_ub;
     if (it_lower != iset.end()) {
         new_lb = it_lower->lower;

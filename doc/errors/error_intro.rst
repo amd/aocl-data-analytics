@@ -34,7 +34,7 @@ Almost all functions in the AOCL-DA C API return a :cpp:type:`da_status` enumera
 If the function exited successfully then this will take the value ``da_status_success``, otherwise the value will indicate the type of error that was encountered.
 
 Functions which take a :cpp:type:`da_handle` or :cpp:type:`da_datastore` as their first argument will store further information about any errors that have been encountered.
-This information can be extracted using :cpp:func:`da_handle_print_error_message` :cpp:func:`da_datastore_print_error_message`.
+This information can be extracted using :cpp:func:`da_handle_print_error_message` or :cpp:func:`da_datastore_print_error_message`.
 Error messages prepended with "DA_WARN" indicate that a problem was encountered but the computation was able to continue. The returned result is potentially useful but the user should check it. Error messages prepended with "DA_ERROR" indicate that the computation was unable to complete and no useful result is returned.
 
 .. toctree::

@@ -46,7 +46,6 @@ for lib in os.listdir('aoclda'):
 
 setup(
     name="aoclda",
-    # ext_modules=[CMakeExtension('aoclda._aoclda')],
     cmdclass={'bdist_wheel': spec_bdist_wheel},
     long_description="AOCL-DA Python Interfaces",
     version="4.2.1",

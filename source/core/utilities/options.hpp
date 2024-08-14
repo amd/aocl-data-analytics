@@ -44,14 +44,6 @@
 #undef max
 
 /*
- * Current status TODO
- * ===================
- * [ ] Rename CamelCase to snake_case
- * [ ] Update of the comments bellow...
- *
- * Options Registry TODO REWRITE THIS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
- * ========================================================================
- *
  * da_options namespace provides a Registry class that "registers"
  * options and an Option class that defines an "option" element.
  * Options can be of any four classes: Integer, Real (float or double,
@@ -59,16 +51,16 @@
  * defines a method Called "Register" to add a new option.
  * Registered options can be set using Registry.SetOption,
  * queried using Registry.GetOption and for strings Registry.GetKey, and
- * prety-printed using either Registry.PrintOptions or Registry.print_details.
+ * pretty-printed using either Registry.PrintOptions or Registry.print_details.
  *
- * Options have a "name" that is used to distiguish them, so this should be
+ * Options have a "name" that is used to distinguish them, so this should be
  * unique among the ALL the registered options (of any Option class).
  * Furthermore, the "name" string is sanitized before using, that is, it is
  * trimmed and blanks squeezed. Do not register the same option twice.
  * No checks on option registry are done.
  *
- * Quering options have a certain cost and should be done only once at the
- * beggining of the solver or when initializing the internal data.
+ * Querying options have a certain cost and should be done only once at the
+ * beginning of the solver or when initializing the internal data.
  *
  *
  * Register functions returns da_status status da_status_option_*
@@ -257,18 +249,17 @@ class OptionBase {
 
         // Quick check
         da_int iflag = 0;
-        // check that it is within range (lower bound)
+        // Check that it is within range (lower bound)
         if ((lbound == greaterthan) && (value <= lower))
             iflag += 1;
         else if ((lbound == greaterequal) && (value < lower))
             iflag += 2;
-        // check that it is within range (upper bound)
+        // Check that it is within range (upper bound)
         if ((ubound == lessthan) && (value >= upper))
             iflag += 10;
         else if ((ubound == lessequal) && (value > upper))
             iflag += 20;
         if (iflag) {
-            // FIXME: use iflag for pretty printing error
             errmsg = "Option '" + name + "': value out-of-bounds";
             return da_status_option_invalid_value;
         }
@@ -276,38 +267,38 @@ class OptionBase {
     }
 
   protected:
-    // name i.e. "Iteration Limit"
+    // Name i.e. "Iteration Limit"
     string name;
-    // type of the option (int, real (float/double), string or bool)
+    // Type of the option (int, real (float/double), string or bool)
     option_t otype = opt_undefined;
-    string desc; // brief description (free text)
+    string desc; // Brief description (free text)
     setby_t setby;
     string errmsg = ""; // internal error buffer
-    // prepare the option key/value pair to be printed on screen.
-    // called with option "print options = yes"
+    // Prepare the option key/value pair to be printed on screen.
+    // Called with option "print options = yes"
     virtual string print_option(void) = 0;
-    // compose the option details (used for documentation)
-    // screen = true => print it in plain text pretty print
-    // screen = false => used to indicate a file format is requested
+    // Compose the option details (used for documentation)
+    // Screen = true => print it in plain text pretty print
+    // Screen = false => used to indicate a file format is requested
     // => doxygen = true => format is set to Doxygen
     // => doxygen = false => format is set to ReStructuredText
     virtual string print_details(bool screen = true, bool doxygen = false) = 0;
 };
 
 template <typename T> class OptionNumeric : public OptionBase {
-    // actual value of the option
+    // Actual value of the option
     T value;
-    // default value for option
+    // Default value for option
     T vdefault;
     // Descriptive string of the vdefault value (optional)
     string vddesc;
-    // lower bound value for option
+    // Lower bound value for option
     T lower;
-    // lower bound type (none (-inf), greater than..., greater or equal than...)
+    // Lower bound type (none (-inf), greater than..., greater or equal than...)
     lbound_t lbound;
-    // upper value for option
+    // Upper value for option
     T upper;
-    // upper bound type (none (+inf), less than..., less or equal than...)
+    // Upper bound type (none (+inf), less than..., less or equal than...)
     ubound_t ubound;
 
   public:
@@ -374,7 +365,7 @@ template <typename T> class OptionNumeric : public OptionBase {
                 if (vddesc != "") { // Pretty print vdefault value
                     rec << " * | **" << name << "** | " << tylab << " | \\f$ " << t
                         << " = " << vddesc << "\\f$ |" << endl;
-                } else { // no detail, conver default value
+                } else { // No detail, conver default value
                     rec << " * | **" << name << "** | " << tylab << " | \\f$ " << t
                         << " = " << vdefault << "\\f$ |" << endl;
                 }
@@ -407,7 +398,7 @@ template <typename T> class OptionNumeric : public OptionBase {
                     rec << "\\f$. |||" << endl;
                 }
             }
-        } else if (!screen) { // restructured text
+        } else if (!screen) { // Restructured text
             if (otype == option_t::opt_bool) {
                 rec << "   \"" << name << "\", \"" << tylab << "\", \":math:`" << t
                     << "=` " << vdefault << "\", \"" << desc << "\", \"";
@@ -415,7 +406,7 @@ template <typename T> class OptionNumeric : public OptionBase {
                 if (vddesc != "") { // Pretty print vdefault value
                     rec << "   \"" << name << "\", \"" << tylab << "\", \":math:`" << t
                         << "=" << vddesc << "`\", \"" << desc << "\", \"";
-                } else { // no detail, conver default value
+                } else { // No detail, conver default value
                     rec << "   \"" << name << "\", \"" << tylab << "\", \":math:`" << t
                         << "=" << vdefault << "`\", \"" << desc << "\", \"";
                 }
@@ -443,7 +434,7 @@ template <typename T> class OptionNumeric : public OptionBase {
                 }
                 rec << "\"" << endl;
             }
-        } else { // plain text
+        } else { // Plain text
             rec << "Begin Option [" << tylab << "]" << endl;
             rec << "   Name: '" << name << "'" << endl;
             if (otype == option_t::opt_bool) {
@@ -486,19 +477,19 @@ template <typename T> class OptionNumeric : public OptionBase {
         if (get_option_t() != da_options::option_t::opt_bool) {
             status = validate(lower, lbound, upper, ubound, value, false);
             if (status != da_status_success)
-                return status; // compose error with status+errmsg
+                return status; // Compose error with status+errmsg
         }
         OptionNumeric::value = value;
         OptionNumeric::setby = setby;
-        return status; // compose error with status+errmsg
+        return status; // Compose error with status+errmsg
     };
 };
 
-// add OptionString class
+// Add OptionString class
 class OptionString : public OptionBase {
-    // default label
+    // Default label
     string vdefault;
-    // selected label
+    // Selected label
     string value;
     map<string, da_int> labels;
 
@@ -544,7 +535,7 @@ class OptionString : public OptionBase {
                 if (label == label_vdefault)
                     defok = true;
             }
-            // check that default is valid
+            // Check that default is valid
             if (!defok) {
                 errmsg = "Option '" + name + "': Default label is invalid.";
                 throw std::invalid_argument(errmsg);
@@ -573,7 +564,7 @@ class OptionString : public OptionBase {
                 << "` |" << endl;
             rec << " * | " << desc << "|||" << endl;
             if (labels.size() > 0) {
-                // categorical options
+                // Categorical options
                 rec << " * | "
                     << "Valid values: \\f$s =\\f$ ";
                 {
@@ -596,7 +587,7 @@ class OptionString : public OptionBase {
                     rec << " |||" << endl;
                 }
             }
-        } else if (!screen) { // restructured text
+        } else if (!screen) { // Restructured text
             rec << "   \"" << name << "\", \"string\", ";
             if (vdefault != "") {
                 if (vdefault == "\"") {
@@ -613,7 +604,7 @@ class OptionString : public OptionBase {
             }
             rec << ", \"" << desc << "\", \"";
             if (labels.size() > 0) {
-                // categorical options
+                // Categorical options
                 {
                     rec << ":math:`s=` ";
                     size_t n = labels.size();
@@ -635,13 +626,13 @@ class OptionString : public OptionBase {
                 }
             }
             rec << "\"" << endl;
-        } else { // plain text
+        } else { // Plain text
             rec << "Begin Option [string]" << endl;
             rec << "   Name: '" << name << "'" << endl;
             rec << "   Value: '" << value << "'     [default: '" << vdefault << "']"
                 << endl;
             if (labels.size() > 0) {
-                //categorical options
+                // Categorical options
                 rec << "   Valid values: " << endl;
                 for (auto const &it : labels) {
                     rec << "      '" << it.first << "' : " << it.second << endl;
@@ -716,7 +707,6 @@ class OptionRegistry {
         }
         size_t n = registry.size();
         registry.insert({o->get_name(), o});
-        //TODO add unit tests for overwrite (ANDREW!!!!!)
         bool ok = (n != registry.size());
         if (!ok) {
             errmsg = "Registry could not add option. Duplicate?";
@@ -764,7 +754,7 @@ class OptionRegistry {
         da_status status =
             std::static_pointer_cast<OptionType>(search->second)->set(value, setby);
         if (status != da_status_success) {
-            // get the error message
+            // Get the error message
             errmsg = std::static_pointer_cast<OptionType>(search->second)->get_errmsg();
         }
         return status;
@@ -891,14 +881,14 @@ class OptionRegistry {
             std::cout << " *" << std::endl;
             std::cout << " * | **Option name** |  Type  | Default value|" << std::endl;
             std::cout << " * |:----------------|:------:|-------------:|" << std::endl;
-        } else if (!screen) { // restructured text
+        } else if (!screen) { // Restructured text
             std::cout << "The following options are supported." << std::endl;
             std::cout << "\n.. csv-table:: " << caption << "\n   :escape: ~\n";
             std::cout << "   :header: \"Option name\", \"Type\", \"Default\", "
                          "\"Description\", \"Constraints\""
                       << std::endl;
             std::cout << "   " << std::endl;
-        } else { // plain text
+        } else { // Plain text
             std::cout << "Begin (detailed print of options)" << std::endl;
         }
         for (auto const &o : registry) {
@@ -935,7 +925,7 @@ class OptionRegistry {
             }
             sep = true;
         }
-        // restuctured text does not required any termination
+        // Restructured text does not require any termination
         if (!screen && doxygen) {
             std::cout << " *" << std::endl;
         } else if (screen) {

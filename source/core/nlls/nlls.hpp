@@ -53,10 +53,10 @@ namespace da_nlls {
 
 template <typename T> class nlls : public basic_handle<T> {
   private:
-    /* pointer to error trace */
+    // Pointer to error trace
     da_errors::da_error_t *err{nullptr};
 
-    /* true if the model has been successfully trained */
+    // True if the model has been successfully trained
     bool model_trained{false};
 
     /* Regression data
@@ -70,33 +70,33 @@ template <typename T> class nlls : public basic_handle<T> {
     da_int n_coef{0};
     std::vector<T> coef;
 
-    /* convenience pointers to model data defined in user-space */
+    // Convenience pointers to model data defined in user-space
     T *usrlower{nullptr};
     T *usrupper{nullptr};
     T *usrweights{nullptr};
 
-    /* pointer to user data */
+    // Pointer to user data
     void *udata{nullptr};
 
-    /* pointers to the callbacks */
+    // Pointers to the callbacks
     resfun_t<T> resfun{nullptr};
     resgrd_t<T> resgrd{nullptr};
     reshes_t<T> reshes{nullptr};
     reshp_t<T> reshp{nullptr};
 
   public:
-    /* optimization object */
+    // Optimization object
     da_optim::da_optimization<T> *opt{nullptr};
 
-    /* constructor*/
+    // Constructor
     nlls(da_errors::da_error_t &err, da_status &status) {
-        // assumes that err is valid
+        // Assumes that err is valid
         this->err = &err;
-        // initialize the optimization framework and options registry
+        // Initialize the optimization framework and options registry
         status = init_opt_solver();
     }
 
-    /* destructor */
+    // Destructor
     ~nlls(void) {
         this->err = nullptr;
         this->udata = nullptr;
@@ -122,7 +122,6 @@ template <typename T> class nlls : public basic_handle<T> {
     da_status define_weights(da_int n_res, T *weights);
     da_status init_opt_solver();
     da_status fit(da_int n_coef, T *coef, void *udata);
-    /* get_result (required to be defined by basic_handle) */
     da_status get_result(da_result query, da_int *dim, T *result);
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
                          [[maybe_unused]] da_int *result);
@@ -262,7 +261,7 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
                         "coef must be of size zero or " +
                             std::to_string(this->n_coef) + ".");
     if (n_coef > 0 && !coef) {
-        // make sure it is a valid pointer
+        // Make sure it is a valid pointer
         if (!coef) {
             return da_error(err, da_status_invalid_pointer,
                             "Pointer coef must be valid.");
@@ -289,7 +288,7 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
 
     da_status status;
 
-    // optimization framework
+    // Optimization framework
     if (!this->opt) {
         return da_error( // LCOV_EXCL_LINE
             this->err, da_status_internal_error,
@@ -338,7 +337,7 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
         return status; // Error message already loaded
     }
 
-    // status is either success or warning with usable solution, continue
+    // Status is either success or warning with usable solution, continue
     // copy out the solution found if user's n_coef is not zero.
     for (da_int i = 0; i < n_coef; ++i) {
         coef[i] = this->coef[i];

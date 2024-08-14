@@ -85,7 +85,7 @@ option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
 option(ARCH "-march or /arch flag ()")
 option(BUILD_PYTHON "Python bindings" OFF)
-# Set paths to AOCLUTILS, BLAS, LAPACK and SPARSE installations.
+# Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
 set(CMAKE_AOCL_ROOT
     $ENV{AOCL_ROOT}
     CACHE
@@ -121,7 +121,7 @@ set(UTILS_CORE_LIB
     CACHE STRING "Path to AU_CORE library")
 
 if(BUILD_SMP OR UNIX)
-  # Even serial builds need an OpenMP runtime to enable correct LibFlame linking
+  # Even serial builds need an OpenMP runtime to enable correct LAPACK linking
   find_package(OpenMP REQUIRED)
   if((NOT WIN32)) # AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -219,7 +219,7 @@ if(WIN32)
     endif()
   endif()
 
-  # Clang-cl or MSVC require ifort for the fortran compilation
+  # Clang-cl or MSVC require ifort for the Fortran compilation
   if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL
                                             "MSVC")
     if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
@@ -255,13 +255,13 @@ else()
   if(NOT WIN32)
     if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
       set(FORTRAN_RUNTIME "flang")
-    else() # Gnu
+    else() # GNU
       set(FORTRAN_RUNTIME "gfortran")
     endif()
   endif()
 endif()
 
-# look for linear algebra libraries dependencies
+# Look for linear algebra libraries dependencies
 include(AOCLDependencies)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
@@ -349,7 +349,7 @@ if(ASAN)
 endif()
 
 if(COVERAGE)
-  # include coverage flags and targets
+  # Include coverage flags and targets
   include(Coverage)
 endif()
 
@@ -372,11 +372,11 @@ if(NOT BUILD_DOC AND INTERNAL_DOC)
   set(INTERNAL_DOC Off)
 endif()
 
-# compile external packages
+# Compile external packages
 add_subdirectory(external/Lbfgsb.3.0)
 add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
 
-# compile data analytics core library
+# Compile data analytics core library
 add_subdirectory(source)
 
 # Put all custom configuration BEFORE including "CTest"
@@ -389,7 +389,7 @@ if(VALGRIND)
       "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
 endif()
 
-# build example and unit test programs
+# Build example and unit test programs
 include(CTest)
 
 # Suppression list file needs to be defined AFTER including ctest
@@ -423,7 +423,7 @@ install(
   RENAME CMakeLists.txt)
 install(FILES tests/examples/README.txt DESTINATION examples)
 
-# Convenience Banner, print relevent info
+# Convenience banner, print relevant info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
 message(
   NOTICE

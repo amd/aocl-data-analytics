@@ -60,7 +60,7 @@ enum block_type {
     block_real,
     block_char,
     block_str,
-    block_bool //primarily intended for uint8_t data obtained from true/false values in a CSV file
+    block_bool // Primarily intended for uint8_t data obtained from true/false values in a CSV file
 };
 
 template <typename T> struct get_block_type {
@@ -102,7 +102,7 @@ template <> struct get_block_type<uint8_t *> {
 
 /* Missing values for each type:
  * - real numbers: missing if value = NaN
- * - intgral types: missing if value >= max int
+ * - integral types: missing if value >= max int
  * - all other types fall into non_missing_types which cannot always return not missing
  *
  * If missing values for other types are added, non_missing_types needs to be updated to not include
@@ -188,8 +188,8 @@ template <class T> class block_dense : public block_base<T> {
         }
     };
 
-    /* constructor can throw bad_alloc exception
-     * it should be caught every time it is called
+    /* Constructor can throw bad_alloc exception
+     * It should be caught every time it is called
      */
     block_dense(da_int m, da_int n, T *data, da_errors::da_error_t &err,
                 da_ordering order = row_major, bool copy_data = false,
@@ -356,7 +356,7 @@ template <class T> class block_dense : public block_base<T> {
     }
 };
 
-/* wrapper structure containing a pointer to a block and meta-data around the block */
+/* Wrapper structure containing a pointer to a block and meta-data around the block */
 class block_id {
   public:
     /* b: pointer to a generic block class
@@ -412,7 +412,7 @@ class data_store {
     bool missing_block = false;
     da_int idx_start_missing;
 
-    /* hash map of selections, using user defined labels (c strings)*/
+    /* Hash map of selections, using user defined labels (c strings) */
     selection_map selections;
 
     /* Bidirectional map linking column index to its name */
@@ -420,7 +420,7 @@ class data_store {
     std::unordered_map<std::string, da_int> name_to_index;
     std::vector<std::string const *> index_to_name;
 
-    /* error structure pointing to the main handle's*/
+    /* Error structure pointing to the main handle */
     da_errors::da_error_t *err;
 
   public:
@@ -464,7 +464,7 @@ class data_store {
                                   bool copy_data = false, bool own_data = false,
                                   bool C_data = false) {
 
-        // cannot concatenate columns if the store is in the process of adding rows
+        // Cannot concatenate columns if the store is in the process of adding rows
         if (missing_block)
             return da_error(
                 err, da_status_missing_block,
@@ -501,7 +501,7 @@ class data_store {
         // Concatenate columns to the right, indices of new columns are [n, n+nc-1]
         cmap.insert(interval(n, n + nc - 1), new_block);
 
-        // update the size of the datastore if it was initially empty
+        // Update the size of the datastore if it was initially empty
         if (m == 0)
             m = mc;
         n += nc;
@@ -580,7 +580,7 @@ class data_store {
                     idx_start_missing = 0;
                 }
             } else {
-                // error occured, clear the 'next' pointers from the existing blocks
+                // Error occurred, clear the 'next' pointers from the existing blocks
                 ub = idx_start - 1;
                 std::shared_ptr<block_id> current_block;
                 while (ub < idx_start + nr - 1) {
@@ -956,7 +956,7 @@ class data_store {
         da_int ncols = 0;
         std::string internal_key;
         if (selections.empty()) {
-            // no selection defined create a temporary selection All
+            // No selection defined create a temporary selection All
             internal_key = DA_STRINTERNAL;
             internal_key += "All";
             status = select_slice(internal_key, {0, m - 1}, {0, n - 1});
@@ -975,7 +975,7 @@ class data_store {
         }
 
         if (it->second.row_slice->empty()) {
-            // no rows in the current selection, create a temporary one containing all
+            // No rows in the current selection, create a temporary one containing all
             status = select_rows(key, {0, m - 1});
             if (status != da_status_success) {
                 exit_status = da_status_internal_error; // LCOV_EXCL_LINE
@@ -987,7 +987,7 @@ class data_store {
         }
 
         if (it->second.col_slice->empty()) {
-            // no cols in the current selection, create a temporary one containing all
+            // No cols in the current selection, create a temporary one containing all
             status = select_columns(key, {0, n - 1});
             if (status != da_status_success) {
                 exit_status = da_status_internal_error; // LCOV_EXCL_LINE
@@ -1041,8 +1041,8 @@ class data_store {
                 err, da_status_missing_block,
                 "Row blocks are not complete, cannot select elements at this time");
 
-        // check if selection 'key' exists. if not create one containing all rows and columns
-        // ensure that the selection iterator it always points to a valid selection
+        // Check if selection 'key' exists. If not, create one containing all rows and columns.
+        // Ensure that the selection iterator 'it' always points to a valid selection.
         auto it = selections.find(key);
         bool clear_cols = false, clear_all_cols = false;
         if (it == selections.end()) {
@@ -1066,10 +1066,10 @@ class data_store {
                             "Memory allocation error");
         }
 
-        // depending on the parameter full_rows, either all the columns are checked
-        // for missing data or only the columns in the selection 'key'
+        // Depending on the parameter full_rows, either all the columns are checked
+        // for missing data or only the columns in the selection 'key'.
         // it_col and it_col_end are set as pointing to the start and the end of valid column
-        // selections
+        // selections.
         interval_set::iterator it_col, it_col_end;
         std::string internal_key;
         if (full_rows) {
@@ -1095,7 +1095,7 @@ class data_store {
             it_col_end = col_slice->end();
         }
 
-        // loop over the columns and rows of the selection to mark the rows with missing
+        // Loop over the columns and rows of the selection to mark the rows with missing
         // data in valid_rows
         for (; it_col != it_col_end; ++it_col) {
             for (auto it_row = row_slice->begin(); it_row != row_slice->end(); ++it_row) {
@@ -1203,17 +1203,17 @@ class data_store {
         if (i < 0 || i >= this->m)
             return da_error(err, da_status_invalid_input,
                             "i = " + std::to_string(i) +
-                                ". The row index must be beteween 0 and " +
+                                ". The row index must be between 0 and " +
                                 std::to_string(this->m - 1) + ".");
         if (j < 0 || j >= this->n)
             return da_error(err, da_status_invalid_input,
                             "j = " + std::to_string(i) +
-                                ". The column index must be beteween 0 and " +
+                                ". The column index must be between 0 and " +
                                 std::to_string(this->n - 1) + ".");
 
         auto it = cmap.find(j);
         if (it == cmap.end())
-            // cannot happen, checks on i and j would have returned invalid input already
+            // Cannot happen, checks on i and j would have returned invalid input already
             return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Couldn't find the element");
 
@@ -1242,17 +1242,17 @@ class data_store {
         if (i < 0 || i >= this->m)
             return da_error(err, da_status_invalid_input,
                             "i = " + std::to_string(i) +
-                                ". The row index must be beteween 0 and " +
+                                ". The row index must be between 0 and " +
                                 std::to_string(this->m - 1) + ".");
         if (j < 0 || j >= this->n)
             return da_error(err, da_status_invalid_input,
                             "j = " + std::to_string(i) +
-                                ". The column index must be beteween 0 and " +
+                                ". The column index must be between 0 and " +
                                 std::to_string(this->n - 1) + ".");
 
         auto it = cmap.find(j);
         if (it == cmap.end())
-            // cannot happen, checks on i and j would have returned invalid input already
+            // Cannot happen, checks on i and j would have returned invalid input already
             return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Couldn't find the element");
 
@@ -1277,7 +1277,7 @@ class data_store {
         return da_status_success;
     }
 
-    /* column tags methods */
+    /* Column tags methods */
     da_status label_column(std::string label, da_int idx) {
         if (idx < 0 || idx >= n)
             return da_error(err, da_status_invalid_input,
@@ -1373,7 +1373,6 @@ class data_store {
         status = concatenate_cols_csv(nrows, ncols, bl, col_major, false, C_data);
         if (status != da_status_success) {
             // LCOV_EXCL_START
-            // cleanup = true;
             status = da_error_trace(err, da_status_internal_error,
                                     "Unexpected error in concatenating columns");
             goto exit;

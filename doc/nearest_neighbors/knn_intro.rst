@@ -38,7 +38,7 @@ which are the most similar to :math:`x_i`.
 
 In addition, when a vector :math:`y_{train}` with the associated labels for each data point in :math:`X_{train}` is provided, this algorithm
 computes the predicted labels of the test data :math:`X_{test}`. A query point :math:`x_i` of :math:`X_{test}` is labeled using the majority vote of the neighbors.
-In case of a tie, the first class label is returned by convension.
+In case of a tie, the first class label is returned by convention.
 
 Outputs from *k*-Nearest Neighbors
 ----------------------------------
@@ -93,7 +93,18 @@ Options
    .. tab-item:: C
       :sync: C
 
-      For details of optional parameters see the :ref:`options section <opts_k-nearestneighbors>`.
+      The following options can be set using :ref:`da_options_set_? <da_options_set>`:
+
+      .. update options using table _opts_k-nearestneighbors
+
+      .. csv-table:: :strong:`Table of options for k-Nearest Neighbors.`
+         :escape: ~
+         :header: "Option name", "Type", "Default", "Description", "Constraints"
+
+         "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors", ":math:`s=` `distance`, or `uniform`."
+         "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix", ":math:`s=` `euclidean`, or `sqeuclidean`."
+         "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors", ":math:`s=` `brute`."
+         "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors", ":math:`1 \le i`"
 
 Examples
 ========

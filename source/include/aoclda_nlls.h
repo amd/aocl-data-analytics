@@ -55,7 +55,7 @@
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[inout] data user data pointer, the solver does not touch this pointer and
+ * \param[in,out] data user data pointer, the solver does not touch this pointer and
  *            passes it along to the call-back.
  * \param[in] x the vector of coefficients (at the current iterate) and of size \p n_coef.
  * \param[out] res residual vector of size \p n_res for the model evaluated at \p x.
@@ -89,15 +89,15 @@ typedef da_int da_resfun_t_d(da_int n_coef, da_int n_res, void *data, const doub
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[inout] data user data pointer, the solver does not touch this pointer and
+ * \param[in,out] data user data pointer, the solver does not touch this pointer and
  *            passes it along to the call-back.
  * \param[in] x the vector of coefficients (at the current iterate) and of size \p n_coef.
  * \param[out] jac Jacobian matrix (\p n_res by \p n_coef), first derivatives of the residual function.
  *             evaluated at \p x. This matrix expects to be stored in the format
  *             defined by the optional parameter \p storage_scheme and defaults to
  *             row-major, this can be changed to column-major (Fortran format as well).
- * \return flag - indicating if evaluation of the model was successful, zero to
- *                inform success; nonzero informs failure, in this case the solver will
+ * \return flag - indicates if evaluation of the model was successful; zero
+ *                indicates success, nonzero indicates failure, in which case the solver will
  *                terminate with \ref da_status_optimization_usrstop.
  */
 typedef da_int da_resgrd_t_s(da_int n_coef, da_int n_res, void *data, float const *x,
@@ -130,17 +130,17 @@ typedef da_int da_resgrd_t_d(da_int n_coef, da_int n_res, void *data, double con
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[inout] data user data pointer, the solver does not touch this pointer and
+ * \param[in,out] data user data pointer. The solver does not touch this pointer and
  *            passes it along to the call-back.
- * \param[in] x the vector of coefficients (at the current iterate) and of size \p n_coef.
- * \param[in] wr a scaled (weighted) version of the residual vector evaluated at \p x and of size \p n_res.
- * \param[out] hes Hessian matrix (size of \p n_coef by \p n_coef), second derivatives of the residual function.
+ * \param[in] x the vector of coefficients (at the current iterate) of size \p n_coef.
+ * \param[in] wr a scaled (weighted) version of the residual vector evaluated at \p x, of size \p n_res.
+ * \param[out] hes Hessian matrix (size of \p n_coef by \p n_coef) containing second derivatives of the residual function
  *             evaluated at \p x. This symmetric matrix is expected to be stored
  *             in the format defined by the optional parameter \p storage_scheme
  *             and defaults to row-major, this can be changed to column-major
- *             (Fortran format as well).
- * \return flag - indicating if evaluation of the model was successful, zero to
- *                inform success; nonzero informs failure, in this case the solver will
+ *             (Fortran format).
+ * \return flag - indicates if evaluation of the model was successful; zero
+ *                indicates success, nonzero indicates failure, in which case the solver will
  *                terminate with \ref da_status_optimization_usrstop.
  */
 typedef da_int da_reshes_t_s(da_int n_coef, da_int n_res, void *data, float const *x,
@@ -165,7 +165,7 @@ typedef da_int da_reshes_t_d(da_int n_coef, da_int n_res, void *data, double con
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[inout] data user data pointer, the solver does not touch this pointer and
+ * \param[in,out] data user data pointer, the solver does not touch this pointer and
  *            passes it along to the call-back.
  * \param[in] x the vector of coefficients (at the current iterate) and of size \p n_coef.
  * \param[in] y an arbitrary vector of size \p n_coef.
@@ -173,9 +173,9 @@ typedef da_int da_reshes_t_d(da_int n_coef, da_int n_res, void *data, double con
  *             This dense matrix of size \p n_coef by \p n_res is expected to be stored
  *             in the format defined by the optional parameter \p storage_scheme
  *             and defaults to row-major, this can be changed to column-major
- *             (Fortran format as well).
- * \return flag - indicating if evaluation of the model was successful, zero to
- *                inform success; nonzero informs failure, in this case the solver will
+ *             (Fortran format).
+ * \return flag - indicates if evaluation of the model was successful; zero
+ *                indicates success, nonzero indicates failure, in which case the solver will
  *                terminate with \ref da_status_optimization_usrstop.
  */
 typedef da_int da_reshp_t_s(da_int n_coef, da_int n_res, const float *x, const float *y,
@@ -192,7 +192,7 @@ typedef da_int da_reshp_t_d(da_int n_coef, da_int n_res, const double *x, const 
  * function call-backs that define the nonlinear model to train.
  * \p resfun (residual function) and \p resgrd (residual Jacobian matrix) are mandatory
  * while \p reshes (residual Hessians) and \p reshp (residual Hessians matrix-vector products) are only
- * required if the solver for the model chosen requires higher order derivatives, if these
+ * required if the solver for the model chosen requires higher order derivatives. If these
  * are not provided and the solver requires them an error will be returned.
  *
  * @rst
@@ -296,8 +296,8 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
  * `relevant` than others.
  *
  * .. note::
- *      The handle does not make a copy of the weights vectors, it stores a pointer to
- *      its location.  It is important that this stays valid on all subsequent calls
+ *      The handle does not make a copy of the weights vector. Instead it stores a pointer to
+ *      its location. It is important that this stays valid on all subsequent calls
  *      to :cpp:func:`da_nlls_fit`.
  *
  * @endrst

@@ -25,7 +25,7 @@
 
 
 """
-Patching scikit learn tree: DecisionTreeClassifier
+Patching scikit-learn tree: DecisionTreeClassifier
 """
 # pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, too-many-instance-attributes, too-many-arguments
 
@@ -36,7 +36,7 @@ from sklearn.tree import DecisionTreeClassifier as DecisionTreeClassifier_sklear
 
 class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
     """
-    Overwrite sklearn DecisionTreeClassifier to call DA library
+    Overwrite scikit-learn DecisionTreeClassifier to call AOCL-DA library
     """
 
     def __init__(

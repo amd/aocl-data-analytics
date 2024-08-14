@@ -24,7 +24,7 @@
 #
 
 """
-Patching scikit learn classifier: KNeighborsClassifier
+Patching scikit-learn classifier: KNeighborsClassifier
 """
 # pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, too-many-instance-attributes, too-many-arguments
 
@@ -34,7 +34,7 @@ from sklearn.neighbors import KNeighborsClassifier as KNeighborsClassifier_sklea
 
 class KNeighborsClassifier(KNeighborsClassifier_sklearn):
     """
-    Overwrite sklearn KNeighborsClassifier to call DA library
+    Overwrite scikit-learn KNeighborsClassifier to call AOCL-DA library
     """
 
     def __init__(

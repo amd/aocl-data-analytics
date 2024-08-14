@@ -40,55 +40,55 @@ class linmod(pybind_linmod):
 
         mod (str): Which linear model to compute.
 
-            - If ``linmod_model='mse'`` then :math:`L_2` norm linear regression is calculated.
+            - If ``linmod_model='mse'`` then :math:`\ell_2` norm linear regression is calculated.
 
             - If ``linmod_model='logistic'`` then logistic regression is calculated.
 
         intercept (bool, optional): Controls whether to add an intercept variable to the model.
             Default=False.
 
-        solver (str, optional): Which solver to use in computation of coefficients. It can \
+        solver (str, optional): Which solver to use to compute the coefficients. It can \
             take values 'auto', 'svd', 'cholesky', 'sparse_cg', 'qr', 'coord', 'lbfgs'. \
-            Some solvers are not suitable for some regularisation types.
+            Some solvers are not suitable for some regularization types.
 
             - ``'auto'`` chooses the best solver based on regression type and data.
 
-            - ``'svd'`` works with normal and Ridge regression. Most robust solver at cost of \
-                efficiency.
+            - ``'svd'`` works with normal and ridge regression. The most robust solver but the \
+                least efficient.
 
-            - ``'cholesky'`` works with normal and Ridge regression. Will return error when \
+            - ``'cholesky'`` works with normal and ridge regression. Will return an error when a \
                 singular matrix is encountered.
 
-            - ``'sparse_cg'`` works with normal and Ridge regression. Might need to set smaller \
-                `tol` when badly conditioned matrix is encountered.
+            - ``'sparse_cg'`` works with normal and ridge regression. You may need to set a \
+                smaller `tol` if a badly conditioned matrix is encountered.
 
-            - ``'qr'`` works with normal linear regression only. Will return error when \
-                undertermined system is encountered.
+            - ``'qr'`` works with normal linear regression only. Will return an error when an \
+                underdetermined system is encountered.
 
             - ``'coord'`` works with all regression types. Requires data to have variance of 1 \
-                column wise (can be achievied with `scaling` option set to `scale only`). \
-                In case of normal linear regression and undertermined system \
-                will converge to solution that is not necessarily a minimum norm solution.
+                column-wise (this can be achieved with the `scaling` option set to `scale only`). \
+                In the case of normal linear regression and an underdetermined system it\
+                will converge to a solution that is not necessarily a minimum norm solution.
 
-            - ``'lbfgs'`` works with normal and Ridge regression. In case of normal linear \
-                regression and undertermined system will converge to solution that is \
+            - ``'lbfgs'`` works with normal and ridge regression. In the case of normal linear \
+                regression and an underdetermined system it will converge to a solution that is \
                 not necessarily a minimum norm solution.
 
-        scaling (str, optional): What type of preprocessing you want to appply on the dataset. \
+        scaling (str, optional): What type of preprocessing you want to apply on the dataset. \
             Available options are: 'none', 'centering', 'scale_only', 'standardize'.
 
         max_iter (int, optional): Maximum number of iterations. Applies only to iterative \
-            solvers: 'sparse_cg', 'coord', 'lbfgs'. Default value depends on a solver. For \
+            solvers: 'sparse_cg', 'coord', 'lbfgs'. The default value depends on the solver. For \
             'sparse_cg' it is 500, for 'lbfgs' and 'coord' it is 10000.
 
         constraint (str, optional): Affects only multinomial logistic regression. \
-            Type of constraint put on coefficients. This will affect number of \
-            coefficients returned. 
+            The type of constraint put on coefficients. This will affect the number of \
+            coefficients returned.
 
-            - ``'rsc'`` means we choose a reference catergory whose coefficients \
+            - ``'rsc'`` means we choose a reference category whose coefficients \
                 will be set to all 0. This results in K-1 class coefficients for K \
-                class problems. 
-            
+                class problems.
+
             - ``'ssc'`` means the sum of coefficients class-wise for each feature \
                 is 0. It will result in K class coefficients for K class problems.
 
@@ -124,7 +124,7 @@ class linmod(pybind_linmod):
             tol=0.0001,
             progress_factor=None):
         """
-        Computes the chosen linear model on the feature matrix X and response vector y
+        Computes the chosen linear model on the feature matrix ``X`` and response vector ``y``
 
         Args:
             X (numpy.ndarray): The feature matrix on which to compute the model.
@@ -161,7 +161,7 @@ class linmod(pybind_linmod):
 
     def predict(self, X):
         """
-        Evaluate the model on a data set X.
+        Evaluate the model on a data set ``X``.
 
         Args:
             X (numpy.ndarray): The feature matrix to evaluate the model on. It must have \
@@ -169,7 +169,7 @@ class linmod(pybind_linmod):
 
         Returns:
             numpy.ndarray of length n_samples: The prediction vector, where n_samples is \
-                the number of rows of X.
+                the number of rows of ``X``.
         """
         return self.pybind_predict(X)
 
@@ -196,7 +196,7 @@ class linmod(pybind_linmod):
 
     @property
     def n_iter(self):
-        """int: The number iterations performed to find solution.
+        """int: The number iterations performed to find the solution.
         Only valid for iterative solvers.
         """
         return self.get_n_iter()

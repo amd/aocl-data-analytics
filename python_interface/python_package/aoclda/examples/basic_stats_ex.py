@@ -59,7 +59,7 @@ def basic_stats_example():
     standardized = standardize(a)
     print(f"\nStandardized matrix:\n{standardized}")
 
-    print("\nBasic statistics calculations succesful")
+    print("\nBasic statistics calculations successful")
     print("---------------------------")
 
 

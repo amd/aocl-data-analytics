@@ -27,13 +27,10 @@
 
 .. _api_handle_options:
 
-Option API for ``da_handle``
-****************************
+Option APIs for ``da_handle``
+*****************************
 
 .. _da_options_set:
-
-da_options_set\_?()
----------------------------
 
 .. doxygenfunction:: da_options_set_int
    :outline:
@@ -44,9 +41,6 @@ da_options_set\_?()
 .. doxygenfunction:: da_options_set_real_d
 
 .. _da_options_get:
-
-da_options_get\_?()
----------------------------
 
 .. doxygenfunction:: da_options_get_int
    :outline:

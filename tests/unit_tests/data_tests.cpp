@@ -294,7 +294,7 @@ TEST(block, getCol) {
     EXPECT_ARR_EQ(m, col, col1_exp, stride, 1, startx, starty);
     b2.get_col(1, &col, stride);
     EXPECT_ARR_EQ(m, col, col2_exp, stride, 1, startx, starty);
-    // out of bound column index
+    // out of bounds column index
     EXPECT_EQ(b2.get_col(2, &col, stride), da_status_invalid_input);
     EXPECT_EQ(b2.get_col(-1, &col, stride), da_status_invalid_input);
 }
@@ -318,7 +318,7 @@ TEST(block, copySlice) {
     exp_slice = {3, 5, 7, 4, 6, 8};
     EXPECT_ARR_EQ(6, islice, exp_slice, 1, 1, 0, 0);
 
-    // try to load he block in the middle of the slice
+    // try to load the block in the middle of the slice
     islice.resize(15);
     std::fill(islice.begin(), islice.end(), 0);
     EXPECT_EQ(b1.copy_slice_dense(cols, rows, 1, 5, &islice[5]), da_status_success);
@@ -333,7 +333,7 @@ TEST(block, copySlice) {
     exp_slice = {3, 5, 7, 4, 6, 8};
     EXPECT_ARR_EQ(6, islice, exp_slice, 1, 1, 0, 0);
 
-    // try to load he block in the middle of the slice
+    // try to load the block in the middle of the slice
     islice.resize(15);
     std::fill(islice.begin(), islice.end(), 0);
     EXPECT_EQ(b2.copy_slice_dense(cols, rows, 1, 5, &islice[5]), da_status_success);
@@ -349,7 +349,7 @@ TEST(block, missingValues) {
     da_int maxi = std::numeric_limits<da_int>::max();
     da_data::interval cols, rows;
 
-    /* column major oredering */
+    /* column major ordering */
     std::vector<da_int> bl_col = {1, 2, 3, 4, 5,  1, maxi, 5, 7, 9,
                                   2, 4, 6, 8, 10, 6, maxi, 8, 9, maxi};
     block_dense<da_int> b1(m, n, bl_col.data(), err, col_major);
@@ -365,7 +365,7 @@ TEST(block, missingValues) {
     exp_valid_rows = {false, true, true};
     EXPECT_ARR_EQ(3, valid_rows, exp_valid_rows, 1, 1, 5, 0);
 
-    /* row major oredering */
+    /* row major ordering */
     m = 4;
     n = 5;
     std::vector<da_int> bl_row = {1, 2, 3, 4, 5,  1, maxi, 5, 7, 9,
@@ -646,7 +646,7 @@ TEST(dataStore, extractCol) {
     col2_exp = {2, 4, 6, 8, 10, 8, 9};
     EXPECT_ARR_EQ(m, col, col2_exp, 1, 1, startx, starty);
 
-    // test the hterogeneous data-store columns
+    // test the heterogeneous data-store columns
     da_errors::da_error_t err2(da_errors::action_t::DA_RECORD);
     data_store hds = data_store(err2);
     std::vector<da_int> idata, coli;
@@ -734,7 +734,7 @@ TEST(dataStore, load) {
               da_status_success);
     da_datastore_destroy(&store);
 
-    // Test row insertions for other data  types
+    // Test row insertions for other data types
     EXPECT_EQ(da_datastore_init(&store), da_status_success);
     m = 1;
     n = 3;
@@ -822,7 +822,7 @@ TEST(dataStore, invalidHconcat) {
 }
 
 TEST(dataStore, hconcat) {
-    // create 2 heterogeneous data_store
+    // create 2 heterogeneous data_stores
     da_int m, n;
     da_errors::da_error_t err(da_errors::action_t::DA_RECORD),
         err2(da_errors::action_t::DA_RECORD), err3(da_errors::action_t::DA_RECORD);
@@ -1475,7 +1475,7 @@ TEST(datastore, missingData) {
     val = "\0";
     EXPECT_EQ(is_missing_value<std::string>(val), false);
 
-    // set some missing values for integers and floating  points
+    // set some missing values for integers and floating points
     float missing_float = std::nanf("");
     da_int int_max = std::numeric_limits<da_int>::max();
     EXPECT_EQ(hds.set_element(0, 2, int_max), da_status_success);
@@ -1559,7 +1559,7 @@ TEST(dataStore, missingDataPub) {
     std::vector<std::string> sdata;
     get_heterogeneous_data_store_pub(store, m, n, idata, fdata, sdata);
 
-    // set some missing values for integers and floating  points
+    // set some missing values for integers and floating points
     float missing_float = std::nanf("");
     da_int int_max = std::numeric_limits<da_int>::max();
     EXPECT_EQ(da_data_set_element_int(store, 0, 2, int_max), da_status_success);
@@ -1742,7 +1742,7 @@ TEST(datastore, selectInvalid) {
               da_status_invalid_input);
     EXPECT_EQ(da_data_select_remove_rows(store, "Valid", 3, 2), da_status_invalid_input);
 
-    // Remove from selection: non existing selction
+    // Remove from selection: non existing selection
     EXPECT_EQ(da_data_select_remove_columns(store, "Invalid", 0, 0),
               da_status_invalid_input);
     EXPECT_EQ(da_data_select_remove_rows(store, "Invalid", 0, 0),

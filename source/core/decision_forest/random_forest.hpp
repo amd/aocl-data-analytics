@@ -45,7 +45,7 @@ template <typename T> class random_forest : public basic_handle<T> {
 
     bool model_trained = false;
 
-    // user data. Never modified by the classifier
+    // User data. Never modified by the classifier
     // X[n_samples X n_features]: features -- floating point matrix, column major
     // y[n_samples]: labels -- integer array, 0,...,n_classes-1 values
     const T *X = nullptr;
@@ -55,18 +55,18 @@ template <typename T> class random_forest : public basic_handle<T> {
     da_int n_features = 0;
     da_int n_class = 0;
 
-    // options
+    // Options
     da_int n_tree = 0;
     da_int seed, n_obs;
     da_int block_size;
 
-    // model data
+    // Model data
     std::vector<std::unique_ptr<decision_tree<T>>> forest;
 
   public:
     da_options::OptionRegistry opts;
     random_forest(da_errors::da_error_t &err) {
-        // assumes that err is valid
+        // Assumes that err is valid
         this->err = &err;
         register_forest_options<T>(opts);
     }
@@ -350,7 +350,7 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
     da_int n_blocks, block_rem;
     da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
     da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
-    // we need n_threads arrays of size block_size
+    // We need n_threads arrays of size block_size
     try {
         y_pred_tree.resize(n_threads * block_size);
         count_classes.resize(n_class * nsamp, 0);
@@ -510,7 +510,7 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     }
     if (ldx_test < nsamp) {
         return da_error(this->err, da_status_invalid_input,
-                        "n_sampels = " + std::to_string(nsamp) +
+                        "n_samples = " + std::to_string(nsamp) +
                             ", ldx = " + std::to_string(ldx_test) +
                             ", the value of ldx needs to be at least as big as the value "
                             "of n_samples");
@@ -531,7 +531,7 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     da_int n_blocks, block_rem;
     da_utils::blocking_scheme(nsamp, block_size, n_blocks, block_rem);
     da_int n_threads = da_utils::get_n_threads_loop(n_blocks * n_tree);
-    // we need n_threads arrays of size block_size
+    // We need n_threads arrays of size block_size
     try {
         y_pred_tree.resize(n_threads * block_size);
         count_classes.resize(n_class * nsamp, 0);

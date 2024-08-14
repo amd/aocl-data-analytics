@@ -139,9 +139,9 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
             "scaling",
-            "Scale or standardize feature matrix and responce vector. Matrix is copied "
+            "Scale or standardize feature matrix and response vector. Matrix is copied "
             "and then rescaled. Option key value auto indicates that rescaling type is "
-            "choosen by the solver (this includes also no scaling).",
+            "chosen by the solver (this also includes no scaling).",
             {{"no", scaling_t::none},
              {"none", scaling_t::none},
              {"auto", scaling_t::automatic},
@@ -156,7 +156,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             "logistic constraint",
             "Affects only multinomial logistic regression. Type of constraint put on "
             "coefficients. This will affect number of coefficients returned. RSC - means "
-            "we choose a reference catergory whose coefficients will be set to all 0. "
+            "we choose a reference category whose coefficients will be set to all 0. "
             "This results in K-1 class coefficients for K class problems. SSC - means "
             "the sum of coefficients class-wise for each feature is 0. It will result in "
             "K class coefficients for K class problem.",
@@ -170,7 +170,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     } catch (...) {                    // LCOV_EXCL_LINE
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 

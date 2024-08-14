@@ -84,7 +84,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
     EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
 
-    // The first ncols-1 columns contain the feature matrix; the last one the response vector
+    // The first ncols-1 columns contain the feature matrix; the last one the response vector.
     // Create the selections in the data store
     EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 2),
               da_status_success);
@@ -110,7 +110,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(da_linmod_define_features(linmod_handle, nsamples, nfeat, A, b),
               da_status_success);
 
-    // compute regression
+    // Compute regression
     EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
 
     // Check that info contains the correct values
@@ -214,7 +214,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         EXPECT_EQ(scols, nsamples);
         EXPECT_EQ(srows, 1);
 
-        // The first ncols-1 columns contain the feature matrix; the last one the response vector
+        // The first ncols-1 columns contain the feature matrix; the last one the response vector.
         // Create the selections in the data store
         EXPECT_EQ(da_data_select_columns(sol_store, "solution", 0, nsamples - 1),
                   da_status_success);
@@ -277,7 +277,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
         EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
 
-        // The first ncols-1 columns contain the feature matrix; the last one the response vector
+        // The first ncols-1 columns contain the feature matrix; the last one the response vector.
         // Create the selections in the data store
         EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 2),
                   da_status_success);

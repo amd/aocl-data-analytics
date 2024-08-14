@@ -25,7 +25,7 @@
 
 
 """
-Patching scikit learn tree: RandomForestClassifier
+Patching scikit-learn tree: RandomForestClassifier
 """
 # pylint: disable = missing-function-docstring, too-many-ancestors, super-init-not-called, too-many-instance-attributes, too-many-arguments, too-many-locals
 
@@ -36,7 +36,7 @@ from sklearn.ensemble import RandomForestClassifier as RandomForestClassifier_sk
 
 class RandomForestClassifier(RandomForestClassifier_sklearn):
     """
-    Overwrite sklearn RandomForestClassifier to call DA library
+    Overwrite scikit-learn RandomForestClassifier to call AOCL-DA library
     """
     def __init__(
         self,

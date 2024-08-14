@@ -41,12 +41,12 @@ template <class T> struct option_t {
     T value;
 };
 
-// Helper to define precision to which we expect the results match
+// Helper to define precision to which we expect the results to match
 template <typename T> T expected_precision(T scale = (T)1.0);
 template <> double expected_precision<double>(double scale) { return scale * 1.0e-3; }
 template <> float expected_precision<float>(float scale) { return scale * 0.5f; }
 
-// return precision as a string litteral to set CSV options
+// return precision as a string literal to set CSV options
 template <typename T> constexpr const char *prec_name();
 template <> constexpr const char *prec_name<float>() { return "single"; }
 template <> constexpr const char *prec_name<double>() { return "double"; }
@@ -140,7 +140,7 @@ void objgrd_logistic(da_int n, da_int m, T *x, std::vector<T> &grad, const T *A,
      */
     std::vector<T> y;
 
-    // Comput A*x[0:n-2] = y
+    // Compute A*x[0:n-2] = y
     da_int aux = intercept ? 1 : 0;
     T alpha = 1.0, beta = 0.0;
     y.resize(m);

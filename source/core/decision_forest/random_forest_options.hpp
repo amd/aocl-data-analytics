@@ -82,7 +82,7 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
         os = std::make_shared<OptionString>(OptionString(
-            "bootstrap", "Select wether to bootstrap the samples in the trees.",
+            "bootstrap", "Select whether to bootstrap the samples in the trees.",
             {{"yes", 1}, {"no", 0}}, "yes"));
         status = opts.register_opt(os);
 
@@ -141,19 +141,13 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
             lbound_t::greaterequal, max_da_int, ubound_t::lessequal, DF_BLOCK_SIZE));
         status = opts.register_opt(oi);
 
-        // os = std::make_shared<OptionString>(
-        //     OptionString("print timings",
-        //                  "Print the timings of different parts of the fitting process.",
-        //                  {{"yes", 1}, {"no", 0}}, "no"));
-        // status = opts.register_opt(os);
-
     } catch (std::bad_alloc &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     } catch (std::invalid_argument &e) {
         std::cerr << e.what() << std::endl; // LCOV_EXCL_LINE
         return da_status_internal_error;    // LCOV_EXCL_LINE
     } catch (...) {                         // LCOV_EXCL_LINE
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 

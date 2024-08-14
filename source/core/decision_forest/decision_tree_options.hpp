@@ -97,7 +97,6 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
             lbound_t::greaterequal, rmax, ubound_t::p_inf, diff_thres_default));
         status = opts.register_opt(oT);
 
-        // TODO check default value
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "minimum split score",
             "Minimum score needed for a node to be considered for splitting.", 0.0,
@@ -110,7 +109,6 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
             "depth first"));
         status = opts.register_opt(os);
 
-        // TODO check the default value
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "minimum split improvement",
             "Minimum score improvement needed to consider a split from the parent node.",
@@ -129,7 +127,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
         std::cerr << e.what() << std::endl; // LCOV_EXCL_LINE
         return da_status_internal_error;    // LCOV_EXCL_LINE
     } catch (...) {                         // LCOV_EXCL_LINE
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 

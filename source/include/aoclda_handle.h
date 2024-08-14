@@ -90,10 +90,10 @@ typedef struct _da_handle *da_handle;
  * @endrst
  *
  * @param[in,out] handle the main data structure.
- * @param[in] handle_type the type of handle to intialize (see @ref da_handle_type).
+ * @param[in] handle_type the type of handle to initialize (see @ref da_handle_type).
  * @returns @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
- * - @ref da_status_memory_error - a memory allocation error occured.
+ * - @ref da_status_memory_error - a memory allocation error occurred.
  * - @ref da_status_internal_error - this should not occur and indicates a memory corruption issue.
  */
 da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type);

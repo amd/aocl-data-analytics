@@ -44,8 +44,6 @@ function(linalg_libs)
       set(LAPACK_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-libflame/lib/${INT_LIB})
     endif()
     if(SPARSE_LIB STREQUAL "")
-      # if (BUILD_SHARED_LIBS) set(SHARED_DIR_NAME shared) else()
-      # set(SHARED_DIR_NAME static) endif()
       set(SHARED_DIR_NAME shared)
       set(SPARSE_LIB_DIR
           ${CMAKE_AOCL_ROOT}/amd-sparse/lib/${INT_LIB}/${SHARED_DIR_NAME})
@@ -81,15 +79,13 @@ function(linalg_libs)
   if(WIN32)
     set(CMAKE_FIND_LIBRARY_PREFIXES "")
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
-    # always link to multi-thread blis because sparse also depends on it anyway
-    # TODO revisit linking to single threaded version
+    # Always link to multi-threaded BLAS because aoclsparse also depends on it
     if(BUILD_SMP)
       set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
       set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
       if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-        # On Windows Clang SMP builds we need both serial and threaded versions in
-        # order to build the Python wheel, since aoclsparse requires serial and
-        # flame requires threaded
+        # On Windows, certain SMP builds need both serial and threaded BLAS/LAPACK in
+        # order to build the Python wheel, since aoclsparse requires serial versions
         set(BLAS_NAME_SERIAL "AOCL-LibBlis-Win-dll")
         set(LAPACK_NAME_SERIAL "AOCL-LibFlame-Win-dll")
         find_library(
@@ -107,7 +103,6 @@ function(linalg_libs)
     endif()
     set(SPARSE_NAME "aoclsparse")
     set(UTILS_NAME "libaoclutils")
-	# Additional utils libs since 24/06
     set(UTILS_CPUID_NAME "au_cpuid")
   else(WIN32) # linux
     set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
@@ -116,15 +111,11 @@ function(linalg_libs)
     else()
       set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
     endif()
-    # always link to multi-thread blis because sparse also depends on it anyway
-    # TODO revisit linking to single threaded version
+    # Always link to multi-thread BLAS because aoclsparse depends on it
     set(BLAS_NAME "blis-mt")
-    # if(BUILD_SMP) set(BLAS_NAME "blis-mt") else() set(BLAS_NAME "blis")
-    # endif()
     set(LAPACK_NAME "flame")
     set(SPARSE_NAME "aoclsparse")
     set(UTILS_NAME "aoclutils")
-    # Additional utils libs since 24/06
     set(UTILS_CPUID_NAME "au_cpuid")
   endif()
 
@@ -198,7 +189,7 @@ function(linalg_libs)
       PARENT_SCOPE)
 endfunction(linalg_libs)
 
-# reset all libs
+# Reset all libraries
 set(BLAS)
 set(LAPACK)
 set(SPARSE)

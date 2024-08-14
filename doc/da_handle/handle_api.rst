@@ -23,7 +23,7 @@
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
 
-Creating and destroying handles
+Creating and Destroying handles
 *******************************
 
 .. doxygentypedef:: da_handle

@@ -50,9 +50,9 @@ class nlls(pybind_nlls):
 
     Args:
 
-        n_coef (int): Number of coefficient in the model, must be positive.
+        n_coef (int): Number of coefficients in the model. Must be positive.
 
-        n_res (int): Number of residuals in the model, must also be positive.
+        n_res (int): Number of residuals in the model. Must also be positive.
 
         weights (float, optional): Vector containing the values of the diagonal weight matrix ``W``.
             It is expected that the values are all non-negative and normalized. Default = ``None``.
@@ -79,10 +79,10 @@ class nlls(pybind_nlls):
 
             - ``'gauss-newton'`` Gauss-Newton method,
             - ``'quasi-newton'`` Quasi-Newton method,
-            - ``'hybrid'`` uses a strategy that allows to switch between Gauss-Newton
+            - ``'hybrid'`` uses a strategy that enables switching between the Gauss-Newton
               and Quasi-Newton methods,
             - ``'tensor-newton'`` higher order method that uses Hessians. This option
-              requires to have call-backs for second order derivatives Hessians.
+              requires call-backs for second order derivative Hessians.
 
         glob_strategy (str, optional): Globalization strategy. Only relevant when ``model`` =
             ``'hybrid'``, ``'gauss-newton'``, or ``'quasi-newton'``.  Default = ``'tr'``.
@@ -113,15 +113,15 @@ class nlls(pybind_nlls):
             - ``'quadratic'`` uses second order regularization,
             - ``'cubic'`` uses third order regularization.
 
-        check_derivatives (str, optional): Verify the user-supplied jacobian
+        check_derivatives (str, optional): Verify the user-supplied Jacobian
             derivatives using finite-differences method.
 
-            - ``'no'``  will not perform any verifiations
+            - ``'no'``  will not perform any verifications
             - ``'yes'`` will trigger the verification on each element of the
               Jacobian matrix. The verification requires one call to the
               residual function for each column of the Jacobian.
               The verification process will print one line for each Jacobian
-              entry that is deemed to be wrong in a similar format to
+              entry that is deemed to be incorrect in a similar format to
 
               ``Jac[2,6] =   1.28402 ~ 1.582  [ 2.097E-01], ( 0.250E-06) XT``
 
@@ -132,7 +132,7 @@ class nlls(pybind_nlls):
               Fortran format instead of C format, or vice-versa).
               Storage scheme is defined with the ``order`` argument and
               defaults to ``c``.
-              The If verbose level is high then one line for each entry
+              If the verbose level is high then one line for each entry
               of the whole Jacobian is printed regardless of its correctness.
 
               The finite-difference and derivative checker machinery
@@ -169,7 +169,7 @@ class nlls(pybind_nlls):
 
         Args:
 
-            x (NDArray): initial guess to start optimizing from
+            x (numpy.ndarray): initial guess to start optimizing from
 
             fun (method): function that calculates the ``n_res`` residuals.
                 This function must return the residual vector of the model evaluated
@@ -215,7 +215,7 @@ class nlls(pybind_nlls):
                         return 0;
 
             hes (method, optional): function that calculates the ``n_coef`` by
-                ``n_coef`` symmetric residual Hessian matrix: H = sum_i r_i H_i.
+                ``n_coef`` symmetric residual Hessian matrix: :math:`H = \sum_i r_i H_i`.
                 This function has the interface
 
                 :code:`def hes(x, r, h, data) -> int:`

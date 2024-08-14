@@ -63,7 +63,7 @@ class PCA(pybind_PCA):
             that eigendecomposition using syevd is quicker.
             Default='auto'.
 
-        store_U (bool, optional): Controls whether to store the matrix ``U`` fromm the singular
+        store_U (bool, optional): Controls whether to store the matrix ``U`` from the singular
             value decomposition. This allows deterministic results regarding the sign of the
             principal components, at the expense of some extra computation. This option cannot be
             used if ``solver = 'syevd'``. Default=False.
@@ -100,7 +100,7 @@ class PCA(pybind_PCA):
 
     @property
     def u(self):
-        """nupmy.ndarray of shape (n_samples, n_samples): The matrix :math:`U` from the SVD."""
+        """numpy.ndarray of shape (n_samples, n_samples): The matrix :math:`U` from the SVD."""
         return self.get_u()
 
     @property

@@ -37,17 +37,18 @@ def pairwise_distances(X, Y=None, metric="euclidean", force_all_finite="allow_in
         X (numpy.ndarray): The feature matrix for which the distance matrix needs to be computed.
             Its shape is (n_samples_X, n_features).
 
-        Y (numpy.ndarray, optional): The optional second feature matrix for which the distance matrix
-            needs to be computed. Its shape is (n_samples_Y, n_features).
+        Y (numpy.ndarray, optional): The optional second feature matrix for which the distance
+            matrix needs to be computed. Its shape is (n_samples_Y, n_features).
 
-        metric (str, optional): The type of metric used to compute the distance matrix.
+        metric (str, optional): The type of metric used to compute the distance matrix. It can take
+            the values 'euclidean' or 'sqeuclidean'. Default: 'euclidean'.
 
-        force_all_finite (str, optional): Denotes if infinite values are allowed in input data.
+        force_all_finite (str, optional): Denotes whether infinite values are allowed in input data.
             Placeholder for adding options in the future.
 
     Returns:
-        numpy.ndarray with shape (n_samples_X, n_samples_Y) is Y is provided, or shape 
-        (n_samples_X, n_samples_X), if Y is None and the distance matrix for the rows 
+        numpy.ndarray with shape (n_samples_X, n_samples_Y) if Y is provided, or shape
+        (n_samples_X, n_samples_X), if Y is None and the distance matrix for the rows
         of X is required.
     """
     return pybind_pairwise_distances(X, Y, metric, force_all_finite)

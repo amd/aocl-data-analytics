@@ -34,7 +34,7 @@ da_status da_knn_set_training_data_d(da_handle handle, da_int n_samples,
                                      da_int ldx_train, const da_int *y_train) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -53,7 +53,7 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
                                      da_int ldx_train, const da_int *y_train) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -72,7 +72,7 @@ da_status da_knn_kneighbors_d(da_handle handle, da_int n_queries, da_int n_featu
                               double *n_dist, da_int k, da_int return_distance) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -89,7 +89,7 @@ da_status da_knn_kneighbors_s(da_handle handle, da_int n_queries, da_int n_featu
                               float *n_dist, da_int k, da_int return_distance) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -105,7 +105,7 @@ da_status da_knn_kneighbors_s(da_handle handle, da_int n_queries, da_int n_featu
 da_status da_knn_classes_d(da_handle handle, da_int *n_classes, da_int *classes) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -115,11 +115,11 @@ da_status da_knn_classes_d(da_handle handle, da_int *n_classes, da_int *classes)
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
     da_status status = da_status_success;
-    if (*n_classes <= 0) { //quering number of classes to allocate memory
+    if (*n_classes <= 0) { // Querying number of classes to allocate memory
         status = handle->knn_d->available_classes();
         if (status == da_status_success)
             *n_classes = da_int(handle->knn_d->classes.size());
-    } else { //now that the number of classes is known, return those values, sorted in ascending order
+    } else { // Now that the number of classes is known, return those values, sorted in ascending order
         if (classes == nullptr)
             return da_error_bypass(handle->err, da_status_invalid_pointer,
                                    "classes is not a valid pointer.");
@@ -132,7 +132,7 @@ da_status da_knn_classes_d(da_handle handle, da_int *n_classes, da_int *classes)
 da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -142,11 +142,11 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
     da_status status = da_status_success;
-    if (*n_classes <= 0) { //quering number of classes to allocate memory
+    if (*n_classes <= 0) { // Querying number of classes to allocate memory
         status = handle->knn_s->available_classes();
         if (status == da_status_success)
             *n_classes = da_int(handle->knn_s->classes.size());
-    } else { //now that the number of classes is known, return those values, sorted in ascending order
+    } else { // Now that the number of classes is known, return those values, sorted in ascending order
         if (classes == nullptr)
             return da_error_bypass(handle->err, da_status_invalid_pointer,
                                    "classes is not a valid pointer.");
@@ -160,7 +160,7 @@ da_status da_knn_predict_proba_d(da_handle handle, da_int n_queries, da_int n_fe
                                  const double *X_test, da_int ldx_test, double *proba) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -178,7 +178,7 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
                                  const float *X_test, da_int ldx_test, float *proba) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -196,7 +196,7 @@ da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features
                            const double *X_test, da_int ldx_test, da_int *y_test) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -214,7 +214,7 @@ da_status da_knn_predict_s(da_handle handle, da_int n_queries, da_int n_features
                            const float *X_test, da_int ldx_test, da_int *y_test) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,

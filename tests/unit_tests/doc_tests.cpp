@@ -105,7 +105,7 @@ TEST(DocOptions, RST_handle) {
     std::cout << ".. note::\n";
     std::cout << "   This page lists optional parameters for **C APIs** only.\n\n";
     std::cout << "In all the following tables, :math:`\\varepsilon`, refers to "
-                 "a *safe* machine precision (twice the actual machine precion) "
+                 "a *safe* machine precision (twice the actual machine precision) "
                  "for the given floating point data type.\n";
     std::string str;
     for (auto htype : htypes) {

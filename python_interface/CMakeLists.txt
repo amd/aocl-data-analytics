@@ -32,7 +32,7 @@ endif()
 find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 
 # Note on Windows we need something like: set
-# CMAKE_PREFIX_PATH=C:\Users\ehopkins\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pybind11\share\cmake\pybind11;%CMAKE_PREFIX_PATH%
+# CMAKE_PREFIX_PATH=C:\path\to\python\site-packages\pybind11\share\cmake\pybind11;%CMAKE_PREFIX_PATH%
 
 # Install the full python package as well as all the dependent libraries in
 # python_package/aoclda. The BLAS_SERIAL and LAPACK_SERIAL variables are only
@@ -155,7 +155,7 @@ endif()
 # Build the Python bindings
 add_subdirectory(python_package)
 
-# create the wheel after instalation
+# create the wheel after installation
 install(
   CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel ${CMAKE_INSTALL_PREFIX}/python_package/ --no-deps --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package)"
 )

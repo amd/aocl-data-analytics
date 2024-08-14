@@ -91,14 +91,14 @@ inline da_status register_kmeans_options(da_options::OptionRegistry &opts) {
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     } catch (...) {
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 
     return da_status_success;
 }
 
-/* Special case of option registering: after data matrix is passed to handle we wish to update the default and bounds for the number of principal components */
+/* Special case of option registering: after data matrix is passed to handle we wish to update the default and bounds for the number of clusters */
 template <class T>
 inline da_status reregister_kmeans_option(da_options::OptionRegistry &opts, da_int p) {
     using namespace da_options;
@@ -114,7 +114,7 @@ inline da_status reregister_kmeans_option(da_options::OptionRegistry &opts, da_i
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     } catch (...) {
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 

@@ -30,7 +30,7 @@
 
 /*
  * Get pointer to the option member of the currently active sub-handle, also
- * if refresh is true, the it call's the appropiate sub-handle's refresh()
+ * if refresh is true, the it calls the appropriate sub-handle's refresh()
  * member to indicate that substantial changes have occurred in the handle.
  * E.g. options changes that alter the model requiring re-training, etc...
  */

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -67,7 +67,7 @@ inline da_status parse_file(csv_reader *csv, const char *filename) {
 
     FILE *fp = nullptr;
 
-/* Most of the time MSVC compiler can automatically replace CRT functions with _s versions, but not this one */
+// Most of the time MSVC compiler can automatically replace CRT functions with _s versions, but not this one
 #if defined(_MSC_VER)
     if (fopen_s(&fp, filename, "r") != 0) {
 #else
@@ -247,7 +247,7 @@ inline da_status parse_headings(csv_reader *csv, da_int ncols, char ***headings)
         return da_error(csv->err, da_status_parsing_error, buff);     // LCOV_EXCL_LINE
     }
 
-    // Calloc rather than new as can be called from C code amd want char pointers set to null
+    // Calloc rather than new as can be called from C code and want char pointers set to null
     *headings = (char **)calloc(ncols, sizeof(char *));
     if (*headings == nullptr) {
         return da_error(csv->err, da_status_memory_error,
@@ -292,7 +292,7 @@ inline da_status parse_and_process(csv_reader *csv, const char *filename, T **a,
         error = tmp_error;
     }
 
-    // now deal with headings
+    // Now deal with headings
 
     if (get_headings) {
 

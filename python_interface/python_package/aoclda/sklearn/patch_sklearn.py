@@ -61,7 +61,7 @@ if USE_INTEL_SKLEARNEX:
         using_intel = True
     except ImportError:
         warnings.warn(
-            "Intel Extension for Scikit-learn not found", category=RuntimeWarning)
+            "Intel Extension for scikit-learn not found", category=RuntimeWarning)
 
 # Now on a case-by-case basis, overwrite with AMD symbols where we have performant implementations
 
@@ -84,8 +84,8 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                          'sk_sym': getattr(linmod_sklearn, 'Lasso'),
                          'da_sym': Lasso_da},
                'ElasticNet': {'pack': linmod_sklearn,
-                         'sk_sym': getattr(linmod_sklearn, 'ElasticNet'),
-                         'da_sym': ElasticNet_da},
+                              'sk_sym': getattr(linmod_sklearn, 'ElasticNet'),
+                              'da_sym': ElasticNet_da},
                'LogisticRegression': {'pack': linmod_sklearn,
                                       'sk_sym': getattr(linmod_sklearn, 'LogisticRegression'),
                                       'da_sym': LogisticRegression_da},
@@ -98,21 +98,22 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                'RandomForestClassifier': {'pack': decision_forest_sklearn,
                                           'sk_sym': getattr(decision_forest_sklearn, 'RandomForestClassifier'),
                                           'da_sym': RandomForestClassifier_da},
-                'pairwise_distances': {'pack': pairwise_sklearn,
-                                'sk_sym': getattr(pairwise_sklearn, "pairwise_distances"),
-                                'da_sym': pairwise_distances_da},
-                'KNeighborsClassifier': {'pack': knn_sklearn,
-                                          'sk_sym': getattr(knn_sklearn, 'KNeighborsClassifier'),
-                                          'da_sym': KNeighborsClassifier_da},
+               'pairwise_distances': {'pack': pairwise_sklearn,
+                                      'sk_sym': getattr(pairwise_sklearn, "pairwise_distances"),
+                                      'da_sym': pairwise_distances_da},
+               'KNeighborsClassifier': {'pack': knn_sklearn,
+                                        'sk_sym': getattr(knn_sklearn, 'KNeighborsClassifier'),
+                                        'da_sym': KNeighborsClassifier_da},
                }
 
 # List of symbols where AMD is chosen over Intel
-AMD_vs_INTEL = ['KMeans', 'LinearRegression', 'Ridge', 'PCA', 'DecisionTreeClassifier']
+AMD_vs_INTEL = ['KMeans', 'LinearRegression',
+                'Ridge', 'PCA', 'DecisionTreeClassifier']
 
 
 def skpatch(*args, print_patched=True):
     """
-    Replace specified sklearn packages by their AOCL-DA equivalent
+    Replace specified scikit-learn packages by their AOCL-DA equivalent
     """
 
     if not args:
@@ -166,14 +167,14 @@ def skpatch(*args, print_patched=True):
 
     if successfully_patched and print_patched:
         print(
-            "AOCL Extension for Scikit-learn enabled for the following packages:"
+            "AOCL Extension for scikit-learn enabled for the following packages:"
         )
         print(', '.join(successfully_patched))
 
 
 def undo_skpatch(*args, print_patched=True):
     """
-    Reinstate sklearn packages with their original symbols
+    Reinstate scikit-learn packages with their original symbols
     """
 
     if using_intel:
@@ -204,6 +205,6 @@ def undo_skpatch(*args, print_patched=True):
 
     if successfully_unpatched and print_patched:
         print(
-            "AOCL Extension for Scikit-learn disabled for the following packages:"
+            "AOCL Extension for scikit-learn disabled for the following packages:"
         )
         print(', '.join(successfully_unpatched))

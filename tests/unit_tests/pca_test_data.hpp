@@ -238,7 +238,7 @@ template <typename T> void GetIdentityData(std::vector<PCAParamType<T>> &params)
     param.components_required = 2;
     param.method = "svd";
     param.svd_solver = "gesvdx";
-    //Various permutations for scores and components, u and vt are equally valid so don't test here
+    // Various permutations for scores and components, u and vt are equally valid so don't test here
     std::vector<double> expected_variance{0.333333333333333, 0.333333333333333};
     param.expected_variance = convert_vector<double, T>(expected_variance);
     std::vector<double> expected_sigma{1.0, 1.0};
@@ -268,7 +268,7 @@ template <typename T> void GetZeroData(std::vector<PCAParamType<T>> &params) {
     param.components_required = 4;
     param.method = "svd";
     param.svd_solver = "gesvdx";
-    //Various permutations for scores and components, u and vt are equally valid so don't test here
+    // Various permutations for scores and components, u and vt are equally valid so don't test here
     std::vector<double> expected_variance{0.0, 0.0, 0.0, 0.0};
     param.expected_variance = convert_vector<double, T>(expected_variance);
     std::vector<double> expected_sigma{0.0, 0.0, 0.0, 0.0};
@@ -335,7 +335,7 @@ template <typename T> void GetSquareData1(std::vector<PCAParamType<T>> &params) 
         0.44721359549995804,  0.447213595499958,     0.44721359549995787,
         0.447213595499958};
     param.expected_u = convert_vector<double, T>(expected_u);
-    // Vanishing singular value means vt is very sensistive to sign flip in last row so we won't test it here
+    // Vanishing singular value means vt is very sensitive to sign flip in last row so we won't test it here
     std::vector<double> expected_variance{17.180698935602862, 6.886274659039021,
                                           4.010541852796752, 0.7864845525613813, 0.0};
     param.expected_variance = convert_vector<double, T>(expected_variance);
@@ -441,7 +441,7 @@ template <typename T> void GetSquareData2(std::vector<PCAParamType<T>> &params) 
         0.44721359549995804,  0.447213595499958,     0.44721359549995787,
         0.447213595499958};
     param.expected_u = convert_vector<double, T>(expected_u);
-    // Vanishing singular value means vt is very sensistive to sign flip in last row so we won't test it here
+    // Vanishing singular value means vt is very sensitive to sign flip in last row so we won't test it here
     std::vector<double> expected_variance{17.180698935602862, 6.886274659039021,
                                           4.010541852796752, 0.7864845525613813, 0.0};
     param.expected_variance = convert_vector<double, T>(expected_variance);
@@ -547,7 +547,7 @@ template <typename T> void GetSquareData3(std::vector<PCAParamType<T>> &params) 
         0.44721359549995804,  0.447213595499958,     0.44721359549995787,
         0.447213595499958};
     param.expected_u = convert_vector<double, T>(expected_u);
-    // Vanishing singular value means vt is very sensistive to sign flip in last row so we won't test it here
+    // Vanishing singular value means vt is very sensitive to sign flip in last row so we won't test it here
     std::vector<double> expected_variance{17.180698935602862, 6.886274659039021,
                                           4.010541852796752, 0.7864845525613813, 0.0};
     param.expected_variance = convert_vector<double, T>(expected_variance);

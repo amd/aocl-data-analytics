@@ -40,9 +40,9 @@
  * \brief Enumeration used to set the floating point data type used.
  */
 typedef enum da_precision_ {
-    da_unknown = 255, ///< Precion not set
+    da_unknown = 255, ///< Precision not set
     da_double = 0,    ///< Use double precision floating point type
-    da_single = 1,    ///< Use single precison floating point type
+    da_single = 1,    ///< Use single precision floating point type
 } da_precision;
 
 /**
