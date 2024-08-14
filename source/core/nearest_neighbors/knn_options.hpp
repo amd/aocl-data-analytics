@@ -42,7 +42,7 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts) {
             "Number of neighbors considered for k-nearest neighbors", 1,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
         opts.register_opt(oi);
-        /**/ // String options
+        // String options
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(
             OptionString("algorithm", "Algorithm used to compute the k-nearest neighbors",
@@ -63,7 +63,7 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts) {
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     } catch (...) {
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 

@@ -27,14 +27,14 @@
 
 .. _sklearn:
 
-Extension for Scikit-learn
+Extension for scikit-learn
 ****************************
 
-In addition to the Python API, AOCL-DA offers an extension to enable existing users of Scikit-learn
+In addition to the Python API, AOCL-DA offers an extension to enable existing users of scikit-learn
 to extract better performance while making minimal changes to their code.
 
-To use the extension, you must *patch* your existing code to replace the Scikit-learn symbols with
-AOCL-DA symbols. This can be done by inserting the following lines prior to your Scikit-learn import
+To use the extension, you must *patch* your existing code to replace the scikit-learn symbols with
+AOCL-DA symbols. This can be done by inserting the following lines prior to your scikit-learn import
 statement.
 
 .. code-block::
@@ -42,13 +42,15 @@ statement.
    from aoclda.sklearn import skpatch, undo_skpatch
    skpatch()
 
-You can switch back to standard Scikit-learn using
+You can switch back to standard scikit-learn using
 
 .. code-block::
 
    undo_skpatch()
 
-The ``skpatch()`` and ``undo_skpatch`` functions can also be called with string or list arguments, specifying which Scikit-learn package should be patched, for example:
+Note that after calling ``undo_skpatch``, you must reimport scikit-learn.
+
+The ``skpatch`` and ``undo_skpatch`` functions can also be called with string or list arguments, specifying which scikit-learn package should be patched, for example:
 
 .. code-block::
 
@@ -63,31 +65,42 @@ making any changes to your own code:
    python -m aoclda.sklearn your_python_script.py
    python -m aoclda.sklearn -m your_python_module
 
-The following Scikit-learn classes are currently available in the AOCL-DA extension.
+The following scikit-learn classes are currently available in the AOCL-DA extension.
 
-.. list-table:: AOCL-DA Extension for Scikit-learn
+.. list-table:: AOCL-DA Extension for scikit-learn
    :header-rows: 1
 
-   * - Scikit-learn class
+   * - scikit-learn class
      - Notes
    * - ``sklearn.cluster.KMeans``
      - ``fit``, ``transform``, ``predict``, ``fit_transform`` and ``fit_predict`` methods and various class attributes
    * - ``sklearn.decomposition.PCA``
      - ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes
    * - ``sklearn.linear_model.LinearRegression``
-     - ``fit`` method and various class attributes
+     - ``fit``, ``predict`` and ``score`` methods and various class attributes
    * - ``sklearn.linear_model.Ridge``
-     - ``fit`` method and various class attributes
+     - ``fit`` and ``predict`` methods and various class attributes
    * - ``sklearn.linear_model.Lasso``
-     - ``fit`` method and various class attributes
+     - ``fit`` and ``predict`` methods and various class attributes
+   * - ``sklearn.linear_model.ElasticNet``
+     - ``fit`` and ``predict`` methods and various class attributes
+   * - ``sklearn.linear_model.LogisticRegression``
+     - ``fit`` and ``predict`` methods and various class attributes
+   * - ``sklearn.tree.DecisionTreeClassifier``
+     - ``fit``, ``predict``, ``score``, ``predict_proba`` and ``predict_log_proba`` methods and various class attributes
+   * - ``sklearn.tree.RandomForestClassifier``
+     - ``fit``, ``predict``, ``score``, ``predict_proba`` and ``predict_log_proba`` methods and various class attributes
+   * - ``sklearn.metrics.pairwise``
+     - ``pairwise_distances`` method with ``euclidean`` and ``sqeuclidean`` distances.
+
 
 Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after
 patching, you attempt to call class member functions which have not been implemented by AOCL-DA,
 then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
 you use the Python APIs described on the subsequent pages of this manual.
 
-Scikit-learn Dispatcher
-=======================
-Since the AOCL-DA Scikit-learn extension is not yet feature-complete, we also offer a dispatcher which can automatically select functions from Intel's Extension for Scikit-learn where they are known to perform well.
+The scikit-learn Dispatcher
+===========================
+Since the AOCL-DA scikit-learn extension is not yet feature-complete, we also offer a dispatcher which can automatically select functions from Intel's Extension for scikit-learn where they are known to perform well.
 
-To enable this dispatcher, set the environment variable ``USE_INTEL_SKLEARNEX``. The AOCL-DA Scikit-learn extension will then detect your Intel installation and use it where appropriate.
+To enable this dispatcher, set the environment variable ``USE_INTEL_SKLEARNEX``. The AOCL-DA scikit-learn extension will then detect your Intel installation and use it where appropriate.

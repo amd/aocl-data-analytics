@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
-# 
+# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -12,7 +12,7 @@
 # 3. Neither the name of the copyright holder nor the names of its contributors
 #    may be used to endorse or promote products derived from this software without
 #    specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -23,7 +23,7 @@
 # WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-# 
+#
 
 USAGE="$(basename "$0") [options]
 
@@ -36,17 +36,17 @@ USAGE="$(basename "$0") [options]
 --valgrind        - Enable valgrind utilities. OFF by default
 --shared          - build shared libraries. OFF by default
 --omp             - Build SMP library. OFF by default
---target target   - Secify which target to build. all by default.
---build folder    - Spcify the build folder. build by default
---compiler comp   - Secify the compiler to use, can be gnu or aocc. gcc by default
+--target target   - Specify which target to build. all by default.
+--build folder    - Specify the build folder. build by default
+--compiler comp   - Specify the compiler to use, can be gnu or aocc. gcc by default
 --gnu_version     - Specify the version of the gcc compiler to load from spack. Must be provided if --spack_path is set
---aocc_path path  - Specify a path where the aocc envirenment script is install. 
+--aocc_path path  - Specify a path where the aocc environment script is install.
                    Either the option or the environment variable AOCC_PATH must be set if using --compiler aocc
---aocl_path       - Specify the path to AOCL libraries. take ACOL_PATH enviorment variable if not set.
---spack_path path - Specify the spack path. 
+--aocl_path       - Specify the path to AOCL libraries. take ACOL_PATH environment variable if not set.
+--spack_path path - Specify the spack path.
                     Either the option or SPACK_PATH must be set if using the --gnu_version option
---parallel nthreads - Specify the number of threads to use. Default is 1      
---verbose         - Build with verbose compilation commands   
+--parallel nthreads - Specify the number of threads to use. Default is 1
+--verbose         - Build with verbose compilation commands
 "
 
 # Clean up the existing path
@@ -60,7 +60,7 @@ fi
 BUILD_DIR="build"
 THREADS=1
 
-# default compiler
+# Default compiler
 CC=gcc
 CXX=g++
 FC=gfortran
@@ -79,7 +79,7 @@ VERBOSE=""
 OMP="OFF"
 
 while [ "${1:-}" != "" ]
-do 
+do
     case $1 in
     "--help")
         echo "${USAGE}"
@@ -254,7 +254,7 @@ echo "                 $(which ${CXX})"
 echo "                 $(which ${FC})"
 echo "cmake options  : ${CMAKE_OPTIONS}"
 
-# checkout the DA repository
+# Checkout the AOCL-DA repository
 cd ${WORKSPACE}
 rm -rf aocl-da
 rm -rf ${BUILD_DIR}
@@ -262,13 +262,13 @@ git clone -b amd-main ssh://gerritgit/cpulibraries/er/aocl-da
 cmake S aocl-da -B ${BUILD_DIR} ${CMAKE_COMPILERS} ${CMAKE_OPTIONS}
 if [[ $VALGRIND=="ON" ]]
 then
-    # run cmake configure a second time for the valgrind suppression list to be taken into account
+    # Run cmake configure a second time for the valgrind suppression list to be taken into account
     cmake S aocl-da -B ${BUILD_DIR} ${CMAKE_COMPILERS} ${CMAKE_OPTIONS}
 fi
 cd ${BUILD_DIR}
 if [[ $COVERAGE=="ON" ]]
 then
-    cmake --build . --target coverage --parallel ${THREADS} 
+    cmake --build . --target coverage --parallel ${THREADS}
 fi
 cmake --build . --target ${TARGET} --parallel ${THREADS} ${VERBOSE}
 ctest -j ${THREADS}

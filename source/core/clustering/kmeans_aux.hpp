@@ -100,7 +100,6 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
         for (da_int j = 1; j < n_clusters; j++) {
             // Compute distance between the ith sample and the jth centre only if needed
             workcs1[index + j] = (T)0.0;
-            //tmp_int = (label < j) ? label + j * n_clusters : label * n_clusters + j;
             tmp_int = label * n_clusters + j;
             if (smallest_dist > workcc1[tmp_int]) {
 
@@ -123,8 +122,6 @@ template <typename T> void da_kmeans<T>::init_elkan_bounds() {
         (*current_labels)[i] = label;
         works1[i] = smallest_dist;
     }
-    //double t1 = omp_get_wtime();
-    //t_init_bounds += t1 - t0;
 }
 
 /* Perform a single iteration of Elkan's method */
@@ -149,8 +146,6 @@ void da_kmeans<T>::elkan_iteration(bool update_centres, da_int n_threads) {
 
     // At this point workc1 contains distance of each cluster centre to the next nearest
     // The latest labels and centres are in 'previous' so we can update them to current
-
-    //double t0 = omp_get_wtime();
 
     da_int block_size = max_block_size;
     da_int block_index;
@@ -230,8 +225,7 @@ void da_kmeans<T>::elkan_iteration(bool update_centres, da_int n_threads) {
                 workcc1.data(), workc1.data(), cluster_count.data());
         }
     }
-    //double t1 = omp_get_wtime();
-    //t_assign += t1 - t0;
+
     if (update_centres) {
         T tmp;
 
@@ -248,8 +242,6 @@ void da_kmeans<T>::elkan_iteration(bool update_centres, da_int n_threads) {
             }
             workc1[i] = std::sqrt(tmp2);
         }
-
-        //double t3 = omp_get_wtime();
 
         if (n_threads > 1) {
             block_size = max_block_size;
@@ -273,12 +265,7 @@ void da_kmeans<T>::elkan_iteration(bool update_centres, da_int n_threads) {
                                                   works1.data(), workc1.data(),
                                                   (*current_labels).data());
         }
-        //double t4 = omp_get_wtime();
-        //t_loop361 += t4 - t3;
     }
-
-    //double t2 = omp_get_wtime();
-    //t_update += t2 - t1;
 
     compute_centre_half_distances();
 }
@@ -307,21 +294,16 @@ void da_kmeans<T>::elkan_iteration_assign_block(
 
             for (da_int j = 0; j < n_clusters; j++) {
                 // Check if this centre is a good candidate for relabelling the sample
-                //double t12 = omp_get_wtime();
                 da_int centre_half_distances_index = label * n_clusters + j;
-                //double t5 = omp_get_wtime();
-                //t_assign5 += t5 - t12;
                 T l_bound = l_bounds[l_bounds_index + j];
                 T centre_half_distance =
                     centre_half_distances[centre_half_distances_index];
 
                 if (j != label && u_bound > l_bound && u_bound > centre_half_distance) {
-                    //double t9 = omp_get_wtime();
 
                     if (tight_bounds == false) {
                         // Get distance from sample point to currently assigned centre
                         u_bound = (T)0.0;
-                        //double t0 = omp_get_wtime();
 #pragma omp simd reduction(+ : u_bound)
                         for (da_int k = 0; k < n_features; k++) {
                             T tmp = data[i + k * lddata] -
@@ -329,19 +311,13 @@ void da_kmeans<T>::elkan_iteration_assign_block(
                             u_bound += tmp * tmp;
                         }
                         u_bound = std::sqrt(u_bound);
-                        //double t1 = omp_get_wtime();
-                        //t_euclidean_it += t1 - t0;
                         l_bounds[l_bounds_index + label] = u_bound;
                         tight_bounds = true;
                     }
-                    //double t10 = omp_get_wtime();
-                    //t_assign4 += t10 - t9;
 
                     // If condition still holds then compute distance to candidate centre and check
-                    //double t7 = omp_get_wtime();
                     if (u_bound > l_bound || u_bound > centre_half_distance) {
                         T dist = (T)0.0;
-                        //double t3 = omp_get_wtime();
 #pragma omp simd reduction(+ : dist)
                         for (da_int k = 0; k < n_features; k++) {
                             T tmp = data[i + k * lddata] -
@@ -350,36 +326,25 @@ void da_kmeans<T>::elkan_iteration_assign_block(
                         }
 
                         dist = std::sqrt(dist);
-                        //double t4 = omp_get_wtime();
-                        //t_euclidean_it += t4 - t3;
                         l_bounds[l_bounds_index + j] = dist;
                         if (dist < u_bound) {
                             u_bound = dist;
-                            //new_labels[i] = j;
                             label = j;
                         }
                     }
-                    //double t8 = omp_get_wtime();
-                    //t_assign3 += t8 - t7;
                 }
-                //double t6 = omp_get_wtime();
-                //t_assign2 += t6 - t5;
             }
         }
 
         u_bounds[i] = u_bound;
-        //current_label = new_labels[i];
         new_labels[i] = label;
 
         if (update_centres) {
             cluster_counts[label] += 1;
             // Add this sample to the cluster mean
-            //double t0 = omp_get_wtime();
             for (da_int j = 0; j < n_features; j++) {
                 new_cluster_centres[label + j * n_clusters] += data[i + j * lddata];
             }
-            //double t1 = omp_get_wtime();
-            //t_assign1 += t1 - t0;
         }
         l_bounds_index += ldl_bounds;
     }
@@ -389,13 +354,11 @@ void da_kmeans<T>::elkan_iteration_assign_block(
    the distance to next closest centre. This matrix is symmetric so only the upper triangle is computed
    and stored. */
 template <typename T> void da_kmeans<T>::compute_centre_half_distances() {
-    //double t0 = omp_get_wtime();
     T *dummy = nullptr;
 
     euclidean_distance(
         n_clusters, n_clusters, n_features, (*current_cluster_centres).data(), n_clusters,
         dummy, 0, workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0, false, true);
-    //double t1 = omp_get_wtime();
     // For each centre, compute the half distance to next closest centre and store in workc1
     std::fill(workc1.begin(), workc1.begin() + n_clusters,
               std::numeric_limits<T>::infinity());
@@ -411,10 +374,6 @@ template <typename T> void da_kmeans<T>::compute_centre_half_distances() {
                 workc1[j] = tmp;
         }
     }
-
-    //double t2 = omp_get_wtime();
-    //t_centre_half_distances += t2 - t0;
-    //t_euclidean_it += t1 - t0;
 }
 
 template <typename T> void da_kmeans<T>::init_lloyd() {
@@ -465,7 +424,6 @@ void da_kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
     }
 
     // Distance matrix part of the computation needs to be done in blocks since it is memory intensive
-    //double t0 = omp_get_wtime();
     da_int block_index;
     da_int block_size = max_block_size;
 
@@ -544,8 +502,6 @@ void da_kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
                 workcs1.data(), ldworkcs1);
         }
     }
-    //double t1 = omp_get_wtime();
-    //t_lloyd_block += t1 - t0;
 
     if (update_centres) {
         scale_current_cluster_centres();
@@ -777,7 +733,6 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
 
     (this->*initialize_algorithm)();
 
-    //double t0 = omp_get_wtime();
     for (current_n_iter = 0; current_n_iter < max_iter; current_n_iter++) {
         // Start with the 'old' centres stored in previous_cluster_centres
         std::swap(previous_cluster_centres, current_cluster_centres);
@@ -791,9 +746,6 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
             break;
         }
     }
-
-    //double t1 = omp_get_wtime();
-    //t_iteration = t1 - t0;
 
     if (converged == 1) {
         // Tolerance-based convergence: means we should rerun labelling step without recomputing centres
@@ -856,7 +808,6 @@ template <typename T> da_int da_kmeans<T>::convergence_test() {
 
     // Recall that that the end of each iteration previous_cluster_centres contains the shift made in that particular iteration
 
-    // Note Scikit-Learn seems to use an absolute test here
     char norm = 'F';
     if (da::lange(&norm, &n_clusters, &n_features, (*previous_cluster_centres).data(),
                   &n_clusters, nullptr) < tol * normc)
@@ -919,7 +870,6 @@ template <typename T> void da_kmeans<T>::initialize_centres() {
 
 /* Initialize centres using k-means++ */
 template <typename T> void da_kmeans<T>::kmeans_plusplus() {
-    //double tt0 = omp_get_wtime();
 
     // Compute squared norms of the data points and store in works1
     for (da_int j = 0; j < n_features; j++) {
@@ -939,12 +889,9 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
     }
 
     T dummy = (T)0.0;
-    //double t0 = omp_get_wtime();
     euclidean_distance(n_samples, 1, n_features, A, lda,
                        (*current_cluster_centres).data(), n_clusters, works3.data(),
                        n_samples, works1.data(), 1, &dummy, 2, true, false);
-    //double t1 = omp_get_wtime();
-    //t_euclidean_kmeanspp += (t1 - t0);
 
     // Numerical errors could cause one of the distances to be slightly negative, leading to undefined behaviour in std::discrete_distribution
     works3[random_int] = (T)0.0;
@@ -1000,13 +947,10 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
                 da_int current_candidate = work_int2[trials];
 
                 // Compute the distance from each point to the candidate centre and store in works4
-                //t0 = omp_get_wtime();
                 euclidean_distance(n_samples, 1, n_features, A, lda,
                                    &A[current_candidate], lda, works4.data(), n_samples,
                                    works1.data(), 1, &works1[current_candidate], 1, true,
                                    false);
-                //t1 = omp_get_wtime();
-                //t_euclidean_kmeanspp += (t1 - t0);
                 // Get minimum squared distance of each sample point to potential centre
                 current_cost = 0;
                 for (da_int j = 0; j < n_samples; j++) {
@@ -1037,8 +981,6 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
         }
     }
     // Now we have n_clusters entries in current_cluster_centres
-    //double tt1 = omp_get_wtime();
-    //t_kmeanspp = (tt1 - tt0);
 }
 
 /* Initialize the random number generator, if needed */

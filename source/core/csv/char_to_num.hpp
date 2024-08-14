@@ -63,7 +63,7 @@ inline void missing_data([[maybe_unused]] char **data) { return; }
 
 inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                              double *number, int *maybe_int) {
-    // get some data from the parser
+    // Get some data from the parser
     int skip_trailing = parser->skip_trailing;
     char decimal = parser->decimal;
     char sci = parser->sci;
@@ -241,7 +241,7 @@ inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
 
 inline da_status char_to_num(parser_t *parser, const char *str, char **endptr,
                              float *number, int *maybe_int) {
-    // get some data from the parser
+    // Get some data from the parser
     int skip_trailing = parser->skip_trailing;
     char decimal = parser->decimal;
     char sci = parser->sci;

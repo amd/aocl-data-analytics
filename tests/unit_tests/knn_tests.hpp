@@ -68,7 +68,7 @@ template <typename T> struct KNNParamType {
     std::vector<T> expected_proba;
     std::vector<da_int> expected_labels;
 
-    // Set constructor to initalize data in test bodies as simply as possible.
+    // Set constructor to initialize data in test bodies as simply as possible.
     KNNParamType(){};
     KNNParamType(da_int n_neigh_knn, da_int n_neigh_kneighbors, std::string metric,
                  std::string algorithm, std::string weights)

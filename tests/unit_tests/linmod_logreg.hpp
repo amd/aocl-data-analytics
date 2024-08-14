@@ -39,17 +39,16 @@ template <class T> struct option_t {
     T value;
 };
 
-// return precision as a string litteral to set CSV options
+// Return precision as a string literal to set CSV options
 template <typename T> constexpr const char *prec_name();
 template <> constexpr const char *prec_name<float>() { return "single"; }
 template <> constexpr const char *prec_name<double>() { return "double"; }
 
-// TODO the option names should be consistent
 template <typename T> constexpr const char *prec_name_float();
 template <> constexpr const char *prec_name_float<float>() { return "float"; }
 template <> constexpr const char *prec_name_float<double>() { return "double"; }
 
-// Helper to define precision to which we expect the results match
+// Helper to define precision to which we expect the results to match
 template <typename T> T expected_precision(T scale = (T)1.0);
 template <> double expected_precision<double>(double scale) { return scale * 1.0e-3; }
 
@@ -80,7 +79,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
               da_status_success);
     bool intercept = (bool)intercept_int;
 
-    // No regularisation
+    // No regularization
     T alpha = 0, lambda = 0;
     EXPECT_EQ(da_options_set(linmod_handle, "alpha", alpha), da_status_success);
     EXPECT_EQ(da_options_set(linmod_handle, "lambda", lambda), da_status_success);
@@ -104,7 +103,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(da_data_get_n_cols(csv_store, &ncols), da_status_success);
     EXPECT_EQ(da_data_get_n_rows(csv_store, &nrows), da_status_success);
 
-    // The first ncols-1 columns contain the feature matrix; the last one the response vector
+    // The first ncols-1 columns contain the feature matrix; the last one the response vector.
     // Create the selections in the data store
     EXPECT_EQ(da_data_select_columns(csv_store, "features", 0, ncols - 2),
               da_status_success);
@@ -128,7 +127,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(da_linmod_define_features(linmod_handle, nrows, ncols - 1, A, b),
               da_status_success);
 
-    // compute regression
+    // Compute regression
     EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
 
     ////////////////////
@@ -141,14 +140,14 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     std::string coef_fname =
         std::string(DATA_DIR) + "/" + csvname + intercept_suff + "_coeffs.csv";
     if (FILE *file = fopen(coef_fname.c_str(), "r")) {
-        std::fclose(file); // read the expected coefficients
+        std::fclose(file); // Read the expected coefficients
         T *coef_exp = nullptr;
         da_int mc, nc;
         EXPECT_EQ(
             da_read_csv(csv_store, coef_fname.c_str(), &coef_exp, &mc, &nc, nullptr),
             da_status_success);
 
-        // read the computed coefficients
+        // Read the computed coefficients
         T *coef = new T[nc];
         EXPECT_EQ(
             da_handle_get_result(linmod_handle, da_result::da_linmod_coef, &nc, coef),
@@ -179,7 +178,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         EXPECT_EQ(da_data_get_n_cols(test_store, &ncols_test), da_status_success);
         EXPECT_EQ(da_data_get_n_rows(test_store, &nrows_test), da_status_success);
 
-        // The first ncols_test-1 columns contain the feature matrix; the last one the response vector
+        // The first ncols_test-1 columns contain the feature matrix; the last one the response vector.
         // Create the selections in the data store
         EXPECT_EQ(da_data_select_columns(test_store, "features", 0, ncols_test - 2),
                   da_status_success);
@@ -205,7 +204,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         std::cout << std::endl;
         EXPECT_ARR_NEAR(nrows_test, predictions, b_test, (T)0.1);
 
-        // free temp memory
+        // Free temp memory
         delete[] A_test;
         delete[] b_test;
         delete[] predictions;

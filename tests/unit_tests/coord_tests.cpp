@@ -92,7 +92,7 @@ TEST(Coord, CycleEnd) {
     da_options::OptionRegistry opts;
     da_status status;
     status = register_optimization_options<T>(err, opts);
-    EXPECT_EQ(status, da_status_success) << "error from register_optiomization_options()";
+    EXPECT_EQ(status, da_status_success) << "error from register_optimization_options()";
     const da_int n = 10;
     std::vector<double> x(n, 10.0), l(0, 0.0), u(0, 0.0), info(100, 0.0);
     std::transform(x.begin(), x.begin() + 5, x.begin(), [](double y) { return y / 2; });

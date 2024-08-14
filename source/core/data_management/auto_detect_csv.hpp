@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -59,7 +59,7 @@ inline void convert_col_to_char(CSVColumnsType &columns, da_int i, da_int j, cha
             break;
         }
     }
-    //replace the ith column with this new vector
+    // Replace the ith column with this new vector
     columns[i] = char_col;
 }
 
@@ -145,7 +145,7 @@ inline void update_column(double elem, CSVColumnsType &columns, da_int i, da_int
 }
 
 /* These next two functions use variadic templates to recursively call char_to_num
-   until the string is succesfully parsed as a number, or return an error if the
+   until the string is successfully parsed as a number, or return an error if the
    string needs to remain as a string */
 template <class T>
 inline da_status get_number(parser_t *parser, const char *str, CSVElementType &output,

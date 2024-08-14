@@ -159,7 +159,7 @@ da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int n
     }
     return da_error(handle->err, da_status_invalid_input,
                     "Parameter `observations` should contain at least one single "
-                    "observation. Parameter `loss` should point to a valid adress.");
+                    "observation. Parameter `loss` should point to a valid address.");
 }
 
 da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int nfeat,
@@ -185,5 +185,5 @@ da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int n
     }
     return da_error(handle->err, da_status_invalid_input,
                     "Parameter `observations` should contain at least one single "
-                    "observation. Parameter `loss` should point to a valid adress.");
+                    "observation. Parameter `loss` should point to a valid address.");
 }

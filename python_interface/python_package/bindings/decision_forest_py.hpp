@@ -82,7 +82,6 @@ class decision_tree : public pyda_handle {
              T feat_thresh = 0.0) {
         da_status status;
 
-        // TODO pass real options to constructor
         status =
             da_options_set(handle, "minimum split improvement", min_impurity_decrease);
         exception_check(status);
@@ -279,7 +278,6 @@ class decision_forest : public pyda_handle {
              T min_split_score = 0.0, T feat_thresh = 0.03) {
         da_status status;
 
-        // TODO options to constructor
         status = da_options_set(handle, "bootstrap samples factor", samples_factor);
         exception_check(status);
         status =

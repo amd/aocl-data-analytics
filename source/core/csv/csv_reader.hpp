@@ -39,12 +39,12 @@ void da_parser_destroy(parser_t **parser);
 
 class csv_reader {
   public:
-    /* parser points to the struct used by the original open source C tokenizer code */
+    // parser points to the struct used by the original open source C tokenizer code
     parser_t *parser;
     da_options::OptionRegistry *opts;
 
-    /* But to deal with datastore objects and autodetection we need some additional machinery;
-    for example, these attributes are used when reading a CSV file straight into a datastore object */
+    // But to deal with datastore objects and autodetection we need some additional machinery;
+    // For example, these attributes are used when reading a CSV file straight into a datastore object
     da_int precision;
     da_int integers_as_fp;
     da_int first_row_header;
@@ -148,7 +148,7 @@ class csv_reader {
         opts->get("CSV warn for missing data", iopt);
         parser->warn_for_missing_data = (int)iopt;
 
-        /* Additional options only used for reading CSV files into datastore */
+        // Additional options only used for reading CSV files into datastore
 
         opts->get("CSV datatype", sopt, iopt);
         datatype = static_cast<csv_datatype>(iopt);

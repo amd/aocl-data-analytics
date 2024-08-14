@@ -35,4 +35,4 @@ enum kmeans_init { random_samples = 0, kmeanspp, supplied, random_partitions };
 
 } // namespace da_kmeans
 
-#endif //KMEANS_TYPES_HPP
+#endif // KMEANS_TYPES_HPP

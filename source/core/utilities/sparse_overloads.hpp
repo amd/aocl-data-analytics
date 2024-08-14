@@ -27,7 +27,6 @@
 
 #ifndef SPARSE_TEMPLATES_HPP
 #define SPARSE_TEMPLATES_HPP
-// #include "aoclda_types.h"
 #include "aoclsparse.h"
 
 template <class T>

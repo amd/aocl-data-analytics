@@ -25,18 +25,18 @@
  *
  */
 
-// Based on code at https://people.sc.fsu.edu/~jburkardt/f77_src/asa136/asa136.html with minimal edits
+/* Based on code at https://people.sc.fsu.edu/~jburkardt/f77_src/asa136/asa136.html with minimal edits
 
-// AMD CHANGES:
-// templating
-// n_iter added which returns number of iterations used
-// int -> da_iont throughout
-// workspace now passed in
-// deal with lda
-// const a
-// Note that further optimizations may be possible here
-// Corrected an lda bug
-// Fixed compilation warnings
+  AMD CHANGES:
+  - templating
+  - n_iter added which returns number of iterations used
+  - int -> da_iont throughout
+  - workspace now passed in
+  - deal with lda
+  - const a
+  - corrected an lda bug
+  - fixed compilation warnings
+*/
 
 #include <math.h>
 #include <stdio.h>

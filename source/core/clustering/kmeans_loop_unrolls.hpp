@@ -25,14 +25,12 @@
 #define KMEANS_LOOP_UNROLLS_HPP
 
 #include "da_cblas.hh"
-//#include <omp.h>
 
 namespace da_kmeans {
 
 /* These functions contain performance-critical loops which must vectorize for performance, but often this
 can only be done by manually unrolling. The amount of unrolling and even the ordering of array elements
-depends on the machine and the number of clusters. The use of these unrolled loops depends on benchmarking
-and tuning so for now they are mainly excised from code coverage. */
+depends on the machine and the number of clusters. */
 
 /* Within Elkan iteration update a block of the lower and upper bound matrices*/
 template <typename T>
@@ -167,12 +165,9 @@ void da_kmeans<T>::lloyd_iteration_block_no_unroll(
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
     // Array access patterns mean for this loop it is quicker to form -2CA^T
     T tmp2;
-    //double t0 = omp_get_wtime();
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, n_clusters, block_size,
                         n_features, -2.0, cluster_centres, n_clusters, data, lddata, 0.0,
                         work, ldwork);
-    //double t1 = omp_get_wtime();
-    //t_euclidean_it += t1 - t0;
     // Go through each sample in work and find argmin
 
     tmp2 = centre_norms[0];
@@ -193,8 +188,6 @@ void da_kmeans<T>::lloyd_iteration_block_no_unroll(
         labels[i] = label;
     }
 
-    //double t2 = omp_get_wtime();
-    //t_assign += t2 - t1;
     if (update_centres) {
 
         for (da_int i = 0; i < block_size; i++) {
@@ -206,8 +199,6 @@ void da_kmeans<T>::lloyd_iteration_block_no_unroll(
             }
         }
     }
-    //double t3 = omp_get_wtime();
-    //t_update += t3 - t2;
 }
 
 // Exclude unrolled loops from coverage as these are used in the benchmark tests
@@ -225,14 +216,9 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
     // Array access patterns mean for this loop it is quicker to form -2CA^T
 
-    //T tmp2;
-    //double t0 = omp_get_wtime();
-
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, n_clusters, block_size,
                         n_features, -2.0, cluster_centres, n_clusters, data, lddata, 0.0,
                         work, ldwork);
-    //double t1 = omp_get_wtime();
-    //t_euclidean_it += t1 - t0;
     // Go through each sample in work and find argmin
 
     T smallest_dists[2];
@@ -268,8 +254,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
         labels[i] = label;
     }
 
-    //double t2 = omp_get_wtime();
-    //t_assign += t2 - t1;
     if (update_centres) {
 
         for (da_int i = 0; i < block_size; i++) {
@@ -281,8 +265,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
             }
         }
     }
-    //double t3 = omp_get_wtime();
-    //t_update += t3 - t2;
 }
 
 template <typename T>
@@ -297,14 +279,9 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
     // Array access patterns mean for this loop it is quicker to form -2CA^T
 
-    //T tmp2;
-    //double t0 = omp_get_wtime();
-
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, n_clusters, block_size,
                         n_features, -2.0, cluster_centres, n_clusters, data, lddata, 0.0,
                         work, ldwork);
-    //double t1 = omp_get_wtime();
-    //t_euclidean_it += t1 - t0;
     // Go through each sample in works and find argmin
 
     T smallest_dists[4];
@@ -358,8 +335,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
         labels[i] = label;
     }
 
-    //double t2 = omp_get_wtime();
-    //t_assign += t2 - t1;
     if (update_centres) {
 
         for (da_int i = 0; i < block_size; i++) {
@@ -371,8 +346,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
             }
         }
     }
-    //double t3 = omp_get_wtime();
-    //t_update += t3 - t2;
 }
 
 template <typename T>
@@ -384,14 +357,10 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
 
-    //T tmp2;
-    //double t0 = omp_get_wtime();
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, block_size, n_clusters,
                         n_features, -2.0, data, lddata, cluster_centres, n_clusters, 0.0,
                         work, ldwork);
 
-    //double t1 = omp_get_wtime();
-    //t_euclidean_it += t1 - t0;
     // Go through each sample in work and find argmin
 
     T smallest_dists[4];
@@ -446,8 +415,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
         labels[i] = label;
     }
 
-    //double t2 = omp_get_wtime();
-    //t_assign += t2 - t1;
     if (update_centres) {
 
         for (da_int i = 0; i < block_size; i++) {
@@ -459,8 +426,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
             }
         }
     }
-    //double t3 = omp_get_wtime();
-    //t_update += t3 - t2;
 }
 
 template <typename T>
@@ -475,13 +440,9 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
     // Array access patterns mean for this loop it is quicker to form -2CA^T
 
-    //double t0 = omp_get_wtime();
-
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, n_clusters, block_size,
                         n_features, -2.0, cluster_centres, n_clusters, data, lddata, 0.0,
                         work, ldwork);
-    //double t1 = omp_get_wtime();
-    //t_euclidean_it += t1 - t0;
     // Go through each sample in work and find argmin
 
     T smallest_dists[8];
@@ -566,8 +527,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
         labels[i] = label;
     }
 
-    //double t2 = omp_get_wtime();
-    //t_assign += t2 - t1;
     if (update_centres) {
 
         for (da_int i = 0; i < block_size; i++) {
@@ -579,8 +538,6 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
             }
         }
     }
-    //double t3 = omp_get_wtime();
-    //t_update += t3 - t2;
 }
 
 // LCOV_EXCL_STOP

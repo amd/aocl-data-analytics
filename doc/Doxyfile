@@ -73,7 +73,7 @@ OUTPUT_DIRECTORY       = auto-generated-by-cmake
 # If the CREATE_SUBDIRS tag is set to YES then doxygen will create up to 4096
 # sub-directories (in 2 levels) under the output directory of each output format
 # and will distribute the generated files over these directories. Enabling this
-# option can be useful when feeding doxygen a huge amount of source files, where
+# option can be useful when feeding doxygen a huge number of source files, where
 # putting all generated files in the same directory would otherwise causes
 # performance problems for the file system. Adapt CREATE_SUBDIRS_LEVEL to
 # control the number of sub-directories.
@@ -1481,7 +1481,7 @@ HTML_CODE_FOLDING      = YES
 # shown in the various tree structured indices initially; the user can expand
 # and collapse entries dynamically later on. Doxygen will expand the tree to
 # such a level that at most the specified number of entries are visible (unless
-# a fully collapsed tree already exceeds this amount). So setting the number of
+# a fully collapsed tree already exceeds this number). So setting the number of
 # entries 1 will produce a full collapsed tree by default. 0 is a special value
 # representing an infinite number of entries and will result in a full expanded
 # tree by default.
@@ -2611,7 +2611,7 @@ UML_LOOK               = NO
 # number of items for each type to make the size more manageable. Set this to 0
 # for no limit. Note that the threshold may be exceeded by 50% before the limit
 # is enforced. So when you set the threshold to 10, up to 15 fields may appear,
-# but if the number exceeds 15, the total amount of fields shown is limited to
+# but if the number exceeds 15, the total number of fields shown is limited to
 # 10.
 # Minimum value: 0, maximum value: 100, default value: 10.
 # This tag requires that the tag UML_LOOK is set to YES.

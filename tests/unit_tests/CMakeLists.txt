@@ -195,8 +195,7 @@ if(WIN32 AND BUILD_SHARED_LIBS)
         $<TARGET_RUNTIME_DLLS:${GTEST_EXE}> $<TARGET_FILE_DIR:${GTEST_EXE}>
       COMMAND_EXPAND_LISTS)
 
-    # gtest_discover_tests does not work on Windows shared library builds - this
-    # is the best we can do for now
+    # gtest_discover_tests does not work with Windows shared library builds
     add_test(${GTEST_EXE} ${GTEST_EXE})
   endforeach()
 endif()

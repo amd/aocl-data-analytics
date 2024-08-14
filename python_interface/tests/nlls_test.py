@@ -119,7 +119,7 @@ def test_functionality(opt_params):
 
 
 @pytest.mark.parametrize("numpy_order, use_fd", [("C", False), ("C", True), ("F", False)])
-def test_fuctionality_order(numpy_order, use_fd):
+def test_functionality_order(numpy_order, use_fd):
     """Test correct functionality while solving a simple problem"""
     if use_fd:
         tol = 1e-4
@@ -163,7 +163,7 @@ def test_fuctionality_order(numpy_order, use_fd):
     assert ndf.metrics['norm_g'] < 1e-6
     assert ndf.metrics['scl_norm_g'] < 1e-6
 
-# Iterface checks
+# Interface checks
 
 
 def test_iface_too_tight():

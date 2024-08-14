@@ -97,7 +97,7 @@ void parser_set_default_options(parser_t *self) {
     // For tokenization
     self->state = START_RECORD;
 
-    self->delimiter = ','; // XXX
+    self->delimiter = ',';
     self->delim_whitespace = 0;
 
     self->doublequote = 0;
@@ -275,7 +275,7 @@ int parser_init(parser_t *self) {
         return PARSER_OUT_OF_MEMORY;
     }
 
-    /* amount of bytes buffered */
+    /* number of bytes buffered */
     self->datalen = 0;
     self->datapos = 0;
 
@@ -426,7 +426,6 @@ static int push_char(parser_t *self, char c) {
 }
 
 int static inline end_field(parser_t *self) {
-    // XXX cruft
     if (self->words_len >= self->words_cap) {
         TRACE(("end_field: ERROR!!! self->words_len(%zu) >= "
                "self->words_cap(%zu)\n",
@@ -687,8 +686,6 @@ static int parser_buffer_bytes(parser_t *self, size_t nbytes,
     *stream++ = c;                                                                       \
     slen++;
 
-// This is a little bit of a hack but works for now
-
 #define END_FIELD()                                                                      \
     self->stream_len = slen;                                                             \
     if (end_field(self) < 0) {                                                           \
@@ -926,7 +923,7 @@ int tokenize_bytes(parser_t *self, size_t line_limit, uint64_t start_lines) {
                 }
                 break;
             } else if (IS_TERMINATOR(c)) {
-                // \n\r possible?
+                // \n\r possible
                 if (self->skip_empty_lines) {
                     parser_store_skipped_row(self, self->file_lines + 1);
                     self->file_lines++;
@@ -1116,18 +1113,17 @@ int tokenize_bytes(parser_t *self, size_t line_limit, uint64_t start_lines) {
                 }
             } else {
                 if (self->delim_whitespace) {
-                    /* XXX
+                    /* 
                      * first character of a new record--need to back up and
                      * reread
                      * to handle properly...
                      */
                     i--;
-                    buf--; // back up one character (HACK!)
+                    buf--; // back up one character
                     END_LINE_STATE(START_RECORD);
                 } else {
                     // \r line terminator
-                    // UGH. we don't actually want
-                    // to consume the token. fix this later
+
                     self->stream_len = slen;
                     if (end_line(self) < 0) {
                         goto parsingerror;
@@ -1138,7 +1134,7 @@ int tokenize_bytes(parser_t *self, size_t line_limit, uint64_t start_lines) {
                     self->state = START_RECORD;
 
                     --i;
-                    buf--; // let's try this character again (HACK!)
+                    buf--; // let's try this character again
                     if (line_limit > 0 && self->lines == start_lines + line_limit) {
                         goto linelimit;
                     }
@@ -1421,7 +1417,6 @@ int _tokenize_helper(parser_t *self, size_t nrows, int all, const char *encoding
         status = tokenize_bytes(self, nrows, start_lines);
 
         if (status < 0) {
-            // XXX
             TRACE(("_tokenize_helper: Status %d returned from tokenize_bytes, "
                    "breaking\n",
                    status));

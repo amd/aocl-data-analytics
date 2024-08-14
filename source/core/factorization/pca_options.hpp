@@ -76,7 +76,7 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     } catch (...) {
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 
@@ -102,7 +102,7 @@ inline da_status reregister_pca_option(da_options::OptionRegistry &opts, da_int 
     } catch (std::bad_alloc &) {
         return da_status_memory_error;
     } catch (...) {
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_status_internal_error; // LCOV_EXCL_LINE
     }
 

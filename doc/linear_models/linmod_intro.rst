@@ -27,7 +27,7 @@
 
 .. _chapter_linmod:
 
-Linear models
+Linear Models
 *************
 
 The topic of linear models encompasses a range of commonly used statistical models and fitting algorithms, including
@@ -44,13 +44,13 @@ where :math:`X` is an array of :math:`n_{\mathrm{samples}}` observations with :m
 coefficients, :math:`g^{-1}` is a (possibly nonlinear) activation / link function, and :math:`C_{\theta}` is a cost /
 error function, which may depend on a set of (fixed) hyperparameters, :math:`\theta`.
 
-Most linear models satisfy a form where the cost function can be split into a Loss function (which measures quality
+Most linear models satisfy a form where the cost function can be split into a loss function (which measures quality
 of fit to the data) and a penalty term (which regularizes the model parameters).  Regularization is also referred to as
 shrinkage because it tends to shrink the size of the parameter values and/or shrink the number of non-zero parameters.
 
-The Loss function is typically a function of the responses or labels (:math:`y`), the features (:math:`X`), and the model
+The loss function is typically a function of the responses or labels (:math:`y`), the features (:math:`X`), and the model
 parameters (:math:`\beta`), whereas the penalty term is typically only a function of the 1-norm and/or the 2-norm of the
-model parameters (:math:`\beta`).  Such linear models are often referred to as Elastic-Nets.
+model parameters (:math:`\beta`).  Such linear models are often referred to as elastic nets.
 
 Typically, in addition to the conditions above, :math:`\phi` and :math:`g^{-1}` are identity mappings and the general form
 for the cost function becomes,
@@ -61,19 +61,18 @@ for the cost function becomes,
    + \lambda \bigg( \alpha \lVert \beta \rVert_1 + \frac{(1 - \alpha)}{2} \lVert \beta \rVert_2^2  \bigg),
    :label: loss
 
-where :math:`0\le\lambda, 0\le\alpha\le1` are hyperparameters, :math:`\lVert \beta \rVert_1` is the 1-norm
-and :math:`\lVert \beta \rVert_2` is the 2-norm of :math:`\beta`, while :math:`\lambda` sets the magnitude of the overall penalization,
-:math:`\alpha` distributes its share across the :math:`\ell_1` and :math:`\ell_2` regularization terms. :math:`L` is known as the
-*Loss function*. Linear models
-where :math:`\alpha=0` are called Ridge Regression. Conversely, when :math:`\alpha=1` the model is called Lasso.
-While for the case where :math:`0 < \alpha < 1` is called Elastic-Net Regression.
+where :math:`0\le\lambda, 0\le\alpha\le1` are hyperparameters with :math:`\lambda` setting the magnitude of the overall penalization and
+:math:`\alpha` distributing its share across the :math:`\ell_1` and :math:`\ell_2` regularization terms, :math:`\lVert \beta \rVert_1` and :math:`\lVert \beta \rVert_2`. :math:`L` is known as the
+*loss function*. Linear models
+where :math:`\alpha=0` are called *ridge regression* models.
+When :math:`\alpha=1` the model is a *lasso* model, whereas if :math:`0 < \alpha < 1` the model is an *elastic net regression* model.
 
 **Intercept**
 
 
 If a linear model contains an intercept term, the parameter vector :math:`\beta` has dimension :math:`n_{\mathrm{features}}+1` and the
 observations :math:`X_i` are extended with a constant of :math:`1`.  For example, if there is a single feature and the
-linear model has an intercept term the Mean Square Error Loss cost function becomes,
+linear model has an intercept term the mean square error loss cost function becomes,
 
 .. math::
 
@@ -81,11 +80,11 @@ linear model has an intercept term the Mean Square Error Loss cost function beco
 
 where :math:`x_i` represents a single (scalar) observation and without any regularization terms.
 
-In general, the intercept can be added or not by setting the linear regression handle option `intercept` to `1`,
-for further details see :ref:`linmod_options`.
+The intercept can be added by setting the linear regression handle option `intercept` to `1`.
+For further details see :ref:`linmod_options`.
 
 .. note::
-    Intercept term is never regularized. For the example above only :math:`\beta_1` is suject to regularization.
+    The intercept term is never regularized. In the example above only :math:`\beta_1` is subject to regularization.
 
 Available Models
 ================
@@ -96,7 +95,7 @@ Mean Square Error
 -----------------
 
 This is the most basic model and its use is widespread across many applications.
-The cost function for a linear regression Model where the fit (loss) is measured by the Mean Square Error (MSE) is,
+The cost function for a linear regression model where the fit (loss) is measured by the mean square error (MSE) is,
 
 .. math::
 
@@ -110,7 +109,7 @@ Note that the intercept term :math:`\beta_0` is not regularized.
 Logistic regression
 -------------------
 
-Logistic regression is a type of supervised classification model aiming at assigning labels.
+Logistic regression is a type of supervised classification model aimed at assigning labels.
 In AOCL-DA, the labels are expected to be provided in a categorical response variable, :math:`y`, encoded by :math:`\{0, 1, 2, \ldots, K-1 \}`.
 The fit is based on maximizing the log-likelihood (loss function) of the probabilities that each observation :math:`i` belongs to a given class,
 in turn defined by,
@@ -125,7 +124,7 @@ As an example, if :math:`K=2`, the loss function simplifies to,
 
    C\left( \beta \right) = -L(y, \beta X) = \sum_{i=0}^n \bigg( y_i \log p(X_i, \beta) + (1 - y_i) \log \big( 1 - p(X_i, \beta) \big) \bigg).
 
-As in the Linear Regession Model, :math:`\ell_1` or :math:`\ell_2` regularization can be applied by adding the corresponding
+As in the linear regression model, :math:`\ell_1` or :math:`\ell_2` regularization can be applied by adding the corresponding
 penalty term to the cost function.
 
 .. only:: internal
@@ -133,10 +132,10 @@ penalty term to the cost function.
     Extensions
     ==========
 
-    Beyond MSE regression, ridge regression, the Lasso, and logistic regression, there are other classes of linear
+    Beyond MSE regression, ridge regression, lasso, and logistic regression, there are other classes of linear
     models which are not currently supported by AOCL-DA.  These include,
 
-    * Weighted residuals - Loss function is of form :math:`\sum_{i=1}^n w_i r_i = \sum_{i=1}^n w_i (y_i - \beta X_i)^2`
+    * Weighted residuals - loss function is of form :math:`\sum_{i=1}^n w_i r_i = \sum_{i=1}^n w_i (y_i - \beta X_i)^2`
     * Additional loss functions - for example Huber, Cauchy, or Quantile in addition to MSE and Log Loss,
     * Basis expansions - for example addition of polynomial terms or extension to nonparametric regression, e.g., Loss
       functions of the form :math:`\sum_{i=1}^n \big(y_i - \beta \, \phi(X_i) \big)^2`
@@ -157,7 +156,7 @@ Different methods are available to compute the models. The method is chosen auto
 
   where :math:`Q` is a :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` matrix with orthogonal columns and :math:`R` is a :math:`n_{\mathrm{features}}\times n_{\mathrm{features}}` triangular matrix.
 
-* SVD: Singular value decomposition can be used to compute standard MSE and Ridge regression models.
+* SVD: the singular value decomposition can be used to compute standard MSE and ridge regression models.
 
   .. math::
 
@@ -166,21 +165,21 @@ Different methods are available to compute the models. The method is chosen auto
   where :math:`U` is a square matrix of size :math:`n_{\mathrm{samples}}` with orthogonal columns, :math:`D` is a :math:`n_{\mathrm{features}}\times n_{\mathrm{features}}`
   diagonal matrix whose elements are non-negative singular values and :math:`V^T` is a transpose of a :math:`n_{\mathrm{features}} \times n_{\mathrm{features}}` orthogonal matrix.
 
-* Cholesky: Cholesky decomposition can be used for normal and Ridge regression when data is full-rank. It factorizes
+* Cholesky: the Cholesky decomposition can be used for normal and ridge regression when the data matrix is full-rank. It factorizes
   the symmetric positive-definite normal equations matrix :math:`X^TX` into two triangular matrices. In linear models it can be used to find coefficients expressed as:
 
   .. math::
 
    \beta = (X^TX+\lambda)^{-1}X^Ty,
 
-  where after left multiplying by an expression inside of the inverse, we end up with system of linear equations in the form :math:`Ax=B`. Left hand side can be factorised using Cholesky
-  as follows:
+  where, after left multiplying by the expression inside of the inverse, we end up with a system of linear equations in the form :math:`Ax=B`.
+  The left hand side can be factorized using the Cholesky decomposition as follows:
 
   .. math::
 
    X^TX+\lambda = LL^T,
 
-  where :math:`L` is a lower triangular matrix with real and positive diagonal entries. Such matrix is then used to find a solution to a system of linear equations.
+  where :math:`L` is a lower triangular matrix with real and positive diagonal entries. This matrix is then used to find a solution to the system of linear equations.
 
 
 **Iterative solvers**
@@ -188,19 +187,18 @@ Different methods are available to compute the models. The method is chosen auto
 * L-BFGS-B: a solver aimed at minimizing smooth nonlinear functions (:cite:t:`lbfgsb`). It can be used to compute both MSE and logistic models with or without :math:`\ell_2` regularization. It is not suitable when an :math:`\ell_1` regularization term is required.
 
 * Coordinate descent: a solver aimed at minimizing nonlinear functions.
-  It is suitable for linear models with an :math:`\ell_1` regularization term and Elastic Nets (:cite:t:`coord_elastic`, :cite:t:`elnet1`).
+  It is suitable for linear models with an :math:`\ell_1` regularization term and elastic nets (:cite:t:`coord_elastic`, :cite:t:`elnet1`).
 
   .. note::
 
-    The coordinate descent method implemented is optimized to solve LASSO or Elastic-Net problems.
-    For Ridge or unregularized problems the use of any alternative methods is recommended.
+    The coordinate descent method implemented is optimized to solve lasso or elastic net problems.
+    For ridge or unregularized problems the use of any alternative methods is recommended.
 
   .. warning::
 
-    The implemented coordinate descent method is designed to fit standardized data, as such, it should not be used with scaling method
-    (see next section) other than
-    :code:`scaling only` (default), or :code:`standardize`. Using any other type of scaling will result in either not
-    converging or providing unexpected results.
+    The implemented coordinate descent method is designed to fit standardized data. As such, it should not be used with the scaling method
+    set to anything other than :code:`scaling only` (default), or :code:`standardize` (see next section). Using any other type of scaling will result in lack of
+    convergence or unexpected results.
 
 * Conjugate gradient: a solver aimed at finding a solution to a system of linear equations.
   It can be used to compute linear regression with or without :math:`\ell_2` regularization.
@@ -210,14 +208,14 @@ Scaling the Data
 ================
 
 In many circumstances, the data used to perform a fit is badly scaled and rescaling can have numerical benefits.
-Furthermore, iterative solvers can show improved quality of the solution when fitting on re-scaled data.
+Furthermore, iterative solvers can show improved quality of the solution when fitting on rescaled data.
 
-If scaling is requested, then the fitting routine takes care of re-scaling the problem
-data (a copy can be made, depending on the value). Once the model is trained, it reverts the scaling on the trained
+If scaling is requested, then the fitting routine takes care of rescaling the problem
+data. Once the model is trained, it reverts the scaling on the trained
 coefficients, so this process is transparent to the user.
 
 The optional parameter *scaling* controls the scaling of the data, it defaults to :code:`auto` in which case depending on the optimization method to use,
-it will apply different types of scaling. The following table shows the default for each solver, while table :ref:`tbl_scaling_types` shows the supported scaling types.
+it will apply different types of scaling. The following table shows the default for each solver, while the table :ref:`tbl_scaling_types` shows the supported scaling types.
 
 .. csv-table:: Default scaling type when optional parameter *scaling* = :code:`auto`
     :header: Method, option *optim method*, option *scaling*
@@ -230,17 +228,16 @@ it will apply different types of scaling. The following table shows the default 
     L-BFGS-B Solver,              :code:`lbfgsb`, :code:`centering` or :code:`none`
 
 When a solver provides two default options for *scaling*, then it is chosen based on problem characteristics, e.g.,
-if the problem is underdetermined or if the model has intercept, etc.
+if the problem is underdetermined or if the model has an intercept.
 
 .. note::
     Scaling is applied prior to solving the problem and hence the regularization (if any) is done over the scaled problem and **not** on the
-    unscaled version. This has implications on the trained coeffients and may differ from the regularized model trained with unscalled data.
+    unscaled version. This has implications on the trained coefficients and may differ from the regularized model trained with unscaled data.
 
 The following table shows the supported scaling types.
-In the table, :math:`N` is a shorthand for :math:`n_{\text{samples}}`; :math:`\sigma^2_Z` refers to the sample variance
-of :math:`Z` (variance formula using :math:`N`
-instead of :math:`N-1`); and :math:`\mu_Z` represents the sample mean of :math:`Z`. Finally, :math:`\hat Z` represents the scaled
-version of :math:`Z`. Specifically for the table, columns labeled :math:`\hat Y` and :math:`\hat X_j` report the transforms performed on the response vector :math:`Y` and the
+In the table, :math:`N` is a shorthand for :math:`n_{\mathrm{samples}}`; :math:`\sigma^2_Z` refers to the sample variance
+of :math:`Z`; and :math:`\mu_Z` represents the sample mean of :math:`Z`. Finally, :math:`\hat Z` represents the scaled
+version of :math:`Z`. Specifically in the table below, columns labeled :math:`\hat Y` and :math:`\hat X_j` report the transforms performed on the response vector :math:`Y` and the
 columns of the predictor matrix :math:`X`.
 
 .. _tbl_scaling_types:
@@ -258,7 +255,7 @@ columns of the predictor matrix :math:`X`.
 
 .. only:: internal
 
-    This is the complete table, containing the scaling factors used in the step function for Coordinate Descent (:math:`\eta`).
+    This is the complete table, containing the scaling factors used in the step function for the coordinate descent method (:math:`\eta`).
 
     .. csv-table:: Linear model data scaling types (full version)
         :header: *scaling* value , model intercept, :math:`m_Y`, :math:`s_Y`, :math:`\hat Y`, :math:`m_{X_j}`, :math:`s_{X_j}`, :math:`x_v(j) =\eta_j`, :math:`\hat X_j`
@@ -273,24 +270,24 @@ columns of the predictor matrix :math:`X`.
 
 .. note::
 
-    Scaling type :code:`scale only` and :code:`standardize` also affect the regularization penalty term :math:`\lambda` in :eq:`loss`.
+    Scaling types :code:`scale only` and :code:`standardize` also affect the regularization penalty term :math:`\lambda` in :eq:`loss`.
 
-    Iterative solvers can show the convergence progress by printing to standard out some progress metric for each iteration (see optional parameter *print level*).
+    Iterative solvers can show the convergence progress by printing to standard output some progress metric for each iteration (as specified by the optional parameter *print level*).
     It is important to note that all reported metrics are based on the rescaled data.
 
     When requesting information from the handle, after training the model, the reported metrics are also based on the scaling type used.
 
-Initial coefficients
+Initial Coefficients
 ====================
 
-For iterative solvers, it is possible to provide warm-start for the process given the user has some initial guess on starting coefficients (for example obtained via previous fit).
-When provided with too many coefficients only the first :math:`k` coefficients will be used, where :math:`k` is the expected number of coefficients. Intercept will always be
-the last member of the provided array. When provided with too few coefficients the initial guess will be ignored.
+For iterative solvers, it is possible to provide a warm-start for the process via an initial guess for the coefficients (for example, these may have been obtained via previous fit).
+When provided with too many coefficients, only the first :math:`k` coefficients will be used, where :math:`k` is the expected number of coefficients. The intercept will always be
+the last member of the provided array. If too few coefficients are provided, the initial guess will be ignored.
 
 .. warning::
 
-    For CG solver in the under-determined case (:math:`n_{\mathrm{features}} \geq n_{\mathrm{samples}}`) we are solving the dual problem, and thus the initial coefficients
-    should also be dual (expected number of coefficients :math:`k` is equal to :math:`n_{\mathrm{samples}}` instead of :math:`n_{\mathrm{features}}`).
+    For the conjugate gradient solver in the underdetermined case (:math:`n_{\mathrm{features}} \geq n_{\mathrm{samples}}`) we are solving the dual problem, and thus the initial coefficients
+    should also be dual (so that the expected number of coefficients :math:`k` is equal to :math:`n_{\mathrm{samples}}` instead of :math:`n_{\mathrm{features}}`).
 
 Initial coefficients can be provided in the following way:
 
@@ -300,13 +297,13 @@ Initial coefficients can be provided in the following way:
       :sync: Python
 
       Provide :code:`x0` parameter when calling :func:`aoclda.linear_model.linmod.fit`.
-      
+
 
    .. tab-item:: C
       :sync: C
 
       Provide :code:`coefs` pointer to initial coefficients while calling :ref:`da_linmod_fit_start_? <da_linmod_fit_start>`
-      
+
 
 Typical Workflow for Linear Models
 ==================================
@@ -344,7 +341,7 @@ The standard way of computing a linear model using AOCL-DA is as follows.
            * info[4]: number of model evaluations performed,
            * info[5]: infinity norm of the optimization metric (varies on the method used),
            * info[6]: infinity norm of of a given metric at the initial iterate (varies on the method used),
-           * info[7]: number of *cheap* model evaluations (only relevant for Coordenate Descent Method) and indicates the number of low-rank updates used to evaluate model,
+           * info[7]: number of *cheap* model evaluations (only relevant for Coordinate Descent Method) and indicates the number of low-rank updates used to evaluate model,
            * info[8-99]: reserved for future use.
 
            .. note::
@@ -374,7 +371,7 @@ Linear Model Options
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
          "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
-         "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and responce vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is choosen by the solver (this includes also no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
+         "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this includes also no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
          "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
          "optim convergence tol", "real", ":math:`r=10/2\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
          "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."

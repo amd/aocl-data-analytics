@@ -1,5 +1,5 @@
 // clang-format off
-/* 
+/*
    This file was originally obtained from
    https://github.com/pandas-dev/pandas/blob/253daaa1a67918f5d71956282a29a14adf74bae7/pandas/_libs/src/klib/khash.h
 
@@ -195,7 +195,7 @@ khuint32_t static inline murmur2_32to32(khuint32_t k){
     // Initialize the hash to a 'random' value
     khuint32_t h = SEED ^ 4;
 
-    //handle 4 bytes:
+    // handle 4 bytes:
     k *= M_32;
     k ^= k >> R_32;
     k *= M_32;
@@ -204,14 +204,14 @@ khuint32_t static inline murmur2_32to32(khuint32_t k){
     h ^= k;
 
     // Do a few final mixes of the hash to ensure the "last few
-    // bytes" are well-incorporated. (Really needed here?)
+    // bytes" are well-incorporated.
     h ^= h >> 13;
     h *= M_32;
     h ^= h >> 15;
     return h;
 }
 
-// it is possible to have a special x64-version, which would need less operations, but
+// It is possible to have a special x64-version, which would need fewer operations, but
 // using 32bit version always has also some benefits:
 //    - one code for 32bit and 64bit builds
 //    - the same case for 32bit and 64bit builds
@@ -227,7 +227,7 @@ khuint32_t static inline murmur2_32_32to32(khuint32_t k1, khuint32_t k2){
     // Initialize the hash to a 'random' value
     khuint32_t h = SEED ^ 4;
 
-    //handle first 4 bytes:
+    // handle first 4 bytes:
     k1 *= M_32;
     k1 ^= k1 >> R_32;
     k1 *= M_32;
@@ -235,7 +235,7 @@ khuint32_t static inline murmur2_32_32to32(khuint32_t k1, khuint32_t k2){
     h *= M_32;
     h ^= k1;
 
-    //handle second 4 bytes:
+    // handle second 4 bytes:
     k2 *= M_32;
     k2 ^= k2 >> R_32;
     k2 *= M_32;
@@ -389,7 +389,7 @@ static const double __ac_HASH_UPPER = 0.77;
 		if (h->n_occupied >= h->upper_bound) { /* update the hash table */ \
 			if (h->n_buckets > (h->size<<1)) kh_resize_##name(h, h->n_buckets - 1); /* clear "deleted" elements */ \
 			else kh_resize_##name(h, h->n_buckets + 1); /* expand the hash table */ \
-		} /* TODO: to implement automatically shrinking; resize() already support shrinking */ \
+		}  \
 		{																\
 			khuint_t inc, k, i, site, last, mask = h->n_buckets - 1;		\
 			x = site = h->n_buckets; k = __hash_func(key); i = k & mask; \

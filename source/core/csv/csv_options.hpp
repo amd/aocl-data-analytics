@@ -151,7 +151,7 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
         da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
     opts.register_opt(oi);
 
-    /* These additional options only apply when reading CSV files into a datastore object */
+    // These additional options only apply when reading CSV files into a datastore object
 
     os = std::make_shared<OptionString>(OptionString(
         "CSV datatype",

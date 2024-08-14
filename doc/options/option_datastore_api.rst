@@ -27,8 +27,8 @@
 
 .. _api_datastore_options:
 
-Option API for ``da_datastore``
-*******************************
+Option APIs for ``da_datastore``
+********************************
 
 .. _da_datastore_options_set:
 

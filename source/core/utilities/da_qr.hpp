@@ -35,7 +35,7 @@
 #include "lapack_templates.hpp"
 #include <vector>
 
-/* This function implements a blocked, parallelized  QR algorithm for tall skinny matrices, similar to
+/* This function implements a blocked, parallelized QR algorithm for tall skinny matrices, similar to
 
    “Communication-Optimal Parallel and Sequential QR and LU Factorizations,”
    J. Demmel, L. Grigori, M. Hoemmen, J. Langou, SIAM J. Sci. Comput, vol. 34, no. 1, 2012
@@ -110,7 +110,7 @@ da_status da_qr(da_int m, da_int n, std::vector<T> &A, da_int lda, std::vector<T
        2. block_size > n for same reason, which is implied by condition 4
        3. n_blocks < m / n x [ (n_threads-1) / (3 x n_threads - 1) ]
        4. n_blocks < m / n (which is implied by condition 3)
-       5. n_blocks < 256 or some other suitable value e.g. number of cores on a Turin node
+       5. n_blocks < 256 or some other suitable value e.g. number of cores on a node
        6. block_size > 2048 to prevent excessively small geqrf calls
        7. block_size to be rounded up to the nearest multiple of 256 for better cache use
        8. block_size < m
@@ -134,7 +134,7 @@ da_status da_qr(da_int m, da_int n, std::vector<T> &A, da_int lda, std::vector<T
 
         if (m / block_size > max_blocks) {
             block_size = m / max_blocks;
-            // Round up to nearest  multiple of 256 as long as we don't exceed m
+            // Round up to nearest multiple of 256 as long as we don't exceed m
             block_size = std::min(((block_size + 255) >> 8) << 8, m);
         }
 
@@ -297,7 +297,7 @@ da_status da_qr(da_int m, da_int n, std::vector<T> &A, da_int lda, std::vector<T
     return da_status_success;
 }
 
-/* This function complements the blocked, parallelized  QR algorithm for tall, skinny matrices
+/* This function complements the blocked, parallelized QR algorithm for tall, skinny matrices
    implemented above. It applies the orthogonal output, Q, to a matrix C in a similar manner to ormqr in LAPACK.
 
    The n, A, lda, tau, R_blocked, tau_R_blocked, n_blocks, block_size and final_block_size used by da_qr

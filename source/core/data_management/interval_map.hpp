@@ -50,7 +50,6 @@ template <class T> class interval_map {
         constexpr bool operator()(const interval &p1, const interval &p2) const {
             bool res = p1.lower < p2.lower;
             // Unintuitive: interval included in another is considered bigger
-            // A bit hacky, TODO review
             if (p1.lower == p2.lower)
                 res = p1.upper > p2.upper;
             return res;
@@ -84,7 +83,7 @@ template <class T> class interval_map {
             return *this;
         }
         iterator operator++(int) {
-            // returns dereferencable iterator
+            // Returns dereferencable iterator
             iterator res = *this;
             ++(*this);
             return res;
@@ -122,8 +121,8 @@ template <class T> class interval_map {
         return da_status_success;
     }
 
-    /* try to find the key in the interval map
-     * If found the value as well as the lower and upper bounds of the containing interval
+    /* Try to find the key in the interval map
+     * If found, the value as well as the lower and upper bounds of the containing interval
      * are returned on the interface
      */
     bool find(da_int key, T &val, da_int &lb, da_int &ub) {
@@ -158,7 +157,7 @@ template <class T> class interval_map {
         return it;
     }
 
-    /* returns an iterator to the biggest interval smaller than the key.
+    /* Returns an iterator to the biggest interval smaller than the key.
      * If no such element exists the iterator points to the closest bigger interval
      */
     iterator closest_interval(da_int key) {
@@ -173,7 +172,7 @@ template <class T> class interval_map {
         return it;
     }
 
-    /* erases the interval containing key or all intervals between first
+    /* Erases the interval containing key or all intervals between first
      * and last iterators (last excluded)
      */
     iterator erase(da_int key) {

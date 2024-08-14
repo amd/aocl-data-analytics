@@ -69,7 +69,7 @@ class interval_set {
             return *this;
         }
         iterator operator++(int) {
-            // returns dereferencable iterator
+            // Returns dereferencable iterator
             iterator res = *this;
             ++(*this);
             return res;

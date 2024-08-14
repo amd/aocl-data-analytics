@@ -33,7 +33,7 @@ da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int n_r
                                      da_reshes_t_d *reshes, da_reshp_t_d *reshp) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -54,7 +54,7 @@ da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_r
                                      da_reshes_t_s *reshes, da_reshp_t_s *reshp) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -75,7 +75,7 @@ da_status da_nlls_define_bounds_d(da_handle handle, da_int n_coef, double *lower
                                   double *upper) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -92,7 +92,7 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
                                   float *upper) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -109,7 +109,7 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
 da_status da_nlls_define_weights_d(da_handle handle, da_int n_coef, double *weights) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -125,7 +125,7 @@ da_status da_nlls_define_weights_d(da_handle handle, da_int n_coef, double *weig
 da_status da_nlls_define_weights_s(da_handle handle, da_int n_coef, float *weights) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -142,7 +142,7 @@ da_status da_nlls_define_weights_s(da_handle handle, da_int n_coef, float *weigh
 da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *udata) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -157,7 +157,7 @@ da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *uda
 da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udata) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,

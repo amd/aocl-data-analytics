@@ -132,7 +132,7 @@ int main(void) {
         // Ready to solve
         status = pd->solve(x, (void *)params);
         // make sure to check the return status (pd.err error structure contains the details)
-        // some return codes provide a useble solution.
+        // some return codes provide a usable solution.
 
         // status that provide usable solutions:
         if (status == da_status_success || status == da_status_optimization_usrstop ||
@@ -142,9 +142,9 @@ int main(void) {
             for (da_int i = 0; i < n; i++)
                 ok &= std::fabs(x[i] - xref[i]) <= 10.0 * tol;
             if (ok) {
-                // operation was successfull, x holds the solution
+                // operation was successful, x holds the solution
                 std::cout << "Solution found: " << x[0] << ", " << x[1] << std::endl;
-                exit_status = 0; // operation was successfull
+                exit_status = 0; // operation was successful
             } else {
                 // fill error trace (e.g. unexpected)
                 status = da_error(pd->err, da_status_internal_error,

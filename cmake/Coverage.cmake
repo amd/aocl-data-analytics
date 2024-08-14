@@ -33,7 +33,7 @@ set(COMPILER_FLAGS_DEBUG
     "${COMPILER_FLAGS_DEBUG};-fprofile-arcs;-ftest-coverage")
 link_libraries(gcov)
 
-# create a coverage_reports directory in the main build dir
+# Create a coverage_reports directory in the main build directory
 set(COV_DIR ${CMAKE_BINARY_DIR}/coverage_reports)
 add_custom_target(create-cov-dir COMMAND ${CMAKE_COMMAND} -E make_directory
                                          ${COV_DIR})
@@ -42,7 +42,7 @@ add_custom_target( clean-coverage
 )
 add_dependencies(cleanall clean-coverage)
 
-# create coverage target for ctest make coverage will run ctest and build a
+# Create coverage target for ctest. 'make coverage' will run ctest and build a
 # report in the build directory
 add_custom_target(
   coverage

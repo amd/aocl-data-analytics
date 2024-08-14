@@ -50,7 +50,7 @@ for f in "$@"; do
   head -3 "$f" | grep --silent "Copyright (C) \([0-9]\{4\}-\)\?$current_year"
   if [ "$?" -ne 0 ]; then
     sed -i "1,3s/Copyright (C) \([0-9]\{4\}\)-\([0-9]\{4\}\) Advanced Micro Devices/Copyright (C) \1-$current_year Advanced Micro Devices/; 1,3s/Copyright (C) \([0-9]\{4\}\) Advanced Micro Devices/Copyright (C) \1-$current_year Advanced Micro Devices/" "$f"
-    # check if fix was successful (it might fail in case that the copyright line
+    # Check if fix was successful (it might fail in case that the copyright line
     # doesn't follow the exact pattern)
     head -3 "$f" | grep --silent "Copyright (C) \([0-9]\{4\}-\)\?$current_year"
     if [ "$?" -ne 0 ]; then

@@ -39,12 +39,11 @@ whichever programming language you are using. Both sets of interfaces call the s
 
 This documentation is available online in the form of web pages, or as a pdf file. It consists of three main sections:
 
-* **AOCL-DA for C**: contains instructions for calling and using the C APIs.
 * **AOCL-DA for Python**: contains instructions for calling and using the Python APIs.
+* **AOCL-DA for C**: contains instructions for calling and using the C APIs.
 * **Algorithms**: details the specific computational algorithms available in AOCL-DA, which have both C and Python APIs.
 
-Your installation is also packaged with a set of
-C++ or Python example programs.
+Your installation is also packaged with C++ and Python example programs.
 
 AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
 toolchainsupport@amd.com.

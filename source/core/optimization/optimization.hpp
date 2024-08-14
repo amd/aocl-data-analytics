@@ -59,14 +59,14 @@ template <typename T> class da_optimization {
     // Number of residuals
     da_int nres = 0;
 
-    // Which type constraints are defined (only bound constraint are allowed for now)
+    // Which type constraints are defined (only bound constraints are allowed for now)
     std::bitset<8> constraint_types{0};
     // Bound constraints (allocated only if constraint_types[cons_bound] is set)
     std::vector<T> l, u;
     // Alternatively, if user provided data, store location
     T *l_usrptr{nullptr};
     T *u_usrptr{nullptr};
-    // pointer to weights
+    // Pointer to weights
     T *w_usrptr{nullptr};
     da_int lw_usrptr{0};
 
@@ -130,7 +130,7 @@ template <typename T> class da_optimization {
 };
 
 template <typename T> da_status da_optimization<T>::get_info(da_int &dim, T info[]) {
-    // blind copy-out of elements in da_optimization
+    // Blind copy-out of elements in da_optimization
     const da_int ilen{(da_int)this->info.size()};
     const da_int mlen{std::max(ilen, da_int(100))};
     if (dim < mlen) {
@@ -230,7 +230,7 @@ da_status da_optimization<T>::add_bound_cons(std::vector<T> &l, std::vector<T> &
     return da_status_success;
 }
 
-// Add bound constraints to the problem (get ponter to user data)
+// Add bound constraints to the problem (get pointer to user data)
 template <typename T>
 da_status da_optimization<T>::add_bound_cons(da_int nvar, T *l, T *u) {
     if (nvar == 0) {
@@ -248,7 +248,7 @@ da_status da_optimization<T>::add_bound_cons(da_int nvar, T *l, T *u) {
     return da_status_success;
 }
 
-// Add vector of weights to the problem (get ponter to user data)
+// Add vector of weights to the problem (get pointer to user data)
 template <typename T> da_status da_optimization<T>::add_weights(da_int lw, T *w) {
     if (lw == 0)
         this->w_usrptr = nullptr;
@@ -322,11 +322,11 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
 
     da_status status;
 
-    // Check if solver is locked (protect agains recursive call)
+    // Check if solver is locked (protect against recursive call)
     if (this->locked)
         return da_error(this->err, da_status_internal_error,
                         "method solve() was called within itself");
-    // note that this->nvar == 0 is checked down the line in the solver driver
+    // Note that this->nvar == 0 is checked down the line in the solver driver
 
     if (x.size() != 0 && x.size() != (size_t)nvar)
         return da_error(this->err, da_status_invalid_input,
@@ -335,7 +335,7 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
                             std::to_string(this->nvar));
 
     if (x.size() == 0) {
-        // no initial point provided, resize and set to zero.
+        // No initial point provided, resize and set to zero.
         try {
             x.resize(this->nvar);
         } catch (std::bad_alloc &) {
@@ -376,7 +376,7 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
         }
         if (prn == "yes")
             opts.print_options();
-        // derivative based solver, allocate gradient memory
+        // Derivative based solver, allocate gradient memory
         try {
             this->g.resize(this->nvar);
         } catch (std::bad_alloc &) {

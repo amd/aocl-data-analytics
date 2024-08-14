@@ -36,7 +36,7 @@ template <class T> struct option_t {
     T value;
 };
 
-// return precision as a string litteral to set CSV options
+// return precision as a string literal to set CSV options
 template <typename T> constexpr const char *prec_name();
 template <> constexpr const char *prec_name<float>() { return "single"; }
 template <> constexpr const char *prec_name<double>() { return "double"; }
@@ -160,7 +160,7 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     }
     EXPECT_NEAR((T)count_correct / (T)nsamples, accuracy, (T)1.0e-05);
 
-    // Check log_proba is consisten with predict
+    // Check log_proba is consistent with prediction
     da_int nclass = *std::max_element(y.begin(), y.end()) + 1;
     std::vector<T> y_proba(nsamples * nclass);
     EXPECT_EQ(da_forest_predict_proba(forest_handle, nsamples, nfeat, X_test.data(),
@@ -179,7 +179,7 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
         if (best_class == y_pred[i])
             count_correct += 1;
     }
-    // TODO change when predict is re-worked
+
     EXPECT_GT((T)count_correct / (T)nsamples, (T)0.9);
 
     //////////////

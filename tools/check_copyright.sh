@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2023 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ fi
 
 suppression=tools/copyright_suppression.txt
 if [ ! -f "$suppression" ] ; then
-  echo "Error: file $suppression NOT fould!"
+  echo "Error: file $suppression NOT found!"
   echo "execute this script from the project root directory!"
   exit 5
 fi

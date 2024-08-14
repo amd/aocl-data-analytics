@@ -92,7 +92,6 @@ template <typename T> struct cb_t {
 };
 
 // container for the call-backs
-// FIXME: see if cb_t signature can be replaced with py::function
 class callbacks_t {
   private:
     struct cb_t<double> cb_d;
@@ -224,7 +223,7 @@ da_int py_wrapper_reshp_t(da_int n_coef, da_int n_res, const T *x, const T *y, T
 }
 } // namespace nlls_cb
 
-// Declaration of NLLS C++ wrapper call-backs - actual definition are in
+// Declaration of NLLS C++ wrapper call-backs - actual definitions are in
 // aoclda_pywrappers.cpp
 da_int py_wrapper_resfun_d(da_int n_coef, da_int n_res, void *data, const double *x,
                            double *r);
@@ -318,7 +317,7 @@ class nlls : public pyda_handle {
 
         exception_check(status, mesg);
 
-        // from here on precision is known and valid
+        // from here on, precision is known and valid
 
         // Add options
         status = da_options_set(handle, "ralfit model", model.c_str());
@@ -457,7 +456,7 @@ class nlls : public pyda_handle {
         status = da_options_get(handle, "storage scheme", opt_order, &lorder, &okey);
         exception_check(status);
         // namespace da_optimization_options { enum storage_scheme { fortran = 1, c = 2 };
-        // see optiomization_options.hpp
+        // see optimization_options.hpp
         this->storage_scheme_c = okey == 2;
 
         this->n_coef = n_coef;

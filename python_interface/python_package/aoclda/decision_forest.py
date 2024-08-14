@@ -66,7 +66,7 @@ class decision_forest(pybind_decision_forest):
         build_order (str, optional): Select in which order to explore the nodes. It can
             take the values 'breadth first' or 'depth first'. Default 'breadth first'.
 
-        bootstrap (bool, optional): Select wether to bootstrap the samples in the trees.
+        bootstrap (bool, optional): Select whether to bootstrap the samples in the trees.
             Default True.
 
         precision (str, optional): Whether to initialize the PCA object in double or

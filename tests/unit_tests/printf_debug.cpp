@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -50,7 +50,7 @@ int main() {
     DA_PRINTF_DEBUG("Inside main \n");
     // check macro works when we are printing a single variable
     DA_PRINTF_DEBUG("x = %6.2f\n", x);
-    // check macro works when we are printing multiple variables including a variable of integer type
+    // check macro works when we are printing multiple variables, including a variable of integer type
     DA_PRINTF_DEBUG("x = %6.2f, y = %" DA_INT_FMT "\n", x, y);
 
     return 0;

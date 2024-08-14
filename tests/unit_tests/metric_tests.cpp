@@ -51,7 +51,7 @@ template <typename T> struct PairwiseDistanceParamType {
     da_data_types data_type = da_allow_infinite;
     da_status expected_status = da_status_success;
     T tol = std::numeric_limits<T>::epsilon();
-    // Set constructor to initalize data in test bodies as simply as possible.
+    // Set constructor to initialize data in test bodies as simply as possible.
     PairwiseDistanceParamType(){};
     PairwiseDistanceParamType(da_int m, da_int n, da_int k, da_int ldx, da_int ldy,
                               da_int ldd, std::tuple<std::string, da_metric> metric)
@@ -64,7 +64,7 @@ template <typename T> struct PairwiseDistanceParamType {
     };
 
     void generateRandomData() {
-        // Initalize random number generator
+        // Initialize random number generator
         std::mt19937 generator(94);
         std::uniform_real_distribution<T> distr(T(-10.0), T(10.0));
         // Initialize with NaNs so that if leading dimension is larger than m
@@ -73,7 +73,7 @@ template <typename T> struct PairwiseDistanceParamType {
         X.resize(ldx * k, std::numeric_limits<T>::quiet_NaN());
         // X is an nxk matrix, with leading dimension ldx
         Y.resize(ldy * k, std::numeric_limits<T>::quiet_NaN());
-        // Initalize matrices with random data
+        // Initialize matrices with random data
         for (auto j = 0; j < k; j++) {
             for (auto i = 0; i < m; i++)
                 X[i + j * ldx] = distr(generator);
@@ -86,7 +86,7 @@ template <typename T> struct PairwiseDistanceParamType {
 template <typename T>
 void InitGenericData(std::vector<PairwiseDistanceParamType<T>> &data, da_int m, da_int n,
                      da_int k, da_int ldx, da_int ldy, da_int ldd) {
-    //Iterate through the list of metrics and register all tests accordingly.
+    // Iterate through the list of metrics and register all tests accordingly.
     for (auto const &i : MetricType) {
         PairwiseDistanceParamType<T> test(m, n, k, ldx, ldy, ldd, i);
         test.tol = 5000 * test.tol;
@@ -97,7 +97,7 @@ void InitGenericData(std::vector<PairwiseDistanceParamType<T>> &data, da_int m, 
 template <typename T>
 void InitGenericData(std::vector<PairwiseDistanceParamType<T>> &data, da_int m, da_int n,
                      da_int k) {
-    //Iterate through the list of metrics and register all tests accordingly.
+    // Iterate through the list of metrics and register all tests accordingly.
     for (auto const &i : MetricType) {
         PairwiseDistanceParamType<T> test(m, n, k, m, n, m, i);
         test.tol = 5000 * test.tol;

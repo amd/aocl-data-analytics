@@ -299,7 +299,7 @@ da_status da_moment_s(da_axis axis, da_int n_rows, da_int n_cols, const float *X
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p quantile is null.
  * - \ref da_status_invalid_array_dimension - either \p n_rows @f$< 1@f$ or \p n_cols @f$< 1@f$.
  * - \ref da_status_invalid_input - \p q is not in the interval @f$[0,1]@f$.
- * - \ref da_status_memory_error - a memory allocation error occured.
+ * - \ref da_status_memory_error - a memory allocation error occurred.
  */
 da_status da_quantile_d(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
                         da_int ldx, double q, double *quantile,
@@ -329,7 +329,7 @@ da_status da_quantile_s(da_axis axis, da_int n_rows, da_int n_cols, const float 
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer - one of the array arguments is null.
  * - \ref da_status_invalid_array_dimension - either \p n_rows @f$< 1@f$ or \p n_cols @f$< 1@f$.
- * - \ref da_status_memory_error - a memory allocation error occured.
+ * - \ref da_status_memory_error - a memory allocation error occurred.
  */
 da_status da_five_point_summary_d(da_axis axis, da_int n_rows, da_int n_cols,
                                   const double *X, da_int ldx, double *minimum,

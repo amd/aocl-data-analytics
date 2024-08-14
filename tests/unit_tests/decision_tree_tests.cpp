@@ -601,7 +601,7 @@ TYPED_TEST(decision_tree_test, multiple_solve) {
 
     // Change an option and solve again
     EXPECT_EQ(tree.opts.set("maximum depth", (da_int)2), da_status_success);
-    tree.refresh(); // refressh is only called by the public interfaces
+    tree.refresh(); // refresh is only called by the public interfaces
     EXPECT_EQ(tree.model_is_trained(), false);
     EXPECT_EQ(tree.fit(), da_status_success);
     EXPECT_EQ(tree.score(data.n_samples_test, data.n_feat, data.X_test.data(),

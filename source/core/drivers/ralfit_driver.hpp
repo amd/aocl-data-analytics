@@ -42,7 +42,7 @@ using namespace std::literals::string_literals;
 
 const da_int RAL_NLLS_CB_DUMMY{-3024};
 const da_int RAL_NLLS_CB_FD{-45544554};
-// Dummy call-backs headers
+// Dummy call-back headers
 template <typename T>
 da_int da_nlls_eval_j_dummy(da_int n, da_int m, void *params, const T *x, T *j) {
     return RAL_NLLS_CB_FD;
@@ -70,8 +70,8 @@ void copy_inform(struct ral_nlls_inform &inform, std::vector<T> &info) {
 // Get RALFit's exit status/message and copy into DA's status
 template <typename T>
 da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t &err) {
-    // exit status: ral_int inform.status;
-    // error message: char inform.error_message[81]
+    // Exit status: ral_int inform.status;
+    // Error message: char inform.error_message[81]
     // See ral_nlls_workspaces.f90 / module
 
     if (inform.status == 0)
@@ -80,11 +80,11 @@ da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t 
     std::string errmsg{inform.error_message};
     da_options::OptionUtils::prep_str(errmsg); // prepare string
     std::string msg;
-    bool warn{false}; // exit status is a warning or error?
+    bool warn{false}; // Exit status is a warning or error?
     da_status status{da_status_internal_error};
 
     switch (inform.status) {
-    case -1: // warning + solution is usable
+    case -1: // Warning + solution is usable
         status = da_status_maxit;
         warn = true;
         break;
@@ -105,7 +105,7 @@ da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t 
         status = da_status_numerical_difficulties;
         warn = true;
         break;
-    case -3: // error + no usable output
+    case -3: // Error + no usable output
     case -5:
     case -10:
     case -12:
@@ -142,13 +142,13 @@ da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t 
     }
 
     if (warn) {
-        // compose and return a warning
+        // Compose and return a warning
         msg = "RALFit solver warning message: "s + errmsg + " (return="s +
               std::to_string(inform.status) + ").";
         return da_warn(&err, status, msg);
     }
 
-    // compose and return an error
+    // Compose and return an error
     msg = "RALFit solver error message: "s + errmsg + " (return="s +
           std::to_string(inform.status) + ").";
     return da_error(&err, status, msg);
@@ -329,7 +329,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
         break;
     default:
         return da_error(&err, da_status_option_invalid_value, // LCOV_EXCL_LINE
-                        "<regularization power> option has an ivalid value?");
+                        "<regularization power> option has an invalid value?");
         break;
     }
 
@@ -349,13 +349,12 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
                         resfun_t<T> eval_r, resgrd_t<T> eval_J, reshes_t<T> eval_HF,
                         reshp_t<T> eval_HP, T *lower_bounds, T *upper_bounds, T *weights,
                         void *usrdata, std::vector<T> &info, da_errors::da_error_t &err) {
-    // FIXME Remove once RALFit float is in
     if constexpr (!std::is_same_v<T, double>) {
         // Make sure we catch any not-implemented variant
         return da_error(&err, da_status_not_implemented,
                         "RALFit currently supports only double precision data type.");
     } else {
-        // Initialize options values
+        // Initialize option values
         struct ral_nlls_options options;
         ral_nlls_default_options(&options);
 
@@ -364,13 +363,11 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
             return da_error_trace(&err, da_status_internal_error,
                                   "Could not copy the options into the RALFit struct.");
 
-        // initialize the workspace
-        // FIXME move this to the handle so it can be checked and destroyed
-        // at the destructor as well at python exception
+        // Initialize the workspace
         void *workspace;
         void *inner_workspace;
 
-        // init workspace allocates and links together workspace with inner_workspace
+        // init_workspace allocates and links together workspace with inner_workspace
         ral_nlls_init_workspace(&workspace, &inner_workspace);
 
         struct ral_nlls_inform inform;
@@ -389,9 +386,9 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
             assert(typeid(ral_nlls_eval_j_type) == eval_J.target_type());
             ral_nlls_eval_J = *(eval_J.template target<ral_nlls_eval_j_type>());
         } else {
-            // instantiate
+            // Instantiate
             da_nlls_eval_j_dummy<T>(0, 0, nullptr, nullptr, nullptr);
-            // assign
+            // Assign
             ral_nlls_eval_J = da_nlls_eval_j_dummy<T>;
         }
 
@@ -400,9 +397,9 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
             assert(typeid(ral_nlls_eval_hf_type) == eval_HF.target_type());
             ral_nlls_eval_HF = *(eval_HF.template target<ral_nlls_eval_hf_type>());
         } else {
-            // instantiate
+            // Instantiate
             da_nlls_eval_hf_dummy<T>(0, 0, nullptr, nullptr, nullptr, nullptr);
-            // assign
+            // Assign
             ral_nlls_eval_HF = da_nlls_eval_hf_dummy<T>;
         }
 
@@ -415,13 +412,12 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
         nlls_solve(nvar, nres, x, ral_nlls_eval_r, ral_nlls_eval_J, ral_nlls_eval_HF,
                    usrdata, &options, &inform, weights, ral_nlls_eval_HP, lower_bounds,
                    upper_bounds);
-        // FIXME add this to the handle->nlls destructor: check + nullify
         ral_nlls_free_workspace(&workspace);
         ral_nlls_free_workspace(&inner_workspace);
 
         copy_inform(inform, info);
 
-        // translate exit status -> severity
+        // Translate exit status -> severity
         da_status status = get_exit_status<T>(inform, err);
 
         return status; // err stack populated

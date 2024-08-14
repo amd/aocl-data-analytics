@@ -31,7 +31,7 @@ project(aocl-da_examples LANGUAGES CXX)
 option(BUILD_ILP64 "ILP64 support" OFF)
 # option(BUILD_SMP "Enable Shared Memory parallelism" ON)
 
-# Set paths to AOCLUTILS, BLAS and LAPACK installations.
+# Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
 set(CMAKE_AOCL_ROOT $ENV{AOCL_ROOT} CACHE STRING "AOCL_ROOT directory to be used to find AOCL BLAS/LAPACK/SPARSE/UTILS libraries")
 if(CMAKE_AOCL_ROOT STREQUAL "")
   message(FATAL_ERROR "CMAKE_AOCL_ROOT is empty. Either set environment variable AOCL_ROOT or set -DCMAKE_AOCL_ROOT=<path_to_AOCL_libs>.")
@@ -45,8 +45,8 @@ else()
 endif()
 
 # ##############################################################################
-# Location of the DA installation. Either set AOCLDA_ROOT specifically or
-# inherit AOCL_ROOT where DA artifacts would be as part of AOCL installation
+# Location of the AOCL-DA installation. Either set AOCLDA_ROOT specifically or
+# inherit AOCL_ROOT where AOCL-DA artifacts would be as part of AOCL installation
 set(CMAKE_AOCLDA_ROOT $ENV{AOCLDA_ROOT} CACHE STRING "AOCLDA_ROOT directory to be used to find DA artifacts")
 if(CMAKE_AOCLDA_ROOT STREQUAL "")
   message(WARNING "AOCLDA_ROOT was not set. Will search for it in main CMAKE_AOCL_ROOT directory.")
@@ -119,7 +119,7 @@ if(NOT WIN32)
 endif()
 
 # ##############################################################################
-# Create Example targets
+# Create example targets
 file(GLOB_RECURSE DA_EX *.cpp)
 message("Targets")
 foreach(ex_source ${DA_EX})
@@ -135,7 +135,6 @@ foreach(ex_source ${DA_EX})
   target_compile_definitions(${ex_target} PRIVATE ${AOCLDA_ILP64})
 
   message(NOTICE "   ${ex_target}")
-  # target_compile_options(${ex_name} PUBLIC ${COMPILER_OPTIONS})
 endforeach()
 message("")
 
@@ -143,7 +142,7 @@ message(NOTICE "Dependent libraries")
 message(NOTICE "   AOCL-DA               : ${AOCL_DA}")
 message(NOTICE "   AOCL-BLAS             : ${BLAS}")
 message(NOTICE "   AOCL-LAPACK           : ${LAPACK}")
-message(NOTICE "   AOCL-SPARSE           : ${SPARSE}")
+message(NOTICE "   AOCL-Sparse           : ${SPARSE}")
 message(NOTICE "   AOCL-Utils            : ${UTILS}")
 message(NOTICE "\nOptions")
 message(NOTICE "   Building for ILP64    : ${BUILD_ILP64}")

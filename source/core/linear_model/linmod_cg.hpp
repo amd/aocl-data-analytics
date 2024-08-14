@@ -44,16 +44,15 @@ template <typename T> struct cg_data {
     cg_data(da_int nsamples, da_int ncoef, T tol, da_int maxit)
         : nsamples(nsamples), ncoef(ncoef), tol(tol), maxit(maxit) {
         min_order = std::min(nsamples, ncoef);
-        coef.resize(min_order, 0);       // Initilise starting point to be vector of 0s
-        A.resize(min_order * min_order); // Initilise array for X'X or XX'
-        b.resize(min_order);             // Initilise array for X'y
+        coef.resize(min_order, 0);       // Initialize starting point to be vector of 0s
+        A.resize(min_order * min_order); // Initialize array for X'X or XX'
+        b.resize(min_order);             // Initialize array for X'y
         // Create handle
         handle = nullptr;
         if (aoclsparse_itsol_init<T>(&handle) != aoclsparse_status_success) {
             throw std::bad_alloc();
         }
         // Set handle options
-        // TODO: Handle absolute tolerance as a function of relative tolerance
         // The following workaround with sprintf is due to the fact that std::to_string()
         // truncates small numbers to 0.
         char tol_str[16];
@@ -101,12 +100,6 @@ template <typename T> struct cg_data {
                 da_blas::cblas_symv(CblasColMajor, CblasUpper, min_order, alpha, A.data(),
                                     min_order, u, 1, beta, v, 1);
                 break;
-
-                // TODO: Preconditioner
-                // case aoclsparse_rci_precond:
-
-                // case aoclsparse_rci_stopping_criterion:
-                //     break;
 
             default:
                 break;

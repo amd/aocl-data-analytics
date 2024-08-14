@@ -51,7 +51,7 @@ template <typename T> class da_knn : public basic_handle<T> {
     // Pointer to error trace
     da_errors::da_error_t *err = nullptr;
 
-    // number of neighbors to be considered
+    // Number of neighbors to be considered
     da_int n_neighbors = 5;
     // Algorithm to be used for the knn computation
     da_int algo = da_brute_force;
@@ -73,9 +73,9 @@ template <typename T> class da_knn : public basic_handle<T> {
     da_options::OptionRegistry opts;
 
     da_knn(da_errors::da_error_t &err, da_status &status) {
-        // assumes that err is valid
+        // Assumes that err is valid
         this->err = &err;
-        // initialize the options registry
+        // Initialize the options registry
         status = register_knn_options<T>(opts);
     };
 
@@ -198,21 +198,21 @@ da_status da_knn<T>::set_training_data(da_int n_samples, da_int n_features,
 }
 
 /**
- * Returns the indices of the k-nearest neighbors for each point in a test data set, and optionally the
+ * Returns the indices of the k-nearest neighbors for each point in a test data set and, optionally, the
  * corresponding distances to each neighbor.
  *
- * - If X_test is a nullptr then, throw an error. ToDo: add functionality so that kneighbors() ignores m, n, and ldx
- * and computes the k-nearest neighbors of the training data matrix provided via set_training_data(), 
+ * - If X_test is a nullptr, then throw an error
+ * and compute the k-nearest neighbors of the training data matrix provided via set_training_data(),
  * not considering itself as a neighbor.
  * - If X_test is not nullptr, then X_test is the test data matrix of size m-by-n, and for each of its points
  * kneighbors() computes its neighbors in the training data matrix.
  *
- * This algorithms has the following steps:
- * - ToDo: If X_test is nullptr, compute the distance matrix D(X_train, X_train). Otherwise, compute D(X_train, X).
+ * This algorithm has the following steps:
+ * - If X_test is nullptr, compute the distance matrix D(X_train, X_train). Otherwise, compute D(X_train, X).
  * - Create a matrix so that its j-th column holds the indices of each point in X_train in ascending order
  *   to the distance, where j is each point in X_test (or X_train when X_test is nullptr).
  * - Return in n_ind only the first k indices for each column (those would be the k-nearest neighbors).
- * - If return_distance is true, return the corresponding distances for between each test point and
+ * - If return_distance is true, return the corresponding distances between each test point and
  *   its neighbors.
  */
 template <typename T>
@@ -252,7 +252,7 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
                     ", the value of ldx_test needs to be at least as big as the value "
                     "of n_queries");
         }
-        // Data matrix X must have the same amount of columns as X_train.
+        // Data matrix X must have the same number of columns as X_train.
         if (n_features != this->n_features) {
             return da_error_bypass(this->err, da_status_invalid_array_dimension,
                                    "n_features = " + std::to_string(n_features) +
@@ -288,7 +288,6 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
     try {
         std::vector<T> D(this->n_samples * n_queries);
 
-        // ToDo: Make this generic for any distance.
         // Call function that computes the squared euclidean distance
         status = da_metrics::pairwise_distances::euclidean(
             this->n_samples, n_queries, n_features, this->X_train, this->ldx_train,
@@ -327,7 +326,7 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
 
         // Storing the distance of the neighbors
         if (return_distance) {
-            // If metric is da_euclidean we need to compute the quare root of the elements before returning.
+            // If metric is da_euclidean, we need to compute the square root of the elements before returning.
             if ((this->internal_metric == da_sqeuclidean) &&
                 (this->metric != da_sqeuclidean)) {
                 for (da_int i = 0; i < n_queries; i++) {
@@ -352,16 +351,16 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
     return da_status_success;
 }
 
-/**
- * From a given distances matrix and a weighting description, compute the 
+/*
+ * From a given distances matrix and a weighting description, compute the
  * corresponding weights to be used for the estimation of the labels.
  */
 template <typename T>
 void get_weights(const std::vector<T> &D, da_int weight_desrc, std::vector<T> &weights) {
-    // Potentially avoid a call here by checking for uniform on a higher level
+    // Potentially avoid a call here by checking for uniformity at a higher level
     if (weight_desrc == da_knn_uniform) {
         return;
-    } else { //da_knn_distance
+    } else { // da_knn_distance
         for (da_int i = 0; i < da_int(D.size()); i++) {
             // If weights=distance is zero then the weight must be one since it's the closest element.
             weights[i] = (weights[i] <= std::numeric_limits<T>::epsilon())
@@ -394,10 +393,10 @@ template <typename T> da_status da_knn<T>::available_classes() {
     return da_status_success;
 }
 
-/**
+/*
  * Get test data matrix X_test and compute the probability estimates for the test samples.
  * proba is a n_queries-by-n_classes matrix.
- * For each query of the matrix, compute the probability estimate for each of the 
+ * For each query of the matrix, compute the probability estimate for each of the
  * available classes presented in classes.
  */
 template <typename T>
@@ -442,7 +441,7 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
                     ", the value of ldx_test needs to be at least as big as the value "
                     "of n_queries");
         }
-        // Data matrix X must have the same amount of columns as X_train.
+        // Data matrix X must have the same number of columns as X_train.
         if (n_features != this->n_features) {
             return da_error_bypass(this->err, da_status_invalid_array_dimension,
                                    "n_features = " + std::to_string(n_features) +
@@ -527,7 +526,7 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
 }
 
 /*
- * Predicts the labels y_test for the provided test data.
+ * Predict the labels y_test for the provided test data.
  * Compute the probabilities for the labels and return the corresponding label according to that.
  */
 template <typename T>

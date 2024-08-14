@@ -33,7 +33,7 @@ Supported Optional Parameters
 .. note::
    This page lists optional parameters for **C APIs** only.
 
-In all the following tables, :math:`\varepsilon`, refers to a *safe* machine precision (twice the actual machine precion) for the given floating point data type.
+In all the following tables, :math:`\varepsilon`, refers to a *safe* machine precision (twice the actual machine precision) for the given floating point data type.
 
 .. _opts_linearmodel:
 
@@ -51,12 +51,12 @@ The following options are supported.
    "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
    "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
    "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-   "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and responce vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is choosen by the solver (this includes also no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
+   "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this includes also no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
    "optim coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than "coord skip tol" to start skipping", ":math:`2 \le i`"
    "optim coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked", ":math:`10 \le i`"
    "debug", "integer", ":math:`i=0`", "set debug level (internal use)", ":math:`0 \le i \le 3`"
-   "logistic constraint", "string", ":math:`s=` `ssc`", "Affects only multinomial logistic regression. Type of constraint put on coefficients. This will affect number of coefficients returned. RSC - means we choose a reference catergory whose coefficients will be set to all 0. This results in K-1 class coefficients for K class problems. SSC - means the sum of coefficients class-wise for each feature is 0. It will result in K class coefficients for K class problem.", ":math:`s=` `reference category`, `rsc`, `ssc`, `symmetric`, or `symmetric side`."
+   "logistic constraint", "string", ":math:`s=` `ssc`", "Affects only multinomial logistic regression. Type of constraint put on coefficients. This will affect number of coefficients returned. RSC - means we choose a reference category whose coefficients will be set to all 0. This results in K-1 class coefficients for K class problems. SSC - means the sum of coefficients class-wise for each feature is 0. It will result in K class coefficients for K class problem.", ":math:`s=` `reference category`, `rsc`, `ssc`, `symmetric`, or `symmetric side`."
    "optim time limit", "real", ":math:`r=10^6`", "Maximum time limit (in seconds). Solver will exit with a warning after this limit. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`0 < r`"
    "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r`"
    "alpha", "real", ":math:`r=0`", "coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r \le 1`"
@@ -119,7 +119,7 @@ The following options are supported.
    "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
    "print timings", "string", ":math:`s=` `no`", "Print the timings of different parts of the fitting process.", ":math:`s=` `no`, or `yes`."
    "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
-   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`1 \le i \le 29`"
+   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
    "predict probabilities", "integer", ":math:`i=1`", "evaluate class probabilities (in addition to class predictions).Needs to be 1 if calls to predict_proba or predict_log_probaare made after fit.", ":math:`0 \le i \le 1`"
    "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`2 \le i`"
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
@@ -139,17 +139,34 @@ The following options are supported.
    "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
    "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting", ":math:`2 \le i`"
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
-   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`1 \le i \le 29`"
+   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
    "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
    "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes", ":math:`s=` `breadth first`, or `depth first`."
    "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 \le r`"
-   "bootstrap", "string", ":math:`s=` `yes`", "Select wether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
+   "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
    "bootstrap samples factor", "real", ":math:`r=0.8`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
    "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split", ":math:`s=` `all`, `custom`, `log2`, or `sqrt`."
    "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute ", ":math:`1 \le i`"
    "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
    "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
    "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+
+
+.. _opts_k-nearestneighbors:
+
+k-Nearest Neighbors
+==============================================
+
+The following options are supported.
+
+.. csv-table:: :strong:`Table of options for k-Nearest Neighbors.`
+   :escape: ~
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   
+   "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors", ":math:`s=` `distance`, or `uniform`."
+   "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix", ":math:`s=` `euclidean`, or `sqeuclidean`."
+   "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors", ":math:`s=` `brute`."
+   "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors", ":math:`1 \le i`"
 
 
 .. _opts_datastore:

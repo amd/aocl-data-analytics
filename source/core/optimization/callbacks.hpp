@@ -39,7 +39,7 @@
  *  -----------------------------------------
  * Input: n>0, x[n] iterate vector
  * Output val = f(x) if return status is 0, otherwise undefined
- * Must return 0 on successfull eval and nonzero to indicate that function could
+ * Must return 0 on successful eval and nonzero to indicate that function could
  * not be evaluated, some solvers don't have recovery capability.
  */
 template <typename T> struct meta_objcb {
@@ -59,12 +59,12 @@ template <typename T> using objfun_t = typename meta_objcb<T>::type;
  *        for computing f(x) and f'(x) and when using iterative solvers that evaluate first f(x) then
  *        g(x), then it is possible to indicate to objgrd to skip the matrix evaluation. If unsure,
  *        then set xnew = true and this will perform all the necessary calculations to correctly evaluate
- *        the objective gratient.
+ *        the objective gradient.
  * Output val = f'(x) = \nabla f(x) if return status is 0, otherwise val is untouched
- * Must return 0 on successfull eval and nonzero to indicate that function could
+ * Must return 0 on successful eval and nonzero to indicate that function could
  * not be evaluated, some solvers don't have recovery capability.
  * Not yet implemented: is *usrdata->fd == true then estimate the gradient using
- * a finite-difference method (forwards, bacbwards, center, cheap, etc).
+ * a finite-difference method (forwards, backwards, center, cheap, etc).
  */
 template <typename T> struct meta_grdcb {
     static_assert(std::is_floating_point<T>::value,
@@ -80,7 +80,7 @@ template <typename T> using objgrd_t = typename meta_grdcb<T>::type;
  *        usrdata: pointer to user data, and
  *        action: action to take (implementation dependent).
  * Output: *s step to take along the k-th coord, *f objective value at x
- * Must return 0 on successfull eval and nonzero to indicate that function could
+ * Must return 0 on successful eval and nonzero to indicate that function could
  * not be evaluated, some solvers don't have recovery capability.
  */
 template <typename T> struct meta_stepcb {
@@ -95,8 +95,9 @@ template <typename T> using stepfun_t = typename meta_stepcb<T>::type;
  *  ------------------------------------------------
  * Input: n>0, x[n] iterate vector
  *        val = f(x), info[100] information vector
- * Must return 0 to intidate the solver to continue, otherwise by returning nonzero it
- * request to interrupt the process and exit.
+ * Must return 0 to indicate that the solver should continue; 
+ * otherwise, by returning non-zero, it
+ * requests to interrupt the process and exit.
  */
 template <typename T> struct meta_moncb {
     static_assert(std::is_floating_point<T>::value,

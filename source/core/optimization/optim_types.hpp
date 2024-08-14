@@ -37,8 +37,8 @@ enum solvers {
 };
 }
 
-/* all constraint types
- * mainly used to check wether a specific type of constraint is defined in a bool array
+/* All constraint types
+ * mainly used to check whether a specific type of constraint is defined in a bool array
  */
 enum cons_type { cons_bounds = 0, cons_linear = 1 };
 

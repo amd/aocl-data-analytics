@@ -36,7 +36,7 @@ template <typename T> struct cholesky_data {
 
     // Constructors
     cholesky_data(da_int nsamples, da_int ncoef) {
-        // work arrays for the cholesky
+        // Work arrays for the cholesky
         min_order = std::min(nsamples, ncoef);
         A.resize(min_order * min_order);
         b.resize(min_order);

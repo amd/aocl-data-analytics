@@ -39,7 +39,6 @@
 #include <stdexcept>
 
 class linmod : public pyda_handle {
-    //da_handle handle = nullptr;
     da_precision precision = da_double;
     da_int n_samples, n_feat, n_class;
     bool intercept;
@@ -90,7 +89,6 @@ class linmod : public pyda_handle {
              std::optional<py::array_t<T>> x0, std::optional<T> progress_factor,
              T reg_lambda = 0.0, T reg_alpha = 0.0, T tol = 0.0001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
-        // TODO Should it be a separate function call like in C with the "define_features" function
 
         da_status status;
         n_samples = X.shape()[0];

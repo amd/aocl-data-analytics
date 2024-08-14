@@ -60,11 +60,6 @@ Modifications Copyright (C) 2022 Advanced Micro Devices, Inc. All rights reserve
 
 #define PARSER_OUT_OF_MEMORY -2
 
-/*
- *  TODO: Might want to couple count_rows() with read_rows() to avoid
- *        duplication of some file I/O.
- */
-
 #ifdef __cplusplus
  extern "C" {
 #endif
@@ -112,12 +107,12 @@ typedef struct parser_t {
     int64_t datalen;   // amount of data available
     int64_t datapos;
 
-    // where to write out tokenized data
+    // Where to write out tokenized data
     char *stream;
     uint64_t stream_len;
     uint64_t stream_cap;
 
-    // Store words in (potentially ragged) matrix for now, hmm
+    // Store words in (potentially ragged) matrix for now
     char **words;
     int64_t *word_starts; // where we are in the stream
     uint64_t words_len;

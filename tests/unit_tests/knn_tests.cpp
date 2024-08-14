@@ -105,7 +105,7 @@ TYPED_TEST(knnTest, AccuracyTesting) {
     }
 }
 
-// When weights is distance we could end with divisions with zero.
+// When weights equal distance we could end up with divisions by zero.
 // Check that these cases are handled correctly.
 TYPED_TEST(knnTest, AccuracyTestingZeroData) {
     std::cout << "Functionality test for zero data:\n";
@@ -226,13 +226,13 @@ TYPED_TEST(knnTest, ErrorExits) {
               da_status_option_invalid_value)
         << "Invalid option 'weights' test failed.";
 
-    // Wrong inputs in classes()
+    // Incorrect inputs in classes()
     n_classes = 2;
     EXPECT_EQ(da_knn_classes<TypeParam>(knn_handle, &n_classes, nullptr),
               da_status_invalid_pointer)
         << ErrorExits_print("classes");
 
-    // Wrong inputs in kneighbors()
+    // Incorrect inputs in kneighbors()
     EXPECT_EQ(da_knn_kneighbors(knn_handle, -1, param.n_features, X.data(),
                                 param.ldx_test, ind.data(), dist.data(),
                                 param.n_neigh_kneighbors, 1),
@@ -270,7 +270,7 @@ TYPED_TEST(knnTest, ErrorExits) {
     EXPECT_EQ(da_options_set_int(knn_handle, "number of neighbors", 1), da_status_success)
         << "Setting correct number of neighbors failed.";
 
-    // Wrong inputs in predict_proba()
+    // Incorrect inputs in predict_proba()
     EXPECT_EQ(da_knn_predict_proba(knn_handle, -1, param.n_features, X.data(),
                                    param.ldx_test, proba.data()),
               da_status_invalid_array_dimension)
@@ -288,7 +288,7 @@ TYPED_TEST(knnTest, ErrorExits) {
               da_status_invalid_pointer)
         << ErrorExits_print("proba");
 
-    // Wrong inputs in predict()
+    // Incorrect inputs in predict()
     EXPECT_EQ(da_knn_predict(knn_handle, -1, param.n_features, X.data(), param.ldx_test,
                              y.data()),
               da_status_invalid_array_dimension)

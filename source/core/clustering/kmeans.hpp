@@ -105,20 +105,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_int lda = 0;
     da_int ldc = 0;
 
-    //double t_iteration = 0.0;
-    //double t_euclidean_it = 0.0;
-    //double t_centre_half_distances = 0.0;
-    //double t_init_bounds = 0.0;
-    //double t_assign = 0.0;
-    //double t_update = 0.0;
-    //double t_loop361 = 0.0;
-    //double t_assign1 = 0.0;
-    //double t_assign2 = 0.0;
-    //double t_assign3 = 0.0;
-    //double t_assign4 = 0.0;
-    //double t_assign5 = 0.0;
-
-    // Maximum size of data blocks for elkan, lloyd and macqueen algorithms
+    // Maximum size of data blocks for Elkan, Lloyd and MacQueen algorithms
     da_int max_block_size = 0;
     da_int n_blocks = 0;
     da_int block_rem = 0;
@@ -146,7 +133,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     std::unique_ptr<std::vector<da_int>> previous_labels =
         std::make_unique<std::vector<da_int>>();
 
-    // Lloyd algorithm functions, including various unrolled versions of the blocked part of the lloyd iteration
+    // Lloyd algorithm functions, including various unrolled versions of the blocked part of the Lloyd iteration
 
     void init_lloyd();
 
@@ -225,7 +212,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void (da_kmeans<T>::*elkan_iteration_update_block)(da_int, T *, da_int, T *, T *,
                                                        da_int *);
 
-    // Macqueen algorithm functions
+    // MacQueen algorithm functions
 
     void init_macqueen();
 
@@ -400,7 +387,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                             "No data has been passed to the handle. Please call "
                             "da_kmeans_set_data_s or da_kmeans_set_data_d.");
 
-        /* Check for illegal arguments */
+        // Check for illegal arguments
         this->opts.get("n_clusters", n_clusters);
         if (ldc_in < n_clusters)
             return da_error(err, da_status_invalid_input,
@@ -425,7 +412,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_status compute() {
 
         da_status status = da_status_success;
-        //double tt0 = omp_get_wtime();
         if (initdone == false)
             return da_error(err, da_status_no_data,
                             "No data has been passed to the handle. Please call "
@@ -582,7 +568,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         best_inertia = std::numeric_limits<T>::infinity();
 
         // Run k-means algorithm n_init times and select the run with the lowest inertia
-        //double tt2 = omp_get_wtime();
         for (da_int run = 0; run < n_init; run++) {
 
             // Initialize the centres if needed
@@ -617,20 +602,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         iscomputed = true;
 
-        //double tt1 = omp_get_wtime();
-        //std::cout << "t_iteration: " << t_iteration << std::endl;
-        //std::cout << "t_euclidean_it: " << t_euclidean_it << std::endl;
-        //std::cout << "t_centre_half_distances: " << t_centre_half_distances << std::endl;
-        //std::cout << "t_init_bounds: " << t_init_bounds << std::endl;
-        //std::cout << "t_assign: " << t_assign << std::endl;
-        //std::cout << "t_update: " << t_update << std::endl;
-        //std::cout << "t_loop361: " << t_loop361 << std::endl;
-        //std::cout << "t_assign1: " << t_assign1 << std::endl;
-        //std::cout << "t_assign2: " << t_assign2 << std::endl;
-        //std::cout << "t_assign3: " << t_assign3 << std::endl;
-        //std::cout << "t_assign4: " << t_assign4 << std::endl;
-        //std::cout << "t_assign5: " << t_assign5 << std::endl;
-
         if (warn_maxit_reached)
             return da_warn(err, da_status_maxit,
                            "The maximum number of iterations was reached.");
@@ -648,7 +619,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 "da_kmeans_compute_d.");
         }
 
-        /* Check for illegal arguments */
+        // Check for illegal arguments
         if (m_samples < 1)
             return da_error(
                 err, da_status_invalid_input,
@@ -709,7 +680,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 "da_kmeans_compute_d.");
         }
 
-        /* Check for illegal arguments */
+        // Check for illegal arguments
         if (k_samples < 1)
             return da_error(
                 err, da_status_invalid_input,
@@ -735,7 +706,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
             return da_error(err, da_status_invalid_pointer,
                             "The array Y_labels is null.");
 
-        // Compute nearest cluster centre for each sample in Y; essentially a single blocked step of the Lloyd iteration
+        // Compute nearest cluster centre for each sample in Y; essentially a single blocked step of the Lloyd iteration.
         std::vector<T> y_work;
 
         max_block_size = std::min(KMEANS_LLOYD_BLOCK_SIZE, k_samples);
@@ -801,4 +772,4 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
 #include "kmeans_aux.hpp"
 
-#endif //KMEANS_HPP
+#endif // KMEANS_HPP

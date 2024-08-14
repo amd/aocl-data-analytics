@@ -34,7 +34,7 @@ da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
                                         da_int ldx, da_int *y) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -53,7 +53,7 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
                                         da_int ldx, da_int *y) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -70,7 +70,7 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
 da_status da_forest_fit_d(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     if (handle->precision != da_double)
         return da_error(
@@ -86,7 +86,7 @@ da_status da_forest_fit_d(da_handle handle) {
 da_status da_forest_fit_s(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     if (handle->precision != da_single)
         return da_error(
@@ -104,7 +104,7 @@ da_status da_forest_predict_d(da_handle handle, da_int n_samples, da_int n_featu
                               double *X_test, da_int ldx_test, da_int *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -120,7 +120,7 @@ da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_featu
                               float *X_test, da_int ldx_test, da_int *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -138,7 +138,7 @@ da_status da_forest_predict_proba_d(da_handle handle, da_int n_samples, da_int n
                                     da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -156,7 +156,7 @@ da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n
                                     da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -175,7 +175,7 @@ da_status da_forest_predict_log_proba_d(da_handle handle, da_int n_obs, da_int n
                                         da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -194,7 +194,7 @@ da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_obs, da_int n
                                         da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -213,7 +213,7 @@ da_status da_forest_score_d(da_handle handle, da_int n_samples, da_int n_feature
                             double *mean_accuracy) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(
             handle->err, da_status_wrong_type,
@@ -233,7 +233,7 @@ da_status da_forest_score_s(da_handle handle, da_int n_samples, da_int n_feature
                             float *mean_accuracy) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(
             handle->err, da_status_wrong_type,

@@ -141,7 +141,7 @@ py::array_t<T> py_da_skewness(py::array_t<T, py::array::f_style> X,
 
     get_size(axis, axis_enum, X, skewness_sz, m, n);
 
-    // Create the output skewness array as a numpy array as well as other arrays to store auxilary output
+    // Create the output skewness array as a numpy array, as well as other arrays to store auxiliary output
     size_t shape[1]{skewness_sz};
     size_t strides[1]{sizeof(T)};
     auto mean = py::array_t<T>(shape, strides);
@@ -166,7 +166,7 @@ py::array_t<T> py_da_kurtosis(py::array_t<T, py::array::f_style> X,
 
     get_size(axis, axis_enum, X, kurtosis_sz, m, n);
 
-    // Create the output kurtosis array as a numpy array as well as other arrays to store auxilary output
+    // Create the output kurtosis array as a numpy array, as well as other arrays to store auxiliary output
     size_t shape[1]{kurtosis_sz};
     size_t strides[1]{sizeof(T)};
     auto mean = py::array_t<T>(shape, strides);

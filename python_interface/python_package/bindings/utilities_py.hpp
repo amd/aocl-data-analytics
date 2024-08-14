@@ -99,7 +99,7 @@ class pyda_handle {
             return;
         // If we got to here, there's an error to deal with
 
-        // Overide the handle message if provided alternative message
+        // Override the handle message if provided alternative message
         if (mesg != "") {
             PyErr_SetString(PyExc_RuntimeError, mesg.c_str());
             throw py::error_already_set();

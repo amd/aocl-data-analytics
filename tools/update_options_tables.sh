@@ -20,8 +20,8 @@
 # THE SOFTWARE.
 ############################################################
 #
-# Awk inchantation to find and update sprinkled options in the documentation.
-# Usage $0 file1.rst [file2.rst [...]], optionaly it is possible to point
+# Awk incantation to find and update sprinkled options in the documentation.
+# Usage $0 file1.rst [file2.rst [...]], optionally it is possible to point
 # to the database file using
 # $0 --db=path/to/all_table.rst file1.rst [...]
 # --db=file MUST be the first argument
@@ -37,7 +37,7 @@ fi
 
 
 if [[ "$1" =~ --db=.* ]] ; then
-  # update location
+  # Update location
   DB="${1#--db=}"
   echo Setting all_table.rst database path to \"$DB\"
   shift
@@ -56,7 +56,7 @@ if [ $# -lt 1 ] ; then
 fi
 
 if [ -t ] ; then
-    # interactive terminal
+    # Interactive terminal
     COLERR="\033[31m\033[1m"
     COLWAR="\033[33m\033[1m"
     COLRES="\033[0m"
@@ -69,7 +69,7 @@ fi
 for f in $* ; do
 
   if [ "`basename $f`" == "$DBBASE" ] ; then
-    echo "$f" is the batabase, skipping.
+    echo "$f" is the database, skipping.
     continue
   fi
 

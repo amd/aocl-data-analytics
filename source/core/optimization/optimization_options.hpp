@@ -313,7 +313,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         return da_error(&err, da_status_memory_error,
                         "Memory allocation failed"); // LCOV_EXCL_LINE
     } catch (...) {                                  // LCOV_EXCL_LINE
-        // invalid use of the constructor, shouldn't happen (invalid_argument))
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
         return da_error(&err, da_status_internal_error,
                         "Unexpected internal error"); // LCOV_EXCL_LINE
     }

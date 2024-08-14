@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -345,7 +345,7 @@ TEST(OpRegistryInternal, OpRegALL) {
     EXPECT_EQ(reg.register_opt(oI), da_status_option_locked);
     reg.unlock();
     da_status status;
-    // add option twice;
+    // add option twice
     status = reg.register_opt(oI);
     EXPECT_EQ(status, da_status_invalid_input);
     // add option (same name but different type)

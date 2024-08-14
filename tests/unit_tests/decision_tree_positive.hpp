@@ -36,7 +36,7 @@ template <class T> struct option_t {
     T value;
 };
 
-// return precision as a string litteral to set CSV options
+// return precision as a string literal to set CSV options
 template <typename T> constexpr const char *prec_name();
 template <> constexpr const char *prec_name<float>() { return "single"; }
 template <> constexpr const char *prec_name<double>() { return "double"; }

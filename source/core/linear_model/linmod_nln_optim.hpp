@@ -35,23 +35,23 @@
 template <class T> class usrdata_base {
   public:
     da_int nsamples = 0, nfeat = 0;
-    /* Feature matrix of size (nsamples x nfeat)*/
+    // Feature matrix of size (nsamples x nfeat)
     const T *X = nullptr;
-    /* Response vector */
+    // Response vector
     const T *y = nullptr;
 
-    /* Intercept */
+    // Intercept
     bool intercept = false;
 
-    /* Additional paremeters that enhance the model */
+    // Additional parameters that enhance the model
 
-    /* Regularization */
+    // Regularization
     T l1reg = T(0);
     T l2reg = T(0);
     /* Pointer to rescaled penalty factors for each coefficient
-     * in the case of standardization these are scale[k]/scale[y], and are
-     *  used in the regularization terms.
-     * See details in the standaridization function
+     * in the case of standardization these are scale[k]/scale[y], 
+     * and are used in the regularization terms.
+     * See details in the standardization function
      * pointer to an array of at least nfeat
      */
     const T *xv{nullptr};
@@ -68,13 +68,13 @@ template <class T> class usrdata_base {
     virtual ~usrdata_base() {}
 };
 
-/* user data for the nonlinear optimization callbacks of the logistic regression */
+/* User data for the nonlinear optimization callbacks of the logistic regression */
 template <class T> class cb_usrdata_logreg : public usrdata_base<T> {
   public:
     da_int nclass;
     /* Add 4 working memory arrays
      * maxexp[nsamples]: used to store the maximum values of each X_k beta_k (k as class index) for the logsumexp trick
-     * sumexp[nsamples]: used to store the sum of exponenents of each X_k beta_k (k as class index) for the logsumexp trick
+     * sumexp[nsamples]: used to store the sum of the exponents of each X_k beta_k (k as class index) for the logsumexp trick
      * lincomb[nsamples*(nclass-1) OR nsamples*nclass]: used to store all the X_k beta_k values
      * gradients_p[nsamples*(nclass-1) OR nsamples*nclass]: used to store all the pointwise gradients
      */
@@ -92,7 +92,7 @@ template <class T> class cb_usrdata_logreg : public usrdata_base<T> {
     ~cb_usrdata_logreg() {}
 };
 
-/* user data for the nonlinear optimization callbacks of the lineqr regression */
+/* User data for the nonlinear optimization callbacks of the lineqr regression */
 template <class T> class cb_usrdata_linreg : public usrdata_base<T> {
   public:
     /* Add a working memory arrays
@@ -108,7 +108,7 @@ template <class T> class cb_usrdata_linreg : public usrdata_base<T> {
     ~cb_usrdata_linreg() {}
 };
 
-/* user data for the coordinate descent step function of the linear regression */
+/* User data for the coordinate descent step function of the linear regression */
 template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
   public:
     /* Add working memory array
@@ -174,7 +174,7 @@ template <typename T> void reggrd(da_int n, T const *x, T l1reg, T l2reg, T *gra
     if (l1reg > 0) {
         // Add LASSO term
         for (da_int i = 0; i < n; i++) {
-            // at xi = 0 there is no derivative => set to 0
+            // At xi = 0 there is no derivative => set to 0
             if (x[i] != 0)
                 grad[i] += x[i] < 0 ? -l1reg : l1reg;
         }
@@ -235,7 +235,7 @@ da_int objfun_logistic_rsc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
     }
 
     // Compute for each sample i ln(1+sum_{k=0}^{K-2} exp(lincomb[i][k]))
-    // use logsumexp trick to avoid overflow
+    // Use logsumexp trick to avoid overflow
     for (da_int i = 0; i < nsamples; i++) {
         T val = exp(-maxexp[i]);
         for (da_int k = 0; k < nclass - 1; k++) {
@@ -285,7 +285,6 @@ da_int objgrd_logistic_rsc(da_int n, T *x, T *grad, void *udata,
     // A_ij * (indicator(i, k) - prob(x_i=k|Beta))
     std::fill(grad, grad + n, 0);
     for (da_int i = 0; i < nsamples; i++) {
-        // lnsumexp := log(1 + sum_k exp(Beta_k^T * x))
         T lnsumexp = exp(-maxexp[i]);
         for (da_int k = 0; k < nclass - 1; k++) {
             lnsumexp += exp(lincomb[k * nsamples + i] - maxexp[i]);
@@ -293,10 +292,8 @@ da_int objgrd_logistic_rsc(da_int n, T *x, T *grad, void *udata,
         lnsumexp = maxexp[i] + log(lnsumexp);
 
         for (da_int k = 0; k < nclass - 1; k++) {
-            // val := exp(Beta_k^T * x) / (1 + sum_j exp(Beta_j^T * x))
             T val = -exp(lincomb[k * nsamples + i] - lnsumexp);
             if (std::round(y[i]) == k)
-                // indicator(i, k)
                 val += 1.;
             for (da_int j = 0; j < nmod - idc; j++) {
                 grad[k * nmod + j] -= X[nsamples * j + i] * val;
@@ -337,12 +334,10 @@ da_int objfun_logistic_two_class([[maybe_unused]] da_int n, T *x, T *f, void *ud
     eval_feature_matrix(nmod, x, nsamples, data->X, lincomb_ptr, data->intercept);
 
     // Loss is sum of log(1+exp(lincomb[i])) - y_i*lincomb[i]
-    // If-else codepath to avoid overflow (TODO: Look at further split for more optimal computation)
+    // If-else codepath to avoid overflow
     // ln(1+exp(b^Tx)) = ln(exp(b^TX)[exp(-b^TX) + 1]) = b^TX + ln(1+exp(-b^TX))
     // look at private and shared variables
-    // #pragma omp parallel for
     for (da_int i = 0; i < nsamples; i++) {
-        // #pragma omp atomic update
         if (lincomb[i] < 0)
             *f += log(1 + exp(lincomb[i])) - std::round(y[i]) * lincomb[i];
         else
@@ -375,14 +370,13 @@ da_int objgrd_logistic_two_class(da_int n, T *x, T *grad, void *udata,
         eval_feature_matrix(nmod, x, nsamples, data->X, lincomb_ptr, data->intercept);
     }
 
-    // compute for all samples i and all variables j with k being the class of sample i:
+    // Compute for all samples i and all variables j with k being the class of sample i:
     // A_ij^T * (sigma(Beta*x)-y_i)
     std::fill(grad, grad + n, 0);
     sum_of_gradients = 0;
 
     // Trick to avoid overflow uses fact that:
     // sigma(x) = 1/(1+exp(-x)) = exp(x)/1+exp(x)
-    // Potential TODO: there can be smarter bounds and shorthands to save computation (f.e setting to -1 with no computation for very small lincomb[i])
     for (da_int i = 0; i < nsamples; i++) {
         if (lincomb[i] < 0)
             gradients_p[i] = exp(lincomb[i]) / (1 + exp(lincomb[i])) - std::round(y[i]);
@@ -443,16 +437,14 @@ da_int objfun_logistic_ssc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
                         1.0, data->X, nsamples, x, nclass, 1.0, lincomb_ptr, nsamples);
 
     // look at private and shared variables
-    // #pragma omp parallel for
     for (da_int i = 0; i < nsamples; i++) {
         for (da_int k = 0; k < nclass; k++) {
             // Find maxexp
             if (maxexp[i] < lincomb[k * nsamples + i]) {
                 maxexp[i] = lincomb[k * nsamples + i];
             }
-            // Substract the residual of correct class
+            // Subtract the residual of correct class
             if (std::round(y[i]) == k)
-                // #pragma omp atomic update
                 *f -= lincomb[k * nsamples + i];
         }
         // Compute for each sample i ln(sum_{k=0}^{K-1} exp(lincomb[i][k]))
@@ -461,7 +453,6 @@ da_int objfun_logistic_ssc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
         for (da_int k = 0; k < nclass; k++) {
             sumexp[i] += exp(lincomb[k * nsamples + i] - maxexp[i]);
         }
-        // #pragma omp atomic update
         *f += maxexp[i] + log(sumexp[i]);
     }
 
@@ -518,11 +509,10 @@ da_int objgrd_logistic_ssc(da_int n, T *x, T *grad, void *udata,
         }
     }
 
-    // compute for all samples i and all variables j with k being the class of sample i:
+    // Compute for all samples i and all variables j with k being the class of sample i:
     // A_ij * (prob(x_i=k|Beta) - indicator(i, k))
     std::fill(grad, grad + n, 0);
     for (da_int i = 0; i < nsamples; i++) {
-        // sumexp[i] = maxexp[i] + log(sumexp[i]);
         for (da_int k = 0; k < nclass; k++) {
             gradients_p[k * nsamples + i] =
                 exp(lincomb[k * nsamples + i] - maxexp[i]) / sumexp[i];
@@ -583,7 +573,7 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *loss, void *udata) {
  * Input:
  *  * nsamples number of samples
  *  * ncoef number of coefficients (includes intercept coefficient)
- *  * coef[ncoef] vector of coefficientes (includes beta0, intercept coefficient)
+ *  * coef[ncoef] vector of coefficients (includes beta0, intercept coefficient)
  *  * X matrix of size (nsamples times nfeat, nfeat = ncoef if intercept=false,
  *    otherwise nfeat = ncoef-1.
  *  * intercept true/false
@@ -677,7 +667,7 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
  *     It assumes that the first call to this function is with f = nullptr.
  *  knew, the new value for coef[k], only if f is nullptr.
  *
- * Actions regarting feature matrix evaluation
+ * Actions regarding feature matrix evaluation
  * action < 0 means that feature matrix was previously called and that only a low rank
  *            update is requested and -(action+1) contains the previous k that changed
  *            kold = -(action+1);
@@ -705,7 +695,7 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
     const da_int nmod = data->intercept ? nfeat - 1 : nfeat;
     const da_int nsamples = data->nsamples;
 
-    if (f) { // quick exit, just provide f
+    if (f) { // Quick exit, just provide f
         *f = (T)0;
         for (da_int i = 0; i < nsamples; ++i) {
             T res = data->residual[i];
@@ -727,8 +717,8 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
         }
     } else if (action < 0 && kdiff != (T)0) {
         /* Low rank update.
-         * Only one single entry of coef[1..nmod;intercep]=coef[1..nfeat] has
-         * changed and we have the entry and the ammount.
+         * Only one single entry of coef[1..nmod;intercept]=coef[1..nfeat] has
+         * changed and we have the entry and the amount.
          * data->matvec = data->aux + kdiff * X[:,kold];
          * Update the residual vector on the fly
          * residual[:] = residual[:] - kdiff * X[:,kold]
@@ -739,7 +729,7 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
                 data->residual[i] -= kdiff * data->X[kold * nsamples + i];
             }
         } else {
-            // change from intercept, X[:,nfeat]=1
+            // Change from intercept, X[:,nfeat]=1
             for (da_int i = 0; i < nsamples; ++i) {
                 data->residual[i] -= kdiff;
             }

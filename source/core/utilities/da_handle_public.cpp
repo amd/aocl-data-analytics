@@ -70,7 +70,7 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             (*handle)->nlls_d = new da_nlls::nlls<double>(*(*handle)->err, status);
             if (status != da_status_success) {
                 (*handle)->nlls_d = nullptr;
-                return status; // err already filled (FIXME do other handles also)
+                return status; // err already filled
             }
             break;
         case da_handle_knn:
@@ -129,7 +129,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             (*handle)->nlls_s = new da_nlls::nlls<float>(*(*handle)->err, status);
             if (status != da_status_success) {
                 (*handle)->nlls_s = nullptr;
-                return status; // err already filled (FIXME do other handles also)
+                return status; // err already filled
             }
             break;
         case da_handle_knn:
@@ -213,7 +213,7 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
                                  double *result) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
         return da_error(handle->err, da_status_wrong_type,
                         "The handle was initialized with a different precision type than "
@@ -253,7 +253,7 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
                                  float *result) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
         return da_error(handle->err, da_status_wrong_type,
                         "The handle was initialized with a different precision type than "
@@ -293,7 +293,7 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
                                    da_int *result) {
     if (!handle)
         return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
+    handle->clear(); // Clean up handle logs
 
     if (dim == nullptr)
         return da_error(handle->err, da_status_invalid_input, "dim has not been defined");
@@ -341,7 +341,7 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
 }
 
 da_status da_handle_get_error_message(da_handle handle, char **message) {
-    // check to see if we have a valid handle
+    // Check to see if we have a valid handle
     if (handle) {
         return handle->err->get_mesg_char(message);
     }
@@ -349,7 +349,7 @@ da_status da_handle_get_error_message(da_handle handle, char **message) {
 }
 
 da_status da_handle_get_error_severity(da_handle handle, da_severity *severity) {
-    // check to see if we have a valid handle
+    // Check to see if we have a valid handle
     if (handle) {
         *severity = handle->err->get_severity();
         return da_status_success;

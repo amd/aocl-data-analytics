@@ -33,7 +33,7 @@
 #include <vector>
 
 /*
- * Linear model elastic net regresion example
+ * Linear model elastic net regression example
  * using the data set from
  *
  * EFRON, HASTIE, JOHNSTONE, and TIBSHIRANI (2004).

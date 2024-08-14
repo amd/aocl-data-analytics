@@ -22,8 +22,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# If in the future OpenMP_Fortran is required, we need to find OpenMP again sot
-# that now that Fortran was enabled, it can find the Fortran runtimes.
+# If OpenMP is used in the future, please uncomment the following line
+# to ensure that the Fortran OpenMP runtime library is found.
 # find_package(OpenMP REQUIRED)
 
 if(NOT WIN32)

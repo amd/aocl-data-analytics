@@ -77,7 +77,7 @@ typedef enum da_data_types_ {
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p D is null.
  * - \ref da_status_invalid_array_dimension - either \p m @f$< 1@f$, or \p k @f$< 1@f$, or \p n @f$< 1@f$, while Y is not nullptr.
  * - \ref da_status_not_implemented - an option that is currently not implemented was set.
- * - \ref da_status_memory_error - a memory allocation error occured.
+ * - \ref da_status_memory_error - a memory allocation error occurred.
  */
 da_status da_pairwise_distances_d(da_int m, da_int n, da_int k, const double *X,
                                   da_int ldx, const double *Y, da_int ldy, double *D,

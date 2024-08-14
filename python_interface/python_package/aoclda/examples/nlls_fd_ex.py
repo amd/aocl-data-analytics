@@ -25,7 +25,7 @@
 # pylint: disable = invalid-name, import-error, unused-argument, missing-function-docstring, unused-variable
 
 """
-Nonlinear Data Fitting example Python script
+Nonlinear data fitting example Python script
 """
 
 import sys
@@ -63,8 +63,8 @@ def res(x, residuals, data=None) -> int:
 
 def nlls_tracks():
     """
-    Nonlinear Data Fitting for the convolution model
-    y ~ mixture of Normal and log-Normal
+    Nonlinear data fitting for the convolution model
+    y ~ mixture of normal and log-normal
     for data vectors y : yi and d : di (i=1:5)
     using finite-differences
     """

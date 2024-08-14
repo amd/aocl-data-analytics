@@ -60,11 +60,11 @@
  * with the same meaning as for error. There is actually NO difference between error
  * and warning except when composing the message. These two macros reset the error stack
  * before adding the new error entry. If you need to keep the existing error stack and
- * just add the new error, the next parragraph shows how to do this.
+ * just add the new error, the next paragraph shows how to do this.
  *
  * In most cases, a function needs to handle the return status of a called function which
  * has already setup the error trace using the previously described da_error() and da_warn().
- * Under these circunstances, it is desirable to stack the next error or warning on top of the
+ * Under these circumstances, it is desirable to stack the next error or warning on top of the
  * existing one in such a way to construct an "error trace". This can be done by calling
  *
  *     return da_error_trace(e, status, msg);
@@ -104,7 +104,7 @@
  * ------------
  *
  * For Debug builds VERBOSE_ERROR is set (by default in CMakeLists.txt) and the
- * error is printed immediatly as it is registered in the error structure.
+ * error is printed immediately as it is registered in the error structure.
  * This as many benefits during development of new functionalities, mainly that
  * the trace build-up can be observed in the console.
  *
@@ -155,16 +155,16 @@ using namespace std;
 string const sev_labels[3] = {"???", "WARNING", "ERROR"};
 
 enum action_t {
-    DA_RECORD = 0, // compose/print the error/warning
-    DA_ABORT,      // compose/print and call std::abort()
-    DA_THROW,      // compose/print and throw std::run_time_error(msg) exception
+    DA_RECORD = 0, // Compose/print the error/warning
+    DA_ABORT,      // Compose/print and call std::abort()
+    DA_THROW,      // Compose/print and throw std::run_time_error(msg) exception
 };
 
 class da_error_t {
 
     // Main error message
     vector<string> mesg;
-    // Some friendy message and possible fix suggestions
+    // Some friendly message and possible fix suggestions
     vector<string> details;
     // Telemetry
     vector<string> telem;
@@ -284,7 +284,7 @@ class da_error_t {
             // Stack almost full, add a generic message
             this->status.push_back(da_status_internal_error);
             this->mesg.push_back(
-                "Too many errors where registered, storing the first " QUOTE(
+                "Too many errors were registered, storing the first " QUOTE(
                     DA_ERROR_STACK_SIZE));
             this->details.push_back("");
             this->telem.push_back("");

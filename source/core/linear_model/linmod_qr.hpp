@@ -28,7 +28,7 @@
 #include <vector>
 
 namespace da_linmod {
-// data for QR factorization used in standard linear least squares
+// Data for QR factorization used in standard linear least squares
 template <typename T> struct qr_data {
     // X needs to be copied as lapack's dgeqr modifies the matrix
     std::vector<T> tau, work;
@@ -36,7 +36,7 @@ template <typename T> struct qr_data {
 
     // Constructors
     qr_data(da_int nsamples, da_int nfeat) {
-        // work arrays for the LAPACK QR factorization
+        // Work arrays for the LAPACK QR factorization
         /* Naming convention of n_col and n_row comes from the fact that in QR we are always
             dealing with tall matrix (if we don't, we transpose it so that we do). So it's more
             natural to call it this way rather than min_order/max_order */

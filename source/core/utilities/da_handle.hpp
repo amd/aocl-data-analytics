@@ -50,11 +50,11 @@ struct _da_handle {
   public:
     // Pointer to error trace and related methods
     da_errors::da_error_t *err = nullptr;
-    // pointer for each sub-handle
+    // Pointer for each sub-handle
     da_csv::csv_reader *csv_parser = nullptr;
     da_precision precision = da_double;
     da_handle_type handle_type = da_handle_uninitialized;
-    // list of sub-handles
+    // List of sub-handles
     da_linmod::linear_model<double> *linreg_d = nullptr;
     da_linmod::linear_model<float> *linreg_s = nullptr;
     da_pca::da_pca<double> *pca_d = nullptr;
@@ -71,8 +71,8 @@ struct _da_handle {
     da_knn::da_knn<double> *knn_d = nullptr;
     da_knn::da_knn<float> *knn_s = nullptr;
 
-    // Clear telemetry, for now it only clears the error stack
-    // vector<>.clear() is linear in cost wrt the amount of elements to erase.
+    // Clear telemetry, for now it only clears the error stack.
+    // vector<>.clear() is linear in cost wrt the number of elements to erase.
     void clear(void) {
         if (err)
             err->clear();

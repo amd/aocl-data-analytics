@@ -22,10 +22,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# Python experiments
+# Python bindings
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(py_aoclda VERSION 4.2.1) # TODO get version elsewhere
+project(py_aoclda VERSION 4.2.1)
 
 set(BUILD_SHARED_LIBS ON)
 option(BUILD_ILP64 "ILP64 Support" OFF)
@@ -59,8 +59,8 @@ endif()
 # Create the pybind11 modules
 pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp
                     bindings/utilities_py.cpp)
-# Do not add any new directories here. This is to keep separated the python
-# wrapper to the main library
+# Do not add any new directories here. This is to keep the python
+# wrapper separate from the main library
 target_include_directories(_aoclda PRIVATE ${CMAKE_SOURCE_DIR}/source/include)
 target_link_libraries(_aoclda PRIVATE aocl-da)
 if(BUILD_SMP OR UNIX)

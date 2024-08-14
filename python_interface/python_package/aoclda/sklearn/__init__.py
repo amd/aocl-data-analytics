@@ -41,7 +41,7 @@ def main():
     import runpy
 
     parser = argparse.ArgumentParser(
-        description="AOCL-DA Extension for Scikit-learn")
+        description="AOCL-DA Extension for scikit-learn")
 
     parser.add_argument(
         "-m", action="store_true", dest="is_module")
@@ -51,7 +51,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Call patch to replace Scikit-learn symbols with AOCL-DA
+    # Call patch to replace scikit-learn symbols with AOCL-DA
     skpatch()
 
     sys.argv = [args.name] + args.args

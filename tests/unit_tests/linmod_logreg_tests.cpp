@@ -42,7 +42,7 @@ typedef struct {
 } logregParam;
 
 // clang-format off
-// Test parameters for the logistic retgression
+// Test parameters for the logistic regression
 const logregParam logregPosValuesD[] = {
     // Two class tests
     {"lrsetNoIntercept", "lrset", {}, {}, {}, {}},

@@ -78,10 +78,9 @@ message(STATUS "Building AOCL-DA documentation version ${AOCLDA_VERSION}")
 
 string(TIMESTAMP BUILD_DATE "%d %b %Y")
 
-# This target makes sure all latex packaged are available prior to launching the
-# full build build a here-document from the main doc which takes all required
+# This target makes sure all latex packages are available prior to launching the
+# full build. build a here-document from the main doc which takes all required
 # packages NOTE: this here-document needs to be kept in sync with refman.tex
-# TODO: Automate the generation of the here-document
 add_custom_target(
   latexdeps.pdf
   COMMAND
@@ -104,7 +103,7 @@ add_custom_target(
 
 add_dependencies(cleanall clean-doc)
 
-# Build sphinx Documentation DOC_TYPE controls what document to produce and can
+# Build sphinx Documentation. DOC_TYPE controls what document to produce and can
 # be set to either pdf or html, default is html
 #
 # Inspired from Sphinx in CMake section of MSFT blog post
@@ -128,7 +127,7 @@ endif()
 # Target to regenerate ALL registered options in handle (datastore)
 # These are tables stored in a file and added as a chapter (appendix?)
 # in the doc.
-# It requires for the unit test to be build, otherwise it won't build
+# It requires the unit test to be built, otherwise it won't build
 # the target.
 # | ${GREP} -v -e ^Running -e \\\[.\\\+\\\]
 file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/process.awk
@@ -156,7 +155,7 @@ add_custom_target(
 file(GLOB_RECURSE REST_FILES
   "${PROJECT_SOURCE_DIR}/*.rst"
 )
-## A note of caution: this targer breaks when jobs>1
+## A note of caution: this target breaks when jobs>1
 add_custom_target(
     update_options_tables
     WORKING_DIRECTORY ${AOCL-DA_SOURCE_DIR}
@@ -166,7 +165,7 @@ add_custom_target(
 )
 
 
-# Target building the doxygen XML Also modifies the output directory and the
+# Target building the doxygen XML. Also modifies the output directory and the
 # version number in the Doxyfile: 1. replace PROJECT_NAME = .* for the string
 # "version ${AOCLDA_VERSION} (date)" 2. Run doxygen on the sources
 add_custom_target(
@@ -217,7 +216,7 @@ add_custom_target(
   DEPENDS doxygen_xml conf_py_version_bumping
   COMMENT "Generating HTML documentation")
 
-# Build a latex documentation in doc/sphinx/latex
+# Build latex documentation in doc/sphinx/latex
 add_custom_target(
   doc_pdf
   COMMAND

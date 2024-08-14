@@ -28,7 +28,7 @@
 #include <vector>
 
 namespace da_linmod {
-// data for svd used in linear regression
+// Data for svd used in linear regression
 template <typename T> struct svd_data {
     std::vector<T> S, U, Vt, temp, work;
     std::vector<da_int> iwork;
@@ -38,7 +38,7 @@ template <typename T> struct svd_data {
     // Constructors
     svd_data(da_int nsamples, da_int nfeat) {
 
-        // work arrays for the SVD
+        // Work arrays for the SVD
         min_order = std::min(nsamples, nfeat);
         S.resize(min_order);
         U.resize(nsamples * min_order);
