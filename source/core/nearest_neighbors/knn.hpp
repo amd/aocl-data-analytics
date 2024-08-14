@@ -32,9 +32,13 @@
 #include "basic_handle.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_omp.hpp"
+#include "da_utils.hpp"
 #include "euclidean_distance.hpp"
 #include "knn_options.hpp"
 #include <numeric>
+
+#define BLOCK_SIZE 16
 
 namespace da_knn {
 
@@ -92,6 +96,10 @@ template <typename T> class da_knn : public basic_handle<T> {
     da_status kneighbors(da_int n_queries, da_int n_features, const T *X_test,
                          da_int ldx_test, da_int *n_ind, T *n_dist, da_int k = 0,
                          bool return_distance = 0);
+    // Compute the k-nearest neighbors and optionally the corresponding distances
+    void kneighbors_kernel(da_int n_queries, da_int n_features, const T *X_test,
+                           da_int ldx_test, T *D, da_int *n_ind, T *n_dist, da_int k = 0,
+                           bool return_distance = 0);
     // Compute probability estimates for provided test data
     da_status predict_proba(da_int n_queries, da_int n_features, const T *X_test,
                             da_int ldx_test, T *proba);
@@ -197,6 +205,56 @@ da_status da_knn<T>::set_training_data(da_int n_samples, da_int n_features,
     return da_status_success;
 }
 
+template <typename T>
+void da_knn<T>::kneighbors_kernel(da_int n_queries, da_int n_features, const T *X_test,
+                                  da_int ldx_test, T *D, da_int *n_ind, T *n_dist,
+                                  da_int n_neigh, bool return_distance) {
+    // ToDo: Make this generic for any distance.
+    // Call function that computes the squared euclidean distance
+    da_metrics::pairwise_distances::euclidean(this->n_samples, n_queries, n_features,
+                                              this->X_train, this->ldx_train, X_test,
+                                              ldx_test, D, this->n_samples, true);
+    for (da_int k = 0; k < n_queries; k++) {
+        // Initialize the values of ind with 0-n_neigh
+        std::iota(n_ind + k * n_neigh, n_ind + (k + 1) * n_neigh, 0);
+        da_int max_index = da_blas::cblas_iamax(n_neigh, D + k * this->n_samples, 1);
+        T max_val = D[max_index + k * this->n_samples];
+
+        for (da_int i = n_neigh; i < this->n_samples; i++) {
+            // Check if an element of D is smaller than the maximum value. If it is,
+            // we need to replace it's index in ind and replace the corresponding D[i] in dist.
+            if (D[i + k * this->n_samples] <= max_val) {
+                // We know D[i] is smaller than Dmax. So we update n_ind[max_index] and D[max_indexk * this->n_samples]
+                // so that they hold the new value.
+                n_ind[max_index + k * n_neigh] = i;
+                D[max_index + k * this->n_samples] = D[i + k * this->n_samples];
+                // Now we need to find the new maximum so that we compare against that in the next iteration.
+                max_index = da_blas::cblas_iamax(n_neigh, D + k * this->n_samples, 1);
+                max_val = D[max_index + k * this->n_samples];
+            }
+        }
+
+        std::stable_sort(
+            n_ind + k * n_neigh, n_ind + (k + 1) * n_neigh, [&](da_int i, da_int j) {
+                return D[i + k * this->n_samples] < D[j + k * this->n_samples];
+            });
+        std::stable_sort(D + k * this->n_samples, D + k * this->n_samples + n_neigh);
+
+        if (return_distance) {
+            if ((this->internal_metric == da_sqeuclidean) &&
+                (this->metric != da_sqeuclidean)) {
+                for (da_int i = 0; i < n_neigh; i++) {
+                    n_dist[i + k * n_neigh] = std::sqrt(D[i + k * this->n_samples]);
+                }
+            } else {
+                for (da_int i = 0; i < n_neigh; i++) {
+                    n_dist[i + k * n_neigh] = D[i + k * this->n_samples];
+                }
+            }
+        }
+    }
+}
+
 /**
  * Returns the indices of the k-nearest neighbors for each point in a test data set and, optionally, the
  * corresponding distances to each neighbor.
@@ -220,6 +278,7 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
                                 da_int ldx_test, da_int *n_ind, T *n_dist, da_int n_neigh,
                                 bool return_distance) {
     da_status status = da_status_success;
+
     // Return if there are no training data
     if (!istrained)
         return da_error_bypass(this->err, da_status_no_data,
@@ -227,7 +286,9 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
                                "da_knn_set_data_s or da_knn_set_data_d.");
     if (!is_up_to_date)
         status = da_knn<T>::set_params();
-
+    if (status != da_status_success)
+        return da_error_bypass(this->err, status,
+                               "Error while setting the parameters in kneighbors().");
     if (X_test == nullptr)
         return da_error_bypass(this->err, da_status_invalid_input,
                                "X_test is not a valid pointer.");
@@ -245,12 +306,12 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
                                    "n_queries and n_features must be greater than 0.");
         }
         if (ldx_test < n_queries) {
-            return da_error_bypass(
-                this->err, da_status_invalid_leading_dimension,
-                "n_queries = " + std::to_string(n_queries) +
-                    ", ldx_test = " + std::to_string(ldx_test) +
-                    ", the value of ldx_test needs to be at least as big as the value "
-                    "of n_queries");
+            return da_error_bypass(this->err, da_status_invalid_leading_dimension,
+                                   "n_queries = " + std::to_string(n_queries) +
+                                       ", ldx_test = " + std::to_string(ldx_test) +
+                                       ", the value of ldx_test needs to be at least "
+                                       "as big as the value "
+                                       "of n_queries");
         }
         // Data matrix X must have the same number of columns as X_train.
         if (n_features != this->n_features) {
@@ -283,71 +344,66 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
                                    "n_dist is not a valid pointer.");
         }
     }
+    std::vector<T> D;
+    // If ldx_test is bigger than n_queries, don't do blocking.
+    if (ldx_test > n_queries) {
+        try {
+            D.resize(this->n_samples * n_queries);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+        kneighbors_kernel(n_queries, n_features, X_test, ldx_test, D.data(), n_ind,
+                          n_dist, n_neigh, return_distance);
+    } else {
 
-    // Create memory to store the distance matrix
-    try {
-        std::vector<T> D(this->n_samples * n_queries);
-
-        // Call function that computes the squared euclidean distance
-        status = da_metrics::pairwise_distances::euclidean(
-            this->n_samples, n_queries, n_features, this->X_train, this->ldx_train,
-            X_test, ldx_test, D.data(), this->n_samples, true);
-        if (status != da_status_success)
-            return da_error_bypass(
-                this->err, status,
-                "Failed to compute k-nearest neighbors due to an internal "
-                "error in the distance computation.");
-
-        std::vector<da_int> indices(this->n_samples * n_queries);
-
-        // Initialize each column of "indices" with values from 0 to n_samples-1.
-        // Those are the initial indices before sorting.
-        for (da_int i = 0; i < n_queries; i++) {
-            std::iota(indices.begin() + i * this->n_samples,
-                      indices.begin() + (i + 1) * this->n_samples, 0);
+        // If the leading dimension and n_queries match, optimize using blocking.
+        da_int n_blocks = n_queries / BLOCK_SIZE;
+        da_int block_rem = n_queries % BLOCK_SIZE;
+        da_int n_threads = da_utils::get_n_threads_loop(std::max(n_blocks, 1));
+        try {
+            D.resize(this->n_samples * BLOCK_SIZE * n_threads);
+        } catch (std::bad_alloc const &) {
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+// Iterate through the number of blocks
+#pragma omp parallel for default(none)                                                   \
+    shared(n_blocks, n_features, X_test, n_queries, n_ind, n_dist, n_neigh,              \
+               return_distance, D) num_threads(n_threads)
+        for (da_int iblock = 0; iblock < n_blocks; iblock++) {
+            da_int D_index = (da_int)omp_get_thread_num() * this->n_samples * BLOCK_SIZE;
+            // If the remaining numbers of queries is ge than the block size
+            // the size of the submatrix we are computing is BLOCK_SIZE
+            kneighbors_kernel(
+                BLOCK_SIZE, n_features, X_test + iblock * BLOCK_SIZE, n_queries,
+                &D[D_index], n_ind + iblock * BLOCK_SIZE * n_neigh,
+                n_dist + iblock * BLOCK_SIZE * n_neigh, n_neigh, return_distance);
         }
 
-        // The first n_queries elements hold the indices for the sorted distances of the first test data and so on.
-        for (da_int k = 0; k < n_queries; k++)
-            std::stable_sort(
-                indices.begin() + k * this->n_samples,
-                indices.begin() + (k + 1) * this->n_samples, [&](da_int i, da_int j) {
-                    return D[i + k * this->n_samples] < D[j + k * this->n_samples];
-                });
-
-        // n_ind holds the info for the nearest neighbors, by using only the first
-        // n_neigh elements for each test data point.
-        for (da_int i = 0; i < n_queries; i++) {
-            for (da_int j = 0; j < n_neigh; j++) {
-                // Copy the data
-                n_ind[i + j * n_queries] = indices[j + i * this->n_samples];
-            }
+        // Need to point to the remainder
+        if (block_rem > 0) {
+            da_int D_index = (da_int)omp_get_thread_num() * this->n_samples * BLOCK_SIZE;
+            kneighbors_kernel(
+                block_rem, n_features, X_test + n_blocks * BLOCK_SIZE, n_queries,
+                &D[D_index], n_ind + n_blocks * BLOCK_SIZE * n_neigh,
+                n_dist + n_blocks * BLOCK_SIZE * n_neigh, n_neigh, return_distance);
         }
-
-        // Storing the distance of the neighbors
-        if (return_distance) {
-            // If metric is da_euclidean, we need to compute the square root of the elements before returning.
-            if ((this->internal_metric == da_sqeuclidean) &&
-                (this->metric != da_sqeuclidean)) {
-                for (da_int i = 0; i < n_queries; i++) {
-                    for (da_int j = 0; j < n_neigh; j++) {
-                        n_dist[i + j * n_queries] =
-                            std::sqrt(D[n_ind[i + j * n_queries] + i * this->n_samples]);
-                    }
-                }
-            } else {
-                for (da_int i = 0; i < n_queries; i++) {
-                    for (da_int j = 0; j < n_neigh; j++) {
-                        n_dist[i + j * n_queries] =
-                            D[n_ind[i + j * n_queries] + i * this->n_samples];
-                    }
-                }
-            }
-        }
-    } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation failed.");
     }
+
+// If da_int is 64 bit, cast to double
+#if defined(AOCLDA_ILP64)
+    da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<double *>(n_ind),
+                      n_neigh, n_queries);
+#else // da_int is 32 bit, cast to float
+    da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<float *>(n_ind),
+                      n_neigh, n_queries);
+#endif
+    // transpose distances
+    if (return_distance) {
+        da_blas::imatcopy('T', n_neigh, n_queries, 1.0, n_dist, n_neigh, n_queries);
+    }
+
     return da_status_success;
 }
 
@@ -434,12 +490,12 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
                                    "n_queries and n_features must be greater than 0.");
         }
         if (ldx_test < n_queries) {
-            return da_error_bypass(
-                this->err, da_status_invalid_leading_dimension,
-                "n_queries = " + std::to_string(n_queries) +
-                    ", ldx_test = " + std::to_string(ldx_test) +
-                    ", the value of ldx_test needs to be at least as big as the value "
-                    "of n_queries");
+            return da_error_bypass(this->err, da_status_invalid_leading_dimension,
+                                   "n_queries = " + std::to_string(n_queries) +
+                                       ", ldx_test = " + std::to_string(ldx_test) +
+                                       ", the value of ldx_test needs to be at least "
+                                       "as big as the value "
+                                       "of n_queries");
         }
         // Data matrix X must have the same number of columns as X_train.
         if (n_features != this->n_features) {
