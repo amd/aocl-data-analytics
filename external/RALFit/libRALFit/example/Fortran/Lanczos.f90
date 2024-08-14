@@ -1,3 +1,6 @@
+! Copyright (c) 2017, The Science and Technology Facilities Council (STFC)
+! All rights reserved.
+! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 ! examples/Fortran/Lanczos.f90
 
 module lanczos_module
@@ -21,7 +24,7 @@ contains
     real(wp), dimension(*), intent(in) :: x
     real(wp), dimension(*), intent(out) :: r
     class(params_base_type), intent(inout) :: params
-    
+
 
     select type(params)
     type is(params_type)
@@ -32,7 +35,7 @@ contains
     end select
 
     status = 0 ! success
-    
+
   end subroutine eval_r
 
   subroutine eval_J(status, n, m, x, J, params)
@@ -109,11 +112,11 @@ contains
                  (params%t(i)**2) * x(5) * exp(-x(6)*params%t(i)) * y(6)
          end do
       end select
-         
-      
+
+
     end subroutine eval_HP
-    
-  
+
+
 end module lanczos_module
 
 
@@ -121,7 +124,7 @@ program lanczos
 
   use ral_nlls_double
   use lanczos_module
-  
+
   implicit none
 
   type(nlls_options) :: options
@@ -131,7 +134,7 @@ program lanczos
   real(wp), allocatable :: x(:)
   type(params_type) :: params
   real(wp) :: tic, toc
-  
+
   ! data to be fitted
   m = 24
   allocate(params%t(m), params%y(m))
@@ -191,6 +194,7 @@ program lanczos
   x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
 
   options%print_level = 4
+  options%check_derivatives = 2
   options%exact_second_derivatives = .true.
   options%model = 4
   options%nlls_method = 3
@@ -209,7 +213,7 @@ program lanczos
      stop
   endif
   call cpu_time(toc)
-  
+
   ! Print result
   print *, "Found a local optimum at x = ", x
   print *, "Took ", inform%iter, " iterations"
@@ -217,4 +221,8 @@ program lanczos
   print *, "     ", inform%g_eval, " gradient evaluations"
   print *, "     ", inform%h_eval, " hessian evaluations"
   print *, "     ", toc-tic, " seconds"
+
+  if (allocated(x)) deallocate(x)
+  if (allocated(params%t)) deallocate(params%t)
+  if (allocated(params%y)) deallocate(params%y)
 end program lanczos

@@ -1,3 +1,8 @@
+! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+! Copyright (c) 2019, The Numerical Algorithms Group Ltd (NAG)
+! All rights reserved.
+! Copyright (c) 2019, The Science and Technology Facilities Council (STFC)
+! All rights reserved.
 ! examples/Fortran/Lanczos.f90
 ! STP to test that initial point is solution.
 
@@ -22,18 +27,18 @@ contains
     real(wp), dimension(*), intent(in) :: x
     real(wp), dimension(*), intent(out) :: r
     class(params_base_type), intent(inout) :: params
-    
+
 
     select type(params)
     type is(params_type)
        r(1:m) = params%y(:) &
             - x(1)*exp(-x(2)*params%t(:)) &
             - x(3)*exp(-x(4)*params%t(:)) &
-            - x(5)*exp(-x(6)*params%t(:)) 
+            - x(5)*exp(-x(6)*params%t(:))
     end select
 
     status = 0 ! success
-    
+
   end subroutine eval_r
 
   subroutine eval_J(status, n, m, x, J, params)
@@ -94,7 +99,7 @@ contains
       class(params_base_type), intent(inout) :: params
 
       integer :: i
-      
+
       HP(1:n*m) = 0.0
       select type(params)
       type is (params_type)
@@ -110,11 +115,11 @@ contains
                  (params%t(i)**2) * x(5) * exp(-x(6)*params%t(i)) * y(6)
          end do
       end select
-         
-      
+
+
     end subroutine eval_HP
-    
-  
+
+
 end module lanczos_module
 
 
@@ -122,7 +127,7 @@ program lanczos
 
   use ral_nlls_double
   use lanczos_module
-  
+
   implicit none
 
   type(nlls_options) :: options
@@ -133,7 +138,9 @@ program lanczos
   type(params_type) :: params
   integer :: inner_method
   real(wp) :: tic, toc
-  
+  logical :: ok
+  continue
+  ok = .False.
   ! data to be fitted
   m = 24
   allocate(params%t(m), params%y(m))
@@ -190,7 +197,6 @@ program lanczos
   ! call fitting routine
   n = 6
   allocate(x(n))
-!  x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
   x=(/ 8.6810580646277377E-02_wp, 0.9549498952571175_wp, 0.8439878897334759_wp,&
        2.9515524061595775_wp, 1.5825943863392782_wp, 4.9863401266962830_wp /)
 
@@ -204,16 +210,16 @@ program lanczos
   options%regularization_power = 2.0
   options%reg_order = -1.0
   options%inner_method = 2
-  options%maxit = 1000
+  options%maxit = 10
 
   call cpu_time(tic)
   call nlls_solve(n,m,x,eval_r, eval_J, eval_HF, params, options, inform)!, eval_HP=eval_HP)
-  if(inform%status.ne.0) then
-     print *, "ral_nlls() returned with error flag ", inform%status
-     stop
-  endif
   call cpu_time(toc)
-  
+  if(inform%status.ne.0) then
+     print *, "nlls_solve returned with error flag: ", inform%status
+     goto 100
+  endif
+
   ! Print result
   print *, "Found a local optimum at x = ", x
   print *, "Took ", inform%iter, " iterations"
@@ -221,4 +227,12 @@ program lanczos
   print *, "     ", inform%g_eval, " gradient evaluations"
   print *, "     ", inform%h_eval, " hessian evaluations"
   print *, "     ", toc-tic, " seconds"
+  ok = inform%iter == 0 .And. inform%f_eval == 1 .And. inform%g_eval == 1
+
+100 Continue
+
+  If (Allocated(params%t)) Deallocate(params%t)
+  If (Allocated(params%y)) Deallocate(params%y)
+
+  Stop merge(0, 7, ok)
 end program lanczos
