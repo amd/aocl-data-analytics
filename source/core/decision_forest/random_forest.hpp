@@ -280,8 +280,8 @@ template <typename T> da_status random_forest<T>::fit() {
 template <typename T>
 void random_forest<T>::parallel_count_classes(
     const T *X_test, da_int ldx_test, const da_int &n_blocks, const da_int &block_size,
-    const da_int &block_rem, const da_int &n_threads, std::vector<da_int> &count_classes,
-    std::vector<da_int> &y_pred_tree) {
+    const da_int &block_rem, [[maybe_unused]] const da_int &n_threads,
+    std::vector<da_int> &count_classes, std::vector<da_int> &y_pred_tree) {
 
 #pragma omp parallel for collapse(2)                                                     \
     shared(n_blocks, forest, y_pred_tree, n_features, X_test, ldx_test, count_classes,   \

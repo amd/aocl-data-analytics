@@ -52,7 +52,7 @@ class nlls(pybind_nlls):
 
         n_coef (int): Number of coefficients in the model. Must be positive.
 
-        n_res (int): Number of residuals in the model. Must also be positive.
+        n_res (int): Number of residuals in the model. Must be positive.
 
         weights (float, optional): Vector containing the values of the diagonal weight matrix ``W``.
             It is expected that the values are all non-negative and normalized. Default = ``None``.

@@ -118,7 +118,7 @@ template <typename T> class da_optimization {
 
     // Update info
     da_status set_info(da_int idx, const T value) {
-        if (0 <= idx && idx < info.size()) {
+        if (0 <= idx && idx < (da_int)info.size()) {
             info[idx] = value;
             return da_status_success;
         }

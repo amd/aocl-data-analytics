@@ -39,7 +39,7 @@ The C interface has been designed to make it as seamless as
 possible to integrate with the library from whichever programming language you are using.
 In addition, a header file containing :ref:`C++ overloads<cpp_overloads>` is available for C++ users who wish to abstract away the floating-point data type.
 
-Library Workflow
+Library workflow
 ================
 
 The intended workflow for using the AOCL-DA C APIs is as follows:
@@ -69,7 +69,7 @@ The intended workflow for using the AOCL-DA C APIs is as follows:
   * extract results from the :cpp:type:`da_handle`.
 
 
-Linking your Application to AOCL-DA
+Linking your application to AOCL-DA
 ===================================
 
 Linking on Linux
@@ -142,7 +142,7 @@ for 32 and 64 bit integers respectively.
        \<path to amd-blis>\lib\<INT_LIB>\AOCL-LibBlis-Win-MT-dll.lib
        \<path to amd-utils>\lib\libaoclutils.lib /openmp:llvm
 
-The same command should work with ``cl`` replaced by ``clang-cl`` (in which case, simply use ``/openmp``) and linking statically using ``/MT``.
+The same command will work with ``cl`` replaced by ``clang-cl`` (in which case, simply use ``/openmp``) and linking statically using ``/MT``.
 
 .. note::
    You should ensure the folders containing the libraries to be linked are on your
@@ -156,7 +156,7 @@ Compiling using CMake
 
 A CMakeLists.txt file is supplied in the examples folder of your installation. You will need to set ``AOCL_ROOT`` to point to your AOCL installation.
 On Windows you may also need to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
-To configure cmake and compile, you can then use commands similar to:
+To configure cmake and compile, you can then use commands such as:
 
 .. code-block::
 
@@ -165,10 +165,10 @@ To configure cmake and compile, you can then use commands similar to:
     cmake -G Ninja -DCMAKE_CXX_COMPILER=clang-cl ..
     cmake --build .
 
-Miscellaneous Topics
+Miscellaneous topics
 ====================
 
-Data Types in AOCL-DA
+Data types in AOCL-DA
 ---------------------
 
 .. _da_int:
@@ -187,12 +187,12 @@ Routines expecting double precision data have ``_d`` appended onto their names.
 Some routines (such as option setting routines) may expect other data types, and will have ``_int`` or ``_string`` appended onto their names accordingly.
 In this documentation we frequently use ``_?`` at the end of routine names to indicate a suite of routines that differ only in the expected data type.
 
-Array Storage
+Array storage
 -------------
 
 Algorithmic routines in the library expect two-dimensional arrays to be in column major format.
 
-Interpreting Missing Data
+Interpreting missing data
 -------------------------
 
 When using a :cpp:type:`da_datastore` for data management, the special convention for floating point *not a number* (``NaN``) can be used to denote missing
@@ -203,7 +203,7 @@ In order to provide the best possible performance, the algorithmic functions wil
 It is therefore the user's responsibility to ensure data is sanitized (for example, by using
 :cpp:func:`da_data_select_non_missing`) before passing it to one of the algorithms.
 
-Error Handling
+Error handling
 --------------
 
 Functions in AOCL-DA return :cpp:type:`da_status`, which provides basic information about whether
@@ -211,7 +211,7 @@ the function call was successful.
 Further information about errors can be obtained by querying :cpp:type:`da_datastore` and
 :cpp:type:`da_handle` types. For further details see the :ref:`error handling<error-handling>` pages.
 
-Version String
+Version string
 --------------
 
 To get the version string of AOCL-DA call the function ``const char* da_get_version()``.

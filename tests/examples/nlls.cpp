@@ -73,7 +73,8 @@ double gaussian(double d, double mu, double sigma, double Ag) {
 };
 
 // residuals for the convolution model
-da_int eval_r(da_int n_coef, da_int n_res, void *udata, double const *x, double *r) {
+da_int eval_r([[maybe_unused]] da_int n_coef, da_int n_res, void *udata, double const *x,
+              double *r) {
     double const a = x[0];
     double const b = x[1];
     double const Al = x[2];
@@ -146,7 +147,8 @@ int main(void) {
         return 1;
     }
     pass &= da_options_set_int(handle, "print level", (da_int)2) == da_status_success;
-    da_options_set_real_d(handle, "finite differences step", 1e-7) == da_status_success;
+    pass &= da_options_set_real_d(handle, "finite differences step", 1e-7) ==
+            da_status_success;
     pass &= pass &=
         da_options_set_real_d(handle, "derivative test tol", 1e-3) == da_status_success;
     pass &=

@@ -99,7 +99,7 @@ patching, you attempt to call class member functions which have not been impleme
 then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
 you use the Python APIs described on the subsequent pages of this manual.
 
-The scikit-learn Dispatcher
+The scikit-learn dispatcher
 ===========================
 Since the AOCL-DA scikit-learn extension is not yet feature-complete, we also offer a dispatcher which can automatically select functions from Intel's Extension for scikit-learn where they are known to perform well.
 

@@ -139,7 +139,7 @@ inline da_status register_csv_options(da_options::OptionRegistry &opts) {
 
     oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
         "CSV warn for missing data",
-        "If set to 0, return error if missing data is encountered; if set to, 1 issue a "
+        "If set to 0, return error if missing data is encountered; if set to 1, issue a "
         "warning and store "
         "missing data as either a NaN (for floating point data) or the maximum value of "
         "the integer type being used",

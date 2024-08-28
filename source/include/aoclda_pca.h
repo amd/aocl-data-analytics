@@ -47,7 +47,7 @@
  * \param[in] lda the leading dimension of the data matrix. Constraint: \p lda @f$\ge@f$ \p n_samples.
   * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
- * - \ref da_status_wrong_type - the handle may have been initialized using th wrong precision.
+ * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or \p A is null.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
  */

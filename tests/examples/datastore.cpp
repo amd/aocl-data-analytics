@@ -66,13 +66,13 @@ int main() {
     da_data_extract_selection_real_d(store, "features", features.data(), 5);
     da_data_extract_selection_real_d(store, "rhs", rhs.data(), 5);
 
-    // define the regression problem to solve
+    // Define the regression problem to solve
     da_handle handle;
     da_handle_init_d(&handle, da_handle_linmod);
     da_linmod_select_model_d(handle, linmod_model_mse);
     da_linmod_define_features_d(handle, 5, 2, features.data(), rhs.data());
 
-    // solve the problem
+    // Solve the problem
     status = da_linmod_fit_d(handle);
 
     int exit = 0;

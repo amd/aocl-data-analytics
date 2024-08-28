@@ -88,7 +88,7 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
 /** \{
  * \brief Read char string data from a CSV file, optionally with a header row containing the column labels.
  *
- * This routine reads files consisting of the character data and stores them in an array of type char* character strings.
+ * This routine reads files consisting of character data and stores them in an array of type char* character strings.
  *
  * \param[in,out] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.

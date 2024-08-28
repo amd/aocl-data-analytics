@@ -37,7 +37,7 @@ Datastores
 
 .. _api_init:
 
-Initialize and Destroy Datastores
+Initialize and destroy datastores
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_datastore_init
@@ -46,7 +46,7 @@ Initialize and Destroy Datastores
 
 .. _api_load_data:
 
-Load Data into a Datastore
+Load data into a datastore
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfunction:: da_data_load_from_csv
 .. doxygenfunction:: da_data_hconcat
@@ -79,7 +79,7 @@ Load Data into a Datastore
 
 .. _api_data_selection:
 
-Data Selection
+Data selection
 ^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_select_columns
@@ -91,7 +91,7 @@ Data Selection
 
 .. _api_data_extraction:
 
-Data Extraction
+Data extraction
 ^^^^^^^^^^^^^^^
 
 .. _da_data_extract_selection:
@@ -118,7 +118,7 @@ Data Extraction
 
 .. _api_column_header:
 
-Column Headers
+Column headers
 ^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_label_column
@@ -128,7 +128,7 @@ Column Headers
 
 .. _api_data_edition:
 
-Data Editing
+Data editing
 ^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_get_n_rows

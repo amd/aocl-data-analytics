@@ -40,8 +40,6 @@ Nonlinear Data Fitting APIs
 
       .. _da_nlls_callbacks:
 
-      .. _da_nlls_callbacks_r:
-
       .. doxygentypedef:: da_resfun_t_s
         :outline:
       .. doxygentypedef:: da_resfun_t_d

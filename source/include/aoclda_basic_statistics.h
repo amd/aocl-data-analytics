@@ -38,11 +38,14 @@
 /**
  * \brief Defines whether to compute statistical quantities by row, by column or for the whole data matrix
  **/
-typedef enum da_axis_ {
+enum da_axis_ {
     da_axis_col, ///< Compute statistics column wise.
     da_axis_row, ///< Compute statistics row wise.
     da_axis_all, ///< Compute statistics for the whole data matrix.
-} da_axis;
+};
+
+/** @brief Alias for the \ref da_axis_ enum. */
+typedef enum da_axis_ da_axis;
 
 /**
  * \brief Defines the method used to compute quantiles in \ref da_quantile_s and \ref da_quantile_d.
@@ -58,7 +61,7 @@ typedef enum da_axis_ {
  *
  * In each case a number @f$h@f$ is computed, corresponding to the approximate location in the data array of the required quantile, \p q @f$\in [0,1]@f$. Then the quantile is computed as follows:
  */
-typedef enum da_quantile_type_ {
+enum da_quantile_type_ {
     da_quantile_type_1, ///< @f$h=n \times q@f$; return @f$\texttt{x[i]}@f$, where @f$i = \lceil h \rceil@f$.
     da_quantile_type_2, ///< @f$h=n \times q+0.5@f$; return @f$(\texttt{x[i]}+\texttt{x[j]})/2@f$, where @f$i = \lceil h-1/2\rceil@f$ and @f$j = \lfloor h+1/2\rfloor@f$.
     da_quantile_type_3, ///< @f$h=n \times q-0.5@f$; return @f$\texttt{x[i]}@f$, where @f$i@f$ is the nearest integer to @f$h@f$.
@@ -68,7 +71,10 @@ typedef enum da_quantile_type_ {
     da_quantile_type_7, ///< @f$h=(n-1) \times q+1@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
     da_quantile_type_8, ///< @f$h=(n+1/3) \times q + 1/3@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
     da_quantile_type_9, ///< @f$h=(n+1/4) \times q + 3/8@f$; return @f$\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})@f$, where @f$i = \lfloor h\rfloor@f$ and @f$j = \lceil h \rceil@f$.
-} da_quantile_type;
+};
+
+/** @brief Alias for the \ref da_quantile_type_ enum. */
+typedef enum da_quantile_type_ da_quantile_type;
 
 /** \{
  * \brief Arithmetic mean of a data matrix.
@@ -402,7 +408,7 @@ da_status da_standardize_s(da_axis axis, da_int n_rows, da_int n_cols, float *X,
  * - \p dof < 0 - the degrees of freedom will be set to \p n_rows.
  * - \p dof = 0 - the degrees of freedom will be set to \p n_rows - 1.
  * - \p dof > 0 - the degrees of freedom will be set to the specified value.
- * \param[out] cov the array which will hold the p &times; p covariance matrix. Must be of size at least p*ldcov. Data will be returned in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column is stored in the [(<i>j</i> - 1) &times; \a ldcov + <i>i</i> - 1]th entry of the array.
+ * \param[out] cov the array which will hold the \p n_cols @f$\times @f$ \p n_cols covariance matrix. Must be of size at least \p n_cols @f$\times @f$ \p ldcov. Data will be returned in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column is stored in the [(<i>j</i> - 1) @f$\times @f$ \p ldcov + <i>i</i> - 1]th entry of the array.
  * \param[in] ldcov the leading dimension of the covariance matrix. Constraint: \p ldcov @f$>@f$ \p n_cols.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -430,7 +436,7 @@ da_status da_covariance_matrix_s(da_int n_rows, da_int n_cols, const float *X, d
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
  * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix. Data is expected to be stored in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column (indexed from 0, so that @f$0 \le i \le@f$ \p n_rows @f$-1@f$ and @f$0 \le j \le@f$ \p n_cols @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows.
- * \param[out] corr the array which will hold the p &times; p correlation matrix. Must be of size at least p*ldcov. Data will be returned in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column is stored in the [(<i>j</i> - 1) &times; \a ldcov + <i>i</i> - 1]th entry of the array.
+ * \param[out] corr the array which will hold the \p n_cols @f$\times @f$ \p n_cols correlation matrix. Must be of size at least \p n_cols @f$\times @f$ \p ldcorr. Data will be returned in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column is stored in the [(<i>j</i> - 1) @f$\times @f$ \p ldcorr + <i>i</i> - 1]th entry of the array.
  * \param[in] ldcorr the leading dimension of the correlation matrix. Constraint: \p ldcorr @f$>@f$ \p n_cols.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.

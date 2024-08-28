@@ -41,21 +41,27 @@ extern "C" {
 /**
  * \brief Defines the metric used when calculating the pairwise distances.
  **/
-typedef enum da_metric_ {
+enum da_metric_ {
     da_euclidean,   ///< Use euclidean distance.
     da_sqeuclidean, ///< Use squared euclidean distance.
     da_minkowski,   ///< Use Minkowski distance.
     da_manhattan    ///< Use Manhattan distance.
-} da_metric;
+};
+
+/** @brief Alias for the \ref da_metric_ enum. */
+typedef enum da_metric_ da_metric;
 
 /**
  * \brief Defines the type of data that is allowed as inputs when pairwise distances are computed.
  **/
-typedef enum da_data_types_ {
+enum da_data_types_ {
     da_all_finite,     ///< Force all values to be finite.
     da_allow_infinite, ///< Allow infinite and NaN values in input data.
     da_allow_NaN       ///< Allow NaN values in input data.
-} da_data_types;
+};
+
+/** @brief Alias for the \ref da_data_types_ enum. */
+typedef enum da_data_types_ da_data_types;
 
 /** \{
  * \brief Compute the distance matrix for an \p m by \p k matrix \p X and optionally an \p n by \p k matrix \p Y (both in column major order).

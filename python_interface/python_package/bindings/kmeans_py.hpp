@@ -126,7 +126,6 @@ class kmeans : public pyda_handle {
         exception_check(status);
 
         // define the output vector
-        da_int n_clusters = (da_int)result[2];
         size_t shape[1]{(size_t)k_samples};
         size_t strides[1]{sizeof(da_int)};
         auto Y_labels = py::array_t<da_int>(shape, strides);
@@ -238,11 +237,8 @@ class kmeans : public pyda_handle {
 
     auto get_inertia() {
 
-        da_status status;
-
         size_t stride_size;
         da_int n_samples, n_features, n_clusters, n_iter;
-        da_int dim, dim1, dim2;
 
         if (precision == da_single) {
             stride_size = sizeof(float);

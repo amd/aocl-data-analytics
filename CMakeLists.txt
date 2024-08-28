@@ -298,11 +298,11 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
   set(COMPILER_FLAGS_COMMON
-      "${COMPILER_FLAS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
+      "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
   )
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     set(COMPILER_FLAGS_COMMON
-        "${COMPILER_FLAS_COMMON};-mtune=native;-mavx2;-mfma;")
+        "${COMPILER_FLAGS_COMMON};-mtune=native;-mavx2;-mfma;")
   endif()
 
   # Release flags

@@ -40,7 +40,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionNumeric<da_int>> oi;
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "print level", "set level of verbosity for the solver", 0,
+            "print level", "Set level of verbosity for the solver", 0,
             da_options::lbound_t::greaterequal, 5, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
@@ -74,7 +74,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "debug", "set debug level (internal use)", 0,
+            "debug", "Set debug level (internal use)", 0,
             da_options::lbound_t::greaterequal, 3, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
@@ -91,28 +91,28 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
 
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("alpha",
-                             "coefficient of alpha in the regularization terms: lambda( "
+                             "Coefficient of alpha in the regularization terms: lambda( "
                              "(1-alpha)/2 L2 + alpha L1 )",
                              0.0, da_options::lbound_t::greaterequal, 1.0,
                              da_options::ubound_t::lessequal, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("lambda",
-                             "penalty coefficient for the regularization terms: lambda( "
+                             "Penalty coefficient for the regularization terms: lambda( "
                              "(1-alpha)/2 L2 + alpha L1 )",
                              0.0, da_options::lbound_t::greaterequal, rmax,
                              da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "optim convergence tol",
-            "tolerance to declare convergence for the iterative optimization step. See "
+            "Tolerance to declare convergence for the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             tol.safe_eps(10, 2), tol.safe_eps_latex(10, 2)));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "optim progress factor",
-            "factor used to detect convergence of the iterative optimization step. See "
+            "Factor used to detect convergence of the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
@@ -157,9 +157,10 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             "Affects only multinomial logistic regression. Type of constraint put on "
             "coefficients. This will affect number of coefficients returned. RSC - means "
             "we choose a reference category whose coefficients will be set to all 0. "
-            "This results in K-1 class coefficients for K class problems. SSC - means "
+            "This results in K-1 class coefficients for problems with K classes. SSC - "
+            "means "
             "the sum of coefficients class-wise for each feature is 0. It will result in "
-            "K class coefficients for K class problem.",
+            "K class coefficients for problems with K classes.",
             {{"rsc", logistic_constraint::rsc},
              {"reference category", logistic_constraint::rsc},
              {"ssc", logistic_constraint::ssc},

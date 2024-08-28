@@ -33,6 +33,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
+#include <limits>
 #include <string>
 #include <type_traits>
 
@@ -1476,7 +1477,7 @@ TEST(datastore, missingData) {
     EXPECT_EQ(is_missing_value<std::string>(val), false);
 
     // set some missing values for integers and floating points
-    float missing_float = std::nanf("");
+    float missing_float = std::numeric_limits<float>::quiet_NaN();
     da_int int_max = std::numeric_limits<da_int>::max();
     EXPECT_EQ(hds.set_element(0, 2, int_max), da_status_success);
     EXPECT_EQ(hds.set_element(2, 0, int_max), da_status_success);
@@ -1560,7 +1561,7 @@ TEST(dataStore, missingDataPub) {
     get_heterogeneous_data_store_pub(store, m, n, idata, fdata, sdata);
 
     // set some missing values for integers and floating points
-    float missing_float = std::nanf("");
+    float missing_float = std::numeric_limits<float>::quiet_NaN();
     da_int int_max = std::numeric_limits<da_int>::max();
     EXPECT_EQ(da_data_set_element_int(store, 0, 2, int_max), da_status_success);
     EXPECT_EQ(da_data_set_element_int(store, 2, 0, int_max), da_status_success);

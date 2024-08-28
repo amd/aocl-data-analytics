@@ -150,7 +150,7 @@ class pca : public pyda_handle {
     }
 
     auto get_result(da_result result) {
-        da_status status;
+        da_status status = da_status_success;
 
         da_int n_samples, n_features, n_components;
         da_int dim = 3, dim1, dim2;
@@ -199,7 +199,11 @@ class pca : public pyda_handle {
             dim1 = 3;
             dim2 = 1;
             break;
+        default:
+            status = da_status_invalid_input;
+            break;
         }
+        exception_check(status, "Unexpected result input");
 
         dim = dim1 * dim2;
         std::vector<size_t> shape, strides;
@@ -243,10 +247,8 @@ class pca : public pyda_handle {
         size_t stride_size;
 
         if (precision == da_single) {
-            float inertia;
             get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
         } else {
-            double inertia;
             get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
         }
 
@@ -258,10 +260,8 @@ class pca : public pyda_handle {
         size_t stride_size;
 
         if (precision == da_single) {
-            float inertia;
             get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
         } else {
-            double inertia;
             get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
         }
 
@@ -273,10 +273,8 @@ class pca : public pyda_handle {
         size_t stride_size;
 
         if (precision == da_single) {
-            float inertia;
             get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
         } else {
-            double inertia;
             get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
         }
 

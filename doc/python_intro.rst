@@ -43,7 +43,7 @@ To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.
    You may also need to install an OpenMP runtime and add it to your Windows environment. If you encounter issues using the Python wheel on Windows, please e-mail us on
    toolchainsupport@amd.com.
 
-NumPy Arrays
+NumPy arrays
 =============
 
 AOCL-DA Python interfaces typically expect data to be supplied as NumPy arrays. These can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
@@ -51,7 +51,7 @@ The AOCL-DA interface will convert C-style numpy arrays to Fortran style, so for
 
 .. _python_examples:
 
-Python Examples
+Python examples
 ===============
 
 The AOCL-DA Python API comes with numerous example scripts, which are installed when you invoke ``pip install aoclda-*.whl``.

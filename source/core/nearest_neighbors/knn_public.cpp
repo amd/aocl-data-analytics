@@ -169,7 +169,6 @@ da_status da_knn_predict_proba_d(da_handle handle, da_int n_queries, da_int n_fe
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
-    da_status status = da_status_success;
 
     return handle->knn_d->predict_proba(n_queries, n_features, X_test, ldx_test, proba);
 }
@@ -187,7 +186,6 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
-    da_status status = da_status_success;
 
     return handle->knn_s->predict_proba(n_queries, n_features, X_test, ldx_test, proba);
 }
@@ -205,7 +203,6 @@ da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
-    da_status status = da_status_success;
 
     return handle->knn_d->predict(n_queries, n_features, X_test, ldx_test, y_test);
 }
@@ -223,7 +220,6 @@ da_status da_knn_predict_s(da_handle handle, da_int n_queries, da_int n_features
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
-    da_status status = da_status_success;
 
     return handle->knn_s->predict(n_queries, n_features, X_test, ldx_test, y_test);
 }

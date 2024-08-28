@@ -42,7 +42,7 @@ template <typename T> struct cg_data {
 
     // Constructors
     cg_data(da_int nsamples, da_int ncoef, T tol, da_int maxit)
-        : nsamples(nsamples), ncoef(ncoef), tol(tol), maxit(maxit) {
+        : tol(tol), nsamples(nsamples), ncoef(ncoef), maxit(maxit) {
         min_order = std::min(nsamples, ncoef);
         coef.resize(min_order, 0);       // Initialize starting point to be vector of 0s
         A.resize(min_order * min_order); // Initialize array for X'X or XX'

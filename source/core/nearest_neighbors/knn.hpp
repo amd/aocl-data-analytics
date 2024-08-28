@@ -485,14 +485,14 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
             // we use this info to compute the probability for each of the class labels.
             for (da_int i = 0; i < n_queries; i++) {
                 denominator = 0.0;
-                for (da_int j = 0; j < this->classes.size(); j++) {
+                for (da_int j = 0; j < (da_int)this->classes.size(); j++) {
                     proba[i + j * n_queries] = 0.0;
                     for (da_int neig = 0; neig < this->n_neighbors; neig++)
                         if (classes[j] == pred_labels[i + neig * n_queries])
                             proba[i + j * n_queries]++;
                     denominator += proba[i + j * n_queries];
                 }
-                for (da_int j = 0; j < this->classes.size(); j++)
+                for (da_int j = 0; j < (da_int)this->classes.size(); j++)
                     proba[i + j * n_queries] = proba[i + j * n_queries] / denominator;
             }
         } else if (this->weights == da_knn_distance) {
@@ -504,7 +504,7 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
             T denominator;
             for (da_int i = 0; i < n_queries; i++) {
                 denominator = 0.0;
-                for (da_int j = 0; j < this->classes.size(); j++) {
+                for (da_int j = 0; j < (da_int)this->classes.size(); j++) {
                     proba[i + j * n_queries] = 0.0;
                     for (da_int neig = 0; neig < this->n_neighbors; neig++)
                         if (classes[j] == pred_labels[i + neig * n_queries])
@@ -512,7 +512,7 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
                                 weight_vector[i + neig * n_queries];
                     denominator += proba[i + j * n_queries];
                 }
-                for (da_int j = 0; j < this->classes.size(); j++)
+                for (da_int j = 0; j < (da_int)this->classes.size(); j++)
                     proba[i + j * n_queries] = proba[i + j * n_queries] / denominator;
             }
         }

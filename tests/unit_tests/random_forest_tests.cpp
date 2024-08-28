@@ -233,8 +233,6 @@ TYPED_TEST(random_forest_test, get_results) {
 
 TYPED_TEST(random_forest_test, invalid_input) {
 
-    da_status status;
-
     std::vector<TypeParam> X{0.0, 1.0, 0.0, 2.0};
     std::vector<da_int> y{0, 1};
 

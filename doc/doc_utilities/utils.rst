@@ -24,13 +24,12 @@
     POSSIBILITY OF SUCH DAMAGE.
 
 
-
-Documentation Utilities
-***********************
-
-This page is for internal use only. The main documentation page can be found :ref:`here <C_intro>`.
-
 .. only:: internal
+
+   Documentation Utilities
+   ***********************
+
+   This page is for internal use only. The main documentation page can be found :ref:`here <aocl-da-index>`.
 
    Creating and Building New Doc
    =============================
@@ -201,14 +200,14 @@ This page is for internal use only. The main documentation page can be found :re
 
    .. code-block:: rst
 
-       .. update options using table _opts_linearmodel
+       .. update options using table _opts_linearmodels
        .. csv-table:: :strong:`Example table of options for linear models`.
             :escape: ~
             :header: "Option name", "Type", "Default", "Description", "Constraints"
 
             "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
 
-   .. update options using table _opts_linearmodel
+   .. update options using table _opts_linearmodels
 
    .. csv-table:: :strong:`Example table of options for linear models`.
         :escape: ~
