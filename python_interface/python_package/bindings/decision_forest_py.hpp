@@ -192,7 +192,6 @@ class decision_tree : public pyda_handle {
     auto get_n_nodes() {
 
         da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
-        size_t stride_size;
 
         if (precision == da_single) {
             get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
@@ -205,7 +204,6 @@ class decision_tree : public pyda_handle {
     auto get_n_leaves() {
 
         da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
-        size_t stride_size;
 
         if (precision == da_single) {
             get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);

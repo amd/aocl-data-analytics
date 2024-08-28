@@ -35,42 +35,42 @@ Supported Optional Parameters
 
 In all the following tables, :math:`\varepsilon`, refers to a *safe* machine precision (twice the actual machine precision) for the given floating point data type.
 
-.. _opts_linearmodel:
+.. _opts_linearmodels:
 
-Linear Model
+Linear models
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Linear Model.`
+.. csv-table:: :strong:`Table of options for Linear models.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "print level", "integer", ":math:`i=0`", "set level of verbosity for the solver", ":math:`0 \le i \le 5`"
-   "optim convergence tol", "real", ":math:`r=10/2\sqrt{2\,\varepsilon}`", "tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
+   "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver", ":math:`0 \le i \le 5`"
+   "optim convergence tol", "real", ":math:`r=10/2\sqrt{2\,\varepsilon}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
    "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
    "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-   "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this includes also no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
+   "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
    "optim coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than "coord skip tol" to start skipping", ":math:`2 \le i`"
    "optim coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked", ":math:`10 \le i`"
-   "debug", "integer", ":math:`i=0`", "set debug level (internal use)", ":math:`0 \le i \le 3`"
-   "logistic constraint", "string", ":math:`s=` `ssc`", "Affects only multinomial logistic regression. Type of constraint put on coefficients. This will affect number of coefficients returned. RSC - means we choose a reference category whose coefficients will be set to all 0. This results in K-1 class coefficients for K class problems. SSC - means the sum of coefficients class-wise for each feature is 0. It will result in K class coefficients for K class problem.", ":math:`s=` `reference category`, `rsc`, `ssc`, `symmetric`, or `symmetric side`."
+   "debug", "integer", ":math:`i=0`", "Set debug level (internal use)", ":math:`0 \le i \le 3`"
+   "logistic constraint", "string", ":math:`s=` `ssc`", "Affects only multinomial logistic regression. Type of constraint put on coefficients. This will affect number of coefficients returned. RSC - means we choose a reference category whose coefficients will be set to all 0. This results in K-1 class coefficients for problems with K classes. SSC - means the sum of coefficients class-wise for each feature is 0. It will result in K class coefficients for problems with K classes.", ":math:`s=` `reference category`, `rsc`, `ssc`, `symmetric`, or `symmetric side`."
    "optim time limit", "real", ":math:`r=10^6`", "Maximum time limit (in seconds). Solver will exit with a warning after this limit. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`0 < r`"
-   "lambda", "real", ":math:`r=0`", "penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r`"
-   "alpha", "real", ":math:`r=0`", "coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r \le 1`"
-   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
+   "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r`"
+   "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r \le 1`"
+   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
 
 
-.. _opts_pca:
+.. _opts_principalcomponentanalysis:
 
-PCA
+Principal component analysis
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for PCA.`
+.. csv-table:: :strong:`Table of options for Principal component analysis.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -81,14 +81,14 @@ The following options are supported.
    "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`"
 
 
-.. _opts_k-means:
+.. _opts_k-meansclustering:
 
-k-means
+k-means clustering
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for k-means.`
+.. csv-table:: :strong:`Table of options for k-means clustering.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -101,14 +101,14 @@ The following options are supported.
    "n_clusters", "integer", ":math:`i=1`", "Number of clusters required", ":math:`1 \le i`"
 
 
-.. _opts_decisiontree:
+.. _opts_decisiontrees:
 
-Decision tree
+Decision trees
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Decision tree.`
+.. csv-table:: :strong:`Table of options for Decision trees.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -125,14 +125,14 @@ The following options are supported.
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
 
 
-.. _opts_decisionforest:
+.. _opts_decisionforests:
 
-Decision forest
+Decision forests
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Decision forest.`
+.. csv-table:: :strong:`Table of options for Decision forests.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -154,12 +154,12 @@ The following options are supported.
 
 .. _opts_k-nearestneighbors:
 
-k-Nearest Neighbors
+k-nearest neighbors
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for k-Nearest Neighbors.`
+.. csv-table:: :strong:`Table of options for k-nearest neighbors.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -183,7 +183,7 @@ The following options are supported.
    "csv integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection", ":math:`0 \le i \le 1`"
    "csv datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection", ":math:`s=` `double`, or `single`."
    "csv use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header", ":math:`0 \le i \le 1`"
-   "csv warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to, 1 issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used", ":math:`0 \le i \le 1`"
+   "csv warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used", ":math:`0 \le i \le 1`"
    "csv skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file", ":math:`0 \le i \le 1`"
    "csv delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
    "csv whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files", ":math:`0 \le i \le 1`"
@@ -217,9 +217,9 @@ The following options are supported.
       :header: "Option name", "Type", "Default", "Description", "Constraints"
       
       "storage scheme", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
-      "print level", "integer", ":math:`i=1`", "set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
-      "lbfgsb convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
-      "derivative test tol", "real", ":math:`r=10^{-4}`", "tolerance used to check user-provided derivatives by finite-differences.If <print level> is 1 then only the entries with larger discrepancy are reported, and if the print level is greater or equal to 2, then all entries are printed", ":math:`0 < r \le 10`"
+      "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
+      "lbfgsb convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
+      "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences.If <print level> is 1 then only the entries with larger discrepancy are reported, and if the print level is greater or equal to 2, then all entries are printed", ":math:`0 < r \le 10`"
       "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`"
       "lbfgsb memory limit", "integer", ":math:`i=11`", "Number of vectors to use for approximating the Hessian", ":math:`1 \le i \le 1000`"
       "lbfgsb iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform", ":math:`1 \le i`"
@@ -228,25 +228,25 @@ The following options are supported.
       "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`."
       "ralfit nlls method", "string", ":math:`s=` `galahad`", "NLLS solver to use.", ":math:`s=` `aint`, `galahad`, `linear solver`, `more-sorensen`, or `powell-dogleg`."
       "optim method", "string", ":math:`s=` `lbfgsb`", "Select optimization solver to use", ":math:`s=` `bfgs`, `coord`, `lbfgs`, `lbfgsb`, or `ralfit`."
-      "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "Absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
       "coord restart", "integer", ":math:`i=\infty`", "Number of inner inner iterations to perform before requesting to perform a full evaluation of the step function", ":math:`0 \le i`"
-      "ralfit convergence rel tol grd", "real", ":math:`r=10^{-8}`", "relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "ralfit convergence rel tol grd", "real", ":math:`r=10^{-8}`", "Relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
       "coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked", ":math:`10 \le i`"
-      "lbfgsb progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "the iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
+      "lbfgsb progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "The iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
       "coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than "coord skip tol" to start skipping", ":math:`2 \le i`"
-      "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "size of step to use for estimating derivatives using finite-differences", ":math:`0 < r < 10`"
-      "debug", "integer", ":math:`i=0`", "set debug level (internal use)", ":math:`0 \le i \le 3`"
+      "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "Size of step to use for estimating derivatives using finite-differences", ":math:`0 < r < 10`"
+      "debug", "integer", ":math:`i=0`", "Set debug level (internal use)", ":math:`0 \le i \le 3`"
       "regularization term", "real", ":math:`r=0`", "Value for the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`"
       "regularization power", "string", ":math:`s=` `quadratic`", "Value for the regularization power term.", ":math:`s=` `cubic`, or `quadratic`."
-      "infinite bound size", "real", ":math:`r=10^{20}`", "threshold value to take for +/- infinity", ":math:`1000 < r`"
-      "coord progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "the iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
-      "time limit", "real", ":math:`r=10^6`", "maximum time allowed to run (in seconds)", ":math:`0 < r`"
-      "coord convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
-      "ralfit convergence rel tol fun", "real", ":math:`r=10^{-8}`", "relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "infinite bound size", "real", ":math:`r=10^{20}`", "Threshold value to take for +/- infinity", ":math:`1000 < r`"
+      "coord progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "The iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
+      "time limit", "real", ":math:`r=10^6`", "Maximum time allowed to run (in seconds)", ":math:`0 < r`"
+      "coord convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence", ":math:`0 < r < 1`"
+      "ralfit convergence rel tol fun", "real", ":math:`r=10^{-8}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
       "coord skip tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme", ":math:`-1 \le r`"
-      "ralfit convergence abs tol grd", "real", ":math:`r=10^{-5}`", "absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "ralfit convergence abs tol grd", "real", ":math:`r=10^{-5}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
       "ralfit globalization method", "string", ":math:`s=` `trust-region`", "Globalization method to use. This parameter makes use of the regularization term and power option values.", ":math:`s=` `reg`, `regularization`, `tr`, or `trust-region`."
-      "ralfit convergence abs tol fun", "real", ":math:`r=10^{-8}`", "absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+      "ralfit convergence abs tol fun", "real", ":math:`r=10^{-8}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
       "print options", "string", ":math:`s=` `no`", "Print options list", ":math:`s=` `no`, or `yes`."
       "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`."
    

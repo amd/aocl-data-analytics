@@ -40,7 +40,7 @@
  * \brief Enumeration defining which result
  * to extract from a handle
  **/
-typedef enum da_result_ {
+enum da_result_ {
     // General purpose data 1..100
     da_rinfo =
         1, ///< General information array, containing a variety of metrics. See each solver's documentation for further information, since each solver stores different information in this array.
@@ -61,11 +61,14 @@ typedef enum da_result_ {
     // Random Forests 401..500
     // Clustering 501...600
     da_kmeans_cluster_centres =
-        501, ///< Matrix of cluster centres computed in *k*-means clustering.
-    da_kmeans_labels, ///< Labels of samples in the data matrix used to compute *k*-means clustering.
-    da_knn_model_params, ///< Model parameters for the trained and fitted kNN.
+        501,          ///< Matrix of cluster centres computed in k-means clustering.
+    da_kmeans_labels, ///< Labels of samples in the data matrix used to compute k-means clustering.
+    da_knn_model_params, ///< Model parameters for the trained and fitted k-nearest neighbors.
     // ...
-} da_result;
+};
+
+/** @brief Alias for the \ref da_result_ enum. */
+typedef enum da_result_ da_result;
 
 /** \{
  * @brief Get results stored in a \ref da_handle

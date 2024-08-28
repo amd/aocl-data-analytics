@@ -697,7 +697,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     if (model_trained)
         return da_status_success;
 
-    da_int prn, intercept_int, scalingint, logistic_constraint_int, dbg{0};
+    da_int prn, intercept_int, scalingint, logistic_constraint_int;
     std::string val, method, scalingstr, logistic_constraint_str;
     da_status status;
     auto clock = std::chrono::system_clock::now();

@@ -116,7 +116,6 @@ TYPED_TEST(knnTest, AccuracyTestingZeroData) {
     std::vector<TypeParam> X_train{0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.};
     std::vector<da_int> y_train{1, 2, 0, 1};
     std::vector<TypeParam> X_test{0., 0., 0., 0., 0., 0., 0., 0., 0.};
-    da_int n_neigh_kneighbors = 3;
     TypeParam tol = 10 * std::numeric_limits<TypeParam>::epsilon();
     EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_knn), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "weights", "distance"), da_status_success);

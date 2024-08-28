@@ -55,7 +55,7 @@ The PCA is closely related to a matrix factorization known as the *singular valu
 where :math:`A` is a (standardized) data matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}`, :math:`\Sigma` is a non-negative diagonal matrix of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{features}}` and :math:`U` and :math:`V` are orthogonal matrices of size :math:`n_{\mathrm{samples}} \times n_{\mathrm{samples}}` and  :math:`n_{\mathrm{features}} \times n_{\mathrm{features}}` respectively.
 The nonzero entries of :math:`\Sigma` are known as the *singular values* of :math:`A`.
 
-Internally, AOCL-DA computes the PCA via the SVD (with :math:`\Sigma` and :math:`V` truncated according to the number of principal components requested) rather than by eigenvalue decomposition of the covariance/correlation matrix.
+AOCL-DA can compute the PCA via the SVD (with :math:`\Sigma` and :math:`V` truncated according to the number of principal components requested) or using an eigenvalue decomposition of the covariance/correlation matrix (which is faster for tall, thin matrices, but can be numerically unstable for ill-conditioned problems).
 
 Outputs from the PCA
 ---------------------
@@ -114,7 +114,7 @@ Options
 
       The following options can be set using :ref:`da_options_set_? <da_options_set>`:
 
-      .. update options using table _opts_pca
+      .. update options using table _opts_principalcomponentanalysis
 
       .. csv-table:: PCA options
          :header: "Option Name", "Type", "Default", "Description", "Constraints"

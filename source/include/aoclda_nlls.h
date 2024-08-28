@@ -80,7 +80,10 @@ typedef da_int da_resfun_t_d(da_int n_coef, da_int n_res, void *data, const doub
  * .. math::
  *
  *      \nabla r(x) = \left [ \nabla r_1(x), \nabla r_2(x), \ldots, \nabla r_{n_{res}}(x)\right ]^{\text{T}},
- *      \text { with }
+ * @endrst
+ * with
+ * @rst
+ * .. math::
  *      \nabla r_i(x) = \left [ \frac{\partial r_i(x)}{\partial x_1},
  *                \frac{\partial r_i(x)}{\partial x_2}, \ldots,
  *                \frac{\partial r_i(x)}{\partial x_{n_{coef}}} \right].
@@ -116,7 +119,11 @@ typedef da_int da_resgrd_t_d(da_int n_coef, da_int n_res, void *data, double con
  * @rst
  * .. math::
  *
- *      H(x) = \sum_{i=1}^{n_{res}} w_{r_i}\nabla^2 r_i(x) \text { with }
+ *      H(x) = \sum_{i=1}^{n_{res}} w_{r_i}\nabla^2 r_i(x)
+ * @endrst
+ * with
+ * @rst
+ * .. math::
  *      \nabla^2 r_i(x) = \left [ \begin{array}{ccc}
  *      \frac{\partial^2 r_i(x)}{\partial x_1 x_1} &\ldots & \frac{\partial^2 r_i(x)}{\partial x_1 x_{n_{coef}}}\\
  *      \vdots                                     & \ddots&\vdots\\
@@ -193,7 +200,7 @@ typedef da_int da_reshp_t_d(da_int n_coef, da_int n_res, const double *x, const 
  * \p resfun (residual function) and \p resgrd (residual Jacobian matrix) are mandatory
  * while \p reshes (residual Hessians) and \p reshp (residual Hessians matrix-vector products) are only
  * required if the solver for the model chosen requires higher order derivatives. If these
- * are not provided and the solver requires them an error will be returned.
+ * are not provided and the solver requires them, an error will be returned.
  *
  * @rst
  * For details on the function call-backs, see :ref:`nonlinear data fitting
@@ -206,13 +213,13 @@ typedef da_int da_reshp_t_d(da_int n_coef, da_int n_res, const double *x, const 
  * \param[in] resfun function callback to provide residual
  *             vector for the model evaluated at \p x.
  * \param[in] resgrd function callback to provide the Jacobian matrix (first derivatives) of
- *             the residual function evaluated at \p x. If not available set to \p NULL. See
+ *             the residual function evaluated at \p x. If not available, set to \p NULL. See
  *             information on estimating derivatives in chapter introduction.
  * \param[in] reshes function callback to evaluate residual Hessian matrices (second derivatives of
- *             the residual function) evaluated at \p x. Optionally can be passed as \p NULL.
+ *             the residual function) evaluated at \p x. Optionally, can be passed as \p NULL.
  * \param[in] reshp function callback to evaluate the residual Hessians evaluated at \p x and perform
  *             for each Hessian matrix-vector product and store the resulting products into a
- *             dense matrix. Optionally can be passed as \p NULL.
+ *             dense matrix. Optionally, can be passed as \p NULL.
  * \return \ref da_status. The function returns:
  *  - @ref da_status_success - the operation was successfully completed.
  *  - @ref da_status_handle_not_initialized - handle was not initialized properly (with @ref da_handle_nlls) or has been corrupted.
@@ -280,9 +287,9 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
  *
  * \details
  * This function sets the square-root of the diagonal elements of the
- * \a weighting \a matrix \f$ W\f$.
+ * weighting matrix \f$ W\f$.
  * This diagonal matrix, defines the norm to be used in the
- * \a least-square \a part of the optimization problem
+ * least-squares part of the optimization problem
  * @rst
  * .. math::
  *        \underset{\text{subject to} x \in R^{n_{coef}}}{\text{minimize}}
@@ -292,8 +299,8 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
  * is taken to be :math:`\ell_2` and so :math:`W = I`.
  *
  * Changing the weighting matrix provides a means to rescale the importance of
- * certain residuals where it is `known` that some residuals are more
- * `relevant` than others.
+ * certain residuals where it is known that some residuals are more
+ * relevant than others.
  *
  * .. note::
  *      The handle does not make a copy of the weights vector. Instead it stores a pointer to
@@ -307,7 +314,7 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
  *            previously defined weights are removed.
  * \param[in] weights vector \f$ w\f$ of length \p n_res that defines the square-root of the
  *            entries of the diagonal weighting matrix: \f$ w_i = \sqrt{W_{ii}}\f$.
- *            The vector is not checked for correctness and is assumed that all
+ *            The vector is not checked for correctness and it is assumed that all
  *            entries are valid.
  *
  * \return \ref da_status. The function returns:
@@ -344,7 +351,7 @@ da_status da_nlls_define_weights_s(da_handle handle, da_int n_res, float *weight
  * \param[in,out] udata a generic pointer for the caller to pass any data objects to the
  *                residual callbacks. This pointer is passed to the callbacks untouched.
  *
- * \return \ref da_status. Some \ref da_status flags are marked as \a warning, in these cases the
+ * \return \ref da_status. Some \ref da_status flags are marked as a warning, in these cases the
  *    returned coefficient vector \p coef contains a valid iterate, potentially a rough estimate
  *    of the solution. The function returns:
  *    - @ref da_status_success - the operation was successfully completed.
@@ -362,10 +369,10 @@ da_status da_nlls_define_weights_s(da_handle handle, da_int n_res, float *weight
  *    - @ref da_status_optimization_usrstop - warning: callback indicated a problem evaluating the model.
  *    - @ref da_status_numerical_difficulties - warning: a potential reason for this warning is that the
  *           data for the model is very badly scaled.
- *    - @ref da_status_invalid_option - Some of the optional parameters set are incompatible.
- *    - @ref da_status_operation_failed - Could not complete a user-requested query.
- *    - @ref da_status_option_invalid_bounds - The bound constraints of the coefficients are invalid.
- *    - @ref da_status_memory_error - Could not allocate space for the solver data.
+ *    - @ref da_status_invalid_option - some of the optional parameters set are incompatible.
+ *    - @ref da_status_operation_failed - could not complete a user-requested query.
+ *    - @ref da_status_option_invalid_bounds - the bound constraints of the coefficients are invalid.
+ *    - @ref da_status_memory_error - could not allocate space for the solver data.
  */
 da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *udata);
 da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udata);

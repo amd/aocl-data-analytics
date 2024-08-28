@@ -61,19 +61,20 @@ const double density[64]{
 
 const struct udata_t udata = {diameter, density};
 
-// scaled Log-Normal density distribution Al amplitude * Log-Normal(a, b)
+// Scaled Log-Normal density distribution Al amplitude * Log-Normal(a, b)
 double lognormal(double d, double a, double b, double Al) {
     return Al / (d * b * sqrt(2.0 * pi)) *
            std::exp(-(pow(std::log(d) - a, 2.0)) / (2.0 * pow(b, 2.0)));
 }
 
-// scaled normal density distribution Ag amplitude * Normal(mu, sigma)
+// Scaled normal density distribution Ag amplitude * Normal(mu, sigma)
 double gaussian(double d, double mu, double sigma, double Ag) {
     return Ag * exp(-0.5 * pow((d - mu) / sigma, 2)) / (sigma * sqrt(2.0 * pi));
 };
 
-// residuals for the convolution model
-da_int eval_r(da_int n_coef, da_int n_res, void *udata, double const *x, double *r) {
+// Residuals for the convolution model
+da_int eval_r([[maybe_unused]] da_int n_coef, da_int n_res, void *udata, double const *x,
+              double *r) {
     double const a = x[0];
     double const b = x[1];
     double const Al = x[2];
@@ -146,7 +147,8 @@ int main(void) {
         return 1;
     }
     pass &= da_options_set_int(handle, "print level", (da_int)2) == da_status_success;
-    da_options_set_real_d(handle, "finite differences step", 1e-7) == da_status_success;
+    pass &= da_options_set_real_d(handle, "finite differences step", 1e-7) ==
+            da_status_success;
     pass &= pass &=
         da_options_set_real_d(handle, "derivative test tol", 1e-3) == da_status_success;
     pass &=

@@ -94,13 +94,13 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("print level",
-                                  "set level of verbosity for the solver 0 indicates no "
+                                  "Set level of verbosity for the solver 0 indicates no "
                                   "output while 5 is a very verbose printing",
                                   0, da_options::lbound_t::greaterequal, 5,
                                   da_options::ubound_t::lessequal, 1));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "debug", "set debug level (internal use)", 0,
+            "debug", "Set debug level (internal use)", 0,
             da_options::lbound_t::greaterequal, 3, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
@@ -119,7 +119,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // ---
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "derivative test tol",
-            "tolerance used to check user-provided derivatives by finite-differences."
+            "Tolerance used to check user-provided derivatives by finite-differences."
             "If <print level> is 1 then only the entries with larger discrepancy are "
             "reported, and if the print level is greater or equal to 2, then all entries "
             "are printed",
@@ -128,30 +128,30 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "finite differences step",
-            "size of step to use for estimating derivatives using finite-differences",
+            "Size of step to use for estimating derivatives using finite-differences",
             0.0, da_options::lbound_t::greaterthan, 10.0, da_options::ubound_t::lessthan,
             tol.safe_eps(10), tol.safe_eps_latex(10)));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("time limit", "maximum time allowed to run (in seconds)",
+            OptionNumeric<T>("time limit", "Maximum time allowed to run (in seconds)",
                              0.0, da_options::lbound_t::greaterthan, 0,
                              da_options::ubound_t::p_inf, static_cast<T>(1.0e6), "10^6"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "infinite bound size", "threshold value to take for +/- infinity", 1000,
+            "infinite bound size", "Threshold value to take for +/- infinity", 1000,
             da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
             static_cast<T>(1.0e20), "10^{20}"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "lbfgsb convergence tol",
-            "tolerance of the projected gradient infinity norm to "
+            "Tolerance of the projected gradient infinity norm to "
             "declare convergence",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "lbfgsb progress factor",
-            "the iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
+            "The iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
             "factr*epsmch"
             " where epsmch is the machine precision. Typical values for type double: "
             "10e12 for"
@@ -162,7 +162,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord convergence tol",
-            "tolerance of the projected gradient infinity norm to declare convergence",
+            "Tolerance of the projected gradient infinity norm to declare convergence",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
@@ -176,7 +176,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord progress factor",
-            "the iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
+            "The iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
             "factr*epsmch"
             " where epsmch is the machine precision. Typical values for type double: "
             "10e12 for"
@@ -188,7 +188,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("ralfit convergence abs tol fun",
-                             "absolute tolerance to declare convergence for the "
+                             "Absolute tolerance to declare convergence for the "
                              "iterative optimization step. See "
                              "details in optimization solver documentation.",
                              0.0, da_options::lbound_t::greaterthan, 1.0,
@@ -197,7 +197,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("ralfit convergence rel tol fun",
-                             "relative tolerance to declare convergence for the "
+                             "Relative tolerance to declare convergence for the "
                              "iterative optimization step. See "
                              "details in optimization solver documentation.",
                              0.0, da_options::lbound_t::greaterthan, 1.0,
@@ -206,7 +206,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("ralfit convergence abs tol grd",
-                             "absolute tolerance on the gradient norm to declare "
+                             "Absolute tolerance on the gradient norm to declare "
                              "convergence for the iterative optimization step. See "
                              "details in optimization solver documentation.",
                              0.0, da_options::lbound_t::greaterthan, 1.0,
@@ -215,7 +215,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "ralfit convergence rel tol grd",
-            "relative tolerance on the gradient norm to declare convergence for the "
+            "Relative tolerance on the gradient norm to declare convergence for the "
             "iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
@@ -224,7 +224,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "ralfit convergence step size",
-            "absolute tolerance over the step size to declare "
+            "Absolute tolerance over the step size to declare "
             "convergence for the iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,

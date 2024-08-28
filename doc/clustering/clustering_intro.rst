@@ -29,11 +29,11 @@
 Clustering
 **********
 
-This chapter contains functions for performing unsupervised clustering computations.
+This chapter contains functions for performing clustering computations.
 
 .. _kmeans_intro:
 
-*k*-means Clustering
+*k*-means clustering
 ============================
 
 *k*-means clustering aims to partition a set of :math:`n_{\mathrm{samples}}` data points :math:`\{x_1, x_2, \dots, x_{n_{\mathrm{samples}}}\}` into :math:`n_{\mathrm{clusters}}` groups. Each group is described by the mean of the data points assigned to it :math:`\{\mu_1, \mu_2, \dots, \mu_{n_{\mathrm{clusters}}}\}`.
@@ -80,7 +80,7 @@ The standard way of using *k*-means clustering in AOCL-DA  is as follows.
       :sync: C
 
       1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_kmeans``.
-      2. Pass data to the handle using either :ref:`da_kmeans_set_data_? <da_kmeans_set_data>`.
+      2. Pass data to the handle using :ref:`da_kmeans_set_data_? <da_kmeans_set_data>`.
       3. Set the number of clusters required and other options using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <kmeans_options>`).
       4. Optionally set the initial centres using :ref:`da_kmeans_set_init_centres_? <da_kmeans_set_init_centres>`.
       5. Compute the *k*-means clusters using :ref:`da_kmeans_compute_? <da_kmeans_compute>`.
@@ -105,7 +105,7 @@ Options
 
       The following options can be set using :ref:`da_options_set_? <da_options_set>`:
 
-      .. update options using table _opts_k-means
+      .. update options using table _opts_k-meansclustering
 
       .. csv-table:: k-means options
          :header: "Option Name", "Type", "Default", "Description", "Constraints"

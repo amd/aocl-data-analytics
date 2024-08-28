@@ -39,11 +39,14 @@
 /**
  * \brief Defines which linear model is computed
  **/
-typedef enum linmod_model_ {
+enum linmod_model_ {
     linmod_model_undefined = 0, ///< No linear model set.
     linmod_model_mse,           ///< \f$L_2\f$ norm linear regression.
     linmod_model_logistic,      ///< Logistic regression.
-} linmod_model;
+};
+
+/** @brief Alias for the \ref linmod_model_ enum. */
+typedef enum linmod_model_ linmod_model;
 
 /** \{
  * @brief Select which linear model to compute.
@@ -143,7 +146,7 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
 /** \{
  * @brief Evaluate the model previously computed on a new set of data @p X and observations y.
  *
- * After a model has been fit using \ref da_linmod_fit_s "da_linmod_fit_?", it can be evaluated on
+ * After a model has been fitted using \ref da_linmod_fit_s "da_linmod_fit_?", it can be evaluated on
  * a new set of data and observations.
  * This function returns the model evaluation (loss) in the array @p loss and the predictions in @p predictions.
 
@@ -157,8 +160,8 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
  * @param nsamples number of rows of \p X or equivalently the number of samples to estimate the model on.
  * @param X the @p nsamples @f$\times@f$ @p nfeat data matrix to evaluate the model on, in column major format.
  * @param predictions vector of size \p nsamples containing the model's prediction.
- * @param observations vector of size \p nsamples containing new observations, may be \p NULL if none are provided
- * @param loss scalar containing the model's loss given the new data \p X and the new observations \p y, may be \p NULL if
+ * @param observations vector of size \p nsamples containing new observations; may be \p NULL if none are provided
+ * @param loss scalar containing the model's loss given the new data \p X and the new observations \p y; may be \p NULL if
  *        no observations are provided. Note that either both \p  observations and \p loss parameters are \p NULL or both
  *        must contain a valid address.
  * @return da_status

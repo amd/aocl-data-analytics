@@ -42,17 +42,23 @@ extern "C" {
 /**
  * \brief Defines which algorithm is used to compute the <i>k</i>-nearest neighbors.
  **/
-typedef enum da_knn_algorithm_ {
+enum da_knn_algorithm_ {
     da_brute_force ///< Use Brute Force.
-} da_knn_algorithm;
+};
+
+/** @brief Alias for the \ref da_knn_algorithm_ enum. */
+typedef enum da_knn_algorithm_ da_knn_algorithm;
 
 /**
  * \brief Sets the weight function used to compute the <i>k</i>-nearest neighbors.
  **/
-typedef enum da_knn_weights_ {
+enum da_knn_weights_ {
     da_knn_uniform, ///< Use uniform weights.
     da_knn_distance ///< Weight points by the inverse of their distance.
-} da_knn_weights;
+};
+
+/** @brief Alias for the \ref da_knn_weights_ enum. */
+typedef enum da_knn_weights_ da_knn_weights;
 
 /** \{
  * \brief Pass a data matrix and a label array to the \ref da_handle object
@@ -64,9 +70,9 @@ typedef enum da_knn_weights_ {
  * @endrst
 
  * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
- * \param[in] n_samples number of observations in \p X_train
- * \param[in] n_features number of features in \p X_train
- * \param[in] X_train array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format
+ * \param[in] n_samples number of observations in \p X_train.
+ * \param[in] n_features number of features in \p X_train.
+ * \param[in] X_train array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
  * \param[in] ldx_train leading dimension of \p X_train.  Constraint: \p ldx_train @f$\ge@f$ \p n_samples.
  * \param[in] y_train array containing the \p n_samples labels.
  * \return \ref da_status.  The function returns:
@@ -93,12 +99,12 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
  * @endrst
  *
  * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
- * \param[in] n_queries number of observations in \p X_test
- * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ \p n_features, the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
- * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format
+ * \param[in] n_queries number of observations in \p X_test.
+ * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
+ * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format.
  * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries.
  * \param[out] n_ind array containing the \p n_queries @f$\times@f$ \p k matrix, with the indices of the \p k - nearest neighbors of the test data \p X_test. If \p k @f$\le@f$ 0, the number of neighbors passed during the option setting will be used instead.
- * \param[out] n_dist array containing the corresponding distances to the neighbors whose indices are stored in \p n_ind, if \p return_distance is 1
+ * \param[out] n_dist array containing the corresponding distances to the neighbors whose indices are stored in \p n_ind, if \p return_distance is 1.
  * \param[in] k number of nearest neighbors requested. If \p k @f$\le@f$ 0, the number of neighbors passed during the option setting will be used instead. Constraint: If \p k @f$\le@f$ \p n_features.
  * \param[in] return_distance denotes if the distances to the <i>k</i>-NN need be computed. If \p return_distance is 1, the distances are returned.
  * \return \ref da_status.  The function returns:
@@ -125,7 +131,7 @@ da_status da_knn_kneighbors_s(da_handle handle, da_int n_queries, da_int n_featu
  * @endrst
  *
  * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
- * \param[in,out] n_classes the number of different classes. If \p n_classes @f$\le@f$ 0, the number of different classes will be returned and \p classes will not be referenced
+ * \param[in,out] n_classes the number of different classes. If \p n_classes @f$\le@f$ 0, the number of different classes will be returned and \p classes will not be referenced.
  * \param[out] classes ordered array that holds the different classes.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -147,9 +153,9 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
  * @endrst
  *
  * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
- * \param[in] n_queries number of observations in \p X_test
- * \param[in] n_features number of features in \p X_test. Constraint: \p m_features @f$=@f$ \p n_features, the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
- * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format
+ * \param[in] n_queries number of observations in \p X_test.
+ * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
+ * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format.
  * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries.
  * \param[out] proba array of size \p n_queries  @f$\times@f$ \p n_classes containing the probability estimates for each of the available classes.
  * \return \ref da_status.  The function returns:
@@ -174,9 +180,9 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
  * @endrst
  *
  * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
- * \param[in] n_queries number of observations in \p X_test
- * \param[in] n_features number of features in \p X_test. Constraint: \p m_features @f$=@f$ \p n_features, the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
- * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format
+ * \param[in] n_queries number of observations in \p X_test.
+ * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
+ * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format.
  * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries.
  * \param[out] y_test array of size \p n_queries containing the estimated label for each query.
  * \return \ref da_status.  The function returns:

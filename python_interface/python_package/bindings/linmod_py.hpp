@@ -145,7 +145,7 @@ class linmod : public pyda_handle {
     }
 
     auto get_coef() {
-        da_status status;
+        da_status status = da_status_success;
         da_int dim;
         switch (mod_enum) {
         case linmod_model_mse:
@@ -165,7 +165,12 @@ class linmod : public pyda_handle {
                     dim += n_class;
             }
             break;
+        default:
+            status = da_status_internal_error;
+            break;
         }
+        exception_check(status, "Model type was not correctly defined.");
+
         // define the output vector
         size_t shape[1]{(size_t)dim};
         if (precision == da_single) {

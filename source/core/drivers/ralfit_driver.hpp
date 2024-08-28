@@ -44,12 +44,15 @@ const da_int RAL_NLLS_CB_DUMMY{-3024};
 const da_int RAL_NLLS_CB_FD{-45544554};
 // Dummy call-back headers
 template <typename T>
-da_int da_nlls_eval_j_dummy(da_int n, da_int m, void *params, const T *x, T *j) {
+da_int da_nlls_eval_j_dummy([[maybe_unused]] da_int n, [[maybe_unused]] da_int m,
+                            [[maybe_unused]] void *params, [[maybe_unused]] const T *x,
+                            [[maybe_unused]] T *j) {
     return RAL_NLLS_CB_FD;
 }
 template <typename T>
-da_int da_nlls_eval_hf_dummy(da_int n, da_int m, void *params, const T *x, const T *f,
-                             T *hf) {
+da_int da_nlls_eval_hf_dummy([[maybe_unused]] da_int n, [[maybe_unused]] da_int m,
+                             [[maybe_unused]] void *params, [[maybe_unused]] const T *x,
+                             [[maybe_unused]] const T *f, [[maybe_unused]] T *hf) {
     return RAL_NLLS_CB_DUMMY;
 }
 

@@ -40,7 +40,7 @@ In addition, when a vector :math:`y_{train}` with the associated labels for each
 computes the predicted labels of the test data :math:`X_{test}`. A query point :math:`x_i` of :math:`X_{test}` is labeled using the majority vote of the neighbors.
 In case of a tie, the first class label is returned by convention.
 
-Outputs from *k*-Nearest Neighbors
+Outputs from *k*-nearest neighbors
 ----------------------------------
 The following results can be computed with this algorithm:
 
@@ -73,7 +73,7 @@ The standard way of computing the *k*-nearest neighbors using AOCL-DA is as foll
 
       1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_knn``.
       2. Pass data to the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
-      3. Set the number of neighbors required and the metric, or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <knn_options>`).
+      3. Set the number of neighbors required and the metric or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <knn_options>`).
       4. Compute the indices to the nearest neighbors and optionally the corresponding distances using :ref:`da_knn_kneighbors_? <da_knn_kneighbors>`.
       5. If only the labels of the test data are required, use :ref:`da_knn_predict_? <da_knn_predict>`.
       6. If the probability estimates for each label are required, use :ref:`da_knn_predict_proba_? <da_knn_predict_proba>`. To allocate the appropriate memory space for the predicted probabilities, use :ref:`da_knn_classes_? <da_knn_classes>`.

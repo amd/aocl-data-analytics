@@ -42,7 +42,7 @@
  */
 
 // clang-format off
-typedef enum da_handle_type_ {
+enum da_handle_type_ {
     da_handle_uninitialized, ///< the handle has not yet been initialized.
     da_handle_linmod, ///< @rst
                       ///< the handle is to be used with functions from the :ref:`linear models chapter <chapter_linmod>`.
@@ -65,8 +65,11 @@ typedef enum da_handle_type_ {
     da_handle_knn,  ///< @rst
                     ///< the handle is to be used with functions from the :ref:`k-nearest neighbors for classification <knn_intro>`.
                     ///< @endrst
-} da_handle_type;
+};
 // clang-format on
+
+/** @brief Alias for the \ref da_handle_type_ enum. */
+typedef enum da_handle_type_ da_handle_type;
 
 /**
  * @brief
@@ -120,7 +123,7 @@ da_status da_handle_print_error_message(da_handle handle);
  *
  * This function should always be called after finishing using the handle.
  *
- * @note memory leaks may occur if handles are not destroyed after use.
+ * @note Memory leaks may occur if handles are not destroyed after use.
  *
  * @param[in,out] handle the main \ref da_handle structure.
  */

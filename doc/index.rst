@@ -27,6 +27,8 @@
 
 .. AOCL-DA documentation master file
 
+.. _aocl-da-index:
+
 AOCL-DA Documentation
 *********************
 
@@ -82,14 +84,6 @@ Library Reference Documentation
    metrics/metrics_intro
    nearest_neighbors/knn_intro
 
-.. only:: internal
-
-   .. toctree::
-      :maxdepth: 1
-      :caption: Internal help
-
-      doc_utilities/utils
-
 .. toctree::
     :maxdepth: 1
     :caption: Appendices
@@ -98,3 +92,10 @@ Library Reference Documentation
     bibliography
     genindex
     search
+
+.. only:: internal
+
+   .. toctree::
+      :maxdepth: 1
+
+      doc_utilities/utils

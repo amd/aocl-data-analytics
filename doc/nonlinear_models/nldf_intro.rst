@@ -42,12 +42,12 @@ The general form of a nonlinear least-squares fitting problem is as follows:
 where
 :math:`x` is the coefficient vector of size :math:`n_{coef}` to be optimized,
 :math:`\Omega` is a constraint set, :math:`r(x): R^{n_{coef}} \rightarrow R^{n_{res}}` with
-:math:`\psi` a `loss` function. :math:`W` is a diagonal matrix of weights that defines the residual norm.
-While :math:`\sigma` and :math:`p` are the regularization parameters.
+:math:`\psi` a `loss` function, :math:`W` is a diagonal matrix of weights that defines the residual norm,
+and :math:`\sigma` and :math:`p` are the regularization parameters.
 
-In most common use cases, the set :math:`\Omega` is either absent or describes simple bounds constraints (i.e.,
-:math:`\ell_x \le x \le u_x`), the loss function is also absent
-and the weight matrix is the identity (making the residual norm :math:`\ell_2`), the regularization is also absent,
+In most common use cases, the set :math:`\Omega` is either absent or describes simple bound constraints (i.e.,
+:math:`\ell_x \le x \le u_x`), the loss function is absent
+and the weight matrix is the identity (making the residual norm :math:`\ell_2`). The regularization is also absent,
 thus reducing the problem to
 
 .. math::
@@ -55,11 +55,11 @@ thus reducing the problem to
     \underset{\ell_x \le x \le u_x}{\text{minimize }} F(x) := \frac{1}{2} \|r(x)\|_2^2.
 
 
-Given the nonlinear nature of the residual function, :math:`r(x)`, for solving this problem there is no closed formula
-as is the case for linear models. Here the approach is to use an iterative optimization method that improves on an
+Given the nonlinear nature of the residual function, :math:`r(x)`, there is no closed formula
+as is the case for linear models. Here, the approach is to use an iterative optimization method that improves on an
 initial guess at every iteration.
 
-Defining a Nonlinear Model
+Defining a nonlinear model
 --------------------------
 
 A model is defined inside a :ref:`handle<intro_handle>`, in which all the components of the model are configured.
@@ -74,7 +74,7 @@ Some solvers require further information such as the
 first order derivatives (residual Jacobian matrix) or even second order ones.
 These are also defined with this function.
 Refer to :ref:`nonlinear least-squares callbacks<da_nlls_callbacks>` for further details on the
-residual functions signatures.
+residual function signatures.
 
 **Derivatives**
 
@@ -88,7 +88,7 @@ single-sided finite-differences method.
 .. collapse:: Details
 
     Finite-differences is a well established and numerically effective method to estimate missing derivatives.
-    The method is expensive requiring a number of residual function calls proportional to the number of
+    The method is expensive, requiring a number of residual function calls proportional to the number of
     variables (coefficients) in the model.
 
     The implementation provides a single optional parameter (``'finite differences step'``) that defines the perturbation step used
@@ -96,7 +96,7 @@ single-sided finite-differences method.
     is a judicious value that works for most applications.
 
 It is strongly recommended to relax the convergence tolerances (see options) when approximating derivatives. If it is
-observed that solver "stagnates" or fails during the optimization process, tweaking the step value is encouraged.
+observed that the solver "stagnates" or fails during the optimization process, tweaking the step value is encouraged.
 
 
 **Verifying derivatives**
@@ -154,11 +154,11 @@ After validating the residual Jacobian matrix, and to avoid performance impact, 
 
 **Residual weights**
 
-Under certain circumstances it is known that some residuals are more `reliable` than others. In such cases it is
-desirable to give more `importance` to these. This is done by :ref:`defining the weighting matrix<da_nlls_define_weights>`, :math:`W`, using
+Under certain circumstances it is known that some residuals are more reliable than others. In such cases it is
+desirable to give more importance to these. This is done by :ref:`defining the weighting matrix<da_nlls_define_weights>`, :math:`W`, using
 :cpp:func:`da_nlls_define_weights<da_nlls_define_weights_s>`. Note that  :math:`W` is a diagonal matrix with
 positive elements. These elements
-should `correspond` to the inverse of the variance of each residual.
+should correspond to the inverse of the variance of each residual.
 
 **Constraining the model**
 
@@ -212,27 +212,28 @@ The standard way of computing a nonlinear model using AOCL-DA is as follows.
       5. Optimized coefficients :math:`x` are returned on the interface.
       6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`
          using :cpp:enum:`da_result::da_rinfo`.
-         The following results are available in the :code:`info[100]` array:
 
-            * info[0] objective value,
-            * info[1] gradient norm of objective,
-            * info[2] number of iterations,
-            * info[3] reserved for future use,
-            * info[4] number of function callback evaluations (includes ``info[12]``),
-            * info[5] reserved for future use,
-            * info[6] reserved for future use,
-            * info[7] reserved for future use,
-            * info[8] number of gradient callback evaluations,
-            * info[9] number of Hessian callback evaluations,
-            * info[10] number of Hessian-vector callback evaluations,
-            * info[11] scaled gradient norm of objective,
-            * info[12] number of objective function callback evaluations used
+         * The following results are available in the :code:`info[100]` array:
+
+            * info[0]: objective value,
+            * info[1]: gradient norm of objective,
+            * info[2]: number of iterations,
+            * info[3]: reserved for future use,
+            * info[4]: number of function callback evaluations (includes ``info[12]``),
+            * info[5]: reserved for future use,
+            * info[6]: reserved for future use,
+            * info[7]: reserved for future use,
+            * info[8]: number of gradient callback evaluations,
+            * info[9]: number of Hessian callback evaluations,
+            * info[10]: number of Hessian-vector callback evaluations,
+            * info[11]: scaled gradient norm of objective,
+            * info[12]: number of objective function callback evaluations used
               for approximating the derivatives or due to derivative checker,
             * info[13-99]: reserved for future use.
 
 .. _nlls_options:
 
-Nonlinear Least-Squares Options
+Nonlinear least-squares options
 ===============================
 
 .. tab-set::
@@ -260,17 +261,17 @@ Nonlinear Least-Squares Options
          "regularization power", "string", ":math:`s=` `quadratic`", "Value for the regularization power term.", ":math:`s=` `cubic`, or `quadratic`."
          "regularization term", "real", ":math:`r=0`", "Value for the regularization term. A value of 0 disables regularization.", ":math:`0 \le r`"
          "ralfit iteration limit", "integer", ":math:`i=100`", "Maximum number of iterations to perform.", ":math:`1 \le i`"
-         "ralfit convergence rel tol fun", "real", ":math:`r=10^{-8}`", "relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
-         "ralfit convergence abs tol fun", "real", ":math:`r=10^{-8}`", "absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
-         "ralfit convergence rel tol grd", "real", ":math:`r=10^{-8}`", "relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
-         "ralfit convergence abs tol grd", "real", ":math:`r=10^{-5}`", "absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
-         "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
-         "print level", "integer", ":math:`i=1`", "set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
+         "ralfit convergence rel tol fun", "real", ":math:`r=10^{-8}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence abs tol fun", "real", ":math:`r=10^{-8}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence rel tol grd", "real", ":math:`r=10^{-8}`", "Relative tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence abs tol grd", "real", ":math:`r=10^{-5}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "Absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
+         "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver 0 indicates no output while 5 is a very verbose printing", ":math:`0 \le i \le 5`"
          "print options", "string", ":math:`s=` `no`", "Print options list", ":math:`s=` `no`, or `yes`."
          "storage scheme", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
          "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`."
-         "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "size of step to use for estimating derivatives using finite-differences", ":math:`0 < r < 10`"
-         "derivative test tol", "real", ":math:`r=10^{-4}`", "tolerance used to check user-provided derivatives by finite-differences.If <print level> is 1 then only the entries with larger discrepancy are reported, and if the print level is greater or equal to 2, then all entries are printed", ":math:`0 < r \le 10`"
+         "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "Size of step to use for estimating derivatives using finite-differences", ":math:`0 < r < 10`"
+         "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences.If <print level> is 1 then only the entries with larger discrepancy are reported, and if the print level is greater or equal to 2, then all entries are printed", ":math:`0 < r \le 10`"
 
 
 Examples
@@ -314,7 +315,7 @@ Examples
 
 
 
-Further Reading
+Further reading
 ===============
 
 An introduction to nonlinear least-squares methods can be found in

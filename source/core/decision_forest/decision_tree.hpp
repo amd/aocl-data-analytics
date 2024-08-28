@@ -93,7 +93,7 @@ template <typename T> struct split {
 };
 
 /* Compute the impurity of a node containing n_samples samples.
- * On input, count_classes[i] is assumed to contain the number of 
+ * On input, count_classes[i] is assumed to contain the number of
  * occurrences of class i within the node samples. */
 template <class T>
 using score_fun_t = typename std::function<T(da_int, da_int, std::vector<da_int> &)>;
@@ -120,7 +120,7 @@ T entropy_score(da_int n_samples, da_int n_class, std::vector<da_int> &count_cla
 }
 
 template <class T>
-T misclassification_score(da_int n_samples, da_int n_class,
+T misclassification_score(da_int n_samples, [[maybe_unused]] da_int n_class,
                           std::vector<da_int> &count_classes) {
     T score =
         (T)1.0 -
@@ -217,10 +217,11 @@ template <typename T> class decision_tree : public basic_handle<T> {
     decision_tree(da_int max_depth, da_int min_node_sample, da_int method,
                   da_int prn_times, da_int build_order, da_int nfeat_split, da_int seed,
                   T min_split_score, T feat_thresh, T min_improvement, bool bootstrap)
-        : max_depth(max_depth), min_node_sample(min_node_sample), method(method),
-          prn_times(prn_times), build_order(build_order), nfeat_split(nfeat_split),
-          seed(seed), min_split_score(min_split_score), feat_thresh(feat_thresh),
-          min_improvement(min_improvement), bootstrap(bootstrap) {
+        : seed(seed), max_depth(max_depth), min_node_sample(min_node_sample),
+          method(method), prn_times(prn_times), build_order(build_order),
+          nfeat_split(nfeat_split), min_split_score(min_split_score),
+          feat_thresh(feat_thresh), min_improvement(min_improvement),
+          bootstrap(bootstrap) {
         this->err = nullptr;
         read_public_options = false;
     }
@@ -402,7 +403,7 @@ da_status decision_tree<T>::add_node(da_int parent_idx, bool is_left, T score,
                                      da_int split_idx) {
 
     da_status status = da_status_success;
-    if (tree.size() <= n_nodes) {
+    if (tree.size() <= (size_t)n_nodes) {
         size_t new_size = 2 * tree.size() + 1;
         // Resize the tree and class_props arrays
         if (predict_proba_opt)

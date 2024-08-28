@@ -16,6 +16,11 @@ set( source_files
   ral_nlls_fd.f90
   )
 
+# Suppress warnings
+if(NOT WIN32)
+  include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_ralfit.cmake)
+endif()
+
 add_library(ral_nlls_object OBJECT ${source_files})
 add_library(ral_nlls-static STATIC $<TARGET_OBJECTS:ral_nlls_object>)
 add_library(ral_nlls SHARED $<TARGET_OBJECTS:ral_nlls_object>)

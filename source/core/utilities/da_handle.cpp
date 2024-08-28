@@ -53,6 +53,10 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             if (refresh)
                 linreg_s->refresh();
             break;
+        default:
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "handle precision ws not correctly set");
+            break;
         }
         break;
     case da_handle_decision_tree:
@@ -70,6 +74,10 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             *opts = &dectree_s->opts;
             if (refresh)
                 dectree_s->refresh();
+            break;
+        default:
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "handle precision ws not correctly set");
             break;
         }
         break;
@@ -89,6 +97,10 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             if (refresh)
                 forest_s->refresh();
             break;
+        default:
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "handle precision ws not correctly set");
+            break;
         }
         break;
     case da_handle_pca:
@@ -106,6 +118,10 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             *opts = &pca_s->opts;
             if (refresh)
                 pca_s->refresh();
+            break;
+        default:
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "handle precision ws not correctly set");
             break;
         }
         break;
@@ -125,6 +141,10 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             if (refresh)
                 kmeans_s->refresh();
             break;
+        default:
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "handle precision ws not correctly set");
+            break;
         }
         break;
     case da_handle_nlls:
@@ -143,6 +163,10 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             if (refresh)
                 nlls_s->refresh();
             break;
+        default:
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "handle precision ws not correctly set");
+            break;
         }
         break;
     case da_handle_knn:
@@ -160,6 +184,10 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
             *opts = &knn_s->opts;
             if (refresh)
                 knn_s->refresh();
+            break;
+        default:
+            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                            "handle precision ws not correctly set");
             break;
         }
         break;

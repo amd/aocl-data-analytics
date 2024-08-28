@@ -39,19 +39,25 @@
 /**
  * \brief Enumeration used to set the floating point data type used.
  */
-typedef enum da_precision_ {
+enum da_precision_ {
     da_unknown = 255, ///< Precision not set
     da_double = 0,    ///< Use double precision floating point type
     da_single = 1,    ///< Use single precision floating point type
-} da_precision;
+};
+
+/** @brief Alias for the \ref da_precision_ enum. */
+typedef enum da_precision_ da_precision;
 
 /**
  * \brief Enumeration used to set column or row major ordering.
  */
-typedef enum da_ordering_ {
+enum da_ordering_ {
     row_major = 0, ///< Use row major ordering
     col_major,     ///< Use column major ordering
-} da_ordering;
+};
+
+/** @brief Alias for the \ref da_ordering_ enum. */
+typedef enum da_ordering_ da_ordering;
 
 /**
  * \def Build library for 64 bit integers

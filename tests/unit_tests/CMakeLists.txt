@@ -39,6 +39,10 @@ set(gtest_force_shared_crt
     CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
+if(NOT WIN32)
+  include(Suppressions_tests)
+endif()
+
 include(GoogleTest)
 include_directories(
   ${CMAKE_SOURCE_DIR}/source/include

@@ -32,7 +32,9 @@
 
 namespace template_nlls_cb_errors {
 template <typename T>
-da_int eval_r_fail(da_int n, da_int m, void *params, T const *x, T *r) {
+da_int eval_r_fail([[maybe_unused]] da_int n, [[maybe_unused]] da_int m,
+                   [[maybe_unused]] void *params, [[maybe_unused]] T const *x,
+                   [[maybe_unused]] T *r) {
     return 1; // fail...
 }
 } // namespace template_nlls_cb_errors
@@ -46,7 +48,10 @@ template <typename T> struct params_type {
 };
 
 // Calculate r_i(x; t_i, y_i) = x_1 e^(x_2 * t_i) - y_i
-template <typename T> da_int eval_r(da_int n, da_int m, void *params, T const *x, T *r) {
+template <typename T>
+da_int eval_r([[maybe_unused]] da_int n, [[maybe_unused]] da_int m,
+              [[maybe_unused]] void *params, [[maybe_unused]] T const *x,
+              [[maybe_unused]] T *r) {
     T x1 = x[0];
     T x2 = x[1];
     T const *t = ((struct params_type<T> *)params)->t;
@@ -70,7 +75,8 @@ template <typename T> da_int eval_r(da_int n, da_int m, void *params, T const *x
 // Calculate:
 // J_i1 = e^(x_2 * t_i)
 // J_i2 = t_i x_1 e^(x_2 * t_i)
-template <typename T> da_int eval_J(da_int n, da_int m, void *params, T const *x, T *J) {
+template <typename T>
+da_int eval_J([[maybe_unused]] da_int n, da_int m, void *params, T const *x, T *J) {
     T x1 = x[0];
     T x2 = x[1];
     T const *t = ((struct params_type<T> *)params)->t;
@@ -85,7 +91,7 @@ template <typename T> da_int eval_J(da_int n, da_int m, void *params, T const *x
 
 // User Stop...
 template <typename T>
-da_int eval_J_wrong(da_int n, da_int m, void *params, T const *x, T *J) {
+da_int eval_J_wrong([[maybe_unused]] da_int n, da_int m, void *params, T const *x, T *J) {
     T x1 = x[0];
     T x2 = x[1];
     T const *t = ((struct params_type<T> *)params)->t;
@@ -108,7 +114,7 @@ da_int eval_J_wrong(da_int n, da_int m, void *params, T const *x, T *J) {
 
 // Num difficulties...
 template <typename T>
-da_int eval_J_bad(da_int n, da_int m, void *params, T const *x, T *J) {
+da_int eval_J_bad([[maybe_unused]] da_int n, da_int m, void *params, T const *x, T *J) {
     T x1 = x[0];
     T x2 = x[1];
     T const *t = ((struct params_type<T> *)params)->t;
@@ -150,7 +156,8 @@ struct usertype {
     double *y;
 };
 
-da_int eval_r(da_int n, da_int m, void *params, double const *x, double *r) {
+da_int eval_r([[maybe_unused]] da_int n, da_int m, void *params, double const *x,
+              double *r) {
     double *y = ((struct usertype *)params)->y;
     double *sigma = ((struct usertype *)params)->sigma;
     double A{x[0]};

@@ -49,7 +49,7 @@ template <class T> class usrdata_base {
     T l1reg = T(0);
     T l2reg = T(0);
     /* Pointer to rescaled penalty factors for each coefficient
-     * in the case of standardization these are scale[k]/scale[y], 
+     * in the case of standardization these are scale[k]/scale[y],
      * and are used in the regularization terms.
      * See details in the standardization function
      * pointer to an array of at least nfeat
@@ -360,7 +360,6 @@ da_int objgrd_logistic_two_class(da_int n, T *x, T *grad, void *udata,
     std::vector<T> &gradients_p = data->gradients_p;
     T *lincomb_ptr = data->lincomb.data();
     da_int nsamples = data->nsamples;
-    const T *X = data->X;
     da_int nfeat = data->nfeat;
     da_int nmod = data->intercept ? data->nfeat + 1 : data->nfeat;
     T sum_of_gradients;
@@ -415,7 +414,6 @@ da_int objfun_logistic_ssc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
     da_int nclass = data->nclass;
     da_int nfeat = data->nfeat;
     da_int nsamples = data->nsamples;
-    da_int nmod = data->intercept ? nfeat + 1 : nfeat;
 
     // lincomb is of size nsamples*nclass
     // Store in lincomb[:,k] the Beta_k^T * x for the nsamples samples in the input matrix
@@ -474,11 +472,8 @@ da_int objgrd_logistic_ssc(da_int n, T *x, T *grad, void *udata,
     std::vector<T> &lincomb = data->lincomb;
     T *lincomb_ptr = data->lincomb.data();
     da_int nsamples = data->nsamples;
-    const T *X = data->X;
-    da_int idc = data->intercept ? 1 : 0;
     da_int nclass = data->nclass;
     da_int nfeat = data->nfeat;
-    da_int nmod = data->intercept ? data->nfeat + 1 : data->nfeat;
 
     if (xnew) {
         std::fill(maxexp.begin(), maxexp.end(), 0.);

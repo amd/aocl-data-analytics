@@ -35,7 +35,7 @@
 /**
  * \brief This enumeration describes all the possible return values from AOCL-DA APIs.
  */
-typedef enum da_status_ {
+enum da_status_ {
     // Common errors 0-99
     da_status_success = 0,         ///< Operation was successful
     da_status_internal_error,      ///< Unexpected error occurred
@@ -45,7 +45,7 @@ typedef enum da_status_ {
     da_status_not_implemented,     ///< Feature not implemented
     da_status_out_of_date,         ///< The data is out of date
     da_status_wrong_type,          ///< A function called with the wrong data type
-    da_status_overflow,            ///< Numerical Overflow detected
+    da_status_overflow,            ///< Numerical overflow detected
     da_status_invalid_handle_type, ///< Invalid handle type provided
     da_status_handle_not_initialized, ///< Handle was not initialized properly or is corrupted
     da_status_store_not_initialized, ///< Store was not initialized properly or is corrupted
@@ -87,7 +87,10 @@ typedef enum da_status_ {
     da_status_missing_block =
         600, ///< The store is missing a block, the requested operation cannot be performed
     da_status_full_extraction, ///< No selection was defined, the full store is being extracted
-} da_status;
+};
+
+/** @brief Alias for the \ref da_status_ enum. */
+typedef enum da_status_ da_status;
 
 typedef enum da_severity_ {
     DA_NOTSET = 0,  // Initial state

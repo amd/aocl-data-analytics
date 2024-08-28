@@ -329,7 +329,7 @@ TYPED_TEST(decision_tree_test, small_multiclass) {
         0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3};
     // clang-format on
 
-    da_int nclass = 4, nsamples = 20, nfeat = 2;
+    da_int nsamples = 20, nfeat = 2;
     da_errors::da_error_t err(da_errors::DA_RECORD);
     decision_tree<TypeParam> dec_tree(err);
     EXPECT_EQ(dec_tree.set_training_data(nsamples, nfeat, X.data(), nsamples, y.data()),
@@ -427,8 +427,6 @@ TYPED_TEST(decision_tree_test, get_results) {
 }
 
 TYPED_TEST(decision_tree_test, invalid_input) {
-
-    da_status status;
 
     std::vector<TypeParam> X{0.0, 1.0, 0.0, 2.0};
     std::vector<da_int> y{0, 1};
@@ -532,7 +530,6 @@ TYPED_TEST(decision_tree_test, invalid_input) {
 }
 
 TEST(decision_tree, incorrect_handle_precision) {
-    da_status status;
 
     da_handle handle_d = nullptr;
     da_handle handle_s = nullptr;

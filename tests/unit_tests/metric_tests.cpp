@@ -185,8 +185,8 @@ TYPED_TEST(PairwiseDistanceTest, AccuracyTesting_XY) {
     for (auto &dat : data) {
         auto D_ref = reference_distance(dat);
         auto D = test_distance(dat);
-        for (auto i = 0; i < D.size(); i++)
-            EXPECT_ARR_NEAR(D.size(), D.data(), D_ref.data(), dat.tol)
+        for (da_int i = 0; i < (da_int)D.size(); i++)
+            EXPECT_ARR_NEAR((da_int)D.size(), D.data(), D_ref.data(), dat.tol)
                 << "\n"
                 << "Test with parameters: " << dat.name << " FAILED" << std::endl;
         std::cout << "Testing for data = " << dat.name << std::endl;
@@ -214,8 +214,8 @@ TYPED_TEST(PairwiseDistanceTest, AccuracyTesting_XX) {
     for (auto &dat : data) {
         auto D_ref = reference_distance(dat);
         auto D = test_distance(dat);
-        for (auto i = 0; i < D.size(); i++)
-            ASSERT_ARR_NEAR(D.size(), D.data(), D_ref.data(), dat.tol)
+        for (da_int i = 0; i < (da_int)D.size(); i++)
+            ASSERT_ARR_NEAR((da_int)D.size(), D.data(), D_ref.data(), dat.tol)
                 << "\n"
                 << "Test with parameters: " << dat.name << " FAILED" << std::endl;
         std::cout << "Testing for data = " << dat.name << std::endl;
