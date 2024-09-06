@@ -61,13 +61,13 @@ const double density[64]{
 
 const struct udata_t udata = {diameter, density};
 
-// Scaled Log-Normal density distribution Al amplitude * Log-Normal(a, b)
+// Scaled log-normal density distribution Al amplitude * log-normal(a, b)
 double lognormal(double d, double a, double b, double Al) {
     return Al / (d * b * sqrt(2.0 * pi)) *
            std::exp(-(pow(std::log(d) - a, 2.0)) / (2.0 * pow(b, 2.0)));
 }
 
-// Scaled normal density distribution Ag amplitude * Normal(mu, sigma)
+// Scaled normal density distribution Ag amplitude * normal(mu, sigma)
 double gaussian(double d, double mu, double sigma, double Ag) {
     return Ag * exp(-0.5 * pow((d - mu) / sigma, 2)) / (sigma * sqrt(2.0 * pi));
 };
@@ -127,7 +127,7 @@ int main(void) {
     double wsum = 1.0 * (n_res - (63 - 55)) + 5.0 * (63 - 55);
     for (da_int j = 55; j <= 63; ++j)
         weights[j] = 5.0;
-    // normalize weights
+    // Normalize weights
     for (da_int j = 0; j < 64; ++j)
         weights[j] /= wsum;
 
@@ -161,7 +161,7 @@ int main(void) {
 
     std::cout << "\n ** Computing regression with exact first derivatives **\n"
               << std::endl;
-    // compute regression
+    // Compute regression
     da_status status;
     status = da_nlls_fit_d(handle, n_coef, coef.data(), (void *)&udata);
     bool ok{false};
@@ -206,7 +206,7 @@ int main(void) {
         std::cout << "Norm of residual gradient: " << info[1] << std::endl;
     }
 
-    // Now we solve again using FD
+    // Now we solve again using finite differences
     std::cout << "\n\n ** Computing regression with finite differences **\n" << std::endl;
     coef.assign({1.65, 0.9, 1.0, 30.0, 1.5, 0.25});
     pass &= da_nlls_define_residuals_d(handle, n_coef, n_res, eval_r, nullptr, nullptr,

@@ -39,7 +39,7 @@ second class for node `m` is defined as,
 
    \hat{p}^0_m = \frac{1}{N_m} \sum_{x_i \in R_m} I(y_i = 1)
 
-where :math:`R_m` is the rectangular region corresponding to the :math:`m` th node, :math:`x_i` is a (multi-dimensional)
+where :math:`R_m` is the rectangular region corresponding to node :math:`m`, :math:`x_i` is a (multi-dimensional)
 observation, :math:`y_i` is a label, and :math:`N_m` is the number of observations in :math:`R_m`.
 
 The node impurity is defined as,
@@ -79,7 +79,7 @@ where
    \hat{p}^1_m(j,s) &= \sum_{ \{i \ : x_i(j) \leq s \} } I(y_i = 1) \\
    \hat{p}^2_m(j,s) &= \sum_{ \{i \ : x_i(j) > s \} } I(y_i = 1)
 
-and :math:`j` is the feature index, so that :math:`x_i(j)` is the :math:`j` th feature of the :math:`i` th observation.
+and :math:`j` is the feature index, so that :math:`x_i(j)` is the :math:`j`-th feature of the :math:`i`-th observation.
 
 Then node :math:`m` stops being a terminal node, and two new terminal nodes are created as children of node :math:`m`.
 The domains for the new child nodes are defined by splitting :math:`R_m` into two rectangles using the variable index
@@ -178,16 +178,16 @@ Options
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
          "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
-         "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting", ":math:`2 \le i`"
-         "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
+         "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`2 \le i`"
+         "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
          "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
          "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
-         "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes", ":math:`s=` `breadth first`, or `depth first`."
-         "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting", ":math:`0 \le r`"
+         "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes.", ":math:`s=` `breadth first`, or `depth first`."
+         "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
          "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
          "bootstrap samples factor", "real", ":math:`r=0.8`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
-         "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split", ":math:`s=` `all`, `custom`, `log2`, or `sqrt`."
-         "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute ", ":math:`1 \le i`"
+         "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split.", ":math:`s=` `all`, `custom`, `log2`, or `sqrt`."
+         "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute. ", ":math:`1 \le i`"
          "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
          "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
          "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"

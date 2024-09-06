@@ -32,7 +32,7 @@ clang++ <example name>.cpp -I /<path to aocl-da headers>/include_<INT_LIB>
     -L/<path to aocl-da and similarly for aoclutils, blis, flame, aoclsparse>/lib_<INT_LIB> -laocl-da -laoclsparse -lflame -lblis-mt -laoclutils
     -lflang -lomp -lpgmath
 
-(note that for dynamic linking you will need to update LD_LIBRARY_PATH e.g. export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>)
+Note that for dynamic linking you will need to update LD_LIBRARY_PATH, e.g. export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>
 
 Compiling examples on Windows
 =============================
@@ -50,7 +50,7 @@ cl <example_name>.cpp /I \<path to aocl-da headers>\include\<INT_LIB> /EHsc /MD
 
 The same command should work with cl replaced by clang-cl (in which case simply use /openmp) and linking statically using /MT
 
-(note that you should ensure the folders containing the libraries to be linked are on your Windows PATH e.g. using set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>)
+Note that you should ensure the folders containing the libraries to be linked are on your Windows PATH, e.g. using set PATH=%PATH%;C:\<path_to_BLAS_and_LAPACK>
 
 Compiling using CMake
 =====================

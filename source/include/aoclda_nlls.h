@@ -55,13 +55,13 @@
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[in,out] data user data pointer, the solver does not touch this pointer and
- *            passes it along to the call-back.
- * \param[in] x the vector of coefficients (at the current iterate) and of size \p n_coef.
+ * \param[in,out] data user data pointer; the solver does not touch this pointer and
+ *            passes it on to the call-back.
+ * \param[in] x the vector of coefficients (at the current iteration) of size \p n_coef.
  * \param[out] res residual vector of size \p n_res for the model evaluated at \p x.
- * \return flag - indicating if evaluation of the model was successful, zero to
- *                inform success; nonzero informs failure, in this case the solver will
- *                terminate with \ref da_status_optimization_usrstop.
+ * \return flag indicating whether evaluation of the model was successful: zero to
+ *         indicate success; nonzero to indicate failure, in which case the solver will
+ *         terminate with \ref da_status_optimization_usrstop.
  */
 typedef da_int da_resfun_t_s(da_int n_coef, da_int n_res, void *data, const float *x,
                              float *res);
@@ -92,16 +92,16 @@ typedef da_int da_resfun_t_d(da_int n_coef, da_int n_res, void *data, const doub
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[in,out] data user data pointer, the solver does not touch this pointer and
- *            passes it along to the call-back.
- * \param[in] x the vector of coefficients (at the current iterate) and of size \p n_coef.
+ * \param[in,out] data user data pointer; the solver does not touch this pointer and
+ *            passes it on to the call-back.
+ * \param[in] x the vector of coefficients (at the current iteration) of size \p n_coef.
  * \param[out] jac Jacobian matrix (\p n_res by \p n_coef), first derivatives of the residual function.
  *             evaluated at \p x. This matrix expects to be stored in the format
  *             defined by the optional parameter \p storage_scheme and defaults to
- *             row-major, this can be changed to column-major (Fortran format as well).
- * \return flag - indicates if evaluation of the model was successful; zero
- *                indicates success, nonzero indicates failure, in which case the solver will
- *                terminate with \ref da_status_optimization_usrstop.
+ *             row-major; this can be changed to column-major (Fortran format).
+ * \return flag indicating whether evaluation of the model was successful: zero to 
+ *         indicate success; nonzero to indicate failure, in which case the solver will
+ *         terminate with \ref da_status_optimization_usrstop.
  */
 typedef da_int da_resgrd_t_s(da_int n_coef, da_int n_res, void *data, float const *x,
                              float *jac);
@@ -137,18 +137,18 @@ typedef da_int da_resgrd_t_d(da_int n_coef, da_int n_res, void *data, double con
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[in,out] data user data pointer. The solver does not touch this pointer and
- *            passes it along to the call-back.
- * \param[in] x the vector of coefficients (at the current iterate) of size \p n_coef.
+ * \param[in,out] data user data pointer; the solver does not touch this pointer and
+ *            passes it on to the call-back.
+ * \param[in] x the vector of coefficients (at the current iteration) of size \p n_coef.
  * \param[in] wr a scaled (weighted) version of the residual vector evaluated at \p x, of size \p n_res.
  * \param[out] hes Hessian matrix (size of \p n_coef by \p n_coef) containing second derivatives of the residual function
  *             evaluated at \p x. This symmetric matrix is expected to be stored
  *             in the format defined by the optional parameter \p storage_scheme
- *             and defaults to row-major, this can be changed to column-major
+ *             and defaults to row-major; this can be changed to column-major
  *             (Fortran format).
- * \return flag - indicates if evaluation of the model was successful; zero
- *                indicates success, nonzero indicates failure, in which case the solver will
- *                terminate with \ref da_status_optimization_usrstop.
+ * \return flag indicating whether evaluation of the model was successful: zero to 
+ *         indicate success; nonzero to indicate failure, in which case the solver will
+ *         terminate with \ref da_status_optimization_usrstop.
  */
 typedef da_int da_reshes_t_s(da_int n_coef, da_int n_res, void *data, float const *x,
                              float const *wr, float *hes);
@@ -172,18 +172,18 @@ typedef da_int da_reshes_t_d(da_int n_coef, da_int n_res, void *data, double con
  *
  * \param[in] n_coef number of coefficients in the model.
  * \param[in] n_res number of residuals declared.
- * \param[in,out] data user data pointer, the solver does not touch this pointer and
- *            passes it along to the call-back.
- * \param[in] x the vector of coefficients (at the current iterate) and of size \p n_coef.
+ * \param[in,out] data user data pointer; the solver does not touch this pointer and
+ *            passes it on to the call-back.
+ * \param[in] x the vector of coefficients (at the current iteration) of size \p n_coef.
  * \param[in] y an arbitrary vector of size \p n_coef.
  * \param[out] hp Hessians matrix-vector product with \p y.
  *             This dense matrix of size \p n_coef by \p n_res is expected to be stored
  *             in the format defined by the optional parameter \p storage_scheme
- *             and defaults to row-major, this can be changed to column-major
+ *             and defaults to row-major; this can be changed to column-major
  *             (Fortran format).
- * \return flag - indicates if evaluation of the model was successful; zero
- *                indicates success, nonzero indicates failure, in which case the solver will
- *                terminate with \ref da_status_optimization_usrstop.
+ * \return flag indicating whether evaluation of the model was successful: zero to 
+ *         indicate success; nonzero to indicate failure, in which case the solver will
+ *         terminate with \ref da_status_optimization_usrstop.
  */
 typedef da_int da_reshp_t_s(da_int n_coef, da_int n_res, const float *x, const float *y,
                             float *hp, void *data);
@@ -258,11 +258,11 @@ da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_r
  *            previously defined bounds are removed.
  * \param[in] lower vector \f$\ell_x\f$ of length \p n_coef that defines the lower bound constraints on
  *            the coefficients. If the problem does not
- *            have lower bounds then \p lower can be \p NULL. Any value less than -1e20
+ *            have lower bounds, then \p lower can be \p NULL. Any value less than -1e20
  *            is considered as -infinity and the coefficient is considered to not have a lower bound.
  * \param[in] upper vector \f$ u_x\f$ of length \p n_coef that defines the upper bound constraints on
  *            the coefficients. If the problem does not
- *            have upper bounds then \p upper can be \p NULL. Any value greater than 1e20
+ *            have upper bounds, then \p upper can be \p NULL. Any value greater than 1e20
  *            is considered as infinity and the coefficient is considered to not have an upper bound.
  * \return \ref da_status. The function returns:
  *  - @ref da_status_success - the operation was successfully completed.
@@ -351,9 +351,9 @@ da_status da_nlls_define_weights_s(da_handle handle, da_int n_res, float *weight
  * \param[in,out] udata a generic pointer for the caller to pass any data objects to the
  *                residual callbacks. This pointer is passed to the callbacks untouched.
  *
- * \return \ref da_status. Some \ref da_status flags are marked as a warning, in these cases the
- *    returned coefficient vector \p coef contains a valid iterate, potentially a rough estimate
- *    of the solution. The function returns:
+ * \return \ref da_status. Some of the following \ref da_status flags have been marked as a "warning". In these cases the
+ *    returned coefficient vector \p coef contains a valid iterate, which is potentially a rough estimate
+ *    of the solution. The function may return:
  *    - @ref da_status_success - the operation was successfully completed.
  *    - @ref da_status_handle_not_initialized - handle was not initialized properly
  *           (with @ref da_handle_nlls) or has been corrupted.
@@ -397,7 +397,7 @@ typedef enum da_optim_info_t_ {
     info_time = 3,           ///< current time
     info_nevalf = 4,         ///< number of objective function callback evaluations
     info_inorm = 5,          ///< infinity norm of gradient
-    info_inorm_init = 6,     ///< infinity norm of gradient at the initial iterate
+    info_inorm_init = 6,     ///< infinity norm of gradient at the initial iteration
     info_ncheap = 7,         ///< number of objective function callback
                              ///< evaluations requesting "cheap" update
     info_nevalg = 8,         ///< number of gradient callback evaluations

@@ -62,7 +62,7 @@ typedef enum da_knn_weights_ da_knn_weights;
 
 /** \{
  * \brief Pass a data matrix and a label array to the \ref da_handle object
- * in preparation of computing a <i>k</i>-NN.
+ * in preparation for computing a <i>k</i>-NN.
  *
  * The data itself is not copied; a pointer to the data matrix is stored instead.
  * @rst

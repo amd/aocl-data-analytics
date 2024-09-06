@@ -128,7 +128,7 @@ da_status da_linmod_fit_s(da_handle handle);
  *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_coefs the number of coefficients provided in coefs. It must match the number of expected coefficients for the model defined in \p handle to be taken into account.
- * @param[in] coefs the initial coefficients
+ * @param[in] coefs the initial coefficients.
  * @return da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
@@ -160,7 +160,7 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
  * @param nsamples number of rows of \p X or equivalently the number of samples to estimate the model on.
  * @param X the @p nsamples @f$\times@f$ @p nfeat data matrix to evaluate the model on, in column major format.
  * @param predictions vector of size \p nsamples containing the model's prediction.
- * @param observations vector of size \p nsamples containing new observations; may be \p NULL if none are provided
+ * @param observations vector of size \p nsamples containing new observations; may be \p NULL if none are provided.
  * @param loss scalar containing the model's loss given the new data \p X and the new observations \p y; may be \p NULL if
  *        no observations are provided. Note that either both \p  observations and \p loss parameters are \p NULL or both
  *        must contain a valid address.

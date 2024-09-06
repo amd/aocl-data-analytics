@@ -36,7 +36,7 @@ Numerous example programs are also provided in the ``examples`` folder within yo
 AOCL-DA installation directory.
 
 The C interface has been designed to make it as seamless as
-possible to integrate with the library from whichever programming language you are using.
+possible to integrate with the library from whatever programming language you are using.
 In addition, a header file containing :ref:`C++ overloads<cpp_overloads>` is available for C++ users who wish to abstract away the floating-point data type.
 
 Library workflow
@@ -61,7 +61,7 @@ The intended workflow for using the AOCL-DA C APIs is as follows:
 
   * initialize a :cpp:type:`da_handle` struct, which is used internally to store
     algorithmic information;
-  * pass arrays of data, or data extracted from a :cpp:type:`da_datastore` to the
+  * pass arrays of data, or data extracted from a :cpp:type:`da_datastore`, to the
     handle (for best possible
     performance, algorithmic functions typically operate on two-dimensional arrays
     stored in column major format);
@@ -155,7 +155,7 @@ Compiling using CMake
 ---------------------
 
 A CMakeLists.txt file is supplied in the examples folder of your installation. You will need to set ``AOCL_ROOT`` to point to your AOCL installation.
-On Windows you may also need to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
+On Windows, you may also need to source the ifort compiler using e.g. ``C:\Program Files (x86)\Intel\oneAPI\setvars.bat``.
 To configure cmake and compile, you can then use commands such as:
 
 .. code-block::
@@ -174,8 +174,8 @@ Data types in AOCL-DA
 .. _da_int:
 
 AOCL-DA uses the ``da_int`` integer type throughout the library.
-For the 32 bit integer library (``LP64``) this is defined to be a 32 bit signed integer.
-For the 64 bit integer library (``ILP64``, compiled with the CMake flag ``-DBUILD_ILP64=On``) this is defined to be a 64 bit signed integer.
+For the 32 bit integer library (``LP64``), this is defined to be a 32 bit signed integer.
+For the 64 bit integer library (``ILP64``, compiled with the CMake flag ``-DBUILD_ILP64=On``), this is defined to be a 64 bit signed integer.
 When compiling your own code to use the 64 bit integer library, you must ensure that the ``AOCLDA_ILP64`` build variable is set.
 
 .. _da_real_prec:
@@ -209,12 +209,12 @@ Error handling
 Functions in AOCL-DA return :cpp:type:`da_status`, which provides basic information about whether
 the function call was successful.
 Further information about errors can be obtained by querying :cpp:type:`da_datastore` and
-:cpp:type:`da_handle` types. For further details see the :ref:`error handling<error-handling>` pages.
+:cpp:type:`da_handle` types. For further details, see the :ref:`error handling<error-handling>` pages.
 
 Version string
 --------------
 
-To get the version string of AOCL-DA call the function ``const char* da_get_version()``.
+To get the version string of AOCL-DA, call the function ``const char* da_get_version()``.
 
 
 .. _cpp_overloads:

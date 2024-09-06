@@ -50,7 +50,7 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oi);
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
-            "pca method", "Compute PCA based on the covariance or correlation matrix",
+            "pca method", "Compute PCA based on the covariance or correlation matrix.",
             {{"covariance", pca_method_cov},
              {"correlation", pca_method_corr},
              {"svd", pca_method_svd}},
@@ -59,18 +59,19 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
         os = std::make_shared<OptionString>(
             OptionString("degrees of freedom",
                          "Whether to use biased or unbiased estimators for standard "
-                         "deviations and variances",
+                         "deviations and variances.",
                          {{"biased", -1}, {"unbiased", 0}}, "unbiased"));
         opts.register_opt(os);
-        os = std::make_shared<OptionString>(OptionString(
-            "svd solver",
-            "Which LAPACK routine to use for the underlying singular value decomposition",
-            {{"auto", solver_auto},
-             {"gesvdx", solver_gesvdx},
-             {"gesvd", solver_gesvd},
-             {"gesdd", solver_gesdd},
-             {"syevd", solver_syevd}},
-            "auto"));
+        os = std::make_shared<OptionString>(
+            OptionString("svd solver",
+                         "Which LAPACK routine to use for the underlying singular value "
+                         "decomposition.",
+                         {{"auto", solver_auto},
+                          {"gesvdx", solver_gesvdx},
+                          {"gesvd", solver_gesvd},
+                          {"gesdd", solver_gesdd},
+                          {"syevd", solver_syevd}},
+                         "auto"));
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {

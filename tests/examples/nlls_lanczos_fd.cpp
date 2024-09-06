@@ -101,7 +101,7 @@ int main(void) {
         return 2;
     }
 
-    // compute regression
+    // Compute regression
     da_status status;
     status = da_nlls_fit_d(handle, n_coef, coef, (void *)&udata);
 

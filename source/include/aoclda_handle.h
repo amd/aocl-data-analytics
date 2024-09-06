@@ -76,7 +76,7 @@ typedef enum da_handle_type_ da_handle_type;
  * @rst
  * The main handle object.
  *
- * For more info on the handle structure see the :ref:`higher-level handle description <intro_handle>`.
+ * For more information on the handle structure, see the :ref:`higher-level handle description <intro_handle>`.
  * @endrst
  */
 typedef struct _da_handle *da_handle;
@@ -89,7 +89,7 @@ typedef struct _da_handle *da_handle;
  * valid handle.
  *
  * @rst
- * For more info on the handle structure: :ref:`higher-level handle description <intro_handle>`
+ * For more info on the handle structure: :ref:`higher-level handle description <intro_handle>`.
  * @endrst
  *
  * @param[in,out] handle the main data structure.

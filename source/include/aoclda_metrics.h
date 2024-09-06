@@ -44,8 +44,8 @@ extern "C" {
 enum da_metric_ {
     da_euclidean,   ///< Use euclidean distance.
     da_sqeuclidean, ///< Use squared euclidean distance.
-    da_minkowski,   ///< Use Minkowski distance.
-    da_manhattan    ///< Use Manhattan distance.
+    da_minkowski,   ///< Use Minkowski distance (used internally only).
+    da_manhattan    ///< Use Manhattan distance (used internally only).
 };
 
 /** @brief Alias for the \ref da_metric_ enum. */

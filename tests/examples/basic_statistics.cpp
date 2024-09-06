@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -74,7 +74,7 @@ int main() {
                      6.916666666666666,  -1.1666666666666665,  0.6666666666666666,
                      -0.6666666666666666,  0.0,                -1.1666666666666665,
                      0.3333333333333333 };
-    // clang format on
+    // clang-format on
     double X_exp[20]{-1.1618950038622251, -0.3872983346207417, 0.3872983346207417,
                      1.1618950038622251,  1.1618950038622251,  0.3872983346207417,
                      -0.3872983346207417, -1.1618950038622251, -1.1618950038622251,

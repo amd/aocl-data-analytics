@@ -91,7 +91,7 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
    * - ``sklearn.tree.RandomForestClassifier``
      - ``fit``, ``predict``, ``score``, ``predict_proba`` and ``predict_log_proba`` methods and various class attributes
    * - ``sklearn.metrics.pairwise``
-     - ``pairwise_distances`` method with ``euclidean`` and ``sqeuclidean`` distances.
+     - ``pairwise_distances`` method with ``euclidean`` and ``sqeuclidean`` distances
 
 
 Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after

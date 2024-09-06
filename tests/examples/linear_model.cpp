@@ -37,7 +37,7 @@ int main() {
     std::cout << std::fixed;
     std::cout.precision(5);
 
-    // problem data
+    // Problem data
     da_int m = 5, n = 2;
     double Al[10] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1};
     double bl[5] = {1, 1, 1, 1, 1};
@@ -58,7 +58,7 @@ int main() {
         return 1;
     }
 
-    // compute regression
+    // Compute regression
     status = da_linmod_fit_d(handle);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;
@@ -77,7 +77,7 @@ int main() {
     std::cout << "----------------------------------------" << std::endl;
 
     // Solve the same model with single precision
-    // problem data
+    // Problem data
     float As[10] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1};
     float bs[5] = {1, 1, 1, 1, 1};
     float xs[2];
@@ -98,7 +98,7 @@ int main() {
         return 1;
     }
 
-    // compute regression
+    // Compute regression
     status = da_linmod_fit_s(handle_s);
     if (status == da_status_success) {
         std::cout << "regression computed successfully!" << std::endl;

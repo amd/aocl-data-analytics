@@ -39,17 +39,17 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionNumeric<da_int>> oi;
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "number of neighbors",
-            "Number of neighbors considered for k-nearest neighbors", 1,
+            "Number of neighbors considered for k-nearest neighbors.", 1,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
         opts.register_opt(oi);
         // String options
         std::shared_ptr<OptionString> os;
-        os = std::make_shared<OptionString>(
-            OptionString("algorithm", "Algorithm used to compute the k-nearest neighbors",
-                         {{"brute", da_brute_force}}, "brute"));
+        os = std::make_shared<OptionString>(OptionString(
+            "algorithm", "Algorithm used to compute the k-nearest neighbors.",
+            {{"brute", da_brute_force}}, "brute"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(
-            OptionString("metric", "Metric used to compute the pairwise distance matrix",
+            OptionString("metric", "Metric used to compute the pairwise distance matrix.",
                          {
                              {"euclidean", da_euclidean},
                              {"sqeuclidean", da_sqeuclidean},
@@ -57,7 +57,7 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts) {
                          "euclidean"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
-            "weights", "Weight function used to compute the k-nearest neighbors",
+            "weights", "Weight function used to compute the k-nearest neighbors.",
             {{"uniform", da_knn_uniform}, {"distance", da_knn_distance}}, "uniform"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {

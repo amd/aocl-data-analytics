@@ -110,13 +110,13 @@ Options
       .. csv-table:: k-means options
          :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
-         "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance", ":math:`0 \le r`"
-         "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
-         "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
-         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results", ":math:`-1 \le i`"
-         "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations", ":math:`1 \le i`"
-         "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres)", ":math:`1 \le i`"
-         "n_clusters", "integer", ":math:`i=1`", "Number of clusters required", ":math:`1 \le i`"
+         "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`"
+         "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
+         "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres.", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
+         "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
+         "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`"
+         "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`"
+         "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`"
 
 Note that if the initialization method is set to ``random`` then the initial cluster centres are chosen randomly from the sample points.
 If it is set to ``random partitions`` then the sample points are assigned to a random cluster and the corresponding cluster centres are computed and used as the starting point.
