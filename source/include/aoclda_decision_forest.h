@@ -378,7 +378,7 @@ da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_samples,
  * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
  * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
  * @param[in] y_test - actual class labels.
- * @param[out] mean_accuracy - proportion of observations where predicted label matches actual label
+ * @param[out] mean_accuracy - proportion of observations where predicted label matches actual label.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle

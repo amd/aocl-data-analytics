@@ -115,7 +115,7 @@ The fit is based on maximizing the log-likelihood (loss function) of the probabi
 in turn defined by,
 
 .. math::
-   p(y_i=k\,|\,X_i, \beta) = \frac{ \exp(\beta_k X_i) }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }, \mathrm{ for } 0 \leq k < K-1,\\
+   p(y_i=k\,|\,X_i, \beta) = \frac{ \exp(\beta_k X_i) }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }, \mathrm{ for }\ 0 \leq k < K-1,\\
    p(y_i=K-1\,|\,X_i, \beta) = \frac{ 1 }{ 1 + \sum_{l=0}^{K-2}\exp(\beta_l X_i) }.
 
 As an example, if :math:`K=2`, the loss function simplifies to,
@@ -136,8 +136,8 @@ penalty term to the cost function.
     models which are not currently supported by AOCL-DA.  These include,
 
     * Weighted residuals - loss function is of form :math:`\sum_{i=1}^n w_i r_i = \sum_{i=1}^n w_i (y_i - \beta X_i)^2`
-    * Additional loss functions - for example Huber, Cauchy, or Quantile in addition to MSE and Log Loss,
-    * Basis expansions - for example addition of polynomial terms or extension to nonparametric regression, e.g., Loss
+    * Additional loss functions - for example, Huber, Cauchy or Quantile, in addition to MSE and log loss
+    * Basis expansions - for example, addition of polynomial terms or extension to nonparametric regression, e.g., loss
       functions of the form :math:`\sum_{i=1}^n \big(y_i - \beta \, \phi(X_i) \big)^2`
 
 
@@ -301,7 +301,7 @@ Initial coefficients can be provided in the following way:
    .. tab-item:: C
       :sync: C
 
-      Provide :code:`coefs` pointer to initial coefficients while calling :ref:`da_linmod_fit_start_? <da_linmod_fit_start>`
+      Provide :code:`coefs` pointer to initial coefficients while calling :ref:`da_linmod_fit_start_? <da_linmod_fit_start>`.
 
 
 Typical workflow for linear models
@@ -328,7 +328,7 @@ The standard way of computing a linear model using AOCL-DA is as follows.
       5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
       6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`. The following results are available:
 
-         * Coefficients (:cpp:enumerator:`da_linmod_coef`): the optimal coefficients of the fitted model
+         * Coefficients (:cpp:enumerator:`da_linmod_coef`): the optimal coefficients of the fitted model.
 
          * Some solvers provide extra information. (:cpp:enumerator:`da_linmod_rinfo`), when available, contains the
            info[100] array with the following values:
@@ -374,11 +374,11 @@ Linear model options
          "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
          "optim convergence tol", "real", ":math:`r=10/2\sqrt{2\,\varepsilon}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
          "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
-         "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r`"
-         "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 )", ":math:`0 \le r \le 1`"
+         "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r`"
+         "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r \le 1`"
          "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
-         "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model", ":math:`0 \le i \le 1`"
-         "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver", ":math:`0 \le i \le 5`"
+         "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`"
+         "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`"
 
       For the complete list of optional parameters see :ref:`linear model options <opts_linearmodels>`.
 

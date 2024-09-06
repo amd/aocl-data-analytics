@@ -47,7 +47,7 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionNumeric<T>> oT;
 
         os = std::make_shared<OptionString>(
-            OptionString("scoring function", "Select scoring function to use",
+            OptionString("scoring function", "Select scoring function to use.",
                          {{"gini", gini},
                           {"cross-entropy", cross_entropy},
                           {"entropy", cross_entropy},
@@ -71,13 +71,13 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "number of trees", "Set the number of trees to compute ", 1,
+            "number of trees", "Set the number of trees to compute. ", 1,
             lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 100));
         status = opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "node minimum samples",
-            "Minimum number of samples to consider a node for splitting", 2,
+            "Minimum number of samples to consider a node for splitting.", 2,
             lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 2));
         status = opts.register_opt(oi);
 
@@ -95,13 +95,13 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oT);
 
         os = std::make_shared<OptionString>(OptionString(
-            "tree building order", "Select in which order to explore the nodes",
+            "tree building order", "Select in which order to explore the nodes.",
             {{"depth first", depth_first}, {"breadth first", breadth_first}},
             "depth first"));
         status = opts.register_opt(os);
 
         os = std::make_shared<OptionString>(OptionString(
-            "features selection", "Select how many features to use for each split",
+            "features selection", "Select how many features to use for each split.",
             {{"all", feat_selection::all},
              {"sqrt", feat_selection::sqrt},
              {"log2", feat_selection::log2},
@@ -120,7 +120,7 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
         T diff_thres_default = (T)1e-6;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "feature threshold",
-            "Minimum difference in feature value required for splitting", 0.0,
+            "Minimum difference in feature value required for splitting.", 0.0,
             lbound_t::greaterequal, rmax, ubound_t::p_inf, diff_thres_default));
         status = opts.register_opt(oT);
 

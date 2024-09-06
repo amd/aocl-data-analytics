@@ -45,7 +45,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
         std::shared_ptr<OptionNumeric<T>> oT;
 
         os = std::make_shared<OptionString>(
-            OptionString("scoring function", "Select scoring function to use",
+            OptionString("scoring function", "Select scoring function to use.",
                          {{"gini", gini},
                           {"cross-entropy", cross_entropy},
                           {"entropy", cross_entropy},
@@ -93,7 +93,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
         T diff_thres_default = (T)1e-6;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "feature threshold",
-            "Minimum difference in feature value required for splitting", 0.0,
+            "Minimum difference in feature value required for splitting.", 0.0,
             lbound_t::greaterequal, rmax, ubound_t::p_inf, diff_thres_default));
         status = opts.register_opt(oT);
 
@@ -104,7 +104,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
         status = opts.register_opt(oT);
 
         os = std::make_shared<OptionString>(OptionString(
-            "tree building order", "Select in which order to explore the nodes",
+            "tree building order", "Select in which order to explore the nodes.",
             {{"depth first", depth_first}, {"breadth first", breadth_first}},
             "depth first"));
         status = opts.register_opt(os);

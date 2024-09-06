@@ -40,12 +40,12 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         std::shared_ptr<OptionNumeric<da_int>> oi;
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "print level", "Set level of verbosity for the solver", 0,
+            "print level", "Set level of verbosity for the solver.", 0,
             da_options::lbound_t::greaterequal, 5, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "intercept", "Add intercept variable to the model", 0,
+            "intercept", "Add intercept variable to the model.", 0,
             da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
@@ -60,7 +60,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("optim coord skip min",
                                   "Minimum times a coordinate change is smaller than "
-                                  "\"coord skip tol\" to start skipping",
+                                  "coord skip tol to start skipping.",
                                   2, da_options::lbound_t::greaterequal, max_da_int,
                                   da_options::ubound_t::p_inf, 2));
         opts.register_opt(oi);
@@ -68,13 +68,13 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("optim coord skip max",
                                   "Maximum times a coordinate can be skipped, after "
-                                  "this the coordinate is checked",
+                                  "this the coordinate is checked.",
                                   10, da_options::lbound_t::greaterequal, max_da_int,
                                   da_options::ubound_t::p_inf, 100));
         opts.register_opt(oi);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "debug", "Set debug level (internal use)", 0,
+            "debug", "Set debug level (internal use).", 0,
             da_options::lbound_t::greaterequal, 3, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
@@ -92,14 +92,14 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("alpha",
                              "Coefficient of alpha in the regularization terms: lambda( "
-                             "(1-alpha)/2 L2 + alpha L1 )",
+                             "(1-alpha)/2 L2 + alpha L1 ).",
                              0.0, da_options::lbound_t::greaterequal, 1.0,
                              da_options::ubound_t::lessequal, 0.0));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("lambda",
                              "Penalty coefficient for the regularization terms: lambda( "
-                             "(1-alpha)/2 L2 + alpha L1 )",
+                             "(1-alpha)/2 L2 + alpha L1 ).",
                              0.0, da_options::lbound_t::greaterequal, rmax,
                              da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(oT);

@@ -47,7 +47,7 @@ NumPy arrays
 =============
 
 AOCL-DA Python interfaces typically expect data to be supplied as NumPy arrays. These can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
-The AOCL-DA interface will convert C-style numpy arrays to Fortran style, so for best performance, it is recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions.
+The AOCL-DA interface will convert C-style NumPy arrays to Fortran style, so for best performance, it is recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions.
 
 .. _python_examples:
 
@@ -69,13 +69,13 @@ Alternatively, from your command prompt, you can call ``aocl.examples.info`` as 
 
    python -m aoclda.examples.info
 
-The examples can then be run as standard Python scripts from the command prompt, for example:
+The examples can then be run as standard Python scripts from the command prompt. For example:
 
 .. code-block::
 
    python path/to/examples/pca_ex.py
 
-You can also inspect and run the examples from a Python interpreter, for example:
+You can also inspect and run the examples from a Python interpreter. For example:
 
 .. code-block::
 

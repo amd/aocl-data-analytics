@@ -62,8 +62,8 @@ int main() {
     std::cout << std::fixed;
     std::cout.precision(5);
 
-    // problem data
-    // m: observations, n: features
+    // Problem data
+    // m: observations; n: features
     da_int m = 442, n = 10;
     da_int rhs_pos = 10;
     std::vector<double> features;
@@ -73,7 +73,7 @@ int main() {
     features.resize(m * n);
     rhs.resize(m);
     x.resize(n + 1);
-    // initial parameter estimates: n + intercept
+    // Initial parameter estimates: n + intercept
     // x.assign({0, 0, 700, 200, 100, 80, 160, 0, 300, 0});
     x.assign(m + 1, 0);
 
@@ -84,7 +84,7 @@ int main() {
 
     da_status status;
 
-    // load data from file
+    // Load data from file
     da_datastore csv;
     const char filename[](DATA_DIR "/diabetes.csv");
     da_datastore_init(&csv);
@@ -106,12 +106,12 @@ int main() {
         return 2;
     }
 
-    // extract the 10 features into a dense matrix
+    // Extract the 10 features into a dense matrix
     bool pass = true;
     pass = pass && da_data_select_columns(csv, "features", 0, n - 1) == da_status_success;
     pass = pass && da_data_extract_selection_real_d(csv, "features", features.data(),
                                                     m) == da_status_success;
-    // extract response variable
+    // Extract response variable
     pass = pass &&
            da_data_select_columns(csv, "response", rhs_pos, rhs_pos) == da_status_success;
     pass = pass && da_data_extract_selection_real_d(csv, "response", rhs.data(), m) ==
@@ -123,7 +123,7 @@ int main() {
         return 1;
     }
 
-    // initialize the linear regression
+    // Initialize the linear regression
     pass = true;
     da_int nx = 0;
     da_handle handle = nullptr;
@@ -146,7 +146,7 @@ int main() {
         return 1;
     }
 
-    // compute regression
+    // Compute regression
     status = da_linmod_fit_start_d(handle, n + 1, x.data());
     bool ok = false;
     if (status == da_status_success) {

@@ -380,7 +380,7 @@ da_status da_five_point_summary_s(da_axis axis, da_int n_rows, da_int n_cols,
  * - \ref da_status_invalid_input - \p mode must be either 0 or 1.
  * - \ref da_status_invalid_leading_dimension - the constraint \p ldx @f$\ge@f$ \p n_rows was violated.
  * - \ref da_status_invalid_pointer -\p X is null.
- * - \ref da_status_invalid_array_dimension - either \p n_rows @f$< 1@f$ or \p n_cols @f$< 1@f$..
+ * - \ref da_status_invalid_array_dimension - either \p n_rows @f$< 1@f$ or \p n_cols @f$< 1@f$.
  */
 da_status da_standardize_d(da_axis axis, da_int n_rows, da_int n_cols, double *X,
                            da_int ldx, da_int dof, da_int mode, double *shift,

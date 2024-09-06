@@ -44,5 +44,5 @@ da_read_csv\_?()
 
 .. doxygenfunction:: da_read_csv_string
 
-For reading data directly into a :cpp:type:`da_datastore` struct, see :cpp:func:`da_data_load_from_csv`
+For reading data directly into a :cpp:type:`da_datastore` struct, see :cpp:func:`da_data_load_from_csv`.
 

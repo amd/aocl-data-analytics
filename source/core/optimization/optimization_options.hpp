@@ -51,56 +51,56 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("coord skip min",
                                   "Minimum times a coordinate change is smaller than "
-                                  "\"coord skip tol\" to start skipping",
+                                  "coord skip tol to start skipping.",
                                   2, da_options::lbound_t::greaterequal, max_da_int,
                                   da_options::ubound_t::p_inf, 2));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("coord skip max",
                                   "Maximum times a coordinate can be skipped, after "
-                                  "this the coordinate is checked",
+                                  "this the coordinate is checked.",
                                   10, da_options::lbound_t::greaterequal, max_da_int,
                                   da_options::ubound_t::p_inf, 100));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("coord restart",
-                                  "Number of inner inner iterations to perform before "
+                                  "Number of inner iterations to perform before "
                                   "requesting to perform a full "
-                                  "evaluation of the step function",
+                                  "evaluation of the step function.",
                                   0, da_options::lbound_t::greaterequal, max_da_int,
                                   da_options::ubound_t::p_inf, max_da_int, "\\infty"));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "coord iteration limit", "Maximum number of iterations to perform", 1,
+            "coord iteration limit", "Maximum number of iterations to perform.", 1,
             da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
             100000));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "lbfgsb iteration limit", "Maximum number of iterations to perform", 1,
+            "lbfgsb iteration limit", "Maximum number of iterations to perform.", 1,
             da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
             10000));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "lbfgsb memory limit",
-            "Number of vectors to use for approximating the Hessian", 1,
+            "Number of vectors to use for approximating the Hessian.", 1,
             da_options::lbound_t::greaterequal, 1000, da_options::ubound_t::lessequal,
             11));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "monitoring frequency",
-            "How frequent to call the user-supplied monitor function", 0,
+            "How frequently to call the user-supplied monitor function.", 0,
             da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
             0));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("print level",
-                                  "Set level of verbosity for the solver 0 indicates no "
-                                  "output while 5 is a very verbose printing",
+                                  "Set level of verbosity for the solver: from 0, "
+                                  "indicating no output, to 5, which is very verbose.",
                                   0, da_options::lbound_t::greaterequal, 5,
                                   da_options::ubound_t::lessequal, 1));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "debug", "Set debug level (internal use)", 0,
+            "debug", "Set debug level (internal use).", 0,
             da_options::lbound_t::greaterequal, 3, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
@@ -119,33 +119,33 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         // ---
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "derivative test tol",
-            "Tolerance used to check user-provided derivatives by finite-differences."
-            "If <print level> is 1 then only the entries with larger discrepancy are "
-            "reported, and if the print level is greater or equal to 2, then all entries "
-            "are printed",
+            "Tolerance used to check user-provided derivatives by finite-differences. "
+            "If <print level> is 1, then only the entries with larger discrepancy are "
+            "reported, and if print level is greater than or equal to 2, "
+            "then all entries are printed.",
             0.0, da_options::lbound_t::greaterthan, 10.0, da_options::ubound_t::lessequal,
             1.0e-4, "10^{-4}"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "finite differences step",
-            "Size of step to use for estimating derivatives using finite-differences",
+            "Size of step to use for estimating derivatives using finite-differences.",
             0.0, da_options::lbound_t::greaterthan, 10.0, da_options::ubound_t::lessthan,
             tol.safe_eps(10), tol.safe_eps_latex(10)));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("time limit", "Maximum time allowed to run (in seconds)",
+            OptionNumeric<T>("time limit", "Maximum time allowed to run (in seconds).",
                              0.0, da_options::lbound_t::greaterthan, 0,
                              da_options::ubound_t::p_inf, static_cast<T>(1.0e6), "10^6"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "infinite bound size", "Threshold value to take for +/- infinity", 1000,
+            "infinite bound size", "Threshold value to take for +/- infinity.", 1000,
             da_options::lbound_t::greaterthan, 0, da_options::ubound_t::p_inf,
             static_cast<T>(1.0e20), "10^{20}"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "lbfgsb convergence tol",
             "Tolerance of the projected gradient infinity norm to "
-            "declare convergence",
+            "declare convergence.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
@@ -162,7 +162,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord convergence tol",
-            "Tolerance of the projected gradient infinity norm to declare convergence",
+            "Tolerance of the projected gradient infinity norm to declare convergence.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
@@ -170,7 +170,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "coord skip tol",
             "Coordinate skip tolerance, a given coordinate could be skipped if the "
             "change between two consecutive iterates is less than tolerance. Any "
-            "negative value disables the skipping scheme",
+            "negative value disables the skipping scheme.",
             -1.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             tol.safe_eps(), tol.safe_eps_latex()));
         opts.register_opt(oT);
@@ -233,7 +233,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "regularization term",
-            "Value for the regularization term. A value of 0 disables regularization.",
+            "Value of the regularization term. A value of 0 disables regularization.",
             0.0, da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,
             0.0));
         opts.register_opt(oT);
@@ -244,7 +244,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         std::shared_ptr<OptionString> os;
         // ---
         os = std::make_shared<OptionString>(OptionString(
-            "print options", "Print options list", {{"yes", 1}, {"no", 0}}, "no"));
+            "print options", "Print options list.", {{"yes", 1}, {"no", 0}}, "no"));
         opts.register_opt(os);
 
         os = std::make_shared<OptionString>(
@@ -254,7 +254,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(os);
 
         os = std::make_shared<OptionString>(
-            OptionString("optim method", "Select optimization solver to use",
+            OptionString("optim method", "Select optimization solver to use.",
                          {{"lbfgsb", da_optim::solvers::solver_lbfgsb},
                           {"lbfgs", da_optim::solvers::solver_lbfgsb},
                           {"bfgs", da_optim::solvers::solver_lbfgsb},
@@ -304,7 +304,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(os);
 
         os = std::make_shared<OptionString>(OptionString(
-            "regularization power", "Value for the regularization power term.",
+            "regularization power", "Value of the regularization power term.",
             {{"quadratic", regularization::quadratic}, {"cubic", regularization::cubic}},
             "quadratic"));
         opts.register_opt(os);
