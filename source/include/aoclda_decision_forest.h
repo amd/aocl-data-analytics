@@ -108,9 +108,7 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
  * - @ref da_status_internal_error - an unexpected error occurred.
  *
  * \post
- * @rst
- * After successful execution, :ref:`da_handle_get_result_? <da_handle_get_result>` can be queried with the following enum:
- * @endrst
+ * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enum:
  * - \p da_rinfo - return an array of size 5 containing \p n_features, \p n_samples, the number of samples the tree was
  *   trained on, the value of the random seed used to fit the tree and the depth of the tree.
  */
@@ -139,9 +137,7 @@ da_status da_tree_fit_s(da_handle handle);
  * - @ref da_status_internal_error - an unexpected error occurred.
  *
  * \post
- * @rst
- * After successful execution, :ref:`da_handle_get_result_? <da_handle_get_result>` can be queried with the following enum:
- * @endrst
+ * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enum:
  * - \p da_rinfo - return an array of size 5 containing \p n_features, \p n_samples, the number of samples the tree was
  *   trained on, the value of the random seed used by the RNG and \p n_tree, the total number of trees in the forest.
 */

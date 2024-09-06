@@ -105,9 +105,7 @@ da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int 
 
  *
  * \post
- * @rst
- * After successful execution, :ref:`da_handle_get_result_? <da_handle_get_result>` can be queried with the following enums for floating-point output:
- * @endrst
+ * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enums for floating-point output:
  * - \p da_kmeans_cluster_centres - return an array of size \p n_clusters @f$\times@f$ \p n_features containing the coordinates of the cluster centres, in column major format.
  * - \p da_rinfo - return an array of size 5 containing \p n_samples, \p n_features, \p n_clusters, \p n_iter (the number of iterations performed) and \p inertia (the sum of the squared distance of each sample to its closest cluster centre).
  *
