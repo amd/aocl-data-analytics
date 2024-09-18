@@ -29,8 +29,8 @@
 #define UTEST_UTILS_HPP
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cmath>
 #include <iostream>
 #include <vector>
 
@@ -64,6 +64,17 @@
     ASSERT_NEAR((std::abs(x[j])), (std::abs(y[j])), abs_error)                           \
         << "Vectors " #x " and " #y " different at index j=" << j << "."
 
+namespace da_numeric {
+// Safe numerical tolerances to be used with single and double precision float types
+template <class T> struct tolerance {
+    static constexpr T eps{std::numeric_limits<T>::epsilon()};
+    static const T safe_tol() { return std::sqrt(T(2) * eps); };
+    static const T tol(T numerator = T(1), T denominator = T(1)) {
+        return numerator * safe_tol() / denominator;
+    }
+};
+} // namespace da_numeric
+
 /* Convert std::vector from one type to another, to avoid warnings in templated tests*/
 template <class T_in, class T_out>
 std::vector<T_out> convert_vector(const std::vector<T_in> &input) {
@@ -80,15 +91,24 @@ inline da_status da_linmod_get_coef(da_handle handle, da_int *nc, float *x) {
     return da_handle_get_result_s(handle, da_result::da_linmod_coef, nc, x);
 }
 
-namespace da_numeric {
-// Safe numerical tolerances to be used with single and double precision float types
-template <class T> struct tolerance {
-    static constexpr T eps{std::numeric_limits<T>::epsilon()};
-    static const T safe_tol() { return std::sqrt(T(2) * eps); };
-    static const T tol(T numerator = T(1), T denominator = T(1)) {
-        return numerator * safe_tol() / denominator;
+namespace da_test {
+template <typename T> inline void free_data(T **arr, [[maybe_unused]] da_int n) {
+    if (*arr)
+        free(*arr);
+}
+
+inline void free_data(char ***arr, da_int n) {
+    if (arr && *arr) {
+        for (da_int i = 0; i < n; i++) {
+            if ((*arr)[i]) {
+                free((*arr)[i]);
+                (*arr)[i] = nullptr;
+            }
+        }
+        free(*arr);
+        *arr = nullptr;
     }
-};
-} // namespace da_numeric
+}
+} // namespace da_test
 
 #endif
