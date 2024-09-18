@@ -33,23 +33,6 @@
 
 namespace da_kmeans {
 
-/* Populate the member variables n_blocks and block_rem with details of the blocking scheme to use */
-template <typename T> void da_kmeans<T>::get_blocking_scheme(da_int n_samples) {
-    n_blocks = n_samples / max_block_size;
-    block_rem = n_samples % max_block_size;
-    // Count the remainder in the number of blocks
-    if (block_rem > 0)
-        n_blocks += 1;
-}
-
-/* Return the number of threads use in a parallel region containing a loop*/
-template <typename T> da_int da_kmeans<T>::get_n_threads(da_int loop_size) {
-    if (omp_get_max_active_levels() == omp_get_level())
-        return (da_int)1;
-
-    return std::min((da_int)omp_get_max_threads(), loop_size);
-}
-
 /* Initialization function for Elkan's algorithm */
 template <typename T> void da_kmeans<T>::init_elkan() {
     ldworkcs1 = n_clusters + 8;
@@ -727,9 +710,9 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
         return;
     }
 
-    get_blocking_scheme(n_samples);
+    da_utils::blocking_scheme(n_samples, max_block_size, n_blocks, block_rem);
 
-    da_int n_threads = get_n_threads(n_blocks);
+    da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
 
     (this->*initialize_algorithm)();
 

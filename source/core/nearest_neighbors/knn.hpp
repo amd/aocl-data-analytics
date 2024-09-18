@@ -360,7 +360,7 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
         // If the leading dimension and n_queries match, optimize using blocking.
         da_int n_blocks = n_queries / BLOCK_SIZE;
         da_int block_rem = n_queries % BLOCK_SIZE;
-        da_int n_threads = da_utils::get_n_threads_loop(std::max(n_blocks, 1));
+        da_int n_threads = da_utils::get_n_threads_loop(std::max(n_blocks, (da_int)1));
         try {
             D.resize(this->n_samples * BLOCK_SIZE * n_threads);
         } catch (std::bad_alloc const &) {

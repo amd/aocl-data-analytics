@@ -40,7 +40,7 @@ void blocking_scheme(da_int n_samples, da_int block_size, da_int &n_blocks,
         n_blocks += 1;
 }
 
-/* Return the number of threads use in a parallel region containing a loop*/
+/* Return the number of threads to use in a parallel region containing a loop*/
 da_int get_n_threads_loop(da_int loop_size) {
     if (omp_get_max_active_levels() == omp_get_level())
         return (da_int)1;

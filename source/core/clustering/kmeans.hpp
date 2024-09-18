@@ -35,6 +35,7 @@
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_utils.hpp"
 #include "euclidean_distance.hpp"
 #include "kmeans_options.hpp"
 #include "kmeans_types.hpp"
@@ -241,10 +242,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void kmeans_plusplus();
 
     void perform_hartigan_wong();
-
-    void get_blocking_scheme(da_int n_samples);
-
-    da_int get_n_threads(da_int loop_size);
 
   public:
     da_options::OptionRegistry opts;
@@ -711,9 +708,9 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         max_block_size = std::min(KMEANS_LLOYD_BLOCK_SIZE, k_samples);
 
-        get_blocking_scheme(k_samples);
+        da_utils::blocking_scheme(k_samples, max_block_size, n_blocks, block_rem);
 
-        da_int n_threads = get_n_threads(n_blocks);
+        da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
 
         da_int ldy_work;
 
