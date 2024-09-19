@@ -159,7 +159,10 @@ template <typename T> class linear_model : public basic_handle<T> {
     linear_model(da_errors::da_error_t &err) {
         // Assumes that err is valid
         this->err = &err;
-        register_linmod_options<T>(opts);
+        // Initialize the options registry
+        // Any error is stored err->status[.] and this NEEDS to be checked
+        // by the caller.
+        register_linmod_options<T>(opts, err);
     }
     ~linear_model();
 

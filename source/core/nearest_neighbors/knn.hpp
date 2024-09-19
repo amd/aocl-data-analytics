@@ -76,11 +76,13 @@ template <typename T> class da_knn : public basic_handle<T> {
     da_int n_classes = -1;
     da_options::OptionRegistry opts;
 
-    da_knn(da_errors::da_error_t &err, da_status &status) {
+    da_knn(da_errors::da_error_t &err) {
         // Assumes that err is valid
         this->err = &err;
         // Initialize the options registry
-        status = register_knn_options<T>(opts);
+        // Any error is stored err->status[.] and this NEEDS to be checked
+        // by the caller.
+        register_knn_options<T>(opts, err);
     };
 
     /* get_result (required to be defined by basic_handle) */

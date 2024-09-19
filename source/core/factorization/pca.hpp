@@ -104,7 +104,10 @@ template <typename T> class da_pca : public basic_handle<T> {
 
     da_pca(da_errors::da_error_t &err) {
         this->err = &err;
-        register_pca_options<T>(opts);
+        // Initialize the options registry
+        // Any error is stored err->status[.] and this NEEDS to be checked
+        // by the caller.
+        register_pca_options<T>(opts, err);
     };
 
     da_status init(da_int n, da_int p, const T *A, da_int lda);

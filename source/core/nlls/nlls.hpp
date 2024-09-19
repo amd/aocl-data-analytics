@@ -89,11 +89,13 @@ template <typename T> class nlls : public basic_handle<T> {
     da_optim::da_optimization<T> *opt{nullptr};
 
     // Constructor
-    nlls(da_errors::da_error_t &err, da_status &status) {
+    nlls(da_errors::da_error_t &err) {
         // Assumes that err is valid
         this->err = &err;
         // Initialize the optimization framework and options registry
-        status = init_opt_solver();
+        // Any error is stored err->status[.] and this NEEDS to be checked
+        // by the caller.
+        init_opt_solver();
     }
 
     // Destructor

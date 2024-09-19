@@ -210,7 +210,10 @@ template <typename T> class decision_tree : public basic_handle<T> {
     decision_tree(da_errors::da_error_t &err) {
         // Assumes that err is valid
         this->err = &err;
-        register_decision_tree_options<T>(opts);
+        // Initialize the options registry
+        // Any error is stored err->status[.] and this NEEDS to be checked
+        // by the caller.
+        register_decision_tree_options<T>(opts, err);
     }
     // Constructor bypassing the optional parameters for internal forest use
     // Values will NOT be checked

@@ -68,7 +68,10 @@ template <typename T> class random_forest : public basic_handle<T> {
     random_forest(da_errors::da_error_t &err) {
         // Assumes that err is valid
         this->err = &err;
-        register_forest_options<T>(opts);
+        // Initialize the options registry
+        // Any error is stored err->status[.] and this NEEDS to be checked
+        // by the caller.
+        register_forest_options<T>(opts, err);
     }
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
                                 da_int ldx, const da_int *y, da_int n_class = 0);

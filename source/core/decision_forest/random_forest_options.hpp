@@ -28,6 +28,7 @@
 #ifndef FOREST_OPTIONS_HPP
 #define FOREST_OPTIONS_HPP
 
+#include "da_error.hpp"
 #include "decision_tree_types.hpp"
 #include "options.hpp"
 #include "random_forest.hpp"
@@ -36,7 +37,8 @@ namespace da_random_forest {
 using namespace da_decision_tree;
 
 template <class T>
-inline da_status register_forest_options(da_options::OptionRegistry &opts) {
+inline da_status register_forest_options(da_options::OptionRegistry &opts,
+                                         da_errors::da_error_t &err) {
     da_status status = da_status_success;
 
     try {
@@ -142,13 +144,12 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
     } catch (std::bad_alloc &) {
-        return da_status_memory_error; // LCOV_EXCL_LINE
-    } catch (std::invalid_argument &e) {
-        std::cerr << e.what() << std::endl; // LCOV_EXCL_LINE
-        return da_status_internal_error;    // LCOV_EXCL_LINE
-    } catch (...) {                         // LCOV_EXCL_LINE
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) { // LCOV_EXCL_LINE
         // Invalid use of the constructor, shouldn't happen (invalid_argument)
-        return da_status_internal_error; // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
     }
 
     return status;

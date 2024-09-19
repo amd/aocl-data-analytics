@@ -28,6 +28,7 @@
 #define NOMINMAX
 #endif
 
+#include "da_error.hpp"
 #include "kmeans_types.hpp"
 #include "options.hpp"
 
@@ -36,7 +37,8 @@
 namespace da_kmeans {
 
 template <class T>
-inline da_status register_kmeans_options(da_options::OptionRegistry &opts) {
+inline da_status register_kmeans_options(da_options::OptionRegistry &opts,
+                                         da_errors::da_error_t &err) {
     using namespace da_options;
     da_int imax = std::numeric_limits<da_int>::max();
 
@@ -89,10 +91,12 @@ inline da_status register_kmeans_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oT);
 
     } catch (std::bad_alloc &) {
-        return da_status_memory_error;
-    } catch (...) {
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) { // LCOV_EXCL_LINE
         // Invalid use of the constructor, shouldn't happen (invalid_argument)
-        return da_status_internal_error; // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
     }
 
     return da_status_success;

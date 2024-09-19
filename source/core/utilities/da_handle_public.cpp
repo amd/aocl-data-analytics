@@ -51,30 +51,57 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             break;
         case da_handle_linmod:
             (*handle)->linreg_d = new da_linmod::linear_model<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->linreg_d = nullptr;
+                return status;
+            }
             break;
         case da_handle_pca:
             (*handle)->pca_d = new da_pca::da_pca<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->pca_d = nullptr;
+                return status;
+            }
             break;
         case da_handle_kmeans:
             (*handle)->kmeans_d = new da_kmeans::da_kmeans<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->kmeans_d = nullptr;
+                return status;
+            }
             break;
         case da_handle_decision_tree:
             (*handle)->dectree_d =
                 new da_decision_tree::decision_tree<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->dectree_d = nullptr;
+                return status;
+            }
             break;
         case da_handle_decision_forest:
             (*handle)->forest_d =
                 new da_random_forest::random_forest<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->forest_d = nullptr;
+                return status;
+            }
             break;
         case da_handle_nlls:
-            (*handle)->nlls_d = new da_nlls::nlls<double>(*(*handle)->err, status);
+            (*handle)->nlls_d = new da_nlls::nlls<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->nlls_d = nullptr;
-                return status; // err already filled
+                return status;
             }
             break;
         case da_handle_knn:
-            (*handle)->knn_d = new da_knn::da_knn<double>(*(*handle)->err, status);
+            (*handle)->knn_d = new da_knn::da_knn<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->knn_d = nullptr;
                 return status;
@@ -110,30 +137,57 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
         switch (handle_type) {
         case da_handle_linmod:
             (*handle)->linreg_s = new da_linmod::linear_model<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->linreg_s = nullptr;
+                return status;
+            }
             break;
         case da_handle_pca:
             (*handle)->pca_s = new da_pca::da_pca<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->pca_s = nullptr;
+                return status;
+            }
             break;
         case da_handle_kmeans:
             (*handle)->kmeans_s = new da_kmeans::da_kmeans<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->kmeans_s = nullptr;
+                return status;
+            }
             break;
         case da_handle_decision_tree:
             (*handle)->dectree_s =
                 new da_decision_tree::decision_tree<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->dectree_s = nullptr;
+                return status;
+            }
             break;
         case da_handle_decision_forest:
             (*handle)->forest_s =
                 new da_random_forest::random_forest<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->forest_s = nullptr;
+                return status;
+            }
             break;
         case da_handle_nlls:
-            (*handle)->nlls_s = new da_nlls::nlls<float>(*(*handle)->err, status);
+            (*handle)->nlls_s = new da_nlls::nlls<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->nlls_s = nullptr;
-                return status; // err already filled
+                return status;
             }
             break;
         case da_handle_knn:
-            (*handle)->knn_s = new da_knn::da_knn<float>(*(*handle)->err, status);
+            (*handle)->knn_s = new da_knn::da_knn<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->knn_s = nullptr;
                 return status;
