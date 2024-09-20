@@ -47,7 +47,7 @@ NumPy arrays
 =============
 
 AOCL-DA Python interfaces typically expect data to be supplied as NumPy arrays. These can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
-The AOCL-DA interface will convert C-style NumPy arrays to Fortran style, so for best performance, it is recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions.
+For best performance, it is generally recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions since row-major arrays may be copied and transposed internally.
 
 .. _python_examples:
 

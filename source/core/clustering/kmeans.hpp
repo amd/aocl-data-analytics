@@ -40,7 +40,6 @@
 #include "kmeans_options.hpp"
 #include "kmeans_types.hpp"
 #include "lapack_templates.hpp"
-#include "options.hpp"
 #include <iostream>
 #include <random>
 #include <string>
@@ -49,6 +48,15 @@ namespace da_kmeans {
 
 /* k-means class */
 template <typename T> class da_kmeans : public basic_handle<T> {
+  public:
+    ~da_kmeans() {
+        // Destructor needs to handle arrays that were allocated due to row major storage of input data
+        if (C_temp)
+            delete[] (C_temp);
+        if (A_temp)
+            delete[] (A_temp);
+    }
+
   private:
     // n x p (samples x features)
     da_int n_samples = 0;
@@ -98,10 +106,14 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     T normc = 0.0;
 
     // User's data
-    const T *A;
-    const T *C;
+    const T *A = nullptr;
+    const T *C = nullptr;
     da_int lda = 0;
     da_int ldc = 0;
+
+    //Utility pointers to column major allocated copies of user's data
+    T *A_temp = nullptr;
+    T *C_temp = nullptr;
 
     // Maximum size of data blocks for Elkan, Lloyd and MacQueen algorithms
     da_int max_block_size = 0;
@@ -244,9 +256,9 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_kmeans(da_errors::da_error_t &err) {
         this->err = &err;
         // Initialize the options registry
-        // Any error is stored err->status[.] and this NEEDS to be checked
+        // Any error is stored err->status[.] and this needs to be checked
         // by the caller.
-        register_kmeans_options<T>(this->opts, err);
+        register_kmeans_options<T>(this->opts, *this->err);
     };
 
     da_status get_result(da_result query, da_int *dim, T *result) {
@@ -283,8 +295,9 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(n_clusters * n_features) + ".");
             }
-            for (da_int i = 0; i < n_clusters * n_features; i++)
-                result[i] = (*best_cluster_centres)[i];
+            this->copy_2D_results_array(n_clusters, n_features,
+                                        (*best_cluster_centres).data(), n_clusters,
+                                        result);
             break;
         default:
             return da_warn(this->err, da_status_unknown_query,
@@ -325,33 +338,22 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     /* Store details about user's data matrix in preparation for k-means computation */
     da_status set_data(da_int n_samples, da_int n_features, const T *A_in,
                        da_int lda_in) {
-        // Check for illegal arguments and function calls
-        if (n_samples < 1)
-            return da_error(
-                this->err, da_status_invalid_input,
-                "The function was called with n_samples = " + std::to_string(n_samples) +
-                    ". Constraint: n_samples >= 1.");
-        if (n_features < 1)
-            return da_error(this->err, da_status_invalid_input,
-                            "The function was called with n_features = " +
-                                std::to_string(n_features) +
-                                ". Constraint: n_features >= 1.");
-        if (lda_in < n_samples)
-            return da_error(
-                this->err, da_status_invalid_input,
-                "The function was called with n_samples = " + std::to_string(n_samples) +
-                    " and lda = " + std::to_string(lda) +
-                    ". Constraint: lda >= n_samples.");
-        if (A_in == nullptr)
-            return da_error(this->err, da_status_invalid_pointer, "The array A is null.");
+
+        // Guard against errors due to multiple calls using the same class instantiation
+        if (A_temp) {
+            delete[] (A_temp);
+            A_temp = nullptr;
+        }
+
+        da_status status =
+            this->store_2D_array(n_samples, n_features, A_in, lda_in, &A_temp, &A, lda,
+                                 "n_samples", "n_features", "A", "lda");
+        if (status != da_status_success)
+            return status;
 
         // Store dimensions of A
         this->n_samples = n_samples;
         this->n_features = n_features;
-        this->lda = lda_in;
-
-        // Pointer to user's data - no need to copy it
-        A = A_in;
 
         // Record that initialization is complete but computation has not yet been performed
         initdone = true;
@@ -382,20 +384,20 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                             "No data has been passed to the handle. Please call "
                             "da_kmeans_set_data_s or da_kmeans_set_data_d.");
 
+        // Guard against errors due to multiple calls using the same class instantiation
+        if (C_temp) {
+            delete[] (C_temp);
+            C_temp = nullptr;
+        }
+
         // Check for illegal arguments
         this->opts.get("n_clusters", n_clusters);
-        if (ldc_in < n_clusters)
-            return da_error(this->err, da_status_invalid_input,
-                            "The function was called ldc = " + std::to_string(ldc_in) +
-                                " and n_clusters is currently set to = " +
-                                std::to_string(n_clusters) +
-                                ". Constraint: ldc >= n_clusters.");
 
-        if (C_in == nullptr)
-            return da_error(this->err, da_status_invalid_pointer, "The array C is null.");
-
-        C = C_in;
-        ldc = ldc_in;
+        da_status status =
+            this->store_2D_array(n_clusters, n_features, C_in, ldc_in, &C_temp, &C, ldc,
+                                 "n_clusters", "n_features", "C", "ldc");
+        if (status != da_status_success)
+            return status;
 
         // Record that centres have been set
         centres_supplied = true;
@@ -614,38 +616,32 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 "da_kmeans_compute_d.");
         }
 
-        // Check for illegal arguments
-        if (m_samples < 1)
-            return da_error(
-                this->err, da_status_invalid_input,
-                "The function was called with m_samples = " + std::to_string(m_samples) +
-                    ". Constraint: m_samples >= 1.");
         if (m_features != n_features)
             return da_error(this->err, da_status_invalid_input,
                             "The function was called with m_features = " +
                                 std::to_string(m_features) +
                                 " but the k-means has been computed with " +
                                 std::to_string(n_features) + " features.");
-        if (ldx < m_samples)
-            return da_error(
-                this->err, da_status_invalid_input,
-                "The function was called with m_samples = " + std::to_string(m_samples) +
-                    " and ldx = " + std::to_string(ldx) +
-                    ". Constraint: ldx >= m_samples.");
 
-        if (ldx_transform < m_samples)
-            return da_error(
-                this->err, da_status_invalid_input,
-                "The function was called with m_samples = " + std::to_string(m_samples) +
-                    " and ldx_transform = " + std::to_string(ldx_transform) +
-                    ". Constraint: ldx_transform >= m_samples.");
+        const T *X_temp;
+        T *utility_ptr1;
+        T *utility_ptr2;
+        da_int ldx_temp;
+        T *X_transform_temp;
+        da_int ldx_transform_temp;
 
-        if (X == nullptr)
-            return da_error(this->err, da_status_invalid_pointer, "The array X is null.");
+        da_status status =
+            this->store_2D_array(m_samples, m_features, X, ldx, &utility_ptr1, &X_temp,
+                                 ldx_temp, "m_samples", "m_features", "X", "ldx");
+        if (status != da_status_success)
+            return status;
 
-        if (X_transform == nullptr)
-            return da_error(this->err, da_status_invalid_pointer,
-                            "The array X_transform is null.");
+        status = this->store_2D_array(
+            m_samples, n_clusters, X_transform, ldx_transform, &utility_ptr2,
+            const_cast<const T **>(&X_transform_temp), ldx_transform_temp, "m_samples",
+            "n_clusters", "X_transform", "ldx_transform", 1);
+        if (status != da_status_success)
+            return status;
 
         std::vector<T> x_work;
 
@@ -657,10 +653,20 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         }
 
         // Compute m_samples x n_clusters matrix of distances to cluster centres
-        euclidean_distance(m_samples, n_clusters, n_features, X, ldx,
-                           (*best_cluster_centres).data(), n_clusters, X_transform,
-                           ldx_transform, x_work.data(), 2, workc1.data(), 1, false,
-                           false);
+        euclidean_distance(column_major, m_samples, n_clusters, n_features, X_temp,
+                           ldx_temp, (*best_cluster_centres).data(), n_clusters,
+                           X_transform_temp, ldx_transform_temp, x_work.data(), 2,
+                           workc1.data(), 1, false, false);
+
+        if (this->order == row_major) {
+
+            da_utils::copy_transpose_2D_array_col_to_row_major(
+                m_samples, n_clusters, X_transform_temp, ldx_transform_temp, X_transform,
+                ldx_transform);
+
+            delete[] (utility_ptr1);
+            delete[] (utility_ptr2);
+        }
 
         return da_status_success;
     }
@@ -675,28 +681,17 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 "da_kmeans_compute_d.");
         }
 
-        // Check for illegal arguments
-        if (k_samples < 1)
-            return da_error(
-                this->err, da_status_invalid_input,
-                "The function was called with k_samples = " + std::to_string(k_samples) +
-                    ". Constraint: k_samples >= 1.");
-        if (k_features != n_features)
-            return da_error(this->err, da_status_invalid_input,
-                            "The function was called with k_features = " +
-                                std::to_string(k_features) +
-                                " but the k-means has been computed with " +
-                                std::to_string(n_features) + " features.");
-        if (ldy < k_samples)
-            return da_error(
-                this->err, da_status_invalid_input,
-                "The function was called with k_samples = " + std::to_string(k_samples) +
-                    " and ldy = " + std::to_string(ldy) +
-                    ". Constraint: ldy >= k_samples.");
+        const T *Y_temp;
+        T *utility_ptr;
+        da_int ldy_temp;
 
-        if (Y == nullptr)
-            return da_error(this->err, da_status_invalid_pointer, "The array Y is null.");
+        da_status status =
+            this->store_2D_array(k_samples, k_features, Y, ldy, &utility_ptr, &Y_temp,
+                                 ldy_temp, "k_samples", "k_features", "Y", "ldy");
+        if (status != da_status_success)
+            return status;
 
+        // Check for illegal output arguments
         if (Y_labels == nullptr)
             return da_error(this->err, da_status_invalid_pointer,
                             "The array Y_labels is null.");
@@ -739,9 +734,9 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         da_int block_size = max_block_size;
 
 #pragma omp parallel firstprivate(block_size) private(block_index)                       \
-    shared(n_blocks, block_rem, k_samples, max_block_size, Y, ldy, best_cluster_centres, \
-               dummy, workc1, dummy_int, Y_labels, y_work, ldy_work) default(none)       \
-    num_threads(n_threads)
+    shared(n_blocks, block_rem, k_samples, max_block_size, Y_temp, ldy_temp,             \
+               best_cluster_centres, dummy, workc1, dummy_int, Y_labels, y_work,         \
+               ldy_work) default(none) num_threads(n_threads)
         {
             da_int y_work_index =
                 ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + 8);
@@ -753,12 +748,16 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 } else {
                     block_index = i * max_block_size;
                 }
-                (this->*predict_block)(false, block_size, &Y[block_index], ldy,
+                (this->*predict_block)(false, block_size, &Y_temp[block_index], ldy_temp,
                                        (*best_cluster_centres).data(), dummy,
                                        workc1.data(), dummy_int, &Y_labels[block_index],
                                        &y_work[y_work_index], ldy_work);
             }
         }
+
+        if (this->order == row_major)
+            delete[] (utility_ptr);
+
         return da_status_success;
     }
 };

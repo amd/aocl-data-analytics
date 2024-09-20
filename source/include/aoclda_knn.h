@@ -69,11 +69,11 @@ typedef enum da_knn_weights_ da_knn_weights;
  * After calling this function you may use the option setting APIs to set :ref:`options <knn_options>`.
  * @endrst
 
- * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
  * \param[in] n_samples number of observations in \p X_train.
  * \param[in] n_features number of features in \p X_train.
- * \param[in] X_train array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * \param[in] ldx_train leading dimension of \p X_train.  Constraint: \p ldx_train @f$\ge@f$ \p n_samples.
+ * \param[in] X_train array containing \p n_samples  @f$\times@f$ \p n_features data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * \param[in] ldx_train leading dimension of \p X_train. Constraint: \p ldx_train @f$\ge@f$ \p n_samples if \p X_train is stored in column-major order, or \p ldx_train @f$\ge@f$ \p n_features if \p X_train is stored in row-major order.
  * \param[in] y_train array containing the \p n_samples labels.
  * \return \ref da_status.  The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -81,6 +81,7 @@ typedef enum da_knn_weights_ da_knn_weights;
  * - \ref da_status_invalid_pointer - the @p handle has not been correctly initialized, or \p X_train or \p y_train are invalid.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
  * - \ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_train was violated.
 */
 da_status da_knn_set_training_data_d(da_handle handle, da_int n_samples,
                                      da_int n_features, const double *X_train,
@@ -98,11 +99,11 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
  * previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
  * @endrst
  *
- * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
  * \param[in] n_queries number of observations in \p X_test.
  * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
- * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format.
- * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries.
+ * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in the same storage format used to set the training data.
+ * \param[in] ldx_test leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_queries if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * \param[out] n_ind array containing the \p n_queries @f$\times@f$ \p k matrix, with the indices of the \p k - nearest neighbors of the test data \p X_test. If \p k @f$\le@f$ 0, the number of neighbors passed during the option setting will be used instead.
  * \param[out] n_dist array containing the corresponding distances to the neighbors whose indices are stored in \p n_ind, if \p return_distance is 1.
  * \param[in] k number of nearest neighbors requested. If \p k @f$\le@f$ 0, the number of neighbors passed during the option setting will be used instead. Constraint: If \p k @f$\le@f$ \p n_features.
@@ -113,6 +114,7 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
  * - \ref da_status_invalid_pointer - the @p handle has not been correctly initialized, or \p X_test or \p n_ind or \p n_dist is invalid.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
  * - \ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
 */
 da_status da_knn_kneighbors_d(da_handle handle, da_int n_queries, da_int n_features,
                               const double *X_test, da_int ldx_test, da_int *n_ind,
@@ -130,8 +132,8 @@ da_status da_knn_kneighbors_s(da_handle handle, da_int n_queries, da_int n_featu
  * memory is allocated correctly for computing the class probabilities of a test data set.
  * @endrst
  *
- * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
- * \param[in,out] n_classes the number of different classes. If \p n_classes @f$\le@f$ 0, the number of different classes will be returned and \p classes will not be referenced.
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
+ * \param[inout] n_classes the number of different classes. If \p n_classes @f$\le@f$ 0, the number of different classes will be returned and \p classes will not be referenced.
  * \param[out] classes ordered array that holds the different classes.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -152,11 +154,11 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
  * data matrix previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
  * @endrst
  *
- * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
  * \param[in] n_queries number of observations in \p X_test.
  * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
- * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format.
- * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries.
+ * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * \param[out] proba array of size \p n_queries  @f$\times@f$ \p n_classes containing the probability estimates for each of the available classes.
  * \return \ref da_status.  The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -164,6 +166,7 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
  * - \ref da_status_invalid_pointer - the @p handle has not been correctly initialized, or \p X_test or \p n_ind or \p n_dist is invalid.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
  * - \ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
 */
 da_status da_knn_predict_proba_d(da_handle handle, da_int n_queries, da_int n_features,
                                  const double *X_test, da_int ldx_test, double *proba);
@@ -179,11 +182,11 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
  * data matrix previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
  * @endrst
  *
- * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
  * \param[in] n_queries number of observations in \p X_test.
  * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
- * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in column-major format.
- * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries.
+ * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * \param[out] y_test array of size \p n_queries containing the estimated label for each query.
  * \return \ref da_status.  The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -191,6 +194,7 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
  * - \ref da_status_invalid_pointer - the @p handle has not been correctly initialized, or \p X_test or \p n_ind or \p n_dist is invalid.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
  * - \ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
 */
 da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features,
                            const double *X_test, da_int ldx_test, da_int *y_test);

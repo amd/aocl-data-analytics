@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 
 #include "aoclda.h"
 #include "moment_statistics.hpp"
+#include "row_to_col_major.hpp"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -49,15 +50,17 @@ template <typename T> bool is_zero(T *arr, da_int len) {
 
 /* Standardize a data array x by shifting and scaling */
 template <typename T>
-da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int dof,
-                      da_int mode, T *shift, T *scale) {
+da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in, T *x,
+                      da_int ldx, da_int dof, da_int mode, T *shift, T *scale) {
 
-    da_status status = da_status_success;
+    da_int n, p;
+    da_axis axis;
 
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (x == nullptr)
         return da_status_invalid_pointer;
     if (mode != 0 && mode != 1)
@@ -118,7 +121,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int
             return da_status_memory_error; // LCOV_EXCL_LINE
         }
 
-        status = variance(axis, n, p, x, ldx, dof, amean, var);
+        status = variance(column_major, axis, n, p, x, ldx, dof, amean, var);
         if (status != da_status_success) {
             delete[] amean;
             delete[] var;
@@ -140,7 +143,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int
         }
         // If we need to compute standard deviations, do so
         if (scale_is_zero) {
-            status = variance(axis, n, p, x, ldx, dof, amean, scale);
+            status = variance(column_major, axis, n, p, x, ldx, dof, amean, scale);
             if (status != da_status_success) {
                 delete[] amean;
                 delete[] var;
@@ -162,7 +165,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int
         }
         // If we need to compute means, do so
         if (shift_is_zero) {
-            status = mean(axis, n, p, x, ldx, shift);
+            status = mean(column_major, axis, n, p, x, ldx, shift);
             if (status != da_status_success) {
                 delete[] amean;
                 delete[] var;
@@ -174,7 +177,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int
     } else {
         // Shift and scale are both to be used, but one of both might contain only zeros
         if (shift_is_zero && scale_is_zero) {
-            status = variance(axis, n, p, x, ldx, dof, shift, scale);
+            status = variance(column_major, axis, n, p, x, ldx, dof, shift, scale);
             if (status != da_status_success) {
                 delete[] amean;
                 delete[] var;
@@ -184,7 +187,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int
                 scale[i] = std::sqrt(scale[i]);
             }
         } else if (shift_is_zero) {
-            status = mean(axis, n, p, x, ldx, shift);
+            status = mean(column_major, axis, n, p, x, ldx, shift);
             if (status != da_status_success) {
                 delete[] amean;
                 delete[] var;
@@ -192,7 +195,7 @@ da_status standardize(da_axis axis, da_int n, da_int p, T *x, da_int ldx, da_int
             }
         } else if (scale_is_zero) {
             // Compute standard deviations about the supplied means
-            status = moment(axis, n, p, x, ldx, 2, 1, shift, scale);
+            status = moment(column_major, axis, n, p, x, ldx, 2, 1, shift, scale);
             if (status != da_status_success) {
                 delete[] amean;
                 delete[] var;

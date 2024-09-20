@@ -25,6 +25,10 @@
  *
  */
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "euclidean_distance.hpp"
@@ -50,6 +54,8 @@ template <typename T> struct EDDataType {
     std::vector<T> X, Y, X_norms, Y_norms;
 
     T tol;
+
+    da_order order = column_major;
 };
 
 template <typename T> struct EDParamType {
@@ -77,7 +83,9 @@ void check_answer(EDDataType<T> data, EDParamType<T> params, T *D, T *X_norms,
     if (params.compute_X_norms) {
         for (da_int j = 0; j < data.k; j++) {
             for (da_int i = 0; i < m; i++) {
-                X_norms_exp[i] += X[i + j * ldx] * X[i + j * ldx];
+                X_norms_exp[i] += (data.order == column_major)
+                                      ? X[i + j * ldx] * X[i + j * ldx]
+                                      : X[i * ldx + j] * X[i * ldx + j];
             }
         }
     } else {
@@ -89,7 +97,9 @@ void check_answer(EDDataType<T> data, EDParamType<T> params, T *D, T *X_norms,
     if (params.compute_Y_norms) {
         for (da_int j = 0; j < data.k; j++) {
             for (da_int i = 0; i < n; i++) {
-                Y_norms_exp[i] += Y[i + j * ldy] * Y[i + j * ldy];
+                Y_norms_exp[i] += (data.order == column_major)
+                                      ? Y[i + j * ldy] * Y[i + j * ldy]
+                                      : Y[i * ldy + j] * Y[i * ldy + j];
             }
         }
     } else {
@@ -107,13 +117,19 @@ void check_answer(EDDataType<T> data, EDParamType<T> params, T *D, T *X_norms,
         ldy = ldx;
     }
 
-    std::vector<T> D_exp(data.ldd * n, 0.0);
+    da_int size_D = std::max(data.ldd * data.n, data.m * data.ldd);
+    std::vector<T> D_exp(size_D, 0.0);
 
     for (da_int j = 0; j < n; j++) {
         for (da_int i = 0; i < m; i++) {
             for (da_int k = 0; k < data.k; k++) {
-                D_exp[i + data.ldd * j] +=
-                    (X[i + k * ldx] - Y[j + k * ldy]) * (X[i + k * ldx] - Y[j + k * ldy]);
+                if (data.order == column_major) {
+                    D_exp[i + data.ldd * j] += (X[i + k * ldx] - Y[j + k * ldy]) *
+                                               (X[i + k * ldx] - Y[j + k * ldy]);
+                } else {
+                    D_exp[i * data.ldd + j] += (X[i * ldx + k] - Y[j * ldy + k]) *
+                                               (X[i * ldx + k] - Y[j * ldy + k]);
+                }
             }
         }
     }
@@ -121,9 +137,15 @@ void check_answer(EDDataType<T> data, EDParamType<T> params, T *D, T *X_norms,
     if (params.compute_X_norms == 0) {
         for (da_int j = 0; j < n; j++) {
             for (da_int i = 0; i < m; i++) {
-                D_exp[i + data.ldd * j] -= X_norms_exp[i];
-                if (params.X_is_Y)
-                    D_exp[i + data.ldd * j] -= X_norms_exp[j];
+                if (data.order == column_major) {
+                    D_exp[i + data.ldd * j] -= X_norms_exp[i];
+                    if (params.X_is_Y)
+                        D_exp[i + data.ldd * j] -= X_norms_exp[j];
+                } else {
+                    D_exp[i * data.ldd + j] -= X_norms_exp[i];
+                    if (params.X_is_Y)
+                        D_exp[i * data.ldd + j] -= X_norms_exp[j];
+                }
             }
         }
     }
@@ -131,7 +153,11 @@ void check_answer(EDDataType<T> data, EDParamType<T> params, T *D, T *X_norms,
     if (params.compute_Y_norms == 0 && !(params.X_is_Y)) {
         for (da_int j = 0; j < n; j++) {
             for (da_int i = 0; i < m; i++) {
-                D_exp[i + data.ldd * j] -= Y_norms_exp[j];
+                if (data.order == column_major) {
+                    D_exp[i + data.ldd * j] -= Y_norms_exp[j];
+                } else {
+                    D_exp[i * data.ldd + j] -= Y_norms_exp[j];
+                }
             }
         }
     }
@@ -139,7 +165,11 @@ void check_answer(EDDataType<T> data, EDParamType<T> params, T *D, T *X_norms,
     if (params.square == false) {
         for (da_int j = 0; j < n; j++) {
             for (da_int i = 0; i < m; i++) {
-                D_exp[i + data.ldd * j] = std::sqrt(D_exp[i + m * j]);
+                if (data.order == column_major) {
+                    D_exp[i + data.ldd * j] = std::sqrt(D_exp[i + data.ldd * j]);
+                } else {
+                    D_exp[i * data.ldd + j] = std::sqrt(D_exp[i * data.ldd + j]);
+                }
             }
         }
     }
@@ -148,12 +178,16 @@ void check_answer(EDDataType<T> data, EDParamType<T> params, T *D, T *X_norms,
         // Set lower triangle to 0
         for (da_int j = 0; j < n; j++) {
             for (da_int i = j + 1; i < m; i++) {
-                D_exp[i + data.ldd * j] = 0.0;
+                if (data.order == column_major) {
+                    D_exp[i + data.ldd * j] = 0.0;
+                } else {
+                    D_exp[i * data.ldd + j] = 0.0;
+                }
             }
         }
     }
 
-    EXPECT_ARR_NEAR(data.ldd * n, D, D_exp.data(), data.tol);
+    EXPECT_ARR_NEAR(size_D, D, D_exp.data(), data.tol);
 }
 
 template <typename T> void Get1by1Data(std::vector<EDDataType<T>> &data) {
@@ -188,6 +222,30 @@ template <typename T> void GetSingleRowData(std::vector<EDDataType<T>> &data) {
     test.ldx = 1;
     test.ldy = 1;
     test.ldd = 1;
+
+    std::vector<double> VecX{1.0, 2.0, -3.0, 1.0}, VecY{0.0, 1.0, 4.0, -2.0}, VecX2{15.0},
+        VecY2{21.0};
+    test.X = convert_vector<double, T>(VecX);
+    test.X_norms = convert_vector<double, T>(VecX2);
+    test.Y = convert_vector<double, T>(VecY);
+    test.Y_norms = convert_vector<double, T>(VecY2);
+
+    test.tol = 100 * std::numeric_limits<T>::epsilon();
+
+    data.push_back(test);
+}
+
+template <typename T> void GetSingleRowDataRowMajor(std::vector<EDDataType<T>> &data) {
+    EDDataType<T> test;
+
+    test.name = "Single row, row major";
+    test.m = 1;
+    test.n = 1;
+    test.k = 4;
+    test.ldx = 4;
+    test.ldy = 4;
+    test.ldd = 1;
+    test.order = row_major;
 
     std::vector<double> VecX{1.0, 2.0, -3.0, 1.0}, VecY{0.0, 1.0, 4.0, -2.0}, VecX2{15.0},
         VecY2{21.0};
@@ -247,6 +305,30 @@ template <typename T> void GetTypicalData(std::vector<EDDataType<T>> &data) {
     data.push_back(test);
 }
 
+template <typename T> void GetTypicalDataRowMajor(std::vector<EDDataType<T>> &data) {
+    EDDataType<T> test;
+
+    test.name = "Typical data, row major";
+    test.m = 3;
+    test.n = 2;
+    test.k = 3;
+    test.ldx = 3;
+    test.ldy = 3;
+    test.ldd = 3;
+    test.order = row_major;
+
+    std::vector<double> VecX{1.0, 2.0, -3.0, 1.0, -1.0, 2.0, 0.0, -2.0, 4.0},
+        VecY{4.0, -2.0, 3.0, 3.0, -1.0, 2.0}, VecX2{14.0, 6.0, 20.0}, VecY2{29.0, 14.0};
+    test.X = convert_vector<double, T>(VecX);
+    test.X_norms = convert_vector<double, T>(VecX2);
+    test.Y = convert_vector<double, T>(VecY);
+    test.Y_norms = convert_vector<double, T>(VecY2);
+
+    test.tol = 100 * std::numeric_limits<T>::epsilon();
+
+    data.push_back(test);
+}
+
 template <typename T> void GetSubarrayData(std::vector<EDDataType<T>> &data) {
     EDDataType<T> test;
 
@@ -278,7 +360,9 @@ template <typename T> void GetEDData(std::vector<EDDataType<T>> &data) {
     GetSingleRowData(data);
     GetSingleColData(data);
     GetTypicalData(data);
+    GetTypicalDataRowMajor(data);
     GetSubarrayData(data);
+    GetSingleRowDataRowMajor(data);
 }
 
 using FloatTypes = ::testing::Types<float, double>;
@@ -343,12 +427,13 @@ TYPED_TEST(EDTest, Euclidean_Distance) {
                       << std::endl;
 
             da_int D_cols = (param.X_is_Y) ? test.m : test.n;
-            std::vector<TypeParam> D(test.ldd * D_cols, 0.0);
+            da_int size_D = std::max(test.ldd * D_cols, test.m * test.ldd);
+            std::vector<TypeParam> D(size_D, 0.0);
             std::vector<TypeParam> X_norms(test.X_norms);
             std::vector<TypeParam> Y_norms(test.Y_norms);
 
-            euclidean_distance(test.m, test.n, test.k, test.X.data(), test.ldx,
-                               test.Y.data(), test.ldy, D.data(), test.ldd,
+            euclidean_distance(test.order, test.m, test.n, test.k, test.X.data(),
+                               test.ldx, test.Y.data(), test.ldy, D.data(), test.ldd,
                                X_norms.data(), param.compute_X_norms, Y_norms.data(),
                                param.compute_Y_norms, param.square, param.X_is_Y);
 

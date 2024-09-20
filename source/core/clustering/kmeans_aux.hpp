@@ -339,9 +339,10 @@ void da_kmeans<T>::elkan_iteration_assign_block(
 template <typename T> void da_kmeans<T>::compute_centre_half_distances() {
     T *dummy = nullptr;
 
-    euclidean_distance(
-        n_clusters, n_clusters, n_features, (*current_cluster_centres).data(), n_clusters,
-        dummy, 0, workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0, false, true);
+    euclidean_distance(column_major, n_clusters, n_clusters, n_features,
+                       (*current_cluster_centres).data(), n_clusters, dummy, 0,
+                       workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0, false,
+                       true);
     // For each centre, compute the half distance to next closest centre and store in workc1
     std::fill(workc1.begin(), workc1.begin() + n_clusters,
               std::numeric_limits<T>::infinity());
@@ -614,7 +615,7 @@ void da_kmeans<T>::macqueen_iteration(bool update_centres,
 
         T *dummy = nullptr;
         T tmp;
-        euclidean_distance(1, n_clusters, n_features, &A[i], lda,
+        euclidean_distance(column_major, 1, n_clusters, n_features, &A[i], lda,
                            (*current_cluster_centres).data(), n_clusters, workc2.data(),
                            1, dummy, 0, workc1.data(), 1, true, false);
 
@@ -872,7 +873,7 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
     }
 
     T dummy = (T)0.0;
-    euclidean_distance(n_samples, 1, n_features, A, lda,
+    euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
                        (*current_cluster_centres).data(), n_clusters, works3.data(),
                        n_samples, works1.data(), 1, &dummy, 2, true, false);
 
@@ -930,7 +931,7 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
                 da_int current_candidate = work_int2[trials];
 
                 // Compute the distance from each point to the candidate centre and store in works4
-                euclidean_distance(n_samples, 1, n_features, A, lda,
+                euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
                                    &A[current_candidate], lda, works4.data(), n_samples,
                                    works1.data(), 1, &works1[current_candidate], 1, true,
                                    false);

@@ -155,6 +155,11 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts,
             "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
+            "storage order",
+            "Whether data is supplied and returned in row- or column-major order.",
+            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
             "logistic constraint",
             "Affects only multinomial logistic regression. Type of constraint put on "
             "coefficients. This will affect number of coefficients returned. RSC - means "

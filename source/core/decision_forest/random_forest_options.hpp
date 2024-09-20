@@ -28,6 +28,7 @@
 #ifndef FOREST_OPTIONS_HPP
 #define FOREST_OPTIONS_HPP
 
+#include "aoclda_types.h"
 #include "da_error.hpp"
 #include "decision_tree_types.hpp"
 #include "options.hpp"
@@ -87,6 +88,12 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts,
             "bootstrap", "Select whether to bootstrap the samples in the trees.",
             {{"yes", 1}, {"no", 0}}, "yes"));
         status = opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString(
+            "storage order",
+            "Whether data is supplied and returned in row- or column-major order.",
+            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
+        opts.register_opt(os);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "bootstrap samples factor",

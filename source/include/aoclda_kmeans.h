@@ -40,17 +40,18 @@
  * After calling this function you may use the option setting APIs to set :ref:`options <kmeans_options>`.
  * @endrst
  *
- * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_kmeans.
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_kmeans.
  * \param[in] n_samples the number of rows of the data matrix, \p A. Constraint: \p n_samples @f$\ge@f$ 1.
  * \param[in] n_features the number of columns of the data matrix, \p A. Constraint: \p n_features @f$\ge@f$ 1.
- * \param[in] A the \p n_samples @f$\times@f$ \p n_features data matrix, in column major format.
- * \param[in] lda the leading dimension of the data matrix. Constraint: \p lda @f$\ge@f$ \p n_samples.
+ * \param[in] A the \p n_samples @f$\times@f$ \p n_features data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * \param[in] lda the leading dimension of the data matrix. Constraint: \p lda @f$\ge@f$ \p n_samples if \p A is stored in column-major order, or \p lda @f$\ge@f$ \p n_features if \p A is stored in row-major order.
   * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_wrong_type - the handle may have been initialized with the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or \p A is null.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
  * - \ref da_status_incompatible_options - if you have already set the number of clusters and it is too high, then it will be reduced accordingly, and this warning returned.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p lda was violated.
  */
 da_status da_kmeans_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
                                const double *A, da_int lda);
@@ -70,15 +71,16 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
  * Note, you must call :ref:`da_kmeans_set_data_? <da_kmeans_set_data>` prior to this function.
  * @endrst
  *
- * \param[in,out] handle a \ref da_handle object, initialized with type \ref da_handle_kmeans.
- * \param[in] C the \p n_clusters @f$\times@f$ \p n_features matrix of initial centres, in column major format.
- * \param[in] ldc the leading dimension of the data matrix. Constraint: \p ldc @f$\ge@f$ \p n_clusters so make sure you set \p n_clusters using \ref da_options_set_int first.
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_kmeans.
+ * \param[in] C the \p n_clusters @f$\times@f$ \p n_features matrix of initial centres. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * \param[in] ldc the leading dimension of the data matrix. Constraint: \p ldc @f$\ge@f$ \p n_clusters if \p C is stored in column-major order, or \p ldc @f$\ge@f$ \p n_features if \p C is stored in row-major order. Make sure you set \p n_clusters using \ref da_options_set_int first.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_no_data - the function \ref da_kmeans_set_data_s "da_kmeans_set_data_?" has not been called.
  * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or \p C is null.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldc was violated.
  */
 da_status da_kmeans_set_init_centres_d(da_handle handle, const double *C, da_int ldc);
 
@@ -92,7 +94,7 @@ da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int 
  * Computes *k*-means clustering on the data matrix previously passed into the handle using :ref:`da_kmeans_set_data_? <da_kmeans_set_data>`.
  * @endrst
  *
- * \param[in,out] handle a \ref da_handle object, initialized
+ * \param[inout] handle a \ref da_handle object, initialized
  *  with type \ref da_handle_kmeans and with data passed in via \ref da_kmeans_set_data_s "da_kmeans_set_data_?".
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -106,7 +108,7 @@ da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int 
  *
  * \post
  * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enums for floating-point output:
- * - \p da_kmeans_cluster_centres - return an array of size \p n_clusters @f$\times@f$ \p n_features containing the coordinates of the cluster centres, in column major format.
+ * - \p da_kmeans_cluster_centres - return an array of size \p n_clusters @f$\times@f$ \p n_features containing the coordinates of the cluster centres, in the same storage format as the input data.
  * - \p da_rinfo - return an array of size 5 containing \p n_samples, \p n_features, \p n_clusters, \p n_iter (the number of iterations performed) and \p inertia (the sum of the squared distance of each sample to its closest cluster centre).
  *
  * In addition \ref da_handle_get_result_int can be queried with the following enum:
@@ -122,19 +124,21 @@ da_status da_kmeans_compute_s(da_handle handle);
  *
  * Transforms a data matrix \p X from the original coordinate system into the new coordinates in which each dimension is the distance to the cluster centres previously computed in \ref da_kmeans_compute_s "da_kmeans_compute_?".
  *
- * \param[in,out] handle a \ref da_handle object, with *k*-means clusters previously computed via \ref da_kmeans_compute_s "da_kmeans_compute_?".
+ * \param[inout] handle a \ref da_handle object, with *k*-means clusters previously computed via \ref da_kmeans_compute_s "da_kmeans_compute_?".
  * \param[in] m_samples the number of rows of the data matrix, \p X. Constraint: \p m_samples @f$\ge@f$ 1.
  * \param[in] m_features the number of columns of the data matrix, \p X. Constraint: \p m_features @f$=@f$ \p n_features, the number of features in the data matrix originally supplied to \ref da_kmeans_set_data_s "da_kmeans_set_data_?".
- * \param[in] X the \p m_samples @f$\times@f$ \p m_features data matrix, in column major format.
- * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p m_samples.
- * \param[out] X_transform an array of size at least \p m_samples @f$\times@f$ \p n_clusters, in which the transformed data will be stored (in column major format).
- * \param[in] ldx_transform the leading dimension of \p X_transform. Constraint: \p ldx_transform @f$\ge@f$ \p m_samples.
+ * \param[in] X the \p m_samples @f$\times@f$ \p m_features data matrix, in the same storage format used to fit the model.
+ * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p m_samples if \p X is stored in column-major order, or \p ldx @f$\ge@f$ \p m_features if \p X is stored in row-major order.
+ * \param[out] X_transform an array of size at least \p m_samples @f$\times@f$ \p n_clusters, in which the transformed data will be stored.
+ * \param[in] ldx_transform the leading dimension of \p X_transform. Constraint: \p ldx_transform @f$\ge@f$ \p m_samples if \p X is stored in column-major order, or \p ldx_transform @f$\ge@f$ \p n_clusters if \p X is stored in row-major order.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_wrong_type - the handle may have been initialized using the wrong precision.
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or one of the arrays is null.
  * - \ref da_status_no_data - the <i>k</i>-means clusters have not been computed prior to this function call.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx or \p ldx_transform was violated.
+
  *
  */
 da_status da_kmeans_transform_d(da_handle handle, da_int m_samples, da_int m_features,
@@ -151,11 +155,11 @@ da_status da_kmeans_transform_s(da_handle handle, da_int m_samples, da_int m_fea
  *
  * For each sample in the data matrix \p Y find the closest cluster centre out of the clusters previously computed in \ref da_kmeans_compute_s "da_kmeans_compute_?".
  *
- * \param[in,out] handle a \ref da_handle object, with <i>k</i>-means clusters previously computed via \ref da_kmeans_compute_s "da_kmeans_compute_?".
+ * \param[inout] handle a \ref da_handle object, with <i>k</i>-means clusters previously computed via \ref da_kmeans_compute_s "da_kmeans_compute_?".
  * \param[in] k_samples the number of rows of the data matrix, \p Y. Constraint: \p k_samples @f$\ge@f$ 1.
  * \param[in] k_features the number of columns of the data matrix, \p Y. Constraint: \p k_features @f$=@f$ \p n_features, the number of features in the data matrix originally supplied to \ref da_kmeans_set_data_s "da_kmeans_set_data_?".
- * \param[in] Y the \p k_samples @f$\times@f$ \p k_features data matrix, in column major format.
- * \param[in] ldy the leading dimension of the data matrix. Constraint: \p ldy @f$\ge@f$ \p k_samples.
+ * \param[in] Y the \p k_samples @f$\times@f$ \p k_features data matrix, in the same storage format used to fit the model.
+ * \param[in] ldy the leading dimension of the data matrix. Constraint: \p ldy @f$\ge@f$ \p k_samples if \p Y is stored in column-major order, or \p ldy @f$\ge@f$ \p k_features if \p Y is stored in row-major order.
  * \param[out] Y_labels an array of size at least \p k_samples, in which the labels will be stored.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
@@ -163,6 +167,7 @@ da_status da_kmeans_transform_s(da_handle handle, da_int m_samples, da_int m_fea
  * - \ref da_status_invalid_pointer - the handle has not been initialized, or one of the arrays is null.
  * - \ref da_status_no_data - the <i>k</i>-means clustering has not been computed prior to this function call.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldy was violated.
  *
  */
 da_status da_kmeans_predict_d(da_handle handle, da_int k_samples, da_int k_features,

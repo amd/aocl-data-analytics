@@ -144,15 +144,15 @@ template <typename T> std::vector<T> test_distance(PairwiseDistanceParamType<T> 
     std::vector<T> D;
     if (data.ldy > 0) {
         D.resize(data.ldd * data.n, T{0.0});
-        auto status = da_pairwise_distances(data.m, data.n, data.k, data.X.data(),
-                                            data.ldx, data.Y.data(), data.ldy, D.data(),
-                                            data.ldd, data.metric);
+        auto status = da_pairwise_distances(column_major, data.m, data.n, data.k,
+                                            data.X.data(), data.ldx, data.Y.data(),
+                                            data.ldy, D.data(), data.ldd, data.metric);
         EXPECT_EQ(status, da_status_success);
     } else {
         D.resize(data.ldd * data.m, T{0.0});
-        auto status =
-            da_pairwise_distances(data.m, data.n, data.k, data.X.data(), data.ldx,
-                                  nullptr, data.ldy, D.data(), data.ldd, data.metric);
+        auto status = da_pairwise_distances(column_major, data.m, data.n, data.k,
+                                            data.X.data(), data.ldx, nullptr, data.ldy,
+                                            D.data(), data.ldd, data.metric);
         EXPECT_EQ(status, da_status_success);
     }
 
@@ -161,6 +161,19 @@ template <typename T> std::vector<T> test_distance(PairwiseDistanceParamType<T> 
 
 using FloatTypes = ::testing::Types<float, double>;
 TYPED_TEST_SUITE(PairwiseDistanceTest, FloatTypes);
+
+TYPED_TEST(PairwiseDistanceTest, RowMajor) {
+    std::vector<TypeParam> X{1.0, 2.0, -3.0, 1.0, -1.0, 2.0, 0.0, -2.0, 4.0},
+        Y{4.0, -2.0, 3.0, 3.0, -1.0, 2.0}, D{0., 0., 0., 0., 0., 0.},
+        D_exp{61., 38., 11., 4., 17., 14.};
+    da_int m = 3, n = 2, k = 3, ldx = 3, ldy = 3, ldd = 2;
+
+    auto status = da_pairwise_distances(row_major, m, n, k, X.data(), ldx, Y.data(), ldy,
+                                        D.data(), ldd, da_sqeuclidean);
+    EXPECT_EQ(status, da_status_success);
+    EXPECT_ARR_NEAR(6, D.data(), D_exp.data(),
+                    100 * std::numeric_limits<TypeParam>::epsilon());
+}
 
 TYPED_TEST(PairwiseDistanceTest, AccuracyTesting_XY) {
     std::vector<PairwiseDistanceParamType<TypeParam>> data;
@@ -234,63 +247,99 @@ TYPED_TEST(PairwiseDistanceTest, ErrorExits) {
     // Use Y_tmp instead of Y to ensure it's not nullptr and that we test all options.
     std::vector<TypeParam> X(1), Y_tmp(1), D(1);
     // Test for invalid pointer X.
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, param.k, nullptr, param.ldx,
-                                    Y_tmp.data(), param.ldy, D.data(), param.ldd,
-                                    param.metric, param.data_type),
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, nullptr,
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(),
+                                    param.ldd, param.metric, param.data_type),
               da_status_invalid_pointer)
         << ErrorExits_print("X");
     // Test for invalid pointer D.
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, param.k, X.data(), param.ldx,
-                                    Y_tmp.data(), param.ldy, nullptr, param.ldd,
-                                    param.metric, param.data_type),
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, nullptr,
+                                    param.ldd, param.metric, param.data_type),
               da_status_invalid_pointer)
         << ErrorExits_print("D");
     // Test for invalid value of m.
-    EXPECT_EQ(da_pairwise_distances(-1, param.n, param.k, X.data(), param.ldx,
+    EXPECT_EQ(da_pairwise_distances(column_major, -1, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(),
+                                    param.ldd, param.metric, param.data_type),
+              da_status_invalid_array_dimension)
+        << ErrorExits_print("m");
+    // Test for invalid value of n.
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, 0, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(),
+                                    param.ldd, param.metric, param.data_type),
+              da_status_invalid_array_dimension)
+        << ErrorExits_print("n");
+    // Test for invalid value of k.
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, -2, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(),
+                                    param.ldd, param.metric, param.data_type),
+              da_status_invalid_array_dimension)
+        << ErrorExits_print("k");
+    // Test for invalid value of ldx
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(), -1,
+                                    Y_tmp.data(), param.ldy, D.data(), param.ldd,
+                                    param.metric, param.data_type),
+              da_status_invalid_leading_dimension)
+        << ErrorExits_print("ldx");
+    // Test for invalid value of ldy.
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), -1, D.data(), param.ldd,
+                                    param.metric, param.data_type),
+              da_status_invalid_leading_dimension)
+        << ErrorExits_print("ldy");
+    // Test for invalid value of ldd.
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(), -1,
+                                    param.metric, param.data_type),
+              da_status_invalid_leading_dimension)
+        << ErrorExits_print("ldd");
+    // Test for invalid value of metric.
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(),
+                                    param.ldd, da_manhattan, param.data_type),
+              da_status_not_implemented)
+        << ErrorExits_print("metric");
+    // Test for invalid value of data_type.
+    EXPECT_EQ(da_pairwise_distances(column_major, param.m, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(),
+                                    param.ldd, param.metric, da_allow_NaN),
+              da_status_not_implemented)
+        << ErrorExits_print("data_type");
+    // Test for invalid value of m, row-major.
+    EXPECT_EQ(da_pairwise_distances(row_major, -1, param.n, param.k, X.data(), param.ldx,
                                     Y_tmp.data(), param.ldy, D.data(), param.ldd,
                                     param.metric, param.data_type),
               da_status_invalid_array_dimension)
         << ErrorExits_print("m");
-    // Test for invalid value of n.
-    EXPECT_EQ(da_pairwise_distances(param.m, 0, param.k, X.data(), param.ldx,
+    // Test for invalid value of n, row-major.
+    EXPECT_EQ(da_pairwise_distances(row_major, param.m, 0, param.k, X.data(), param.ldx,
                                     Y_tmp.data(), param.ldy, D.data(), param.ldd,
                                     param.metric, param.data_type),
               da_status_invalid_array_dimension)
         << ErrorExits_print("n");
-    // Test for invalid value of k.
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, -2, X.data(), param.ldx,
+    // Test for invalid value of k, row-major.
+    EXPECT_EQ(da_pairwise_distances(row_major, param.m, param.n, -2, X.data(), param.ldx,
                                     Y_tmp.data(), param.ldy, D.data(), param.ldd,
                                     param.metric, param.data_type),
               da_status_invalid_array_dimension)
         << ErrorExits_print("k");
-    // Test for invalid value of ldx
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, param.k, X.data(), -1, Y_tmp.data(),
-                                    param.ldy, D.data(), param.ldd, param.metric,
-                                    param.data_type),
+    // Test for invalid value of ldx, row-major
+    EXPECT_EQ(da_pairwise_distances(row_major, param.m, param.n, param.k, X.data(), -1,
+                                    Y_tmp.data(), param.ldy, D.data(), param.ldd,
+                                    param.metric, param.data_type),
               da_status_invalid_leading_dimension)
         << ErrorExits_print("ldx");
-    // Test for invalid value of ldy.
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, param.k, X.data(), param.ldx,
-                                    Y_tmp.data(), -1, D.data(), param.ldd, param.metric,
-                                    param.data_type),
+    // Test for invalid value of ldy, row-major.
+    EXPECT_EQ(da_pairwise_distances(row_major, param.m, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), -1, D.data(), param.ldd,
+                                    param.metric, param.data_type),
               da_status_invalid_leading_dimension)
         << ErrorExits_print("ldy");
-    // Test for invalid value of ldd.
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, param.k, X.data(), param.ldx,
-                                    Y_tmp.data(), param.ldy, D.data(), -1, param.metric,
-                                    param.data_type),
+    // Test for invalid value of ldd, row-major.
+    EXPECT_EQ(da_pairwise_distances(row_major, param.m, param.n, param.k, X.data(),
+                                    param.ldx, Y_tmp.data(), param.ldy, D.data(), -1,
+                                    param.metric, param.data_type),
               da_status_invalid_leading_dimension)
         << ErrorExits_print("ldd");
-    // Test for invalid value of metric.
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, param.k, X.data(), param.ldx,
-                                    Y_tmp.data(), param.ldy, D.data(), param.ldd,
-                                    da_manhattan, param.data_type),
-              da_status_not_implemented)
-        << ErrorExits_print("metric");
-    // Test for invalid value of data_type.
-    EXPECT_EQ(da_pairwise_distances(param.m, param.n, param.k, X.data(), param.ldx,
-                                    Y_tmp.data(), param.ldy, D.data(), param.ldd,
-                                    param.metric, da_allow_NaN),
-              da_status_not_implemented)
-        << ErrorExits_print("data_type");
 }

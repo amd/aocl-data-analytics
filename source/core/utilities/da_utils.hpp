@@ -52,6 +52,26 @@ constexpr da_status convert_num_to_char(T num, char character[U]) {
     return da_status_success;
 }
 
+template <typename T>
+void copy_transpose_2D_array_row_to_column_major(da_int n_rows, da_int n_cols, const T *A,
+                                                 da_int lda, T *B, da_int ldb) {
+    for (da_int i = 0; i < n_rows; i++) {
+        for (da_int j = 0; j < n_cols; j++) {
+            B[j * ldb + i] = A[i * lda + j];
+        }
+    }
+}
+
+template <typename T>
+void copy_transpose_2D_array_col_to_row_major(da_int n_rows, da_int n_cols, const T *A,
+                                              da_int lda, T *B, da_int ldb) {
+    for (da_int j = 0; j < n_cols; j++) {
+        for (da_int i = 0; i < n_rows; i++) {
+            B[j + i * ldb] = A[i + j * lda];
+        }
+    }
+}
+
 void blocking_scheme(da_int n_samples, da_int block_size, da_int &n_blocks,
                      da_int &block_rem);
 

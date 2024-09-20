@@ -113,140 +113,153 @@ inline da_status da_read_csv(da_datastore store, const char *filename, char ***A
 }
 
 /* Basic statistics overloaded functions */
-inline da_status da_mean(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
-                         da_int ldx, double *mean) {
-    return da_mean_d(axis, n_rows, n_cols, X, ldx, mean);
+inline da_status da_mean(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                         const double *X, da_int ldx, double *mean) {
+    return da_mean_d(order, axis, n_rows, n_cols, X, ldx, mean);
 }
 
-inline da_status da_mean(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
-                         da_int ldx, float *mean) {
-    return da_mean_s(axis, n_rows, n_cols, X, ldx, mean);
+inline da_status da_mean(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                         const float *X, da_int ldx, float *mean) {
+    return da_mean_s(order, axis, n_rows, n_cols, X, ldx, mean);
 }
 
-inline da_status da_harmonic_mean(da_axis axis, da_int n_rows, da_int n_cols,
-                                  const double *X, da_int ldx, double *harmonic_mean) {
-    return da_harmonic_mean_d(axis, n_rows, n_cols, X, ldx, harmonic_mean);
+inline da_status da_harmonic_mean(da_order order, da_axis axis, da_int n_rows,
+                                  da_int n_cols, const double *X, da_int ldx,
+                                  double *harmonic_mean) {
+    return da_harmonic_mean_d(order, axis, n_rows, n_cols, X, ldx, harmonic_mean);
 }
 
-inline da_status da_harmonic_mean(da_axis axis, da_int n_rows, da_int n_cols,
-                                  const float *X, da_int ldx, float *harmonic_mean) {
-    return da_harmonic_mean_s(axis, n_rows, n_cols, X, ldx, harmonic_mean);
+inline da_status da_harmonic_mean(da_order order, da_axis axis, da_int n_rows,
+                                  da_int n_cols, const float *X, da_int ldx,
+                                  float *harmonic_mean) {
+    return da_harmonic_mean_s(order, axis, n_rows, n_cols, X, ldx, harmonic_mean);
 }
 
-inline da_status da_geometric_mean(da_axis axis, da_int n_rows, da_int n_cols,
-                                   const double *X, da_int ldx, double *geometric_mean) {
-    return da_geometric_mean_d(axis, n_rows, n_cols, X, ldx, geometric_mean);
+inline da_status da_geometric_mean(da_order order, da_axis axis, da_int n_rows,
+                                   da_int n_cols, const double *X, da_int ldx,
+                                   double *geometric_mean) {
+    return da_geometric_mean_d(order, axis, n_rows, n_cols, X, ldx, geometric_mean);
 }
 
-inline da_status da_geometric_mean(da_axis axis, da_int n_rows, da_int n_cols,
-                                   const float *X, da_int ldx, float *geometric_mean) {
-    return da_geometric_mean_s(axis, n_rows, n_cols, X, ldx, geometric_mean);
+inline da_status da_geometric_mean(da_order order, da_axis axis, da_int n_rows,
+                                   da_int n_cols, const float *X, da_int ldx,
+                                   float *geometric_mean) {
+    return da_geometric_mean_s(order, axis, n_rows, n_cols, X, ldx, geometric_mean);
 }
 
-inline da_status da_variance(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
-                             da_int ldx, da_int dof, double *mean, double *variance) {
-    return da_variance_d(axis, n_rows, n_cols, X, ldx, dof, mean, variance);
+inline da_status da_variance(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const double *X, da_int ldx, da_int dof, double *mean,
+                             double *variance) {
+    return da_variance_d(order, axis, n_rows, n_cols, X, ldx, dof, mean, variance);
 }
 
-inline da_status da_variance(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
-                             da_int ldx, da_int dof, float *mean, float *variance) {
-    return da_variance_s(axis, n_rows, n_cols, X, ldx, dof, mean, variance);
+inline da_status da_variance(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const float *X, da_int ldx, da_int dof, float *mean,
+                             float *variance) {
+    return da_variance_s(order, axis, n_rows, n_cols, X, ldx, dof, mean, variance);
 }
 
-inline da_status da_skewness(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
-                             da_int ldx, double *mean, double *variance,
+inline da_status da_skewness(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const double *X, da_int ldx, double *mean, double *variance,
                              double *skewness) {
-    return da_skewness_d(axis, n_rows, n_cols, X, ldx, mean, variance, skewness);
+    return da_skewness_d(order, axis, n_rows, n_cols, X, ldx, mean, variance, skewness);
 }
 
-inline da_status da_skewness(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
-                             da_int ldx, float *mean, float *variance, float *skewness) {
-    return da_skewness_s(axis, n_rows, n_cols, X, ldx, mean, variance, skewness);
+inline da_status da_skewness(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const float *X, da_int ldx, float *mean, float *variance,
+                             float *skewness) {
+    return da_skewness_s(order, axis, n_rows, n_cols, X, ldx, mean, variance, skewness);
 }
 
-inline da_status da_kurtosis(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
-                             da_int ldx, double *mean, double *variance,
+inline da_status da_kurtosis(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const double *X, da_int ldx, double *mean, double *variance,
                              double *kurtosis) {
-    return da_kurtosis_d(axis, n_rows, n_cols, X, ldx, mean, variance, kurtosis);
+    return da_kurtosis_d(order, axis, n_rows, n_cols, X, ldx, mean, variance, kurtosis);
 }
 
-inline da_status da_kurtosis(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
-                             da_int ldx, float *mean, float *variance, float *kurtosis) {
-    return da_kurtosis_s(axis, n_rows, n_cols, X, ldx, mean, variance, kurtosis);
+inline da_status da_kurtosis(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const float *X, da_int ldx, float *mean, float *variance,
+                             float *kurtosis) {
+    return da_kurtosis_s(order, axis, n_rows, n_cols, X, ldx, mean, variance, kurtosis);
 }
 
-inline da_status da_moment(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
-                           da_int ldx, da_int k, da_int use_precomputed_mean,
-                           double *mean, double *moment) {
-    return da_moment_d(axis, n_rows, n_cols, X, ldx, k, use_precomputed_mean, mean,
+inline da_status da_moment(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                           const double *X, da_int ldx, da_int k,
+                           da_int use_precomputed_mean, double *mean, double *moment) {
+    return da_moment_d(order, axis, n_rows, n_cols, X, ldx, k, use_precomputed_mean, mean,
                        moment);
 }
 
-inline da_status da_moment(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
-                           da_int ldx, da_int k, da_int use_precomputed_mean, float *mean,
-                           float *moment) {
-    return da_moment_s(axis, n_rows, n_cols, X, ldx, k, use_precomputed_mean, mean,
+inline da_status da_moment(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                           const float *X, da_int ldx, da_int k,
+                           da_int use_precomputed_mean, float *mean, float *moment) {
+    return da_moment_s(order, axis, n_rows, n_cols, X, ldx, k, use_precomputed_mean, mean,
                        moment);
 }
 
-inline da_status da_quantile(da_axis axis, da_int n_rows, da_int n_cols, const double *X,
-                             da_int ldx, double q, double *quantile,
+inline da_status da_quantile(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const double *X, da_int ldx, double q, double *quantile,
                              da_quantile_type quantile_type) {
-    return da_quantile_d(axis, n_rows, n_cols, X, ldx, q, quantile, quantile_type);
+    return da_quantile_d(order, axis, n_rows, n_cols, X, ldx, q, quantile, quantile_type);
 }
 
-inline da_status da_quantile(da_axis axis, da_int n_rows, da_int n_cols, const float *X,
-                             da_int ldx, float q, float *quantile,
+inline da_status da_quantile(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
+                             const float *X, da_int ldx, float q, float *quantile,
                              da_quantile_type quantile_type) {
-    return da_quantile_s(axis, n_rows, n_cols, X, ldx, q, quantile, quantile_type);
+    return da_quantile_s(order, axis, n_rows, n_cols, X, ldx, q, quantile, quantile_type);
 }
 
-inline da_status da_five_point_summary(da_axis axis, da_int n_rows, da_int n_cols,
-                                       const double *X, da_int ldx, double *minimum,
-                                       double *lower_hinge, double *median,
-                                       double *upper_hinge, double *maximum) {
-    return da_five_point_summary_d(axis, n_rows, n_cols, X, ldx, minimum, lower_hinge,
-                                   median, upper_hinge, maximum);
+inline da_status da_five_point_summary(da_order order, da_axis axis, da_int n_rows,
+                                       da_int n_cols, const double *X, da_int ldx,
+                                       double *minimum, double *lower_hinge,
+                                       double *median, double *upper_hinge,
+                                       double *maximum) {
+    return da_five_point_summary_d(order, axis, n_rows, n_cols, X, ldx, minimum,
+                                   lower_hinge, median, upper_hinge, maximum);
 }
 
-inline da_status da_five_point_summary(da_axis axis, da_int n_rows, da_int n_cols,
-                                       const float *X, da_int ldx, float *minimum,
-                                       float *lower_hinge, float *median,
+inline da_status da_five_point_summary(da_order order, da_axis axis, da_int n_rows,
+                                       da_int n_cols, const float *X, da_int ldx,
+                                       float *minimum, float *lower_hinge, float *median,
                                        float *upper_hinge, float *maximum) {
-    return da_five_point_summary_s(axis, n_rows, n_cols, X, ldx, minimum, lower_hinge,
-                                   median, upper_hinge, maximum);
+    return da_five_point_summary_s(order, axis, n_rows, n_cols, X, ldx, minimum,
+                                   lower_hinge, median, upper_hinge, maximum);
 }
 
-inline da_status da_standardize(da_axis axis, da_int n_rows, da_int n_cols, double *X,
-                                da_int ldx, da_int dof, da_int mode, double *shift,
-                                double *scale) {
-    return da_standardize_d(axis, n_rows, n_cols, X, ldx, dof, mode, shift, scale);
+inline da_status da_standardize(da_order order, da_axis axis, da_int n_rows,
+                                da_int n_cols, double *X, da_int ldx, da_int dof,
+                                da_int mode, double *shift, double *scale) {
+    return da_standardize_d(order, axis, n_rows, n_cols, X, ldx, dof, mode, shift, scale);
 }
 
-inline da_status da_standardize(da_axis axis, da_int n_rows, da_int n_cols, float *X,
-                                da_int ldx, da_int dof, da_int mode, float *shift,
-                                float *scale) {
-    return da_standardize_s(axis, n_rows, n_cols, X, ldx, dof, mode, shift, scale);
+inline da_status da_standardize(da_order order, da_axis axis, da_int n_rows,
+                                da_int n_cols, float *X, da_int ldx, da_int dof,
+                                da_int mode, float *shift, float *scale) {
+    return da_standardize_s(order, axis, n_rows, n_cols, X, ldx, dof, mode, shift, scale);
 }
 
-inline da_status da_covariance_matrix(da_int n_rows, da_int n_cols, const float *X,
-                                      da_int ldx, da_int dof, float *cov, da_int ldcov) {
-    return da_covariance_matrix_s(n_rows, n_cols, X, ldx, dof, cov, ldcov);
+inline da_status da_covariance_matrix(da_order order, da_int n_rows, da_int n_cols,
+                                      const float *X, da_int ldx, da_int dof, float *cov,
+                                      da_int ldcov) {
+    return da_covariance_matrix_s(order, n_rows, n_cols, X, ldx, dof, cov, ldcov);
 }
 
-inline da_status da_covariance_matrix(da_int n_rows, da_int n_cols, const double *X,
-                                      da_int ldx, da_int dof, double *cov, da_int ldcov) {
-    return da_covariance_matrix_d(n_rows, n_cols, X, ldx, dof, cov, ldcov);
+inline da_status da_covariance_matrix(da_order order, da_int n_rows, da_int n_cols,
+                                      const double *X, da_int ldx, da_int dof,
+                                      double *cov, da_int ldcov) {
+    return da_covariance_matrix_d(order, n_rows, n_cols, X, ldx, dof, cov, ldcov);
 }
 
-inline da_status da_correlation_matrix(da_int n_rows, da_int n_cols, const float *X,
-                                       da_int ldx, float *corr, da_int ldcorr) {
-    return da_correlation_matrix_s(n_rows, n_cols, X, ldx, corr, ldcorr);
+inline da_status da_correlation_matrix(da_order order, da_int n_rows, da_int n_cols,
+                                       const float *X, da_int ldx, float *corr,
+                                       da_int ldcorr) {
+    return da_correlation_matrix_s(order, n_rows, n_cols, X, ldx, corr, ldcorr);
 }
 
-inline da_status da_correlation_matrix(da_int n_rows, da_int n_cols, const double *X,
-                                       da_int ldx, double *corr, da_int ldcorr) {
-    return da_correlation_matrix_d(n_rows, n_cols, X, ldx, corr, ldcorr);
+inline da_status da_correlation_matrix(da_order order, da_int n_rows, da_int n_cols,
+                                       const double *X, da_int ldx, double *corr,
+                                       da_int ldcorr) {
+    return da_correlation_matrix_d(order, n_rows, n_cols, X, ldx, corr, ldcorr);
 }
 
 /* Linear model overloaded functions */
@@ -259,11 +272,13 @@ template <> da_status da_linmod_select_model<float>(da_handle handle, linmod_mod
 }
 
 inline da_status da_linmod_define_features(da_handle handle, da_int n_samples,
-                                           da_int n_features, float *X, float *y) {
+                                           da_int n_features, const float *X,
+                                           const float *y) {
     return da_linmod_define_features_s(handle, n_samples, n_features, X, y);
 }
 inline da_status da_linmod_define_features(da_handle handle, da_int n_samples,
-                                           da_int n_features, double *X, double *y) {
+                                           da_int n_features, const double *X,
+                                           const double *y) {
     return da_linmod_define_features_d(handle, n_samples, n_features, X, y);
 }
 
@@ -276,18 +291,19 @@ template <> da_status da_linmod_fit<float>(da_handle handle) {
 }
 
 template <class T>
-da_status da_linmod_fit_start(da_handle handle, da_int ncoef, T *coefs);
+da_status da_linmod_fit_start(da_handle handle, da_int ncoef, const T *coefs);
 template <>
-da_status da_linmod_fit_start<double>(da_handle handle, da_int ncoef, double *coefs) {
+da_status da_linmod_fit_start<double>(da_handle handle, da_int ncoef,
+                                      const double *coefs) {
     return da_linmod_fit_start_d(handle, ncoef, coefs);
 }
 template <>
-da_status da_linmod_fit_start<float>(da_handle handle, da_int ncoef, float *coefs) {
+da_status da_linmod_fit_start<float>(da_handle handle, da_int ncoef, const float *coefs) {
     return da_linmod_fit_start_s(handle, ncoef, coefs);
 }
 
 inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
-                                          double *X, double *predictions,
+                                          const double *X, double *predictions,
                                           double *observations = nullptr,
                                           double *loss = nullptr) {
     return da_linmod_evaluate_model_d(handle, nsamples, nfeat, X, predictions,
@@ -295,7 +311,7 @@ inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_
 }
 
 inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
-                                          float *X, float *predictions,
+                                          const float *X, float *predictions,
                                           float *observations = nullptr,
                                           float *loss = nullptr) {
     return da_linmod_evaluate_model_s(handle, nsamples, nfeat, X, predictions,
@@ -325,20 +341,20 @@ inline da_status da_data_extract_column(da_datastore store, da_int idx, da_int d
 }
 
 inline da_status da_data_extract_selection(da_datastore store, const char *key,
-                                           da_int *data, da_int lddata) {
-    return da_data_extract_selection_int(store, key, data, lddata);
+                                           da_order order, da_int *data, da_int lddata) {
+    return da_data_extract_selection_int(store, key, order, data, lddata);
 }
 inline da_status da_data_extract_selection(da_datastore store, const char *key,
-                                           float *data, da_int lddata) {
-    return da_data_extract_selection_real_s(store, key, data, lddata);
+                                           da_order order, float *data, da_int lddata) {
+    return da_data_extract_selection_real_s(store, key, order, data, lddata);
 }
 inline da_status da_data_extract_selection(da_datastore store, const char *key,
-                                           double *data, da_int lddata) {
-    return da_data_extract_selection_real_d(store, key, data, lddata);
+                                           da_order order, double *data, da_int lddata) {
+    return da_data_extract_selection_real_d(store, key, order, data, lddata);
 }
 inline da_status da_data_extract_selection(da_datastore store, const char *key,
-                                           uint8_t *data, da_int lddata) {
-    return da_data_extract_selection_uint8(store, key, data, lddata);
+                                           da_order order, uint8_t *data, da_int lddata) {
+    return da_data_extract_selection_uint8(store, key, order, data, lddata);
 }
 
 /* PCA overloaded functions */
@@ -450,13 +466,13 @@ inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_
 /* Decision Forest overloaded functions */
 /* Decision tree */
 inline da_status da_tree_set_training_data(da_handle handle, da_int n_samples,
-                                           da_int n_features, da_int n_class, double *X,
-                                           da_int ldx, da_int *y) {
+                                           da_int n_features, da_int n_class,
+                                           const double *X, da_int ldx, const da_int *y) {
     return da_tree_set_training_data_d(handle, n_samples, n_features, n_class, X, ldx, y);
 }
 inline da_status da_tree_set_training_data(da_handle handle, da_int n_samples,
-                                           da_int n_features, da_int n_class, float *X,
-                                           da_int ldx, da_int *y) {
+                                           da_int n_features, da_int n_class,
+                                           const float *X, da_int ldx, const da_int *y) {
     return da_tree_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx, y);
 }
 
@@ -469,30 +485,30 @@ template <> inline da_status da_tree_fit<float>(da_handle handle) {
 }
 
 inline da_status da_tree_predict(da_handle handle, da_int n_samples, da_int n_features,
-                                 double *X_test, da_int ldx_test, da_int *y_pred) {
+                                 const double *X_test, da_int ldx_test, da_int *y_pred) {
     return da_tree_predict_d(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
 inline da_status da_tree_predict(da_handle handle, da_int n_samples, da_int n_features,
-                                 float *X_test, da_int ldx_test, da_int *y_pred) {
+                                 const float *X_test, da_int ldx_test, da_int *y_pred) {
     return da_tree_predict_s(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
 
 inline da_status da_tree_predict_proba(da_handle handle, da_int n_obs, da_int n_features,
-                                       double *X_test, da_int ldx_test, double *y_pred,
-                                       da_int n_class, da_int ldy) {
+                                       const double *X_test, da_int ldx_test,
+                                       double *y_pred, da_int n_class, da_int ldy) {
     return da_tree_predict_proba_d(handle, n_obs, n_features, X_test, ldx_test, y_pred,
                                    n_class, ldy);
 }
 
 inline da_status da_tree_predict_proba(da_handle handle, da_int n_obs, da_int n_features,
-                                       float *X_test, da_int ldx_test, float *y_pred,
-                                       da_int n_class, da_int ldy) {
+                                       const float *X_test, da_int ldx_test,
+                                       float *y_pred, da_int n_class, da_int ldy) {
     return da_tree_predict_proba_s(handle, n_obs, n_features, X_test, ldx_test, y_pred,
                                    n_class, ldy);
 }
 
 inline da_status da_tree_predict_log_proba(da_handle handle, da_int n_obs,
-                                           da_int n_features, double *X_test,
+                                           da_int n_features, const double *X_test,
                                            da_int ldx_test, double *y_pred,
                                            da_int n_class, da_int ldy) {
     return da_tree_predict_log_proba_d(handle, n_obs, n_features, X_test, ldx_test,
@@ -500,7 +516,7 @@ inline da_status da_tree_predict_log_proba(da_handle handle, da_int n_obs,
 }
 
 inline da_status da_tree_predict_log_proba(da_handle handle, da_int n_obs,
-                                           da_int n_features, float *X_test,
+                                           da_int n_features, const float *X_test,
                                            da_int ldx_test, float *y_pred, da_int n_class,
                                            da_int ldy) {
     return da_tree_predict_log_proba_s(handle, n_obs, n_features, X_test, ldx_test,
@@ -508,13 +524,13 @@ inline da_status da_tree_predict_log_proba(da_handle handle, da_int n_obs,
 }
 
 inline da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_features,
-                               double *X_test, da_int ldx_test, da_int *y_test,
-                               double *mean_accuracy) {
+                               const double *X_test, da_int ldx_test,
+                               const da_int *y_test, double *mean_accuracy) {
     return da_tree_score_d(handle, n_samples, n_features, X_test, ldx_test, y_test,
                            mean_accuracy);
 }
 inline da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_features,
-                               float *X_test, da_int ldx_test, da_int *y_test,
+                               const float *X_test, da_int ldx_test, const da_int *y_test,
                                float *mean_accuracy) {
     return da_tree_score_s(handle, n_samples, n_features, X_test, ldx_test, y_test,
                            mean_accuracy);
@@ -522,14 +538,16 @@ inline da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_feat
 
 /* Random forest */
 inline da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
-                                             da_int n_features, da_int n_class, double *X,
-                                             da_int ldx, da_int *y) {
+                                             da_int n_features, da_int n_class,
+                                             const double *X, da_int ldx,
+                                             const da_int *y) {
     return da_forest_set_training_data_d(handle, n_samples, n_features, n_class, X, ldx,
                                          y);
 }
 inline da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
-                                             da_int n_features, da_int n_class, float *X,
-                                             da_int ldx, da_int *y) {
+                                             da_int n_features, da_int n_class,
+                                             const float *X, da_int ldx,
+                                             const da_int *y) {
     return da_forest_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx,
                                          y);
 }
@@ -543,16 +561,17 @@ template <> inline da_status da_forest_fit<float>(da_handle handle) {
 }
 
 inline da_status da_forest_predict(da_handle handle, da_int n_samples, da_int n_features,
-                                   double *X_test, da_int ldx_test, da_int *y_pred) {
+                                   const double *X_test, da_int ldx_test,
+                                   da_int *y_pred) {
     return da_forest_predict_d(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
 inline da_status da_forest_predict(da_handle handle, da_int n_samples, da_int n_features,
-                                   float *X_test, da_int ldx_test, da_int *y_pred) {
+                                   const float *X_test, da_int ldx_test, da_int *y_pred) {
     return da_forest_predict_s(handle, n_samples, n_features, X_test, ldx_test, y_pred);
 }
 
 inline da_status da_forest_predict_proba(da_handle handle, da_int n_obs,
-                                         da_int n_features, double *X_test,
+                                         da_int n_features, const double *X_test,
                                          da_int ldx_test, double *y_pred, da_int n_class,
                                          da_int ldy) {
     return da_forest_predict_proba_d(handle, n_obs, n_features, X_test, ldx_test, y_pred,
@@ -560,7 +579,7 @@ inline da_status da_forest_predict_proba(da_handle handle, da_int n_obs,
 }
 
 inline da_status da_forest_predict_proba(da_handle handle, da_int n_obs,
-                                         da_int n_features, float *X_test,
+                                         da_int n_features, const float *X_test,
                                          da_int ldx_test, float *y_pred, da_int n_class,
                                          da_int ldy) {
     return da_forest_predict_proba_s(handle, n_obs, n_features, X_test, ldx_test, y_pred,
@@ -568,7 +587,7 @@ inline da_status da_forest_predict_proba(da_handle handle, da_int n_obs,
 }
 
 inline da_status da_forest_predict_log_proba(da_handle handle, da_int n_obs,
-                                             da_int n_features, double *X_test,
+                                             da_int n_features, const double *X_test,
                                              da_int ldx_test, double *y_pred,
                                              da_int n_class, da_int ldy) {
     return da_forest_predict_log_proba_d(handle, n_obs, n_features, X_test, ldx_test,
@@ -576,7 +595,7 @@ inline da_status da_forest_predict_log_proba(da_handle handle, da_int n_obs,
 }
 
 inline da_status da_forest_predict_log_proba(da_handle handle, da_int n_obs,
-                                             da_int n_features, float *X_test,
+                                             da_int n_features, const float *X_test,
                                              da_int ldx_test, float *y_pred,
                                              da_int n_class, da_int ldy) {
     return da_forest_predict_log_proba_s(handle, n_obs, n_features, X_test, ldx_test,
@@ -584,14 +603,14 @@ inline da_status da_forest_predict_log_proba(da_handle handle, da_int n_obs,
 }
 
 inline da_status da_forest_score(da_handle handle, da_int n_samples, da_int n_features,
-                                 double *X_test, da_int ldx_test, da_int *y_test,
-                                 double *mean_accuracy) {
+                                 const double *X_test, da_int ldx_test,
+                                 const da_int *y_test, double *mean_accuracy) {
     return da_forest_score_d(handle, n_samples, n_features, X_test, ldx_test, y_test,
                              mean_accuracy);
 }
 inline da_status da_forest_score(da_handle handle, da_int n_samples, da_int n_features,
-                                 float *X_test, da_int ldx_test, da_int *y_test,
-                                 float *mean_accuracy) {
+                                 const float *X_test, da_int ldx_test,
+                                 const da_int *y_test, float *mean_accuracy) {
     return da_forest_score_s(handle, n_samples, n_features, X_test, ldx_test, y_test,
                              mean_accuracy);
 }
@@ -640,20 +659,20 @@ inline da_status da_nlls_fit(da_handle handle, da_int n_coefs, float *coefs,
 
 /* Pairwise distances overloaded functions */
 inline da_status
-da_pairwise_distances(da_int m, da_int n, da_int k, const double *X, da_int ldx,
-                      const double *Y, da_int ldy, double *D, da_int ldd,
+da_pairwise_distances(da_order order, da_int m, da_int n, da_int k, const double *X,
+                      da_int ldx, const double *Y, da_int ldy, double *D, da_int ldd,
                       da_metric metric = da_euclidean,
                       da_data_types force_all_finite = da_allow_infinite) {
-    return da_pairwise_distances_d(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+    return da_pairwise_distances_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
                                    force_all_finite);
 }
 
 inline da_status
-da_pairwise_distances(da_int m, da_int n, da_int k, const float *X, da_int ldx,
-                      const float *Y, da_int ldy, float *D, da_int ldd,
+da_pairwise_distances(da_order order, da_int m, da_int n, da_int k, const float *X,
+                      da_int ldx, const float *Y, da_int ldy, float *D, da_int ldd,
                       da_metric metric = da_euclidean,
                       da_data_types force_all_finite = da_allow_infinite) {
-    return da_pairwise_distances_s(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+    return da_pairwise_distances_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
                                    force_all_finite);
 }
 

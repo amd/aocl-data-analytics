@@ -40,51 +40,53 @@
  * @brief Pass a data matrix and a label array to the \ref da_handle object
  * in preparation for fitting a decision tree.
  *
- * @param handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
- * @param n_samples number of observations in \p X.
- * @param n_features number of features in \p X.
- * @param n_class number of distinct classes in \p y. Will be computed automatically if \p n_class is set to 0.
- * @param X array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param ldx leading dimension of \p X.  Constraint: \p ldx @f$\ge@f$ \p n_samples.
- * @param y array containing the \p n_samples labels. The label values are expected to range from 0 to \p n_class - 1.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[in] n_samples number of observations in \p X.
+ * @param[in] n_features number of features in \p X.
+ * @param[in] n_class number of distinct classes in \p y. Will be computed automatically if \p n_class is set to 0.
+ * @param[in] X array containing \p n_samples  @f$\times@f$ \p n_features data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] ldx leading dimension of \p X. Constraint: \p ldx @f$\ge@f$ \p n_samples if \p X is stored in column-major order, or \p ldx @f$\ge@f$ \p n_features if \p X is stored in row-major order.
+ * @param[in] y array containing the \p n_samples labels. The label values are expected to range from 0 to \p n_class - 1.
  * @return @ref da_status.  The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
  * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx was violated.
 */
 da_status da_tree_set_training_data_d(da_handle handle, da_int n_samples,
-                                      da_int n_features, da_int n_class, double *X,
-                                      da_int ldx, da_int *y);
+                                      da_int n_features, da_int n_class, const double *X,
+                                      da_int ldx, const da_int *y);
 da_status da_tree_set_training_data_s(da_handle handle, da_int n_samples,
-                                      da_int n_features, da_int n_class, float *X,
-                                      da_int ldx, da_int *y);
+                                      da_int n_features, da_int n_class, const float *X,
+                                      da_int ldx, const da_int *y);
 /** \} */
 
 /** \{
  * @brief Pass a data matrix and a label array to the \ref da_handle object
  * in preparation for fitting a decision forest.
  *
- * @param handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
- * @param n_samples number of observations in \p X.
- * @param n_features number of features in \p X.
- * @param n_class number of distinct classes in \p y. Will be computed automatically if \p n_class is set to 0.
- * @param X array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param ldx leading dimension of \p X.  Constraint: \p ldx @f$\ge@f$ \p n_samples.
- * @param y array containing the \p n_samples labels. The label values are expected to range from 0 to \p n_class - 1.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
+ * @param[in] n_samples number of observations in \p X.
+ * @param[in] n_features number of features in \p X.
+ * @param[in] n_class number of distinct classes in \p y. Will be computed automatically if \p n_class is set to 0.
+ * @param[in] X array containing \p n_samples  @f$\times@f$ \p n_features data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] ldx leading dimension of \p X. Constraint: \p ldx @f$\ge@f$ \p n_samples if \p X is stored in column-major order, or \p ldx @f$\ge@f$ \p n_features if \p X is stored in row-major order.
+ * @param[in] y array containing the \p n_samples labels. The label values are expected to range from 0 to \p n_class - 1.
  * @return @ref da_status.  The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
  * - @ref da_status_invalid_pointer - the @p handle has not been correctly initialized.
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx was violated.
  */
 da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
-                                        da_int n_features, da_int n_class, double *X,
-                                        da_int ldx, da_int *y);
+                                        da_int n_features, da_int n_class,
+                                        const double *X, da_int ldx, const da_int *y);
 da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
-                                        da_int n_features, da_int n_class, float *X,
-                                        da_int ldx, da_int *y);
+                                        da_int n_features, da_int n_class, const float *X,
+                                        da_int ldx, const da_int *y);
 /** \} */
 
 /** \{
@@ -96,7 +98,7 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
  * see :ref:`this section <opts_decisionforests>` for a list of available options.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -125,7 +127,7 @@ da_status da_tree_fit_s(da_handle handle);
  * see :ref:`this section <opts_decisiontrees>` for a list of available options.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -153,15 +155,15 @@ da_status da_forest_fit_s(da_handle handle);
  * function returns the decision tree predictions in the array ``y_pred``.
  *
  * For each data point ``i``, ``y_pred[i]`` will contain the label of the most likely class
- * according to the decision tree,
- * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * according to the decision tree, the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[out] y_pred - array of size at least \p n_samples. On output, will contain the predicted class labels.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
@@ -171,11 +173,12 @@ da_status da_forest_fit_s(da_handle handle);
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
  */
 da_status da_tree_predict_d(da_handle handle, da_int n_samples, da_int n_features,
-                            double *X_test, da_int ldx_test, da_int *y_pred);
+                            const double *X_test, da_int ldx_test, da_int *y_pred);
 da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_features,
-                            float *X_test, da_int ldx_test, da_int *y_pred);
+                            const float *X_test, da_int ldx_test, da_int *y_pred);
 /** \} */
 
 /** \{
@@ -185,19 +188,19 @@ da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_feature
  * After a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
  * function returns the decision tree class probabilities in the array ``y_pred``.
  *
- * For each data point ``i``, and class ``j``, ``y_proba[i + j*ldy]`` will contain the class probability
- * according to the decision tree,
- * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * For each data point ``i``, and class ``j``, the ``(i,j)`` element of ``y_proba`` will contain the class probability
+ * according to the decision tree, and the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[out] y_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class probabilities.
  * @param[in] n_class - number of classes in \p y_proba.
- * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
+ * @param[in] ldy leading dimension of \p y_proba. Constraint: \p ldy @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldy @f$\ge@f$ \p n_class if \p X_test is stored in row-major order.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -206,12 +209,13 @@ da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_feature
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx_test or \p ldy was violated.
  */
 da_status da_tree_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
-                                  double *X_test, da_int ldx_test, double *y_proba,
+                                  const double *X_test, da_int ldx_test, double *y_proba,
                                   da_int n_class, da_int ldy);
 da_status da_tree_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
-                                  float *X_test, da_int ldx_test, float *y_proba,
+                                  const float *X_test, da_int ldx_test, float *y_proba,
                                   da_int n_class, da_int ldy);
 /** \} */
 
@@ -222,19 +226,19 @@ da_status da_tree_predict_proba_s(da_handle handle, da_int n_samples, da_int n_f
  * After a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`, it can be used to generate predicted labels on new data. This
  * function returns the decision tree class log probabilities in the array ``y_pred``.
  *
- * For each data point ``i``, and class ``j``, ``y_proba[i + j*ldy]`` will contain the class log probability
- * according to the decision tree,
- * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * For each data point ``i``, and class ``j``, the ``(i,j)`` element of ``y_log_proba`` will contain the class log probability
+ * according to the decision tree, and the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[out] y_log_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class log probabilities.
  * @param[in] n_class - number of classes in \p y_log_proba.
- * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
+ * @param[in] ldy leading dimension of \p y_log_proba. Constraint: \p ldy @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldy @f$\ge@f$ \p n_class if \p X_test is stored in row-major order.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -243,13 +247,16 @@ da_status da_tree_predict_proba_s(da_handle handle, da_int n_samples, da_int n_f
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx_test or \p ldy was violated.
  */
 da_status da_tree_predict_log_proba_d(da_handle handle, da_int n_samples,
-                                      da_int n_features, double *X_test, da_int ldx_test,
-                                      double *y_log_proba, da_int n_class, da_int ldy);
+                                      da_int n_features, const double *X_test,
+                                      da_int ldx_test, double *y_log_proba,
+                                      da_int n_class, da_int ldy);
 da_status da_tree_predict_log_proba_s(da_handle handle, da_int n_samples,
-                                      da_int n_features, float *X_test, da_int ldx_test,
-                                      float *y_log_proba, da_int n_class, da_int ldy);
+                                      da_int n_features, const float *X_test,
+                                      da_int ldx_test, float *y_log_proba, da_int n_class,
+                                      da_int ldy);
 /** \} */
 
 /** \{
@@ -260,15 +267,15 @@ da_status da_tree_predict_log_proba_s(da_handle handle, da_int n_samples,
  * function returns the decision forest predictions in the array ``y_pred``.
  *
  * For each data point ``i``, ``y_pred[i]`` will contain the label of the most likely class
- * according to the decision forest;
- * ``x[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * according to the decision forest; the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
-* @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+* @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[out] y_pred - array of size at least \p n_samples. On output, will contain the predicted class labels.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
@@ -278,11 +285,12 @@ da_status da_tree_predict_log_proba_s(da_handle handle, da_int n_samples,
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
  */
 da_status da_forest_predict_d(da_handle handle, da_int n_samples, da_int n_features,
-                              double *X_test, da_int ldx_test, da_int *y_pred);
+                              const double *X_test, da_int ldx_test, da_int *y_pred);
 da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_features,
-                              float *X_test, da_int ldx_test, da_int *y_pred);
+                              const float *X_test, da_int ldx_test, da_int *y_pred);
 /** \} */
 
 /** \{
@@ -292,19 +300,19 @@ da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_featu
  * After a model has been fitted using :ref:`da_forest_fit_? <da_forest_fit>`, it can be used to generate predicted labels on new data. This
  * function returns the decision forest class probabilities in the array ``y_pred``.
  *
- * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class probability
- * according to the decision forest,
- * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * For each data point ``i``, and class ``j``, the ``(i,j)`` element of ``y_proba`` will contain the class probability
+ * according to the decision forest, and the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
+ * @param[inout] handle - a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test - array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test - leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[out] y_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class probabilities.
  * @param[in] n_class - number of classes in \p y_proba.
- * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
+ * @param[in] ldy leading dimension of \p y_proba. Constraint: \p ldy @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldy @f$\ge@f$ \p n_class if \p X_test is stored in row-major order.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -313,12 +321,13 @@ da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_featu
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx_test or \p ldy was violated.
  */
 da_status da_forest_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
-                                    double *X_test, da_int ldx_test, double *y_proba,
-                                    da_int n_class, da_int ldy);
+                                    const double *X_test, da_int ldx_test,
+                                    double *y_proba, da_int n_class, da_int ldy);
 da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
-                                    float *X_test, da_int ldx_test, float *y_proba,
+                                    const float *X_test, da_int ldx_test, float *y_proba,
                                     da_int n_class, da_int ldy);
 /** \} */
 
@@ -329,19 +338,19 @@ da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n
  * After a model has been fitted using :ref:`da_forest_fit_? <da_forest_fit>`, it can be used to generate predicted labels on new data. This
  * function returns the decision forest class log probabilities in the array ``y_pred``.
  *
- * For each data point ``i``, and class ``j``, ``y_proba[i*n_class + j]`` will contain the class log probability
- * according to the decision forest,
- * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * For each data point ``i``, and class ``j``, the ``(i,j)`` element of ``y_proba`` will contain the class log probability
+ * according to the decision forest, and the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test - array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test - leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[out] y_log_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class log probabilities.
  * @param[in] n_class - number of classes in \p y_log_proba.
- * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
+ * @param[in] ldy leading dimension of \p y_log_proba. Constraint: \p ldy @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldy @f$\ge@f$ \p n_class if \p X_test is stored in row-major order.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -350,14 +359,16 @@ da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx_test or \p ldy was violated.
  */
 da_status da_forest_predict_log_proba_d(da_handle handle, da_int n_samples,
-                                        da_int n_features, double *X_test,
+                                        da_int n_features, const double *X_test,
                                         da_int ldx_test, double *y_log_proba,
                                         da_int n_class, da_int ldy);
 da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_samples,
-                                        da_int n_features, float *X_test, da_int ldx_test,
-                                        float *y_log_proba, da_int n_class, da_int ldy);
+                                        da_int n_features, const float *X_test,
+                                        da_int ldx_test, float *y_log_proba,
+                                        da_int n_class, da_int ldy);
 /** \} */
 
 /** \{
@@ -367,16 +378,16 @@ da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_samples,
  * @rst
  * To be used after a model has been fitted using :ref:`da_tree_fit_? <da_tree_fit>`.
  *
- * For each data point ``i``, ``y_test[i]`` will contain the label of the test data,
- * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * For each data point ``i``, ``y_test[i]`` will contain the label of the test data, and the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
+ * @param[inout] handle - a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test. It must match the number of features from
  *                         the training data set.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test - array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test - leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[in] y_test - actual class labels.
  * @param[out] mean_accuracy - proportion of observations where predicted label matches actual label.
  * @return da_status
@@ -387,13 +398,14 @@ da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_samples,
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
  */
 da_status da_tree_score_d(da_handle handle, da_int n_samples, da_int n_features,
-                          double *X_test, da_int ldx_test, da_int *y_test,
+                          const double *X_test, da_int ldx_test, const da_int *y_test,
                           double *mean_accuracy);
 
 da_status da_tree_score_s(da_handle handle, da_int n_samples, da_int n_features,
-                          float *X_test, da_int ldx_test, da_int *y_test,
+                          const float *X_test, da_int ldx_test, const da_int *y_test,
                           float *mean_accuracy);
 /** \} */
 
@@ -404,16 +416,16 @@ da_status da_tree_score_s(da_handle handle, da_int n_samples, da_int n_features,
  * @rst
  * To be used after a model has been fitted using :ref:`da_forest_fit_? <da_forest_fit>`.
  *
- * For each data point ``i``, ``y_test[i]`` will contain the label of the test data,
- * ``X_test[i + j*ldx_test]`` should contain the feature ``j`` for observation ``i``.
+ * For each data point ``i``, ``y_test[i]`` will contain the label of the test data, and the ``(i,j)`` element of
+ * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
+ * @param[inout] handle - a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
  * @param[in] n_samples - number of observations in \p X_test.
  * @param[in] n_features - number of features in \p X_test. It must match the number of features from
  *                         the training data set.
- * @param[in] X_test array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in column-major format.
- * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
+ * @param[in] X_test - array containing \p n_samples  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * @param[in] ldx_test - leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * @param[in] y_test - actual class labels.
  * @param[out] mean_accuracy - proportion of observations where predicted label matches actual label.
  * @return da_status
@@ -424,12 +436,13 @@ da_status da_tree_score_s(da_handle handle, da_int n_samples, da_int n_features,
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using
  *   @ref da_handle_print_error_message.
  * - @ref da_status_out_of_date - the model has not been trained yet.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
  */
 da_status da_forest_score_d(da_handle handle, da_int n_samples, da_int n_features,
-                            double *X_test, da_int ldx_test, da_int *y_test,
+                            const double *X_test, da_int ldx_test, const da_int *y_test,
                             double *mean_accuracy);
 da_status da_forest_score_s(da_handle handle, da_int n_samples, da_int n_features,
-                            float *X_test, da_int ldx_test, da_int *y_test,
+                            const float *X_test, da_int ldx_test, const da_int *y_test,
                             float *mean_accuracy);
 
 /** \} */

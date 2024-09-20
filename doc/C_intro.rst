@@ -190,7 +190,8 @@ In this documentation we frequently use ``_?`` at the end of routine names to in
 Array storage
 -------------
 
-Algorithmic routines in the library expect two-dimensional arrays to be in column major format.
+Algorithmic routines in the library can handle two-dimensional arrays in either column-major or row-major order.
+However, for best possible performance, it is recommended that you store your data in column-major format, since row-major arrays may be copied and transposed internally.
 
 Interpreting missing data
 -------------------------

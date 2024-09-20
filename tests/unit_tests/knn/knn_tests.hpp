@@ -29,6 +29,7 @@
 #include <list>
 #include <string>
 
+#include "../datests_cblas.hh"
 #include "../utest_utils.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -58,6 +59,7 @@ template <typename T> struct KNNParamType {
     std::string metric = "euclidean";
     std::string weights = "uniform";
     std::string algorithm = "brute";
+    std::string order = "column-major";
 
     da_status expected_status = da_status_success;
     T tol = 40 * std::numeric_limits<T>::epsilon();
@@ -249,6 +251,55 @@ template <typename T> void GetExampleData(std::vector<KNNParamType<T>> &params) 
     }
 }
 
+template <typename T> void GetRowMajorData(std::vector<KNNParamType<T>> &params) {
+    // Test with row major data.
+
+    KNNParamType<T> test(5, 4, "euclidean", "brute", "uniform");
+    test.n_features = 3;
+    test.n_samples = 6;
+    test.n_queries = 3;
+    test.ldx_train = test.n_samples;
+    test.ldx_test = test.n_queries;
+    std::vector<T> X_train{-1., -2., -3., 1., 2., 3.,  -1., -1., -2.,
+                           3.,  5.,  -1., 2., 3., -1., 1.,  1.,  2.};
+    std::vector<da_int> y_train{1, 2, 0, 1, 2, 2};
+    test.X_train = convert_vector<T, T>(X_train);
+    test.y_train = convert_vector<da_int, da_int>(y_train);
+
+    std::vector<T> X_test{-2., -1., 2., 2., -2., 1., 3., -1., -3.};
+    test.X_test = convert_vector<T, T>(X_test);
+
+    get_expected_kind_k_dist(test);
+    get_proba(test);
+    get_labels(test);
+
+    // Now convert everything to row major order
+    test.order = "row-major";
+    datest_blas::imatcopy('T', test.n_samples, test.n_features, 1.0, test.X_train.data(),
+                          test.n_samples, test.n_features);
+    datest_blas::imatcopy('T', test.n_queries, test.n_features, 1.0, test.X_test.data(),
+                          test.n_queries, test.n_features);
+    datest_blas::imatcopy('T', test.n_queries, 3, 1.0, test.expected_proba.data(),
+                          test.n_queries, 3);
+    datest_blas::imatcopy('T', test.n_queries, 4, 1.0, test.expected_kdist.data(),
+                          test.n_queries, 4);
+#if defined(AOCLDA_ILP64)
+    datest_blas::imatcopy('T', test.n_queries, 4, 1.0,
+                          reinterpret_cast<double *>(test.expected_kind.data()),
+                          test.n_queries, 4);
+#else
+    datest_blas::imatcopy('T', test.n_queries, 4, 1.0,
+                          reinterpret_cast<float *>(test.expected_kind.data()),
+                          test.n_queries, 4);
+#endif
+    test.ldx_train = test.n_features;
+    test.ldx_test = test.n_features;
+    test.name = "Row major test";
+
+    params.push_back(test);
+}
+
 template <typename T> void GetKNNData(std::vector<KNNParamType<T>> &params) {
     GetExampleData(params);
+    GetRowMajorData(params);
 }

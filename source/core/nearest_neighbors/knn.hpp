@@ -67,10 +67,18 @@ template <typename T> class da_knn : public basic_handle<T> {
     da_int n_samples = 0, n_features = 0, ldx_train = 0;
     const T *X_train = nullptr /*n_samples-by-n_features*/;
     const da_int *y_train = nullptr /*n_samples*/;
+    //Utility pointer to column major allocated copy of user's data
+    T *X_train_temp = nullptr;
 
   public:
     std::vector<da_int> classes;
     da_int n_classes = -1;
+
+    ~da_knn() {
+        // Destructor needs to handle arrays that were allocated due to row major storage of input data
+        if (X_train_temp)
+            delete[] (X_train_temp);
+    }
 
     da_knn(da_errors::da_error_t &err) {
         // Assumes that err is valid
@@ -78,7 +86,7 @@ template <typename T> class da_knn : public basic_handle<T> {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_knn_options<T>(this->opts, err);
+        register_knn_options<T>(this->opts, *this->err);
     };
 
     /* get_result (required to be defined by basic_handle) */
@@ -174,32 +182,29 @@ template <typename T>
 da_status da_knn<T>::set_training_data(da_int n_samples, da_int n_features,
                                        const T *X_train, da_int ldx_train,
                                        const da_int *y_train) {
-    if (X_train == nullptr || y_train == nullptr)
-        return da_error_bypass(this->err, da_status_invalid_pointer,
-                               "Either X_train, or y_train are not valid pointers.");
-    if (n_samples <= 0 || n_features <= 0) {
-        return da_error_bypass(
-            this->err, da_status_invalid_array_dimension,
-            "n_samples = " + std::to_string(n_samples) +
-                ", n_features = " + std::to_string(n_features) +
-                ", the values of n_samples and n_features need to be greater than 0");
-    }
-    if (ldx_train < n_samples) {
-        return da_error_bypass(
-            this->err, da_status_invalid_leading_dimension,
-            "n_samples = " + std::to_string(n_samples) +
-                ", ldx_train = " + std::to_string(ldx_train) +
-                ", the value of ldx_train needs to be at least as big as the value "
-                "of n_samples");
+
+    // Guard against errors due to multiple calls using the same class instantiation
+    if (X_train_temp) {
+        delete[] (X_train_temp);
+        X_train_temp = nullptr;
     }
 
+    da_status status = this->store_2D_array(
+        n_samples, n_features, X_train, ldx_train, &X_train_temp, &this->X_train,
+        this->ldx_train, "n_samples", "n_features", "X_train", "ldx_train");
+    if (status != da_status_success)
+        return status;
+
+    if (y_train == nullptr)
+        return da_error_bypass(this->err, da_status_invalid_pointer,
+                               "y_train is not a valid pointer.");
+
     // Set internal pointers to user data
-    this->X_train = X_train;
     this->y_train = y_train;
     this->n_samples = n_samples;
     this->n_features = n_features;
-    this->ldx_train = ldx_train;
     this->istrained = true;
+
     return da_status_success;
 }
 
@@ -209,9 +214,10 @@ void da_knn<T>::kneighbors_kernel(da_int n_queries, da_int n_features, const T *
                                   da_int n_neigh, bool return_distance) {
     // ToDo: Make this generic for any distance.
     // Call function that computes the squared euclidean distance
-    da_metrics::pairwise_distances::euclidean(this->n_samples, n_queries, n_features,
-                                              this->X_train, this->ldx_train, X_test,
-                                              ldx_test, D, this->n_samples, true);
+
+    da_metrics::pairwise_distances::euclidean(column_major, this->n_samples, n_queries,
+                                              n_features, this->X_train, this->ldx_train,
+                                              X_test, ldx_test, D, this->n_samples, true);
     for (da_int k = 0; k < n_queries; k++) {
         // Initialize the values of ind with 0-n_neigh
         std::iota(n_ind + k * n_neigh, n_ind + (k + 1) * n_neigh, 0);
@@ -282,16 +288,16 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
         return da_error_bypass(this->err, da_status_no_data,
                                "No data has been passed to the handle. Please call "
                                "da_knn_set_data_s or da_knn_set_data_d.");
+    const T *X_test_temp;
+    T *utility_ptr1;
+    da_int ldx_test_temp;
+
     if (!is_up_to_date)
         status = da_knn<T>::set_params();
     if (status != da_status_success)
         return da_error_bypass(this->err, status,
                                "Error while setting the parameters in kneighbors().");
-    if (X_test == nullptr)
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "X_test is not a valid pointer.");
 
-    // Add error checking for input parameters
     if (n_ind == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_pointer,
                                "n_ind is not a valid pointer.");
@@ -299,18 +305,11 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
     // This check is added based on the functionality that will be added in the future.
     // X can be nullptr. Only check parameters related to X, if X is not nullptr.
     if (X_test != nullptr) {
-        if (n_queries < 1 || n_features < 1) {
-            return da_error_bypass(this->err, da_status_invalid_array_dimension,
-                                   "n_queries and n_features must be greater than 0.");
-        }
-        if (ldx_test < n_queries) {
-            return da_error_bypass(this->err, da_status_invalid_leading_dimension,
-                                   "n_queries = " + std::to_string(n_queries) +
-                                       ", ldx_test = " + std::to_string(ldx_test) +
-                                       ", the value of ldx_test needs to be at least "
-                                       "as big as the value "
-                                       "of n_queries");
-        }
+        status = this->store_2D_array(n_queries, n_features, X_test, ldx_test,
+                                      &utility_ptr1, &X_test_temp, ldx_test_temp,
+                                      "n_queries", "n_features", "X_test", "ldx_test");
+        if (status != da_status_success)
+            return status;
         // Data matrix X must have the same number of columns as X_train.
         if (n_features != this->n_features) {
             return da_error_bypass(this->err, da_status_invalid_array_dimension,
@@ -319,6 +318,7 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
                                        std::to_string(this->n_features) + ".");
         }
     }
+
     // Check number of requested neighbors
     if ((n_neigh <= 0 && this->n_neighbors <= 0)) {
         return da_error_bypass(this->err, da_status_invalid_input,
@@ -344,15 +344,15 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
     }
     std::vector<T> D;
     // If ldx_test is bigger than n_queries, don't do blocking.
-    if (ldx_test > n_queries) {
+    if (ldx_test_temp > n_queries) {
         try {
             D.resize(this->n_samples * n_queries);
         } catch (std::bad_alloc const &) {
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
-        kneighbors_kernel(n_queries, n_features, X_test, ldx_test, D.data(), n_ind,
-                          n_dist, n_neigh, return_distance);
+        kneighbors_kernel(n_queries, n_features, X_test_temp, ldx_test_temp, D.data(),
+                          n_ind, n_dist, n_neigh, return_distance);
     } else {
 
         // If the leading dimension and n_queries match, optimize using blocking.
@@ -367,14 +367,14 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
         }
 // Iterate through the number of blocks
 #pragma omp parallel for default(none)                                                   \
-    shared(n_blocks, n_features, X_test, n_queries, n_ind, n_dist, n_neigh,              \
-               return_distance, D) num_threads(n_threads)
+    shared(n_blocks, n_features, X_test_temp, n_queries, n_ind, n_dist, n_neigh,         \
+               ldx_test_temp, return_distance, D) num_threads(n_threads)
         for (da_int iblock = 0; iblock < n_blocks; iblock++) {
             da_int D_index = (da_int)omp_get_thread_num() * this->n_samples * BLOCK_SIZE;
             // If the remaining numbers of queries is ge than the block size
             // the size of the submatrix we are computing is BLOCK_SIZE
             kneighbors_kernel(
-                BLOCK_SIZE, n_features, X_test + iblock * BLOCK_SIZE, n_queries,
+                BLOCK_SIZE, n_features, X_test_temp + iblock * BLOCK_SIZE, ldx_test_temp,
                 &D[D_index], n_ind + iblock * BLOCK_SIZE * n_neigh,
                 n_dist + iblock * BLOCK_SIZE * n_neigh, n_neigh, return_distance);
         }
@@ -383,23 +383,28 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
         if (block_rem > 0) {
             da_int D_index = (da_int)omp_get_thread_num() * this->n_samples * BLOCK_SIZE;
             kneighbors_kernel(
-                block_rem, n_features, X_test + n_blocks * BLOCK_SIZE, n_queries,
+                block_rem, n_features, X_test_temp + n_blocks * BLOCK_SIZE, ldx_test_temp,
                 &D[D_index], n_ind + n_blocks * BLOCK_SIZE * n_neigh,
                 n_dist + n_blocks * BLOCK_SIZE * n_neigh, n_neigh, return_distance);
         }
     }
 
+    if (this->order == column_major) {
 // If da_int is 64 bit, cast to double
 #if defined(AOCLDA_ILP64)
-    da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<double *>(n_ind),
-                      n_neigh, n_queries);
+        da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<double *>(n_ind),
+                          n_neigh, n_queries);
 #else // da_int is 32 bit, cast to float
-    da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<float *>(n_ind),
-                      n_neigh, n_queries);
+        da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<float *>(n_ind),
+                          n_neigh, n_queries);
 #endif
-    // transpose distances
-    if (return_distance) {
-        da_blas::imatcopy('T', n_neigh, n_queries, 1.0, n_dist, n_neigh, n_queries);
+        // transpose distances
+        if (return_distance) {
+            da_blas::imatcopy('T', n_neigh, n_queries, 1.0, n_dist, n_neigh, n_queries);
+        }
+    } else {
+
+        delete[] (utility_ptr1);
     }
 
     return da_status_success;
@@ -480,21 +485,20 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
         return da_error_bypass(this->err, da_status_invalid_pointer,
                                "proba is not a valid pointer.");
 
+    // Most checks occur lower in the call tree, but we need this one to prevent illegal allocation
+    if (n_queries < 1)
+        return da_error(this->err, da_status_invalid_array_dimension,
+                        "Number of queries must be greater than zero.");
+
+    if (n_features < 1)
+        return da_error(this->err, da_status_invalid_array_dimension,
+                        "Number of features must be greater than zero.");
+
     // This check is added based on the functionality that will be added in the future.
     // X can be nullptr. Only check parameters related to X, if X is not nullptr.
     if (X_test != nullptr) {
-        if (n_queries < 1 || n_features < 1) {
-            return da_error_bypass(this->err, da_status_invalid_array_dimension,
-                                   "n_queries and n_features must be greater than 0.");
-        }
-        if (ldx_test < n_queries) {
-            return da_error_bypass(this->err, da_status_invalid_leading_dimension,
-                                   "n_queries = " + std::to_string(n_queries) +
-                                       ", ldx_test = " + std::to_string(ldx_test) +
-                                       ", the value of ldx_test needs to be at least "
-                                       "as big as the value "
-                                       "of n_queries");
-        }
+        if (status != da_status_success)
+            return status;
         // Data matrix X must have the same number of columns as X_train.
         if (n_features != this->n_features) {
             return da_error_bypass(this->err, da_status_invalid_array_dimension,
@@ -504,6 +508,7 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
         }
     }
     // Allocate memory to set neighbors' indices and corresponding distances.
+    // If n_ind and n_dist were returned in row order, then we need to transpose them
     try {
         std::vector<da_int> n_ind(n_queries * this->n_neighbors);
 
@@ -517,7 +522,21 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
             // Call kneighbors to compute the indices and distances.
             status = kneighbors(n_queries, n_features, X_test, ldx_test, n_ind.data(),
                                 n_dist.data(), this->n_neighbors, true);
+            if (this->order == row_major)
+                da_blas::imatcopy('T', this->n_neighbors, n_queries, 1.0, n_dist.data(),
+                                  this->n_neighbors, n_queries);
         }
+#if defined AOCLDA_ILP64
+        if (this->order == row_major)
+            da_blas::imatcopy('T', this->n_neighbors, n_queries, 1.0,
+                              reinterpret_cast<double *>(n_ind.data()), this->n_neighbors,
+                              n_queries);
+#else
+        if (this->order == row_major)
+            da_blas::imatcopy('T', this->n_neighbors, n_queries, 1.0,
+                              reinterpret_cast<float *>(n_ind.data()), this->n_neighbors,
+                              n_queries);
+#endif
         if (status != da_status_success)
             return da_error_bypass(
                 this->err, status,
@@ -576,6 +595,11 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
                         "Memory allocation failed.");
     }
 
+    if (this->order == row_major) {
+
+        da_blas::imatcopy('T', n_queries, n_classes, 1.0, proba, n_queries, n_classes);
+    }
+
     return status;
 }
 
@@ -630,11 +654,18 @@ da_status da_knn<T>::predict(da_int n_queries, da_int n_features, const T *X_tes
         // For each row in n_queries, check which label appears the most times.
         // In case of a tie, return the first label.
         da_int max_index;
+        if (this->order == row_major)
+            da_blas::imatcopy('T', this->n_classes, n_queries, 1.0, proba.data(),
+                              this->n_classes, n_queries);
         for (da_int i = 0; i < n_queries; i++) {
             max_index =
                 da_blas::cblas_iamax(this->n_classes, proba.data() + i, n_queries);
             y_test[i] = this->classes[max_index];
         }
+        if (this->order == row_major)
+            da_blas::imatcopy('T', n_queries, this->n_classes, 1.0, proba.data(),
+                              n_queries, this->n_classes);
+
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");

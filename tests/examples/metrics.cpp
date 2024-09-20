@@ -31,7 +31,7 @@
 
 /* Metrics example
  *
- * This example computes the euclidean distance matrix 
+ * This example computes the euclidean distance matrix
  * between two feature arrays
  */
 
@@ -57,8 +57,9 @@ int main() {
     double D[6];
 
     // Compute the euclidean distance matrix
-    pass = pass && (da_pairwise_distances_d(m, n, k, X, m, Y, n, D, m, da_euclidean,
-                                            da_allow_infinite) == da_status_success);
+    pass = pass &&
+           (da_pairwise_distances_d(column_major, m, n, k, X, m, Y, n, D, m, da_euclidean,
+                                    da_allow_infinite) == da_status_success);
 
     // Check status and print
     if (pass) {

@@ -27,13 +27,20 @@
 #ifndef DA_CBLAS_HH
 #define DA_CBLAS_HH
 
+#include "aoclda.h"
+#include <complex>
+
 extern "C" {
 #define BLIS_ENABLE_CBLAS
 #include "cblas.h"
+/*
+ * Adding those declarations because they do not exist in cblas.h
+ */
+void simatcopy_(char *trans, da_int *m, da_int *n, const float *alpha, float *A,
+                da_int *lda_in, da_int *lda_out);
+void dimatcopy_(char *trans, da_int *m, da_int *n, const double *alpha, double *A,
+                da_int *lda_in, da_int *lda_out);
 }
-
-#include "aoclda.h"
-#include <complex>
 
 namespace datest_blas {
 
@@ -972,6 +979,17 @@ inline void cblas_her2k(CBLAS_ORDER layout, CBLAS_UPLO uplo, CBLAS_TRANSPOSE tra
                         std::complex<double> *C, da_int ldc) {
     cblas_zher2k(layout, uplo, trans, n, k, &alpha, A, lda, B, ldb, beta, C, ldc);
 }
-} // namespace da_blas
+
+inline void imatcopy(char trans, da_int m, da_int n, float alpha, float *A, da_int lda_in,
+                     da_int lda_out) {
+    simatcopy_(&trans, &m, &n, (const float *)&alpha, A, &lda_in, &lda_out);
+}
+
+inline void imatcopy(char trans, da_int m, da_int n, double alpha, double *A,
+                     da_int lda_in, da_int lda_out) {
+    dimatcopy_(&trans, &m, &n, (const double *)&alpha, A, &lda_in, &lda_out);
+}
+
+} // namespace datest_blas
 
 #endif //  #ifndef CBLAS_HH

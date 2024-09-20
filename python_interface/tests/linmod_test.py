@@ -27,7 +27,6 @@
 import numpy as np
 import pytest
 from aoclda.linear_model import linmod
-import aoclda as da
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [
     ("double", np.float64), ("single", np.float32),

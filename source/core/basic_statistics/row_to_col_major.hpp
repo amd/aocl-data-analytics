@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,21 +25,46 @@
  *
  */
 
+#ifndef ROW_TO_COL_MAJOR_HPP
+#define ROW_TO_COL_MAJOR_HPP
+
 #include "aoclda.h"
-#include "pairwise_distances.hpp"
 
-da_status da_pairwise_distances_d(da_order order, da_int m, da_int n, da_int k,
-                                  const double *X, da_int ldx, const double *Y,
-                                  da_int ldy, double *D, da_int ldd, da_metric metric,
-                                  da_data_types force_all_finite) {
-    return pairwise_distance_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
-                                    force_all_finite);
-}
+namespace da_basic_statistics {
 
-da_status da_pairwise_distances_s(da_order order, da_int m, da_int n, da_int k,
-                                  const float *X, da_int ldx, const float *Y, da_int ldy,
-                                  float *D, da_int ldd, da_metric metric,
-                                  da_data_types force_all_finite) {
-    return pairwise_distance_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
-                                    force_all_finite);
+/* Utility function for basic statistics routines:
+    Inputs: order, axis, n_in, p_in, ldx
+    If order is column_major, then we just check validity of n_in, p_in and ldx and copy to n and p
+    If order is row_major, then we swap the axis, check validity of n_in, p_in and ldx and copy to p and n respectively.
+    This ensures that the calling function can continue as if it was a column major order computation.
+    */
+da_status inline row_to_col_major(da_order order, da_axis axis_in, da_int n_in,
+                                  da_int p_in, da_int ldx, da_axis &axis, da_int &n,
+                                  da_int &p) {
+    if (n_in < 1 || p_in < 1)
+        return da_status_invalid_array_dimension;
+
+    if (order == column_major) {
+        if (ldx < n_in)
+            return da_status_invalid_leading_dimension;
+        n = n_in;
+        p = p_in;
+        axis = axis_in;
+        return da_status_success;
+    } else {
+        if (ldx < p_in)
+            return da_status_invalid_leading_dimension;
+        n = p_in;
+        p = n_in;
+        if (axis_in == da_axis_row)
+            axis = da_axis_col;
+        if (axis_in == da_axis_col)
+            axis = da_axis_row;
+        if (axis_in == da_axis_all)
+            axis = da_axis_all;
+        return da_status_success;
+    }
 }
+} // namespace da_basic_statistics
+
+#endif // ROW_TO_COL_MAJOR_HPP

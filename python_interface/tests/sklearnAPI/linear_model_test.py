@@ -267,7 +267,7 @@ def test_errors(problem):
     '''
     Test we catch the errors for unsupported functions
     '''
-    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]])
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9.1]])
     y = np.array([3., 6.5, 10., 12., 13., 19.])
     # patch and import scikit-learn
     skpatch()

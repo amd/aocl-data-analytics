@@ -28,6 +28,7 @@
 #ifndef DECISION_TREE_OPTIONS_HPP
 #define DECISION_TREE_OPTIONS_HPP
 
+#include "aoclda_types.h"
 #include "da_error.hpp"
 #include "decision_tree_types.hpp"
 #include "options.hpp"
@@ -122,6 +123,12 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
                          "Print the timings of different parts of the fitting process.",
                          {{"yes", 1}, {"no", 0}}, "no"));
         status = opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString(
+            "storage order",
+            "Whether data is supplied and returned in row- or column-major order.",
+            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
+        opts.register_opt(os);
 
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE

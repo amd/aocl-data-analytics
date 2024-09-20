@@ -71,12 +71,11 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     ////////////////////////
     std::string input_data_fname =
         std::string(DATA_DIR) + "/df_data/" + csvname + "_data.csv";
-    std::cout << "HERE " << input_data_fname << std::endl;
     da_datastore csv_store = nullptr;
     EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datastore precision",
-                                              prec_name<T>()),
-              da_status_success);
+    EXPECT_EQ(
+        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
+        da_status_success);
     EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
               da_status_success);
 
@@ -95,9 +94,11 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     // Extract the selections
     std::vector<T> X(nfeat * nsamples);
     std::vector<da_int> y(nsamples);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", X.data(), nsamples),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", column_major, X.data(),
+                                        nsamples),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", y.data(), nsamples),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", column_major, y.data(),
+                                        nsamples),
               da_status_success);
     da_datastore_destroy(&csv_store);
 
@@ -116,9 +117,9 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     input_data_fname = std::string(DATA_DIR) + "/df_data/" + csvname + "_test.csv";
     csv_store = nullptr;
     EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datastore precision",
-                                              prec_name<T>()),
-              da_status_success);
+    EXPECT_EQ(
+        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
+        da_status_success);
     EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
               da_status_success);
 
@@ -134,9 +135,11 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     // Extract the selections
     std::vector<T> X_test(nfeat * nsamples);
     std::vector<da_int> y_test(nsamples);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", X_test.data(), nsamples),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", column_major,
+                                        X_test.data(), nsamples),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", y_test.data(), nsamples),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", column_major,
+                                        y_test.data(), nsamples),
               da_status_success);
     da_datastore_destroy(&csv_store);
 

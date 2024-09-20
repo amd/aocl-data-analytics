@@ -67,6 +67,8 @@ TYPED_TEST(KMeansTest, KMeansFunctionality) {
                   da_status_success);
         EXPECT_EQ(da_options_set_string(handle, "algorithm", param.algorithm.c_str()),
                   da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
+                  da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "n_clusters", param.n_clusters),
                   da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "max_iter", param.max_iter),
@@ -149,11 +151,13 @@ TYPED_TEST(KMeansTest, MultipleCalls) {
     EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans), da_status_success);
 
     std::vector<KMeansParamType<TypeParam>> params;
-    KMeansParamType<TypeParam> param1, param2;
+    KMeansParamType<TypeParam> param1, param2, param3;
     Get1by1BaseData(param1);
     params.push_back(param1);
     Get3ClustersBaseData(param2);
     params.push_back(param2);
+    GetRowMajorBaseData(param3);
+    params.push_back(param3);
     param2.algorithm = "lloyd";
     param2.expected_rinfo[3] = 1.0;
     params.push_back(param2);
@@ -177,6 +181,8 @@ TYPED_TEST(KMeansTest, MultipleCalls) {
                                         param.initialization_method.c_str()),
                   da_status_success);
         EXPECT_EQ(da_options_set_string(handle, "algorithm", param.algorithm.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
                   da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "n_clusters", param.n_clusters),
                   da_status_success);
@@ -268,12 +274,12 @@ TYPED_TEST(KMeansTest, ErrorExits) {
                                  param.lda),
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_set_data(handle, 0, param.n_features, param.A.data(), param.lda),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_kmeans_set_data(handle, param.n_samples, 0, param.A.data(), param.lda),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(
         da_kmeans_set_data(handle, param.n_samples, param.n_features, param.A.data(), 0),
-        da_status_invalid_input);
+        da_status_invalid_leading_dimension);
 
     // error exits to do with routines called in the wrong order
     EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
@@ -301,7 +307,7 @@ TYPED_TEST(KMeansTest, ErrorExits) {
     EXPECT_EQ(da_kmeans_set_init_centres(handle, null_arr, param.ldc),
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), 0),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
 
     // compute error exits
     EXPECT_EQ(da_options_set_int(handle, "n_init", 10), da_status_success);
@@ -332,17 +338,17 @@ TYPED_TEST(KMeansTest, ErrorExits) {
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_transform(handle, 0, param.m_features, param.X.data(), param.ldx,
                                   param.X_transform.data(), param.ldx_transform),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, 0, param.X.data(), param.ldx,
                                   param.X_transform.data(), param.ldx_transform),
               da_status_invalid_input);
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
                                   param.X.data(), 0, param.X_transform.data(),
                                   param.ldx_transform),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
                                   param.X.data(), param.ldx, param.X_transform.data(), 0),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
 
     // predict error exits
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, param.k_samples, null_arr,
@@ -353,13 +359,13 @@ TYPED_TEST(KMeansTest, ErrorExits) {
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_predict(handle, 0, param.k_samples, param.Y.data(), param.ldy,
                                 param.Y_labels.data()),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, 0, param.Y.data(), param.ldy,
                                 param.Y_labels.data()),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, param.k_samples, param.Y.data(),
                                 0, param.Y_labels.data()),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
 
     // get results error exits
     EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, null_arr),

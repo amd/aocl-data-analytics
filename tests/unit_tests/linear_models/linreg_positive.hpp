@@ -79,12 +79,11 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         std::string(DATA_DIR) + "/linmod_data/linear_reg/" + csvname + "_data.csv";
     da_datastore csv_store = nullptr;
     EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datastore precision",
-                                              prec_name<T>()),
-              da_status_success);
     EXPECT_EQ(
-        da_datastore_options_set_string(csv_store, "CSV datatype", type_opt_name<T>()),
+        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
         da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(csv_store, "datatype", type_opt_name<T>()),
+              da_status_success);
     EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
               da_status_success);
 
@@ -105,9 +104,9 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     T *A = nullptr, *b = nullptr;
     A = new T[nfeat * nsamples];
     b = new T[nsamples];
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nsamples),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", column_major, A, nsamples),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nsamples),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", column_major, b, nsamples),
               da_status_success);
 
     ///////////////////
@@ -207,12 +206,12 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // read the expected prediction
         da_datastore sol_store = nullptr;
         EXPECT_EQ(da_datastore_init(&sol_store), da_status_success);
-        EXPECT_EQ(da_datastore_options_set_string(sol_store, "CSV datastore precision",
+        EXPECT_EQ(da_datastore_options_set_string(sol_store, "datastore precision",
                                                   prec_name<T>()),
                   da_status_success);
-        EXPECT_EQ(da_datastore_options_set_string(sol_store, "CSV datatype",
-                                                  type_opt_name<T>()),
-                  da_status_success);
+        EXPECT_EQ(
+            da_datastore_options_set_string(sol_store, "datatype", type_opt_name<T>()),
+            da_status_success);
         EXPECT_EQ(da_data_load_from_csv(sol_store, solution_fname.c_str()),
                   da_status_success);
 
@@ -272,12 +271,12 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         fclose(file);
 
         EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-        EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datastore precision",
+        EXPECT_EQ(da_datastore_options_set_string(csv_store, "datastore precision",
                                                   prec_name<T>()),
                   da_status_success);
-        EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datatype",
-                                                  type_opt_name<T>()),
-                  da_status_success);
+        EXPECT_EQ(
+            da_datastore_options_set_string(csv_store, "datatype", type_opt_name<T>()),
+            da_status_success);
 
         EXPECT_EQ(da_data_load_from_csv(csv_store, predict_fname.c_str()),
                   da_status_success);
@@ -297,10 +296,12 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // Extract the selections
         A = new T[nfeat * nsamples];
         b = new T[nsamples];
-        EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nsamples),
-                  da_status_success);
-        EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nsamples),
-                  da_status_success);
+        EXPECT_EQ(
+            da_data_extract_selection(csv_store, "features", column_major, A, nsamples),
+            da_status_success);
+        EXPECT_EQ(
+            da_data_extract_selection(csv_store, "response", column_major, b, nsamples),
+            da_status_success);
 
         da_datastore_destroy(&csv_store);
 

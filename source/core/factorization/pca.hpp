@@ -55,6 +55,9 @@ template <typename T> class da_pca : public basic_handle<T> {
     const T *A;
     da_int lda;
 
+    //Utility pointer to column major allocated copy of user's data
+    T *A_temp = nullptr;
+
     // Set true when initialization is complete
     bool initdone = false;
 
@@ -104,6 +107,12 @@ template <typename T> class da_pca : public basic_handle<T> {
         // by the caller.
         register_pca_options<T>(this->opts, *this->err);
     };
+
+    ~da_pca() {
+        // Destructor needs to handle arrays that were allocated due to row major storage of input data
+        if (A_temp)
+            delete[] (A_temp);
+    }
 
     da_status init(da_int n, da_int p, const T *A, da_int lda);
 
@@ -156,10 +165,20 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(n * ns) + ".");
             }
+            // Copy u into result array
+            this->copy_2D_results_array(n, ns, u.data(), ldu, result);
             // Compute Scores matrix, U * Sigma
-            for (da_int j = 0; j < ns; j++) {
+            if (this->order == column_major) {
+                for (da_int j = 0; j < ns; j++) {
+                    for (da_int i = 0; i < n; i++) {
+                        result[j * n + i] *= sigma[j];
+                    }
+                }
+            } else {
                 for (da_int i = 0; i < n; i++) {
-                    result[j * n + i] = sigma[j] * u[j * ldu + i];
+                    for (da_int j = 0; j < ns; j++) {
+                        result[i * ns + j] *= sigma[j];
+                    }
                 }
             }
             break;
@@ -176,11 +195,7 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(n * ns) + ".");
             }
-            for (da_int j = 0; j < ns; j++) {
-                for (da_int i = 0; i < n; i++) {
-                    result[i + n * j] = u[i + ldu * j];
-                }
-            }
+            this->copy_2D_results_array(n, ns, u.data(), ldu, result);
             break;
         case da_result::da_pca_principal_components:
             if (*dim < ns * p) {
@@ -190,9 +205,7 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(ns * p) + ".");
             }
-            for (da_int j = 0; j < p; j++)
-                for (da_int i = 0; i < ns; i++)
-                    result[i + j * ns] = vt[i + j * ldvt];
+            this->copy_2D_results_array(ns, p, vt.data(), ldvt, result);
             break;
         case da_result::da_pca_vt:
             if (*dim < npc * p) {
@@ -202,11 +215,7 @@ template <typename T> class da_pca : public basic_handle<T> {
                                "least size: " +
                                    std::to_string(npc * p) + ".");
             }
-            for (da_int j = 0; j < p; j++) {
-                for (da_int i = 0; i < npc; i++) {
-                    result[i + npc * j] = vt[i + ldvt * j];
-                }
-            }
+            this->copy_2D_results_array(npc, p, vt.data(), ldvt, result);
             break;
         case da_result::da_pca_variance:
             if (*dim < ns) {
@@ -282,30 +291,23 @@ template <typename T> class da_pca : public basic_handle<T> {
 
 /* Store the user's data matrix in preparation for PCA computation */
 template <typename T>
-da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
+da_status da_pca<T>::init(da_int n, da_int p, const T *A_in, da_int lda_in) {
 
-    // Check for illegal arguments and function calls
-    if (n < 1)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with n_samples = " + std::to_string(n) +
-                            ". Constraint: n_samples >= 1.");
-    if (p < 1)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with n_features = " + std::to_string(p) +
-                            ". Constraint: n_features >= 1.");
-    if (lda < n)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with n_samples = " + std::to_string(n) +
-                            " and lda = " + std::to_string(lda) +
-                            ". Constraint: lda >= n_samples.");
-    if (A == nullptr)
-        return da_error(this->err, da_status_invalid_pointer, "The array A is null.");
+    // Guard against errors due to multiple calls using the same class instantiation
+    if (A_temp) {
+        delete[] (A_temp);
+        A_temp = nullptr;
+        A = nullptr;
+    }
+
+    da_status status = this->store_2D_array(n, p, A_in, lda_in, &A_temp, &A, this->lda,
+                                            "n_samples", "n_features", "A", "lda");
+    if (status != da_status_success)
+        return status;
 
     // Store dimensions of A
     this->n = n;
     this->p = p;
-    this->A = A;
-    this->lda = lda;
 
     qr = false;
     store_U = false;
@@ -437,7 +439,8 @@ template <typename T> da_status da_pca<T>::compute() {
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
-        da_basic_statistics::mean(da_axis_col, n, p, A, lda, column_means.data());
+        da_basic_statistics::mean(column_major, da_axis_col, n, p, A, lda,
+                                  column_means.data());
 
         if (solver == solver_syevd) {
 #pragma omp simd
@@ -464,8 +467,8 @@ template <typename T> da_status da_pca<T>::compute() {
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
-        da_basic_statistics::variance(da_axis_col, n, p, A, lda, dof, column_means.data(),
-                                      column_sdevs.data());
+        da_basic_statistics::variance(column_major, da_axis_col, n, p, A, lda, dof,
+                                      column_means.data(), column_sdevs.data());
         if (solver == solver_syevd) {
 #pragma omp simd
             for (da_int j = 0; j < p; j++) {
@@ -791,34 +794,31 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
                        "da_pca_compute_d.");
     }
 
-    /* Check for illegal arguments */
-    if (m < 1)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with m_samples = " + std::to_string(m) +
-                            ". Constraint: m_samples >= 1.");
+    const T *X_temp;
+    T *utility_ptr1 = nullptr;
+    T *utility_ptr2 = nullptr;
+    da_int ldx_temp;
+    T *X_transform_temp;
+    da_int ldx_transform_temp;
+
     if (p != this->p)
         return da_error(this->err, da_status_invalid_input,
                         "The function was called with m_features = " + std::to_string(p) +
                             " but the PCA has been computed with " +
                             std::to_string(this->p) + " features.");
-    if (ldx < m)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with m_samples = " + std::to_string(m) +
-                            " and ldx = " + std::to_string(ldx) +
-                            ". Constraint: ldx >= m_samples.");
 
-    if (ldx_transform < m)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with m_samples = " + std::to_string(m) +
-                            " and ldx_transform = " + std::to_string(ldx_transform) +
-                            ". Constraint: ldx_transform >= m_samples.");
+    da_status status =
+        this->store_2D_array(m, p, X, ldx, &utility_ptr1, &X_temp, ldx_temp, "m_samples",
+                             "m_features", "X", "ldx");
+    if (status != da_status_success)
+        return status;
 
-    if (X == nullptr)
-        return da_error(this->err, da_status_invalid_pointer, "The array X is null.");
-
-    if (X_transform == nullptr)
-        return da_error(this->err, da_status_invalid_pointer,
-                        "The array X_transform is null.");
+    status = this->store_2D_array(m, ns, X_transform, ldx_transform, &utility_ptr2,
+                                  const_cast<const T **>(&X_transform_temp),
+                                  ldx_transform_temp, "m_samples", "n_components",
+                                  "X_transform", "ldx_transform", 1);
+    if (status != da_status_success)
+        return status;
 
     // We need a copy of X to avoid changing the user's data
     std::vector<T> X_copy;
@@ -838,7 +838,7 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
 #pragma omp simd
         for (da_int j = 0; j < p; j++) {
             for (da_int i = 0; i < m; i++) {
-                X_copy[i + j * m] = X[i + ldx * j] - column_means[j];
+                X_copy[i + j * m] = X_temp[i + ldx_temp * j] - column_means[j];
             }
         }
         X_gemm = X_copy.data();
@@ -848,8 +848,8 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
 #pragma omp simd
         for (da_int j = 0; j < p; j++) {
             for (da_int i = 0; i < m; i++) {
-                X_copy[i + j * m] =
-                    (X[i + ldx * j] - column_means[j]) / column_sdevs_nonzero[j];
+                X_copy[i + j * m] = (X_temp[i + ldx_temp * j] - column_means[j]) /
+                                    column_sdevs_nonzero[j];
             }
         }
         X_gemm = X_copy.data();
@@ -857,14 +857,26 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
         break;
     default:
         // No standardization is required
-        X_gemm = X;
-        ldx_gemm = ldx;
+        X_gemm = X_temp;
+        ldx_gemm = ldx_temp;
         break;
     }
 
     // Compute X * VT^T and store in transformed_data
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, m, ns, p, 1.0, X_gemm,
-                        ldx_gemm, vt.data(), ldvt, 0.0, X_transform, ldx_transform);
+                        ldx_gemm, vt.data(), ldvt, 0.0, X_transform_temp,
+                        ldx_transform_temp);
+
+    if (this->order == row_major) {
+
+        da_utils::copy_transpose_2D_array_col_to_row_major(
+            m, ns, X_transform_temp, ldx_transform_temp, X_transform, ldx_transform);
+    }
+
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
+    if (utility_ptr2)
+        delete[] (utility_ptr2);
 
     return da_status_success;
 }
@@ -879,56 +891,64 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
                        "da_pca_compute_d.");
     }
 
-    // Check for illegal arguments
-    if (k < 1)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with k_samples = " + std::to_string(k) +
-                            ". Constraint: k_samples >= 1.");
+    const T *X_temp;
+    T *utility_ptr1 = nullptr;
+    T *utility_ptr2 = nullptr;
+    da_int ldx_temp;
+    T *X_inv_transform_temp;
+    da_int ldx_inv_transform_temp;
+
     if (r != ns)
         return da_error(this->err, da_status_invalid_input,
                         "The function was called with k_features = " + std::to_string(r) +
                             " but the PCA has been computed with " + std::to_string(ns) +
                             " components.");
-    if (ldx < k)
-        return da_error(this->err, da_status_invalid_input,
-                        "The function was called with k_samples = " + std::to_string(k) +
-                            " and ldy = " + std::to_string(ldx) +
-                            ". Constraint: ldy >= k_samples.");
 
-    if (ldx_inv_transform < k)
-        return da_error(
-            this->err, da_status_invalid_input,
-            "The function was called with k_samples = " + std::to_string(k) +
-                " and ldy_inv_transform = " + std::to_string(ldx_inv_transform) +
-                ". Constraint: ldy_inv_transform >= k_samples.");
+    da_status status =
+        this->store_2D_array(k, ns, X, ldx, &utility_ptr1, &X_temp, ldx_temp, "k_samples",
+                             "k_features", "Y", "ldy");
+    if (status != da_status_success)
+        return status;
 
-    if (X == nullptr)
-        return da_error(this->err, da_status_invalid_pointer, "The array Y is null.");
-
-    if (X_inv_transform == nullptr)
-        return da_error(this->err, da_status_invalid_pointer,
-                        "The array Y_inv_transform is null.");
+    status = this->store_2D_array(k, p, X_inv_transform, ldx_inv_transform, &utility_ptr2,
+                                  const_cast<const T **>(&X_inv_transform_temp),
+                                  ldx_inv_transform_temp, "k_samples", "n_features",
+                                  "Y_transform", "ldy_transform", 1);
+    if (status != da_status_success)
+        return status;
 
     // Compute X * VT and store
-    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X, ldx,
-                        vt.data(), ldvt, 0.0, X_inv_transform, ldx_inv_transform);
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X_temp,
+                        ldx_temp, vt.data(), ldvt, 0.0, X_inv_transform_temp,
+                        ldx_inv_transform_temp);
 
     // Undo the standardization used in the PCA computation
     switch (method) {
     case pca_method_cov:
-        da_basic_statistics::standardize(da_axis_col, k, p, X_inv_transform,
-                                         ldx_inv_transform, dof, 1, column_means.data(),
-                                         (T *)nullptr);
+        da_basic_statistics::standardize(column_major, da_axis_col, k, p,
+                                         X_inv_transform_temp, ldx_inv_transform_temp,
+                                         dof, 1, column_means.data(), (T *)nullptr);
         break;
     case pca_method_corr:
-        da_basic_statistics::standardize(da_axis_col, k, p, X_inv_transform,
-                                         ldx_inv_transform, dof, 1, column_means.data(),
-                                         column_sdevs.data());
+        da_basic_statistics::standardize(
+            column_major, da_axis_col, k, p, X_inv_transform_temp, ldx_inv_transform_temp,
+            dof, 1, column_means.data(), column_sdevs.data());
         break;
     default:
         // No standardization is required
         break;
     }
+
+    if (this->order == row_major) {
+
+        da_utils::copy_transpose_2D_array_col_to_row_major(
+            k, p, X_inv_transform_temp, ldx_inv_transform_temp, X_inv_transform,
+            ldx_inv_transform);
+    }
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
+    if (utility_ptr2)
+        delete[] (utility_ptr2);
 
     return da_status_success;
 }

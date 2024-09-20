@@ -64,35 +64,36 @@ enum da_data_types_ {
 typedef enum da_data_types_ da_data_types;
 
 /** \{
- * \brief Compute the distance matrix for an \p m by \p k matrix \p X and optionally an \p n by \p k matrix \p Y (both in column major order).
+ * \brief Compute the distance matrix for an \p m by \p k matrix \p X and optionally an \p n by \p k matrix \p Y.
  *
- * \param[in] m the number of rows of matrix X.
- * \param[in] n the number of rows of matrix Y.
- * \param[in] k the number of columns of matrices X and Y.
- * \param[in] X the \p m @f$\times @f$ \p k matrix. Data is expected to be stored in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column (indexed from 0, so that @f$0 \le i \le@f$ \p m @f$-1@f$ and @f$0 \le j \le@f$ \p k @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldx + <i>i</i>]th entry of \p X.
- * \param[in] ldx the leading dimension of the matrix X. Constraint: \p ldx @f$\ge@f$ \p m.
- * \param[in] Y the \p n @f$\times @f$ \p k matrix. Data is expected to be stored in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column (indexed from 0, so that @f$0 \le i \le@f$ \p n @f$-1@f$ and @f$0 \le j \le@f$ \p k @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldy + <i>i</i>]th entry of \p Y.
- * \param[in] ldy the leading dimension of the matrix Y. Constraint: \p ldy @f$\ge@f$ \p n.
- * \param[out] D if Y is nullptr, the \p m @f$\times @f$ \p m distance matrix, and the \p m @f$\times @f$ \p n distance matrix, otherwise. Data is expected to be stored in column major order, so that the element in the @f$i@f$th row and @f$j@f$th column (indexed from 0, so that @f$0 \le i \le@f$ \p m @f$-1@f$ and @f$0 \le j \le@f$ \p n @f$-1@f$) is stored in the [<i>j</i> @f$\times@f$ \p ldd + <i>i</i>]th entry of \p D.
- * \param[in] ldd the leading dimension of the matrix D. Constraint: \p ldd @f$\ge@f$ \p m, if Y is nullptr, and \p ldd @f$\ge@f$ \p n, otherwise.
+ * \param[in] order a \ref da_order enumerated type, specifying whether \p X, \p Y and \p D are stored in row-major order or column-major order.
+ * \param[in] m the number of rows of matrix \p X.
+ * \param[in] n the number of rows of matrix \p Y.
+ * \param[in] k the number of columns of matrices \p X and \p Y.
+ * \param[in] X the \p m @f$\times @f$ \p k matrix.
+ * \param[in] ldx the leading dimension of the matrix \p X. Constraint: \p ldx @f$\ge@f$ \p m if \p order = \p column_major, or \p ldx @f$\ge@f$ \p k if \p order = \p row_major.
+ * \param[in] Y the \p n @f$\times @f$ \p k matrix.
+ * \param[in] ldy the leading dimension of the matrix \p Y. Constraint: \p ldy @f$\ge@f$ \p n if \p order = \p column_major, or \p ldy @f$\ge@f$ \p k if \p order = \p row_major.
+ * \param[out] D if Y is nullptr, the \p m @f$\times @f$ \p m distance matrix, and the \p m @f$\times @f$ \p n distance matrix, otherwise.
+ * \param[in] ldd the leading dimension of the matrix D. Constraint: \p ldd @f$\ge@f$ \p m, if \p Y is nullptr or \p order = \p column_major, and \p ldd @f$\ge@f$ \p n, otherwise.
  * \param[in] metric enum that specifies the metric to use to compute the distance matrix. The default value is \ref da_euclidean.
  * \param[in] force_all_finite enum that specifies whether to raise an error on infinite or NaN values.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
- * - \ref da_status_invalid_leading_dimension - one of the constraints \p ldx @f$\ge@f$ \p m, \p ldy @f$\ge@f$ \p n, or \p ldd @f$\ge@f$ \p m or \p n was violated.
+ * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx, \p ldy or \p ldd was violated.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p D is null.
- * - \ref da_status_invalid_array_dimension - either \p m @f$< 1@f$, or \p k @f$< 1@f$, or \p n @f$< 1@f$, while Y is not nullptr.
+ * - \ref da_status_invalid_array_dimension - either \p m @f$< 1@f$, or \p k @f$< 1@f$, or \p n @f$< 1@f$, while \p Y is not nullptr.
  * - \ref da_status_not_implemented - an option that is currently not implemented was set.
  * - \ref da_status_memory_error - a memory allocation error occurred.
  */
-da_status da_pairwise_distances_d(da_int m, da_int n, da_int k, const double *X,
-                                  da_int ldx, const double *Y, da_int ldy, double *D,
-                                  da_int ldd, da_metric metric,
+da_status da_pairwise_distances_d(da_order order, da_int m, da_int n, da_int k,
+                                  const double *X, da_int ldx, const double *Y,
+                                  da_int ldy, double *D, da_int ldd, da_metric metric,
                                   da_data_types force_all_finite);
 
-da_status da_pairwise_distances_s(da_int m, da_int n, da_int k, const float *X,
-                                  da_int ldx, const float *Y, da_int ldy, float *D,
-                                  da_int ldd, da_metric metric,
+da_status da_pairwise_distances_s(da_order order, da_int m, da_int n, da_int k,
+                                  const float *X, da_int ldx, const float *Y, da_int ldy,
+                                  float *D, da_int ldd, da_metric metric,
                                   da_data_types force_all_finite);
 /** \} */
 

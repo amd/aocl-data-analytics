@@ -35,35 +35,46 @@
 // Check if metric is valid and direct accordingly, otherwise throw an error.
 // Check value of force_all_finite and direct accordingly, otherwise throw an error.
 template <typename T>
-da_status pairwise_distance_kernel(da_int m, da_int n, da_int k, const T *X, da_int ldx,
-                                   const T *Y, da_int ldy, T *D, da_int ldd,
-                                   da_metric metric, da_data_types force_all_finite) {
+da_status pairwise_distance_kernel(da_order order, da_int m, da_int n, da_int k,
+                                   const T *X, da_int ldx, const T *Y, da_int ldy, T *D,
+                                   da_int ldd, da_metric metric,
+                                   da_data_types force_all_finite) {
     da_status status = da_status_success;
     if (m < 1 || k < 1) {
         return da_status_invalid_array_dimension;
     }
-    if (ldx < m || ldd < m)
+    if (order == column_major && ldx < m)
+        return da_status_invalid_leading_dimension;
+    if (order == row_major && ldx < k)
         return da_status_invalid_leading_dimension;
     if (X == nullptr || D == nullptr)
         return da_status_invalid_pointer;
     // Check if Y is nullptr to continue with appropriate check of the leading dimension.
     if (Y != nullptr) {
-        if (ldy < n)
-            return da_status_invalid_leading_dimension;
         if (n < 1) {
             return da_status_invalid_array_dimension;
         }
+        if (order == column_major) {
+            if (ldy < n || ldd < m)
+                return da_status_invalid_leading_dimension;
+        } else {
+            if (ldy < k || ldd < n)
+                return da_status_invalid_leading_dimension;
+        }
+    } else {
+        if (ldd < m)
+            return da_status_invalid_leading_dimension;
     }
     // Currently no checks for NaNs/Infs are implemented.
     if (force_all_finite != da_allow_infinite)
         return da_status_not_implemented;
 
     if (metric == da_euclidean)
-        return da_metrics::pairwise_distances::euclidean(m, n, k, X, ldx, Y, ldy, D, ldd,
-                                                         false);
+        return da_metrics::pairwise_distances::euclidean(order, m, n, k, X, ldx, Y, ldy,
+                                                         D, ldd, false);
     if (metric == da_sqeuclidean)
-        return da_metrics::pairwise_distances::euclidean(m, n, k, X, ldx, Y, ldy, D, ldd,
-                                                         true);
+        return da_metrics::pairwise_distances::euclidean(order, m, n, k, X, ldx, Y, ldy,
+                                                         D, ldd, true);
     else
         return da_status_not_implemented;
 

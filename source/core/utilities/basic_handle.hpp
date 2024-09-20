@@ -29,12 +29,14 @@
 #define BASIC_HANDLE_HPP
 #include "aoclda_error.h"
 #include "aoclda_result.h"
+#include "aoclda_types.h"
 #include "da_error.hpp"
+#include "da_utils.hpp"
 #include "options.hpp"
 
 /*
  * Base handle class (basic_handle) that contains members that
- * are common for all specialized handles types, pca, linear
+ * are common for all specialized handle types, pca, linear
  * models, etc.
  *
  * This handle is inherited by all specialized (internal) handles.
@@ -58,11 +60,148 @@ template <typename T> class basic_handle {
      */
     virtual void refresh(){};
 
+    // Is the user's data stored in row or column major order
+    da_int order = column_major;
+
     // Pointer to error trace
     da_errors::da_error_t *err = nullptr;
+
     // Options registry
     da_options::OptionRegistry opts;
 
     da_options::OptionRegistry &get_opts() { return this->opts; };
+
+    // Store a pointer to a 2D array, converting to column major ordering if necessary
+    da_status store_2D_array(da_int n_rows, da_int n_cols, const T *data, da_int lddata,
+                             T **temp_data, const T **data_internal,
+                             da_int &lddata_internal, const std::string &n_rows_name,
+                             const std::string &n_cols_name, const std::string &data_name,
+                             const std::string &lddata_name, da_int mode = 0,
+                             da_int n_rows_min = 1, da_int n_cols_min = 1);
+
+    // Copy a column major internal 2D results array into the user's buffer, converting to row major ordering if necessary
+    void copy_2D_results_array(da_int n_rows, da_int n_cols, T *data, da_int lddata,
+                               T *results_arr);
 };
+
+/*
+Calling the function with mode = 0 will do the following:
+1. If the user's data array is in column major format, point data_internal to the same data.
+2. If the user's data array is in row major format, allocate memory for data_internal, copy and transpose the data.
+3. In each case, lddata_internal is updated appropriately.
+4. The temp_data pointer is used to enable memory to be deallocated later (it is not const, but points to any allocated memory).
+Calling the function with mode = 1 will do the same except that no copying occurs (use case: output array)
+Calling the function with mode = 2 just copies the pointer and leading dimension argument, without argument
+or option checking (for use when we already know data is usable and in column major format)
+*/
+template <typename T>
+da_status basic_handle<T>::store_2D_array(
+    da_int n_rows, da_int n_cols, const T *data, da_int lddata, T **temp_data,
+    const T **data_internal, da_int &lddata_internal, const std::string &n_rows_name,
+    const std::string &n_cols_name, const std::string &data_name,
+    const std::string &lddata_name, da_int mode, da_int n_rows_min, da_int n_cols_min) {
+
+    // Quick exit if mode == 2
+    if (mode == 2) {
+        *data_internal = data;
+        lddata_internal = lddata;
+        return da_status_success;
+    }
+
+    // Check for illegal rows/columns arguments
+    if (n_rows < n_rows_min)
+        return da_error(this->err, da_status_invalid_array_dimension,
+                        "The function was called with " + n_rows_name + " = " +
+                            std::to_string(n_rows) + ". Constraint: " + n_rows_name +
+                            " >= 1.");
+    if (n_cols < n_cols_min)
+        return da_error(this->err, da_status_invalid_array_dimension,
+                        "The function was called with " + n_cols_name + " = " +
+                            std::to_string(n_rows) + ". Constraint: " + n_cols_name +
+                            " >= 1.");
+
+    if (data == nullptr)
+        return da_error(this->err, da_status_invalid_pointer,
+                        "The array " + data_name + " is null.");
+
+    // Read in data storage option
+    std::string opt_order;
+    this->opts.get("storage order", opt_order, this->order);
+
+    std::string wrong_order = "";
+
+    switch (order) {
+    case column_major:
+
+        if (lddata < n_rows) {
+            if (lddata >= n_cols) {
+                wrong_order =
+                    " The handle is set to expect column major data. Did you mean to set "
+                    "it to row major?";
+            }
+            return da_error(this->err, da_status_invalid_leading_dimension,
+                            "The function was called with " + n_rows_name + " = " +
+                                std::to_string(n_rows) + " and " + lddata_name + " = " +
+                                std::to_string(lddata) + ". Constraint: " + lddata_name +
+                                " >= " + n_rows_name + "." + wrong_order);
+        }
+        *data_internal = data;
+        lddata_internal = lddata;
+        break;
+    case row_major: {
+        if (lddata < n_cols) {
+            if (lddata >= n_rows) {
+                wrong_order =
+                    " The handle is set to expect row major data. Did you mean to set "
+                    "it to column major?";
+            }
+            return da_error(this->err, da_status_invalid_leading_dimension,
+                            "The function was called with " + n_cols_name + "  = " +
+                                std::to_string(n_cols) + " and " + lddata_name + " = " +
+                                std::to_string(lddata) + ". Constraint: " + lddata_name +
+                                " >= " + n_cols_name + "." + wrong_order);
+        }
+
+        // Allocate memory for transposed data
+        try {
+            *temp_data = new T[n_rows * n_cols];
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation failed.");
+        }
+
+        // Transpose the data
+        if (mode == 0)
+            da_utils::copy_transpose_2D_array_row_to_column_major(
+                n_rows, n_cols, data, lddata, *temp_data, n_rows);
+
+        // Cast the non-const pointer and assign it to the const pointer
+        *const_cast<T **>(data_internal) = *temp_data;
+        lddata_internal = n_rows;
+        break;
+    }
+    default:
+        break;
+    }
+
+    return da_status_success;
+}
+
+template <typename T>
+void basic_handle<T>::copy_2D_results_array(da_int n_rows, da_int n_cols, T *data,
+                                            da_int lddata, T *results_arr) {
+    if (order == column_major) {
+        for (da_int j = 0; j < n_cols; ++j) {
+            for (da_int i = 0; i < n_rows; ++i) {
+                results_arr[i + j * n_rows] = data[i + lddata * j];
+            }
+        }
+    } else {
+        for (da_int i = 0; i < n_rows; ++i) {
+            for (da_int j = 0; j < n_cols; ++j) {
+                results_arr[i * n_cols + j] = data[i + lddata * j];
+            }
+        }
+    }
+}
 #endif

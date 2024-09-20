@@ -53,6 +53,9 @@ template <typename T> class random_forest : public basic_handle<T> {
     da_int n_features = 0;
     da_int n_class = 0;
 
+    //Utility pointer to column major allocated copy of user's data
+    T *X_temp = nullptr;
+
     // Options
     da_int n_tree = 0;
     da_int seed, n_obs;
@@ -68,7 +71,12 @@ template <typename T> class random_forest : public basic_handle<T> {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_forest_options<T>(this->opts, err);
+        register_forest_options<T>(this->opts, *this->err);
+    }
+    ~random_forest() {
+        // Destructor needs to handle arrays that were allocated due to row major storage of input data
+        if (X_temp)
+            delete[] (X_temp);
     }
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
                                 da_int ldx, const da_int *y, da_int n_class = 0);
@@ -85,7 +93,7 @@ template <typename T> class random_forest : public basic_handle<T> {
     da_status predict_log_proba(da_int nsamp, da_int n_features, const T *X_test,
                                 da_int ldx, T *y_pred, da_int n_class, da_int ldy);
     da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test,
-                    da_int *y_test, T *score);
+                    const da_int *y_test, T *score);
 
     da_status get_result(da_result query, da_int *dim, T *result);
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
@@ -132,31 +140,27 @@ template <typename T>
 da_status random_forest<T>::set_training_data(da_int n_samples, da_int n_features,
                                               const T *X, da_int ldx, const da_int *y,
                                               da_int n_class) {
-    if (X == nullptr || y == nullptr)
-        return da_error(this->err, da_status_invalid_input,
-                        "Either X, or y are not valid pointers.");
-    if (n_samples <= 0 || n_features <= 0) {
-        return da_error(
-            this->err, da_status_invalid_input,
-            "n_samples = " + std::to_string(n_samples) +
-                ", n_features = " + std::to_string(n_features) +
-                ", the values of n_samples and n_features need to be greater than 0");
-    }
-    if (ldx < n_samples) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_samples = " + std::to_string(n_samples) +
-                            ", ldx = " + std::to_string(ldx) +
-                            ", the value of ldx needs to be at least as big as the value "
-                            "of n_samples");
+    if (y == nullptr)
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "y is not a valid pointer.");
+
+    // Guard against errors due to multiple calls using the same class instantiation
+    if (X_temp) {
+        delete[] (X_temp);
+        X_temp = nullptr;
     }
 
+    da_status status =
+        this->store_2D_array(n_samples, n_features, X, ldx, &X_temp, &this->X, this->ldx,
+                             "n_samples", "n_features", "X", "ldx");
+    if (status != da_status_success)
+        return status;
+
     this->refresh();
-    this->X = X;
     this->y = y;
     this->n_samples = n_samples;
     this->n_features = n_features;
     this->n_class = n_class;
-    this->ldx = ldx;
     if (n_class <= 0)
         this->n_class = *std::max_element(y, y + n_samples) + 1;
 
@@ -300,7 +304,7 @@ void random_forest<T>::parallel_count_classes(
                 n_elem = block_rem;
             }
             tree->predict(n_elem, n_features, &X_test[start_idx], ldx_test,
-                          &(y_pred_tree.data()[start_pred_idx]));
+                          &(y_pred_tree.data()[start_pred_idx]), 2);
             for (da_int i = 0; i < n_elem; i++) {
                 da_int c = y_pred_tree[start_pred_idx + i];
 #pragma omp atomic update
@@ -313,27 +317,21 @@ void random_forest<T>::parallel_count_classes(
 template <typename T>
 da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                                     da_int ldx_test, da_int *y_pred) {
-    if (X_test == nullptr || y_pred == nullptr) {
+
+    const T *X_test_temp;
+    T *utility_ptr1 = nullptr;
+    da_int ldx_test_temp;
+
+    if (y_pred == nullptr) {
         return da_error(this->err, da_status_invalid_input,
-                        "Either X_test, or y_pred are not valid pointers.");
+                        "y_pred is not a valid pointer.");
     }
-    if (nsamp <= 0) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_samples = " + std::to_string(nsamp) +
-                            ", it must be greater than 0.");
-    }
+
     if (nfeat != n_features) {
         return da_error(this->err, da_status_invalid_input,
                         "n_features = " + std::to_string(nfeat) +
                             " doesn't match the expected value " +
                             std::to_string(n_features) + ".");
-    }
-    if (ldx_test < nsamp) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_samples = " + std::to_string(nsamp) +
-                            ", ldx = " + std::to_string(ldx_test) +
-                            ", the value of ldx needs to be at least as big as the value "
-                            "of n_samples");
     }
 
     if (!model_trained) {
@@ -341,6 +339,12 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                         "The model has not yet been trained or the data it is "
                         "associated with is out of date.");
     }
+
+    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
+                                            &X_test_temp, ldx_test_temp, "n_samples",
+                                            "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
 
     if (this->opts.get("block size", block_size) != da_status_success)
         return da_error_trace( // LCOV_EXCL_LINE
@@ -362,8 +366,8 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-    parallel_count_classes(X_test, ldx_test, n_blocks, block_size, block_rem, n_threads,
-                           count_classes, y_pred_tree);
+    parallel_count_classes(X_test_temp, ldx_test_temp, n_blocks, block_size, block_rem,
+                           n_threads, count_classes, y_pred_tree);
 
 #pragma omp parallel for shared(nsamp, n_class, y_pred, count_classes) default(none)
     for (da_int i = 0; i < nsamp; i++) {
@@ -377,6 +381,9 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
         y_pred[i] = class_i;
     }
 
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
+
     return da_status_success;
 }
 
@@ -384,40 +391,26 @@ template <typename T>
 da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X_test,
                                           da_int ldx_test, T *y_proba, da_int nclass,
                                           da_int ldy) {
-    if (X_test == nullptr || y_proba == nullptr) {
-        return da_error(this->err, da_status_invalid_input,
-                        "Either X_test, or y_proba are not valid pointers.");
-    }
-    if (nsamp <= 0) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_samples = " + std::to_string(nsamp) +
-                            ", it must be greater than 0.");
-    }
+
+    const T *X_test_temp;
+    T *utility_ptr1;
+    T *utility_ptr2;
+    da_int ldx_test_temp;
+    T *y_proba_temp;
+    da_int ldy_proba_temp;
+
     if (nfeat != n_features) {
         return da_error(this->err, da_status_invalid_input,
                         "n_features = " + std::to_string(nfeat) +
                             " doesn't match the expected value " +
                             std::to_string(n_features) + ".");
     }
-    if (ldx_test < nsamp) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_samples = " + std::to_string(nsamp) +
-                            ", ldx = " + std::to_string(ldx_test) +
-                            ", the value of ldx needs to be at least as big as the value "
-                            "of n_samples");
-    }
+
     if (nclass != n_class) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "n_class = " + std::to_string(nclass) +
                                    " doesn't match the expected value " +
                                    std::to_string(n_class) + ".");
-    }
-    if (ldy < nsamp) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "n_samples = " + std::to_string(nsamp) + ", ldy = " + std::to_string(ldy) +
-                ", the value of ldy needs to be at least as big as the value "
-                "of n_samples");
     }
 
     if (!model_trained) {
@@ -425,6 +418,18 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
                         "The model has not yet been trained or the data it is "
                         "associated with is out of date.");
     }
+
+    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
+                                            &X_test_temp, ldx_test_temp, "n_samples",
+                                            "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
+
+    status = this->store_2D_array(nsamp, nclass, y_proba, ldy, &utility_ptr2,
+                                  const_cast<const T **>(&y_proba_temp), ldy_proba_temp,
+                                  "n_samples", "n_class", "y_proba", "ldy", 1);
+    if (status != da_status_success)
+        return status;
 
     std::vector<T> sum_proba, y_proba_tree;
     da_int n_blocks, block_rem;
@@ -439,8 +444,8 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
     }
 
 #pragma omp parallel for collapse(2)                                                     \
-    shared(sum_proba, nsamp, nfeat, X_test, ldx_test, n_blocks, block_rem, y_proba_tree, \
-               ldy, n_threads) default(none)
+    shared(sum_proba, nsamp, nfeat, X_test_temp, ldx_test_temp, n_blocks, block_rem,     \
+               y_proba_tree, n_threads) default(none)
     for (da_int i_block = 0; i_block < n_blocks; i_block++) {
         for (auto &tree : forest) {
             da_int start_idx = i_block * block_size;
@@ -450,9 +455,9 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
             if (i_block == n_blocks - 1 && block_rem > 0) {
                 n_elem = block_rem;
             }
-            tree->predict_proba(n_elem, n_features, &X_test[start_idx], ldx_test,
-                                &y_proba_tree.data()[start_pred_idx], n_class,
-                                n_threads * block_size);
+            tree->predict_proba(n_elem, n_features, &X_test_temp[start_idx],
+                                ldx_test_temp, &y_proba_tree.data()[start_pred_idx],
+                                n_class, n_threads * block_size, 2);
             for (da_int i = 0; i < n_elem; i++) {
                 for (da_int j = 0; j < n_class; j++) {
 #pragma omp atomic update
@@ -463,18 +468,27 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
         }
     }
 
-#pragma omp parallel for shared(nsamp, n_class, ldy, y_proba, sum_proba,                 \
+#pragma omp parallel for shared(nsamp, n_class, ldy_proba_temp, y_proba_temp, sum_proba, \
                                     n_tree) default(none)
     for (da_int i = 0; i < nsamp; i++) {
         T sum_ave_prob = 0.0;
         for (da_int j = 0; j < n_class; j++) {
             T ave_proba = sum_proba[j * nsamp + i] / n_tree;
-            y_proba[j * ldy + i] = ave_proba;
+            y_proba_temp[j * ldy_proba_temp + i] = ave_proba;
             sum_ave_prob += ave_proba;
         }
         for (da_int j = 0; j < n_class; j++) {
-            y_proba[j * ldy + i] /= sum_ave_prob;
+            y_proba_temp[j * ldy_proba_temp + i] /= sum_ave_prob;
         }
+    }
+
+    if (this->order == row_major) {
+
+        da_utils::copy_transpose_2D_array_col_to_row_major(nsamp, n_class, y_proba_temp,
+                                                           ldy_proba_temp, y_proba, ldy);
+
+        delete[] (utility_ptr1);
+        delete[] (utility_ptr2);
     }
 
     return da_status_success;
@@ -486,45 +500,55 @@ da_status random_forest<T>::predict_log_proba(da_int nsamp, da_int nfeat, const 
                                               da_int nclass, da_int ldy) {
 
     predict_proba(nsamp, nfeat, X_test, ldx_test, y_log_proba, n_class, ldy);
-    for (da_int j = 0; j < nsamp; j++) {
-        for (da_int i = 0; i < nclass; i++) {
-            y_log_proba[j * ldy * j + i] = log(y_log_proba[ldy * j + i]);
+
+    if (this->order == column_major) {
+        for (da_int j = 0; j < nclass; j++) {
+            for (da_int i = 0; i < nsamp; i++) {
+                y_log_proba[ldy * j + i] = log(y_log_proba[ldy * j + i]);
+            }
+        }
+    } else {
+        for (da_int j = 0; j < nsamp; j++) {
+            for (da_int i = 0; i < nclass; i++) {
+                y_log_proba[j * ldy + i] = log(y_log_proba[j * ldy + i]);
+            }
         }
     }
+
     return da_status_success;
 }
 
 template <typename T>
 da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
-                                  da_int ldx_test, da_int *y_test, T *score) {
-    if (X_test == nullptr || y_test == nullptr || score == nullptr) {
-        return da_error(this->err, da_status_invalid_input,
-                        "Either X_test, y_pred or mean_accuracy are not valid pointers.");
+                                  da_int ldx_test, const da_int *y_test, T *score) {
+
+    const T *X_test_temp;
+    T *utility_ptr1 = nullptr;
+    da_int ldx_test_temp;
+
+    if (y_test == nullptr || score == nullptr) {
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "Either y_test or mean_accuracy are not valid pointers.");
     }
-    if (nsamp <= 0) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_samples = " + std::to_string(nsamp) +
-                            ", it must be greater than 0.");
-    }
+
     if (nfeat != n_features) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_features = " + std::to_string(nfeat) +
-                            " doesn't match the expected value " +
-                            std::to_string(n_features) + ".");
-    }
-    if (ldx_test < nsamp) {
-        return da_error(this->err, da_status_invalid_input,
-                        "n_samples = " + std::to_string(nsamp) +
-                            ", ldx = " + std::to_string(ldx_test) +
-                            ", the value of ldx needs to be at least as big as the value "
-                            "of n_samples");
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "nfeat = " + std::to_string(nfeat) +
+                                   " doesn't match the expected value " +
+                                   std::to_string(n_features) + ".");
     }
 
     if (!model_trained) {
-        return da_error(this->err, da_status_out_of_date,
-                        "The model has not yet been trained or the data it is "
-                        "associated with is out of date.");
+        return da_error_bypass(this->err, da_status_out_of_date,
+                               "The model has not yet been trained or the data it is "
+                               "associated with is out of date.");
     }
+
+    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
+                                            &X_test_temp, ldx_test_temp, "n_samples",
+                                            "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
 
     if (this->opts.get("block size", block_size) != da_status_success)
         return da_error_trace( // LCOV_EXCL_LINE
@@ -543,8 +567,8 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
-    parallel_count_classes(X_test, ldx_test, n_blocks, block_size, block_rem, n_threads,
-                           count_classes, y_pred_tree);
+    parallel_count_classes(X_test_temp, ldx_test_temp, n_blocks, block_size, block_rem,
+                           n_threads, count_classes, y_pred_tree);
 
     *score = 0;
 #pragma omp parallel for shared(nsamp, n_class, y_test, count_classes,                   \
@@ -564,6 +588,8 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     }
     *score /= (T)nsamp;
 
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
     return da_status_success;
 }
 

@@ -61,6 +61,9 @@ TYPED_TEST(PCATest, PCAFunctionality) {
 
         EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_pca), da_status_success);
 
+        EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
+                  da_status_success);
+
         EXPECT_EQ(da_pca_set_data(handle, param.n, param.p, param.A.data(), param.lda),
                   da_status_success);
 
@@ -89,7 +92,11 @@ TYPED_TEST(PCATest, PCAFunctionality) {
         EXPECT_EQ(da_pca_compute<TypeParam>(handle), param.expected_status);
 
         if (param.X.size() > 0) {
-            da_int size_X_transform = param.ldx_transform * param.expected_n_components;
+            da_int size_X_transform;
+            if (param.order == "column-major")
+                size_X_transform = param.ldx_transform * param.expected_n_components;
+            else
+                size_X_transform = param.ldx_transform * param.m;
             std::vector<TypeParam> X_transform(size_X_transform);
             EXPECT_EQ(da_pca_transform(handle, param.m, param.p, param.X.data(),
                                        param.ldx, X_transform.data(),
@@ -100,7 +107,11 @@ TYPED_TEST(PCATest, PCAFunctionality) {
         }
 
         if (param.Xinv.size() > 0) {
-            da_int size_Xinv_transform = param.ldxinv_transform * param.p;
+            da_int size_Xinv_transform;
+            if (param.order == "column-major")
+                size_Xinv_transform = param.ldxinv_transform * param.p;
+            else
+                size_Xinv_transform = param.ldxinv_transform * param.k;
             std::vector<TypeParam> Xinv_transform(size_Xinv_transform);
             EXPECT_EQ(da_pca_inverse_transform(
                           handle, param.k, param.expected_n_components, param.Xinv.data(),
@@ -215,7 +226,8 @@ TYPED_TEST(PCATest, TallSkinny) {
     auto uniform_real_dist = std::uniform_real_distribution<TypeParam>(-1.0, 1.0);
     std::generate(A.begin(), A.end(), [&]() { return uniform_real_dist(gen); });
 
-    EXPECT_EQ(da_standardize(da_axis_col, m, n, A.data(), m, 0, 0, nullptr, nullptr),
+    EXPECT_EQ(da_standardize(column_major, da_axis_col, m, n, A.data(), m, 0, 0, nullptr,
+                             nullptr),
               da_status_success);
     std::vector<TypeParam> A_copy;
     A_copy = A;
@@ -434,11 +446,11 @@ TYPED_TEST(PCATest, ErrorExits) {
     // Check da_pca_set_data error exits
     EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
                               params[0].n - 1),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
     EXPECT_EQ(da_pca_set_data(handle, 0, params[0].p, params[0].A.data(), params[0].lda),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_pca_set_data(handle, params[0].n, 0, params[0].A.data(), params[0].lda),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, null_arr, params[0].n),
               da_status_invalid_pointer);
 
@@ -468,16 +480,16 @@ TYPED_TEST(PCATest, ErrorExits) {
     // Check da_pca_transform and da_pca_inverse_transform error exits
     EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p, params[0].X.data(),
                                params[0].m - 1, results_arr, params[0].ldx_transform),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
     EXPECT_EQ(da_pca_transform(handle, 0, params[0].p, params[0].X.data(), params[0].ldx,
                                results_arr, params[0].ldx_transform),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p + 1, params[0].X.data(),
                                params[0].ldx, results_arr, params[0].ldx_transform),
               da_status_invalid_input);
     EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p, params[0].X.data(),
                                params[0].ldx, results_arr, params[0].m - 1),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
     EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p, params[0].X.data(),
                                params[0].ldx, null_arr, params[0].m),
               da_status_invalid_pointer);
@@ -485,11 +497,11 @@ TYPED_TEST(PCATest, ErrorExits) {
                                        params[0].expected_n_components,
                                        params[0].Xinv.data(), params[0].k - 1,
                                        results_arr, params[0].ldxinv_transform),
-              da_status_invalid_input);
+              da_status_invalid_leading_dimension);
     EXPECT_EQ(da_pca_inverse_transform(handle, 0, params[0].expected_n_components,
                                        params[0].Xinv.data(), params[0].ldxinv,
                                        results_arr, params[0].ldxinv_transform),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_pca_inverse_transform(handle, params[0].k,
                                        params[0].expected_n_components + 1,
                                        params[0].Xinv.data(), params[0].ldxinv,

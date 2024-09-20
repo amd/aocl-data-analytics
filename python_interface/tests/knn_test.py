@@ -49,7 +49,7 @@ def test_knn_functionality(da_precision, numpy_precision, numpy_order):
 
     y_train = np.array([1, 2, 0, 1, 2, 2],
                        dtype=numpy_precision, order=numpy_order)
-    
+
     x_test = np.array([[-2 , 2, 3],
                        [-1, -2, -1],
                        [2, 1, -3]],
@@ -58,7 +58,13 @@ def test_knn_functionality(da_precision, numpy_precision, numpy_order):
     knn = knn_classifier(precision=da_precision)
     knn.fit(x_train, y_train)
     k_dist, k_ind = knn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+
+    assert k_dist.flags.f_contiguous == x_test.flags.f_contiguous
+    assert k_ind.flags.f_contiguous == x_test.flags.f_contiguous
+
     proba = knn.predict_proba(x_test)
+    assert proba.flags.f_contiguous == x_test.flags.f_contiguous
+
     y_test = knn.predict(x_test)
 
     expected_ind = np.array([[1, 0, 3],
@@ -102,6 +108,18 @@ def test_knn_error_exits(da_precision, numpy_precision):
     x_test = np.array([[1, 1], [2, 2], [3, 3]], dtype=numpy_precision)
     with pytest.raises(RuntimeError):
         knn.kneighbors(X=x_test)
+    with pytest.raises(RuntimeError):
+        knn.predict(X=x_test)
+    with pytest.raises(RuntimeError):
+        knn.predict_proba(X=x_test)
+
+    x_train = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
+    y_train = np.array([[1, 2, 3]], dtype=numpy_precision)
+    knn = knn_classifier(precision=da_precision)
+    knn.fit(x_train, y_train)
+    x_test = np.array([[1, 1, 3], [2, 2, 3]], dtype=numpy_precision, order="C")
+    with pytest.raises(RuntimeError):
+        knn.kneighbors(X=x_test, n_neighbors=2)
     with pytest.raises(RuntimeError):
         knn.predict(X=x_test)
     with pytest.raises(RuntimeError):

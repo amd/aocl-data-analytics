@@ -66,6 +66,7 @@ template <typename T> struct KMeansParamType {
     T convergence_tolerance = (T)1e-4;
     std::string initialization_method;
     std::string algorithm;
+    std::string order = "column-major";
 
     std::vector<T> expected_rinfo;
     std::vector<T> expected_centres;
@@ -237,6 +238,68 @@ template <typename T> void Get3ClustersBaseData(KMeansParamType<T> &param) {
         1.4414077320453085, 1.0500744021258683, 0.9887650125282548, 2.2478114355968564,
         2.0631798542810347, 3.042484364973978,  2.0599460618612757, 1.1210312712458608,
         2.0064368639179446, 1.9880783574989047, 2.9820220581939925, 2.469640099735629};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    std::vector<da_int> expected_Y_labels{0, 1, 2};
+    param.expected_Y_labels = expected_Y_labels;
+
+    param.tol = 100 * std::sqrt(std::numeric_limits<T>::epsilon());
+    param.max_allowed_inertia = (T)0.185475;
+    param.expected_status = da_status_success;
+}
+
+template <typename T> void GetRowMajorBaseData(KMeansParamType<T> &param) {
+    param.test_name =
+        "Data matrix in three distinct clusters, stored in row major format";
+
+    param.n_samples = 10;
+    param.n_features = 2;
+    std::vector<double> A{1.0,  1.0,  1.1,  1.2,  0.5, -2.0, 0.49, -1.9, -2.0, 0.5,
+                          -2.0, 0.51, 0.53, -2.1, 0.9, 0.95, 1.2,  0.8,  -1.8, 0.6};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 2;
+
+    std::vector<double> C{0.5, 0.5, 0.7, -1.7, -1.3, 0.2};
+    param.C = convert_vector<double, T>(C);
+    param.ldc = 2;
+
+    param.m_samples = 4;
+    param.m_features = 2;
+    std::vector<double> X{0.0, 0.0, 0.0, 1.0, 1.0, 0.0, 0.0, -1.0};
+    param.X = convert_vector<double, T>(X);
+    param.ldx = 2;
+    std::vector<double> X_transform{0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    param.X_transform = convert_vector<double, T>(X_transform);
+    param.ldx_transform = 3;
+
+    param.k_samples = 3;
+    param.k_features = 2;
+    std::vector<double> Y{0.5, 0.5, 0.5, -1.0, -1.0, 0.0};
+    param.Y = convert_vector<double, T>(Y);
+    param.ldy = 2;
+    std::vector<da_int> Y_labels{0, 0, 0};
+    param.Y_labels = Y_labels;
+
+    param.n_clusters = 3;
+    param.n_init = 1;
+    param.max_iter = 50;
+    param.seed = 78;
+    param.convergence_tolerance = (T)1.0e-4;
+    param.initialization_method = "supplied";
+    param.algorithm = "hartigan-wong";
+    param.order = "row-major";
+
+    std::vector<double> expected_rinfo{10.0, 2.0, 3.0, 1.0, 0.185475};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> expected_centres{1.05, 0.9875,         0.506667,
+                                         -2.0, -1.93333333333, 0.53666666666};
+    param.expected_centres = convert_vector<double, T>(expected_centres);
+    std::vector<da_int> expected_labels{0, 0, 1, 1, 2, 2, 1, 0, 0, 2};
+    param.expected_labels = expected_labels;
+    std::vector<double> expected_X_transform{
+        1.4414077320453085, 2.0631798542810347, 2.0064368639179446, 1.0500744021258683,
+        3.042484364973978,  1.9880783574989047, 0.9887650125282548, 2.0599460618612757,
+        2.9820220581939925, 2.2478114355968564, 1.1210312712458608, 2.469640099735629};
     param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
     std::vector<da_int> expected_Y_labels{0, 1, 2};
     param.expected_Y_labels = expected_Y_labels;
@@ -506,10 +569,18 @@ template <typename T> void GetSubarrayData(std::vector<KMeansParamType<T>> &para
     params.push_back(param);
 }
 
+template <typename T> void GetRowMajorData(std::vector<KMeansParamType<T>> &params) {
+    // Tests with a data matrix in 3 distinct clusters
+    KMeansParamType<T> param;
+    GetRowMajorBaseData(param);
+    params.push_back(param);
+}
+
 template <typename T> void GetKMeansData(std::vector<KMeansParamType<T>> &params) {
     Get1by1Data(params);
     Get3ClustersData(params);
     GetSubarrayData(params);
     GetZeroData(params);
     GetPseudoRandomData(params);
+    GetRowMajorData(params);
 }

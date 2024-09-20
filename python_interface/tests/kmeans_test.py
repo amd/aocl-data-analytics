@@ -22,6 +22,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# pylint: disable = import-error
 
 """
 k-means clustering Python test script
@@ -64,11 +65,11 @@ def test_kmeans_functionality(da_precision, numpy_precision, numpy_order):
     expected_centres = np.array([[2., 2.], [-2., -2.]])
     expected_labels = np.array([0, 1, 0, 0, 1, 1, 1, 0])
 
-    print(km.cluster_centres)
-
     expected_x_transform = np.array([[2.23606797749979, 3.605551275463989],
                                      [3.605551275463989, 2.23606797749979]])
     expected_x_labels = np.array([0, 1])
+
+    assert x.flags.f_contiguous == x_transform.flags.f_contiguous
 
     # Check we have the right answer
     tol = np.finfo(numpy_precision).eps * 1000
@@ -108,6 +109,14 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
     with pytest.warns(RuntimeWarning):
         km.fit(a)
 
-    b = np.array([1])
+    b = np.array([1], dtype=numpy_precision)
+    with pytest.raises(RuntimeError):
+        km.transform(b)
+
+    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
+    b = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="C")
+    km = kmeans(n_clusters=10, precision=da_precision)
+    with pytest.warns(RuntimeWarning):
+        km.fit(a)
     with pytest.raises(RuntimeError):
         km.transform(b)

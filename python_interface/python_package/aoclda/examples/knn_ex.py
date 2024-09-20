@@ -31,6 +31,7 @@ import sys
 import numpy as np
 from aoclda.nearest_neighbors import knn_classifier
 
+
 def knn_classifier_example():
     """
     k-Nearest Neighbors classification
@@ -42,13 +43,13 @@ def knn_classifier_example():
                         [-3, -2, -1],
                         [1, 3, 1],
                         [2, 5, 1],
-                        [3, -1, 2]])
+                        [3, -1, 2]], dtype=np.float64)
 
     y_train = np.array([1, 2, 0, 1, 2, 2])
 
-    x_test = np.array([[-2 , 2, 3],
+    x_test = np.array([[-2, 2, 3],
                        [-1, -2, -1],
-                       [2, 1, -3]])
+                       [2, 1, -3]], dtype=np.float64)
 
     print("\nk-nearest neighbors for a small data matrix\n")
     knn = knn_classifier()
@@ -72,8 +73,8 @@ def knn_classifier_example():
     expected_ind = np.array([[1, 0, 3],
                              [2, 0, 1],
                              [3, 5, 4]])
-    expected_dist = np.array([[3.        , 3.31662479, 3.74165739 ],
-                              [2.        , 3.16227766, 4.24264069 ],
+    expected_dist = np.array([[3., 3.31662479, 3.74165739],
+                              [2., 3.16227766, 4.24264069],
                               [4.58257569, 5.47722558, 5.65685425]])
     expected_proba = np.array([[0.2, 0.4, 0.4],
                                [0.2, 0.4, 0.4],
@@ -96,6 +97,7 @@ def knn_classifier_example():
         sys.exit(1)
 
     print("\nk-nearest neighbors successfully computed\n")
+
 
 if __name__ == "__main__":
     try:

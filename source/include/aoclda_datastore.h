@@ -56,7 +56,7 @@ da_status da_datastore_init(da_datastore *store);
  * Some functions store extra information about errors and
  * this function prints (to standard output) the stored error message(s).
  *
- * @param[in,out] store the da_datastore structure.
+ * @param[inout] store the da_datastore structure.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successful.
  * - @ref da_status_invalid_input - the handle pointer is invalid.
@@ -114,8 +114,8 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * with the number of rows already present.
  * @endrst
  *
- * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row
- * major or column major ordering.
+ * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row-major
+ * or column-major order.
  *
  * The data provided can be optionally copied into the store (for non C-string data blocks)
  * if @p copy_data was set to true.
@@ -127,8 +127,8 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * @param[in] n_rows number of rows of the new block.
  * @param[in] n_cols number of columns of the new block.
  * @param[in] block pointer to the raw data to add to the store.
- * @param[in] order a @ref da_ordering enumerated type.
-  *                 Specifies if the data block was stored in a column or row major ordering.
+ * @param[in] order a @ref da_order enumerated type.
+  *                 Specifies if the data block was stored in column- or row-major order.
  * @param[in] copy_data specifies if the data needs to be copied in the store.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successful.
@@ -138,13 +138,13 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2);
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  */
 da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
-                               da_int *block, da_ordering order, da_int copy_data);
+                               da_int *block, da_order order, da_int copy_data);
 da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *block, da_ordering order, da_int copy_data);
+                                  double *block, da_order order, da_int copy_data);
 da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_cols,
-                                  float *block, da_ordering order, da_int copy_data);
+                                  float *block, da_order order, da_int copy_data);
 da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *block, da_ordering order, da_int copy_data);
+                                 uint8_t *block, da_order order, da_int copy_data);
 /** \} */
 
 /** \{
@@ -154,15 +154,15 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
  * If data was already loaded in the store, the number of rows of the new block must match
  * with the number of rows already present.
  *
- * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row
- * major or column major ordering.
+ * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row-major
+ * or column-major order.
  *
  * @param[inout] store the main structure.
  * @param[in] n_rows number of rows of the new block.
  * @param[in] n_cols number of columns of the new block.
  * @param[in] block pointer to the raw data to add to the store.
- * @param[in] order a @ref da_ordering enumerated type.
- *            Specifies if the data block was stored in a column or row major ordering.
+ * @param[in] order a @ref da_order enumerated type.
+ *            Specifies if the data block was stored in column- or row-major order.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successful.
  * - @ref da_status_invalid_input - some of the input data was not correct.
@@ -171,7 +171,7 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  */
 da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **block, da_ordering order);
+                               const char **block, da_order order);
 /** \} */
 
 /** \{
@@ -184,8 +184,8 @@ da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
  * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the store's structure).
  * @endrst
  *
- * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row major
- * or column major ordering.
+ * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row-major
+ * or column-major order.
  *
  * The data provided can be optionally copied into the store (for non C-string data blocks)
  * if @p copy_data was set to true.
@@ -197,8 +197,8 @@ da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
  * @param[in] n_rows number of rows of the new block.
  * @param[in] n_cols number of columns of the new block.
  * @param[in] block pointer to the raw data to add to the store.
- * @param[in] order a @ref da_ordering enumerated type.
- *              Specifies if the data block was stored in a column or row major ordering.
+ * @param[in] order a @ref da_order enumerated type.
+ *              Specifies if the data block was stored in column- or row-major order.
  * @param[in] copy_data specifies if the data needs to be copied in the store.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successful.
@@ -208,13 +208,13 @@ da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  */
 da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
-                               da_int *block, da_ordering order, da_int copy_data);
+                               da_int *block, da_order order, da_int copy_data);
 da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *block, da_ordering order, da_int copy_data);
+                                  double *block, da_order order, da_int copy_data);
 da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_cols,
-                                  float *block, da_ordering order, da_int copy_data);
+                                  float *block, da_order order, da_int copy_data);
 da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *block, da_ordering order, da_int copy_data);
+                                 uint8_t *block, da_order order, da_int copy_data);
 /** \} */
 
 /** \{
@@ -226,15 +226,15 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the stores structure).
  * @endrst
  *
- * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row major
- * or column major ordering.
+ * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row-major
+ * or column-major order.
  *
  * @param[inout] store the main structure.
  * @param[in] n_rows number of rows of the new block.
  * @param[in] n_cols number of columns of the new block.
  * @param[in] block pointer to the raw data to add to the store.
- * @param[in] order a @ref da_ordering enumerated type.
- *            Specifies if the data block was stored in a column or row major ordering.
+ * @param[in] order a @ref da_order enumerated type.
+ *            Specifies if the data block was stored in column- or row-major order.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successful.
  * - @ref da_status_invalid_input - some of the input data was not correct.
@@ -243,42 +243,42 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * - @ref da_status_memory_error - internal memory allocation encountered a problem.
  */
 da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **block, da_ordering order);
+                               const char **block, da_order order);
 /** \} */
 
 /**
  * @brief Read data from a CSV file into a @ref da_datastore object. The data type of each column will be automatically detected.
  *
- * Prior to calling this function, the following options can be set using calls to @ref da_options_set_int or @ref da_options_set_string. 
+ * Prior to calling this function, the following options can be set using calls to @ref da_options_set_int or @ref da_options_set_string.
  *
  \rst
  .. csv-table::
    :header: "Option Name", "Type", "Default", "Description", "Constraints"
 
-   "csv integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`"
-   "csv datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`."
-   "csv use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`"
-   "csv warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`"
-   "csv skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`"
-   "csv delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
-   "csv whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`"
-   "csv decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", ""
-   "csv skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`"
-   "csv line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", ""
-   "csv row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`"
-   "csv comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", ""
-   "csv quote character", "string", ":math:`s=''`", "The character used to denote quotations in CSV files.", ""
-   "csv scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", ""
-   "csv escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", ""
-   "csv thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", ""
-   "csv skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", ""
-   "csv datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`."
-   "csv data storage", "string", ":math:`s=` `column major`", "Whether to store data from CSV files in row or column major format.", ":math:`s=` `column major`, or `row major`."
-   "csv skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`"
-   "csv double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`"
+   "integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`"
+   "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`."
+   "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`"
+   "warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`"
+   "skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`"
+   "delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
+   "whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`"
+   "decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", ""
+   "skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`"
+   "line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", ""
+   "row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`"
+   "comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", ""
+   "quote character", "string", ":math:`s=''`", "The character used to denote quotations in CSV files.", ""
+   "scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", ""
+   "escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", ""
+   "thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", ""
+   "skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", ""
+   "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether to return data in row- or column-major format.", ":math:`s=` `column-major`, or `row-major`."
+   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`"
+   "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`"
 \endrst
  *
- * @param[in,out] store a @ref _da_datastore object, initialized using @ref da_datastore_init.
+ * @param[inout] store a @ref _da_datastore object, initialized using @ref da_datastore_init.
  * @param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
  * \return @ref da_status. The function returns:
  * - @ref da_status_success
@@ -447,10 +447,11 @@ da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
  * The last suffix of the function name marks the type of the data to be extracted.
  *
  * The data marked by the set of columns and rows in the selection @p key is extracted into
- * a dense matrix of the corresponding type. The matrix is returned in column major ordering.
+ * a dense matrix of the corresponding type. The matrix is returned in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
  *
  * @param[in] store main data structure.
  * @param[in] key label of the selection.
+ * @param[in] order a @ref da_order enumerated type. Specifies whether \p data should be returned in column-major or row-major order.
  * @param[out] data output matrix.
  * @param[in] lddata leading dimension of the output data.
  * @return @ref da_status. The function returns:
@@ -461,14 +462,14 @@ da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
  * - @ref da_status_missing_block - the store contains incomplete row blocks.
  * - @ref da_status_internal_error - an unexpected error occurred.
  */
-da_status da_data_extract_selection_int(da_datastore store, const char *key, da_int *data,
-                                        da_int lddata);
+da_status da_data_extract_selection_int(da_datastore store, const char *key,
+                                        da_order order, da_int *data, da_int lddata);
 da_status da_data_extract_selection_real_d(da_datastore store, const char *key,
-                                           double *data, da_int lddata);
+                                           da_order order, double *data, da_int lddata);
 da_status da_data_extract_selection_real_s(da_datastore store, const char *key,
-                                           float *data, da_int lddata);
+                                           da_order order, float *data, da_int lddata);
 da_status da_data_extract_selection_uint8(da_datastore store, const char *key,
-                                          uint8_t *data, da_int lddata);
+                                          da_order order, uint8_t *data, da_int lddata);
 /** \} */
 
 /* ************************************* headings ************************************ */

@@ -28,6 +28,7 @@
 #define NOMINMAX
 #endif
 
+#include "aoclda_types.h"
 #include "da_error.hpp"
 #include "kmeans_types.hpp"
 #include "options.hpp"
@@ -82,6 +83,11 @@ inline da_status register_kmeans_options(da_options::OptionRegistry &opts,
                           {"hartigan-wong", hartigan_wong},
                           {"macqueen", macqueen}},
                          "lloyd"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "storage order",
+            "Whether data is supplied and returned in row- or column-major order.",
+            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
         opts.register_opt(os);
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(

@@ -63,7 +63,7 @@ TEST(nlls, template_double_nlls_example_box_2d) {
               da_status_success);
     EXPECT_EQ(da_nlls_define_bounds_d(handle, n_coef, blx, bux), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "print options", "yes"), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle, "storage scheme", "fortran"),
+    EXPECT_EQ(da_options_set_string(handle, "storage order", "fortran"),
               da_status_success);
     EXPECT_EQ(da_options_set_int(handle, "print level", (da_int)3), da_status_success);
     EXPECT_EQ(da_options_set_int(handle, "ralfit iteration limit", (da_int)200),
@@ -120,7 +120,7 @@ TEST(nlls, template_double_nlls_example_box_c) {
     EXPECT_EQ(da_nlls_define_weights(handle, m, weights), da_status_success);
     EXPECT_EQ(da_options_set(handle, "print level", (da_int)2), da_status_success);
     EXPECT_EQ(da_options_set(handle, "print options", "yes"), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "Storage Scheme", "Fortran"), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "Storage Order", "Fortran"), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
     // Check output
     std::vector<T> info(100);
@@ -238,7 +238,7 @@ TEST(nlls, template_double_lm_example_c) {
     EXPECT_EQ(da_options_set(handle, "ralfit model", "gauss-newton"), da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit nlls method", "more-sorensen"),
               da_status_success);
-    EXPECT_EQ(da_options_set(handle, "Storage Scheme", "C"), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "Storage Order", "C"), da_status_success);
     EXPECT_EQ(da_options_set(handle, "print level", da_int(2)), da_status_success);
     EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
     EXPECT_EQ(da_options_set(handle, "derivative test tol", 9.0e-5), da_status_success);
@@ -304,7 +304,7 @@ TEST(nlls, template_double_lm_example_c) {
     x[0] = 1.0;
     x[1] = 0.0;
     x[2] = 0.0;
-    EXPECT_EQ(da_options_set(handle, "storage scheme", "Fortran"), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "storage order", "Fortran"), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
     // Check output
     EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
@@ -469,7 +469,7 @@ TEST(nlls, solverCheckMaxIt) {
               da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit iteration limit", da_int(1)),
               da_status_success);
-    EXPECT_EQ(da_options_set(handle, "Storage Scheme", "Fortran"), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "Storage Order", "Fortran"), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_maxit);
     da_handle_destroy(&handle);
 }
@@ -504,7 +504,7 @@ TEST(nlls, solverCheckUsrStop) {
     EXPECT_EQ(da_nlls_define_weights(handle, m, weights), da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit iteration limit", da_int(10)),
               da_status_success);
-    EXPECT_EQ(da_options_set(handle, "Storage Scheme", "Fortran"), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "Storage Order", "Fortran"), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_optimization_usrstop);
 
     // Check during FD check derivatives
@@ -541,7 +541,7 @@ TEST(nlls, solverCheckNumDifficulties) {
               da_status_success);
     EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, upper_bounds),
               da_status_success);
-    EXPECT_EQ(da_options_set(handle, "Storage Scheme", "Fortran"), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "Storage Order", "Fortran"), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_numerical_difficulties);
     da_handle_destroy(&handle);
 }

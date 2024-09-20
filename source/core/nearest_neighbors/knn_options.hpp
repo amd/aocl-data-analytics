@@ -26,6 +26,7 @@
 
 #include "aoclda_knn.h"
 #include "aoclda_metrics.h"
+#include "aoclda_types.h"
 #include "da_error.hpp"
 #include "options.hpp"
 
@@ -61,6 +62,11 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
         os = std::make_shared<OptionString>(OptionString(
             "weights", "Weight function used to compute the k-nearest neighbors.",
             {{"uniform", da_knn_uniform}, {"distance", da_knn_distance}}, "uniform"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "storage order",
+            "Whether data is supplied and returned in row- or column-major order.",
+            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE

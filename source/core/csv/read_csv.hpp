@@ -189,7 +189,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
                 data_index = j - parser->line_start[i] +
                              (i - (int64_t)first_line) * fields_per_line_signed;
                 break;
-            case col_major:
+            case column_major:
                 data_index =
                     i - (int64_t)first_line +
                     (j - parser->line_start[i]) * ((int64_t)lines - (int64_t)first_line);

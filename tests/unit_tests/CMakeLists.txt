@@ -70,6 +70,7 @@ set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 ############ Basic stats #############
 ######################################
 add_executable(basic_stats_public basic_statistics/basic_stats_public.cpp)
+target_link_libraries(basic_stats_public PRIVATE ${BLAS})
 
 ######################################
 ############## Metrics ###############
@@ -111,6 +112,7 @@ add_executable(dectree_public decision_trees/dectree_public.cpp)
 target_compile_definitions(
   dectree_public
   PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(dectree_public PRIVATE ${BLAS})
 
 add_executable(dectree_internal decision_trees/dectree_internal.cpp)
 
@@ -118,6 +120,7 @@ add_executable(decforest_public decision_forests/decforest_public.cpp)
 target_compile_definitions(
   decforest_public
   PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(decforest_public PRIVATE ${BLAS})
 
 ######################################
 ## DA Utilities (opts, errors, ...) ##
@@ -185,7 +188,7 @@ add_executable(interval_set_internal data_management/interval_set_internal.cpp)
 ############### knn ##################
 ######################################
 add_executable(knn_public knn/knn_public.cpp)
-target_link_libraries(knn_public PRIVATE aocl-da)
+target_link_libraries(knn_public PRIVATE aocl-da ${BLAS})
 
 set(GTEST_INTERNAL
     csv_internal

@@ -39,7 +39,6 @@
 #include <stdexcept>
 
 class linmod : public pyda_handle {
-    da_precision precision = da_double;
     da_int n_samples, n_feat, n_class;
     bool intercept;
     linmod_model mod_enum;
@@ -85,60 +84,79 @@ class linmod : public pyda_handle {
     ~linmod() { da_handle_destroy(&handle); }
 
     template <typename T>
-    void fit(py::array_t<T, py::array::f_style> X, py::array_t<T> y,
-             std::optional<py::array_t<T>> x0, std::optional<T> progress_factor,
-             T reg_lambda = 0.0, T reg_alpha = 0.0, T tol = 0.0001) {
+    void fit(py::array_t<T> X, py::array_t<T> y, std::optional<py::array_t<T>> x0,
+             std::optional<T> progress_factor, T reg_lambda = 0.0, T reg_alpha = 0.0,
+             T tol = 0.0001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
 
         da_status status;
-        n_samples = X.shape()[0];
-        n_feat = X.shape()[1];
+        da_int ldx;
+
+        get_numpy_array_properties(X, n_samples, n_feat, ldx);
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column-major");
+        }
         // y rhs is assumed to only contain values from 0 to K-1 (K being the number of classes)
-        n_class = (da_int)(std::round(*std::max_element(y.mutable_data(),
-                                                        y.mutable_data() + n_samples)) +
-                           1);
-        status = da_linmod_define_features(handle, n_samples, n_feat, X.mutable_data(),
-                                           y.mutable_data());
+        n_class =
+            (da_int)(std::round(*std::max_element(y.data(), y.data() + n_samples)) + 1);
+        status = da_linmod_define_features(handle, n_samples, n_feat, X.data(), y.data());
+
         exception_check(status); // throw an exception if status is not success
 
         // Set the real optional parameters
+
         status = da_options_set(handle, "lambda", reg_lambda);
+
         exception_check(status);
         status = da_options_set(handle, "alpha", reg_alpha);
+
         exception_check(status);
         status = da_options_set(handle, "optim convergence tol", tol);
         exception_check(status);
+
         if (progress_factor.has_value()) {
+
             status =
                 da_options_set(handle, "optim progress factor", progress_factor.value());
             exception_check(status);
         }
         if (x0.has_value()) {
             if (precision == da_double) {
+
                 da_int ncoef = x0->shape()[0];
-                status = da_linmod_fit_start<T>(handle, ncoef, x0->mutable_data());
+                status = da_linmod_fit_start<T>(handle, ncoef, x0->data());
             } else {
                 da_int ncoef = x0->shape()[0];
-                status = da_linmod_fit_start<T>(handle, ncoef, x0->mutable_data());
+                status = da_linmod_fit_start<T>(handle, ncoef, x0->data());
             }
         } else {
-            if (precision == da_double)
+            if (precision == da_double) {
+
                 status = da_linmod_fit<double>(handle);
-            else
+            } else
                 status = da_linmod_fit<float>(handle);
         }
 
         exception_check(status);
     }
 
-    template <typename T> py::array_t<T> predict(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> predict(py::array_t<T> X) {
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+
+        da_int n_samples, n_features, ldx;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
         size_t shape[1]{(size_t)n_samples};
         size_t strides[1]{sizeof(T)};
+
         auto predictions = py::array_t<T>(shape, strides);
-        status = da_linmod_evaluate_model(handle, n_samples, n_features, X.mutable_data(),
+
+        status = da_linmod_evaluate_model(handle, n_samples, n_features, X.data(),
                                           predictions.mutable_data());
         exception_check(status);
         return predictions;

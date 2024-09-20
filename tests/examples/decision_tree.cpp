@@ -50,8 +50,8 @@ int main() {
     filename += "/decision_train.csv";
     da_int n_cols = 0, n_rows = 0;
     pass = da_datastore_init(&csv_store) == da_status_success;
-    pass &= da_datastore_options_set_string(csv_store, "CSV datastore precision",
-                                            "single") == da_status_success;
+    pass &= da_datastore_options_set_string(csv_store, "datastore precision", "single") ==
+            da_status_success;
     pass &= da_data_load_from_csv(csv_store, filename.c_str()) == da_status_success;
     pass &= da_data_get_n_cols(csv_store, &n_cols) == da_status_success;
     pass &= da_data_get_n_rows(csv_store, &n_rows) == da_status_success;
@@ -63,10 +63,10 @@ int main() {
     da_int n_samples = n_rows;
     std::vector<float> X(n_features * n_samples);
     std::vector<da_int> y(n_rows);
-    pass &= da_data_extract_selection_real_s(csv_store, "features", X.data(), n_rows) ==
-            da_status_success;
-    pass &= da_data_extract_selection_int(csv_store, "labels", y.data(), n_rows) ==
-            da_status_success;
+    pass &= da_data_extract_selection_real_s(csv_store, "features", column_major,
+                                             X.data(), n_rows) == da_status_success;
+    pass &= da_data_extract_selection_int(csv_store, "labels", column_major, y.data(),
+                                          n_rows) == da_status_success;
     da_int n_class = *std::max_element(y.begin(), y.end()) + 1;
     da_datastore_destroy(&csv_store);
     if (!pass) {
@@ -99,8 +99,8 @@ int main() {
     filename = DATA_DIR;
     filename += "/decision_test.csv";
     pass = da_datastore_init(&csv_store) == da_status_success;
-    pass &= da_datastore_options_set_string(csv_store, "CSV datastore precision",
-                                            "single") == da_status_success;
+    pass &= da_datastore_options_set_string(csv_store, "datastore precision", "single") ==
+            da_status_success;
     pass &= da_data_load_from_csv(csv_store, filename.c_str()) == da_status_success;
     pass &= da_data_get_n_rows(csv_store, &n_rows) == da_status_success;
     pass &=
@@ -110,10 +110,11 @@ int main() {
     n_samples = n_rows;
     std::vector<float> X_test(n_features * n_samples);
     std::vector<da_int> y_test(n_samples);
-    pass &= da_data_extract_selection_real_s(csv_store, "features", X_test.data(),
-                                             n_samples) == da_status_success;
-    pass &= da_data_extract_selection_int(csv_store, "labels", y_test.data(),
-                                          n_samples) == da_status_success;
+    pass &=
+        da_data_extract_selection_real_s(csv_store, "features", column_major,
+                                         X_test.data(), n_samples) == da_status_success;
+    pass &= da_data_extract_selection_int(csv_store, "labels", column_major,
+                                          y_test.data(), n_samples) == da_status_success;
     da_datastore_destroy(&csv_store);
     if (!pass) {
         std::cout << "Something went wrong while loading test data.\n";

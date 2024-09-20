@@ -291,7 +291,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(os);
 
         os = std::make_shared<OptionString>(OptionString(
-            "storage scheme",
+            "storage order",
             "Define the storage scheme used to store multi-dimensional arrays (Jacobian "
             "matrix, "
             "etc).",

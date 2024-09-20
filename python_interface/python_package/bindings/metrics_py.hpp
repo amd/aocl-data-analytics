@@ -41,28 +41,35 @@
 namespace py = pybind11;
 
 template <typename T>
-py::array_t<T>
-py_da_pairwise_distances(py::array_t<T, py::array::f_style> X,
-                         std::optional<py::array_t<T, py::array::f_style>> Y,
-                         std::string metric = "euclidean",
-                         std::string force_all_finite = "allow_infinite") {
+py::array_t<T> py_da_pairwise_distances(py::array_t<T> X, std::optional<py::array_t<T>> Y,
+                                        std::string metric = "euclidean",
+                                        std::string force_all_finite = "allow_infinite") {
     da_status status;
-    da_int m = X.shape()[0], k = X.shape()[1];
+
+    da_int m, n, k_x, k_y, ldx, ldy, ldd;
+    da_order order_X, order_Y;
+
+    get_size(order_X, X, m, k_x, ldx);
+
     // Initialize numbers of columns for distance matrix D.
     // If Y is provided, D is m-by-n, otherwise it's m-by-m.
     da_int ncols = m;
+
     T *dummy = nullptr;
     // Check if the user provided matrix Y and set n accordingly
-    da_int n = 0;
+    n = 0;
     if (Y.has_value()) {
-        n = Y->shape()[0];
+        get_size(order_Y, Y.value(), n, k_y, ldy);
+
+        if (order_X != order_Y)
+            throw std::invalid_argument("Incompatible ordering for X and Y matrices.");
+
         // Y is provided, set number of columns correctly.
         ncols = n;
-        if (X.shape()[1] != Y->shape()[1])
+        if (k_x != k_y)
             throw std::invalid_argument(
                 "Incompatible dimension for X and Y matrices: X.shape[1]=" +
-                std::to_string(X.shape()[1]) +
-                " while Y.shape[1]=" + std::to_string(Y->shape()[1]) + ".");
+                std::to_string(k_x) + " while Y.shape[1]=" + std::to_string(k_y) + ".");
     }
 
     // Translate strings to enums
@@ -83,16 +90,29 @@ py_da_pairwise_distances(py::array_t<T, py::array::f_style> X,
                                     "Available choice is: 'allow_infinite'.");
     }
     // Create the output distance matrix as a numpy array
+
     size_t shape[2]{(size_t)m, (size_t)ncols};
-    auto D = py::array_t<T, py::array::f_style>(shape);
+    size_t strides[2];
+    if (order_X == column_major) {
+        strides[0] = sizeof(T);
+        strides[1] = sizeof(T) * m;
+        ldd = m;
+    } else {
+        strides[0] = sizeof(T) * ncols;
+        strides[1] = sizeof(T);
+        ldd = ncols;
+    }
+
+    auto D = py::array_t<T>(shape, strides);
 
     if (Y.has_value()) {
-        status = da_pairwise_distances(m, n, k, X.data(), m, Y->mutable_data(), n,
-                                       D.mutable_data(), m, metric_enum,
-                                       force_all_finite_enum);
+        status = da_pairwise_distances(order_X, m, n, k_x, X.data(), ldx,
+                                       Y->mutable_data(), ldy, D.mutable_data(), ldd,
+                                       metric_enum, force_all_finite_enum);
     } else {
-        status = da_pairwise_distances(m, n, k, X.data(), m, dummy, n, D.mutable_data(),
-                                       m, metric_enum, force_all_finite_enum);
+        status = da_pairwise_distances(order_X, m, n, k_x, X.data(), ldx, dummy, n,
+                                       D.mutable_data(), ldd, metric_enum,
+                                       force_all_finite_enum);
     }
     status_to_exception(status);
 

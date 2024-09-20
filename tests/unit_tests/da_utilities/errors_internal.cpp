@@ -142,7 +142,7 @@ TEST(ErrorStack, StoreReset) {
     EXPECT_EQ(da_datastore_options_set_int(store, "Invalid Option", 0),
               da_status_option_not_found);
     EXPECT_NE(store->err->get_status(), da_status_success);
-    EXPECT_EQ(da_datastore_options_set_int(store, "CSV use header row", 1),
+    EXPECT_EQ(da_datastore_options_set_int(store, "use header row", 1),
               da_status_success);
     EXPECT_EQ(store->err->get_status(), da_status_success);
     da_datastore_destroy(&store);

@@ -103,6 +103,9 @@ template <typename T> class linear_model : public basic_handle<T> {
     T *y = nullptr; // May contain a modified copy of yusr
     T *X = nullptr; // May contain a modified copy of XUSR
 
+    //Utility pointer to column major allocated copy of user's data
+    T *X_temp = nullptr;
+
     T time; // Computation time
 
     /* Parameters used during the standardization of the problem
@@ -158,7 +161,7 @@ template <typename T> class linear_model : public basic_handle<T> {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_linmod_options<T>(this->opts, err);
+        register_linmod_options<T>(this->opts, *this->err);
     }
     ~linear_model();
 
@@ -221,7 +224,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status fit_linreg_cholesky();
     da_status fit_linreg_cg();
     da_status get_coef(da_int &nx, T *coef);
-    da_status evaluate_model(da_int nfeat, da_int nsamples, T *X, T *predictions,
+    da_status evaluate_model(da_int nfeat, da_int nsamples, const T *X, T *predictions,
                              T *observations, T *loss);
 
     da_status get_result(da_result query, da_int *dim, T *result);
@@ -264,6 +267,9 @@ template <typename T> linear_model<T>::~linear_model() {
 
     if (udata)
         delete udata;
+
+    if (X_temp)
+        delete[] (X_temp);
 };
 
 template <typename T>
@@ -340,13 +346,25 @@ da_status linear_model<T>::get_result([[maybe_unused]] da_result query,
 template <typename T>
 da_status linear_model<T>::define_features(da_int nfeat, da_int nsamples, const T *X,
                                            const T *y) {
-    if (nfeat <= 0)
-        return da_error(this->err, da_status_invalid_input, "nfeat must be positive.");
-    if (nsamples <= 0)
-        return da_error(this->err, da_status_invalid_input, "nsamples must be positive.");
-    if (X == nullptr || y == nullptr)
-        return da_error(this->err, da_status_invalid_input,
-                        "Either X or y are not valid pointers.");
+
+    // Guard against errors due to multiple calls using the same class instantiation
+    if (X_temp) {
+        delete[] (X_temp);
+        X_temp = nullptr;
+    }
+
+    std::string opt_order;
+    this->opts.get("storage order", opt_order, this->order);
+    da_int ldx = (this->order == column_major) ? nsamples : nfeat;
+    da_int tmp;
+
+    da_status status = this->store_2D_array(nsamples, nfeat, X, ldx, &X_temp, &this->XUSR,
+                                            tmp, "n_samples", "n_features", "X", "ldx");
+    if (status != da_status_success)
+        return status;
+
+    if (y == nullptr)
+        return da_error(this->err, da_status_invalid_input, "y is not a valid pointer.");
 
     model_trained = false;
 
@@ -355,10 +373,9 @@ da_status linear_model<T>::define_features(da_int nfeat, da_int nsamples, const 
     this->is_well_determined = nsamples > nfeat;
     // Assign user's feature pointers
     this->yusr = y;
-    this->XUSR = X;
     // Point copy X and y also to user data
     this->y = (T *)(y);
-    this->X = (T *)(X);
+    this->X = (T *)(XUSR);
 
     return da_status_success;
 }
@@ -571,9 +588,14 @@ template <typename T> da_status linear_model<T>::get_coef(da_int &nx, T *coef) {
 }
 
 template <typename T>
-da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
+da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, const T *X,
                                           T *predictions, T *observations, T *loss) {
     da_int i, status;
+
+    const T *X_temp;
+    T *utility_ptr1 = nullptr;
+    da_int ldx_temp;
+    da_int ldx = (this->order == column_major) ? nsamples : nfeat;
 
     if (nfeat != this->nfeat)
         return da_error(this->err, da_status_invalid_input,
@@ -581,14 +603,19 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
                             ". it must match the number of features of the computed "
                             "model: nfeat = " +
                             std::to_string(this->nfeat) + ".");
-    if (nsamples <= 0)
-        return da_error(this->err, da_status_invalid_input, "nsamples must be positive.");
-    if (X == nullptr || predictions == nullptr)
+
+    if (predictions == nullptr)
         return da_error(this->err, da_status_invalid_input,
-                        "One of X or predictions was a null pointer.");
+                        "predictions is a null pointer.");
     if (!model_trained)
         return da_error(this->err, da_status_out_of_date,
                         "The model has not been trained yet.");
+
+    da_status errstatus =
+        this->store_2D_array(nsamples, nfeat, X, ldx, &utility_ptr1, &X_temp, ldx_temp,
+                             "n_samples", "n_features", "X", "ldx");
+    if (errstatus != da_status_success)
+        return errstatus;
 
     // X is assumed to be of shape (nsamples, nfeat)
     // y is assumed to be of size nsamples
@@ -603,7 +630,7 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
     switch (mod) {
     case linmod_model_mse:
         // Call loss_mse
-        status = loss_mse(nsamples, nfeat, X, this->intercept, l1reg, l2reg,
+        status = loss_mse(nsamples, nfeat, X_temp, this->intercept, l1reg, l2reg,
                           this->coef.data(), observations, loss, predictions);
         if (status != 0) {
             return da_error(this->err, da_status_incorrect_output,
@@ -625,7 +652,7 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
         }
         std::fill(predictions, predictions + nsamples, T(0));
         if (nclass == 2) {
-            eval_feature_matrix(nmod, this->coef.data(), nsamples, X, scores.data(),
+            eval_feature_matrix(nmod, this->coef.data(), nsamples, X_temp, scores.data(),
                                 this->intercept, false);
             for (da_int i = 0; i < nsamples; i++)
                 scores[i] > 0 ? predictions[i] = 1 : predictions[i] = 0;
@@ -633,7 +660,7 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
             std::fill(log_proba.begin() + nsamples * (nclass - 1), log_proba.end(), T(1));
             for (da_int k = 0; k < nclass - 1; k++) {
                 da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, nfeat, alpha,
-                                    X, nsamples, &coef[k * nmod], 1, beta,
+                                    X_temp, nsamples, &coef[k * nmod], 1, beta,
                                     &log_proba[k * nsamples], 1);
                 if (intercept) {
                     for (i = 0; i < nsamples; i++)
@@ -670,8 +697,8 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
             }
             // Compute raw prediction = X*beta^T+intercept
             da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, nsamples, nclass,
-                                nfeat, 1.0, X, nsamples, this->coef.data(), nclass, 1.0,
-                                scores.data(), nsamples);
+                                nfeat, 1.0, X_temp, nsamples, this->coef.data(), nclass,
+                                1.0, scores.data(), nsamples);
             // Iterate over predictions to pick argmax between each class
             for (da_int i = 0; i < nsamples; i++) {
                 aux = 0.0;
@@ -690,6 +717,9 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, T *X,
                         "The requested model is not supported.");
         break;
     }
+
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
 
     return da_status_success;
 }
@@ -1560,15 +1590,15 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
             // Data copied XUSR -> X and yusr -> y, set-up scaling vectors and exit
             return da_status_success;
         }
-        if (da_basic_statistics::standardize(axis, nrow, ncol, X, nrow, nrow, 0,
-                                             std_shifts.data(),
+        if (da_basic_statistics::standardize(column_major, axis, nrow, ncol, X, nrow,
+                                             nrow, 0, std_shifts.data(),
                                              (T *)nullptr) != da_status_success) {
             return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Call to standardize on feature matrix unexpectedly failed.");
         }
         // Intercept -> shift and scale Y
-        if (da_basic_statistics::standardize(da_axis_col, nsamples, 1, y, nsamples,
-                                             nsamples, 0, &std_shifts[nfeat],
+        if (da_basic_statistics::standardize(column_major, da_axis_col, nsamples, 1, y,
+                                             nsamples, nsamples, 0, &std_shifts[nfeat],
                                              (T *)nullptr) != da_status_success) {
             return da_error(                         // LCOV_EXCL_LINE
                 this->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -1588,15 +1618,15 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
     if (standardize && intercept) {
         // intercept -> shift and scale X
         std_xv.assign(nfeat, T(1));
-        if (da_basic_statistics::standardize(axis, nrow, ncol, X, nrow, nrow, 0,
-                                             std_shifts.data(),
+        if (da_basic_statistics::standardize(column_major, axis, nrow, ncol, X, nrow,
+                                             nrow, 0, std_shifts.data(),
                                              std_scales.data()) != da_status_success) {
             return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Call to standardize on feature matrix unexpectedly failed.");
         }
         // Intercept -> shift and scale Y
-        if (da_basic_statistics::standardize(axis, nsamples, 1, y, nsamples, nsamples, 0,
-                                             &std_shifts[nfeat],
+        if (da_basic_statistics::standardize(column_major, axis, nsamples, 1, y, nsamples,
+                                             nsamples, 0, &std_shifts[nfeat],
                                              &std_scales[nfeat]) != da_status_success) {
             return da_error(                         // LCOV_EXCL_LINE
                 this->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -1626,8 +1656,8 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
             std_scales[j] = sqdof; // same as with intercept: stdev using 1/nsamples
             std_shifts[j] = (T)0;  // zero
         }
-        if (da_basic_statistics::standardize(axis, nrow, ncol, X, nrow, nrow, 0,
-                                             (T *)nullptr,
+        if (da_basic_statistics::standardize(column_major, axis, nrow, ncol, X, nrow,
+                                             nrow, 0, (T *)nullptr,
                                              std_scales.data()) != da_status_success) {
             return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Call to standardize on feature matrix unexpectedly failed.");
@@ -1637,8 +1667,8 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
         sqdof = sqrt(ynrm / T(nsamples));
         std_scales[nfeat] = sqdof;
         std_shifts[nfeat] = (T)0;
-        if (da_basic_statistics::standardize(da_axis_col, nsamples, 1, y, nsamples,
-                                             nsamples, 0, (T *)nullptr,
+        if (da_basic_statistics::standardize(column_major, da_axis_col, nsamples, 1, y,
+                                             nsamples, nsamples, 0, (T *)nullptr,
                                              &std_scales[nfeat]) != da_status_success) {
             return da_error(                         // LCOV_EXCL_LINE
                 this->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -1646,15 +1676,15 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
         }
     } else if (!standardize && intercept) {
         // Intercept -> shift and scale X
-        if (da_basic_statistics::variance(axis, nrow, ncol, X, nrow, nrow,
+        if (da_basic_statistics::variance(column_major, axis, nrow, ncol, X, nrow, nrow,
                                           std_shifts.data(),
                                           std_xv.data()) != da_status_success) {
             return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Call to variance on feature matrix unexpectedly failed.");
         }
         std_scales.assign(nfeat + 1, sqrt(T(nsamples)));
-        if (da_basic_statistics::standardize(axis, nrow, ncol, X, nrow, 1, 0,
-                                             std_shifts.data(),
+        if (da_basic_statistics::standardize(column_major, axis, nrow, ncol, X, nrow, 1,
+                                             0, std_shifts.data(),
                                              std_scales.data()) != da_status_success) {
             return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                             "Call to standardize on feature matrix unexpectedly failed.");
@@ -1664,8 +1694,8 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
         // Intercept -> shift and scale Y
         std_scales[nfeat] = T(0);
         std_shifts[nfeat] = T(0);
-        if (da_basic_statistics::variance(da_axis_col, nsamples, 1, y, nsamples, nsamples,
-                                          &std_shifts[nfeat],
+        if (da_basic_statistics::variance(column_major, da_axis_col, nsamples, 1, y,
+                                          nsamples, nsamples, &std_shifts[nfeat],
                                           &std_scales[nfeat]) != da_status_success) {
             return da_error(                         // LCOV_EXCL_LINE
                 this->err, da_status_internal_error, // LCOV_EXCL_LINE

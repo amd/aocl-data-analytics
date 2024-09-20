@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 .. AUTO GENERATED. Do not hand edit this file! (see doc_test.cpp)
@@ -45,7 +45,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for Linear models.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`"
    "optim convergence tol", "real", ":math:`r=10/2\sqrt{2\,\varepsilon}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`"
@@ -73,7 +73,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for Principal component analysis.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, or `syevd`."
    "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`."
    "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`."
@@ -91,7 +91,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for k-means clustering.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
    "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres.", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
    "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`"
@@ -111,7 +111,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for Decision trees.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
    "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
    "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes.", ":math:`s=` `breadth first`, or `depth first`."
@@ -135,7 +135,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for Decision forests.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
    "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`2 \le i`"
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
@@ -162,7 +162,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for k-nearest neighbors.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
    "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `euclidean`, or `sqeuclidean`."
    "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `brute`."
@@ -179,44 +179,44 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for` :cpp:type:`da_datastore`.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
-   "csv integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`"
-   "csv datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`."
-   "csv use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`"
-   "csv warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`"
-   "csv skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`"
-   "csv delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
-   "csv whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`"
-   "csv decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", ""
-   "csv skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`"
-   "csv line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", ""
-   "csv row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`"
-   "csv comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", ""
-   "csv quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files.", ""
-   "csv scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", ""
-   "csv escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", ""
-   "csv thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", ""
-   "csv skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", ""
-   "csv datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`."
-   "csv data storage", "string", ":math:`s=` `column major`", "Whether to store data from CSV files in row or column major format.", ":math:`s=` `column major`, or `row major`."
-   "csv skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`"
-   "csv double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`"
+
+   "integers as floats", "integer", ":math:`i=0`", "Whether or not to interpret integers as floating point numbers when using autodetection.", ":math:`0 \le i \le 1`"
+   "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`."
+   "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`"
+   "warn for missing data", "integer", ":math:`i=0`", "If set to 0, return error if missing data is encountered; if set to 1, issue a warning and store missing data as either a NaN (for floating point data) or the maximum value of the integer type being used.", ":math:`0 \le i \le 1`"
+   "skip footer", "integer", ":math:`i=0`", "Whether or not to ignore the last line when reading a CSV file.", ":math:`0 \le i \le 1`"
+   "delimiter", "string", ":math:`s=` `,`", "The delimiter used when reading CSV files.", ""
+   "whitespace delimiter", "integer", ":math:`i=0`", "Whether or not to use whitespace as the delimiter when reading CSV files.", ":math:`0 \le i \le 1`"
+   "decimal", "string", ":math:`s=` `.`", "The character used to denote a decimal point in CSV files.", ""
+   "skip initial space", "integer", ":math:`i=0`", "Whether or not to ignore initial spaces in CSV file lines.", ":math:`0 \le i \le 1`"
+   "line terminator", "string", "empty", "The character used to denote line termination in CSV files (leave this empty to use the default).", ""
+   "row start", "integer", ":math:`i=0`", "Ignore the specified number of lines from the top of the file (note that line numbers in CSV files start at 1).", ":math:`0 \le i`"
+   "comment", "string", ":math:`s=` `#`", "The character used to denote comments in CSV files (note, if a line in a CSV file is to be interpreted as only containing a comment, the comment character should be the first character on the line).", ""
+   "quote character", "string", ":math:`s=` `~"`", "The character used to denote quotations in CSV files.", ""
+   "scientific notation character", "string", ":math:`s=` `e`", "The character used to denote powers of 10 in floating point values in CSV files.", ""
+   "escape character", "string", ":math:`s=` `\\`", "The escape character in CSV files.", ""
+   "thousands", "string", "empty", "The character used to separate thousands when reading numeric values in CSV files.", ""
+   "skip rows", "string", "empty", "A comma- or space-separated list of rows to ignore in CSV files.", ""
+   "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether to return data in row- or column-major format.", ":math:`s=` `column-major`, or `row-major`."
+   "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`"
+   "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`"
 
 
 .. only:: internal
-   
+
    .. _opts_optimizationsolvers:
-   
+
    Optimization Solvers
    ====================
-   
+
    The following options are supported.
-   
+
    .. csv-table:: :strong:`Table of options for optimization solvers.`
       :escape: ~
       :header: "Option name", "Type", "Default", "Description", "Constraints"
-      
-      "storage scheme", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
+      "storage order", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
       "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`"
       "lbfgsb convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`"
       "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`"
@@ -249,4 +249,4 @@ The following options are supported.
       "ralfit convergence abs tol fun", "real", ":math:`r=10^{-8}`", "Absolute tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
       "print options", "string", ":math:`s=` `no`", "Print options list.", ":math:`s=` `no`, or `yes`."
       "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`."
-   
+

@@ -62,13 +62,15 @@ TYPED_TEST(knnTest, AccuracyTesting) {
                   da_status_success);
         EXPECT_EQ(da_options_set_string(handle, "weights", param.weights.c_str()),
                   da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
+                  da_status_success);
         EXPECT_EQ(da_options_set_string(handle, "algorithm", param.algorithm.c_str()),
                   da_status_success);
         EXPECT_EQ(da_options_set_int(handle, "number of neighbors", param.n_neigh_knn),
                   da_status_success);
 
         EXPECT_EQ(da_knn_set_training_data(handle, param.n_samples, param.n_features,
-                                           param.X_train.data(), param.n_samples,
+                                           param.X_train.data(), param.ldx_train,
                                            param.y_train.data()),
                   da_status_success);
 
@@ -76,7 +78,7 @@ TYPED_TEST(knnTest, AccuracyTesting) {
         std::vector<TypeParam> kdist(param.n_neigh_kneighbors * param.n_queries);
         std::vector<da_int> kind(param.n_neigh_kneighbors * param.n_queries);
         EXPECT_EQ(da_knn_kneighbors(handle, param.n_queries, param.n_features,
-                                    param.X_test.data(), param.n_queries, kind.data(),
+                                    param.X_test.data(), param.ldx_test, kind.data(),
                                     kdist.data(), param.n_neigh_kneighbors, 1),
                   da_status_success);
         EXPECT_ARR_NEAR(param.n_neigh_kneighbors * param.n_queries, kdist.data(),

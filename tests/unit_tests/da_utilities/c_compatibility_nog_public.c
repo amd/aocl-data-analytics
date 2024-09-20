@@ -165,7 +165,7 @@ da_status test_nlls(void) {
         da_handle_destroy(&handle);
         return status;
     }
-    status = da_options_set_string(handle, "Storage Scheme", "Fortran");
+    status = da_options_set_string(handle, "Storage Order", "Fortran");
     if (status != da_status_success) {
         da_handle_print_error_message(handle);
         da_handle_destroy(&handle);

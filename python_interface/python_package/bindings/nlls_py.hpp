@@ -244,7 +244,7 @@ da_int py_wrapper_reshp_s(da_int n_coef, da_int n_res, const float *x, const flo
 
 class nlls : public pyda_handle {
 
-    da_precision precision{da_unknown};
+    da_precision precision_nlls{da_unknown};
     da_int n_coef{0};
     da_int n_res{0};
     bool storage_scheme_c{true};
@@ -253,9 +253,9 @@ class nlls : public pyda_handle {
 
   public:
     std::string get_precision() {
-        if (precision == da_precision::da_double) {
+        if (precision_nlls == da_precision::da_double) {
             return "double";
-        } else if (precision == da_precision::da_single) {
+        } else if (precision_nlls == da_precision::da_single) {
             return "single";
         }
         return "unknown";
@@ -278,12 +278,12 @@ class nlls : public pyda_handle {
         mesg = std::regex_replace(mesg, squeeze, std::string(" "));
         transform(mesg.begin(), mesg.end(), mesg.begin(), ::tolower);
         if (mesg == "double"s)
-            precision = da_double;
+            precision_nlls = da_double;
         else if (mesg == "single"s)
-            precision = da_single;
+            precision_nlls = da_single;
         mesg = "";
 
-        if (precision == da_double) {
+        if (precision_nlls == da_double) {
             using T = double;
             da_handle_init<T>(&handle, da_handle_nlls);
             if (handle)
@@ -296,7 +296,7 @@ class nlls : public pyda_handle {
                 status = da_status_handle_not_initialized;
                 mesg = "Handle could not be initialized.";
             }
-        } else if (precision == da_single) {
+        } else if (precision_nlls == da_single) {
             using T = float;
             da_handle_init<T>(&handle, da_handle_nlls);
             if (handle)
@@ -382,9 +382,10 @@ class nlls : public pyda_handle {
             }
             llen = l.shape(0);
             if (llen > 0) {
-                if (l.dtype().is(py::dtype::of<double>()) && precision == da_double)
+                if (l.dtype().is(py::dtype::of<double>()) && precision_nlls == da_double)
                     lower_d = py::array_t<double>(l).mutable_data();
-                else if (l.dtype().is(py::dtype::of<float>()) && precision == da_single)
+                else if (l.dtype().is(py::dtype::of<float>()) &&
+                         precision_nlls == da_single)
                     lower_s = py::array_t<float>(l).mutable_data();
                 else {
                     status = da_status_wrong_type;
@@ -405,9 +406,10 @@ class nlls : public pyda_handle {
             }
             ulen = u.shape(0);
             if (ulen > 0) {
-                if (u.dtype().is(py::dtype::of<double>()) && precision == da_double)
+                if (u.dtype().is(py::dtype::of<double>()) && precision_nlls == da_double)
                     upper_d = py::array_t<double>(u).mutable_data();
-                else if (u.dtype().is(py::dtype::of<float>()) && precision == da_single)
+                else if (u.dtype().is(py::dtype::of<float>()) &&
+                         precision_nlls == da_single)
                     upper_s = py::array_t<float>(u).mutable_data();
                 else {
                     status = da_status_wrong_type;
@@ -437,9 +439,9 @@ class nlls : public pyda_handle {
                 exception_check(status, mesg);
             }
 
-            if (precision == da_double)
+            if (precision_nlls == da_double)
                 status = da_nlls_define_bounds(handle, len, lower_d, upper_d);
-            else if (precision == da_single)
+            else if (precision_nlls == da_single)
                 status = da_nlls_define_bounds(handle, len, lower_s, upper_s);
             else {
             }
@@ -448,12 +450,12 @@ class nlls : public pyda_handle {
 
         // Options
         // order default is "c"
-        status = da_options_set(handle, "storage scheme", order.c_str());
+        status = da_options_set(handle, "storage order", order.c_str());
         exception_check(status);
         char opt_order[20];
         da_int lorder = 20;
         da_int okey;
-        status = da_options_get(handle, "storage scheme", opt_order, &lorder, &okey);
+        status = da_options_get(handle, "storage order", opt_order, &lorder, &okey);
         exception_check(status);
         // namespace da_optimization_options { enum storage_scheme { fortran = 1, c = 2 };
         // see optimization_options.hpp
@@ -482,11 +484,11 @@ class nlls : public pyda_handle {
             exception_check(status, mesg);
         }
         if constexpr (std::is_same_v<T, double>) {
-            if (this->precision != da_double) {
+            if (this->precision_nlls != da_double) {
                 status = da_status_wrong_type;
             }
         } else if constexpr (std::is_same_v<T, float>) {
-            if (this->precision != da_single) {
+            if (this->precision_nlls != da_single) {
                 status = da_status_wrong_type;
             }
         } else {
@@ -620,7 +622,7 @@ class nlls : public pyda_handle {
     // Getters for info
     auto get_info_iter() {
         da_int iter, f_eval, g_eval, h_eval, hp_eval, fd_f_eval;
-        if (precision == da_single) {
+        if (precision_nlls == da_single) {
             using T = float;
             T obj, norm_g, scaled_g;
             get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
@@ -635,7 +637,7 @@ class nlls : public pyda_handle {
     }
     auto get_info_evals() {
         da_int iter, f_eval, g_eval, h_eval, hp_eval, fd_f_eval;
-        if (precision == da_single) {
+        if (precision_nlls == da_single) {
             using T = float;
             T obj, norm_g, scaled_g;
             get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,
@@ -655,7 +657,7 @@ class nlls : public pyda_handle {
     }
     auto get_info_optim() {
         da_int iter, f_eval, g_eval, h_eval, hp_eval, fd_f_eval;
-        if (precision == da_single) {
+        if (precision_nlls == da_single) {
             using T = float;
             T obj, norm_g, scaled_g;
             get_info(iter, f_eval, g_eval, h_eval, hp_eval, obj, norm_g, scaled_g,

@@ -67,6 +67,9 @@ def test_metrics_functionality(numpy_precision, numpy_order, metric):
         expected_XX = np.array([[0.,  8., 32.],
                                 [8.,  0.,  8.],
                                 [32., 8.,  0.]])
+
+    assert X.dtype == euclidean_distance_XY.dtype
+
     # Check that distance matrix had the expected shape
     assert euclidean_distance_XY.shape == expected_XY.shape
     # Compare matrices element-wise
@@ -76,6 +79,8 @@ def test_metrics_functionality(numpy_precision, numpy_order, metric):
         euclidean_distance_XX = da_metrics.pairwise_distances(X)
     else:
         euclidean_distance_XX = da_metrics.pairwise_distances(X, metric=metric)
+
+    assert X.dtype == euclidean_distance_XX.dtype
 
     # Check that distance matrix had the expected shape
     assert euclidean_distance_XX.shape == expected_XX.shape

@@ -47,6 +47,7 @@ template <typename T> struct StatsParamType {
     da_int ldx = 0;
     da_int dof = 0;
     da_int mode = 0;
+    da_order order = column_major;
     std::vector<T> x;
     std::vector<T> expected_x_column;
     std::vector<T> column_shift;
@@ -823,6 +824,70 @@ template <typename T> void GetModeOne(std::vector<StatsParamType<T>> &params) {
     params.push_back(param);
 }
 
+template <typename T> void GetRowMajorData(std::vector<StatsParamType<T>> &params) {
+    // Test with row-major data
+    StatsParamType<T> param;
+    param.n = 4;
+    param.p = 4;
+    param.ldx = param.p;
+    param.order = row_major;
+
+    std::vector<double> x{0, 0, 0, 0, 0, 1, 2, 3, 0, 2, 4, 6, 0, 4, 8, 16};
+    param.x = convert_vector<double, T>(x);
+
+    std::vector<T> column_shift(0);
+    param.column_shift = column_shift;
+    std::vector<T> column_scale(0);
+    param.column_scale = column_scale;
+    std::vector<double> expected_x_row{0,
+                                       0,
+                                       0,
+                                       0,
+                                       -1.161895003862225,
+                                       -0.3872983346207417,
+                                       0.3872983346207417,
+                                       1.161895003862225,
+                                       -1.161895003862225,
+                                       -0.3872983346207417,
+                                       0.3872983346207417,
+                                       1.161895003862225,
+                                       -1.02469507659596,
+                                       -0.4391550328268399,
+                                       0.14638501094228,
+                                       1.3174650984805198};
+    param.expected_x_row = convert_vector<double, T>(expected_x_row);
+
+    std::vector<T> row_shift(0);
+    param.row_shift = row_shift;
+    std::vector<T> row_scale(0);
+    param.row_scale = row_scale;
+    std::vector<double> expected_x_column{
+        0, -1.02469507659596,   -1.02469507659596,   -0.8997696884358682,
+        0, -0.4391550328268399, -0.4391550328268399, -0.4678802379866515,
+        0, 0.14638501094228,    0.14638501094228,    -0.0359907875374347,
+        0, 1.3174650984805198,  1.3174650984805198,  1.4036407139599545};
+    param.expected_x_column = convert_vector<double, T>(expected_x_column);
+
+    std::vector<T> overall_shift(0);
+    param.overall_shift = overall_shift;
+    std::vector<T> overall_scale(0);
+    param.overall_scale = overall_scale;
+    std::vector<double> expected_x_overall{
+        -0.6729865963777508, -0.6729865963777508, -0.6729865963777508,
+        -0.6729865963777508, -0.6729865963777508, -0.4389043019854896,
+        -0.2048220075932285, 0.0292602867990326,  -0.6729865963777508,
+        -0.2048220075932285, 0.2633425811912938,  0.7315071699758161,
+        -0.6729865963777508, 0.2633425811912938,  1.1996717587603385,
+        3.0723301138984276};
+    param.expected_x_overall = convert_vector<double, T>(expected_x_overall);
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
 template <typename T> void GetStatsData(std::vector<StatsParamType<T>> &params) {
 
     GetStandardData(params);
@@ -838,6 +903,7 @@ template <typename T> void GetStatsData(std::vector<StatsParamType<T>> &params) 
     GetShiftNullScaleZero(params);
     GetShiftNonZeroScaleZero(params);
     GetShiftZeroScaleZero(params);
+    GetRowMajorData(params);
     GetModeOne(params);
 }
 
@@ -871,20 +937,20 @@ TYPED_TEST(StatisticsUtilitiesTest, StatisticsUtilitiesFunctionality) {
         if (param.overall_scale.size() > 0)
             overall_scale = param.overall_scale.data();
 
-        EXPECT_EQ(da_standardize(da_axis_col, param.n, param.p, x_column.data(),
-                                 param.ldx, param.dof, param.mode, column_shift,
-                                 column_scale),
+        EXPECT_EQ(da_standardize(param.order, da_axis_col, param.n, param.p,
+                                 x_column.data(), param.ldx, param.dof, param.mode,
+                                 column_shift, column_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_column.data(),
                         x_column.data(), param.epsilon);
-        EXPECT_EQ(da_standardize(da_axis_row, param.n, param.p, x_row.data(), param.ldx,
-                                 param.dof, param.mode, row_shift, row_scale),
+        EXPECT_EQ(da_standardize(param.order, da_axis_row, param.n, param.p, x_row.data(),
+                                 param.ldx, param.dof, param.mode, row_shift, row_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_row.data(), x_row.data(),
                         param.epsilon);
-        EXPECT_EQ(da_standardize(da_axis_all, param.n, param.p, x_overall.data(),
-                                 param.ldx, param.dof, param.mode, overall_shift,
-                                 overall_scale),
+        EXPECT_EQ(da_standardize(param.order, da_axis_all, param.n, param.p,
+                                 x_overall.data(), param.ldx, param.dof, param.mode,
+                                 overall_shift, overall_scale),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.ldx * param.p, param.expected_x_overall.data(),
                         x_overall.data(), param.epsilon);
@@ -928,31 +994,31 @@ TYPED_TEST(StatisticsUtilitiesTest, IllegalArgsStatisticsUtilities) {
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    EXPECT_EQ(da_standardize(da_axis_all, n, p, x.data(), ldx_illegal, dof, mode,
-                             scale.data(), shift.data()),
+    EXPECT_EQ(da_standardize(column_major, da_axis_all, n, p, x.data(), ldx_illegal, dof,
+                             mode, scale.data(), shift.data()),
               da_status_invalid_leading_dimension);
 
     // Test with illegal p
     da_int p_illegal = 0;
-    EXPECT_EQ(da_standardize(da_axis_all, n, p_illegal, x.data(), ldx, dof, mode,
-                             scale.data(), shift.data()),
+    EXPECT_EQ(da_standardize(column_major, da_axis_all, n, p_illegal, x.data(), ldx, dof,
+                             mode, scale.data(), shift.data()),
               da_status_invalid_array_dimension);
 
     // Test with illegal n
     da_int n_illegal = 0;
-    EXPECT_EQ(da_standardize(da_axis_all, n_illegal, p, x.data(), ldx, dof, mode,
-                             scale.data(), shift.data()),
+    EXPECT_EQ(da_standardize(column_major, da_axis_all, n_illegal, p, x.data(), ldx, dof,
+                             mode, scale.data(), shift.data()),
               da_status_invalid_array_dimension);
 
     // Test with illegal mode
     da_int mode_illegal = -12;
-    EXPECT_EQ(da_standardize(da_axis_all, n, p, x.data(), ldx, dof, mode_illegal,
-                             scale.data(), shift.data()),
+    EXPECT_EQ(da_standardize(column_major, da_axis_all, n, p, x.data(), ldx, dof,
+                             mode_illegal, scale.data(), shift.data()),
               da_status_invalid_input);
 
     // Test illegal pointers
     TypeParam *x_null = nullptr;
-    EXPECT_EQ(da_standardize(da_axis_all, n, p, x_null, ldx, dof, mode, scale.data(),
-                             shift.data()),
+    EXPECT_EQ(da_standardize(column_major, da_axis_all, n, p, x_null, ldx, dof, mode,
+                             scale.data(), shift.data()),
               da_status_invalid_pointer);
 }

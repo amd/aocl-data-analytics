@@ -67,7 +67,7 @@ da_status da_linmod_select_model_s(da_handle handle, linmod_model mod) {
 }
 
 da_status da_linmod_define_features_d(da_handle handle, da_int nsamples, da_int nfeat,
-                                      double *A, double *b) {
+                                      const double *A, const double *b) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -86,7 +86,7 @@ da_status da_linmod_define_features_d(da_handle handle, da_int nsamples, da_int 
 }
 
 da_status da_linmod_define_features_s(da_handle handle, da_int nsamples, da_int nfeat,
-                                      float *A, float *b) {
+                                      const float *A, const float *b) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -104,7 +104,7 @@ da_status da_linmod_define_features_s(da_handle handle, da_int nsamples, da_int 
     return linreg_s->define_features(nfeat, nsamples, A, b);
 }
 
-da_status da_linmod_fit_start_d(da_handle handle, da_int ncoefs, double *coefs) {
+da_status da_linmod_fit_start_d(da_handle handle, da_int ncoefs, const double *coefs) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -127,7 +127,7 @@ da_status da_linmod_fit_d(da_handle handle) {
     return da_linmod_fit_start_d(handle, 0, nullptr);
 }
 
-da_status da_linmod_fit_start_s(da_handle handle, da_int ncoefs, float *coefs) {
+da_status da_linmod_fit_start_s(da_handle handle, da_int ncoefs, const float *coefs) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -150,8 +150,8 @@ da_status da_linmod_fit_s(da_handle handle) {
 }
 
 da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int nfeat,
-                                     double *X, double *predictions, double *observations,
-                                     double *loss) {
+                                     const double *X, double *predictions,
+                                     double *observations, double *loss) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
@@ -178,8 +178,8 @@ da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int n
 }
 
 da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int nfeat,
-                                     float *X, float *predictions, float *observations,
-                                     float *loss) {
+                                     const float *X, float *predictions,
+                                     float *observations, float *loss) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs

@@ -24,6 +24,7 @@
 #ifndef PCA_OPTIONS_HPP
 #define PCA_OPTIONS_HPP
 
+#include "aoclda_types.h"
 #include "da_error.hpp"
 #include "options.hpp"
 #include "pca_types.hpp"
@@ -74,6 +75,11 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts,
                           {"gesdd", solver_gesdd},
                           {"syevd", solver_syevd}},
                          "auto"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "storage order",
+            "Whether data is supplied and returned in row- or column-major order.",
+            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {

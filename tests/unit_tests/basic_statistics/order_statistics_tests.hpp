@@ -46,6 +46,7 @@ template <typename T> struct OrderParamType {
     da_int p;
     da_int ldx;
     T q;
+    da_order order = column_major;
     std::vector<T> x;
     std::vector<T> expected_row_quantiles;
     std::vector<T> expected_column_quantiles;
@@ -459,6 +460,75 @@ template <typename T> void GetSubarrayData(std::vector<OrderParamType<T>> &param
     params.push_back(param);
 }
 
+template <typename T> void GetRowMajorData(std::vector<OrderParamType<T>> &params) {
+    // Test with row-major data matrix
+    OrderParamType<T> param;
+    param.n = 9;
+    param.p = 8;
+    param.ldx = param.p;
+    param.q = (T)0.7;
+    param.quantile_type = da_quantile_type_2;
+    std::vector<double> x{
+        4.7,  2.6,  7.4,  9.5,   4.6,  5.1,  8,    2,    -4.7, 1.6,  8.4,  3.5,
+        -2.6, 5.0,  8.0,  0.0,   0.0,  -2.6, 5.4,  9.9,  2.6,  5.2,  -1.8, 1.2,
+        1.6,  9.4,  7.6,  -10.5, 1.6,  4.1,  8,    -2.1, -4.7, -2.6, -7.4, 9.1,
+        4.2,  5.3,  7.2,  2.1,   1.7,  2.1,  -7.4, -9.1, 4.1,  3.1,  0.8,  1.2,
+        -4.7, 2.6,  -7.4, 6.5,   -4.3, 5.0,  8.1,  -2.0, 4.1,  2.8,  -7.4, 3.5,
+        4.6,  -5.9, 8.2,  -2,    4.1,  2.8,  -7.4, 3.5,  -4.1, -5.9, 8.3,  -2};
+    param.x = convert_vector<double, T>(x);
+    param.order = row_major;
+    std::vector<double> expected_column_quantiles{4.1, 2.8, 7.4, 9.1, 4.2, 5.1, 8.1, 1.2};
+    param.expected_column_quantiles =
+        convert_vector<double, T>(expected_column_quantiles);
+    std::vector<double> expected_column_medians{1.6, 2.6, -7.4, 3.5, 2.6, 5., 8., 0.};
+    param.expected_column_medians = convert_vector<double, T>(expected_column_medians);
+    std::vector<double> expected_column_maxima{4.7, 9.4, 8.4, 9.9, 4.6, 5.3, 8.3, 2.1};
+    param.expected_column_maxima = convert_vector<double, T>(expected_column_maxima);
+    std::vector<double> expected_column_minima{-4.7, -2.6, -7.4, -10.5,
+                                               -4.3, -5.9, -1.8, -2.1};
+    param.expected_column_minima = convert_vector<double, T>(expected_column_minima);
+    std::vector<double> expected_column_upper_hinges{4.1, 2.8,  7.5,  9.3,
+                                                     4.4, 5.15, 8.15, 1.6};
+    param.expected_column_upper_hinges =
+        convert_vector<double, T>(expected_column_upper_hinges);
+    std::vector<double> expected_column_lower_hinges{-4.7,  -0.5, -7.4, -2.8,
+                                                     -3.35, -1.4, 4.,   -2.};
+    param.expected_column_lower_hinges =
+        convert_vector<double, T>(expected_column_lower_hinges);
+
+    std::vector<double> expected_row_quantiles{7.4, 5., 5.2, 7.6, 5.3, 2.1, 5., 4.1, 3.5};
+    param.expected_row_quantiles = convert_vector<double, T>(expected_row_quantiles);
+    std::vector<double> expected_row_medians{4.9,  2.55, 1.9,  2.85, 3.15,
+                                             1.45, 0.3,  3.15, 0.4};
+    param.expected_row_medians = convert_vector<double, T>(expected_row_medians);
+    std::vector<double> expected_row_maxima{9.5, 8.4, 9.9, 9.4, 9.1, 4.1, 8.1, 8.2, 8.3};
+    param.expected_row_maxima = convert_vector<double, T>(expected_row_maxima);
+    std::vector<double> expected_row_minima{2.,   -4.7, -2.6, -10.5, -7.4,
+                                            -9.1, -7.4, -7.4, -7.4};
+    param.expected_row_minima = convert_vector<double, T>(expected_row_minima);
+    std::vector<double> expected_row_upper_hinges{7.85, 7.25,  5.35,  7.9, 6.725,
+                                                  2.85, 6.125, 4.475, 3.95};
+    param.expected_row_upper_hinges =
+        convert_vector<double, T>(expected_row_upper_hinges);
+    std::vector<double> expected_row_lower_hinges{3.1,   -1.95, -1.35,  -1.175, -4.175,
+                                                  -5.35, -4.6,  -4.925, -5.45};
+    param.expected_row_lower_hinges =
+        convert_vector<double, T>(expected_row_lower_hinges);
+
+    param.expected_overall_quantile = (T)4.7;
+    param.expected_overall_maximum = (T)9.9;
+    param.expected_overall_minimum = (T)-10.5;
+    param.expected_overall_median = (T)2.6;
+    param.expected_overall_upper_hinge = (T)5.175;
+    param.expected_overall_lower_hinge = (T)-2.075;
+
+    param.expected_status = da_status_success;
+
+    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+
+    params.push_back(param);
+}
+
 template <typename T> void GetTallThinData1(std::vector<OrderParamType<T>> &params) {
     // Test with tall thin data matrix
     OrderParamType<T> param;
@@ -856,6 +926,7 @@ template <typename T> void GetOrderData(std::vector<OrderParamType<T>> &params) 
     GetSingleRowData(params);
     GetSingleColumnData(params);
     Get1by1Data(params);
+    GetRowMajorData(params);
 }
 
 using FloatTypes = ::testing::Types<float, double>;
@@ -886,23 +957,25 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         std::vector<TypeParam> row_upper_hinges(param.n);
         TypeParam overall_upper_hinge[1];
 
-        EXPECT_EQ(da_quantile(da_axis_col, param.n, param.p, param.x.data(), param.ldx,
-                              param.q, column_quantiles.data(), param.quantile_type),
+        EXPECT_EQ(da_quantile(param.order, da_axis_col, param.n, param.p, param.x.data(),
+                              param.ldx, param.q, column_quantiles.data(),
+                              param.quantile_type),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.p, param.expected_column_quantiles.data(),
                         column_quantiles.data(), param.epsilon);
-        EXPECT_EQ(da_quantile(da_axis_row, param.n, param.p, param.x.data(), param.ldx,
-                              param.q, row_quantiles.data(), param.quantile_type),
+        EXPECT_EQ(da_quantile(param.order, da_axis_row, param.n, param.p, param.x.data(),
+                              param.ldx, param.q, row_quantiles.data(),
+                              param.quantile_type),
                   param.expected_status);
         EXPECT_ARR_NEAR(param.n, param.expected_row_quantiles.data(),
                         row_quantiles.data(), param.epsilon);
-        EXPECT_EQ(da_quantile(da_axis_all, param.n, param.p, param.x.data(), param.ldx,
-                              param.q, overall_quantile, param.quantile_type),
+        EXPECT_EQ(da_quantile(param.order, da_axis_all, param.n, param.p, param.x.data(),
+                              param.ldx, param.q, overall_quantile, param.quantile_type),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_quantile, overall_quantile[0], param.epsilon);
 
-        EXPECT_EQ(da_five_point_summary(da_axis_col, param.n, param.p, param.x.data(),
-                                        param.ldx, column_minima.data(),
+        EXPECT_EQ(da_five_point_summary(param.order, da_axis_col, param.n, param.p,
+                                        param.x.data(), param.ldx, column_minima.data(),
                                         column_lower_hinges.data(), column_medians.data(),
                                         column_upper_hinges.data(), column_maxima.data()),
                   param.expected_status);
@@ -917,8 +990,8 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         EXPECT_ARR_NEAR(param.p, param.expected_column_upper_hinges.data(),
                         column_upper_hinges.data(), param.epsilon);
 
-        EXPECT_EQ(da_five_point_summary(da_axis_row, param.n, param.p, param.x.data(),
-                                        param.ldx, row_minima.data(),
+        EXPECT_EQ(da_five_point_summary(param.order, da_axis_row, param.n, param.p,
+                                        param.x.data(), param.ldx, row_minima.data(),
                                         row_lower_hinges.data(), row_medians.data(),
                                         row_upper_hinges.data(), row_maxima.data()),
                   param.expected_status);
@@ -933,10 +1006,10 @@ TYPED_TEST(OrderStatisticsTest, OrderFunctionality) {
         EXPECT_ARR_NEAR(param.n, param.expected_row_upper_hinges.data(),
                         row_upper_hinges.data(), param.epsilon);
 
-        EXPECT_EQ(da_five_point_summary(da_axis_all, param.n, param.p, param.x.data(),
-                                        param.ldx, overall_minimum, overall_lower_hinge,
-                                        overall_median, overall_upper_hinge,
-                                        overall_maximum),
+        EXPECT_EQ(da_five_point_summary(param.order, da_axis_all, param.n, param.p,
+                                        param.x.data(), param.ldx, overall_minimum,
+                                        overall_lower_hinge, overall_median,
+                                        overall_upper_hinge, overall_maximum),
                   param.expected_status);
         EXPECT_NEAR(param.expected_overall_minimum, overall_minimum[0], param.epsilon);
         EXPECT_NEAR(param.expected_overall_maximum, overall_maximum[0], param.epsilon);
@@ -968,47 +1041,47 @@ TYPED_TEST(OrderStatisticsTest, IllegalArgsOrderStatistics) {
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
-    EXPECT_EQ(da_quantile(da_axis_all, n, p, x.data(), ldx_illegal, q, dummy1.data(),
-                          da_quantile_type_1),
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx_illegal, q,
+                          dummy1.data(), da_quantile_type_1),
               da_status_invalid_leading_dimension);
-    EXPECT_EQ(da_five_point_summary(da_axis_all, n, p, x.data(), ldx_illegal,
-                                    dummy1.data(), dummy2.data(), dummy3.data(),
-                                    dummy4.data(), dummy5.data()),
+    EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n, p, x.data(),
+                                    ldx_illegal, dummy1.data(), dummy2.data(),
+                                    dummy3.data(), dummy4.data(), dummy5.data()),
               da_status_invalid_leading_dimension);
 
     // Test with illegal p
     da_int p_illegal = 0;
-    EXPECT_EQ(da_quantile(da_axis_all, n, p_illegal, x.data(), ldx, q, dummy1.data(),
-                          da_quantile_type_1),
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p_illegal, x.data(), ldx, q,
+                          dummy1.data(), da_quantile_type_1),
               da_status_invalid_array_dimension);
-    EXPECT_EQ(da_five_point_summary(da_axis_all, n, p_illegal, x.data(), ldx,
-                                    dummy1.data(), dummy2.data(), dummy3.data(),
+    EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n, p_illegal, x.data(),
+                                    ldx, dummy1.data(), dummy2.data(), dummy3.data(),
                                     dummy4.data(), dummy5.data()),
               da_status_invalid_array_dimension);
 
     // Test with illegal n
     da_int n_illegal = 0;
-    EXPECT_EQ(da_quantile(da_axis_all, n_illegal, p, x.data(), ldx, q, dummy1.data(),
-                          da_quantile_type_1),
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n_illegal, p, x.data(), ldx, q,
+                          dummy1.data(), da_quantile_type_1),
               da_status_invalid_array_dimension);
-    EXPECT_EQ(da_five_point_summary(da_axis_all, n_illegal, p, x.data(), ldx,
-                                    dummy1.data(), dummy2.data(), dummy3.data(),
+    EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n_illegal, p, x.data(),
+                                    ldx, dummy1.data(), dummy2.data(), dummy3.data(),
                                     dummy4.data(), dummy5.data()),
               da_status_invalid_array_dimension);
 
     // Test illegal q
     TypeParam q_illegal = (TypeParam)-0.1;
-    EXPECT_EQ(da_quantile(da_axis_all, n, p, x.data(), ldx, q_illegal, dummy1.data(),
-                          da_quantile_type_1),
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x.data(), ldx, q_illegal,
+                          dummy1.data(), da_quantile_type_1),
               da_status_invalid_input);
 
     // Test illegal pointers
     TypeParam *x_null = nullptr;
-    EXPECT_EQ(
-        da_quantile(da_axis_all, n, p, x_null, ldx, q, dummy1.data(), da_quantile_type_1),
-        da_status_invalid_pointer);
-    EXPECT_EQ(da_five_point_summary(da_axis_all, n, p, x_null, ldx, dummy1.data(),
-                                    dummy2.data(), dummy3.data(), dummy4.data(),
-                                    dummy5.data()),
+    EXPECT_EQ(da_quantile(column_major, da_axis_all, n, p, x_null, ldx, q, dummy1.data(),
+                          da_quantile_type_1),
+              da_status_invalid_pointer);
+    EXPECT_EQ(da_five_point_summary(column_major, da_axis_all, n, p, x_null, ldx,
+                                    dummy1.data(), dummy2.data(), dummy3.data(),
+                                    dummy4.data(), dummy5.data()),
               da_status_invalid_pointer);
 }

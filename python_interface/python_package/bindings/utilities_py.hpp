@@ -40,57 +40,48 @@
 namespace py = pybind11;
 using namespace pybind11::literals;
 
-/* Helper function to avoid redundancy
- * Determine the size of output array based on the axis
+/* Helper enum to record whether we are using Fortran or C ordering */
+enum numpy_order { f_contiguous = 0, c_contiguous, undetermined };
+
+/*
+ * Determine the size and ordering of a numpy array
  */
 template <typename T>
-void get_size(std::string axis, da_axis &axis_enum, py::array_t<T, py::array::f_style> &X,
-              size_t &size, da_int &m, da_int &n) {
-    if (axis == "col") {
-        axis_enum = da_axis_col;
-    } else if (axis == "row") {
-        axis_enum = da_axis_row;
-    } else if (axis == "all") {
-        axis_enum = da_axis_all;
-    } else {
-        throw std::invalid_argument(
-            "Given axis does not exist. Available choices are: 'col', 'row', 'all'.");
-    }
+void get_size(da_order &order, py::array_t<T> &X, da_int &m, da_int &n, da_int &ldx) {
+
     if (X.ndim() > 2) {
         throw std::length_error(
             "Function does not accept arrays with more than 2 dimensions.");
     }
     // If we are dealing with 1D array the shape attribute is stored as (n_samples, )
-    // so accessing X.shape()[1] is causing errors when 1D array is passed
+    // so accessing X.shape()[1] will cause an error when 1D array is passed
     if (X.ndim() == 1) {
         n = X.shape()[0];
         m = 1;
-        // If user provided 1D array then calculating for example mean over all elements
-        // would mean calculation over that one row of data.
-        if (axis_enum == da_axis_all) {
-            axis_enum = da_axis_row;
-        }
+        order = column_major;
+        ldx = m;
     } else {
         m = X.shape()[0], n = X.shape()[1];
-    }
-    switch (axis_enum) {
-    case (da_axis_all):
-        size = 1;
-        break;
 
-    case (da_axis_col):
-        size = n;
-        break;
-
-    case (da_axis_row):
-        size = m;
-        break;
+        auto X_buffer = X.request();
+        bool X_c_style = (X_buffer.strides[X_buffer.ndim - 1] == sizeof(T));
+        if (X_c_style) {
+            // X is C-style array
+            ldx = n;
+            order = row_major;
+        } else {
+            // X is F-style array
+            ldx = m;
+            order = column_major;
+        }
     }
 }
 
 class pyda_handle {
   protected:
     da_handle handle = nullptr;
+    da_precision precision = da_double;
+    numpy_order order = undetermined;
 
   public:
     void print_error_message() { da_handle_print_error_message(handle); };
@@ -115,6 +106,69 @@ class pyda_handle {
             PyErr_WarnEx(PyExc_RuntimeWarning, std::string(message).c_str(), 1);
 
         free(message);
+    }
+    /* Extract the storage scheme of a numpy array and check if it matches the order stored in the class.
+       If this is the first call to such a routine, then set the order accordingly.
+    */
+    template <typename T>
+    void get_numpy_array_properties(py::array_t<T> &X, da_int &n_rows, da_int &n_cols,
+                                    da_int &ldx) {
+
+        if (X.ndim() == 1) {
+            n_rows = X.shape()[0];
+            n_cols = 1;
+        } else {
+            n_rows = X.shape()[0];
+            n_cols = X.shape()[1];
+        }
+
+        // Special case for single row or column which can be either C or Fortran contiguous
+        if (n_rows == 1 || n_cols == 1) {
+            switch (order) {
+            case f_contiguous:
+                ldx = n_rows;
+                break;
+            case c_contiguous:
+                ldx = n_cols;
+                break;
+            default:
+                // Order hasn't been set yet so warn user and carry on with column major
+                std::string warn_message =
+                    "Cannot determine storage scheme; defaulting to "
+                    "column-major.";
+                PyErr_WarnEx(PyExc_RuntimeWarning, std::string(warn_message).c_str(), 1);
+                ldx = n_rows;
+                order = f_contiguous;
+                break;
+            }
+            return;
+        }
+
+        auto X_buffer = X.request();
+        bool X_c_style = (X_buffer.strides[X_buffer.ndim - 1] == sizeof(T));
+        numpy_order X_order;
+        if (X_c_style) {
+            // X is C-style array
+            ldx = n_cols;
+            X_order = c_contiguous;
+        } else {
+            // X is F-style array
+            ldx = n_rows;
+            X_order = f_contiguous;
+        }
+
+        // Check if we match expected order
+        if (order == undetermined) {
+            // Order hasn't yet been se, so set it
+            order = X_order;
+            return;
+        } else if (order != X_order) {
+            std::string err_message = "Inconsistent use of C and Fortran ordering.";
+            PyErr_SetString(PyExc_RuntimeError, std::string(err_message).c_str());
+            throw py::error_already_set();
+        }
+
+        return;
     }
 };
 

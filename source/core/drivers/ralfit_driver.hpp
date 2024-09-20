@@ -305,10 +305,10 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
 
     std::string storage;
     da_int istorage;
-    status = opts.get("storage scheme", storage, istorage);
+    status = opts.get("storage order", storage, istorage);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<storage scheme>"s + msg);
+                        "<storage order>"s + msg);
     }
     if (istorage == da_optimization_options::storage_scheme::fortran) {
         options.Fortran_Jacobian = true;

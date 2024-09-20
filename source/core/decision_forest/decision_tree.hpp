@@ -149,6 +149,9 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_int n_obs;
     da_int depth = 0;
 
+    //Utility pointer to column major allocated copy of user's data
+    T *X_temp = nullptr;
+
     // Tree structure
     // tree (vector): contains the all the nodes, each node stores the indices of its children
     // class_props (vector): contains the proportions in each class for each node
@@ -207,9 +210,9 @@ template <typename T> class decision_tree : public basic_handle<T> {
         // Assumes that err is valid
         this->err = &err;
         // Initialize the options registry
-        // Any error is stored err->status[.] and this NEEDS to be checked
+        // Any error is stored err->status[.] and this needs to be checked
         // by the caller.
-        register_decision_tree_options<T>(this->opts, err);
+        register_decision_tree_options<T>(this->opts, *this->err);
     }
     // Constructor bypassing the optional parameters for internal forest use
     // Values will NOT be checked
@@ -224,7 +227,11 @@ template <typename T> class decision_tree : public basic_handle<T> {
         this->err = nullptr;
         read_public_options = false;
     }
-
+    ~decision_tree() {
+        // Destructor needs to handle arrays that were allocated due to row major storage of input data
+        if (X_temp)
+            delete[] (X_temp);
+    }
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
                                 da_int ldx, const da_int *y, da_int n_class = 0,
                                 da_int n_obs = 0, da_int *samples_subset = nullptr);
@@ -238,13 +245,13 @@ template <typename T> class decision_tree : public basic_handle<T> {
                          split<T> &sp);
     da_status fit();
     da_status predict(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
-                      da_int *y_pred);
+                      da_int *y_pred, da_int mode = 0);
     da_status predict_proba(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
-                            T *y_pred, da_int n_class, da_int ldy);
+                            T *y_pred, da_int n_class, da_int ldy, da_int mode = 0);
     da_status predict_log_proba(da_int nsamp, da_int n_features, const T *X_test,
                                 da_int ldx, T *y_pred, da_int n_class, da_int ldy);
     da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx,
-                    da_int *y_test, T *accuracy);
+                    const da_int *y_test, T *accuracy);
     void clear_working_memory();
 
     void refresh() {
@@ -326,24 +333,22 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
                                               const T *X, da_int ldx, const da_int *y,
                                               da_int n_class, da_int n_obs,
                                               da_int *samples_subset) {
-    if (X == nullptr || y == nullptr)
+    if (y == nullptr)
         return da_error_bypass(this->err, da_status_invalid_input,
-                               "Either X, or y are not valid pointers.");
-    if (n_samples <= 0 || n_features <= 0) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "n_samples = " + std::to_string(n_samples) +
-                ", n_features = " + std::to_string(n_features) +
-                ", the values of n_samples and n_features need to be greater than 0");
+                               "y is not a valid pointer.");
+
+    // Guard against errors due to multiple calls using the same class instantiation
+    if (X_temp) {
+        delete[] (X_temp);
+        X_temp = nullptr;
     }
-    if (ldx < n_samples) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "n_samples = " + std::to_string(n_samples) +
-                ", ldx = " + std::to_string(ldx) +
-                ", the value of ldx needs to be at least as big as the value "
-                "of n_samples");
-    }
+
+    da_status status =
+        this->store_2D_array(n_samples, n_features, X, ldx, &X_temp, &this->X, this->ldx,
+                             "n_samples", "n_features", "X", "ldx");
+    if (status != da_status_success)
+        return status;
+
     if (n_obs > n_samples || n_obs < 0) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "n_obs = " + std::to_string(n_obs) +
@@ -352,12 +357,10 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
     }
 
     this->refresh();
-    this->X = X;
     this->y = y;
     this->n_samples = n_samples;
     this->n_features = n_features;
     this->n_class = n_class;
-    this->ldx = ldx;
     if (n_class <= 0)
         this->n_class = *std::max_element(y, y + n_samples) + 1;
     this->n_obs = n_obs;
@@ -728,28 +731,21 @@ template <typename T> da_status decision_tree<T>::fit() {
 
 template <typename T>
 da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
-                                    da_int ldx_test, da_int *y_pred) {
-    if (X_test == nullptr || y_pred == nullptr) {
+                                    da_int ldx_test, da_int *y_pred, da_int mode) {
+    if (y_pred == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_input,
-                               "Either X_test, or y_pred are not valid pointers.");
+                               "y_pred is not a valid pointer.");
     }
-    if (nsamp <= 0) {
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "n_samples = " + std::to_string(nsamp) +
-                                   ", it must be greater than 0.");
-    }
+
+    const T *X_test_temp;
+    T *utility_ptr1 = nullptr;
+    da_int ldx_test_temp;
+
     if (nfeat != n_features) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "n_features = " + std::to_string(nfeat) +
                                    " doesn't match the expected value " +
                                    std::to_string(n_features) + ".");
-    }
-    if (ldx_test < nsamp) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "nsamp = " + std::to_string(nsamp) + ", ldx = " + std::to_string(ldx_test) +
-                ", the value of ldx needs to be at least as big as the value "
-                "of nsamp");
     }
 
     if (!model_trained) {
@@ -758,12 +754,18 @@ da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                                "associated with is out of date.");
     }
 
+    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
+                                            &X_test_temp, ldx_test_temp, "n_samples",
+                                            "n_features", "X_test", "ldx_test", mode);
+    if (status != da_status_success)
+        return status;
+
     // Fill y_pred with the values of all the requested samples
     node<T> *current_node;
     for (da_int i = 0; i < nsamp; i++) {
         current_node = &tree[0];
         while (!current_node->is_leaf) {
-            T feat_val = X_test[ldx_test * current_node->feature + i];
+            T feat_val = X_test_temp[ldx_test_temp * current_node->feature + i];
             if (feat_val < current_node->x_threshold)
                 current_node = &tree[current_node->left_child_idx];
             else
@@ -771,53 +773,40 @@ da_status decision_tree<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
         }
         y_pred[i] = current_node->y_pred;
     }
-
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
     return da_status_success;
 }
 
 template <typename T>
 da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X_test,
                                           da_int ldx_test, T *y_proba_pred, da_int nclass,
-                                          da_int ldy) {
+                                          da_int ldy, da_int mode) {
+
+    const T *X_test_temp;
+    T *utility_ptr1;
+    T *utility_ptr2;
+    da_int ldx_test_temp;
+    T *y_proba_pred_temp;
+    da_int ldy_proba_pred_temp;
+
     if (!predict_proba_opt) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "predict_proba must be set to 1");
     }
 
-    if (X_test == nullptr || y_proba_pred == nullptr) {
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "Either X_test, or y_proba_pred are not valid pointers.");
-    }
-    if (nsamp <= 0) {
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "n_samples = " + std::to_string(nsamp) +
-                                   ", it must be greater than 0.");
-    }
     if (nfeat != n_features) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "n_features = " + std::to_string(nfeat) +
                                    " doesn't match the expected value " +
                                    std::to_string(n_features) + ".");
     }
-    if (ldx_test < nsamp) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "nsamp = " + std::to_string(nsamp) + ", ldx = " + std::to_string(ldx_test) +
-                ", the value of ldx needs to be at least as big as the value "
-                "of nsamp");
-    }
+
     if (nclass != n_class) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "n_features = " + std::to_string(nclass) +
                                    " doesn't match the expected value " +
                                    std::to_string(nclass) + ".");
-    }
-    if (ldy < nsamp) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "nsamp = " + std::to_string(nsamp) + ", ldx = " + std::to_string(ldy) +
-                ", the value of ldy needs to be at least as big as the value "
-                "of nsamp");
     }
 
     if (!model_trained) {
@@ -826,13 +815,27 @@ da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
                                "associated with is out of date.");
     }
 
+    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
+                                            &X_test_temp, ldx_test_temp, "n_samples",
+                                            "n_features", "X_test", "ldx_test", mode);
+    if (status != da_status_success)
+        return status;
+
+    da_int mode_output = (mode == 0) ? 1 : mode;
+    status = this->store_2D_array(nsamp, nclass, y_proba_pred, ldy, &utility_ptr2,
+                                  const_cast<const T **>(&y_proba_pred_temp),
+                                  ldy_proba_pred_temp, "n_samples", "n_class", "y_proba",
+                                  "ldy", mode_output);
+    if (status != da_status_success)
+        return status;
+
     // Fill y_proba_pred with the values of all the requested samples
     node<T> *current_node;
     for (da_int i = 0; i < nsamp; i++) {
         current_node = &tree[0];
         da_int current_node_idx = 0;
         while (!current_node->is_leaf) {
-            T feat_val = X_test[ldx_test * current_node->feature + i];
+            T feat_val = X_test_temp[ldx_test_temp * current_node->feature + i];
             if (feat_val < current_node->x_threshold) {
                 current_node_idx = current_node->left_child_idx;
                 current_node = &tree[current_node_idx];
@@ -842,9 +845,19 @@ da_status decision_tree<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
             }
         }
         for (da_int j = 0; j < n_class; j++)
-            y_proba_pred[ldy * j + i] = class_props[n_class * current_node_idx + j];
+            y_proba_pred_temp[ldy_proba_pred_temp * j + i] =
+                class_props[n_class * current_node_idx + j];
     }
 
+    if (this->order == row_major) {
+
+        da_utils::copy_transpose_2D_array_col_to_row_major(
+            nsamp, n_class, y_proba_pred_temp, ldy_proba_pred_temp, y_proba_pred, ldy);
+        if (utility_ptr1)
+            delete[] (utility_ptr1);
+        if (utility_ptr2)
+            delete[] (utility_ptr2);
+    }
     return da_status_success;
 }
 
@@ -858,9 +871,17 @@ da_status decision_tree<T>::predict_log_proba(da_int nsamp, da_int nfeat, const 
     if (status != da_status_success)
         return status;
 
-    for (da_int j = 0; j < nsamp; j++) {
-        for (da_int i = 0; i < nclass; i++) {
-            y_log_proba[ldy * j + i] = log(y_log_proba[ldy * j + i]);
+    if (this->order == column_major) {
+        for (da_int j = 0; j < nclass; j++) {
+            for (da_int i = 0; i < nsamp; i++) {
+                y_log_proba[ldy * j + i] = log(y_log_proba[ldy * j + i]);
+            }
+        }
+    } else {
+        for (da_int j = 0; j < nsamp; j++) {
+            for (da_int i = 0; i < nclass; i++) {
+                y_log_proba[j * ldy + i] = log(y_log_proba[j * ldy + i]);
+            }
         }
     }
     return status;
@@ -868,42 +889,42 @@ da_status decision_tree<T>::predict_log_proba(da_int nsamp, da_int nfeat, const 
 
 template <typename T>
 da_status decision_tree<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
-                                  da_int ldx_test, da_int *y_test, T *accuracy) {
-    if (X_test == nullptr || y_test == nullptr || accuracy == nullptr) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "Either X_test, y_test or accuracy are not valid pointers.");
-    }
-    if (nsamp <= 0) {
+                                  da_int ldx_test, const da_int *y_test, T *accuracy) {
+
+    const T *X_test_temp;
+    T *utility_ptr1 = nullptr;
+    da_int ldx_test_temp;
+
+    if (y_test == nullptr || accuracy == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_input,
-                               "nsamp = " + std::to_string(nsamp) +
-                                   ", it must be greater than 0.");
+                               "Either y_test or mean_accuracy are not valid pointers.");
     }
+
     if (nfeat != n_features) {
         return da_error_bypass(this->err, da_status_invalid_input,
                                "nfeat = " + std::to_string(nfeat) +
                                    " doesn't match the expected value " +
                                    std::to_string(n_features) + ".");
     }
-    if (ldx_test < nsamp) {
-        return da_error_bypass(
-            this->err, da_status_invalid_input,
-            "nsamp = " + std::to_string(nsamp) + ", ldx = " + std::to_string(ldx_test) +
-                ", the value of ldx needs to be at least as big as the value "
-                "of nsamp");
-    }
+
     if (!model_trained) {
         return da_error_bypass(this->err, da_status_out_of_date,
                                "The model has not yet been trained or the data it is "
                                "associated with is out of date.");
     }
 
+    da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
+                                            &X_test_temp, ldx_test_temp, "n_samples",
+                                            "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
+
     node<T> *current_node;
     *accuracy = 0.;
     for (da_int i = 0; i < nsamp; i++) {
         current_node = &tree[0];
         while (!current_node->is_leaf) {
-            T feat_val = X_test[ldx_test * current_node->feature + i];
+            T feat_val = X_test_temp[ldx_test_temp * current_node->feature + i];
             if (feat_val < current_node->x_threshold)
                 current_node = &tree[current_node->left_child_idx];
             else
@@ -913,6 +934,8 @@ da_status decision_tree<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
             *accuracy += (T)1.0;
     }
     *accuracy = *accuracy / (T)nsamp;
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
 
     return da_status_success;
 }
@@ -924,6 +947,10 @@ template <typename T> void decision_tree<T>::clear_working_memory() {
     count_left_classes = std::vector<da_int>();
     count_right_classes = std::vector<da_int>();
     features_idx = std::vector<da_int>();
+    if (X_temp) {
+        delete[] (X_temp);
+        X = nullptr;
+    }
 }
 
 } // namespace da_decision_tree

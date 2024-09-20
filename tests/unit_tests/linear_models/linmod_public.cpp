@@ -122,21 +122,21 @@ TEST(linmod, invalidInput) {
 
     // define features
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, 0, Ad, bd),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, 0, n, Ad, bd),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, nullptr, bd),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, nullptr),
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
 
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, 0, As, bs),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, 0, n, As, bs),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, nullptr, bs),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, nullptr),
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, bs), da_status_success);
@@ -167,20 +167,21 @@ TEST(linmod, invalidInput) {
     double pred[1];
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, 3, X, pred), da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, nullptr, pred),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, X, nullptr),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 0, n, X, pred), da_status_invalid_input);
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 0, n, X, pred),
+              da_status_invalid_array_dimension);
     float Xs[2] = {1., 2.};
     float preds[1];
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, 3, Xs, preds),
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, nullptr, preds),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, Xs, nullptr),
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 0, n, Xs, preds),
-              da_status_invalid_input);
+              da_status_invalid_array_dimension);
 
     da_handle_destroy(&handle_d);
     da_handle_destroy(&handle_s);
@@ -624,6 +625,39 @@ void test_linmod_warmstart(const warmstart_params pr) {
     da_handle_destroy(&handle_d);
 }
 
+TEST(linmod, RowMajor) { // Problem data
+    da_int m = 6, n = 2;
+    double Al[12] = {1, 2, 3, 4, 5, 6, 1, 3, 5, 8, 7, 9};
+    double bl[6] = {3., 6.5, 10., 12., 13., 19.};
+    da_int nx = 2;
+    double x[2];
+
+    // Initialize the linear regression
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(handle, linmod_model_mse), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle, m, n, Al, bl), da_status_success);
+    // Compute regression
+    EXPECT_EQ(da_linmod_fit_d(handle), da_status_success);
+    EXPECT_EQ(da_handle_get_result_d(handle, da_linmod_coef, &nx, x), da_status_success);
+    da_handle_destroy(&handle);
+
+    // Now repeat in row-major
+    double Al_row[12] = {1, 1, 2, 3, 3, 5, 4, 8, 5, 7, 6, 9};
+    double x_row[2];
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "storage order", "row-major"), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(handle, linmod_model_mse), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle, m, n, Al_row, bl), da_status_success);
+    // Compute regression
+    EXPECT_EQ(da_linmod_fit_d(handle), da_status_success);
+    EXPECT_EQ(da_handle_get_result_d(handle, da_linmod_coef, &nx, x_row),
+              da_status_success);
+
+    EXPECT_ARR_NEAR(2, x, x_row, 10 * std::numeric_limits<double>::epsilon());
+
+    da_handle_destroy(&handle);
+}
 // Teach GTest how to print the param type
 // in this case use only user's unique testname
 // It is used to when testing::PrintToString(GetParam()) to generate test name for ctest

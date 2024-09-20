@@ -29,6 +29,7 @@
 #include <list>
 #include <string.h>
 
+#include "../datests_cblas.hh"
 #include "../utest_utils.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -65,6 +66,7 @@ template <typename T> struct PCAParamType {
     da_int ldx = 0;
     std::vector<T> expected_X_transform;
     da_int ldx_transform = 0;
+    std::string order = "column-major";
 
     da_int k = 0;
     std::vector<T> Xinv;
@@ -1795,6 +1797,113 @@ template <typename T> void GetBiasedData2(std::vector<PCAParamType<T>> &params) 
     params.push_back(param);
 }
 
+template <typename T> void GetRowMajorData(std::vector<PCAParamType<T>> &params) {
+    // Test with a tall thin data matrix
+    PCAParamType<T> param;
+    param.test_name = "Tall thin data matrix in row major order";
+    param.n = 8;
+    param.p = 5;
+    std::vector<double> A{1.0,  3.0, 0.0, -7.0, 1.0,  2.0, 2.0,  5.5, 1.0, 2.0,
+                          3.0,  0.2, 0.1, 0.8,  6.0,  4.0, 1.0,  0.9, 3.1, 0.0,
+                          -7.8, 9.8, 0.7, 4.0,  4.1,  1.1, 3.0,  2.1, 6.2, 0.6,
+                          2.0,  2.0, 5.5, 1.0,  -2.0, 3.0, -0.2, 0.1, 0.8, 6.0};
+    datest_blas::imatcopy('T', param.n, param.p, 1.0, A.data(), param.n, param.p);
+    param.A = convert_vector<double, T>(A);
+    param.lda = 5;
+    param.components_required = 3;
+    param.method = "correlation";
+    param.order = "row-major";
+    param.svd_solver = "gesvdx";
+    std::vector<double> expected_scores{
+        0.6267979871027662,   -0.5840661299986506, -0.029499040897586454,
+        1.170456209881111,    2.7265278206031027,  -1.4135093389270788,
+        -0.9926217969782473,  -1.504085710785417,  -0.4195179292574332,
+        0.0435634967928295,   0.31139177600800805, 1.7483581905660086,
+        -0.9310388558598546,  1.3826222180401109,  -0.9145007073597778,
+        -1.2208781889298912,  1.396660839144611,   -0.28269291608599634,
+        -1.3489020461078889,  0.8035118542854264,  -0.5671754542756104,
+        -0.24748367799132698, -0.8877960299693047, 1.133877431000091};
+    datest_blas::imatcopy('T', param.n, param.components_required, 1.0,
+                          expected_scores.data(), param.n, param.components_required);
+
+    param.expected_scores = convert_vector<double, T>(expected_scores);
+    std::vector<double> expected_u{
+        0.16301441689926877,  -0.15190093390764553, -0.007671959786015266,
+        0.30440626882328325,  0.7091014202034718,   -0.36761828437252125,
+        -0.2581560036334061,  -0.3911749242264357,  -0.1444301519035428,
+        0.014997886908849872, 0.10720486151797456,  0.601918586631605,
+        -0.3205347709881148,  0.4760042969562981,   -0.3148410755975569,
+        -0.42031963352551305, 0.5296868400048295,   -0.10721193951786444,
+        -0.5115742077486266,  0.3047337213689863,   -0.2151025973403451,
+        -0.09385875487730042, -0.3366986891185997,  0.43002562722892085};
+    datest_blas::imatcopy('T', param.n, param.components_required, 1.0, expected_u.data(),
+                          param.n, param.components_required);
+    param.expected_u = convert_vector<double, T>(expected_u);
+    std::vector<double> expected_components{
+        -0.36868737869699797, -0.6316232406874217, -0.06683479410503197,
+        -0.43113246622806944, -0.4801687992018557, -0.28425022864703875,
+        -0.5779618011659566,  0.3844037107350251,  0.08444048886635638,
+        0.5784712910192207,   -0.4144512975032958, -0.009353960170916515,
+        -0.09759884842147158, -0.2257297394397662, 0.9526369849424157};
+    datest_blas::imatcopy('T', param.components_required, param.p, 1.0,
+                          expected_components.data(), param.components_required, param.p);
+    param.expected_components = convert_vector<double, T>(expected_components);
+    std::vector<double> expected_vt{
+        -0.36868737869699797, -0.6316232406874217, -0.06683479410503197,
+        -0.43113246622806944, -0.4801687992018557, -0.28425022864703875,
+        -0.5779618011659566,  0.3844037107350251,  0.08444048886635638,
+        0.5784712910192207,   -0.4144512975032958, -0.009353960170916515,
+        -0.09759884842147158, -0.2257297394397662, 0.9526369849424157};
+    datest_blas::imatcopy('T', param.components_required, param.p, 1.0,
+                          expected_vt.data(), param.components_required, param.p);
+    param.expected_vt = convert_vector<double, T>(expected_vt);
+    std::vector<double> expected_variance{2.1120544797846836, 1.205278130973026,
+                                          0.9932201143631529};
+    param.expected_variance = convert_vector<double, T>(expected_variance);
+    std::vector<double> expected_sigma{3.8450463402269657, 2.9046423044518215,
+                                       2.6367671115481683};
+    param.expected_sigma = convert_vector<double, T>(expected_sigma);
+    param.expected_total_variance = (T)5.0;
+    param.expected_n_components = 3;
+    std::vector<double> expected_rinfo{8.0, 5.0, 3.0};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> X{0.1, 1.2, 3.1, 0.6, 5.1, -0.4, 0.1, -0.9, 12.3, 1.1};
+    param.m = 2;
+    datest_blas::imatcopy('T', param.m, param.p, 1.0, X.data(), param.m, param.p);
+    param.X = convert_vector<double, T>(X);
+    param.ldx = 5;
+
+    param.ldx_transform = 3;
+    std::vector<double> expected_X_transform{
+        -1.7253499234437553, -0.6034681631460469, -0.046898565475484856,
+        1.0339127620777953,  3.5129486393005163,  -0.035833080502485085};
+    datest_blas::imatcopy('T', param.m, param.components_required, 1.0,
+                          expected_X_transform.data(), param.m,
+                          param.components_required);
+
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    std::vector<double> Xinv{1.1, 1.5, 4.1, 3.6, 5.2, -1.4};
+    param.k = 2;
+    datest_blas::imatcopy('T', param.k, param.components_required, 1.0, Xinv.data(),
+                          param.k, param.components_required);
+
+    param.ldxinv_transform = 5;
+    param.ldxinv = 3;
+    param.Xinv = convert_vector<double, T>(Xinv);
+    std::vector<double> expected_Xinv_transform{
+        -11.12944237741829, -8.929412948858758, -5.998571520336921, -1.965471274648701,
+        8.213628377799804,  3.4138252479100837, 0.64114064861087,   1.5397586079913463,
+        12.838600918423584, -4.694421617930349};
+    datest_blas::imatcopy('T', param.k, param.p, 1.0, expected_Xinv_transform.data(),
+                          param.k, param.p);
+    param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
 template <typename T> void GetPCAData(std::vector<PCAParamType<T>> &params) {
 
     Get1by1Data(params);
@@ -1810,6 +1919,7 @@ template <typename T> void GetPCAData(std::vector<PCAParamType<T>> &params) {
     GetTallThinData2(params);
     GetTallThinData3(params);
     GetTallThinData4(params);
+    GetRowMajorData(params);
     GetShortFatData(params);
     GetSubarrayData1(params);
     GetSubarrayData2(params);

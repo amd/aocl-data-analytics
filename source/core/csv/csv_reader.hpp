@@ -50,7 +50,7 @@ class csv_reader {
     da_int first_row_header;
     csv_datatype datatype;
 
-    da_ordering order;
+    da_order order;
 
     da_errors::da_error_t *err = nullptr;
 
@@ -70,31 +70,31 @@ class csv_reader {
         da_int iopt;
         std::string sopt;
 
-        opts->get("CSV delimiter", sopt);
+        opts->get("delimiter", sopt);
         parser->delimiter = sopt[0];
 
-        opts->get("CSV thousands", sopt);
+        opts->get("thousands", sopt);
         parser->thousands = sopt[0];
 
-        opts->get("CSV decimal", sopt);
+        opts->get("decimal", sopt);
         parser->decimal = sopt[0];
 
-        opts->get("CSV comment", sopt);
+        opts->get("comment", sopt);
         parser->commentchar = sopt[0];
 
-        opts->get("CSV quote character", sopt);
+        opts->get("quote character", sopt);
         parser->quotechar = sopt[0];
 
-        opts->get("CSV escape character", sopt);
+        opts->get("escape character", sopt);
         parser->escapechar = sopt[0];
 
-        opts->get("CSV line terminator", sopt);
+        opts->get("line terminator", sopt);
         parser->lineterminator = sopt[0];
 
-        opts->get("CSV scientific notation character", sopt);
+        opts->get("scientific notation character", sopt);
         parser->sci = sopt[0];
 
-        opts->get("CSV skip rows", sopt);
+        opts->get("skip rows", sopt);
         if (parser->skipset != NULL) {
             kh_destroy_int64((kh_int64_t *)parser->skipset);
             parser->skipset = NULL;
@@ -124,42 +124,42 @@ class csv_reader {
             }
         }
 
-        opts->get("CSV data storage", sopt, iopt);
-        order = static_cast<da_ordering>(iopt);
+        opts->get("storage order", sopt, iopt);
+        order = static_cast<da_order>(iopt);
 
-        opts->get("CSV double quote", iopt);
+        opts->get("double quote", iopt);
         parser->doublequote = (int)iopt;
 
-        opts->get("CSV whitespace delimiter", iopt);
+        opts->get("whitespace delimiter", iopt);
         parser->delim_whitespace = (int)iopt;
 
-        opts->get("CSV row start", iopt);
+        opts->get("row start", iopt);
         parser_set_skipfirstnrows(parser, (int64_t)iopt);
 
-        opts->get("CSV skip empty lines", iopt);
+        opts->get("skip empty lines", iopt);
         parser->skip_empty_lines = (int)iopt;
 
-        opts->get("CSV skip initial space", iopt);
+        opts->get("skip initial space", iopt);
         parser->skipinitialspace = (int)iopt;
 
-        opts->get("CSV skip footer", iopt);
+        opts->get("skip footer", iopt);
         parser->skip_footer = (int)iopt;
 
-        opts->get("CSV warn for missing data", iopt);
+        opts->get("warn for missing data", iopt);
         parser->warn_for_missing_data = (int)iopt;
 
         // Additional options only used for reading CSV files into datastore
 
-        opts->get("CSV datatype", sopt, iopt);
+        opts->get("datatype", sopt, iopt);
         datatype = static_cast<csv_datatype>(iopt);
 
-        opts->get("CSV datastore precision", sopt, iopt);
+        opts->get("datastore precision", sopt, iopt);
         precision = iopt;
 
-        opts->get("CSV integers as floats", iopt);
+        opts->get("integers as floats", iopt);
         integers_as_fp = iopt;
 
-        opts->get("CSV use header row", iopt);
+        opts->get("use header row", iopt);
         first_row_header = iopt;
 
         return da_status_success;

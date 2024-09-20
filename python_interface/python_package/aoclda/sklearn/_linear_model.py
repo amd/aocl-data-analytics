@@ -204,11 +204,20 @@ class Ridge(Ridge_sklearn):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
         # If data matrix is in single precision switch internally
+
         if X.dtype == "float32":
             self.precision = "single"
             self.lmod = self.lmod_single
             self.lmod_double = None
-        self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=0.0, tol=self.tol)
+            reg_lambda_t = np.float32(self.alpha)
+            reg_alpha_t = np.float32(0.0)
+            tol_t = np.float32(self.tol)
+        else:
+            reg_lambda_t = np.float64(self.alpha)
+            reg_alpha_t = np.float64(0.0)
+            tol_t = np.float64(self.tol)
+
+        self.lmod.fit(X, y, reg_lambda=reg_lambda_t, reg_alpha=reg_alpha_t, tol=tol_t)
         return self
 
     def predict(self, X) -> np.ndarray:
@@ -338,7 +347,14 @@ class Lasso(Lasso_sklearn):
             self.precision = "single"
             self.lmod = self.lmod_single
             self.lmod_double = None
-        self.lmod.fit(X, y, reg_lambda=self.alpha, reg_alpha=1.0, tol=self.tol)
+            reg_lambda_t = np.float32(self.alpha)
+            reg_alpha_t = np.float32(1.0)
+            tol_t = np.float32(self.tol)
+        else:
+            reg_lambda_t = np.float64(self.alpha)
+            reg_alpha_t = np.float64(1.0)
+            tol_t = np.float64(self.tol)
+        self.lmod.fit(X, y, reg_lambda=reg_lambda_t, reg_alpha=reg_alpha_t, tol=tol_t)
         return self
 
     def predict(self, X) -> np.ndarray:
@@ -480,11 +496,19 @@ class ElasticNet(ElasticNet_sklearn):
             self.precision = "single"
             self.lmod = self.lmod_single
             self.lmod_double = None
+            reg_lambda_t = np.float32(self.alpha)
+            reg_alpha_t = np.float32(self.l1_ratio)
+            tol_t = np.float32(self.tol)
+        else:
+            reg_lambda_t = np.float64(self.alpha)
+            reg_alpha_t = np.float64(self.l1_ratio)
+            tol_t = np.float64(self.tol)
+
         self.lmod.fit(X,
                       y,
-                      reg_lambda=self.alpha,
-                      reg_alpha=self.l1_ratio,
-                      tol=self.tol)
+                      reg_lambda=reg_lambda_t,
+                      reg_alpha=reg_alpha_t,
+                      tol=tol_t)
         return self
 
     def predict(self, X) -> np.ndarray:
@@ -686,12 +710,21 @@ class LogisticRegression(LogisticRegression_sklearn):
             self.precision = "single"
             self.lmod = self.lmod_single
             self.lmod_double = None
+            reg_lambda_t = np.float32(self.reg_lambda)
+            reg_alpha_t = np.float32(self.l1_ratio)
+            tol_t = np.float32(self.tol)
+            progress_factor_t = np.float32(self.progress_factor)
+        else:
+            reg_lambda_t = np.float64(self.reg_lambda)
+            reg_alpha_t = np.float64(self.l1_ratio)
+            tol_t = np.float64(self.tol)
+            progress_factor_t = np.float64(self.progress_factor)
         self.lmod.fit(X,
                       y,
-                      reg_lambda=self.reg_lambda,
-                      reg_alpha=self.l1_ratio,
-                      tol=self.tol,
-                      progress_factor=self.progress_factor)
+                      reg_lambda=reg_lambda_t,
+                      reg_alpha=reg_alpha_t,
+                      tol=tol_t,
+                      progress_factor=progress_factor_t)
         return self
 
     def predict(self, X) -> np.ndarray:

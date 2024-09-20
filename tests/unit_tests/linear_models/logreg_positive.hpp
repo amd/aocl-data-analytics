@@ -94,11 +94,11 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         std::string(DATA_DIR) + "/linmod_data/logistic/" + csvname + "_data.csv";
     da_datastore csv_store = nullptr;
     EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
-    EXPECT_EQ(da_datastore_options_set_string(csv_store, "CSV datastore precision",
-                                              prec_name<T>()),
-              da_status_success);
     EXPECT_EQ(
-        da_datastore_options_set_string(csv_store, "CSV datatype", prec_name_float<T>()),
+        da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
+        da_status_success);
+    EXPECT_EQ(
+        da_datastore_options_set_string(csv_store, "datatype", prec_name_float<T>()),
         da_status_success);
     EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
               da_status_success);
@@ -118,9 +118,9 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     T *A = nullptr, *b = nullptr;
     A = new T[(ncols - 1) * nrows];
     b = new T[nrows];
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", A, nrows),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", column_major, A, nrows),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", b, nrows),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", column_major, b, nrows),
               da_status_success);
 
     ///////////////////
@@ -170,12 +170,12 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         std::fclose(file);
         da_datastore test_store = nullptr;
         EXPECT_EQ(da_datastore_init(&test_store), da_status_success);
-        EXPECT_EQ(da_datastore_options_set_string(test_store, "CSV datastore precision",
+        EXPECT_EQ(da_datastore_options_set_string(test_store, "datastore precision",
                                                   prec_name<T>()),
                   da_status_success);
-        EXPECT_EQ(da_datastore_options_set_string(test_store, "CSV datatype",
-                                                  prec_name_float<T>()),
-                  da_status_success);
+        EXPECT_EQ(
+            da_datastore_options_set_string(test_store, "datatype", prec_name_float<T>()),
+            da_status_success);
         EXPECT_EQ(da_data_load_from_csv(test_store, test_set_fname.c_str()),
                   da_status_success);
 
@@ -194,9 +194,11 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // Extract the selections
         T *A_test = new T[(ncols_test - 1) * nrows_test];
         T *b_test = new T[nrows_test];
-        EXPECT_EQ(da_data_extract_selection(test_store, "features", A_test, nrows_test),
+        EXPECT_EQ(da_data_extract_selection(test_store, "features", column_major, A_test,
+                                            nrows_test),
                   da_status_success);
-        EXPECT_EQ(da_data_extract_selection(test_store, "response", b_test, nrows_test),
+        EXPECT_EQ(da_data_extract_selection(test_store, "response", column_major, b_test,
+                                            nrows_test),
                   da_status_success);
 
         // Check that the model evaluates the classes correctly

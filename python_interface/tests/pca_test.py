@@ -46,7 +46,7 @@ def test_pca_functionality(da_precision, numpy_precision, numpy_order):
     x = np.array([[1, 1, 4], [3, 2, 3], [0, 2, 3], [1, 0, 1]],
                  dtype=numpy_precision, order=numpy_order)
 
-    pca = PCA(n_components=2, store_U = True, precision=da_precision)
+    pca = PCA(n_components=2, store_U=True, precision=da_precision)
     pca.fit(a)
 
     expected_components = np.array([[0.4082482904638631,  0.816496580927726, -0.408248290463863],
@@ -110,6 +110,8 @@ def test_pca_functionality(da_precision, numpy_precision, numpy_order):
 
     assert pca.n_components == 2
 
+    assert a.flags.f_contiguous == pca.transform(x).flags.f_contiguous
+
     # Simple test to check we can also get column_sdevs
     a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
                  dtype=numpy_precision, order=numpy_order)
@@ -136,9 +138,18 @@ def test_pca_error_exits(da_precision, numpy_precision):
     with pytest.warns(RuntimeWarning):
         pca.fit(a)
 
-    b = np.array([1])
+    b = np.array([[1, 1], [2, 2]], dtype=numpy_precision)
     with pytest.raises(RuntimeError):
         pca.transform(b)
 
     with pytest.raises(RuntimeError):
         pca.inverse_transform(b)
+
+    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
+    b = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="C")
+    pca = PCA(n_components=10, precision=da_precision, method="correlation")
+    with pytest.warns(RuntimeWarning):
+        pca.fit(a)
+    with pytest.raises(RuntimeError):
+        pca.transform(b)
+
