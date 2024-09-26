@@ -65,6 +65,18 @@ Decision trees
          :outline:
       .. doxygenfunction:: da_tree_predict_d
 
+      .. _da_tree_predict_proba:
+
+      .. doxygenfunction:: da_tree_predict_proba_s
+         :outline:
+      .. doxygenfunction:: da_tree_predict_proba_d
+
+      .. _da_tree_predict_log_proba:
+
+      .. doxygenfunction:: da_tree_predict_log_proba_s
+         :outline:
+      .. doxygenfunction:: da_tree_predict_log_proba_d
+
       .. _da_tree_score:
 
       .. doxygenfunction:: da_tree_score_s
@@ -105,6 +117,18 @@ Decision forests
       .. doxygenfunction:: da_forest_predict_s
          :outline:
       .. doxygenfunction:: da_forest_predict_d
+
+      .. _da_forest_predict_proba:
+
+      .. doxygenfunction:: da_forest_predict_proba_s
+         :outline:
+      .. doxygenfunction:: da_forest_predict_proba_d
+
+      .. _da_forest_predict_log_proba:
+
+      .. doxygenfunction:: da_forest_predict_log_proba_s
+         :outline:
+      .. doxygenfunction:: da_forest_predict_log_proba_d
 
       .. _da_forest_score:
 

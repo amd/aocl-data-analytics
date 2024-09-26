@@ -197,7 +197,7 @@ da_status da_tree_predict_s(da_handle handle, da_int n_samples, da_int n_feature
  * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
  * @param[out] y_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class probabilities.
  * @param[in] n_class - number of classes in \p y_proba.
- * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -234,7 +234,7 @@ da_status da_tree_predict_proba_s(da_handle handle, da_int n_samples, da_int n_f
  * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
  * @param[out] y_log_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class log probabilities.
  * @param[in] n_class - number of classes in \p y_log_proba.
- * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -304,7 +304,7 @@ da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_featu
  * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
  * @param[out] y_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class probabilities.
  * @param[in] n_class - number of classes in \p y_proba.
- * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @param[in] ldy leading dimension of \p y_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
@@ -341,7 +341,7 @@ da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n
  * @param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_samples.
  * @param[out] y_log_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class log probabilities.
  * @param[in] n_class - number of classes in \p y_log_proba.
- * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_class.
+ * @param[in] ldy leading dimension of \p y_log_proba.  Constraint: \p ldy @f$\ge@f$ \p n_samples.
  * @return da_status
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle
