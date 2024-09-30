@@ -133,4 +133,7 @@ void da_handle_destroy(da_handle *handle);
 da_status da_handle_get_error_message(da_handle handle, char **message);
 da_status da_handle_get_error_severity(da_handle handle, da_severity *severity);
 
+/* Expose the refresh functionality for benchmark purposes */
+void da_handle_refresh(da_handle handle);
+
 #endif

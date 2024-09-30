@@ -50,60 +50,61 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         switch (handle_type) {
             break;
         case da_handle_linmod:
-            (*handle)->linreg_d = new da_linmod::linear_model<double>(*(*handle)->err);
+            (*handle)->alg_handle_d =
+                new da_linmod::linear_model<double>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->linreg_d = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
         case da_handle_pca:
-            (*handle)->pca_d = new da_pca::da_pca<double>(*(*handle)->err);
+            (*handle)->alg_handle_d = new da_pca::da_pca<double>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->pca_d = nullptr;
+                (*handle)->alg_handle_d = nullptr;
                 return status;
             }
             break;
         case da_handle_kmeans:
-            (*handle)->kmeans_d = new da_kmeans::da_kmeans<double>(*(*handle)->err);
+            (*handle)->alg_handle_d = new da_kmeans::da_kmeans<double>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->kmeans_d = nullptr;
+                (*handle)->alg_handle_d = nullptr;
                 return status;
             }
             break;
         case da_handle_decision_tree:
-            (*handle)->dectree_d =
+            (*handle)->alg_handle_d =
                 new da_decision_tree::decision_tree<double>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->dectree_d = nullptr;
+                (*handle)->alg_handle_d = nullptr;
                 return status;
             }
             break;
         case da_handle_decision_forest:
-            (*handle)->forest_d =
+            (*handle)->alg_handle_d =
                 new da_random_forest::random_forest<double>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->forest_d = nullptr;
+                (*handle)->alg_handle_d = nullptr;
                 return status;
             }
             break;
         case da_handle_nlls:
-            (*handle)->nlls_d = new da_nlls::nlls<double>(*(*handle)->err);
-            status = (*handle)->err->get_status();
+            (*handle)->alg_handle_d = new da_nlls::nlls<double>(status, *(*handle)->err);
+            // status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->nlls_d = nullptr;
+                (*handle)->alg_handle_d = nullptr;
                 return status;
             }
             break;
         case da_handle_knn:
-            (*handle)->knn_d = new da_knn::da_knn<double>(*(*handle)->err);
+            (*handle)->alg_handle_d = new da_knn::da_knn<double>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->knn_d = nullptr;
+                (*handle)->alg_handle_d = nullptr;
                 return status;
             }
             break;
@@ -136,60 +137,60 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
     try {
         switch (handle_type) {
         case da_handle_linmod:
-            (*handle)->linreg_s = new da_linmod::linear_model<float>(*(*handle)->err);
+            (*handle)->alg_handle_s = new da_linmod::linear_model<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->linreg_s = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
         case da_handle_pca:
-            (*handle)->pca_s = new da_pca::da_pca<float>(*(*handle)->err);
+            (*handle)->alg_handle_s = new da_pca::da_pca<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->pca_s = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
         case da_handle_kmeans:
-            (*handle)->kmeans_s = new da_kmeans::da_kmeans<float>(*(*handle)->err);
+            (*handle)->alg_handle_s = new da_kmeans::da_kmeans<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->kmeans_s = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
         case da_handle_decision_tree:
-            (*handle)->dectree_s =
+            (*handle)->alg_handle_s =
                 new da_decision_tree::decision_tree<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->dectree_s = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
         case da_handle_decision_forest:
-            (*handle)->forest_s =
+            (*handle)->alg_handle_s =
                 new da_random_forest::random_forest<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->forest_s = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
         case da_handle_nlls:
-            (*handle)->nlls_s = new da_nlls::nlls<float>(*(*handle)->err);
-            status = (*handle)->err->get_status();
+            (*handle)->alg_handle_s = new da_nlls::nlls<float>(status, *(*handle)->err);
+            // status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->nlls_s = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
         case da_handle_knn:
-            (*handle)->knn_s = new da_knn::da_knn<float>(*(*handle)->err);
+            (*handle)->alg_handle_s = new da_knn::da_knn<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
-                (*handle)->knn_s = nullptr;
+                (*handle)->alg_handle_s = nullptr;
                 return status;
             }
             break;
@@ -221,36 +222,12 @@ void da_handle_destroy(da_handle *handle) {
 
     if (handle) {
         if (*handle) {
-            if ((*handle)->linreg_d)
-                delete (*handle)->linreg_d;
-            if ((*handle)->linreg_s)
-                delete (*handle)->linreg_s;
+            if ((*handle)->alg_handle_d)
+                delete (*handle)->alg_handle_d;
+            if ((*handle)->alg_handle_s)
+                delete (*handle)->alg_handle_s;
             if ((*handle)->csv_parser)
                 delete (*handle)->csv_parser;
-            if ((*handle)->pca_d)
-                delete (*handle)->pca_d;
-            if ((*handle)->pca_s)
-                delete (*handle)->pca_s;
-            if ((*handle)->kmeans_d)
-                delete (*handle)->kmeans_d;
-            if ((*handle)->kmeans_s)
-                delete (*handle)->kmeans_s;
-            if ((*handle)->dectree_d)
-                delete (*handle)->dectree_d;
-            if ((*handle)->dectree_s)
-                delete (*handle)->dectree_s;
-            if ((*handle)->forest_d)
-                delete (*handle)->forest_d;
-            if ((*handle)->forest_s)
-                delete (*handle)->forest_s;
-            if ((*handle)->nlls_d)
-                delete (*handle)->nlls_d;
-            if ((*handle)->nlls_s)
-                delete (*handle)->nlls_s;
-            if ((*handle)->knn_d)
-                delete (*handle)->knn_d;
-            if ((*handle)->knn_s)
-                delete (*handle)->knn_s;
             if ((*handle)->err)
                 delete (*handle)->err;
         }
@@ -282,20 +259,8 @@ da_status da_handle_get_result_d(da_handle handle, da_result query, da_int *dim,
     // Currently there can only be a SINGLE valid internal handle pointer,
     // so we cycle through them and query to see if the result is
     // provided by it.
-    if (handle->linreg_d != nullptr)
-        return handle->linreg_d->get_result(query, dim, result);
-    else if (handle->pca_d != nullptr)
-        return handle->pca_d->get_result(query, dim, result);
-    else if (handle->kmeans_d != nullptr)
-        return handle->kmeans_d->get_result(query, dim, result);
-    else if (handle->dectree_d != nullptr)
-        return handle->dectree_d->get_result(query, dim, result);
-    else if (handle->forest_d != nullptr)
-        return handle->forest_d->get_result(query, dim, result);
-    if (handle->nlls_d != nullptr)
-        return handle->nlls_d->get_result(query, dim, result);
-    if (handle->knn_d != nullptr)
-        return handle->knn_d->get_result(query, dim, result);
+    if (handle->alg_handle_d != nullptr)
+        return handle->alg_handle_d->get_result(query, dim, result);
 
     // handle was not initialized with
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -322,20 +287,8 @@ da_status da_handle_get_result_s(da_handle handle, da_result query, da_int *dim,
     // Currently there can only be a SINGLE valid internal handle pointer,
     // so we cycle through them and query to see if the result is
     // provided by it.
-    if (handle->linreg_s != nullptr)
-        return handle->linreg_s->get_result(query, dim, result);
-    else if (handle->pca_s != nullptr)
-        return handle->pca_s->get_result(query, dim, result);
-    else if (handle->kmeans_s != nullptr)
-        return handle->kmeans_s->get_result(query, dim, result);
-    else if (handle->dectree_s != nullptr)
-        return handle->dectree_s->get_result(query, dim, result);
-    else if (handle->forest_s != nullptr)
-        return handle->forest_s->get_result(query, dim, result);
-    else if (handle->nlls_s != nullptr)
-        return handle->nlls_s->get_result(query, dim, result);
-    else if (handle->knn_s != nullptr)
-        return handle->knn_s->get_result(query, dim, result);
+    if (handle->alg_handle_s != nullptr)
+        return handle->alg_handle_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -358,35 +311,10 @@ da_status da_handle_get_result_int(da_handle handle, da_result query, da_int *di
     // Currently there can only be a SINGLE valid internal handle pointer,
     // so we cycle through them and query to see if the result is
     // provided by it.
-    if (handle->linreg_d != nullptr)
-        return handle->linreg_d->get_result(query, dim, result);
-    else if (handle->linreg_s != nullptr)
-        return handle->linreg_s->get_result(query, dim, result);
-    else if (handle->pca_d != nullptr)
-        return handle->pca_d->get_result(query, dim, result);
-    else if (handle->pca_s != nullptr)
-        return handle->pca_s->get_result(query, dim, result);
-    else if (handle->dectree_d != nullptr)
-        return handle->dectree_d->get_result(query, dim, result);
-    else if (handle->dectree_s != nullptr)
-        return handle->dectree_s->get_result(query, dim, result);
-    else if (handle->forest_d != nullptr)
-        return handle->forest_d->get_result(query, dim, result);
-    else if (handle->forest_s != nullptr)
-        return handle->forest_s->get_result(query, dim, result);
-
-    else if (handle->kmeans_d != nullptr)
-        return handle->kmeans_d->get_result(query, dim, result);
-    else if (handle->kmeans_s != nullptr)
-        return handle->kmeans_s->get_result(query, dim, result);
-    if (handle->knn_d != nullptr)
-        return handle->knn_d->get_result(query, dim, result);
-    else if (handle->knn_s != nullptr)
-        return handle->knn_s->get_result(query, dim, result);
-    if (handle->nlls_d != nullptr)
-        return handle->nlls_d->get_result(query, dim, result);
-    else if (handle->nlls_s != nullptr)
-        return handle->nlls_s->get_result(query, dim, result);
+    if (handle->alg_handle_d != nullptr)
+        return handle->alg_handle_d->get_result(query, dim, result);
+    else if (handle->alg_handle_s != nullptr)
+        return handle->alg_handle_s->get_result(query, dim, result);
 
     // handle was not initialized
     return da_error(handle->err, da_status_handle_not_initialized,
@@ -409,4 +337,13 @@ da_status da_handle_get_error_severity(da_handle handle, da_severity *severity) 
         return da_status_success;
     }
     return da_status_invalid_input;
+}
+
+void da_handle_refresh(da_handle handle) {
+    if (handle) {
+        if (handle->alg_handle_s != nullptr)
+            handle->alg_handle_s->refresh();
+        if (handle->alg_handle_d != nullptr)
+            handle->alg_handle_d->refresh();
+    }
 }

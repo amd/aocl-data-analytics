@@ -89,6 +89,8 @@ int main(void) {
 
     da_optim::da_optimization<double> *pd =
         new da_optim::da_optimization<double>(status, err);
+    da_options::OptionRegistry opts = pd->get_opts();
+
     if (status != da_status_success) {
         pd = nullptr;
         goto abort;

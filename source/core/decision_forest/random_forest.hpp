@@ -41,8 +41,6 @@ using namespace da_errors;
 
 template <typename T> class random_forest : public basic_handle<T> {
 
-    da_errors::da_error_t *err = nullptr;
-
     bool model_trained = false;
 
     // User data. Never modified by the classifier
@@ -64,14 +62,13 @@ template <typename T> class random_forest : public basic_handle<T> {
     std::vector<std::unique_ptr<decision_tree<T>>> forest;
 
   public:
-    da_options::OptionRegistry opts;
     random_forest(da_errors::da_error_t &err) {
         // Assumes that err is valid
         this->err = &err;
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_forest_options<T>(opts, err);
+        register_forest_options<T>(this->opts, err);
     }
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
                                 da_int ldx, const da_int *y, da_int n_class = 0);
@@ -93,7 +90,7 @@ template <typename T> class random_forest : public basic_handle<T> {
     da_status get_result(da_result query, da_int *dim, T *result);
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
                          [[maybe_unused]] da_int *result) {
-        return da_warn(err, da_status_unknown_query,
+        return da_warn(this->err, da_status_unknown_query,
                        "There are no integer results available for this API.");
     };
 };
@@ -113,7 +110,7 @@ da_status random_forest<T>::get_result(da_result query, da_int *dim, T *result) 
     case da_result::da_rinfo:
         if (*dim < rinfo_size) {
             *dim = rinfo_size;
-            return da_warn(err, da_status_invalid_array_dimension,
+            return da_warn(this->err, da_status_invalid_array_dimension,
                            "The array is too small. Please provide an array of at "
                            "least size: " +
                                std::to_string(rinfo_size) + ".");
@@ -125,7 +122,7 @@ da_status random_forest<T>::get_result(da_result query, da_int *dim, T *result) 
         result[4] = (T)n_tree;
         break;
     default:
-        return da_warn_bypass(err, da_status_unknown_query,
+        return da_warn_bypass(this->err, da_status_unknown_query,
                               "The requested result could not be found.");
     }
     return da_status_success;
@@ -174,33 +171,37 @@ template <typename T> da_status random_forest<T>::fit() {
         feat_select;
     T feat_thresh, min_split_score, min_improvement, prop;
     std::string opt_val;
-    opt_pass &= opts.get("number of trees", n_tree) == da_status_success;
-    opt_pass &= opts.get("maximum depth", max_depth) == da_status_success;
-    opt_pass &= opts.get("seed", seed) == da_status_success;
-    opt_pass &= opts.get("node minimum samples", min_node_sample) == da_status_success;
-    opt_pass &= opts.get("node minimum samples", min_node_sample) == da_status_success;
-    opt_pass &= opts.get("scoring function", opt_val, method) == da_status_success;
+    opt_pass &= this->opts.get("number of trees", n_tree) == da_status_success;
+    opt_pass &= this->opts.get("maximum depth", max_depth) == da_status_success;
+    opt_pass &= this->opts.get("seed", seed) == da_status_success;
     opt_pass &=
-        opts.get("tree building order", opt_val, build_order) == da_status_success;
-    opt_pass &= opts.get("features selection", opt_val, feat_select) == da_status_success;
-    opt_pass &= opts.get("maximum features", nfeat_split) == da_status_success;
-    opt_pass &= opts.get("feature threshold", feat_thresh) == da_status_success;
-    opt_pass &= opts.get("minimum split score", min_split_score) == da_status_success;
+        this->opts.get("node minimum samples", min_node_sample) == da_status_success;
     opt_pass &=
-        opts.get("minimum split improvement", min_improvement) == da_status_success;
-    opt_pass &= opts.get("bootstrap", opt_val, bootstrap_opt) == da_status_success;
-    opt_pass &= opts.get("bootstrap samples factor", prop) == da_status_success;
-    opt_pass &= opts.get("block size", block_size) == da_status_success;
+        this->opts.get("node minimum samples", min_node_sample) == da_status_success;
+    opt_pass &= this->opts.get("scoring function", opt_val, method) == da_status_success;
+    opt_pass &=
+        this->opts.get("tree building order", opt_val, build_order) == da_status_success;
+    opt_pass &=
+        this->opts.get("features selection", opt_val, feat_select) == da_status_success;
+    opt_pass &= this->opts.get("maximum features", nfeat_split) == da_status_success;
+    opt_pass &= this->opts.get("feature threshold", feat_thresh) == da_status_success;
+    opt_pass &=
+        this->opts.get("minimum split score", min_split_score) == da_status_success;
+    opt_pass &=
+        this->opts.get("minimum split improvement", min_improvement) == da_status_success;
+    opt_pass &= this->opts.get("bootstrap", opt_val, bootstrap_opt) == da_status_success;
+    opt_pass &= this->opts.get("bootstrap samples factor", prop) == da_status_success;
+    opt_pass &= this->opts.get("block size", block_size) == da_status_success;
     if (!opt_pass)
-        return da_error_trace(err, da_status_internal_error, // LCOV_EXCL_LINE
+        return da_error_trace(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                               "Unexpected error while reading the optional parameters.");
 
     std::vector<da_int> seed_tree;
     try {
         forest.resize(n_tree);
         seed_tree.resize(n_tree);
-    } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+    } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
 
@@ -272,7 +273,7 @@ template <typename T> da_status random_forest<T>::fit() {
     }
 
     if (n_failed_tree != 0)
-        return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                         std::to_string(n_failed_tree) +
                             " trees failed training unexpectedly.");
 
@@ -341,9 +342,9 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
                         "associated with is out of date.");
     }
 
-    if (opts.get("block size", block_size) != da_status_success)
+    if (this->opts.get("block size", block_size) != da_status_success)
         return da_error_trace( // LCOV_EXCL_LINE
-            err, da_status_internal_error,
+            this->err, da_status_internal_error,
             "Unexpected error while reading the optional parameter 'block size' .");
 
     // Set up the parallel tasks and data. X is divided into blocks of small size
@@ -357,8 +358,8 @@ da_status random_forest<T>::predict(da_int nsamp, da_int nfeat, const T *X_test,
     try {
         y_pred_tree.resize(n_threads * block_size);
         count_classes.resize(n_class * nsamp, 0);
-    } catch (std::bad_alloc const &) {               // LCOV_EXCL_LINE
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+    } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
     parallel_count_classes(X_test, ldx_test, n_blocks, block_size, block_rem, n_threads,
@@ -432,8 +433,8 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
     try {
         sum_proba.resize(n_class * nsamp);
         y_proba_tree.resize(n_threads * n_class * block_size);
-    } catch (std::bad_alloc const &) {               // LCOV_EXCL_LINE
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+    } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
@@ -525,9 +526,9 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
                         "associated with is out of date.");
     }
 
-    if (opts.get("block size", block_size) != da_status_success)
+    if (this->opts.get("block size", block_size) != da_status_success)
         return da_error_trace( // LCOV_EXCL_LINE
-            err, da_status_internal_error,
+            this->err, da_status_internal_error,
             "Unexpected error while reading the optional parameter 'block size' .");
 
     std::vector<da_int> count_classes, y_pred_tree;
@@ -538,8 +539,8 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     try {
         y_pred_tree.resize(n_threads * block_size);
         count_classes.resize(n_class * nsamp, 0);
-    } catch (std::bad_alloc const &) {               // LCOV_EXCL_LINE
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+    } catch (std::bad_alloc const &) {                     // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
     parallel_count_classes(X_test, ldx_test, n_blocks, block_size, block_rem, n_threads,

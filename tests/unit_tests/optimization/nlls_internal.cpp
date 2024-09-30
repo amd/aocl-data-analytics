@@ -41,11 +41,13 @@ TEST(nlls, tamperNllsHandle) {
               da_status_success);
 
     // save...
-    da_nlls::nlls<float> *nlls_s = handle_s->nlls_s;
-    da_nlls::nlls<double> *nlls_d = handle_d->nlls_d;
+    da_nlls::nlls<float> *nlls_s =
+        dynamic_cast<da_nlls::nlls<float> *>(handle_s->alg_handle_s);
+    da_nlls::nlls<double> *nlls_d =
+        dynamic_cast<da_nlls::nlls<double> *>(handle_d->alg_handle_d);
     // tamper...
-    handle_s->nlls_s = nullptr;
-    handle_d->nlls_d = nullptr;
+    handle_s->alg_handle_s = nullptr;
+    handle_d->alg_handle_d = nullptr;
 
     da_int n{2}, m{5};
     EXPECT_EQ(da_nlls_define_residuals(handle_s, n, m, eval_r<float>, eval_J<float>,
@@ -69,8 +71,8 @@ TEST(nlls, tamperNllsHandle) {
     EXPECT_EQ(da_nlls_fit(handle_s, n, x_s, nullptr), da_status_invalid_handle_type);
     EXPECT_EQ(da_nlls_fit(handle_d, n, x_d, nullptr), da_status_invalid_handle_type);
     // restore...
-    handle_s->nlls_s = nlls_s;
-    handle_d->nlls_d = nlls_d;
+    handle_s->alg_handle_s = nlls_s;
+    handle_d->alg_handle_d = nlls_d;
     da_handle_destroy(&handle_s);
     da_handle_destroy(&handle_d);
 }

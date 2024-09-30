@@ -52,9 +52,6 @@ template <typename T> class da_knn : public basic_handle<T> {
     // Set true if the available classes have been computed via a call to available_classes()
     bool classes_computed = false;
 
-    // Pointer to error trace
-    da_errors::da_error_t *err = nullptr;
-
     // Number of neighbors to be considered
     da_int n_neighbors = 5;
     // Algorithm to be used for the knn computation
@@ -74,7 +71,6 @@ template <typename T> class da_knn : public basic_handle<T> {
   public:
     std::vector<da_int> classes;
     da_int n_classes = -1;
-    da_options::OptionRegistry opts;
 
     da_knn(da_errors::da_error_t &err) {
         // Assumes that err is valid
@@ -82,7 +78,7 @@ template <typename T> class da_knn : public basic_handle<T> {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_knn_options<T>(opts, err);
+        register_knn_options<T>(this->opts, err);
     };
 
     /* get_result (required to be defined by basic_handle) */
@@ -117,7 +113,7 @@ template <typename T> class da_knn : public basic_handle<T> {
 
 template <typename T>
 da_status da_knn<T>::get_result(da_result query, da_int *dim, T *result) {
-    return da_warn_bypass(err, da_status_unknown_query,
+    return da_warn_bypass(this->err, da_status_unknown_query,
                           "There are no floating-point results available for this API.");
 }
 
@@ -138,7 +134,7 @@ da_status da_knn<T>::get_result([[maybe_unused]] da_result query,
     case da_result::da_knn_model_params:
         if (*dim < knn_info_size) {
             *dim = knn_info_size;
-            return da_warn_bypass(err, da_status_invalid_array_dimension,
+            return da_warn_bypass(this->err, da_status_invalid_array_dimension,
                                   "The array is too small. Please provide an array of at "
                                   "least size: " +
                                       std::to_string(knn_info_size) + ".");
@@ -151,7 +147,7 @@ da_status da_knn<T>::get_result([[maybe_unused]] da_result query,
         result[5] = da_int(n_samples);
         break;
     default:
-        return da_warn_bypass(err, da_status_unknown_query,
+        return da_warn_bypass(this->err, da_status_unknown_query,
                               "The requested result could not be found.");
     }
     return status;
@@ -161,12 +157,12 @@ template <typename T> da_status da_knn<T>::set_params() {
     // Extract options
     std::string opt_val;
     bool opt_pass = true;
-    opt_pass &= opts.get("number of neighbors", n_neighbors) == da_status_success;
-    opt_pass &= opts.get("algorithm", opt_val, algo) == da_status_success;
-    opt_pass &= opts.get("metric", opt_val, metric) == da_status_success;
-    opt_pass &= opts.get("weights", opt_val, weights) == da_status_success;
+    opt_pass &= this->opts.get("number of neighbors", n_neighbors) == da_status_success;
+    opt_pass &= this->opts.get("algorithm", opt_val, algo) == da_status_success;
+    opt_pass &= this->opts.get("metric", opt_val, metric) == da_status_success;
+    opt_pass &= this->opts.get("weights", opt_val, weights) == da_status_success;
     if (!opt_pass)
-        return da_error_bypass(err, da_status_internal_error, // LCOV_EXCL_LINE
+        return da_error_bypass(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                                "Unexpected error while reading the optional parameters.");
     if (metric == da_euclidean || metric == da_sqeuclidean)
         internal_metric = da_sqeuclidean;
@@ -352,7 +348,7 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
         try {
             D.resize(this->n_samples * n_queries);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
         kneighbors_kernel(n_queries, n_features, X_test, ldx_test, D.data(), n_ind,
@@ -366,7 +362,7 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
         try {
             D.resize(this->n_samples * BLOCK_SIZE * n_threads);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
 // Iterate through the number of blocks
@@ -445,7 +441,7 @@ template <typename T> da_status da_knn<T>::available_classes() {
         this->n_classes = da_int(this->classes.size());
         this->classes_computed = true;
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
     return da_status_success;
@@ -576,7 +572,7 @@ da_status da_knn<T>::predict_proba(da_int n_queries, da_int n_features, const T 
         }
 
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
@@ -640,7 +636,7 @@ da_status da_knn<T>::predict(da_int n_queries, da_int n_features, const T *X_tes
             y_test[i] = this->classes[max_index];
         }
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
     return status;

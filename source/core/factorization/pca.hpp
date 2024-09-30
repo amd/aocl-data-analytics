@@ -86,9 +86,6 @@ template <typename T> class da_pca : public basic_handle<T> {
     // Will we perform a QR decomposition prior to the SVD?
     bool qr = false;
 
-    // Pointer to error trace
-    da_errors::da_error_t *err = nullptr;
-
     // Arrays used by the SVD, and to store results
     std::vector<T> scores;   // U*Sigma
     std::vector<T> variance; // Sigma**2 / n-1
@@ -100,14 +97,12 @@ template <typename T> class da_pca : public basic_handle<T> {
     std::vector<da_int> iwork;
 
   public:
-    da_options::OptionRegistry opts;
-
     da_pca(da_errors::da_error_t &err) {
         this->err = &err;
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_pca_options<T>(opts, err);
+        register_pca_options<T>(this->opts, *this->err);
     };
 
     da_status init(da_int n, da_int p, const T *A, da_int lda);
@@ -123,7 +118,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     da_status get_result(da_result query, da_int *dim, T *result) {
         // Don't return anything if PCA has not been computed
         if (!iscomputed) {
-            return da_warn(err, da_status_no_data,
+            return da_warn(this->err, da_status_no_data,
                            "PCA has not yet been computed. Please call da_pca_compute_s "
                            "or da_pca_compute_d before extracting results.");
         }
@@ -131,7 +126,7 @@ template <typename T> class da_pca : public basic_handle<T> {
         da_int rinfo_size = 3;
 
         if (result == nullptr) {
-            return da_warn(err, da_status_invalid_array_dimension,
+            return da_warn(this->err, da_status_invalid_array_dimension,
                            "The results array has not been allocated.");
         }
 
@@ -139,7 +134,7 @@ template <typename T> class da_pca : public basic_handle<T> {
         case da_result::da_rinfo:
             if (*dim < rinfo_size) {
                 *dim = rinfo_size;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(rinfo_size) + ".");
@@ -151,12 +146,12 @@ template <typename T> class da_pca : public basic_handle<T> {
         case da_result::da_pca_scores:
             if (store_U == false) {
                 return da_error(
-                    err, da_status_invalid_option,
+                    this->err, da_status_invalid_option,
                     "In order to return the scores, the option 'store U' must be set.");
             }
             if (*dim < n * ns) {
                 *dim = n * ns;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(n * ns) + ".");
@@ -171,12 +166,12 @@ template <typename T> class da_pca : public basic_handle<T> {
         case da_result::da_pca_u:
             if (store_U == false) {
                 return da_error(
-                    err, da_status_invalid_option,
+                    this->err, da_status_invalid_option,
                     "In order to return U, the option 'store U' must be set.");
             }
             if (*dim < n * ns) {
                 *dim = n * ns;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(n * ns) + ".");
@@ -190,7 +185,7 @@ template <typename T> class da_pca : public basic_handle<T> {
         case da_result::da_pca_principal_components:
             if (*dim < ns * p) {
                 *dim = ns * p;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(ns * p) + ".");
@@ -202,7 +197,7 @@ template <typename T> class da_pca : public basic_handle<T> {
         case da_result::da_pca_vt:
             if (*dim < npc * p) {
                 *dim = npc * p;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(npc * p) + ".");
@@ -239,12 +234,12 @@ template <typename T> class da_pca : public basic_handle<T> {
             break;
         case da_result::da_pca_column_means:
             if (method == pca_method_svd)
-                return da_warn(err, da_status_unknown_query,
+                return da_warn(this->err, da_status_unknown_query,
                                "Column means are only computed if the 'PCA method' "
                                "option is set to 'covariance' or 'correlation'.");
             if (*dim < p) {
                 *dim = p;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(p) + ".");
@@ -254,7 +249,7 @@ template <typename T> class da_pca : public basic_handle<T> {
             break;
         case da_result::da_pca_column_sdevs:
             if (method != pca_method_corr)
-                return da_warn(err, da_status_unknown_query,
+                return da_warn(this->err, da_status_unknown_query,
                                "Standard deviations are only computed if the 'PCA "
                                "method' option is set to 'correlation'.");
             if (*dim < p) {
@@ -271,7 +266,7 @@ template <typename T> class da_pca : public basic_handle<T> {
             result[0] = total_variance;
             break;
         default:
-            return da_warn(err, da_status_unknown_query,
+            return da_warn(this->err, da_status_unknown_query,
                            "The requested result could not be found.");
         }
         return da_status_success;
@@ -280,7 +275,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
                          [[maybe_unused]] da_int *result) {
 
-        return da_warn(err, da_status_unknown_query,
+        return da_warn(this->err, da_status_unknown_query,
                        "There are no integer results available for this API.");
     };
 };
@@ -291,20 +286,20 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
 
     // Check for illegal arguments and function calls
     if (n < 1)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with n_samples = " + std::to_string(n) +
                             ". Constraint: n_samples >= 1.");
     if (p < 1)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with n_features = " + std::to_string(p) +
                             ". Constraint: n_features >= 1.");
     if (lda < n)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with n_samples = " + std::to_string(n) +
                             " and lda = " + std::to_string(lda) +
                             ". Constraint: lda >= n_samples.");
     if (A == nullptr)
-        return da_error(err, da_status_invalid_pointer, "The array A is null.");
+        return da_error(this->err, da_status_invalid_pointer, "The array A is null.");
 
     // Store dimensions of A
     this->n = n;
@@ -328,15 +323,15 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
 
     // Now that we have a data matrix we can re-register the n_components option with new constraints
     da_int npc, max_npc = std::min(n, p);
-    opts.get("n_components", npc);
+    this->opts.get("n_components", npc);
 
-    reregister_pca_option<T>(opts, max_npc);
+    reregister_pca_option<T>(this->opts, max_npc);
 
-    opts.set("n_components", std::min(npc, max_npc));
+    this->opts.set("n_components", std::min(npc, max_npc));
 
     if (npc > max_npc)
         return da_warn(
-            err, da_status_incompatible_options,
+            this->err, da_status_incompatible_options,
             "The requested number of principal components has been decreased from " +
                 std::to_string(npc) + " to " + std::to_string(max_npc) +
                 " due to the size (" + std::to_string(n) + " x " + std::to_string(p) +
@@ -348,7 +343,7 @@ da_status da_pca<T>::init(da_int n, da_int p, const T *A, da_int lda) {
 /* Compute the PCA */
 template <typename T> da_status da_pca<T>::compute() {
     if (initdone == false)
-        return da_error(err, da_status_no_data,
+        return da_error(this->err, da_status_no_data,
                         "No data has been passed to the handle. Please call "
                         "da_pca_set_data_s or da_pca_set_data_d.");
 
@@ -375,7 +370,7 @@ template <typename T> da_status da_pca<T>::compute() {
         solver = (n > 3 * p && !(store_U)) ? solver_syevd : solver_gesdd;
     }
     if (solver == solver_syevd && store_U) {
-        return da_error(err, da_status_incompatible_options,
+        return da_error(this->err, da_status_incompatible_options,
                         "The 'store U' and 'syevd' options cannot be used together.");
     }
 
@@ -421,7 +416,7 @@ template <typename T> da_status da_pca<T>::compute() {
         iwork.resize(iwork_size);
         A_copy.resize(A_copy_size);
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
 
@@ -439,7 +434,7 @@ template <typename T> da_status da_pca<T>::compute() {
         try {
             column_means.resize(p, 0.0);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
         da_basic_statistics::mean(da_axis_col, n, p, A, lda, column_means.data());
@@ -466,7 +461,7 @@ template <typename T> da_status da_pca<T>::compute() {
             column_sdevs.resize(p, 0.0);
             column_sdevs_nonzero.resize(p, 0.0);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
         da_basic_statistics::variance(da_axis_col, n, p, A, lda, dof, column_means.data(),
@@ -535,10 +530,11 @@ template <typename T> da_status da_pca<T>::compute() {
     if (solver != solver_syevd && (T)n / (T)p > 1.2) {
         // The factor is a heuristic based on flop counts of QR and SVD routines
         qr = true;
-        da_status status = da_qr(n, p, A_copy, n, tau, R_blocked, tau_R_blocked, R,
-                                 n_blocks, block_size, final_block_size, store_U, err);
+        da_status status =
+            da_qr(n, p, A_copy, n, tau, R_blocked, tau_R_blocked, R, n_blocks, block_size,
+                  final_block_size, store_U, this->err);
         if (status != da_status_success)
-            return da_error(err, status, // LCOV_EXCL_LINE
+            return da_error(this->err, status, // LCOV_EXCL_LINE
                             "Failed to compute QR decomposition prior to SVD.");
 
         A_svd = R.data();
@@ -571,7 +567,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Handle SVD Error
         if (INFO != 0) {
             return da_error(
-                err, da_status_internal_error,
+                this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "
                 "the input data for undefined values.");
         }
@@ -581,7 +577,7 @@ template <typename T> da_status da_pca<T>::compute() {
         try {
             work.resize(lwork);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error,
+            return da_error(this->err, da_status_memory_error,
                             "Memory allocation failed."); // LCOV_EXCL_LINE
         }
 
@@ -606,7 +602,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Handle error
         if (INFO != 0) {
             return da_error(
-                err, da_status_internal_error,
+                this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "
                 "the input data for undefined values.");
         }
@@ -628,7 +624,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Handle error
         if (INFO != 0) {
             return da_error(
-                err, da_status_internal_error,
+                this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "
                 "the input data for undefined values.");
         }
@@ -645,7 +641,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Handle error
         if (INFO != 0) {
             return da_error(
-                err, da_status_internal_error,
+                this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "
                 "the input data for undefined values.");
         }
@@ -667,7 +663,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Handle error
         if (INFO != 0) {
             return da_error(
-                err, da_status_internal_error,
+                this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "
                 "the input data for undefined values.");
         }
@@ -689,7 +685,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Handle eigensolver error
         if (INFO != 0) {
             return da_error(
-                err, da_status_internal_error,
+                this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "
                 "the input data for undefined values.");
         }
@@ -712,7 +708,7 @@ template <typename T> da_status da_pca<T>::compute() {
         // Handle error
         if (INFO != 0) {
             return da_error(
-                err, da_status_internal_error,
+                this->err, da_status_internal_error,
                 "An internal error occurred while computing the PCA. Please check "
                 "the input data for undefined values.");
         }
@@ -739,7 +735,7 @@ template <typename T> da_status da_pca<T>::compute() {
     }
     default:
         return da_error(
-            err, da_status_internal_error,
+            this->err, da_status_internal_error,
             "An internal error occurred while computing the PCA. Please check "
             "the input data for undefined values.");
     }
@@ -748,9 +744,9 @@ template <typename T> da_status da_pca<T>::compute() {
         // Update the relevant ns columns of U with the reflectors used in the QR decomposition
         da_status status =
             da_qr_apply(p, A_copy, n, tau, R_blocked, tau_R_blocked, n_blocks, block_size,
-                        final_block_size, ns, u, ldu, err);
+                        final_block_size, ns, u, ldu, this->err);
         if (status != da_status_success)
-            return da_error(err, status, // LCOV_EXCL_LINE
+            return da_error(this->err, status, // LCOV_EXCL_LINE
                             "Failed to update U following QR decomposition.");
     }
 
@@ -790,45 +786,46 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
                                da_int ldx_transform) {
 
     if (!iscomputed) {
-        return da_warn(err, da_status_no_data,
+        return da_warn(this->err, da_status_no_data,
                        "The PCA has not been computed. Please call da_pca_compute_s or "
                        "da_pca_compute_d.");
     }
 
     /* Check for illegal arguments */
     if (m < 1)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with m_samples = " + std::to_string(m) +
                             ". Constraint: m_samples >= 1.");
     if (p != this->p)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with m_features = " + std::to_string(p) +
                             " but the PCA has been computed with " +
                             std::to_string(this->p) + " features.");
     if (ldx < m)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with m_samples = " + std::to_string(m) +
                             " and ldx = " + std::to_string(ldx) +
                             ". Constraint: ldx >= m_samples.");
 
     if (ldx_transform < m)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with m_samples = " + std::to_string(m) +
                             " and ldx_transform = " + std::to_string(ldx_transform) +
                             ". Constraint: ldx_transform >= m_samples.");
 
     if (X == nullptr)
-        return da_error(err, da_status_invalid_pointer, "The array X is null.");
+        return da_error(this->err, da_status_invalid_pointer, "The array X is null.");
 
     if (X_transform == nullptr)
-        return da_error(err, da_status_invalid_pointer, "The array X_transform is null.");
+        return da_error(this->err, da_status_invalid_pointer,
+                        "The array X_transform is null.");
 
     // We need a copy of X to avoid changing the user's data
     std::vector<T> X_copy;
     try {
         X_copy.resize(p * m);
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error,
+        return da_error(this->err, da_status_memory_error,
                         "Memory allocation failed."); // LCOV_EXCL_LINE
     }
 
@@ -877,39 +874,39 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
                                        T *X_inv_transform, da_int ldx_inv_transform) {
 
     if (!iscomputed) {
-        return da_warn(err, da_status_no_data,
+        return da_warn(this->err, da_status_no_data,
                        "The PCA has not been computed. Please call da_pca_compute_s or "
                        "da_pca_compute_d.");
     }
 
     // Check for illegal arguments
     if (k < 1)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with k_samples = " + std::to_string(k) +
                             ". Constraint: k_samples >= 1.");
     if (r != ns)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with k_features = " + std::to_string(r) +
                             " but the PCA has been computed with " + std::to_string(ns) +
                             " components.");
     if (ldx < k)
-        return da_error(err, da_status_invalid_input,
+        return da_error(this->err, da_status_invalid_input,
                         "The function was called with k_samples = " + std::to_string(k) +
                             " and ldy = " + std::to_string(ldx) +
                             ". Constraint: ldy >= k_samples.");
 
     if (ldx_inv_transform < k)
         return da_error(
-            err, da_status_invalid_input,
+            this->err, da_status_invalid_input,
             "The function was called with k_samples = " + std::to_string(k) +
                 " and ldy_inv_transform = " + std::to_string(ldx_inv_transform) +
                 ". Constraint: ldy_inv_transform >= k_samples.");
 
     if (X == nullptr)
-        return da_error(err, da_status_invalid_pointer, "The array Y is null.");
+        return da_error(this->err, da_status_invalid_pointer, "The array Y is null.");
 
     if (X_inv_transform == nullptr)
-        return da_error(err, da_status_invalid_pointer,
+        return da_error(this->err, da_status_invalid_pointer,
                         "The array Y_inv_transform is null.");
 
     // Compute X * VT and store

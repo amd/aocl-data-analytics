@@ -33,6 +33,7 @@
 #include <string.h>
 
 #include "aoclda.h"
+#include "basic_handle.hpp"
 #include "csv_reader.hpp"
 #include "da_error.hpp"
 #include "decision_tree.hpp"
@@ -54,22 +55,10 @@ struct _da_handle {
     da_csv::csv_reader *csv_parser = nullptr;
     da_precision precision = da_double;
     da_handle_type handle_type = da_handle_uninitialized;
-    // List of sub-handles
-    da_linmod::linear_model<double> *linreg_d = nullptr;
-    da_linmod::linear_model<float> *linreg_s = nullptr;
-    da_pca::da_pca<double> *pca_d = nullptr;
-    da_pca::da_pca<float> *pca_s = nullptr;
-    da_kmeans::da_kmeans<double> *kmeans_d = nullptr;
-    da_kmeans::da_kmeans<float> *kmeans_s = nullptr;
 
-    da_decision_tree::decision_tree<double> *dectree_d = nullptr;
-    da_decision_tree::decision_tree<float> *dectree_s = nullptr;
-    da_random_forest::random_forest<double> *forest_d = nullptr;
-    da_random_forest::random_forest<float> *forest_s = nullptr;
-    da_nlls::nlls<double> *nlls_d = nullptr;
-    da_nlls::nlls<float> *nlls_s = nullptr;
-    da_knn::da_knn<double> *knn_d = nullptr;
-    da_knn::da_knn<float> *knn_s = nullptr;
+    // subhandle
+    basic_handle<double> *alg_handle_d = nullptr;
+    basic_handle<float> *alg_handle_s = nullptr;
 
     // Clear telemetry, for now it only clears the error stack.
     // vector<>.clear() is linear in cost wrt the number of elements to erase.

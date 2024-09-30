@@ -38,16 +38,22 @@ da_status da_nlls_define_residuals_d(da_handle handle, da_int n_coef, da_int n_r
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->nlls_d == nullptr)
+    da_nlls::nlls<double> *nlls =
+        dynamic_cast<da_nlls::nlls<double> *>(handle->alg_handle_d);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    handle->nlls_d->refresh();
-    da_status status = handle->nlls_d->define_residuals(n_coef, n_res);
+    nlls->refresh();
+    da_status status;
+    status = nlls->add_vars(n_coef);
     if (status != da_status_success)
         return status; // Error message already loaded
-    return handle->nlls_d->define_callbacks(resfun, resgrd, reshes, reshp);
+    status = nlls->add_res(n_res);
+    if (status != da_status_success)
+        return status; // Error message already loaded
+    return nlls->define_callbacks(resfun, resgrd, reshes, reshp);
 }
 da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_res,
                                      da_resfun_t_s *resfun, da_resgrd_t_s *resgrd,
@@ -59,16 +65,22 @@ da_status da_nlls_define_residuals_s(da_handle handle, da_int n_coef, da_int n_r
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->nlls_s == nullptr)
+    da_nlls::nlls<float> *nlls =
+        dynamic_cast<da_nlls::nlls<float> *>(handle->alg_handle_s);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    handle->nlls_s->refresh();
-    da_status status = handle->nlls_s->define_residuals(n_coef, n_res);
+    nlls->refresh();
+    da_status status;
+    status = nlls->add_vars(n_coef);
     if (status != da_status_success)
         return status; // Error message already loaded
-    return handle->nlls_s->define_callbacks(resfun, resgrd, reshes, reshp);
+    status = nlls->add_res(n_res);
+    if (status != da_status_success)
+        return status; // Error message already loaded
+    return nlls->define_callbacks(resfun, resgrd, reshes, reshp);
 }
 
 da_status da_nlls_define_bounds_d(da_handle handle, da_int n_coef, double *lower,
@@ -80,13 +92,15 @@ da_status da_nlls_define_bounds_d(da_handle handle, da_int n_coef, double *lower
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->nlls_d == nullptr)
+    da_nlls::nlls<double> *nlls =
+        dynamic_cast<da_nlls::nlls<double> *>(handle->alg_handle_d);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    handle->nlls_d->refresh();
-    return handle->nlls_d->define_bounds(n_coef, lower, upper);
+    nlls->refresh();
+    return nlls->add_bound_cons(n_coef, lower, upper);
 }
 da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
                                   float *upper) {
@@ -97,13 +111,15 @@ da_status da_nlls_define_bounds_s(da_handle handle, da_int n_coef, float *lower,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->nlls_s == nullptr)
+    da_nlls::nlls<float> *nlls =
+        dynamic_cast<da_nlls::nlls<float> *>(handle->alg_handle_s);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    handle->nlls_s->refresh();
-    return handle->nlls_s->define_bounds(n_coef, lower, upper);
+    nlls->refresh();
+    return nlls->add_bound_cons(n_coef, lower, upper);
 }
 
 da_status da_nlls_define_weights_d(da_handle handle, da_int n_coef, double *weights) {
@@ -114,13 +130,15 @@ da_status da_nlls_define_weights_d(da_handle handle, da_int n_coef, double *weig
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->nlls_d == nullptr)
+    da_nlls::nlls<double> *nlls =
+        dynamic_cast<da_nlls::nlls<double> *>(handle->alg_handle_d);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    handle->nlls_d->refresh();
-    return handle->nlls_d->define_weights(n_coef, weights);
+    nlls->refresh();
+    return nlls->add_weights(n_coef, weights);
 }
 da_status da_nlls_define_weights_s(da_handle handle, da_int n_coef, float *weights) {
     if (!handle)
@@ -130,13 +148,15 @@ da_status da_nlls_define_weights_s(da_handle handle, da_int n_coef, float *weigh
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->nlls_s == nullptr)
+    da_nlls::nlls<float> *nlls =
+        dynamic_cast<da_nlls::nlls<float> *>(handle->alg_handle_s);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    handle->nlls_s->refresh();
-    return handle->nlls_s->define_weights(n_coef, weights);
+    nlls->refresh();
+    return nlls->add_weights(n_coef, weights);
 }
 
 da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *udata) {
@@ -147,12 +167,14 @@ da_status da_nlls_fit_d(da_handle handle, da_int n_coef, double *coef, void *uda
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->nlls_d == nullptr)
+    da_nlls::nlls<double> *nlls =
+        dynamic_cast<da_nlls::nlls<double> *>(handle->alg_handle_d);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    return handle->nlls_d->fit(n_coef, coef, udata);
+    return nlls->fit(n_coef, coef, udata);
 }
 da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udata) {
     if (!handle)
@@ -162,10 +184,12 @@ da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udat
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->nlls_s == nullptr)
+    da_nlls::nlls<float> *nlls =
+        dynamic_cast<da_nlls::nlls<float> *>(handle->alg_handle_s);
+    if (nlls == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_nlls or "
                         "handle is invalid.");
 
-    return handle->nlls_s->fit(n_coef, coef, udata);
+    return nlls->fit(n_coef, coef, udata);
 }

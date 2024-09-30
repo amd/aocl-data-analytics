@@ -97,9 +97,6 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     // Norm of previous cluster centre array, for use in convergence testing
     T normc = 0.0;
 
-    // Pointer to error trace
-    da_errors::da_error_t *err = nullptr;
-
     // User's data
     const T *A;
     const T *C;
@@ -244,20 +241,18 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void perform_hartigan_wong();
 
   public:
-    da_options::OptionRegistry opts;
-
     da_kmeans(da_errors::da_error_t &err) {
         this->err = &err;
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_kmeans_options<T>(opts, err);
+        register_kmeans_options<T>(this->opts, err);
     };
 
     da_status get_result(da_result query, da_int *dim, T *result) {
         // Don't return anything if k-means has not been computed
         if (!iscomputed) {
-            return da_warn(err, da_status_no_data,
+            return da_warn(this->err, da_status_no_data,
                            "k-means clustering has not yet been computed. Please call "
                            "da_kmeans_compute_s "
                            "or da_kmeans_compute_d before extracting results.");
@@ -269,7 +264,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         case da_result::da_rinfo:
             if (*dim < rinfo_size) {
                 *dim = rinfo_size;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(rinfo_size) + ".");
@@ -283,7 +278,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         case da_result::da_kmeans_cluster_centres:
             if (*dim < n_clusters * n_features) {
                 *dim = n_clusters * n_features;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(n_clusters * n_features) + ".");
@@ -292,7 +287,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 result[i] = (*best_cluster_centres)[i];
             break;
         default:
-            return da_warn(err, da_status_unknown_query,
+            return da_warn(this->err, da_status_unknown_query,
                            "The requested result could not be found.");
         }
         return da_status_success;
@@ -301,7 +296,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_status get_result(da_result query, da_int *dim, da_int *result) {
         // Don't return anything if k-means has not been computed
         if (!iscomputed) {
-            return da_warn(err, da_status_no_data,
+            return da_warn(this->err, da_status_no_data,
                            "k-means clustering has not yet been computed. Please call "
                            "da_kmeans_compute_s "
                            "or da_kmeans_compute_d before extracting results.");
@@ -311,7 +306,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         case da_result::da_kmeans_labels:
             if (*dim < n_samples) {
                 *dim = n_samples;
-                return da_warn(err, da_status_invalid_array_dimension,
+                return da_warn(this->err, da_status_invalid_array_dimension,
                                "The array is too small. Please provide an array of at "
                                "least size: " +
                                    std::to_string(n_samples) + ".");
@@ -320,7 +315,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 result[i] = (*best_labels)[i];
             break;
         default:
-            return da_warn(err, da_status_unknown_query,
+            return da_warn(this->err, da_status_unknown_query,
                            "The requested result could not be found.");
         }
 
@@ -333,22 +328,22 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         // Check for illegal arguments and function calls
         if (n_samples < 1)
             return da_error(
-                err, da_status_invalid_input,
+                this->err, da_status_invalid_input,
                 "The function was called with n_samples = " + std::to_string(n_samples) +
                     ". Constraint: n_samples >= 1.");
         if (n_features < 1)
-            return da_error(err, da_status_invalid_input,
+            return da_error(this->err, da_status_invalid_input,
                             "The function was called with n_features = " +
                                 std::to_string(n_features) +
                                 ". Constraint: n_features >= 1.");
         if (lda_in < n_samples)
             return da_error(
-                err, da_status_invalid_input,
+                this->err, da_status_invalid_input,
                 "The function was called with n_samples = " + std::to_string(n_samples) +
                     " and lda = " + std::to_string(lda) +
                     ". Constraint: lda >= n_samples.");
         if (A_in == nullptr)
-            return da_error(err, da_status_invalid_pointer, "The array A is null.");
+            return da_error(this->err, da_status_invalid_pointer, "The array A is null.");
 
         // Store dimensions of A
         this->n_samples = n_samples;
@@ -364,14 +359,14 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         // Now that we have a data matrix we can re-register the n_clusters option with new constraints
         da_int temp_clusters;
-        opts.get("n_clusters", temp_clusters);
+        this->opts.get("n_clusters", temp_clusters);
 
-        reregister_kmeans_option<T>(opts, n_samples);
+        reregister_kmeans_option<T>(this->opts, n_samples);
 
-        opts.set("n_clusters", std::min(temp_clusters, n_samples));
+        this->opts.set("n_clusters", std::min(temp_clusters, n_samples));
 
         if (temp_clusters > n_samples)
-            return da_warn(err, da_status_incompatible_options,
+            return da_warn(this->err, da_status_incompatible_options,
                            "The requested number of clusters has been decreased from " +
                                std::to_string(temp_clusters) + " to " +
                                std::to_string(n_samples) +
@@ -383,21 +378,21 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     da_status set_init_centres(const T *C_in, da_int ldc_in) {
 
         if (initdone == false)
-            return da_error(err, da_status_no_data,
+            return da_error(this->err, da_status_no_data,
                             "No data has been passed to the handle. Please call "
                             "da_kmeans_set_data_s or da_kmeans_set_data_d.");
 
         // Check for illegal arguments
         this->opts.get("n_clusters", n_clusters);
         if (ldc_in < n_clusters)
-            return da_error(err, da_status_invalid_input,
+            return da_error(this->err, da_status_invalid_input,
                             "The function was called ldc = " + std::to_string(ldc_in) +
                                 " and n_clusters is currently set to = " +
                                 std::to_string(n_clusters) +
                                 ". Constraint: ldc >= n_clusters.");
 
         if (C_in == nullptr)
-            return da_error(err, da_status_invalid_pointer, "The array C is null.");
+            return da_error(this->err, da_status_invalid_pointer, "The array C is null.");
 
         C = C_in;
         ldc = ldc_in;
@@ -413,7 +408,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         da_status status = da_status_success;
         if (initdone == false)
-            return da_error(err, da_status_no_data,
+            return da_error(this->err, da_status_no_data,
                             "No data has been passed to the handle. Please call "
                             "da_kmeans_set_data_s or da_kmeans_set_data_d.");
 
@@ -435,8 +430,8 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         this->opts.get("seed", seed);
 
         // Remove the constraint on n_clusters, in case the user re-uses the handle with different data
-        reregister_kmeans_option<T>(opts, std::numeric_limits<da_int>::max());
-        opts.set("n_clusters", n_samples);
+        reregister_kmeans_option<T>(this->opts, std::numeric_limits<da_int>::max());
+        this->opts.set("n_clusters", n_samples);
 
         // Check for conflicting options
         if (n_init > 1 && init_method == supplied) {
@@ -445,17 +440,17 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 " but the initialization method was set to 'supplied'. The "
                 "k-means algorithm will only be run once.";
             n_init = 1;
-            da_warn(err, da_status_incompatible_options, buff);
+            da_warn(this->err, da_status_incompatible_options, buff);
         }
 
         if (algorithm == hartigan_wong && (n_clusters == 1 || n_clusters >= n_samples)) {
-            return da_error(err, da_status_incompatible_options,
+            return da_error(this->err, da_status_incompatible_options,
                             "The Hartigan-Wong algorithm requires 1 < k < n_samples.");
         }
 
         // This can only be triggered if the user re-uses the handle, otherwise the option handling should catch it
         if (n_clusters > n_samples) {
-            return da_error(err, da_status_incompatible_options,
+            return da_error(this->err, da_status_incompatible_options,
                             "n_clusters = " + std::to_string(n_clusters) +
                                 ", and n_samples = " + std::to_string(n_samples) +
                                 ". Constraint: n_clusters <= n_samples.");
@@ -463,7 +458,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         if (init_method == supplied && centres_supplied == false) {
             return da_error(
-                err, da_status_no_data,
+                this->err, da_status_no_data,
                 "The initialization method was set to 'supplied' but no initial "
                 "centres have been provided.");
         }
@@ -506,7 +501,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
                 best_labels->resize(n_samples);
             }
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
 
@@ -548,7 +543,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
             }
 
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
 
@@ -603,7 +598,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         iscomputed = true;
 
         if (warn_maxit_reached)
-            return da_warn(err, da_status_maxit,
+            return da_warn(this->err, da_status_maxit,
                            "The maximum number of iterations was reached.");
 
         return status;
@@ -614,7 +609,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         if (!iscomputed) {
             return da_warn(
-                err, da_status_no_data,
+                this->err, da_status_no_data,
                 "The k-means has not been computed. Please call da_kmeans_compute_s or "
                 "da_kmeans_compute_d.");
         }
@@ -622,34 +617,34 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         // Check for illegal arguments
         if (m_samples < 1)
             return da_error(
-                err, da_status_invalid_input,
+                this->err, da_status_invalid_input,
                 "The function was called with m_samples = " + std::to_string(m_samples) +
                     ". Constraint: m_samples >= 1.");
         if (m_features != n_features)
-            return da_error(err, da_status_invalid_input,
+            return da_error(this->err, da_status_invalid_input,
                             "The function was called with m_features = " +
                                 std::to_string(m_features) +
                                 " but the k-means has been computed with " +
                                 std::to_string(n_features) + " features.");
         if (ldx < m_samples)
             return da_error(
-                err, da_status_invalid_input,
+                this->err, da_status_invalid_input,
                 "The function was called with m_samples = " + std::to_string(m_samples) +
                     " and ldx = " + std::to_string(ldx) +
                     ". Constraint: ldx >= m_samples.");
 
         if (ldx_transform < m_samples)
             return da_error(
-                err, da_status_invalid_input,
+                this->err, da_status_invalid_input,
                 "The function was called with m_samples = " + std::to_string(m_samples) +
                     " and ldx_transform = " + std::to_string(ldx_transform) +
                     ". Constraint: ldx_transform >= m_samples.");
 
         if (X == nullptr)
-            return da_error(err, da_status_invalid_pointer, "The array X is null.");
+            return da_error(this->err, da_status_invalid_pointer, "The array X is null.");
 
         if (X_transform == nullptr)
-            return da_error(err, da_status_invalid_pointer,
+            return da_error(this->err, da_status_invalid_pointer,
                             "The array X_transform is null.");
 
         std::vector<T> x_work;
@@ -657,7 +652,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         try {
             x_work.resize(m_samples);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
 
@@ -675,7 +670,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         if (!iscomputed) {
             return da_warn(
-                err, da_status_no_data,
+                this->err, da_status_no_data,
                 "The k-means has not been computed. Please call da_kmeans_compute_s or "
                 "da_kmeans_compute_d.");
         }
@@ -683,27 +678,27 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         // Check for illegal arguments
         if (k_samples < 1)
             return da_error(
-                err, da_status_invalid_input,
+                this->err, da_status_invalid_input,
                 "The function was called with k_samples = " + std::to_string(k_samples) +
                     ". Constraint: k_samples >= 1.");
         if (k_features != n_features)
-            return da_error(err, da_status_invalid_input,
+            return da_error(this->err, da_status_invalid_input,
                             "The function was called with k_features = " +
                                 std::to_string(k_features) +
                                 " but the k-means has been computed with " +
                                 std::to_string(n_features) + " features.");
         if (ldy < k_samples)
             return da_error(
-                err, da_status_invalid_input,
+                this->err, da_status_invalid_input,
                 "The function was called with k_samples = " + std::to_string(k_samples) +
                     " and ldy = " + std::to_string(ldy) +
                     ". Constraint: ldy >= k_samples.");
 
         if (Y == nullptr)
-            return da_error(err, da_status_invalid_pointer, "The array Y is null.");
+            return da_error(this->err, da_status_invalid_pointer, "The array Y is null.");
 
         if (Y_labels == nullptr)
-            return da_error(err, da_status_invalid_pointer,
+            return da_error(this->err, da_status_invalid_pointer,
                             "The array Y_labels is null.");
 
         // Compute nearest cluster centre for each sample in Y; essentially a single blocked step of the Lloyd iteration.
@@ -720,7 +715,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
         try {
             y_work.resize(max_block_size * (n_clusters + 8) * n_threads);
         } catch (std::bad_alloc const &) {
-            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
 

@@ -199,7 +199,8 @@ set(GTEST_INTERNAL
     errors_internal
     doc_internal
     coord_internal
-    nlls_internal)
+    nlls_internal
+    miscellaneous_internal)
 set(INDEP_INTERNAL
     printf_debug_internal
     lbfgsb_rc_internal
@@ -220,7 +221,6 @@ set(GTEST_PUBLIC
     pca_public
     kmeans_public
     parallel_public
-    miscellaneous_internal
     nlls_public
     knn_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)

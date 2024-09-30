@@ -130,9 +130,6 @@ T misclassification_score(da_int n_samples, [[maybe_unused]] da_int n_class,
 
 template <typename T> class decision_tree : public basic_handle<T> {
 
-    // Pointer to error trace
-    da_errors::da_error_t *err = nullptr;
-
     bool model_trained = false;
     da_int predict_proba_opt = true;
 
@@ -205,7 +202,6 @@ template <typename T> class decision_tree : public basic_handle<T> {
     bool bootstrap = false;
 
   public:
-    da_options::OptionRegistry opts;
     // Constructor for public interfaces
     decision_tree(da_errors::da_error_t &err) {
         // Assumes that err is valid
@@ -213,7 +209,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
-        register_decision_tree_options<T>(opts, err);
+        register_decision_tree_options<T>(this->opts, err);
     }
     // Constructor bypassing the optional parameters for internal forest use
     // Values will NOT be checked
@@ -262,8 +258,8 @@ template <typename T> class decision_tree : public basic_handle<T> {
             tree.resize(new_size);
             class_props.resize(new_size * this->n_class);
             return da_status_success;
-        } catch (std::bad_alloc &) {                            // LCOV_EXCL_LINE
-            return da_error_bypass(err, da_status_memory_error, // LCOV_EXCL_LINE
+        } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE
+            return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                                    "Memory allocation error");
         }
     }
@@ -272,7 +268,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
                          [[maybe_unused]] da_int *result) {
 
-        return da_warn_bypass(err, da_status_unknown_query,
+        return da_warn_bypass(this->err, da_status_unknown_query,
                               "There are no integer results available for this API.");
     };
 
@@ -305,7 +301,7 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
     case da_result::da_rinfo:
         if (*dim < rinfo_size) {
             *dim = rinfo_size;
-            return da_warn_bypass(err, da_status_invalid_array_dimension,
+            return da_warn_bypass(this->err, da_status_invalid_array_dimension,
                                   "The array is too small. Please provide an array of at "
                                   "least size: " +
                                       std::to_string(rinfo_size) + ".");
@@ -319,7 +315,7 @@ da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) 
         result[6] = (T)n_leaves;
         break;
     default:
-        return da_warn_bypass(err, da_status_unknown_query,
+        return da_warn_bypass(this->err, da_status_unknown_query,
                               "The requested result could not be found.");
     }
     return da_status_success;
@@ -378,8 +374,8 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
         count_left_classes.resize(this->n_class);
         count_right_classes.resize(this->n_class);
         features_idx.resize(this->n_features);
-    } catch (std::bad_alloc &) {                            // LCOV_EXCL_LINE
-        return da_error_bypass(err, da_status_memory_error, // LCOV_EXCL_LINE
+    } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE
+        return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                                "Memory allocation error");
     }
     std::iota(features_idx.begin(), features_idx.end(), 0);
@@ -570,24 +566,27 @@ template <typename T> da_status decision_tree<T>::fit() {
     if (read_public_options) {
         std::string opt_val;
         bool opt_pass = true;
+        opt_pass &= this->opts.get("predict probabilities", predict_proba_opt) ==
+                    da_status_success;
+        opt_pass &= this->opts.get("maximum depth", max_depth) == da_status_success;
         opt_pass &=
-            opts.get("predict probabilities", predict_proba_opt) == da_status_success;
-        opt_pass &= opts.get("maximum depth", max_depth) == da_status_success;
-        opt_pass &= opts.get("scoring function", opt_val, method) == da_status_success;
+            this->opts.get("scoring function", opt_val, method) == da_status_success;
         opt_pass &=
-            opts.get("Node minimum samples", min_node_sample) == da_status_success;
-        opt_pass &= opts.get("Minimum split score", min_split_score) == da_status_success;
+            this->opts.get("Node minimum samples", min_node_sample) == da_status_success;
         opt_pass &=
-            opts.get("tree building order", opt_val, build_order) == da_status_success;
-        opt_pass &= opts.get("maximum features", nfeat_split) == da_status_success;
-        opt_pass &= opts.get("seed", seed) == da_status_success;
-        opt_pass &= opts.get("feature threshold", feat_thresh) == da_status_success;
+            this->opts.get("Minimum split score", min_split_score) == da_status_success;
+        opt_pass &= this->opts.get("tree building order", opt_val, build_order) ==
+                    da_status_success;
+        opt_pass &= this->opts.get("maximum features", nfeat_split) == da_status_success;
+        opt_pass &= this->opts.get("seed", seed) == da_status_success;
+        opt_pass &= this->opts.get("feature threshold", feat_thresh) == da_status_success;
+        opt_pass &= this->opts.get("minimum split improvement", min_improvement) ==
+                    da_status_success;
         opt_pass &=
-            opts.get("minimum split improvement", min_improvement) == da_status_success;
-        opt_pass &= opts.get("print timings", opt_val, prn_times) == da_status_success;
+            this->opts.get("print timings", opt_val, prn_times) == da_status_success;
         if (!opt_pass)
             return da_error_bypass(
-                err, da_status_internal_error, // LCOV_EXCL_LINE
+                this->err, da_status_internal_error, // LCOV_EXCL_LINE
                 "Unexpected error while reading the optional parameters.");
     }
 

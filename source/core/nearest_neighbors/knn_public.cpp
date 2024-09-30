@@ -39,13 +39,14 @@ da_status da_knn_set_training_data_d(da_handle handle, da_int n_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->knn_d == nullptr)
+    da_knn::da_knn<double> *knn =
+        dynamic_cast<da_knn::da_knn<double> *>(handle->alg_handle_d);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
 
-    return handle->knn_d->set_training_data(n_samples, n_features, X_train, ldx_train,
-                                            y_train);
+    return knn->set_training_data(n_samples, n_features, X_train, ldx_train, y_train);
 }
 
 da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
@@ -58,13 +59,14 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->knn_s == nullptr)
+    da_knn::da_knn<float> *knn =
+        dynamic_cast<da_knn::da_knn<float> *>(handle->alg_handle_s);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
 
-    return handle->knn_s->set_training_data(n_samples, n_features, X_train, ldx_train,
-                                            y_train);
+    return knn->set_training_data(n_samples, n_features, X_train, ldx_train, y_train);
 }
 
 da_status da_knn_kneighbors_d(da_handle handle, da_int n_queries, da_int n_features,
@@ -77,12 +79,14 @@ da_status da_knn_kneighbors_d(da_handle handle, da_int n_queries, da_int n_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->knn_d == nullptr)
+    da_knn::da_knn<double> *knn =
+        dynamic_cast<da_knn::da_knn<double> *>(handle->alg_handle_d);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
-    return handle->knn_d->kneighbors(n_queries, n_features, X_test, ldx_test, n_ind,
-                                     n_dist, k, return_distance);
+    return knn->kneighbors(n_queries, n_features, X_test, ldx_test, n_ind, n_dist, k,
+                           return_distance);
 }
 da_status da_knn_kneighbors_s(da_handle handle, da_int n_queries, da_int n_features,
                               const float *X_test, da_int ldx_test, da_int *n_ind,
@@ -94,12 +98,14 @@ da_status da_knn_kneighbors_s(da_handle handle, da_int n_queries, da_int n_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->knn_s == nullptr)
+    da_knn::da_knn<float> *knn =
+        dynamic_cast<da_knn::da_knn<float> *>(handle->alg_handle_s);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
-    return handle->knn_s->kneighbors(n_queries, n_features, X_test, ldx_test, n_ind,
-                                     n_dist, k, return_distance);
+    return knn->kneighbors(n_queries, n_features, X_test, ldx_test, n_ind, n_dist, k,
+                           return_distance);
 }
 
 da_status da_knn_classes_d(da_handle handle, da_int *n_classes, da_int *classes) {
@@ -110,21 +116,23 @@ da_status da_knn_classes_d(da_handle handle, da_int *n_classes, da_int *classes)
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->knn_d == nullptr)
+    da_knn::da_knn<double> *knn =
+        dynamic_cast<da_knn::da_knn<double> *>(handle->alg_handle_d);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
     da_status status = da_status_success;
     if (*n_classes <= 0) { // Querying number of classes to allocate memory
-        status = handle->knn_d->available_classes();
+        status = knn->available_classes();
         if (status == da_status_success)
-            *n_classes = da_int(handle->knn_d->classes.size());
+            *n_classes = da_int(knn->classes.size());
     } else { // Now that the number of classes is known, return those values, sorted in ascending order
         if (classes == nullptr)
             return da_error_bypass(handle->err, da_status_invalid_pointer,
                                    "classes is not a valid pointer.");
         for (da_int i = 0; i < *n_classes; i++)
-            classes[i] = handle->knn_d->classes[i];
+            classes[i] = knn->classes[i];
     }
     return status;
 }
@@ -137,21 +145,23 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->knn_s == nullptr)
+    da_knn::da_knn<float> *knn =
+        dynamic_cast<da_knn::da_knn<float> *>(handle->alg_handle_s);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
     da_status status = da_status_success;
     if (*n_classes <= 0) { // Querying number of classes to allocate memory
-        status = handle->knn_s->available_classes();
+        status = knn->available_classes();
         if (status == da_status_success)
-            *n_classes = da_int(handle->knn_s->classes.size());
+            *n_classes = da_int(knn->classes.size());
     } else { // Now that the number of classes is known, return those values, sorted in ascending order
         if (classes == nullptr)
             return da_error_bypass(handle->err, da_status_invalid_pointer,
                                    "classes is not a valid pointer.");
         for (da_int i = 0; i < *n_classes; i++)
-            classes[i] = handle->knn_s->classes[i];
+            classes[i] = knn->classes[i];
     }
     return status;
 }
@@ -165,12 +175,14 @@ da_status da_knn_predict_proba_d(da_handle handle, da_int n_queries, da_int n_fe
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->knn_d == nullptr)
+    da_knn::da_knn<double> *knn =
+        dynamic_cast<da_knn::da_knn<double> *>(handle->alg_handle_d);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
 
-    return handle->knn_d->predict_proba(n_queries, n_features, X_test, ldx_test, proba);
+    return knn->predict_proba(n_queries, n_features, X_test, ldx_test, proba);
 }
 
 da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_features,
@@ -182,12 +194,14 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->knn_s == nullptr)
+    da_knn::da_knn<float> *knn =
+        dynamic_cast<da_knn::da_knn<float> *>(handle->alg_handle_s);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
 
-    return handle->knn_s->predict_proba(n_queries, n_features, X_test, ldx_test, proba);
+    return knn->predict_proba(n_queries, n_features, X_test, ldx_test, proba);
 }
 
 da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features,
@@ -199,12 +213,14 @@ da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->knn_d == nullptr)
+    da_knn::da_knn<double> *knn =
+        dynamic_cast<da_knn::da_knn<double> *>(handle->alg_handle_d);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
 
-    return handle->knn_d->predict(n_queries, n_features, X_test, ldx_test, y_test);
+    return knn->predict(n_queries, n_features, X_test, ldx_test, y_test);
 }
 
 da_status da_knn_predict_s(da_handle handle, da_int n_queries, da_int n_features,
@@ -216,10 +232,12 @@ da_status da_knn_predict_s(da_handle handle, da_int n_queries, da_int n_features
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->knn_s == nullptr)
+    da_knn::da_knn<float> *knn =
+        dynamic_cast<da_knn::da_knn<float> *>(handle->alg_handle_s);
+    if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
 
-    return handle->knn_s->predict(n_queries, n_features, X_test, ldx_test, y_test);
+    return knn->predict(n_queries, n_features, X_test, ldx_test, y_test);
 }

@@ -29,6 +29,8 @@
 #define BASIC_HANDLE_HPP
 #include "aoclda_error.h"
 #include "aoclda_result.h"
+#include "da_error.hpp"
+#include "options.hpp"
 
 /*
  * Base handle class (basic_handle) that contains members that
@@ -54,6 +56,13 @@ template <typename T> class basic_handle {
      * the underlying model is different and a new call to fit is required.
      * Each (sub)handle is responsible to implement this function if required.
      */
-    void refresh(){};
+    virtual void refresh(){};
+
+    // Pointer to error trace
+    da_errors::da_error_t *err = nullptr;
+    // Options registry
+    da_options::OptionRegistry opts;
+
+    da_options::OptionRegistry &get_opts() { return this->opts; };
 };
 #endif
