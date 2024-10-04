@@ -253,8 +253,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void perform_hartigan_wong();
 
   public:
-    da_kmeans(da_errors::da_error_t &err) {
-        this->err = &err;
+    da_kmeans(da_errors::da_error_t &err) : basic_handle<T>(err) {
         // Initialize the options registry
         // Any error is stored err->status[.] and this needs to be checked
         // by the caller.
@@ -660,7 +659,7 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
         if (this->order == row_major) {
 
-            da_utils::copy_transpose_2D_array_col_to_row_major(
+            da_utils::copy_transpose_2D_array_column_to_row_major(
                 m_samples, n_clusters, X_transform_temp, ldx_transform_temp, X_transform,
                 ldx_transform);
 

@@ -100,8 +100,7 @@ template <typename T> class da_pca : public basic_handle<T> {
     std::vector<da_int> iwork;
 
   public:
-    da_pca(da_errors::da_error_t &err) {
-        this->err = &err;
+    da_pca(da_errors::da_error_t &err) : basic_handle<T>(err) {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
@@ -869,7 +868,7 @@ da_status da_pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_
 
     if (this->order == row_major) {
 
-        da_utils::copy_transpose_2D_array_col_to_row_major(
+        da_utils::copy_transpose_2D_array_column_to_row_major(
             m, ns, X_transform_temp, ldx_transform_temp, X_transform, ldx_transform);
     }
 
@@ -941,7 +940,7 @@ da_status da_pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ld
 
     if (this->order == row_major) {
 
-        da_utils::copy_transpose_2D_array_col_to_row_major(
+        da_utils::copy_transpose_2D_array_column_to_row_major(
             k, p, X_inv_transform_temp, ldx_inv_transform_temp, X_inv_transform,
             ldx_inv_transform);
     }

@@ -104,6 +104,7 @@ da_status nlls<T>::define_callbacks(resfun_t<T> resfun, resgrd_t<T> resgrd,
 
 template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata) {
 
+    da_status status;
     // Copy the starting point
     if (n_coef != 0 && n_coef != this->nvar)
         return da_error(this->err, da_status_invalid_array_dimension,
@@ -112,10 +113,8 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
                             std::to_string(this->nvar) + ".");
     if (n_coef > 0 && !coef) {
         // Make sure it is a valid pointer
-        if (!coef) {
-            return da_error(this->err, da_status_invalid_pointer,
-                            "Pointer coef must be valid.");
-        }
+        return da_error(this->err, da_status_invalid_pointer,
+                        "Pointer coef must be valid.");
     }
     try {
         this->coef.resize(this->nvar);
@@ -128,6 +127,9 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
         // Initial guess is zeros...
         std::fill(this->coef.begin(), this->coef.end(), T(0));
     else {
+        status = this->check_1D_array(n_coef, coef, "n_coef", "coef", 0);
+        if (status != da_status_success)
+            return status;
         // Copy
         for (da_int i = 0; i < n_coef; ++i) {
             this->coef[i] = coef[i];
@@ -136,7 +138,6 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
 
     this->udata = udata;
 
-    da_status status;
     status = this->solve(this->coef, udata);
     if (this->err->get_severity() == DA_ERROR) {
         return status; // Error message already loaded

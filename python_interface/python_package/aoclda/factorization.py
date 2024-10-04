@@ -66,11 +66,13 @@ class PCA(pybind_PCA):
         store_U (bool, optional): Controls whether to store the matrix ``U`` from the singular
             value decomposition. This allows deterministic results regarding the sign of the
             principal components, at the expense of some extra computation. This option cannot be
-            used if ``solver = 'syevd'``. Default=False.
+            used if ``solver = 'syevd'``. Default = False.
 
         precision (str, optional): Whether to initialize the PCA object in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
 
     """
     @property

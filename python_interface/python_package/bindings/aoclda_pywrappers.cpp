@@ -146,11 +146,11 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
         .def(py::init<std::string, std::optional<da_int>, bool, std::string, std::string,
-                      std::string, std::string &>(),
+                      std::string, std::string &, bool>(),
              py::arg("mod"), py::arg("max_iter") = py::none(),
              py::arg("intercept") = false, py::arg("solver") = "auto",
              py::arg("scaling") = "auto", py::arg("constraint") = "ssc",
-             py::arg("precision") = "double")
+             py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
              py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,
@@ -172,11 +172,12 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_factorization = m.def_submodule("factorization", "Matrix factorizations.");
     py::class_<pca, pyda_handle>(m_factorization, "pybind_PCA")
-        .def(py::init<da_int, std::string, std::string, std::string, bool,
-                      std::string &>(),
+        .def(py::init<da_int, std::string, std::string, std::string, bool, std::string &,
+                      bool>(),
              py::arg("n_components") = 1, py::arg("bias") = "unbiased",
              py::arg("method") = "covariance", py::arg("solver") = "gesdd",
-             py::arg("store_U") = false, py::arg("precision") = "double")
+             py::arg("store_U") = false, py::arg("precision") = "double",
+             py::arg("check_data") = false)
         .def("pybind_fit", &pca::fit<float>, "Fit the principal component analysis",
              "A"_a)
         .def("pybind_fit", &pca::fit<double>, "Fit the principal component analysis",
@@ -208,10 +209,11 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_clustering = m.def_submodule("clustering", "Clustering algorithms.");
     py::class_<kmeans, pyda_handle>(m_clustering, "pybind_kmeans")
         .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string,
-                      std::string &>(),
+                      std::string &, bool>(),
              py::arg("n_clusters") = 1, py::arg("initialization_method") = "k-means++",
              py::arg("n_init") = 10, py::arg("max_iter") = 300, py::arg("seed") = -1,
-             py::arg("algorithm") = "elkan", py::arg("precision") = "double")
+             py::arg("algorithm") = "elkan", py::arg("precision") = "double",
+             py::arg("check_data") = false)
         .def("pybind_fit", &kmeans::fit<float>, "Fit the k-means clusters", "A"_a,
              "C"_a = py::none(), py::arg("convergence_tolerance") = (float)1.0e-4)
         .def("pybind_fit", &kmeans::fit<double>, "Fit the k-means clusters", "A"_a,
@@ -238,10 +240,11 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_decision_tree = m.def_submodule("decision_tree", "Decision trees.");
     py::class_<decision_tree, pyda_handle>(m_decision_tree, "pybind_decision_tree")
         .def(py::init<da_int, da_int, da_int, std::string, da_int, std::string,
-                      std::string &>(),
+                      std::string &, bool>(),
              py::arg("seed") = -1, py::arg("max_depth") = 29, py::arg("max_features") = 0,
              py::arg("criterion") = "gini", py::arg("min_samples_split") = 2,
-             py::arg("build_order") = "breadth first", py::arg("precision") = "double")
+             py::arg("build_order") = "breadth first", py::arg("precision") = "double",
+             py::arg("check_data") = false)
         .def("pybind_fit", &decision_tree::fit<float>, "Fit the decision tree", "X"_a,
              "y"_a, py::arg("min_impurity_decrease") = 0.0,
              py::arg("min_split_score") = 0.0, py::arg("feat_thresh") = 0.0)
@@ -275,12 +278,13 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_decision_forest = m.def_submodule("decision_forest", "Decision forests.");
     py::class_<decision_forest, pyda_handle>(m_decision_forest, "pybind_decision_forest")
         .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string, bool,
-                      std::string, da_int, std::string &>(),
+                      std::string, da_int, std::string &, bool>(),
              py::arg("n_trees") = 100, py::arg("criterion") = "gini",
              py::arg("seed") = -1, py::arg("max_depth") = 29,
              py::arg("min_samples_split") = 2, py::arg("build_order") = "breadth first",
              py::arg("bootstrap") = true, py::arg("features_selection") = "sqrt",
-             py::arg("max_features") = 0, py::arg("precision") = "double")
+             py::arg("max_features") = 0, py::arg("precision") = "double",
+             py::arg("check_data") = false)
         .def("pybind_fit", &decision_forest::fit<float>, "Fit the decision forest", "X"_a,
              "y"_a, py::arg("samples factor") = 0.8,
              py::arg("min_impurity_decrease") = 0.03, py::arg("min_split_score") = 0.03,
@@ -317,13 +321,14 @@ PYBIND11_MODULE(_aoclda, m) {
     py::class_<nlls, pyda_handle>(m_nlls, "pybind_nlls")
         .def(py::init<da_int, da_int, std::optional<py::array>, std::optional<py::array>,
                       std::optional<py::array>, std::string, std::string, std::string,
-                      std::string, std::string, std::string, std::string, da_int>(),
+                      std::string, std::string, std::string, std::string, da_int, bool>(),
              py::arg("n_coef"), py::arg("n_res"), py::arg("weights") = py::none(),
              py::arg("lower_bounds") = py::none(), py::arg("upper_bounds") = py::none(),
              py::arg("order") = "c", py::arg("prec") = "double",
              py::arg("model") = "hybrid", py::arg("method") = "galahad",
              py::arg("glob_strategy") = "tr", py::arg("reg_power") = "quadratic",
-             py::arg("check_derivatives") = "no", py::arg("verbose") = (da_int)0)
+             py::arg("check_derivatives") = "no", py::arg("verbose") = (da_int)0,
+             py::arg("check_data") = false)
         .def("fit_d", &nlls::fit<double>, "Fit data and train the model", "x"_a, "fun"_a,
              "jac"_a, "hes"_a = py::none(), "hep"_a = py::none(), "data"_a = py::none(),
              py::arg("ftol") = (double)1.0e-8, py::arg("abs_ftol") = (double)1.0e-8,
@@ -360,10 +365,11 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_knn_classifier =
         m.def_submodule("nearest_neighbors", "k-Nearest Neighbors for classification");
     py::class_<knn_classifier, pyda_handle>(m_knn_classifier, "pybind_knn_classifier")
-        .def(py::init<da_int, std::string, std::string, std::string, std::string &>(),
+        .def(py::init<da_int, std::string, std::string, std::string, std::string &,
+                      bool>(),
              py::arg("n_neighbors") = (da_int)5, py::arg("weights") = "uniform",
              py::arg("algorithm") = "brute", py::arg("metric") = "euclidean",
-             py::arg("precision") = "double")
+             py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &knn_classifier::fit<float>, "Fit the knn classifier", "X"_a,
              "y"_a)
         .def("pybind_fit", &knn_classifier::fit<double>, "Fit the knn classifier", "X"_a,

@@ -320,6 +320,14 @@ TYPED_TEST(KMeansTest, ErrorExits) {
     EXPECT_EQ(da_options_set_string(handle, "algorithm", a.c_str()), da_status_success);
     EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), da_status_incompatible_options);
 
+    // Test that check_data works - could do this in any handle type really, so we will do it here
+    EXPECT_EQ(da_options_set(handle, "check data", (da_int)1), da_status_success);
+    TypeParam tmp = param.C.data()[0];
+    param.C.data()[0] = std::numeric_limits<TypeParam>::quiet_NaN();
+    EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
+              da_status_invalid_input);
+    param.C.data()[0] = tmp;
+
     // Subsequent tests require compute to be done
     EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
               da_status_success);

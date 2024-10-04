@@ -44,8 +44,8 @@ class decision_tree : public pyda_handle {
   public:
     decision_tree(da_int seed = -1, da_int max_depth = 29, da_int max_features = 0,
                   std::string criterion = "gini", da_int min_samples_split = 2,
-                  std::string build_order = "breadth first",
-                  std::string prec = "double") {
+                  std::string build_order = "breadth first", std::string prec = "double",
+                  bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_tree);
@@ -264,7 +264,7 @@ class decision_forest : public pyda_handle {
                     da_int seed = -1, da_int max_depth = 29, da_int min_samples_split = 2,
                     std::string build_order = "breadth first", bool bootstrap = true,
                     std::string features_selection = "sqrt", da_int max_features = 0,
-                    std::string prec = "double") {
+                    std::string prec = "double", bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_forest);
@@ -294,6 +294,10 @@ class decision_forest : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "maximum features", max_features);
         exception_check(status);
+        if (check_data == true) {
+            status = da_options_set_int(handle, "check data", 1);
+            exception_check(status);
+        }
     }
     ~decision_forest() { da_handle_destroy(&handle); }
 

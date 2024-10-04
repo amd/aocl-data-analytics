@@ -52,6 +52,8 @@ class knn_classifier(pybind_knn_classifier):
         precision (str, optional): Whether to initialize the k-NN object in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
     def fit(self, X, y):
         """

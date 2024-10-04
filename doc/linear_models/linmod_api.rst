@@ -32,7 +32,7 @@ Linear Model APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.linear_model.linmod(mod, intercept='False', solver='auto', scaling='auto', max_iter=None, constraint='ssc', precision='double')
+      .. autoclass:: aoclda.linear_model.linmod(mod, intercept='False', solver='auto', scaling='auto', max_iter=None, constraint='ssc', precision='double', check_data=false)
          :members:
 
    .. tab-item:: C

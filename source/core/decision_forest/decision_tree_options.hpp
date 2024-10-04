@@ -124,12 +124,6 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
                          {{"yes", 1}, {"no", 0}}, "no"));
         status = opts.register_opt(os);
 
-        os = std::make_shared<OptionString>(OptionString(
-            "storage order",
-            "Whether data is supplied and returned in row- or column-major order.",
-            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
-        opts.register_opt(os);
-
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");

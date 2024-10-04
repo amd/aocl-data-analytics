@@ -736,4 +736,38 @@ inline da_status da_knn_predict(da_handle handle, da_int n_queries, da_int n_fea
     return da_knn_predict_s(handle, n_queries, n_features, X_test, ldx_test, y_test);
 }
 
+/* Utility overloaded functions */
+inline da_status da_check_data(da_order order, da_int n_rows, da_int n_cols,
+                               const double *X, da_int ldx) {
+    return da_check_data_d(order, n_rows, n_cols, X, ldx);
+}
+
+inline da_status da_check_data(da_order order, da_int n_rows, da_int n_cols,
+                               const float *X, da_int ldx) {
+    return da_check_data_s(order, n_rows, n_cols, X, ldx);
+}
+
+inline da_status da_switch_order_copy(da_order order_X, da_int n_rows, da_int n_cols,
+                                      const float *X, da_int ldx, float *Y, da_int ldy) {
+    return da_switch_order_copy_s(order_X, n_rows, n_cols, X, ldx, Y, ldy);
+}
+
+inline da_status da_switch_order_copy(da_order order_X, da_int n_rows, da_int n_cols,
+                                      const double *X, da_int ldx, double *Y,
+                                      da_int ldy) {
+    return da_switch_order_copy_d(order_X, n_rows, n_cols, X, ldx, Y, ldy);
+}
+
+inline da_status da_switch_order_in_place(da_order order_X_in, da_int n_rows,
+                                          da_int n_cols, float *X, da_int ldx_in,
+                                          da_int ldx_out) {
+    return da_switch_order_in_place_s(order_X_in, n_rows, n_cols, X, ldx_in, ldx_out);
+}
+
+inline da_status da_switch_order_in_place(da_order order_X_in, da_int n_rows,
+                                          da_int n_cols, double *X, da_int ldx_in,
+                                          da_int ldx_out) {
+    return da_switch_order_in_place_d(order_X_in, n_rows, n_cols, X, ldx_in, ldx_out);
+}
+
 #endif // AOCLDA_CPP_OVERLOADS

@@ -299,3 +299,23 @@ def test_warning():
     with pytest.warns(RuntimeWarning):
         ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
                 abs_gtol=1e-7, gtol=1.e-9, maxit=1)
+
+def test_nan():
+    abs_gtol = 1e-7
+    gtol = 1.e-9
+    maxit = 20
+    n_coef = 2
+    n_res = 5
+    x = np.array([2.5, np.nan])
+    w = 0.12 * np.array([1, 1, 1, 1, 1])
+    blx = np.array([np.nan,  0.0])
+    bux = np.array([5.0,  3.0])
+    with pytest.raises(RuntimeError):
+        ndf = nlls(n_coef, n_res, prec='double', weights=w, lower_bounds=blx, upper_bounds=bux,
+                   verbose=0, check_derivatives='yes', check_data=True)
+    blx = np.array([0.0,  0.0])
+    ndf = nlls(n_coef, n_res, prec='double', weights=w, lower_bounds=blx, upper_bounds=bux,
+                   verbose=0, check_derivatives='yes', check_data=True)
+    with pytest.raises(RuntimeError):
+        ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
+                    abs_gtol=abs_gtol, gtol=gtol, maxit=maxit)

@@ -265,7 +265,8 @@ class nlls : public pyda_handle {
          std::string order = "c", std::string prec = "double",
          std::string model = "hybrid", std::string method = "galahad",
          std::string glob_strategy = "tr", std::string reg_power = "quadratic",
-         std::string check_derivatives = "no", da_int verbose = (da_int)0) {
+         std::string check_derivatives = "no", da_int verbose = (da_int)0,
+         bool check_data = false) {
 
         da_status status{da_status_success};
         // prep precision string
@@ -340,6 +341,10 @@ class nlls : public pyda_handle {
         exception_check(status, mesg);
         if (verbose > 1) {
             da_options_set(handle, "print options", "yes");
+        }
+        if (check_data == true) {
+            status = da_options_set_int(handle, "check data", 1);
+            exception_check(status);
         }
 
         da_int dim{0};

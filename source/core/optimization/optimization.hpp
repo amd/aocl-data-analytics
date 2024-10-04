@@ -186,7 +186,8 @@ template <typename T> da_status da_optimization<T>::get_info(da_int &dim, T info
 };
 
 template <typename T>
-da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &err) {
+da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &err)
+    : basic_handle<T>() {
     // Assuming that err is valid
     this->err = &err;
     try {
@@ -269,12 +270,25 @@ da_status da_optimization<T>::add_bound_cons(std::vector<T> &l, std::vector<T> &
 // Add bound constraints to the problem (get pointer to user data)
 template <typename T>
 da_status da_optimization<T>::add_bound_cons(da_int nvar, T *l, T *u) {
+    da_status status;
+
     if (nvar == 0) {
         this->l_usrptr = nullptr;
         this->u_usrptr = nullptr;
     } else if (this->nvar == nvar) {
         this->l_usrptr = l;
         this->u_usrptr = u;
+        // Call check_1D array only if l and u were supplied, since they are allowed to be null
+        if (l) {
+            status = this->check_1D_array(nvar, l, "n_coef", "lower", 1);
+            if (status != da_status_success)
+                return status;
+        }
+        if (u) {
+            status = this->check_1D_array(nvar, u, "n_coef", "upper", 1);
+            if (status != da_status_success)
+                return status;
+        }
     } else {
         return da_error(this->err, da_status_invalid_input,
                         "Invalid size of nvar, it must match zero or the number of "
@@ -291,9 +305,12 @@ template <typename T> da_status da_optimization<T>::add_weights(da_int lw, T *w)
     else if (w == nullptr)
         return da_error(this->err, da_status_invalid_pointer,
                         "w must be a valid pointer");
-    else if (lw == this->nres)
+    else if (lw == this->nres) {
+        da_status status = this->check_1D_array(lw, w, "n_res", "weights", 0);
+        if (status != da_status_success)
+            return status;
         this->w_usrptr = w;
-    else
+    } else
         return da_error(this->err, da_status_invalid_input,
                         "Invalid size of lw, it must match zero or the "
                         "number of residuals defined: " +

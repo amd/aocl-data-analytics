@@ -58,6 +58,8 @@ class decision_tree(pybind_decision_tree):
         precision (str, optional): Whether to initialize the PCA object in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
     def __init__(self,
              criterion = 'gini',
@@ -73,7 +75,7 @@ class decision_tree(pybind_decision_tree):
     @property
     def max_features(self):
         return self.max_features
-        
+
     @max_features.setter
     def max_features(self, value):
         self.set_max_features_opt(max_features=value)

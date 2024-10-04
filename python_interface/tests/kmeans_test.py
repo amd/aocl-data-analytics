@@ -120,3 +120,19 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
         km.fit(a)
     with pytest.raises(RuntimeError):
         km.transform(b)
+
+    a = np.array([[2., 1.],
+                  [-1., -2.],
+                  [np.nan, 2.],
+                  [2., 3.],
+                  [-3., -2.],
+                  [-2., -1.],
+                  [-2., -3.],
+                  [1., 2.]], dtype=numpy_precision)
+
+    c = np.array([[1., 1.],
+                  [-3., -3.]], dtype=numpy_precision)
+
+    km = kmeans(n_clusters=2, precision=da_precision, check_data=True)
+    with pytest.raises(RuntimeError):
+        km.fit(a, c, 1.0e-4)

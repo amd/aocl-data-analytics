@@ -95,6 +95,8 @@ class linmod(pybind_linmod):
         precision (str, optional): Whether to compute the linear model in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
     # This is done to change the order of parameters, in pybind usage of std::optional for max_iter
@@ -106,14 +108,16 @@ class linmod(pybind_linmod):
                  scaling='auto',
                  max_iter=None,
                  constraint='ssc',
-                 precision='double'):
+                 precision='double',
+                 check_data=False):
         super().__init__(mod=mod,
                          max_iter=max_iter,
                          intercept=intercept,
                          solver=solver,
                          scaling=scaling,
                          constraint=constraint,
-                         precision=precision)
+                         precision=precision,
+                         check_data=check_data)
 
     def fit(self,
             X,

@@ -65,9 +65,7 @@ template <typename T> class random_forest : public basic_handle<T> {
     std::vector<std::unique_ptr<decision_tree<T>>> forest;
 
   public:
-    random_forest(da_errors::da_error_t &err) {
-        // Assumes that err is valid
-        this->err = &err;
+    random_forest(da_errors::da_error_t &err) : basic_handle<T>(err) {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
@@ -140,9 +138,6 @@ template <typename T>
 da_status random_forest<T>::set_training_data(da_int n_samples, da_int n_features,
                                               const T *X, da_int ldx, const da_int *y,
                                               da_int n_class) {
-    if (y == nullptr)
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "y is not a valid pointer.");
 
     // Guard against errors due to multiple calls using the same class instantiation
     if (X_temp) {
@@ -153,6 +148,10 @@ da_status random_forest<T>::set_training_data(da_int n_samples, da_int n_feature
     da_status status =
         this->store_2D_array(n_samples, n_features, X, ldx, &X_temp, &this->X, this->ldx,
                              "n_samples", "n_features", "X", "ldx");
+    if (status != da_status_success)
+        return status;
+
+    status = this->check_1D_array(n_samples, y, "n_samples", "y", 1);
     if (status != da_status_success)
         return status;
 
@@ -484,8 +483,8 @@ da_status random_forest<T>::predict_proba(da_int nsamp, da_int nfeat, const T *X
 
     if (this->order == row_major) {
 
-        da_utils::copy_transpose_2D_array_col_to_row_major(nsamp, n_class, y_proba_temp,
-                                                           ldy_proba_temp, y_proba, ldy);
+        da_utils::copy_transpose_2D_array_column_to_row_major(
+            nsamp, n_class, y_proba_temp, ldy_proba_temp, y_proba, ldy);
 
         delete[] (utility_ptr1);
         delete[] (utility_ptr2);
@@ -526,9 +525,9 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     T *utility_ptr1 = nullptr;
     da_int ldx_test_temp;
 
-    if (y_test == nullptr || score == nullptr) {
+    if (score == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_input,
-                               "Either y_test or mean_accuracy are not valid pointers.");
+                               "mean_accuracy is not valid pointers.");
     }
 
     if (nfeat != n_features) {
@@ -547,6 +546,10 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     da_status status = this->store_2D_array(nsamp, nfeat, X_test, ldx_test, &utility_ptr1,
                                             &X_test_temp, ldx_test_temp, "n_samples",
                                             "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
+
+    status = this->check_1D_array(nsamp, y_test, "n_samples", "y_test", 1);
     if (status != da_status_success)
         return status;
 

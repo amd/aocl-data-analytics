@@ -162,7 +162,7 @@ TYPED_TEST(dectree_public_test, invalid_input) {
               da_status_invalid_pointer);
     EXPECT_EQ(da_tree_set_training_data(tree_handle, n_samples, n_features, n_class,
                                         X.data(), n_samples, y_invalid),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_tree_set_training_data(nullptr, n_samples, n_features, n_class,
                                         X_invalid, n_samples, y.data()),
               da_status_handle_not_initialized);
@@ -218,7 +218,7 @@ TYPED_TEST(dectree_public_test, invalid_input) {
               da_status_invalid_pointer);
     EXPECT_EQ(da_tree_score(tree_handle, n_samples, n_features, X.data(), n_samples,
                             y_invalid, &accuracy),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_tree_score(tree_handle, n_samples, n_features, X.data(), n_samples,
                             y.data(), nullptr),
               da_status_invalid_input);

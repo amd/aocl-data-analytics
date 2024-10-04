@@ -45,7 +45,8 @@ class kmeans : public pyda_handle {
   public:
     kmeans(da_int n_clusters = 1, std::string initialization_method = "k-means++",
            da_int n_init = 10, da_int max_iter = 300, da_int seed = -1,
-           std::string algorithm = "elkan", std::string prec = "double") {
+           std::string algorithm = "elkan", std::string prec = "double",
+           bool check_data = false) {
         if (prec == "double")
             da_handle_init<double>(&handle, da_handle_kmeans);
         else if (prec == "single") {
@@ -66,6 +67,10 @@ class kmeans : public pyda_handle {
         exception_check(status);
         status = da_options_set_int(handle, "n_init", n_init);
         exception_check(status);
+        if (check_data == true) {
+            status = da_options_set_int(handle, "check data", 1);
+            exception_check(status);
+        }
     }
     ~kmeans() { da_handle_destroy(&handle); }
 

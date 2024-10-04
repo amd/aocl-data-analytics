@@ -89,12 +89,6 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts,
             {{"yes", 1}, {"no", 0}}, "yes"));
         status = opts.register_opt(os);
 
-        os = std::make_shared<OptionString>(OptionString(
-            "storage order",
-            "Whether data is supplied and returned in row- or column-major order.",
-            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
-        opts.register_opt(os);
-
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "bootstrap samples factor",
             "Proportion of samples to draw from the data set to build each tree if "

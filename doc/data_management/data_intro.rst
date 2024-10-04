@@ -199,3 +199,4 @@ The source files ``datastore.cpp`` and ``linmod_diabetes.cpp`` showcase loading,
 
     csv_api
     datastores_api
+    utility_api

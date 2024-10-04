@@ -72,6 +72,8 @@ class decision_forest(pybind_decision_forest):
         precision (str, optional): Whether to initialize the PCA object in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
     def __init__(self,
              n_trees = 100, criterion = 'gini',

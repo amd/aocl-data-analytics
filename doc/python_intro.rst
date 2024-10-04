@@ -37,6 +37,7 @@ Installation
 
 Your AOCL-DA package comes bundled with a Python wheel, ``aoclda-*.whl``, where ``*`` depends on your particular system.
 To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.whl``. This will install the necessary libraries and dependencies.
+If you find that your system is incompatible with the supplied wheel, you can instead install the Python package using the spack recipe at the following link: https://www.amd.com/en/developer/zen-software-studio/applications/spack/spack-aocl.html
 
 .. note::
    Python support on Windows is currently experimental. A Fortran runtime library ``libifcore-mt.lib`` is required, so you will need to install the Intel Fortran compiler and set the environment variable ``FORTRAN_RUNTIME`` to point to the directory containing the corresponding DLL.
@@ -48,6 +49,10 @@ NumPy arrays
 
 AOCL-DA Python interfaces typically expect data to be supplied as NumPy arrays. These can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
 For best performance, it is generally recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions since row-major arrays may be copied and transposed internally.
+
+In order to provide the best possible performance, the algorithmic functions will not automatically check for
+``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behaviour is undefined.
+It is therefore the user's responsibility to ensure data is sanitized (this can be done in Python, or by setting the ``check_data`` optional argument in the appropriate algorithmic APIs).
 
 .. _python_examples:
 

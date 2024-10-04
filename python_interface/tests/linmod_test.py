@@ -98,3 +98,11 @@ def test_linear_regression_error_exits(da_precision, numpy_precision, numpy_orde
         lmod = linmod("mse", solver='coord', scaling='none',
                       precision=da_precision)
         lmod.fit(X, y)
+
+    # NaN checking
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]],
+                 dtype=numpy_precision, order=numpy_order)
+    y = np.array([3., 6.5, 10., 12., np.nan, 19.], dtype=numpy_precision)
+    lmod2 = linmod("mse", precision=da_precision, check_data=True)
+    with pytest.raises(RuntimeError):
+        lmod2.fit(X, y)

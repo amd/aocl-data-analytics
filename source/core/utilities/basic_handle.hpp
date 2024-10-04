@@ -30,6 +30,7 @@
 #include "aoclda_error.h"
 #include "aoclda_result.h"
 #include "aoclda_types.h"
+#include "basic_handle_options.hpp"
 #include "da_error.hpp"
 #include "da_utils.hpp"
 #include "options.hpp"
@@ -43,6 +44,13 @@
  */
 template <typename T> class basic_handle {
   public:
+    basic_handle(){};
+    basic_handle(da_errors::da_error_t &err) {
+        // Assumes that err is valid
+        this->err = &err;
+        // Initialize the options registry with common options to all handles
+        register_common_options<T>(this->opts, *this->err);
+    };
     virtual ~basic_handle(){};
 
     /*
@@ -71,7 +79,13 @@ template <typename T> class basic_handle {
 
     da_options::OptionRegistry &get_opts() { return this->opts; };
 
-    // Store a pointer to a 2D array, converting to column major ordering if necessary
+    // Argument checking for a 1D input array, including NaN check if option is set
+    da_status check_1D_array(da_int n, const T *data, const std::string &n_name,
+                             const std::string &data_name, da_int n_min = 1);
+    da_status check_1D_array(da_int n, const da_int *data, const std::string &n_name,
+                             const std::string &data_name, da_int n_min = 1);
+
+    // Store a pointer to a 2D array, converting to column major ordering if necessary, and optionally checking arguments
     da_status store_2D_array(da_int n_rows, da_int n_cols, const T *data, da_int lddata,
                              T **temp_data, const T **data_internal,
                              da_int &lddata_internal, const std::string &n_rows_name,
@@ -79,18 +93,72 @@ template <typename T> class basic_handle {
                              const std::string &lddata_name, da_int mode = 0,
                              da_int n_rows_min = 1, da_int n_cols_min = 1);
 
-    // Copy a column major internal 2D results array into the user's buffer, converting to row major ordering if necessary
+    // Copy a column major internal 2D results array into the user's buffer, converting to row-major ordering and checking for NaNs if necessary
     void copy_2D_results_array(da_int n_rows, da_int n_cols, T *data, da_int lddata,
                                T *results_arr);
 };
 
 /*
+Calling the function will do the following:
+1. Point data_internal to the same data.
+2. Argument checking on the data pointer and the size
+3. Read the `check data` option and accordingly to check for NaNs.
+*/
+template <typename T>
+da_status basic_handle<T>::check_1D_array(da_int n, const T *data,
+                                          const std::string &n_name,
+                                          const std::string &data_name, da_int n_min) {
+
+    if (data == nullptr)
+        return da_error(this->err, da_status_invalid_pointer,
+                        "The array " + data_name + " is null.");
+
+    // Check for illegal rows/columns arguments
+    if (n < n_min)
+        return da_error(this->err, da_status_invalid_array_dimension,
+                        "The function was called with " + n_name + " = " +
+                            std::to_string(n) + ". Constraint: " + n_name +
+                            " >= " + std::to_string(n_min) + ".");
+
+    // Check for NaNs if the `check data` option has been set
+    da_int check_data = 0;
+
+    this->opts.get("check data", check_data);
+    if (check_data) {
+        da_status status = da_utils::check_data(column_major, n, 1, data, n);
+        if (status == da_status_invalid_input)
+            return da_error(this->err, da_status_invalid_input,
+                            "The array " + data_name + " contains at least one NaN.");
+    }
+
+    return da_status_success;
+}
+
+template <typename T>
+da_status basic_handle<T>::check_1D_array(da_int n, const da_int *data,
+                                          const std::string &n_name,
+                                          const std::string &data_name, da_int n_min) {
+
+    if (data == nullptr)
+        return da_error(this->err, da_status_invalid_pointer,
+                        "The array " + data_name + " is null.");
+
+    // Check for illegal rows/columns arguments
+    if (n < n_min)
+        return da_error(this->err, da_status_invalid_array_dimension,
+                        "The function was called with " + n_name + " = " +
+                            std::to_string(n) + ". Constraint: " + n_name +
+                            " >= " + std::to_string(n_min) + ".");
+    return da_status_success;
+}
+
+/*
 Calling the function with mode = 0 will do the following:
 1. If the user's data array is in column major format, point data_internal to the same data.
 2. If the user's data array is in row major format, allocate memory for data_internal, copy and transpose the data.
-3. In each case, lddata_internal is updated appropriately.
+3. In each case, lddata_internal is updated appropriately and the `check data` option is read and acted upon accordingly to check for NaNs.
 4. The temp_data pointer is used to enable memory to be deallocated later (it is not const, but points to any allocated memory).
-Calling the function with mode = 1 will do the same except that no copying occurs (use case: output array)
+Calling the function with mode = 1 will do the same except that no copying or data checking occurs (use case: output array)
 Calling the function with mode = 2 just copies the pointer and leading dimension argument, without argument
 or option checking (for use when we already know data is usable and in column major format)
 */
@@ -113,12 +181,12 @@ da_status basic_handle<T>::store_2D_array(
         return da_error(this->err, da_status_invalid_array_dimension,
                         "The function was called with " + n_rows_name + " = " +
                             std::to_string(n_rows) + ". Constraint: " + n_rows_name +
-                            " >= 1.");
+                            " >= " + std::to_string(n_rows_min) + ".");
     if (n_cols < n_cols_min)
         return da_error(this->err, da_status_invalid_array_dimension,
                         "The function was called with " + n_cols_name + " = " +
                             std::to_string(n_rows) + ". Constraint: " + n_cols_name +
-                            " >= 1.");
+                            " >= " + std::to_string(n_cols_min) + ".");
 
     if (data == nullptr)
         return da_error(this->err, da_status_invalid_pointer,
@@ -128,6 +196,19 @@ da_status basic_handle<T>::store_2D_array(
     std::string opt_order;
     this->opts.get("storage order", opt_order, this->order);
 
+    // Check for NaNs if the `check data` option has been set
+    da_int check_data = 0;
+    if (mode == 0) {
+        this->opts.get("check data", check_data);
+        if (check_data) {
+            da_status status =
+                da_utils::check_data((da_order)this->order, n_rows, n_cols, data, lddata);
+            if (status == da_status_invalid_input)
+                return da_error(this->err, da_status_invalid_input,
+                                "The array " + data_name + " contains at least one NaN.");
+        }
+    }
+
     std::string wrong_order = "";
 
     switch (order) {
@@ -135,9 +216,9 @@ da_status basic_handle<T>::store_2D_array(
 
         if (lddata < n_rows) {
             if (lddata >= n_cols) {
-                wrong_order =
-                    " The handle is set to expect column major data. Did you mean to set "
-                    "it to row major?";
+                wrong_order = "The handle is set to expect column major data. Did "
+                              "you mean to set "
+                              "it to row major?";
             }
             return da_error(this->err, da_status_invalid_leading_dimension,
                             "The function was called with " + n_rows_name + " = " +
@@ -152,7 +233,7 @@ da_status basic_handle<T>::store_2D_array(
         if (lddata < n_cols) {
             if (lddata >= n_rows) {
                 wrong_order =
-                    " The handle is set to expect row major data. Did you mean to set "
+                    "The handle is set to expect row major data. Did you mean to set "
                     "it to column major?";
             }
             return da_error(this->err, da_status_invalid_leading_dimension,

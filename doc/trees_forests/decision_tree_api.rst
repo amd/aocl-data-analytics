@@ -41,7 +41,7 @@ Decision trees
    .. tab-item:: Python
       :sync: Python
 
-      .. autoclass:: aoclda.decision_tree.decision_tree(criterion='gini', seed=-1, max_depth=10, max_features=0, min_samples_split=2, build_order='breadth first', precision='double')
+      .. autoclass:: aoclda.decision_tree.decision_tree(criterion='gini', seed=-1, max_depth=10, max_features=0, min_samples_split=2, build_order='breadth first', precision='double', check_data=false)
          :members:
 
    .. tab-item:: C
@@ -94,7 +94,7 @@ Decision forests
    .. tab-item:: Python
       :sync: Python
 
-      .. autoclass:: aoclda.decision_forest.decision_forest(criterion='gini', bootstrap=True, n_trees=100, features_selection='sqrt', max_features=0, seed=-1, max_depth=10, min_samples_split=2, build_order='breadth first', precision='double')
+      .. autoclass:: aoclda.decision_forest.decision_forest(criterion='gini', bootstrap=True, n_trees=100, features_selection='sqrt', max_features=0, seed=-1, max_depth=10, min_samples_split=2, build_order='breadth first', precision='double', check_data=false)
          :members:
 
    .. tab-item:: C

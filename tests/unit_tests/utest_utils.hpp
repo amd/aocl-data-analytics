@@ -97,18 +97,7 @@ template <typename T> inline void free_data(T **arr, [[maybe_unused]] da_int n) 
         free(*arr);
 }
 
-inline void free_data(char ***arr, da_int n) {
-    if (arr && *arr) {
-        for (da_int i = 0; i < n; i++) {
-            if ((*arr)[i]) {
-                free((*arr)[i]);
-                (*arr)[i] = nullptr;
-            }
-        }
-        free(*arr);
-        *arr = nullptr;
-    }
-}
+inline void free_data(char ***arr, da_int n) { da_delete_string_array(arr, n); }
 } // namespace da_test
 
 #endif

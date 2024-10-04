@@ -34,7 +34,7 @@
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.nearest_neighbors.knn_classifier(n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean', precision='double')
+      .. autoclass:: aoclda.nearest_neighbors.knn_classifier(n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean', precision='double', check_data=false)
          :members:
 
    .. tab-item:: C

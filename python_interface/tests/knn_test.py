@@ -124,3 +124,8 @@ def test_knn_error_exits(da_precision, numpy_precision):
         knn.predict(X=x_test)
     with pytest.raises(RuntimeError):
         knn.predict_proba(X=x_test)
+
+    knn = knn_classifier(precision=da_precision, check_data=True)
+    x_train = np.array([[1, 1, np.nan], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
+    with pytest.raises(RuntimeError):
+        knn.fit(x_train, y_train)

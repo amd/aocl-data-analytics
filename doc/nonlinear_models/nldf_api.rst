@@ -33,7 +33,7 @@ Nonlinear Data Fitting APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.nonlinear_model.nlls(n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None, order='c', prec='double', model='hybrid', method='galahad', glob_strategy='tr', reg_power='quadratic', verbose=0)
+      .. autoclass:: aoclda.nonlinear_model.nlls(n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None, order='c', prec='double', model='hybrid', method='galahad', glob_strategy='tr', reg_power='quadratic', verbose=0, check_data=false)
          :members:
 
    .. tab-item:: C

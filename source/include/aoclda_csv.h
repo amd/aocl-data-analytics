@@ -46,7 +46,7 @@
  * \param[out] A a pointer to the \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
  * \param[out] n_cols the number of columns loaded.
- * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. It is your responsibility to deallocate this memory.
+ * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. You can call \ref da_delete_string_array to deallocate this memory.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_file_reading_error - the file could not be opened.
@@ -74,7 +74,7 @@ da_status da_read_csv_int(da_datastore store, const char *filename, da_int **A,
  * \param[out] A a pointer to the \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
  * \param[out] n_cols the number of columns loaded.
- * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. It is your responsibility to deallocate this memory.
+ * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. You can call \ref da_delete_string_array to deallocate this memory.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_file_reading_error - the file could not be opened.
@@ -92,10 +92,10 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
  *
  * \param[inout] store a \ref da_datastore object, initialized using \ref da_datastore_init.
  * \param[in] filename the relative or absolute path to a file or stream that can be opened for reading.
- * \param[out] A a pointer to the \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>. Note that this routine allocates memory for \p A internally. It is your responsibility to deallocate this memory.
+ * \param[out] A a pointer to the \p n_rows @f$\times@f$ \p n_cols array of data read from the CSV file. Data is stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>. Note that this routine allocates memory for \p A internally. You can call \ref da_delete_string_array to deallocate this memory.
  * \param[out] n_rows the number of rows loaded.
  * \param[out] n_cols the number of columns loaded.
- * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. It is your responsibility to deallocate this memory.
+ * \param[out] headings a pointer to the size \p n_cols array of strings containing the column headings. If the option <em>use header row</em> is set to 0 (the default) then this argument is not used. Otherwise, note that this routine allocates memory for \p headings internally. You can call \ref da_delete_string_array to deallocate this memory.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_file_reading_error - the file could not be opened.
@@ -104,6 +104,20 @@ da_status da_read_csv_uint8(da_datastore store, const char *filename, uint8_t **
  */
 da_status da_read_csv_string(da_datastore store, const char *filename, char ***A,
                              da_int *n_rows, da_int *n_cols, char ***headings);
+/** \} */
+
+/** \{
+ * \brief Delete array of strings.
+ *
+ * This routine safely deallocates an array of strings allocated when reading CSV files.
+ *
+ * \param[inout] S a pointer to the size \p n array of strings to delete.
+ * \param[in] n the number of strings in the array.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_invalid_array_dimension - the number of columns is too small.
+ */
+da_status da_delete_string_array(char ***S, da_int n);
 /** \} */
 
 #endif

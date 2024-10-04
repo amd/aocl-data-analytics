@@ -59,6 +59,8 @@ Most statistical quantities can be computed by column, by row or for the data ma
       to ``col``, then ``n_cols`` means will be computed, one for each column. If the
       :py:attr:`axis` argument is set to ``all``, then a single mean will be computed.
 
+      Note that the functions in this chapter do not check for the presence of NaNs in your input data.
+
    .. tab-item:: C
       :sync: C
 
@@ -75,6 +77,9 @@ Most statistical quantities can be computed by column, by row or for the data ma
       For example, if the routine :cpp:func:`da_mean_s` is called with the :cpp:type:`da_axis` argument set
       to :cpp:enumerator:`da_axis_col`, then ``n_cols`` means will be computed, one for each column. If the
       :cpp:type:`da_axis` argument is set to ``da_axis_all``, then a single mean will be computed.
+
+      The functions in this chapter do not check for the presence of NaNs in your input data.
+      You can use the :cpp:func:`da_check_data_s` function to check for NaNs in your data.
 
 Examples
 --------

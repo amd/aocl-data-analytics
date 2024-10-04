@@ -134,6 +134,9 @@ add_executable(parallel_public da_utilities/parallel_public.cpp)
 
 add_executable(doc_internal da_utilities/doc_internal.cpp)
 
+add_executable(utilities_public da_utilities/utilities_public.cpp)
+target_link_libraries(utilities_public PRIVATE aocl-da)
+
 add_executable(printf_debug_internal da_utilities/printf_debug_internal.cpp)
 target_link_libraries(printf_debug_internal PRIVATE aocl-da)
 
@@ -224,6 +227,7 @@ set(GTEST_PUBLIC
     pca_public
     kmeans_public
     parallel_public
+    utilities_public
     nlls_public
     knn_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)

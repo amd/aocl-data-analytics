@@ -41,6 +41,24 @@
 /* Contains routines for parsing a csv file */
 namespace da_csv {
 
+inline da_status delete_string_array(char ***S, da_int n) {
+
+    if (n < 1)
+        return da_status_invalid_array_dimension;
+
+    if (S && *S) {
+        for (da_int i = 0; i < n; i++) {
+            if ((*S)[i]) {
+                free((*S)[i]);
+                (*S)[i] = nullptr;
+            }
+        }
+        free(*S);
+        *S = nullptr;
+    }
+    return da_status_success;
+}
+
 template <typename T> inline void free_data(T **arr, [[maybe_unused]] da_int n) {
     if (*arr)
         free(*arr);

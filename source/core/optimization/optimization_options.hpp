@@ -110,6 +110,11 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             100));
         opts.register_opt(oi);
 
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "check data", "Check input data for NaNs prior to performing computation.", 0,
+            da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
+        opts.register_opt(oi);
+
         // ===========================================================================
         // REAL OPTIONS
         // ===========================================================================

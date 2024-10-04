@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -24,48 +24,23 @@
     POSSIBILITY OF SUCH DAMAGE.
 
 
+.. _utility_api:
 
-Clustering APIs
-*********************
+Utility APIs
+************
 
-*k*-means
-========================================
+The following functions are provided for your convenience.
 
-.. tab-set::
+.. doxygenfunction:: da_delete_string_array
 
-   .. tab-item:: Python
+.. doxygenfunction:: da_check_data_s
+   :outline:
+.. doxygenfunction:: da_check_data_d
 
-      .. autoclass:: aoclda.clustering.kmeans(n_clusters=1, initialization_method='k-means++', n_init=10, max_iter=300, seed=-1, algorithm='elkan', precision="double", check_data=false)
-         :members:
+.. doxygenfunction:: da_switch_order_copy_s
+   :outline:
+.. doxygenfunction:: da_switch_order_copy_d
 
-   .. tab-item:: C
-
-      .. _da_kmeans_set_data:
-
-      .. doxygenfunction:: da_kmeans_set_data_s
-         :outline:
-      .. doxygenfunction:: da_kmeans_set_data_d
-
-      .. _da_kmeans_set_init_centres:
-
-      .. doxygenfunction:: da_kmeans_set_init_centres_s
-         :outline:
-      .. doxygenfunction:: da_kmeans_set_init_centres_d
-
-      .. _da_kmeans_compute:
-
-      .. doxygenfunction:: da_kmeans_compute_s
-         :outline:
-      .. doxygenfunction:: da_kmeans_compute_d
-
-      .. _da_kmeans_transform:
-
-      .. doxygenfunction:: da_kmeans_transform_s
-         :outline:
-      .. doxygenfunction:: da_kmeans_transform_d
-
-      .. _da_kmeans_predict:
-
-      .. doxygenfunction:: da_kmeans_predict_s
-         :outline:
-      .. doxygenfunction:: da_kmeans_predict_d
+.. doxygenfunction:: da_switch_order_in_place_s
+   :outline:
+.. doxygenfunction:: da_switch_order_in_place_d

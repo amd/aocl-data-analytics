@@ -47,7 +47,7 @@ class knn_classifier : public pyda_handle {
   public:
     knn_classifier(da_int n_neighbors = 5, std::string weights = "uniform",
                    std::string algorithm = "brute", std::string metric = "euclidean",
-                   std::string prec = "double") {
+                   std::string prec = "double", bool check_data = false) {
         da_status status;
         if (prec == "double") {
             status = da_handle_init<double>(&handle, da_handle_knn);
@@ -65,6 +65,10 @@ class knn_classifier : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "metric", metric.c_str());
         exception_check(status);
+        if (check_data == true) {
+            status = da_options_set_int(handle, "check data", 1);
+            exception_check(status);
+        }
     }
     ~knn_classifier() { da_handle_destroy(&handle); }
 

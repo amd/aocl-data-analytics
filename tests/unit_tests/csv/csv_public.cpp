@@ -286,7 +286,7 @@ TYPED_TEST(CSVTest_public, basic_headings_row_major) {
     }
 
     da_test::free_data(&a, nrows * ncols);
-    da_test::free_data(&headings, ncols);
+    EXPECT_EQ(da_delete_string_array(&headings, ncols), da_status_success);
 
     da_datastore_destroy(&store);
 
@@ -751,8 +751,9 @@ TEST(csvtest, incorrect_headings) {
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
     da_datastore_destroy(&store);
-    if (headings != nullptr)
-        da_test::free_data(&headings, ncols);
+    if (headings != nullptr) {
+        EXPECT_EQ(da_delete_string_array(&headings, ncols), da_status_success);
+    }
 }
 
 TEST(csvtest, incorrect_headings2) {
@@ -773,8 +774,9 @@ TEST(csvtest, incorrect_headings2) {
     EXPECT_EQ(da_read_csv_d(store, filepath, &a, &nrows, &ncols, &headings),
               da_status_parsing_error);
     da_datastore_destroy(&store);
-    if (headings != nullptr)
-        da_test::free_data(&headings, ncols);
+    if (headings != nullptr) {
+        EXPECT_EQ(da_delete_string_array(&headings, ncols), da_status_success);
+    }
 }
 
 TEST(csvtest, error_exits) {
@@ -892,6 +894,9 @@ TEST(csvtest, error_exits) {
               da_status_success);
     EXPECT_EQ(da_data_load_from_csv(store, filepath), da_status_parsing_error);
 
+    EXPECT_EQ(da_delete_string_array(nullptr, (da_int)(-1)),
+              da_status_invalid_array_dimension);
+
     da_datastore_destroy(&store);
     da_datastore_destroy(&store);
 
@@ -930,7 +935,7 @@ TEST(csvtest, no_data) {
     for (da_int j = 0; j < ncols; j++) {
         EXPECT_STREQ(headings[j], expected_headings[j]);
     }
-    da_test::free_data(&headings, ncols);
+    EXPECT_EQ(da_delete_string_array(&headings, ncols), da_status_success);
 
     // Now try the same thing in a datastore but just expect no data error
     EXPECT_EQ(da_datastore_options_set_int(store, "use header row", 1),
@@ -994,8 +999,9 @@ TEST(csvtest, no_data) {
 
     if (a)
         free(a);
-    if (headings != nullptr)
-        da_test::free_data(&headings, ncols);
+    if (headings != nullptr) {
+        EXPECT_EQ(da_delete_string_array(&headings, ncols), da_status_success);
+    }
 }
 
 TEST(CSVTest_public, lineterminator) {

@@ -128,7 +128,15 @@ TEST(linmod, invalidInput) {
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, nullptr, bd),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, nullptr),
+              da_status_invalid_pointer);
+
+    // Check we can handle NaN data correctly
+    EXPECT_EQ(da_options_set(handle_d, "check data", (da_int)1), da_status_success);
+    bd[0] = std::numeric_limits<double>::quiet_NaN();
+    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd),
               da_status_invalid_input);
+    bd[0] = 1;
+
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd), da_status_success);
 
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, 0, As, bs),
@@ -138,7 +146,7 @@ TEST(linmod, invalidInput) {
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, nullptr, bs),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, nullptr),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, bs), da_status_success);
 
     // compute regression

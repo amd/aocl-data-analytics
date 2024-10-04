@@ -155,9 +155,7 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status validate_options(da_int method);
 
   public:
-    linear_model(da_errors::da_error_t &err) {
-        // Assumes that err is valid
-        this->err = &err;
+    linear_model(da_errors::da_error_t &err) : basic_handle<T>(err) {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
@@ -363,8 +361,9 @@ da_status linear_model<T>::define_features(da_int nfeat, da_int nsamples, const 
     if (status != da_status_success)
         return status;
 
-    if (y == nullptr)
-        return da_error(this->err, da_status_invalid_input, "y is not a valid pointer.");
+    status = this->check_1D_array(nsamples, y, "n_samples", "y", 1);
+    if (status != da_status_success)
+        return status;
 
     model_trained = false;
 
@@ -732,6 +731,13 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
     da_int prn, intercept_int, scalingint, logistic_constraint_int;
     std::string val, method, scalingstr, logistic_constraint_str;
     da_status status;
+
+    if (usr_ncoefs > 0) {
+        status = this->check_1D_array(usr_ncoefs, coefs, "n_coefs", "coefs", 1);
+        if (status != da_status_success)
+            return status;
+    }
+
     auto clock = std::chrono::system_clock::now();
 
     // For all opts.get() it is assumed they don't fail

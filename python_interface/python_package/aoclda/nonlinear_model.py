@@ -150,16 +150,19 @@ class nlls(pybind_nlls):
               different values for this parameter may help.
 
         verbose (int, optional): Set verbosity level (0 to 3) of the solver. Default = 0.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
     def __init__(self, n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None,
                  order='c', prec='double', model='hybrid', method='galahad', glob_strategy='tr',
-                 reg_power='quadratic', check_derivatives='no', verbose=0):
+                 reg_power='quadratic', check_derivatives='no', verbose=0, check_data=False):
         super().__init__(n_coef=n_coef, n_res=n_res, weights=weights,
                          lower_bounds=lower_bounds, upper_bounds=upper_bounds,
                          order=order, prec=prec, model=model, method=method,
                          glob_strategy=glob_strategy, reg_power=reg_power,
-                         check_derivatives=check_derivatives, verbose=verbose)
+                         check_derivatives=check_derivatives, verbose=verbose,
+                         check_data=check_data)
 
     def fit(self, x, fun, jac=None, hes=None, hep=None, data=None, ftol=1.0e-8, abs_ftol=1.0e-8,
             gtol=1.0e-8, abs_gtol=1.0e-5, xtol=2.22e-16, reg_term=0, maxit=100,

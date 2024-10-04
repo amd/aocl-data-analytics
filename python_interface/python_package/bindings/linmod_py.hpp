@@ -47,7 +47,8 @@ class linmod : public pyda_handle {
   public:
     linmod(std::string mod, std::optional<da_int> max_iter, bool intercept = false,
            std::string solver = "auto", std::string scaling = "auto",
-           std::string constraint = "ssc", std::string prec = "double")
+           std::string constraint = "ssc", std::string prec = "double",
+           bool check_data = false)
         : intercept(intercept), logreg_constraint_str(constraint) {
         da_status status;
         if (mod == "mse") {
@@ -78,6 +79,10 @@ class linmod : public pyda_handle {
         if (max_iter.has_value()) {
             status =
                 da_options_set_int(handle, "optim iteration limit", max_iter.value());
+            exception_check(status);
+        }
+        if (check_data == true) {
+            status = da_options_set_int(handle, "check data", 1);
             exception_check(status);
         }
     }

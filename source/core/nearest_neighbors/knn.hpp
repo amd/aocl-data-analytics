@@ -80,9 +80,7 @@ template <typename T> class da_knn : public basic_handle<T> {
             delete[] (X_train_temp);
     }
 
-    da_knn(da_errors::da_error_t &err) {
-        // Assumes that err is valid
-        this->err = &err;
+    da_knn(da_errors::da_error_t &err) : basic_handle<T>(err) {
         // Initialize the options registry
         // Any error is stored err->status[.] and this NEEDS to be checked
         // by the caller.
@@ -195,9 +193,9 @@ da_status da_knn<T>::set_training_data(da_int n_samples, da_int n_features,
     if (status != da_status_success)
         return status;
 
-    if (y_train == nullptr)
-        return da_error_bypass(this->err, da_status_invalid_pointer,
-                               "y_train is not a valid pointer.");
+    status = this->check_1D_array(n_samples, y_train, "n_samples", "y_train", 1);
+    if (status != da_status_success)
+        return status;
 
     // Set internal pointers to user data
     this->y_train = y_train;
