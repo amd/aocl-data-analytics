@@ -1,0 +1,14 @@
+# Vscode temporary files
+.vscode
+.vs
+# build artifacts
+build*
+tags
+# Vim files
+.*.swp
+.*.un~
+# Fortran modules
+*.mod
+# Compiled Python
+*.pyc
+

@@ -1,0 +1,292 @@
+\documentclass{spec}
+
+\usepackage{amsfonts,bm,amsmath}
+\usepackage{verbatim}
+\usepackage{algorithm, algpseudocode}
+\usepackage{caption}
+
+\input{nlls_header.tex}
+\newcommand{\scalarinteger}[1]{\itt{int #1}}
+\newcommand{\scalarreal}[1]{\itt{double #1}}
+\newcommand{\scalarlogical}[1]{\itt{bool #1}}
+\newcommand{\ronearrayreal}[2]{\itt{double *#1}}
+\newcommand{\scalarcharacter}[2]{
+  % need to advance the size by one for the c version compared to the fortran version...
+  \newcount\charsize
+  \charsize=#2 
+  \advance\charsize by 1 % 
+  \itt{character #1[\the\charsize]}
+}
+\newcommand{\mainroutine}{{\tt nlls\_solve}}
+\newcommand{\onestep}{{\tt ral\_nlls\_iterate}}
+\newcommand{\ct}{.}
+\newcommand{\vecentry}[2]{\texttt{#1[#2]}}
+\newcommand{\fortranonly}[1]{}
+\newcommand{\conly}[1]{#1}
+\begin{document}
+
+\hslheader
+
+\begin{center}
+\huge \sc  C Interface
+\end{center}
+
+\hslsummary
+
+\input{summary.tex}
+
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+\hslattributes
+\hslversions{\versionum\ (\versiondate)}.
+\hslIRDCZ Real (single, double).
+\hsllanguage Fortran 2003 subset (F95+TR155581).
+\hsldate January 2016.
+\hslorigin The Numerical Analysis Group, Rutherford Appleton Laboratory.
+\hslremark The development of this package was
+partially supported by EPSRC grant EP/M025179/1.
+
+%!!!!!!!!!!!!!!!!!!!!!!!!!!!
+\newpage
+\hslhowto
+
+\subsection{Calling sequences}
+
+Functions signatures are defined in a header file
+\begin{verbatim}
+   #include "ral_nlls.h"
+\end{verbatim}
+\medskip
+
+\noindent The user callable subroutines are:
+\vspace{-0.1cm}
+\begin{description}
+   \item[\texttt{ral\_nlls\_default\_options()}] initializes solver options to default values.
+   \item[\texttt{nlls\_solve()}]  solves the non-linear least squares problem (Section~\ref{eq:nlls_problem}).
+   \item[\texttt{ral\_nlls\_init\_workspace()}] initialises a workspace for use with \texttt{ral\_nlls\_iterate()}.
+   \item[\texttt{ral\_nlls\_iterate()}] performs a single iteration of the solver algorithm.
+   \item[\texttt{ral\_nlls\_free\_workspace()}] frees memory allocated by a call to \texttt{ral\_nlls\_init\_workspace()}.
+\end{description}
+
+%%%%%%%%%%%%%%%%%%%%%% derived types %%%%%%%%%%%%%%%%%%%%%%%%
+
+\hsltypes
+\label{derived types}
+For each problem, the user must employ the derived types defined by the
+module to declare scalars of the types {\tt struct ral\_nlls\_options}, and
+{\tt ral\_nlls\_inform}.
+The following pseudocode illustrates this.
+\begin{verbatim}
+   #include "ral_nlls.h"
+   ...
+   struct ral_nlls_options options;
+   struct ral_nlls_inform inform;
+   ...
+\end{verbatim}
+The members of these structs are explained
+in Sections~\ref{typeoptions} and \ref{typeinform}.
+
+
+%%%%%%%%%%%%%%%%%%%%%% argument lists %%%%%%%%%%%%%%%%%%%%%%%%
+\hslarguments
+
+\subsubsection{Integer and package types}
+%{\tt INTEGER} denotes default {\tt INTEGER} and
+%{\tt INTEGER(long)} denotes {\tt INTEGER(kind=selected\_int\_kind(18))}.
+The term {\bf package type} is used to mean \texttt{float}
+if the single precision version is being used and
+\texttt{double} for the double precision version.
+
+\subsubsection{To initialise members of \texttt{struct nlls\_options} to default values}
+
+To initialise the value of \texttt{struct nlls\_options}, the user \textbf{must} make a
+call to the following suboutine (failure to do so will result in undefined behaviour):
+\begin{verbatim}
+   void ral_nlls_default_options(struct ral_nlls_options *options);
+\end{verbatim}
+
+\begin{description}
+   \itt{*options} will be initialised to default values on return.
+\end{description}
+
+\subsubsection{To solve the non-linear least squares problem}
+\label{sec:solve}
+
+To solve the non-linear least squares problem make a call of the following
+subroutine:
+
+\begin{verbatim}
+   void nlls_solve( int n, int m, double X[], ral_nlls_eval_r_type eval_r,
+      ral_nlls_eval_j_type eval_j, ral_nlls_eval_hf_type eval_hf,
+      void* params, struct nlls_options const* options, struct nlls_inform* inform,
+      double weights[])
+\end{verbatim}
+
+\begin{description}
+\itt{n} holds the number $n$ of
+variables to be fitted; i.e., $n$ is the length of the unknown vector $\bm x$.
+
+\itt{m} holds the number $m$ of
+data points available; i.e., $m$ is the number of functions $f_i$.
+\textbf{Restriction:} \texttt{m},\texttt{n}$>$\texttt{0}
+
+\itt{x} must hold the initial guess for $\bm x$, and on
+successful exit it holds the solution to the non-linear least squares problem.
+
+\itt{eval\_r} specifies a callback function that, given a point $\iter{\vx}$,
+returns the vector $\vr(\iter{\vx})$. Details of the function signature and
+requirements are are given in Section~\ref{sec::function_eval}.
+
+\itt{eval\_j} specifies a callback function that, given a point $\iter{\vx}$,
+returns the $m \times n$ Jacobian matrix, $\iter{\vJ}$, of $\vr$ at $\iter{\vx}$. Details of the function signature and requirements are are given in
+Section~\ref{sec::function_eval}.
+
+\itt{eval\_hf} is a {\tt PROCEDURE} that, given a point $\iter{\vx}$
+and function $\vr(\iter{\vx})$, returns the second-order terms of the Hessian at $\iter{\vx}$.
+Further details of the format required are given in Section~\ref{sec::function_eval}.
+
+\itt{params} is a pointer to user data that is passed unaltered to the callback
+functions {\tt eval\_r}, {\tt eval\_J}, and {\tt eval\_Hf}.
+
+\itt{inform} provides information about the execution
+of the subroutine, as explained in Section~\ref{typeinform}.
+
+\itt{options} specifies options that control the execution of the subroutine,
+see Section~\ref{typeoptions}.
+
+\itt{weights} may be {\tt NULL}, otherwise it is a rank-1 array of size {\tt m}. If present, {\tt weights} holds the square-roots of the 
+diagonal entries of the weighting matrix, $\vW$, in (\ref{eq:nlls_problem}).  If absent, then the norm in (\ref{eq:nlls_problem}) is taken to be the 2-norm, that is, $\vW = I$.
+\end{description}
+
+\subsubsection{To initialise a workspace for use with \texttt{ral\_nlls\_iterate()}}
+
+Prior to the first call of \texttt{ral\_nlls\_iterate()}, the workspace must be
+initialised by a call to the following subroutine:
+\begin{verbatim}
+   void ral_nlls_init_workspace(void **workspace);
+\end{verbatim}
+
+\begin{description}
+   \itt{*workspace} will, on return, be allocated and initialised using Fortran intrinsics.
+      To avoid a memory leak, it must be freed through a call to \texttt{ral\_nlls\_free\_workspace()}.
+\end{description}
+
+\subsubsection{To iterate once}
+\label{sec:iterate}
+Alternatively, the user may step through the solution process one iteration at
+a time by making a call of the following form:
+
+\begin{verbatim}
+   void ral_nlls_iterate( int n, int m, double X[], void* workspace,
+      ral_nlls_eval_r_type eval_r, ral_nlls_eval_j_type eval_j, ral_nlls_eval_hf_type eval_hf,
+      void* params, struct nlls_options const* options, struct nlls_inform* inform,
+      double weights[])
+\end{verbatim}
+
+\begin{description}
+
+\item[\normalfont \texttt{n}, \texttt{m}, \texttt{eval\_F}, \texttt{eval\_J}, \texttt{eval\_HF}, \texttt{params}, \texttt{options}, \texttt{inform}, and \texttt{weights}] are as described in Section~\ref{sec:solve}.
+
+\itt{X} is an array of size {\tt n}. On the first call, it must hold the initial guess for
+$\bm x$. On return it holds the value of $\bm x$ at the current iterate, and
+must be passed unaltered to any subsequent call to \texttt{ral\_nlls\_iterate()}.
+
+\itt{w} is workspace allocated and initialised through a previous call to
+\texttt{ral\_nlls\_init\_workspace()}.
+
+\end{description}
+
+\subsubsection{To free a workspace when it is no longer required}
+
+Memory allocated during the call to \texttt{ral\_nlls\_init\_workspace()} may be freed
+by a call to the following subroutine:
+\begin{verbatim}
+   void ral_nlls_free_workspace(void **workspace);
+\end{verbatim}
+
+\begin{description}
+   \itt{*workspace} is the workspace to be freed. On exit it will be set to \texttt{NULL}.
+\end{description}
+
+
+\subsection{User-supplied function evaluation routines}
+\label{sec::function_eval}
+In order to evaluate the function, Jacobian and Hessian at a point, the user
+must supply callback functions that perform this operation that the code
+{\tt ral\_nlls} will call internally.
+
+In order to pass user-defined data into the evaluation calls, the parameter
+\texttt{params} is passed unaltered to the callback functions. Typically this
+will be a pointer to a user defined structure that stores the data to be fitted.
+
+\subsubsection{For evaluating the function $\vr(\vx)$}
+
+A subroutine must be supplied to calculate $\vr(\vx)$ for a given vector $\vx$. 
+It must have the following signature:
+\begin{verbatim}
+  int eval_r (int n, int m, void const* params, double const* x, double* r);
+\end{verbatim}
+
+\input{eval_r.tex}
+
+\subsubsection{For evaluating the function $J = \nabla \vr(\iter{\vx})$}
+A subroutine must be supplied to calculate $J = \nabla \vr(\iter{\vx})$ for a given vector $\vx$. It must have the following signature:
+
+\begin{verbatim}
+   int eval_j (int n, int m, void const* params, double const* x, double* J);
+\end{verbatim}
+
+\input{eval_j.tex}
+
+\subsubsection{For evaluating the function $Hf = \sum_{i=1}^m r_i(\vx) \vW  \nabla^2 \vr_i(x)$}
+A subroutine must be supplied to calculate $Hf = \sum_{i=1}^m (\vr)_i \nabla^2 r_i(\vx)$ for given vectors $\vx \in \mathbb{R}^n$ and $\vr \in \mathbb{R}^m$; here \((\vr)_i\) denotes the $i$th component of the vector $\vr$.  
+It must have the following signature
+
+\begin{verbatim}
+int eval_hf (int n, int m, void const* params, double const* x, double const* r, double* Hf);
+\end{verbatim}
+
+\input{eval_hf.tex}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\subsection{The options derived data type}
+\label{typeoptions}
+
+\input{options_type.tex}
+
+\subsection{The derived data type for holding information}
+\label{typeinform}
+
+\input{info_type.tex}
+
+%%%%%%%%%%%%%%%%%%%%%% Warning and error messages %%%%%%%%%%%%%%%%%%%%%%%%
+
+\hslerrors
+
+A successful return from a subroutine in the package is indicated by
+{\tt inform.status} having the value zero.
+A non-zero value is associated with an error message that by default will
+be output on the Fortran unit {\tt inform.error}.  This string is also passed to the 
+calling routine in {\tt inform.error\_message}.
+
+\input{errors.tex}
+
+\hslgeneral
+
+\hslrestrictions {\tt m$\ge$n$\ge$1}.
+
+\hslmethod
+\label{method}
+
+\input{method.tex}
+
+\hslexample
+
+\input{example_text.tex}
+
+\verbatiminput{../example/C/nlls_example.c}
+
+
+\end{document}
