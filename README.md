@@ -33,7 +33,7 @@ Building on Linux
 1. You will need to have BLAS, LAPACK, AOCL-Sparse and AOCL-Utils installed.
 
 2. Make sure you have set the environment variable `$AOCL_ROOT` to where the AOCL libraries are
-   installed e.g. `/home/username/amd/aocl/4.0`.
+   installed e.g. `/home/username/amd/aocl/5.0`.
 
 3. Configure cmake with any of the following options:
 
@@ -120,7 +120,8 @@ Building the Python interfaces
 
 To build the Python interfaces, use `-DBUILD_PYTHON=On` (note that this will only work with shared library builds).
 You will need PyBind11, which can be installed using `pip install pybind11`.
-On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the location of you pybind11 installation, e.g.  `C:\path\to\your\python-environment\site-packages\pybind11\share\cmake\pybind11`
 By default, cmake will compile the bindings but will not install them.
 If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.
+
+On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the location of you pybind11 installation, e.g.  `C:\path\to\your\python-environment\site-packages\pybind11\share\cmake\pybind11`.
 When using the bindings on Windows, the Intel Fortran runtime must be available. This can be done by setting the environment variable `INTEL_FCOMPILER`.
