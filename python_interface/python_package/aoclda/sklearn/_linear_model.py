@@ -713,12 +713,18 @@ class LogisticRegression(LogisticRegression_sklearn):
             reg_lambda_t = np.float32(self.reg_lambda)
             reg_alpha_t = np.float32(self.l1_ratio)
             tol_t = np.float32(self.tol)
-            progress_factor_t = np.float32(self.progress_factor)
+            if self.progress_factor is not None:
+                progress_factor_t = np.float32(self.progress_factor)
+            else:
+                progress_factor_t = None
         else:
             reg_lambda_t = np.float64(self.reg_lambda)
             reg_alpha_t = np.float64(self.l1_ratio)
             tol_t = np.float64(self.tol)
-            progress_factor_t = np.float64(self.progress_factor)
+            if self.progress_factor is not None:
+                progress_factor_t = np.float64(self.progress_factor)
+            else:
+                progress_factor_t = None
         self.lmod.fit(X,
                       y,
                       reg_lambda=reg_lambda_t,
