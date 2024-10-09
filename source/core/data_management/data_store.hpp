@@ -57,7 +57,8 @@ enum block_type {
     block_none,
     block_string,
     block_int,
-    block_real,
+    block_real_s,
+    block_real_d,
     block_char,
     block_str,
     block_bool // Primarily intended for uint8_t data obtained from true/false values in a CSV file
@@ -73,16 +74,16 @@ template <> struct get_block_type<da_int *> {
     constexpr operator block_type() const { return block_int; }
 };
 template <> struct get_block_type<float> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_s; }
 };
 template <> struct get_block_type<float *> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_s; }
 };
 template <> struct get_block_type<double> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_d; }
 };
 template <> struct get_block_type<double *> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_d; }
 };
 template <> struct get_block_type<std::string> {
     constexpr operator block_type() const { return block_string; }

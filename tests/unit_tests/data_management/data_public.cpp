@@ -157,7 +157,7 @@ TEST(datastore, getSetElementPub) {
     // setters
     EXPECT_EQ(da_data_set_element_int(store, 0, 0, 100), da_status_success);
     EXPECT_EQ(da_data_set_element_uint8(store, 0, 7, 2), da_status_success);
-    EXPECT_EQ(da_data_set_element_real_d(store, 2, 4, 100.0), da_status_success);
+    EXPECT_EQ(da_data_set_element_real_d(store, 2, 4, 100.0), da_status_invalid_input);
     EXPECT_EQ(da_data_set_element_real_s(store, 2, 5, 200.0), da_status_success);
 
     // getters
@@ -168,8 +168,7 @@ TEST(datastore, getSetElementPub) {
     EXPECT_EQ(da_data_get_element_uint8(store, 0, 7, &uiel), da_status_success);
     EXPECT_EQ(uiel, 2);
     double del;
-    EXPECT_EQ(da_data_get_element_real_d(store, 2, 4, &del), da_status_success);
-    EXPECT_EQ(del, 100.0);
+    EXPECT_EQ(da_data_get_element_real_d(store, 2, 4, &del), da_status_invalid_input);
     float sel;
     EXPECT_EQ(da_data_get_element_real_s(store, 2, 5, &sel), da_status_success);
     EXPECT_EQ(sel, 200.0);
@@ -596,9 +595,13 @@ TEST(dataStore, extractSelPub) {
               da_status_success);
     EXPECT_EQ(da_data_select_slice(store, "float", 0, 1, 4, 4), da_status_success);
     std::vector<float> ssel(2);
+    std::vector<double> dsel(2);
     EXPECT_EQ(
         da_data_extract_selection_real_s(store, "float", column_major, ssel.data(), 2),
         da_status_success);
+    EXPECT_EQ(
+        da_data_extract_selection_real_d(store, "float", column_major, dsel.data(), 2),
+        da_status_invalid_input);
     std::vector<float> sexp = {1, 2};
     EXPECT_ARR_EQ(2, ssel, sexp, 1, 1, 0, 0);
 
@@ -608,10 +611,12 @@ TEST(dataStore, extractSelPub) {
               da_status_success);
     EXPECT_EQ(da_data_select_rows(store, "double", 0, 1), da_status_success);
     EXPECT_EQ(da_data_select_columns(store, "double", 6, 6), da_status_success);
-    std::vector<double> dsel(2);
     EXPECT_EQ(
         da_data_extract_selection_real_d(store, "double", column_major, dsel.data(), 2),
         da_status_success);
+    EXPECT_EQ(
+        da_data_extract_selection_real_s(store, "double", column_major, ssel.data(), 2),
+        da_status_invalid_input);
     std::vector<double> dexp = {5, 6};
     EXPECT_ARR_EQ(2, dsel, dexp, 1, 1, 0, 0);
 
