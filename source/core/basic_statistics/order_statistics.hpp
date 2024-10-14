@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
  * 1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
  * 3. Neither the name of the copyright holder nor the names of its contributors
  *    may be used to endorse or promote products derived from this software without
  *    specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  */
 
 #ifndef ORDER_STATISTICS_HPP
@@ -34,6 +34,7 @@
 #endif
 
 #include "aoclda.h"
+#include "row_to_col_major.hpp"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -70,15 +71,17 @@ da_status indexed_partial_sort(const T *x, da_int length, da_int stride, da_int 
 
 /* Compute the qth quantile of x along the specified axis */
 template <typename T>
-da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q,
-                   T *quant, da_quantile_type quantile_type) {
+da_status quantile(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
+                   da_int ldx, T q, T *quant, da_quantile_type quantile_type) {
 
-    da_status status;
+    da_int n, p;
+    da_axis axis;
 
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (q < 0 || q > 1)
         return da_status_invalid_input;
     if (x == nullptr || quant == nullptr)
@@ -247,19 +250,21 @@ da_status quantile(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T q
 
 /* Compute min/max, hinges and median along specified axis */
 template <typename T>
-da_status five_point_summary(da_axis axis, da_int n, da_int p, const T *x, da_int ldx,
-                             T *minimum, T *lower_hinge, T *median, T *upper_hinge,
-                             T *maximum) {
+da_status five_point_summary(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
+                             const T *x, da_int ldx, T *minimum, T *lower_hinge,
+                             T *median, T *upper_hinge, T *maximum) {
 
-    da_status status;
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
 
     // Quantile enables user to choose a method, but for this simple routine we will use a default of type 6
     // Note, we are not directly calling quantile here because efficiencies are possible in the sorting stage due to computing multiple statistics
 
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
     if (x == nullptr || minimum == nullptr || lower_hinge == nullptr ||
         median == nullptr || upper_hinge == nullptr || maximum == nullptr)
         return da_status_invalid_pointer;

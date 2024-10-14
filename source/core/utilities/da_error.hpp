@@ -317,6 +317,7 @@ constexpr int32_t strip_path(const char *const path, const int32_t pos = 0,
 // starts. Does the same as "basename file"
 constexpr const char *basename(const char *const path) { return &path[strip_path(path)]; }
 
+// Macros to fill the error stack
 #define da_error(e, status, msg)                                                         \
     (e)->rec(status, (msg), "", std::string(da_errors::basename(__FILE__)) + ":",        \
              __LINE__, DA_ERROR, false)
@@ -334,6 +335,7 @@ constexpr const char *basename(const char *const path) { return &path[strip_path
              std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
              DA_WARNING, true)
 
+// Special implementations where stack is not filled if invalid
 #define da_error_bypass(e, status, msg)                                                  \
     ((e) != nullptr                                                                      \
          ? (e)->rec(status, (msg), "", std::string(da_errors::basename(__FILE__)) + ":", \

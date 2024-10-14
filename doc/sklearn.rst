@@ -95,7 +95,7 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
 
 
 Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after
-patching, you attempt to call class member functions which have not been implemented by AOCL-DA,
+patching, you attempt to call class member functions which have not been implemented in AOCL-DA,
 then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
 you use the Python APIs described on the subsequent pages of this manual.
 

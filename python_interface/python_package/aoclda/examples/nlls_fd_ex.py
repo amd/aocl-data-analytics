@@ -61,7 +61,7 @@ def res(x, residuals, data=None) -> int:
     return 0
 
 
-def nlls_tracks():
+def nlls_fd_example():
     """
     Nonlinear data fitting for the convolution model
     y ~ mixture of normal and log-normal
@@ -110,7 +110,7 @@ def nlls_tracks():
 
 if __name__ == "__main__":
     try:
-        nlls_tracks()
+        nlls_fd_example()
     except RuntimeError:
         print("Something unexpected happened while running the example.")
         sys.exit(1)

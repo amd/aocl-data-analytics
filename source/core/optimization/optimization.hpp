@@ -28,6 +28,12 @@
 #ifndef OPTIMIZATION_HPP
 #define OPTIMIZATION_HPP
 
+// Deal with some Windows compilation issues regarding max/min macros
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include "basic_handle.hpp"
 #include "callbacks.hpp"
 #include "coord.hpp"
 #include "da_error.hpp"
@@ -47,17 +53,21 @@
 
 namespace da_optim {
 
-using namespace da_optim;
-
-template <typename T> class da_optimization {
-  private:
+template <typename T> class da_optimization : public basic_handle<T> {
+  protected:
     // Lock for solver
     bool locked = false;
+
+    // True if the model has been successfully trained
+    bool model_trained{false};
 
     // Number of variables
     da_int nvar = 0;
     // Number of residuals
     da_int nres = 0;
+
+    // model coefficients
+    std::vector<T> coef;
 
     // Which type constraints are defined (only bound constraints are allowed for now)
     std::bitset<8> constraint_types{0};
@@ -88,15 +98,18 @@ template <typename T> class da_optimization {
     // Information vector
     std::vector<T> info;
 
+    // Pointer to user data
+    void *udata{nullptr};
+
   public:
-    // Options
-    da_options::OptionRegistry opts;
-
-    // Pointer to error handler
-    da_errors::da_error_t *err = nullptr;
-
     da_optimization(da_status &status, da_errors::da_error_t &err);
     ~da_optimization();
+
+    /* This function is called when data in the handle has changed, e.g. options
+     * changed. We mark the model untrained and prepare the handle in a way that
+     * it is suitable to solve again.
+     */
+    void refresh() { model_trained = false; };
 
     // Build model to solve
     da_status add_vars(da_int nvar);
@@ -122,11 +135,34 @@ template <typename T> class da_optimization {
             info[idx] = value;
             return da_status_success;
         }
-        return da_error(err, da_status_internal_error, "info index out-of-bounds?");
+        return da_error(this->err, da_status_internal_error, "info index out-of-bounds?");
     }
 
     // Retrieve data from solver
     da_status get_info(da_int &dim, T info[]);
+
+    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
+                         [[maybe_unused]] T *result) {
+        if (!this->model_trained)
+            return da_warn(this->err, da_status_unknown_query,
+                           "Handle does not contain data relevant to this query. Was the "
+                           "last call to the solver successful?");
+        switch (query) {
+        case da_result::da_rinfo:
+            return this->get_info(*dim, result);
+            break;
+        default:
+            return da_warn(this->err, da_status_unknown_query,
+                           "The requested result could not be queried by this handle.");
+        }
+    }
+
+    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
+                         [[maybe_unused]] da_int *result) {
+        return da_error( // LCOV_EXCL_LINE
+            this->err, da_status_unknown_query,
+            "Handle does not contain data relevant to this query.");
+    }
 };
 
 template <typename T> da_status da_optimization<T>::get_info(da_int &dim, T info[]) {
@@ -150,9 +186,8 @@ template <typename T> da_status da_optimization<T>::get_info(da_int &dim, T info
 };
 
 template <typename T>
-da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &err) {
-    // Assuming that err is valid
-    this->err = &err;
+da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &err)
+    : basic_handle<T>(err) {
     try {
         this->info.resize(da_optim_info_t::info_number);
     } catch (...) {
@@ -160,7 +195,7 @@ da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &er
                           "could not resize solver information vector");
     }
     this->info.assign(da_optim_info_t::info_number, 0);
-    status = register_optimization_options<T>(err, opts);
+    status = register_optimization_options<T>(*this->err, this->opts);
 };
 
 template <typename T> da_optimization<T>::~da_optimization(){};
@@ -233,12 +268,25 @@ da_status da_optimization<T>::add_bound_cons(std::vector<T> &l, std::vector<T> &
 // Add bound constraints to the problem (get pointer to user data)
 template <typename T>
 da_status da_optimization<T>::add_bound_cons(da_int nvar, T *l, T *u) {
+    da_status status;
+
     if (nvar == 0) {
         this->l_usrptr = nullptr;
         this->u_usrptr = nullptr;
     } else if (this->nvar == nvar) {
         this->l_usrptr = l;
         this->u_usrptr = u;
+        // Call check_1D array only if l and u were supplied, since they are allowed to be null
+        if (l) {
+            status = this->check_1D_array(nvar, l, "n_coef", "lower", 1);
+            if (status != da_status_success)
+                return status;
+        }
+        if (u) {
+            status = this->check_1D_array(nvar, u, "n_coef", "upper", 1);
+            if (status != da_status_success)
+                return status;
+        }
     } else {
         return da_error(this->err, da_status_invalid_input,
                         "Invalid size of nvar, it must match zero or the number of "
@@ -252,9 +300,15 @@ da_status da_optimization<T>::add_bound_cons(da_int nvar, T *l, T *u) {
 template <typename T> da_status da_optimization<T>::add_weights(da_int lw, T *w) {
     if (lw == 0)
         this->w_usrptr = nullptr;
-    else if (lw == this->nres)
+    else if (w == nullptr)
+        return da_error(this->err, da_status_invalid_pointer,
+                        "w must be a valid pointer");
+    else if (lw == this->nres) {
+        da_status status = this->check_1D_array(lw, w, "n_res", "weights", 0);
+        if (status != da_status_success)
+            return status;
         this->w_usrptr = w;
-    else
+    } else
         return da_error(this->err, da_status_invalid_input,
                         "Invalid size of lw, it must match zero or the "
                         "number of residuals defined: " +
@@ -350,20 +404,20 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
 
     // Print welcome banner
     da_int prnlvl;
-    if (opts.get("print level", prnlvl) != da_status_success)
+    if (this->opts.get("print level", prnlvl) != da_status_success)
         return da_error(this->err, da_status_internal_error,
                         "expected option not found: print options");
 
     // Print options
     std::string prn;
-    if (opts.get("print options", prn) != da_status_success)
+    if (this->opts.get("print options", prn) != da_status_success)
         return da_error(this->err, da_status_internal_error,
                         "expected option not found: print options");
 
     // Select_solver based on problem and options
     da_int solver;
     std::string solvname;
-    if (opts.get("optim method", solvname, solver) != da_status_success)
+    if (this->opts.get("optim method", solvname, solver) != da_status_success)
         return da_error(this->err, da_status_internal_error,
                         "expected option not found: optim method");
 
@@ -375,7 +429,7 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
                       << "-----------------------------------------------------\n";
         }
         if (prn == "yes")
-            opts.print_options();
+            this->opts.print_options();
         // Derivative based solver, allocate gradient memory
         try {
             this->g.resize(this->nvar);
@@ -395,7 +449,7 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
                       << "-----------------------------------------------------------\n";
         }
         if (prn == "yes")
-            opts.print_options();
+            this->opts.print_options();
         status = coord::coord(this->opts, this->nvar, x, this->l, this->u, this->info,
                               this->stepfun, this->monit, usrdata, *this->err);
         break;
@@ -406,7 +460,7 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
                       << " ------------------------------------------------------\n";
         }
         if (prn == "yes")
-            opts.print_options();
+            this->opts.print_options();
 
         status = ralfit::ralfit_driver(this->opts, this->nvar, this->nres, x.data(),
                                        this->resfun, this->resgrd, this->reshes,

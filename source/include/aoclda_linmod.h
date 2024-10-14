@@ -59,7 +59,7 @@ typedef enum linmod_model_ linmod_model;
  * See the :ref:`linear model options section <linmod_options>` for more information.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] mod a @ref linmod_model enum type to select the linear model.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
@@ -81,10 +81,10 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
  *
  * Only the pointers to @p X and @p y are stored; no internal copy is made.
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples the number of observations (rows) of the data matrix @p X. Constraint: @p n_samples @f$\ge@f$ 1.
  * @param[in] n_features the number of features (columns) of the data matrix, @p X. Constraint: @p n_features @f$\ge@f$ 1.
- * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix, in column major format.
+ * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
  * @param[in] y the response vector, of size @p n_samples.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
@@ -93,9 +93,10 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
  */
 da_status da_linmod_define_features_d(da_handle handle, da_int n_samples,
-                                      da_int n_features, double *X, double *y);
+                                      da_int n_features, const double *X,
+                                      const double *y);
 da_status da_linmod_define_features_s(da_handle handle, da_int n_samples,
-                                      da_int n_features, float *X, float *y);
+                                      da_int n_features, const float *X, const float *y);
 /** \} */
 
 /** \{
@@ -107,7 +108,7 @@ da_status da_linmod_define_features_s(da_handle handle, da_int n_samples,
  * see :ref:`this section <linmod_options>` for a list of available options (e.g., the regularization terms).
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
@@ -126,7 +127,7 @@ da_status da_linmod_fit_s(da_handle handle);
  *
  * Compute the same model as \ref da_linmod_fit_s "da_linmod_fit_?", starting the fitting process with the custom values defined in \p coefs.
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_coefs the number of coefficients provided in coefs. It must match the number of expected coefficients for the model defined in \p handle to be taken into account.
  * @param[in] coefs the initial coefficients.
  * @return da_status. The function returns:
@@ -139,8 +140,8 @@ da_status da_linmod_fit_s(da_handle handle);
  * - @ref da_status_internal_error - an unexpected error occurred.
  *
  */
-da_status da_linmod_fit_start_d(da_handle handle, da_int n_coefs, double *coefs);
-da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
+da_status da_linmod_fit_start_d(da_handle handle, da_int n_coefs, const double *coefs);
+da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, const float *coefs);
 /** \} */
 
 /** \{
@@ -155,13 +156,13 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
  * For each data point ``i``, ``prediction[i]`` will contain the index of the most likely class according to the model.
  * @endrst
  *
- * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
- * @param nfeat number of columns of \p X or equivalently the number of features of the test data. It must match the number features of the data defined in the \p handle.
- * @param nsamples number of rows of \p X or equivalently the number of samples to estimate the model on.
- * @param X the @p nsamples @f$\times@f$ @p nfeat data matrix to evaluate the model on, in column major format.
- * @param predictions vector of size \p nsamples containing the model's prediction.
- * @param observations vector of size \p nsamples containing new observations; may be \p NULL if none are provided.
- * @param loss scalar containing the model's loss given the new data \p X and the new observations \p y; may be \p NULL if
+ * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
+ * @param[in] n_samples number of rows of \p X or equivalently the number of samples to estimate the model on.
+ * @param[in] n_features number of columns of \p X or equivalently the number of features of the test data. It must match the number features of the data defined in the \p handle.
+ * @param[in] X the @p nsamples @f$\times@f$ @p n_features data matrix to evaluate the model on. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * @param[out] predictions vector of size \p n_samples containing the model's prediction.
+ * @param[in] observations vector of size \p n_samples containing new observations; may be \p NULL if none are provided.
+ * @param[out] loss scalar containing the model's loss given the new data \p X and the new observations \p y; may be \p NULL if
  *        no observations are provided. Note that either both \p  observations and \p loss parameters are \p NULL or both
  *        must contain a valid address.
  * @return da_status
@@ -173,12 +174,14 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, float *coefs);
  *
  *
  */
-da_status da_linmod_evaluate_model_d(da_handle handle, da_int nsamples, da_int nfeat,
-                                     double *X, double *predictions, double *observations,
+da_status da_linmod_evaluate_model_d(da_handle handle, da_int n_samples,
+                                     da_int n_features, const double *X,
+                                     double *predictions, double *observations,
                                      double *loss);
 
-da_status da_linmod_evaluate_model_s(da_handle handle, da_int nsamples, da_int nfeat,
-                                     float *X, float *predictions, float *observations,
+da_status da_linmod_evaluate_model_s(da_handle handle, da_int n_samples,
+                                     da_int n_features, const float *X,
+                                     float *predictions, float *observations,
                                      float *loss);
 /** \} */
 

@@ -40,12 +40,16 @@ namespace da_basic_statistics {
 
 /* Correlation or covariance matrix of x */
 template <typename T>
-da_status cov_corr_matrix(da_int n, da_int p, const T *x, da_int ldx, da_int dof, T *mat,
-                          da_int ldmat, bool compute_corr) {
+da_status cov_corr_matrix(da_order order, da_int n, da_int p, const T *x, da_int ldx,
+                          da_int dof, T *mat, da_int ldmat, bool compute_corr) {
 
     da_status status = da_status_success;
 
-    if (ldx < n || ldmat < p)
+    if (order == column_major && ldx < n)
+        return da_status_invalid_leading_dimension;
+    if (order == row_major && ldx < p)
+        return da_status_invalid_leading_dimension;
+    if (ldmat < p)
         return da_status_invalid_leading_dimension;
     if (n <= 1 || p < 1)
         return da_status_invalid_array_dimension;
@@ -54,15 +58,29 @@ da_status cov_corr_matrix(da_int n, da_int p, const T *x, da_int ldx, da_int dof
 
     // We need a copy of x so we don't alter the input data
     T *x_copy = nullptr;
+    da_int ldx_copy;
+    CBLAS_ORDER cblas_order;
     try {
         x_copy = new T[n * p];
     } catch (std::bad_alloc const &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
-    for (da_int j = 0; j < p; j++) {
+    if (order == column_major) {
+        ldx_copy = n;
+        cblas_order = CBLAS_ORDER::CblasColMajor;
+        for (da_int j = 0; j < p; j++) {
+            for (da_int i = 0; i < n; i++) {
+                x_copy[j * ldx_copy + i] = x[j * ldx + i];
+            }
+        }
+    } else {
+        ldx_copy = p;
+        cblas_order = CBLAS_ORDER::CblasRowMajor;
         for (da_int i = 0; i < n; i++) {
-            x_copy[j * n + i] = x[j * ldx + i];
+            for (da_int j = 0; j < p; j++) {
+                x_copy[i * ldx_copy + j] = x[i * ldx + j];
+            }
         }
     }
 
@@ -78,12 +96,13 @@ da_status cov_corr_matrix(da_int n, da_int p, const T *x, da_int ldx, da_int dof
     // For correlation matrix we standardize completely. For covariance we just mean centre the columns.
     if (compute_corr) {
         // Use dof = 1 to avoid dividing standard deviations by n, only to have to multiply by n later
-        status = standardize(da_axis_col, n, p, x_copy, n, 1, 0, dummy, dummy);
+        status =
+            standardize(order, da_axis_col, n, p, x_copy, ldx_copy, 1, 0, dummy, dummy);
     } else {
         std::vector<T> col_means(p);
         // Call standardize with col_means full of zeros so the means are computed
-        status =
-            standardize(da_axis_col, n, p, x_copy, n, dof, 0, col_means.data(), dummy);
+        status = standardize(order, da_axis_col, n, p, x_copy, ldx_copy, dof, 0,
+                             col_means.data(), dummy);
     }
     if (status != da_status_success) {
         status = da_status_internal_error; // LCOV_EXCL_LINE
@@ -91,9 +110,10 @@ da_status cov_corr_matrix(da_int n, da_int p, const T *x, da_int ldx, da_int dof
     }
 
     // Form X^T X in mat
-    da_blas::cblas_gemm(CblasColMajor, CblasTrans, CblasNoTrans, p, p, n, 1.0, x_copy, n,
-                        x_copy, n, 0.0, mat, ldmat);
+    da_blas::cblas_gemm(cblas_order, CblasTrans, CblasNoTrans, p, p, n, 1.0, x_copy,
+                        ldx_copy, x_copy, ldx_copy, 0.0, mat, ldmat);
 
+    // In this section, the same code works for both row- and column-major ordering
     if (!compute_corr && scale_factor > 1) {
         // Scale the covariance matrix
         for (da_int j = 0; j < p; j++) {
@@ -114,15 +134,15 @@ exit:
 }
 
 template <typename T>
-da_status covariance_matrix(da_int n, da_int p, const T *x, da_int ldx, da_int dof,
-                            T *cov, da_int ldcov) {
-    return cov_corr_matrix(n, p, x, ldx, dof, cov, ldcov, false);
+da_status covariance_matrix(da_order order, da_int n, da_int p, const T *x, da_int ldx,
+                            da_int dof, T *cov, da_int ldcov) {
+    return cov_corr_matrix(order, n, p, x, ldx, dof, cov, ldcov, false);
 }
 
 template <typename T>
-da_status correlation_matrix(da_int n, da_int p, const T *x, da_int ldx, T *corr,
-                             da_int ldcorr) {
-    return cov_corr_matrix(n, p, x, ldx, 0, corr, ldcorr, true);
+da_status correlation_matrix(da_order order, da_int n, da_int p, const T *x, da_int ldx,
+                             T *corr, da_int ldcorr) {
+    return cov_corr_matrix(order, n, p, x, ldx, 0, corr, ldcorr, true);
 }
 
 } // namespace da_basic_statistics

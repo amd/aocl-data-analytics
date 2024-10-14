@@ -28,14 +28,33 @@
 import os
 from setuptools import setup, find_packages
 from wheel.bdist_wheel import bdist_wheel
+from packaging.tags import sys_tags
 
 # Create a specific bdist_wheel to signal to setup.py that the wheel is not pure python
 
 class spec_bdist_wheel(bdist_wheel):
+    def get_tag(self):
+        python_tag, abi_tag, platform_tag = None, None, None
+
+        for tag in sys_tags():
+            if abi_tag is None:
+                abi_tag = str(tag.abi)
+            if platform_tag is None:
+                platform_tag = str(tag.platform)
+            if python_tag is None:
+                python_tag = str(tag.interpreter)
+            if abi_tag is not None and platform_tag is not None:
+                break
+
+        if 'manylinux' in str(platform_tag):
+            platform_tag = 'linux_x86_64'
+
+
+        return python_tag, abi_tag, platform_tag
+
     def finalize_options(self):
         bdist_wheel.finalize_options(self)
         self.root_is_pure = False
-
 
 # List of all dependent libraries that were copied in the python_package install
 lib_extensions = ['.so', '.dll', '.lib', '.pyd']
@@ -48,9 +67,9 @@ setup(
     name="aoclda",
     cmdclass={'bdist_wheel': spec_bdist_wheel},
     long_description="AOCL-DA Python Interfaces",
-    version="5.0.0",
+    version="5.0.1",
     packages=find_packages(),
     include_package_data=True,
     package_data={'aoclda': dep_libs},
-    install_requires=['numpy<2.0', 'wheel'],
+    install_requires=['numpy', 'wheel'],
 )

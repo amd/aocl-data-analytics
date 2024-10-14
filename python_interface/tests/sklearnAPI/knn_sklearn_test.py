@@ -62,9 +62,10 @@ def test_knn_classifier(precision, weights, metric, n_neigh_constructor, n_neigh
     # patch and import scikit-learn
     skpatch()
     from sklearn import neighbors
-    knn_da = neighbors.KNeighborsClassifier(weights=weights, 
-                                            n_neighbors=n_neigh_constructor, 
-                                            metric=metric)
+    with pytest.warns(RuntimeWarning):
+        knn_da = neighbors.KNeighborsClassifier(weights=weights,
+                                                n_neighbors=n_neigh_constructor,
+                                                metric=metric)
     knn_da.fit(x_train, y_train)
     da_dist, da_ind = knn_da.kneighbors(x_test, n_neighbors=n_neigh_kneighbors, return_distance=True)
     da_predict_proba = knn_da.predict_proba(x_test)
@@ -116,17 +117,21 @@ def test_knn_errors():
     from sklearn import neighbors
 
     with pytest.raises(RuntimeError):
-        knn = neighbors.KNeighborsClassifier(n_neighbors = -1)
+        with pytest.warns(RuntimeWarning):
+            knn = neighbors.KNeighborsClassifier(n_neighbors = -1)
     with pytest.raises(ValueError):
-        knn = neighbors.KNeighborsClassifier(weights = "ones")
+        with pytest.warns(RuntimeWarning):
+            knn = neighbors.KNeighborsClassifier(weights = "ones")
     with pytest.raises(ValueError):
-        knn = neighbors.KNeighborsClassifier(metric = "manhattan")
+        with pytest.warns(RuntimeWarning):
+            knn = neighbors.KNeighborsClassifier(metric = "manhattan")
 
-    x_train = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
-    y_train = np.array([[1, 2, 3]])
-    x_test = np.array([[1, 2, 3], [3, 2, 1]])
-    y_test = np.array([[1, 1]])
-    knn = neighbors.KNeighborsClassifier()
+    x_train = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.float64)
+    y_train = np.array([[1, 2, 3]], dtype=np.float64)
+    x_test = np.array([[1, 2, 3], [3, 2, 1]], dtype=np.float64)
+    y_test = np.array([[1, 1]], dtype=np.float64)
+    with pytest.warns(RuntimeWarning):
+        knn = neighbors.KNeighborsClassifier()
     knn.fit(x_train, y_train)
     with pytest.raises(RuntimeError):
         knn.score(x_test, y_test)

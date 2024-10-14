@@ -8,7 +8,7 @@ tags
 'test/data/.*'
 'example/data/.*'
 'README\.md'
-'README-Release\.txt'
+'README-dev\.md'
 '.*/README'
 '.*/README.md'
 '.*/README[-]?.*\.txt'
@@ -21,6 +21,7 @@ doc/404.md
 doc/requirements.txt
 tools/valgrind_suppress\.txt
 tools/copyright_suppression\.txt
+tools/linux_python_wheel\.def
 jenkins_log_rules\.txt
 source/core/csv/tokenizer.[ch]
 source/core/csv/khash.h
@@ -35,4 +36,5 @@ source/core/csv/char_to_num.hpp
 'external/RALFit/LICEN.*'
 'python_interface/requirements\.txt'
 'python_interface/.pylintrc'
-
+'License'
+'NOTICES'

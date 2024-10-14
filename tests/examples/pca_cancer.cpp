@@ -69,7 +69,7 @@ int main() {
 
     // Load data
     da_datastore_init(&store);
-    da_datastore_options_set_int(store, "CSV use header row", 0);
+    da_datastore_options_set_int(store, "use header row", 0);
     status = da_read_csv_d(store, filename, &A, &n_samples, &n_features, &headers);
     if (status != da_status_success) {
         da_datastore_print_error_message(store);

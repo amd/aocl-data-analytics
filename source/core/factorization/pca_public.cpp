@@ -34,12 +34,14 @@ da_status da_pca_set_data_d(da_handle handle, da_int n_samples, da_int n_feature
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->pca_d == nullptr)
+    da_pca::da_pca<double> *pca_d =
+        dynamic_cast<da_pca::da_pca<double> *>(handle->alg_handle_d);
+    if (pca_d == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_d->init(n_samples, n_features, A, lda);
+    return pca_d->init(n_samples, n_features, A, lda);
 }
 
 da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_features,
@@ -51,12 +53,14 @@ da_status da_pca_set_data_s(da_handle handle, da_int n_samples, da_int n_feature
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->pca_s == nullptr)
+    da_pca::da_pca<float> *pca_s =
+        dynamic_cast<da_pca::da_pca<float> *>(handle->alg_handle_s);
+    if (pca_s == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_s->init(n_samples, n_features, A, lda);
+    return pca_s->init(n_samples, n_features, A, lda);
 }
 
 da_status da_pca_compute_d(da_handle handle) {
@@ -67,12 +71,14 @@ da_status da_pca_compute_d(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->pca_d == nullptr)
+    da_pca::da_pca<double> *pca_d =
+        dynamic_cast<da_pca::da_pca<double> *>(handle->alg_handle_d);
+    if (pca_d == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_d->compute();
+    return pca_d->compute();
 }
 
 da_status da_pca_compute_s(da_handle handle) {
@@ -83,12 +89,14 @@ da_status da_pca_compute_s(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->pca_s == nullptr)
+    da_pca::da_pca<float> *pca_s =
+        dynamic_cast<da_pca::da_pca<float> *>(handle->alg_handle_s);
+    if (pca_s == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_s->compute();
+    return pca_s->compute();
 }
 
 da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_features,
@@ -101,13 +109,14 @@ da_status da_pca_transform_s(da_handle handle, da_int m_samples, da_int m_featur
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->pca_s == nullptr)
+    da_pca::da_pca<float> *pca_s =
+        dynamic_cast<da_pca::da_pca<float> *>(handle->alg_handle_s);
+    if (pca_s == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_s->transform(m_samples, m_features, X, ldx, X_transform,
-                                    ldx_transform);
+    return pca_s->transform(m_samples, m_features, X, ldx, X_transform, ldx_transform);
 }
 
 da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_features,
@@ -120,13 +129,14 @@ da_status da_pca_transform_d(da_handle handle, da_int m_samples, da_int m_featur
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->pca_d == nullptr)
+    da_pca::da_pca<double> *pca_d =
+        dynamic_cast<da_pca::da_pca<double> *>(handle->alg_handle_d);
+    if (pca_d == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_d->transform(m_samples, m_features, X, ldx, X_transform,
-                                    ldx_transform);
+    return pca_d->transform(m_samples, m_features, X, ldx, X_transform, ldx_transform);
 }
 
 da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples,
@@ -139,13 +149,15 @@ da_status da_pca_inverse_transform_s(da_handle handle, da_int k_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->pca_s == nullptr)
+    da_pca::da_pca<float> *pca_s =
+        dynamic_cast<da_pca::da_pca<float> *>(handle->alg_handle_s);
+    if (pca_s == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_s->inverse_transform(k_samples, k_features, X, ldx,
-                                            X_inv_transform, ldx_inv_transform);
+    return pca_s->inverse_transform(k_samples, k_features, X, ldx, X_inv_transform,
+                                    ldx_inv_transform);
 }
 
 da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples,
@@ -158,11 +170,13 @@ da_status da_pca_inverse_transform_d(da_handle handle, da_int k_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->pca_d == nullptr)
+    da_pca::da_pca<double> *pca_d =
+        dynamic_cast<da_pca::da_pca<double> *>(handle->alg_handle_d);
+    if (pca_d == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_pca or "
                         "handle is invalid.");
 
-    return handle->pca_d->inverse_transform(k_samples, k_features, X, ldx,
-                                            X_inv_transform, ldx_inv_transform);
+    return pca_d->inverse_transform(k_samples, k_features, X, ldx, X_inv_transform,
+                                    ldx_inv_transform);
 }

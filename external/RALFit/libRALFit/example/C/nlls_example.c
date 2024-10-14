@@ -1,5 +1,10 @@
+/* Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (c) 2019, The Science and Technology Facilities Council (STFC)
+ * All rights reserved.
+ */
+
 // examples/C/nlls_example.c
-// 
+//
 // Attempts to fit the model y_i = x_1 e^(x_2 t_i)
 // For parameters x_1 and x_2, and input data (t_i, y_i)
 #include "ral_nlls.h"
@@ -73,6 +78,10 @@ int main(void) {
    // Initialize options values
    struct ral_nlls_options options;
    ral_nlls_default_options(&options);
+   options.print_level = 2;
+   options.check_derivatives = 1;
+   options.print_options = true;
+   options.derivative_test_tol = 2.0e-5;
 
    // Call fitting routine
    double x[2] = { 2.5, 0.25 }; // Initial guess

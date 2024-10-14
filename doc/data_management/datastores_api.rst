@@ -163,5 +163,5 @@ The :cpp:type:`da_datastore` functionality also includes
 :ref:`option setting <api_datastore_options>` and
 :ref:`error handling <datastore_error_api>` capabilities.
 
-.. doxygentypedef:: da_ordering
-.. doxygenenum:: da_ordering_
+.. doxygentypedef:: da_order
+.. doxygenenum:: da_order_

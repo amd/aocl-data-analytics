@@ -35,7 +35,7 @@ Clustering APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.clustering.kmeans(n_clusters=1, initialization_method='k-means++', n_init=10, max_iter=300, seed=-1, algorithm='elkan',precision="double")
+      .. autoclass:: aoclda.clustering.kmeans(n_clusters=1, initialization_method='k-means++', C=None, n_init=10, max_iter=300, seed=-1, algorithm='elkan', tol=1.0e-4, check_data=false)
          :members:
 
    .. tab-item:: C

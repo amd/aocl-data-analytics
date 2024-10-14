@@ -1,0 +1,101 @@
+Bootstrap: docker
+From: rockylinux:8
+Stage: build
+
+
+%arguments
+    PY_VERSION=3.9-3.10-3.11-3.12
+
+%setup
+    # Download latest AOCL if it is not already in the current directory
+    if [ ! -f ./*aocl*.tar.gz ]; then
+        wget http://aocl.amd.com/data/latest/aocl-linux-aocc-latest.tar.gz
+    fi
+    if [ ! -f ./aocc*.tar* ]; then
+        # Download from Jenkins if official AOCC not present ion the current directory
+        wget http://atlvjksapp01.amd.com:8080/job/aocc_postsub_p/job/aocc_5_0_0_interim/739/artifact/lin/aocc-compiler-rel-5.0.0-4925-739.tar.xz
+    fi
+    # Download conda
+    if [ ! -f ./Miniconda3-latest-Linux-x86_64.sh ]; then
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+    fi
+
+%files
+    ./aocl*.tar.gz /amd/aocl/
+    ./aocc*.tar* /amd/aocc/
+    ./Miniconda3*.sh /amd
+
+%post
+    dnf -y update
+    dnf install -y pkgconf-pkg-config dnf-plugins-core epel-release
+    dnf -y install make gcc gcc-gfortran gcc-c++ python3-pip patchelf python3-pip xz git
+
+    # Install conda
+    cd /amd
+    chmod +x Miniconda3*.sh
+    /bin/sh Miniconda3*.sh -b -p conda
+    echo "#!/bin/sh" >> $SINGULARITY_ENVIRONMENT
+    echo ". /amd/conda/etc/profile.d/conda.sh" >> $SINGULARITY_ENVIRONMENT
+    . conda/bin/activate
+
+    # Install all required python versions in PY_VERSION ('-' separated list of version numbers)
+    # create a virtual environment for each and install the required packages
+    for ver in $(echo {{ PY_VERSION }} | sed "s/-/ /g")
+    do
+        conda create -yn python${ver}-env python=${ver}
+        conda activate python${ver}-env
+        python -m ensurepip --upgrade
+        pip install build
+
+        python -m pip install \
+            pybind11 \
+            numpy \
+            wheel \
+            pytest \
+            scikit-learn \
+            pylint \
+            sphinxcontrib.bibtex \
+            breathe \
+            sphinx_collapse \
+            rocm-docs-core==0.34.2
+        python -m pip install cmake --upgrade
+        conda deactivate
+    done
+    conda deactivate
+
+    # update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-{{ GCC_VERSION }} 99
+    # update-alternatives --set cc /usr/bin/gcc
+    # update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-{{ GCC_VERSION }} 99
+    # update-alternatives --set c++ /usr/bin/g++
+
+    # Install the latest versions of AOCL
+    cd /amd/aocl/
+    tar -xf ./aocl*.tar.gz
+    aocl_dir=$(ls -d aocl*/)
+    cd $aocl_dir
+    ./install.sh -t /amd/aocl -l sparse blis libflame utils
+    cd ..
+    rm -r aocl*.tar.gz ./$aocl_dir
+    aocl_install=$(ls -d */)
+    . $aocl_install/aocc/amd-libs.cfg
+
+    # Install latest aocc
+    cd /amd/aocc
+    aocc_tar=$(ls aocc*.tar* | head -1)
+    tar -xf ./$aocc_tar
+    aocc_dir=$(ls -d aocc*/)
+    cd $aocc_dir
+    bash install.sh
+    . /amd/aocc/setenv_AOCC.sh
+
+%environment
+    # AOCC env
+    . /amd/aocc/setenv_AOCC.sh
+    # AOCL env
+    aocl_dir=$(ls -d /amd/aocl/*)
+    gcc --version
+    . $aocl_dir/aocc/amd-libs.cfg
+    # activate base conda and list all python virtual environments
+    . /amd/conda/bin/activate
+    . /amd/conda/etc/profile.d/conda.sh
+    conda env list

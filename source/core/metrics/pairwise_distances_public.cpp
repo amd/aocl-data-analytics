@@ -28,18 +28,18 @@
 #include "aoclda.h"
 #include "pairwise_distances.hpp"
 
-da_status da_pairwise_distances_d(da_int m, da_int n, da_int k, const double *X,
-                                  da_int ldx, const double *Y, da_int ldy, double *D,
-                                  da_int ldd, da_metric metric,
+da_status da_pairwise_distances_d(da_order order, da_int m, da_int n, da_int k,
+                                  const double *X, da_int ldx, const double *Y,
+                                  da_int ldy, double *D, da_int ldd, da_metric metric,
                                   da_data_types force_all_finite) {
-    return pairwise_distance_kernel(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+    return pairwise_distance_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
                                     force_all_finite);
 }
 
-da_status da_pairwise_distances_s(da_int m, da_int n, da_int k, const float *X,
-                                  da_int ldx, const float *Y, da_int ldy, float *D,
-                                  da_int ldd, da_metric metric,
+da_status da_pairwise_distances_s(da_order order, da_int m, da_int n, da_int k,
+                                  const float *X, da_int ldx, const float *Y, da_int ldy,
+                                  float *D, da_int ldd, da_metric metric,
                                   da_data_types force_all_finite) {
-    return pairwise_distance_kernel(m, n, k, X, ldx, Y, ldy, D, ldd, metric,
+    return pairwise_distance_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
                                     force_all_finite);
 }

@@ -29,6 +29,7 @@
 #define MOMENT_STATISTICS_HPP
 
 #include "aoclda.h"
+#include "row_to_col_major.hpp"
 #include <cmath>
 
 namespace da_basic_statistics {
@@ -51,12 +52,17 @@ template <typename T> T power(T a, da_int exponent) {
 
 /* Arithmetic mean along specified axis */
 template <typename T>
-da_status mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean) {
+da_status mean(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
+               da_int ldx, T *amean) {
 
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (x == nullptr || amean == nullptr)
         return da_status_invalid_pointer;
 
@@ -106,12 +112,17 @@ da_status mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amea
 
 /* Geometric mean computed using log and exp to avoid overflow. Care needed to deal with negative or zero entries */
 template <typename T>
-da_status geometric_mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx,
-                         T *gmean) {
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+da_status geometric_mean(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
+                         const T *x, da_int ldx, T *gmean) {
+
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (x == nullptr || gmean == nullptr)
         return da_status_invalid_pointer;
 
@@ -173,12 +184,17 @@ da_status geometric_mean(da_axis axis, da_int n, da_int p, const T *x, da_int ld
 
 /* Harmonic mean along a specified axis */
 template <typename T>
-da_status harmonic_mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx,
-                        T *hmean) {
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+da_status harmonic_mean(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
+                        const T *x, da_int ldx, T *hmean) {
+
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (x == nullptr || hmean == nullptr)
         return da_status_invalid_pointer;
 
@@ -229,16 +245,21 @@ da_status harmonic_mean(da_axis axis, da_int n, da_int p, const T *x, da_int ldx
 
 /* Mean and variance along specified axis */
 template <typename T>
-da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, da_int dof,
-                   T *amean, T *var) {
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+da_status variance(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
+                   da_int ldx, da_int dof, T *amean, T *var) {
+
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (x == nullptr || amean == nullptr || var == nullptr)
         return da_status_invalid_pointer;
 
-    mean(axis, n, p, x, ldx, amean);
+    mean(column_major, axis, n, p, x, ldx, amean);
 
     T zero = (T)0.0;
     da_int scale_factor = dof;
@@ -313,16 +334,21 @@ da_status variance(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, da_
 
 /* Mean, variance and skewness along specified axis */
 template <typename T>
-da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean,
-                   T *var, T *skew) {
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+da_status skewness(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
+                   da_int ldx, T *amean, T *var, T *skew) {
+
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (x == nullptr || amean == nullptr || var == nullptr || skew == nullptr)
         return da_status_invalid_pointer;
 
-    mean(axis, n, p, x, ldx, amean);
+    mean(column_major, axis, n, p, x, ldx, amean);
 
     T zero = (T)0.0;
 
@@ -392,16 +418,21 @@ da_status skewness(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
 
 /* Mean, variance and kurtosis along specified axis */
 template <typename T>
-da_status kurtosis(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *amean,
-                   T *var, T *kurt) {
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+da_status kurtosis(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
+                   da_int ldx, T *amean, T *var, T *kurt) {
+
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (x == nullptr || amean == nullptr || var == nullptr || kurt == nullptr)
         return da_status_invalid_pointer;
 
-    mean(axis, n, p, x, ldx, amean);
+    mean(column_major, axis, n, p, x, ldx, amean);
 
     T zero = (T)0.0;
     T three = (T)3.0;
@@ -467,19 +498,24 @@ da_status kurtosis(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, T *
 
 /* kth moment along specified axis. Optionally use precomputed mean. */
 template <typename T>
-da_status moment(da_axis axis, da_int n, da_int p, const T *x, da_int ldx, da_int k,
-                 da_int use_precomputed_mean, T *amean, T *mom) {
-    if (ldx < n)
-        return da_status_invalid_leading_dimension;
-    if (n < 1 || p < 1)
-        return da_status_invalid_array_dimension;
+da_status moment(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
+                 da_int ldx, da_int k, da_int use_precomputed_mean, T *amean, T *mom) {
+
+    da_int n, p;
+    da_axis axis;
+
+    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
+    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    if (status != da_status_success)
+        return status;
+
     if (k < 0)
         return da_status_invalid_input;
     if (x == nullptr || amean == nullptr || mom == nullptr)
         return da_status_invalid_pointer;
 
     if (!use_precomputed_mean)
-        mean(axis, n, p, x, ldx, amean);
+        mean(column_major, axis, n, p, x, ldx, amean);
 
     T zero = (T)0.0;
 

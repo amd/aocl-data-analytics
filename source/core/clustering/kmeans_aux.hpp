@@ -33,23 +33,6 @@
 
 namespace da_kmeans {
 
-/* Populate the member variables n_blocks and block_rem with details of the blocking scheme to use */
-template <typename T> void da_kmeans<T>::get_blocking_scheme(da_int n_samples) {
-    n_blocks = n_samples / max_block_size;
-    block_rem = n_samples % max_block_size;
-    // Count the remainder in the number of blocks
-    if (block_rem > 0)
-        n_blocks += 1;
-}
-
-/* Return the number of threads use in a parallel region containing a loop*/
-template <typename T> da_int da_kmeans<T>::get_n_threads(da_int loop_size) {
-    if (omp_get_max_active_levels() == omp_get_level())
-        return (da_int)1;
-
-    return std::min((da_int)omp_get_max_threads(), loop_size);
-}
-
 /* Initialization function for Elkan's algorithm */
 template <typename T> void da_kmeans<T>::init_elkan() {
     ldworkcs1 = n_clusters + 8;
@@ -356,9 +339,10 @@ void da_kmeans<T>::elkan_iteration_assign_block(
 template <typename T> void da_kmeans<T>::compute_centre_half_distances() {
     T *dummy = nullptr;
 
-    euclidean_distance(
-        n_clusters, n_clusters, n_features, (*current_cluster_centres).data(), n_clusters,
-        dummy, 0, workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0, false, true);
+    euclidean_distance(column_major, n_clusters, n_clusters, n_features,
+                       (*current_cluster_centres).data(), n_clusters, dummy, 0,
+                       workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0, false,
+                       true);
     // For each centre, compute the half distance to next closest centre and store in workc1
     std::fill(workc1.begin(), workc1.begin() + n_clusters,
               std::numeric_limits<T>::infinity());
@@ -631,7 +615,7 @@ void da_kmeans<T>::macqueen_iteration(bool update_centres,
 
         T *dummy = nullptr;
         T tmp;
-        euclidean_distance(1, n_clusters, n_features, &A[i], lda,
+        euclidean_distance(column_major, 1, n_clusters, n_features, &A[i], lda,
                            (*current_cluster_centres).data(), n_clusters, workc2.data(),
                            1, dummy, 0, workc1.data(), 1, true, false);
 
@@ -727,9 +711,9 @@ template <typename T> void da_kmeans<T>::perform_kmeans() {
         return;
     }
 
-    get_blocking_scheme(n_samples);
+    da_utils::blocking_scheme(n_samples, max_block_size, n_blocks, block_rem);
 
-    da_int n_threads = get_n_threads(n_blocks);
+    da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
 
     (this->*initialize_algorithm)();
 
@@ -889,7 +873,7 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
     }
 
     T dummy = (T)0.0;
-    euclidean_distance(n_samples, 1, n_features, A, lda,
+    euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
                        (*current_cluster_centres).data(), n_clusters, works3.data(),
                        n_samples, works1.data(), 1, &dummy, 2, true, false);
 
@@ -947,7 +931,7 @@ template <typename T> void da_kmeans<T>::kmeans_plusplus() {
                 da_int current_candidate = work_int2[trials];
 
                 // Compute the distance from each point to the candidate centre and store in works4
-                euclidean_distance(n_samples, 1, n_features, A, lda,
+                euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
                                    &A[current_candidate], lda, works4.data(), n_samples,
                                    works1.data(), 1, &works1[current_candidate], 1, true,
                                    false);

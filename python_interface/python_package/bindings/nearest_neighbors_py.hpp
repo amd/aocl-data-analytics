@@ -41,20 +41,17 @@
 namespace py = pybind11;
 
 class knn_classifier : public pyda_handle {
-    da_precision precision = da_double;
     da_int internal_neigh;
-    py::array_t<float, py::array::f_style> Xf_internal;
-    py::array_t<double, py::array::f_style> Xd_internal;
     py::array_t<da_int> y_internal;
 
   public:
     knn_classifier(da_int n_neighbors = 5, std::string weights = "uniform",
                    std::string algorithm = "brute", std::string metric = "euclidean",
-                   std::string prec = "double") {
+                   std::string prec = "double", bool check_data = false) {
         da_status status;
         if (prec == "double") {
             status = da_handle_init<double>(&handle, da_handle_knn);
-        } else if (prec == "single") {
+        } else {
             status = da_handle_init<float>(&handle, da_handle_knn);
             precision = da_single;
         }
@@ -68,38 +65,61 @@ class knn_classifier : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "metric", metric.c_str());
         exception_check(status);
+        if (check_data == true) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
+            exception_check(status);
+        }
     }
     ~knn_classifier() { da_handle_destroy(&handle); }
 
-    template <typename T>
-    void fit(py::array_t<T, py::array::f_style> X, py::array_t<da_int> y) {
+    template <typename T> void fit(py::array_t<T> X, py::array y) {
         da_status status;
 
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
-        status = da_knn_set_training_data(handle, n_samples, n_features, X.data(),
-                                          n_samples, y.data());
-        exception_check(status); // throw an exception if status is not success
+        da_int n_samples, n_features, ldx;
 
-        // Store the pointers since they can be temporary so that memory is not
-        // freed and reused later.
-        if constexpr (std::is_same_v<T, double>) {
-            Xd_internal = std::move(X);
-        } else if (std::is_same_v<T, float>) {
-            Xf_internal = std::move(X);
+        auto y_int = py::array_t<da_int>(y); // Convert y to da_int.
+        y_internal = std::move(y_int);
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column-major");
         }
-        y_internal = std::move(y);
+
+        status = da_knn_set_training_data(handle, n_samples, n_features, X.data(), ldx,
+                                          y_internal.data());
+        exception_check(status); // throw an exception if status is not success
+            // Store the pointers since they can be temporary so that memory is not
+        // freed and reused later.
     }
 
     template <typename T>
-    py::array_t<da_int> kneighbors_indices(py::array_t<T, py::array::f_style> X,
+    py::array_t<da_int> kneighbors_indices(py::array_t<T> X,
                                            da_int n_neighbors = (da_int)0) {
         da_status status;
-        da_int n_queries = X.shape()[0], n_features = X.shape()[1], ldx = X.shape()[0];
+
+        da_int n_queries, n_features, ldx;
+
+        get_numpy_array_properties(X, n_queries, n_features, ldx);
+
         da_int req_neigh = internal_neigh;
         if (n_neighbors != 0)
             req_neigh = n_neighbors;
+
         size_t shape[2]{(size_t)n_queries, (size_t)req_neigh};
-        size_t strides[2]{sizeof(da_int), sizeof(da_int) * n_queries};
+
+        size_t strides[2];
+        if (order == c_contiguous) {
+            strides[0] = sizeof(da_int) * req_neigh;
+            strides[1] = sizeof(da_int);
+        } else {
+            strides[0] = sizeof(da_int);
+            strides[1] = sizeof(da_int) * n_queries;
+        }
+
         auto k_ind = py::array_t<da_int>(shape, strides);
         status = da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
                                    k_ind.mutable_data(), nullptr, req_neigh, 0);
@@ -108,18 +128,34 @@ class knn_classifier : public pyda_handle {
     }
 
     template <typename T>
-    py::tuple kneighbors(py::array_t<T, py::array::f_style> X,
-                         da_int n_neighbors = (da_int)0) {
+    py::tuple kneighbors(py::array_t<T> X, da_int n_neighbors = (da_int)0) {
         da_status status;
-        da_int n_queries = X.shape()[0], n_features = X.shape()[1], ldx = X.shape()[0];
+        da_int n_queries, n_features, ldx;
+
+        get_numpy_array_properties(X, n_queries, n_features, ldx);
+
         da_int req_neigh = internal_neigh;
         if (n_neighbors != 0)
             req_neigh = n_neighbors;
+
         size_t shape[2]{(size_t)n_queries, (size_t)req_neigh};
-        size_t strides_i[2]{sizeof(da_int), sizeof(da_int) * n_queries};
+
+        size_t strides_i[2], strides_f[2];
+        if (order == c_contiguous) {
+            strides_i[0] = sizeof(da_int) * req_neigh;
+            strides_i[1] = sizeof(da_int);
+            strides_f[0] = sizeof(T) * req_neigh;
+            strides_f[1] = sizeof(T);
+        } else {
+            strides_i[0] = sizeof(da_int);
+            strides_i[1] = sizeof(da_int) * n_queries;
+            strides_f[0] = sizeof(T);
+            strides_f[1] = sizeof(T) * n_queries;
+        }
+
         auto k_ind = py::array_t<da_int>(shape, strides_i);
-        size_t strides_f[2]{sizeof(T), sizeof(T) * n_queries};
         auto k_dist = py::array_t<T>(shape, strides_f);
+
         status =
             da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
                               k_ind.mutable_data(), k_dist.mutable_data(), req_neigh, 1);
@@ -128,16 +164,28 @@ class knn_classifier : public pyda_handle {
         return k_info;
     }
 
-    template <typename T>
-    py::array_t<T> predict_proba(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> predict_proba(py::array_t<T> X) {
         da_status status;
-        da_int n_queries = X.shape()[0], n_features = X.shape()[1], ldx = X.shape()[0];
+
+        da_int n_queries, n_features, ldx;
+
+        get_numpy_array_properties(X, n_queries, n_features, ldx);
+
         da_int num_classes = -3;
         status = da_knn_classes<T>(handle, &num_classes, nullptr);
         exception_check(status);
 
         size_t shape[2]{(size_t)n_queries, (size_t)num_classes};
-        size_t strides[2]{sizeof(T), sizeof(T) * n_queries};
+
+        size_t strides[2];
+        if (order == c_contiguous) {
+            strides[0] = sizeof(T) * num_classes;
+            strides[1] = sizeof(T);
+        } else {
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * n_queries;
+        }
+
         auto proba = py::array_t<T>(shape, strides);
         status = da_knn_predict_proba(handle, n_queries, n_features, X.data(), ldx,
                                       proba.mutable_data());
@@ -145,10 +193,11 @@ class knn_classifier : public pyda_handle {
         return proba;
     }
 
-    template <typename T>
-    py::array_t<da_int> predict(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<da_int> predict(py::array_t<T> X) {
         da_status status;
-        da_int n_queries = X.shape()[0], n_features = X.shape()[1], ldx = X.shape()[0];
+        da_int n_queries, n_features, ldx;
+
+        get_numpy_array_properties(X, n_queries, n_features, ldx);
 
         size_t shape[1]{(size_t)n_queries};
         auto y_test = py::array_t<da_int>(shape);

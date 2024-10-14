@@ -30,6 +30,13 @@
 extern "C" {
 #define BLIS_ENABLE_CBLAS
 #include "cblas.h"
+/*
+ * Adding those declarations because they do not exist in cblas.h
+ */
+void simatcopy_(char *trans, da_int *m, da_int *n, const float *alpha, float *A,
+                da_int *lda_in, da_int *lda_out);
+void dimatcopy_(char *trans, da_int *m, da_int *n, const double *alpha, double *A,
+                da_int *lda_in, da_int *lda_out);
 }
 
 #include <complex>
@@ -43,14 +50,10 @@ template <typename... Types>
 using real_type = typename real_type_traits<Types...>::real_t;
 
 // For one type
-template <typename T> struct real_type_traits<T> {
-    using real_t = T;
-};
+template <typename T> struct real_type_traits<T> { using real_t = T; };
 
 // For one complex type, strip complex
-template <typename T> struct real_type_traits<std::complex<T>> {
-    using real_t = T;
-};
+template <typename T> struct real_type_traits<std::complex<T>> { using real_t = T; };
 
 // =============================================================================
 // Level 1 BLAS
@@ -971,6 +974,17 @@ inline void cblas_her2k(CBLAS_ORDER layout, CBLAS_UPLO uplo, CBLAS_TRANSPOSE tra
                         std::complex<double> *C, da_int ldc) {
     cblas_zher2k(layout, uplo, trans, n, k, &alpha, A, lda, B, ldb, beta, C, ldc);
 }
+
+inline void imatcopy(char trans, da_int m, da_int n, float alpha, float *A, da_int lda_in,
+                     da_int lda_out) {
+    simatcopy_(&trans, &m, &n, (const float *)&alpha, A, &lda_in, &lda_out);
+}
+
+inline void imatcopy(char trans, da_int m, da_int n, double alpha, double *A,
+                     da_int lda_in, da_int lda_out) {
+    dimatcopy_(&trans, &m, &n, (const double *)&alpha, A, &lda_in, &lda_out);
+}
+
 } // namespace da_blas
 
 #endif //  #ifndef CBLAS_HH

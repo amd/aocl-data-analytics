@@ -46,7 +46,7 @@ using CSVElementType = std::variant<da_int, float, double, uint8_t>;
 
 /* Convert column i of the CSV data to char, when we have already read the first j elements */
 inline void convert_col_to_char(CSVColumnsType &columns, da_int i, da_int j, char **data,
-                                da_int nrows, da_int ncols, da_ordering order) {
+                                da_int nrows, da_int ncols, da_order order) {
     std::vector<char **> char_col;
 
     for (da_int k = 0; k <= j; k++) {
@@ -54,7 +54,7 @@ inline void convert_col_to_char(CSVColumnsType &columns, da_int i, da_int j, cha
         case row_major:
             char_col.push_back(&data[i + ncols * k]);
             break;
-        case col_major:
+        case column_major:
             char_col.push_back(&data[k + nrows * i]);
             break;
         }
@@ -66,7 +66,7 @@ inline void convert_col_to_char(CSVColumnsType &columns, da_int i, da_int j, cha
 /* Add the item elem to the ith column of the data, where j entries have already been dealt with */
 template <class T>
 inline void update_column(T elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int nrows, da_int ncols, da_ordering order) {
+                          char **data, da_int nrows, da_int ncols, da_order order) {
     // T can be da_int, float, double or uint8_t, but char** will have been caught earlier
     // If columns[i] is also of type T then simply push_back
     if (std::vector<T> *T_col = std::get_if<std::vector<T>>(&(columns[i]))) {
@@ -85,7 +85,7 @@ inline void update_column(T elem, CSVColumnsType &columns, da_int i, da_int j,
 
 /* Overload of previous function to deal with da_int data which can be cast to float or double */
 inline void update_column(da_int elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int nrows, da_int ncols, da_ordering order) {
+                          char **data, da_int nrows, da_int ncols, da_order order) {
     if (std::vector<da_int> *int_col = std::get_if<std::vector<da_int>>(&(columns[i]))) {
         // This column already contains da_int data so we only need to push_back
         int_col->push_back(elem);
@@ -103,7 +103,7 @@ inline void update_column(da_int elem, CSVColumnsType &columns, da_int i, da_int
 
 /* Overload of previous function to deal with float data */
 inline void update_column(float elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int nrows, da_int ncols, da_ordering order) {
+                          char **data, da_int nrows, da_int ncols, da_order order) {
     if (std::vector<float> *float_col = std::get_if<std::vector<float>>(&(columns[i]))) {
         // This column already contains float data so we only need to push_back
         float_col->push_back(elem);
@@ -124,7 +124,7 @@ inline void update_column(float elem, CSVColumnsType &columns, da_int i, da_int 
 
 /* Overload of previous function to deal with double data */
 inline void update_column(double elem, CSVColumnsType &columns, da_int i, da_int j,
-                          char **data, da_int nrows, da_int ncols, da_ordering order) {
+                          char **data, da_int nrows, da_int ncols, da_order order) {
     if (std::vector<double> *double_col =
             std::get_if<std::vector<double>>(&(columns[i]))) {
         // This column already contains double data so we only need to push_back
@@ -202,7 +202,7 @@ inline da_status detect_columns(da_csv::csv_reader *csv, CSVColumnsType &columns
             case row_major:
                 data_index = i + ncols * j;
                 break;
-            case col_major:
+            case column_major:
                 data_index = j + nrows * i;
                 break;
             }

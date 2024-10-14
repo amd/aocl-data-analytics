@@ -92,7 +92,7 @@ typedef struct _da_handle *da_handle;
  * For more info on the handle structure: :ref:`higher-level handle description <intro_handle>`.
  * @endrst
  *
- * @param[in,out] handle the main data structure.
+ * @param[inout] handle the main data structure.
  * @param[in] handle_type the type of handle to initialize (see @ref da_handle_type).
  * @returns @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
@@ -109,7 +109,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type);
  * Some functions store extra information about errors and
  * this function prints (to standard output) the stored error message(s).
  *
- * @param[in,out] handle the @ref da_handle structure.
+ * @param[inout] handle the @ref da_handle structure.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
  * - @ref da_status_invalid_input - the handle pointer is invalid.
@@ -125,12 +125,15 @@ da_status da_handle_print_error_message(da_handle handle);
  *
  * @note Memory leaks may occur if handles are not destroyed after use.
  *
- * @param[in,out] handle the main \ref da_handle structure.
+ * @param[inout] handle the main \ref da_handle structure.
  */
 void da_handle_destroy(da_handle *handle);
 
 /* The following routines are undocumented and are used internally to help the Python interfaces */
 da_status da_handle_get_error_message(da_handle handle, char **message);
 da_status da_handle_get_error_severity(da_handle handle, da_severity *severity);
+
+/* Expose the refresh functionality for benchmark purposes */
+void da_handle_refresh(da_handle handle);
 
 #endif

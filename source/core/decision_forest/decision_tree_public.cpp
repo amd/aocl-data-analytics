@@ -29,9 +29,11 @@
 #include "da_handle.hpp"
 #include "decision_tree.hpp"
 
+using namespace da_decision_tree;
+
 da_status da_tree_set_training_data_d(da_handle handle, da_int n_samples,
-                                      da_int n_features, da_int n_class, double *X,
-                                      da_int ldx, da_int *y) {
+                                      da_int n_features, da_int n_class, const double *X,
+                                      da_int ldx, const da_int *y) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -39,19 +41,20 @@ da_status da_tree_set_training_data_d(da_handle handle, da_int n_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->dectree_d == nullptr)
+    decision_tree<double> *dectree =
+        dynamic_cast<decision_tree<double> *>(handle->alg_handle_d);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
 
-    return handle->dectree_d->set_training_data(n_samples, n_features, X, ldx, y,
-                                                n_class);
+    return dectree->set_training_data(n_samples, n_features, X, ldx, y, n_class);
 }
 
 da_status da_tree_set_training_data_s(da_handle handle, da_int n_samples,
-                                      da_int n_features, da_int n_class, float *X,
-                                      da_int ldx, da_int *y) {
+                                      da_int n_features, da_int n_class, const float *X,
+                                      da_int ldx, const da_int *y) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -59,14 +62,15 @@ da_status da_tree_set_training_data_s(da_handle handle, da_int n_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->dectree_s == nullptr)
+    decision_tree<float> *dectree =
+        dynamic_cast<decision_tree<float> *>(handle->alg_handle_s);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
 
-    return handle->dectree_s->set_training_data(n_samples, n_features, X, ldx, y,
-                                                n_class);
+    return dectree->set_training_data(n_samples, n_features, X, ldx, y, n_class);
 }
 
 da_status da_tree_fit_d(da_handle handle) {
@@ -78,12 +82,14 @@ da_status da_tree_fit_d(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->dectree_d == nullptr)
+    decision_tree<double> *dectree =
+        dynamic_cast<decision_tree<double> *>(handle->alg_handle_d);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_d->fit();
+    return dectree->fit();
 }
 da_status da_tree_fit_s(da_handle handle) {
     if (!handle)
@@ -94,16 +100,18 @@ da_status da_tree_fit_s(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->dectree_s == nullptr)
+    decision_tree<float> *dectree =
+        dynamic_cast<decision_tree<float> *>(handle->alg_handle_s);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_s->fit();
+    return dectree->fit();
 }
 
 da_status da_tree_predict_d(da_handle handle, da_int n_obs, da_int n_features,
-                            double *X_test, da_int ldx_test, da_int *y_pred) {
+                            const double *X_test, da_int ldx_test, da_int *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -111,15 +119,17 @@ da_status da_tree_predict_d(da_handle handle, da_int n_obs, da_int n_features,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->dectree_d == nullptr)
+    decision_tree<double> *dectree =
+        dynamic_cast<decision_tree<double> *>(handle->alg_handle_d);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_d->predict(n_obs, n_features, X_test, ldx_test, y_pred);
+    return dectree->predict(n_obs, n_features, X_test, ldx_test, y_pred);
 }
 da_status da_tree_predict_s(da_handle handle, da_int n_obs, da_int n_features,
-                            float *X_test, da_int ldx_test, da_int *y_pred) {
+                            const float *X_test, da_int ldx_test, da_int *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -127,16 +137,18 @@ da_status da_tree_predict_s(da_handle handle, da_int n_obs, da_int n_features,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->dectree_s == nullptr)
+    decision_tree<float> *dectree =
+        dynamic_cast<decision_tree<float> *>(handle->alg_handle_s);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_s->predict(n_obs, n_features, X_test, ldx_test, y_pred);
+    return dectree->predict(n_obs, n_features, X_test, ldx_test, y_pred);
 }
 
 da_status da_tree_predict_proba_d(da_handle handle, da_int n_obs, da_int n_features,
-                                  double *X_test, da_int ldx_test, double *y_pred,
+                                  const double *X_test, da_int ldx_test, double *y_pred,
                                   da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
@@ -145,17 +157,19 @@ da_status da_tree_predict_proba_d(da_handle handle, da_int n_obs, da_int n_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->dectree_d == nullptr)
+    decision_tree<double> *dectree =
+        dynamic_cast<decision_tree<double> *>(handle->alg_handle_d);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_d->predict_proba(n_obs, n_features, X_test, ldx_test, y_pred,
-                                            n_class, ldy);
+    return dectree->predict_proba(n_obs, n_features, X_test, ldx_test, y_pred, n_class,
+                                  ldy);
 }
 
 da_status da_tree_predict_proba_s(da_handle handle, da_int n_obs, da_int n_features,
-                                  float *X_test, da_int ldx_test, float *y_pred,
+                                  const float *X_test, da_int ldx_test, float *y_pred,
                                   da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
@@ -164,18 +178,20 @@ da_status da_tree_predict_proba_s(da_handle handle, da_int n_obs, da_int n_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->dectree_s == nullptr)
+    decision_tree<float> *dectree =
+        dynamic_cast<decision_tree<float> *>(handle->alg_handle_s);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_s->predict_proba(n_obs, n_features, X_test, ldx_test, y_pred,
-                                            n_class, ldy);
+    return dectree->predict_proba(n_obs, n_features, X_test, ldx_test, y_pred, n_class,
+                                  ldy);
 }
 
 da_status da_tree_predict_log_proba_d(da_handle handle, da_int n_obs, da_int n_features,
-                                      double *X_test, da_int ldx_test, double *y_pred,
-                                      da_int n_class, da_int ldy) {
+                                      const double *X_test, da_int ldx_test,
+                                      double *y_pred, da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -183,17 +199,19 @@ da_status da_tree_predict_log_proba_d(da_handle handle, da_int n_obs, da_int n_f
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->dectree_d == nullptr)
+    decision_tree<double> *dectree =
+        dynamic_cast<decision_tree<double> *>(handle->alg_handle_d);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_d->predict_log_proba(n_obs, n_features, X_test, ldx_test,
-                                                y_pred, n_class, ldy);
+    return dectree->predict_log_proba(n_obs, n_features, X_test, ldx_test, y_pred,
+                                      n_class, ldy);
 }
 
 da_status da_tree_predict_log_proba_s(da_handle handle, da_int n_obs, da_int n_features,
-                                      float *X_test, da_int ldx_test, float *y_pred,
+                                      const float *X_test, da_int ldx_test, float *y_pred,
                                       da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
@@ -202,17 +220,19 @@ da_status da_tree_predict_log_proba_s(da_handle handle, da_int n_obs, da_int n_f
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->dectree_s == nullptr)
+    decision_tree<float> *dectree =
+        dynamic_cast<decision_tree<float> *>(handle->alg_handle_s);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
-    return handle->dectree_s->predict_log_proba(n_obs, n_features, X_test, ldx_test,
-                                                y_pred, n_class, ldy);
+    return dectree->predict_log_proba(n_obs, n_features, X_test, ldx_test, y_pred,
+                                      n_class, ldy);
 }
 
 da_status da_tree_score_d(da_handle handle, da_int n_samples, da_int n_features,
-                          double *X_test, da_int ldx_test, da_int *y_test,
+                          const double *X_test, da_int ldx_test, const da_int *y_test,
                           double *mean_accuracy) {
     if (!handle)
         return da_status_handle_not_initialized;
@@ -221,18 +241,19 @@ da_status da_tree_score_d(da_handle handle, da_int n_samples, da_int n_features,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->dectree_d == nullptr)
+    decision_tree<double> *dectree =
+        dynamic_cast<decision_tree<double> *>(handle->alg_handle_d);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
 
-    return handle->dectree_d->score(n_samples, n_features, X_test, ldx_test, y_test,
-                                    mean_accuracy);
+    return dectree->score(n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy);
 }
 
 da_status da_tree_score_s(da_handle handle, da_int n_samples, da_int n_features,
-                          float *X_test, da_int ldx_test, da_int *y_test,
+                          const float *X_test, da_int ldx_test, const da_int *y_test,
                           float *mean_accuracy) {
     if (!handle)
         return da_status_handle_not_initialized;
@@ -241,12 +262,13 @@ da_status da_tree_score_s(da_handle handle, da_int n_samples, da_int n_features,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->dectree_s == nullptr)
+    decision_tree<float> *dectree =
+        dynamic_cast<decision_tree<float> *>(handle->alg_handle_s);
+    if (dectree == nullptr)
         return da_error(
             handle->err, da_status_invalid_handle_type,
             "handle was not initialized with handle_type=da_handle_decision_tree or "
             "handle is invalid.");
 
-    return handle->dectree_s->score(n_samples, n_features, X_test, ldx_test, y_test,
-                                    mean_accuracy);
+    return dectree->score(n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy);
 }

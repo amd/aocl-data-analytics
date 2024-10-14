@@ -36,6 +36,10 @@ Possible values are:
       -  Unsupported value of linesearch type (``box_linesearch_type``)
     * - -18
       -  Bad bound constraints (blx <= bux)
+    * - -19
+      -  One or more elements in the Jacobian appear to be wrong
+    * - -20
+      -  Weights vector must be sufficiently positive
     * - -101
       -  Unsupported model in dogleg (``nlls_method=1``).
     * - -201
@@ -55,4 +59,4 @@ Possible values are:
     * - -900
       - Illegal value of ``print_level`` in options array. Valid range is 0 to 5. 
     * - -999
-      - Unexpected error occured
+      - Unexpected error occurred

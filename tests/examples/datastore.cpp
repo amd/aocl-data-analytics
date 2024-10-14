@@ -51,8 +51,8 @@ int main() {
 
     // Load data
     da_datastore_init(&store);
-    da_datastore_options_set_string(store, "CSV datatype", "double");
-    da_datastore_options_set_int(store, "CSV use header row", 1);
+    da_datastore_options_set_string(store, "datatype", "double");
+    da_datastore_options_set_int(store, "use header row", 1);
     status = da_data_load_from_csv(store, filename.c_str());
     if (status != da_status_success) {
         std::cout << "Data loading unsuccessful" << std::endl;
@@ -63,8 +63,8 @@ int main() {
     std::vector<double> features(10), rhs(5);
     da_data_select_columns(store, "features", 0, 1);
     da_data_select_columns(store, "rhs", 2, 2);
-    da_data_extract_selection_real_d(store, "features", features.data(), 5);
-    da_data_extract_selection_real_d(store, "rhs", rhs.data(), 5);
+    da_data_extract_selection_real_d(store, "features", column_major, features.data(), 5);
+    da_data_extract_selection_real_d(store, "rhs", column_major, rhs.data(), 5);
 
     // Define the regression problem to solve
     da_handle handle;

@@ -41,6 +41,24 @@
 /* Contains routines for parsing a csv file */
 namespace da_csv {
 
+inline da_status delete_string_array(char ***S, da_int n) {
+
+    if (n < 1)
+        return da_status_invalid_array_dimension;
+
+    if (S && *S) {
+        for (da_int i = 0; i < n; i++) {
+            if ((*S)[i]) {
+                free((*S)[i]);
+                (*S)[i] = nullptr;
+            }
+        }
+        free(*S);
+        *S = nullptr;
+    }
+    return da_status_success;
+}
+
 template <typename T> inline void free_data(T **arr, [[maybe_unused]] da_int n) {
     if (*arr)
         free(*arr);
@@ -189,7 +207,7 @@ inline da_status populate_data_array(csv_reader *csv, T **a, da_int *nrows, da_i
                 data_index = j - parser->line_start[i] +
                              (i - (int64_t)first_line) * fields_per_line_signed;
                 break;
-            case col_major:
+            case column_major:
                 data_index =
                     i - (int64_t)first_line +
                     (j - parser->line_start[i]) * ((int64_t)lines - (int64_t)first_line);

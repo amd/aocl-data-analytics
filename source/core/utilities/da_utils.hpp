@@ -28,7 +28,14 @@
 #ifndef DA_UTILITIES_HPP
 #define DA_UTILITIES_HPP
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
 #include "aoclda.h"
+#include "da_cblas.hh"
+#include <cmath>
+#include <math.h>
 #include <type_traits>
 
 namespace da_utils {
@@ -49,6 +56,101 @@ constexpr da_status convert_num_to_char(T num, char character[U]) {
         sprintf(character, "%ld", num);
     else if constexpr (std::is_same_v<T, long long int>)
         sprintf(character, "%lld", num);
+    return da_status_success;
+}
+
+template <typename T>
+void copy_transpose_2D_array_row_to_column_major(da_int n_rows, da_int n_cols, const T *A,
+                                                 da_int lda, T *B, da_int ldb) {
+    for (da_int i = 0; i < n_rows; i++) {
+        for (da_int j = 0; j < n_cols; j++) {
+            B[j * ldb + i] = A[i * lda + j];
+        }
+    }
+}
+
+template <typename T>
+void copy_transpose_2D_array_column_to_row_major(da_int n_rows, da_int n_cols, const T *A,
+                                                 da_int lda, T *B, da_int ldb) {
+    for (da_int j = 0; j < n_cols; j++) {
+        for (da_int i = 0; i < n_rows; i++) {
+            B[j + i * ldb] = A[i + j * lda];
+        }
+    }
+}
+
+template <typename T>
+da_status check_data(da_order order, da_int n_rows, da_int n_cols, const T *X,
+                     da_int ldx) {
+    if (n_rows < 1 || n_cols < 1)
+        return da_status_invalid_array_dimension;
+
+    if (X == nullptr)
+        return da_status_invalid_pointer;
+
+    if (order == row_major) {
+        if (ldx < n_cols)
+            return da_status_invalid_leading_dimension;
+        for (da_int i = 0; i < n_rows; i++) {
+            for (da_int j = 0; j < n_cols; j++) {
+                if (std::isnan(X[i * ldx + j])) {
+                    return da_status_invalid_input;
+                }
+            }
+        }
+    } else {
+        if (ldx < n_rows)
+            return da_status_invalid_leading_dimension;
+        for (da_int j = 0; j < n_cols; j++) {
+            for (da_int i = 0; i < n_rows; i++) {
+                if (std::isnan(X[i + j * ldx])) {
+                    return da_status_invalid_input;
+                }
+            }
+        }
+    }
+    return da_status_success;
+}
+
+template <typename T>
+da_status switch_order_copy(da_order order, da_int n_rows, da_int n_cols, const T *X,
+                            da_int ldx, T *Y, da_int ldy) {
+    if (n_rows < 1 || n_cols < 1)
+        return da_status_invalid_array_dimension;
+    if (X == nullptr || Y == nullptr)
+        return da_status_invalid_pointer;
+
+    if (order == row_major) {
+        if (ldy < n_rows || ldx < n_cols)
+            return da_status_invalid_leading_dimension;
+        copy_transpose_2D_array_row_to_column_major(n_rows, n_cols, X, ldx, Y, ldy);
+    } else {
+        if (ldx < n_rows || ldy < n_cols)
+            return da_status_invalid_leading_dimension;
+        copy_transpose_2D_array_column_to_row_major(n_rows, n_cols, X, ldx, Y, ldy);
+    }
+
+    return da_status_success;
+}
+
+template <typename T>
+da_status switch_order_in_place(da_order order_X_in, da_int n_rows, da_int n_cols, T *X,
+                                da_int ldx_in, da_int ldx_out) {
+    if (n_rows < 1 || n_cols < 1)
+        return da_status_invalid_array_dimension;
+    if (X == nullptr)
+        return da_status_invalid_pointer;
+
+    if (order_X_in == row_major) {
+        if (ldx_out < n_rows || ldx_in < n_cols)
+            return da_status_invalid_leading_dimension;
+        da_blas::imatcopy('T', n_cols, n_rows, (T)1.0, X, ldx_in, ldx_out);
+    } else {
+        if (ldx_in < n_rows || ldx_out < n_cols)
+            return da_status_invalid_leading_dimension;
+        da_blas::imatcopy('T', n_rows, n_cols, (T)1.0, X, ldx_in, ldx_out);
+    }
+
     return da_status_success;
 }
 

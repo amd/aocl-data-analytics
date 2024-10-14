@@ -39,12 +39,11 @@
 #include <stdexcept>
 
 class pca : public pyda_handle {
-    da_precision precision = da_double;
 
   public:
     pca(da_int n_components = 1, std::string bias = "unbiased",
         std::string method = "covariance", std::string solver = "gesdd",
-        bool store_U = false, std::string prec = "double") {
+        bool store_U = false, std::string prec = "double", bool check_data = false) {
         if (prec == "double")
             da_handle_init<double>(&handle, da_handle_pca);
         else if (prec == "single") {
@@ -64,21 +63,37 @@ class pca : public pyda_handle {
             status = da_options_set_int(handle, "store U", 1);
             exception_check(status);
         }
+        if (check_data == true) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
+            exception_check(status);
+        }
     }
     ~pca() { da_handle_destroy(&handle); }
 
-    template <typename T> void fit(py::array_t<T, py::array::f_style> A) {
+    template <typename T> void fit(py::array_t<T> A) {
         da_status status;
-        da_int n_samples = A.shape()[0], n_features = A.shape()[1], lda = A.shape()[0];
+        da_int n_samples, n_features, lda;
+
+        get_numpy_array_properties(A, n_samples, n_features, lda);
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column");
+        }
+
         status = da_pca_set_data(handle, n_samples, n_features, A.data(), lda);
         exception_check(status);
         status = da_pca_compute<T>(handle);
         exception_check(status);
     }
 
-    template <typename T> py::array_t<T> transform(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> transform(py::array_t<T> X) {
         da_status status;
-        da_int m_samples = X.shape()[0], m_features = X.shape()[1], ldx = X.shape()[0];
+        da_int m_samples, m_features, ldx;
+
+        get_numpy_array_properties(X, m_samples, m_features, ldx);
 
         T result[3];
         da_int dim = 3;
@@ -86,11 +101,19 @@ class pca : public pyda_handle {
         status = da_handle_get_result(handle, da_rinfo, &dim, result);
         exception_check(status);
 
-        // define the output vector
-        da_int n_components = (da_int)result[2];
-        da_int ldx_transform = m_samples;
+        // Define the output vector
+        da_int n_components = (da_int)result[2], ldx_transform;
         size_t shape[2]{(size_t)m_samples, (size_t)n_components};
-        size_t strides[2]{sizeof(T), sizeof(T) * m_samples};
+        size_t strides[2];
+        if (order == c_contiguous) {
+            ldx_transform = n_components;
+            strides[0] = sizeof(T) * n_components;
+            strides[1] = sizeof(T);
+        } else {
+            ldx_transform = m_samples;
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * m_samples;
+        }
         auto X_transform = py::array_t<T>(shape, strides);
 
         status = da_pca_transform(handle, m_samples, m_features, X.data(), ldx,
@@ -99,10 +122,11 @@ class pca : public pyda_handle {
         return X_transform;
     }
 
-    template <typename T>
-    py::array_t<T> inverse_transform(py::array_t<T, py::array::f_style> Y) {
+    template <typename T> py::array_t<T> inverse_transform(py::array_t<T> Y) {
         da_status status;
-        da_int k_samples = Y.shape()[0], k_features = Y.shape()[1], ldy = Y.shape()[0];
+        da_int k_samples, k_features, ldy;
+
+        get_numpy_array_properties(Y, k_samples, k_features, ldy);
 
         T result[3];
         da_int dim = 3;
@@ -110,11 +134,19 @@ class pca : public pyda_handle {
         status = da_handle_get_result(handle, da_rinfo, &dim, result);
         exception_check(status);
 
-        // define the output vector
-        da_int n_features = (da_int)result[1];
-        da_int ldy_inv_transform = k_samples;
+        // Define the output vector
+        da_int n_features = (da_int)result[1], ldy_inv_transform;
         size_t shape[2]{(size_t)k_samples, (size_t)n_features};
-        size_t strides[2]{sizeof(T), sizeof(T) * k_samples};
+        size_t strides[2];
+        if (order == c_contiguous) {
+            ldy_inv_transform = n_features;
+            strides[0] = sizeof(T) * n_features;
+            strides[1] = sizeof(T);
+        } else {
+            ldy_inv_transform = k_samples;
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * k_samples;
+        }
         auto Y_inv_transform = py::array_t<T>(shape, strides);
 
         status =
@@ -153,7 +185,7 @@ class pca : public pyda_handle {
         da_status status = da_status_success;
 
         da_int n_samples, n_features, n_components;
-        da_int dim = 3, dim1, dim2;
+        da_int dim = 3, dim1 = 0, dim2 = 0;
         size_t stride_size;
 
         get_rinfo(&n_samples, &n_features, &n_components, &stride_size);
@@ -207,11 +239,21 @@ class pca : public pyda_handle {
 
         dim = dim1 * dim2;
         std::vector<size_t> shape, strides;
+
         shape.push_back(dim1);
-        strides.push_back(stride_size);
-        if (dim2 > 1) {
+        if (dim2 > 1)
             shape.push_back(dim2);
-            strides.push_back(stride_size * dim1);
+
+        if (order == c_contiguous) {
+            if (dim2 > 1) {
+                strides.push_back(stride_size * dim2);
+            }
+            strides.push_back(stride_size);
+        } else {
+            strides.push_back(stride_size);
+            if (dim2 > 1) {
+                strides.push_back(stride_size * dim1);
+            }
         }
 
         if (precision == da_single) {

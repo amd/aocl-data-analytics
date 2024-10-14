@@ -31,6 +31,7 @@ Decision forest tests, check output of skpatch versus sklearn
 
 import numpy as np
 import pytest
+import warnings
 from aoclda.sklearn import skpatch, undo_skpatch
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
@@ -53,7 +54,8 @@ def test_decision_forest(precision, bootstrap):
     clf = clf.fit(X, Y)
     da_yp = clf.predict( Xp )
     da_yprob = clf.predict_proba( Xp )
-    da_ylogprob = clf.predict_log_proba( Xp )
+    with warnings.catch_warnings(record=True):
+        da_ylogprob = clf.predict_log_proba( Xp )
     assert clf.aocl is True
 
     # unpatch and solve the same problem with sklearn
@@ -63,7 +65,8 @@ def test_decision_forest(precision, bootstrap):
     clf = clf.fit(X, Y)
     yp = clf.predict( Xp )
     yprob = clf.predict_proba( Xp )
-    ylogprob = clf.predict_log_proba( Xp )
+    with warnings.catch_warnings(record=True):
+        ylogprob = clf.predict_log_proba( Xp )
     assert not hasattr(clf, 'aocl')
 
     # Check results

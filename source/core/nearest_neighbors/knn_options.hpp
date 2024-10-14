@@ -26,12 +26,15 @@
 
 #include "aoclda_knn.h"
 #include "aoclda_metrics.h"
+#include "aoclda_types.h"
+#include "da_error.hpp"
 #include "options.hpp"
 
 namespace da_knn {
 
 template <typename T>
-inline da_status register_knn_options(da_options::OptionRegistry &opts) {
+inline da_status register_knn_options(da_options::OptionRegistry &opts,
+                                      da_errors::da_error_t &err) {
     using namespace da_options;
     da_int imax = std::numeric_limits<da_int>::max();
     try {
@@ -61,10 +64,12 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts) {
             {{"uniform", da_knn_uniform}, {"distance", da_knn_distance}}, "uniform"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {
-        return da_status_memory_error;
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
     } catch (...) {
         // Invalid use of the constructor, shouldn't happen (invalid_argument)
-        return da_status_internal_error; // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
     }
 
     return da_status_success;

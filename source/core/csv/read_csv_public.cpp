@@ -65,3 +65,7 @@ da_status da_read_csv_string(da_datastore store, const char *filename, char ***a
         return da_status_store_not_initialized;
     return da_csv::read_csv(store->csv_parser, filename, a, n_rows, n_cols, headings);
 }
+
+da_status da_delete_string_array(char ***headings, da_int n_cols) {
+    return da_csv::delete_string_array(headings, n_cols);
+}
