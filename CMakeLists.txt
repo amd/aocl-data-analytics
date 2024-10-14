@@ -406,9 +406,8 @@ endif()
 
 # Install examples and README files
 install(
-  FILES README-Release.txt
-  DESTINATION ${CMAKE_INSTALL_PREFIX}
-  RENAME README.txt)
+  FILES README.md
+  DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(FILES License DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(
   DIRECTORY tests/examples/
