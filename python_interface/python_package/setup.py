@@ -34,17 +34,18 @@ from packaging.tags import sys_tags
 
 class spec_bdist_wheel(bdist_wheel):
     def get_tag(self):
-        python_tag = 'py3'
-        abi_tag, platform_tag = None, None
+        python_tag, abi_tag, platform_tag = None, None, None
 
         for tag in sys_tags():
             if abi_tag is None:
                 abi_tag = str(tag.abi)
             if platform_tag is None:
                 platform_tag = str(tag.platform)
+            if python_tag is None:
+                python_tag = str(tag.interpreter)
             if abi_tag is not None and platform_tag is not None:
                 break
-        abi_tag = 'none'
+
         if 'manylinux' in str(platform_tag):
             platform_tag = 'linux_x86_64'
 
