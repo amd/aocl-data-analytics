@@ -23,12 +23,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable=import-error, invalid-name, too-many-arguments, missing-module-docstring,too-many-locals
+# pylint: disable=import-error,invalid-name,too-many-arguments,
+# pylint: disable=missing-module-docstring,too-many-locals, anomalous-backslash-in-string
 from inspect import signature
 from ._aoclda.nlls import pybind_nlls
 
 
-class nlls(pybind_nlls):
+class nlls():
     r"""
     Nonlinear data fitting.
 
@@ -150,16 +151,53 @@ class nlls(pybind_nlls):
               different values for this parameter may help.
 
         verbose (int, optional): Set verbosity level (0 to 3) of the solver. Default = 0.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
     def __init__(self, n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None,
-                 order='c', prec='double', model='hybrid', method='galahad', glob_strategy='tr',
-                 reg_power='quadratic', check_derivatives='no', verbose=0):
-        super().__init__(n_coef=n_coef, n_res=n_res, weights=weights,
-                         lower_bounds=lower_bounds, upper_bounds=upper_bounds,
-                         order=order, prec=prec, model=model, method=method,
-                         glob_strategy=glob_strategy, reg_power=reg_power,
-                         check_derivatives=check_derivatives, verbose=verbose)
+                 order='c', model='hybrid', method='galahad', glob_strategy='tr',
+                 reg_power='quadratic', check_derivatives='no', verbose=0, check_data=False):
+        self.precision = "unknown"
+        self.nlls_double = None
+        self.nlls_single = None
+        if weights is None:
+            self.nlls_double = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
+                                           lower_bounds=lower_bounds, upper_bounds=upper_bounds,
+                                           order=order, prec="double", model=model, method=method,
+                                           glob_strategy=glob_strategy, reg_power=reg_power,
+                                           check_derivatives=check_derivatives, verbose=verbose,
+                                           check_data=check_data)
+            self.nlls_single = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
+                                           lower_bounds=lower_bounds, upper_bounds=upper_bounds,
+                                           order=order, prec="single", model=model, method=method,
+                                           glob_strategy=glob_strategy, reg_power=reg_power,
+                                           check_derivatives=check_derivatives, verbose=verbose,
+                                           check_data=check_data)
+            self.nlls = self.nlls_double
+        else:
+            if weights.dtype == "float32":
+                self.precision = "single"
+                self.nlls_single = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
+                                               lower_bounds=lower_bounds, upper_bounds=upper_bounds,
+                                               order=order, prec="single", model=model,
+                                               method=method, glob_strategy=glob_strategy,
+                                               reg_power=reg_power,
+                                               check_derivatives=check_derivatives, verbose=verbose,
+                                               check_data=check_data)
+                self.nlls = self.nlls_single
+            elif weights.dtype == "float64":
+                self.precision = "double"
+                self.nlls_double = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
+                                               lower_bounds=lower_bounds, upper_bounds=upper_bounds,
+                                               order=order, prec="double", model=model,
+                                               method=method, glob_strategy=glob_strategy,
+                                               reg_power=reg_power,
+                                               check_derivatives=check_derivatives, verbose=verbose,
+                                               check_data=check_data)
+                self.nlls = self.nlls_double
+            else:
+                raise ValueError(f"Data type {weights.dtype} not supported.")
 
     def fit(self, x, fun, jac=None, hes=None, hep=None, data=None, ftol=1.0e-8, abs_ftol=1.0e-8,
             gtol=1.0e-8, abs_gtol=1.0e-5, xtol=2.22e-16, reg_term=0, maxit=100,
@@ -306,6 +344,18 @@ class nlls(pybind_nlls):
             self (object): Returns the fitted model, instance itself.
         """
 
+        if self.precision == "unknown":
+            if x.dtype == "float32":
+                self.precision = "single"
+                self.nlls_double = None
+                self.nlls = self.nlls_single
+            elif x.dtype == "float64":
+                self.precision = "double"
+                self.nlls_single = None
+                self.nlls = self.nlls_double
+            else:
+                raise ValueError(f"Data type {x.dtype} not supported.")
+
         # inspect some parameter before entering c++
         self.__cb_inspect(fun, 3)
         if jac is not None:
@@ -315,18 +365,14 @@ class nlls(pybind_nlls):
         if hep is not None:
             self.__cb_inspect(hep, 4)
         # Separate calls, pybind is calling the wrong specialization
-        if pybind_nlls._get_precision(self) == "double":
-            pybind_nlls.fit_d(self, x=x, fun=fun, jac=jac, hes=hes,
-                              hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
-                              gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
-                              reg_term=reg_term, maxit=maxit, fd_step=fd_step,
-                              fd_ttol=fd_ttol)
+        if self.precision == "double":
+            self.nlls.fit_d(x=x, fun=fun, jac=jac, hes=hes, hep=hep, data=data, ftol=ftol,
+                            abs_ftol=abs_ftol, gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
+                            reg_term=reg_term, maxit=maxit, fd_step=fd_step, fd_ttol=fd_ttol)
         else:
-            pybind_nlls.fit_s(self, x=x, fun=fun, jac=jac, hes=hes,
-                              hep=hep, data=data, ftol=ftol, abs_ftol=abs_ftol,
-                              gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
-                              reg_term=reg_term, maxit=maxit, fd_step=fd_step,
-                              fd_ttol=fd_ttol)
+            self.nlls.fit_s(x=x, fun=fun, jac=jac, hes=hes, hep=hep, data=data, ftol=ftol,
+                            abs_ftol=abs_ftol, gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
+                            reg_term=reg_term, maxit=maxit, fd_step=fd_step, fd_ttol=fd_ttol)
         return self
 
     @property
@@ -334,7 +380,7 @@ class nlls(pybind_nlls):
         """
         int: number of iterations the solver made.
         """
-        return pybind_nlls.get_info_iter(self)
+        return self.nlls.get_info_iter()
 
     @property
     def n_eval(self):
@@ -348,7 +394,7 @@ class nlls(pybind_nlls):
         - ``hp`` (int): Hessian-vector product function ``hep``.
         - ``fd_f`` (int): Residual function ``fun`` due to finite-differences or derivative checker.
         """
-        return pybind_nlls.get_info_evals(self)
+        return self.nlls.get_info_evals()
 
     @property
     def metrics(self):
@@ -359,7 +405,7 @@ class nlls(pybind_nlls):
         - ``norm_g`` (float): Norm of the residual gradient at iterate ``x``.
         - ``scl_norm_g`` (float): Norm of the scaled residual gradient at ``x``.
         """
-        return pybind_nlls.get_info_optim(self)
+        return self.nlls.get_info_optim()
 
     def __cb_inspect(self, f: callable, narg: int):
         """Internal helper function"""

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -22,11 +22,17 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# If OpenMP is used in the future, please uncomment the following line
-# to ensure that the Fortran OpenMP runtime library is found.
-# find_package(OpenMP REQUIRED)
+# If OpenMP is used in the future, please uncomment the following line to ensure
+# that the Fortran OpenMP runtime library is found. find_package(OpenMP
+# REQUIRED)
 
 set(CMAKE_Fortran_PREPROCESS ON)
+
+if(NOT WIN32)
+  set(CMAKE_Fortran_FLAGS -mavx2)
+elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
+  set(CMAKE_Fortran_FLAGS /Qavx2)
+endif()
 
 if(BUILD_ILP64)
   if(CMAKE_Fortran_COMPILER_ID MATCHES "GNU")
@@ -34,7 +40,7 @@ if(BUILD_ILP64)
   elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     list(APPEND CMAKE_Fortran_FLAGS -fdefault-integer-8)
   elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-      list(APPEND CMAKE_Fortran_FLAGS -i8)
+    list(APPEND CMAKE_Fortran_FLAGS -i8)
   else()
     message(FATAL_ERROR "Unknown Fortran compiler!")
   endif()
@@ -60,6 +66,11 @@ endif()
 
 add_subdirectory(libRALFit/src EXCLUDE_FROM_ALL)
 
-message(NOTICE "RALFit: Fortran Compiler ID       : ${CMAKE_Fortran_COMPILER_ID}")
+message(NOTICE
+        "RALFit: Fortran Compiler ID       : ${CMAKE_Fortran_COMPILER_ID}")
 
 message(NOTICE "RALFit: Fortran Compiler flags    : ${CMAKE_Fortran_FLAGS}")
+
+set(nlls_obj_list
+    ${nlls_obj_list}
+    PARENT_SCOPE)

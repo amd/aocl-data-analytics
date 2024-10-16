@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,17 +29,23 @@
 #define BASIC_HANDLE_HPP
 #include "aoclda_error.h"
 #include "aoclda_result.h"
+#include "aoclda_types.h"
+#include "da_error.hpp"
+#include "da_utils.hpp"
+#include "options.hpp"
 
 /*
  * Base handle class (basic_handle) that contains members that
- * are common for all specialized handles types, pca, linear
+ * are common for all specialized handle types, pca, linear
  * models, etc.
  *
  * This handle is inherited by all specialized (internal) handles.
  */
 template <typename T> class basic_handle {
   public:
-    virtual ~basic_handle(){};
+    basic_handle(da_errors::da_error_t *err = nullptr);
+    basic_handle(da_errors::da_error_t &err);
+    virtual ~basic_handle();
 
     /*
      * Generic interface to extract all data stored
@@ -54,6 +60,36 @@ template <typename T> class basic_handle {
      * the underlying model is different and a new call to fit is required.
      * Each (sub)handle is responsible to implement this function if required.
      */
-    void refresh(){};
+    virtual void refresh();
+
+    // Is the user's data stored in row or column major order
+    da_int order = column_major;
+
+    // Pointer to error trace
+    da_errors::da_error_t *err = nullptr;
+
+    // Options registry
+    da_options::OptionRegistry opts;
+
+    da_options::OptionRegistry &get_opts();
+
+    // Argument checking for a 1D input array, including NaN check if option is set
+    da_status check_1D_array(da_int n, const T *data, const std::string &n_name,
+                             const std::string &data_name, da_int n_min = 1);
+    da_status check_1D_array(da_int n, const da_int *data, const std::string &n_name,
+                             const std::string &data_name, da_int n_min = 1);
+
+    // Store a pointer to a 2D array, converting to column major ordering if necessary, and optionally checking arguments
+    da_status store_2D_array(da_int n_rows, da_int n_cols, const T *data, da_int lddata,
+                             T **temp_data, const T **data_internal,
+                             da_int &lddata_internal, const std::string &n_rows_name,
+                             const std::string &n_cols_name, const std::string &data_name,
+                             const std::string &lddata_name, da_int mode = 0,
+                             da_int n_rows_min = 1, da_int n_cols_min = 1);
+
+    // Copy a column major internal 2D results array into the user's buffer, converting to row-major ordering and checking for NaNs if necessary
+    void copy_2D_results_array(da_int n_rows, da_int n_cols, T *data, da_int lddata,
+                               T *results_arr);
 };
+
 #endif

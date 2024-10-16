@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,32 +25,45 @@
  *
  */
 
-#ifndef DA_UTILITIES_HPP
-#define DA_UTILITIES_HPP
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 
 #include "aoclda.h"
+#include "da_cblas.hh"
+#include "macros.h"
+#include <cmath>
+#include <math.h>
 #include <type_traits>
+
+namespace ARCH {
+
+namespace da_arch {
+
+const char *get_namespace(void);
+
+}
 
 namespace da_utils {
 
-/* Convert number into char array, appropriately depending on its type */
-template <typename T, size_t U>
-constexpr da_status convert_num_to_char(T num, char character[U]) {
-    static_assert(std::is_arithmetic_v<T>,
-                  "Error in convert_num_to_char function. T must be numerical "
-                  "value");
-    if constexpr (std::is_same_v<T, float>)
-        sprintf(character, "%9.2e", num);
-    else if constexpr (std::is_same_v<T, double>)
-        sprintf(character, "%9.2e", num);
-    else if constexpr (std::is_same_v<T, int>)
-        sprintf(character, "%d", num);
-    else if constexpr (std::is_same_v<T, long int>)
-        sprintf(character, "%ld", num);
-    else if constexpr (std::is_same_v<T, long long int>)
-        sprintf(character, "%lld", num);
-    return da_status_success;
-}
+template <typename T>
+void copy_transpose_2D_array_row_to_column_major(da_int n_rows, da_int n_cols, const T *A,
+                                                 da_int lda, T *B, da_int ldb);
+template <typename T>
+void copy_transpose_2D_array_column_to_row_major(da_int n_rows, da_int n_cols, const T *A,
+                                                 da_int lda, T *B, da_int ldb);
+
+template <typename T>
+da_status check_data(da_order order, da_int n_rows, da_int n_cols, const T *X,
+                     da_int ldx);
+
+template <typename T>
+da_status switch_order_copy(da_order order, da_int n_rows, da_int n_cols, const T *X,
+                            da_int ldx, T *Y, da_int ldy);
+
+template <typename T>
+da_status switch_order_in_place(da_order order_X_in, da_int n_rows, da_int n_cols, T *X,
+                                da_int ldx_in, da_int ldx_out);
 
 void blocking_scheme(da_int n_samples, da_int block_size, da_int &n_blocks,
                      da_int &block_rem);
@@ -59,4 +72,4 @@ da_int get_n_threads_loop(da_int loop_size);
 
 } // namespace da_utils
 
-#endif
+} // namespace ARCH

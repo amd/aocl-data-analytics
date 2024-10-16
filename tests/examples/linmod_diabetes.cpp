@@ -88,9 +88,9 @@ int main() {
     da_datastore csv;
     const char filename[](DATA_DIR "/diabetes.csv");
     da_datastore_init(&csv);
-    da_datastore_options_set_int(csv, "CSV whitespace delimiter", 1);
-    da_datastore_options_set_string(csv, "CSV comment", "#");
-    da_datastore_options_set_int(csv, "CSV use header row", 1);
+    da_datastore_options_set_int(csv, "whitespace delimiter", 1);
+    da_datastore_options_set_string(csv, "comment", "#");
+    da_datastore_options_set_int(csv, "use header row", 1);
     status = da_data_load_from_csv(csv, filename);
     if (status != da_status_success) {
         da_datastore_print_error_message(csv);
@@ -109,13 +109,14 @@ int main() {
     // Extract the 10 features into a dense matrix
     bool pass = true;
     pass = pass && da_data_select_columns(csv, "features", 0, n - 1) == da_status_success;
-    pass = pass && da_data_extract_selection_real_d(csv, "features", features.data(),
-                                                    m) == da_status_success;
+    pass =
+        pass && da_data_extract_selection_real_d(csv, "features", column_major,
+                                                 features.data(), m) == da_status_success;
     // Extract response variable
     pass = pass &&
            da_data_select_columns(csv, "response", rhs_pos, rhs_pos) == da_status_success;
-    pass = pass && da_data_extract_selection_real_d(csv, "response", rhs.data(), m) ==
-                       da_status_success;
+    pass = pass && da_data_extract_selection_real_d(csv, "response", column_major,
+                                                    rhs.data(), m) == da_status_success;
     da_datastore_destroy(&csv);
     if (!pass) {
         std::cout

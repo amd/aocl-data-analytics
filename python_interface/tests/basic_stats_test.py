@@ -343,43 +343,43 @@ def get_standardized_with_shift_or_mean(array,
     X = np.copy(array)
     # Case when we want to do calculations over rows
     if axis == "row":
-        if shift_a and scale_a:
+        if shift_a is not None and scale_a is not None:
             for i in range(array.shape[0]):
                 X[i, :] = (array[i, :] - shift_a[i]) / scale_a[i]
-        elif shift_a:
+        elif shift_a is not None:
             for i in range(array.shape[0]):
                 X[i, :] = array[i, :] - shift_a[i]
-        elif scale_a:
+        elif scale_a is not None:
             for i in range(array.shape[0]):
                 X[i, :] = array[i, :] / scale_a[i]
         return X
     # Case when we want to do calculations over columns
     if axis == "col":
-        if shift_a and scale_a:
+        if shift_a is not None and scale_a is not None :
             for i in range(array.shape[1]):
                 X[:, i] = (array[:, i] - shift_a[i]) / scale_a[i]
-        elif shift_a:
+        elif shift_a is not None:
             for i in range(array.shape[1]):
                 X[:, i] = array[:, i] - shift_a[i]
-        elif scale_a:
+        elif scale_a is not None:
             for i in range(array.shape[1]):
                 X[:, i] = array[:, i] / scale_a[i]
         return X
     # Case when we want to do calculations over entire dataset
-    if shift_a and scale_a:
+    if shift_a is not None and scale_a is not None:
         X = (array - shift_a[0]) / scale_a[0]
-    elif shift_a:
+    elif shift_a is not None:
         X = array - shift_a[0]
-    elif scale_a:
+    elif scale_a is not None:
         X = array / scale_a[0]
     return X
 
 
 @pytest.mark.parametrize(
     "da_axis, np_axis, shift_a, scale_a",
-    [("row", 1, [4.1, 5, 10, 6], [7, 3, 1.5, 2]),
-     ("col", 0, [12, 10, 4, 1.2, 2.6], [1.2, 5, 1.76, 8, 4.7]),
-     ("all", 2, [10.4], [4.9])],
+    [("row", 1, np.array([4.1, 5., 10., 6.]), np.array([7., 3., 1.5, 2.])),
+     ("col", 0, np.array([12., 10., 4., 1.2, 2.6]), np.array([1.2, 5., 1.76, 8., 4.7])),
+     ("all", 2, np.array([10.4]), np.array([4.9]))],
     ids=['row', 'column', 'all'])
 def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
                                    scale_a):
@@ -406,7 +406,7 @@ def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
     shifted = da_stats.standardize(X,
                                    axis=da_axis,
                                    inplace=False,
-                                   shift=shift_a,
+                                   shift=shift_a.astype(X.dtype),
                                    dof=-1)
     reversed_shifted = da_stats.standardize(shifted,
                                             axis=da_axis,
@@ -418,7 +418,7 @@ def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
     scaled = da_stats.standardize(X,
                                   axis=da_axis,
                                   inplace=False,
-                                  scale=scale_a,
+                                  scale=scale_a.astype(X.dtype),
                                   dof=-1)
     reversed_scaled = da_stats.standardize(scaled,
                                            axis=da_axis,
@@ -430,8 +430,8 @@ def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
     shifted_scaled = da_stats.standardize(X,
                                           axis=da_axis,
                                           inplace=False,
-                                          scale=scale_a,
-                                          shift=shift_a,
+                                          scale=scale_a.astype(X.dtype),
+                                          shift=shift_a.astype(X.dtype),
                                           dof=-1)
     reversed_shifted_scaled = da_stats.standardize(shifted_scaled,
                                                    axis=da_axis,
@@ -480,6 +480,27 @@ def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
     error = np.max(np.abs(X - reversed_shifted_scaled))
     assert error < tol
 
+    assert standardized.dtype == X.dtype
+    assert standardized.flags.f_contiguous == X.flags.f_contiguous
+
+    assert reversed_standardized.dtype == X.dtype
+    assert reversed_standardized.flags.f_contiguous == X.flags.f_contiguous
+
+    assert shifted.dtype == X.dtype
+    assert shifted.flags.f_contiguous == X.flags.f_contiguous
+
+    #assert scaled.dtype == X.dtype
+    assert scaled.flags.f_contiguous == X.flags.f_contiguous
+
+    #assert reversed_shifted.dtype == X.dtype
+    assert reversed_shifted.flags.f_contiguous == X.flags.f_contiguous
+
+    #assert reversed_shifted_scaled.dtype == X.dtype
+    assert reversed_shifted_scaled.flags.f_contiguous == X.flags.f_contiguous
+
+    #assert reversed_scaled.dtype == X.dtype
+    assert reversed_scaled.flags.f_contiguous == X.flags.f_contiguous
+
 
 @pytest.mark.parametrize("da_biased, numpy_biased", [(-1, True), (0, False)])
 def test_covariance_functionality(get_data2D, da_biased, numpy_biased):
@@ -498,6 +519,9 @@ def test_covariance_functionality(get_data2D, da_biased, numpy_biased):
     error = np.max(np.abs(covariance - covariance_ex))
     assert error < tol
 
+    assert covariance.dtype == X.dtype
+    assert covariance.flags.f_contiguous == X.flags.f_contiguous
+
 
 def test_correlation_functionality(get_data2D):
     """
@@ -514,6 +538,9 @@ def test_correlation_functionality(get_data2D):
 
     error = np.max(np.abs(correlation - correlation_ex))
     assert error < tol
+
+    assert correlation.dtype == X.dtype
+    assert correlation.flags.f_contiguous == X.flags.f_contiguous
 
 
 @pytest.mark.parametrize("func", [

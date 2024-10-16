@@ -40,3 +40,11 @@
    ...
    fun:_dl_*
 }
+
+{
+   dynamic_dispatch_context
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   ...
+   fun:*context*
+}

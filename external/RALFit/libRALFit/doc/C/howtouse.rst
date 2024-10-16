@@ -11,7 +11,7 @@ Overview
 Calling sequences
 ^^^^^^^^^^^^^^^^^
 
-Function signatures are definied in a header file
+Function signatures are defined in a header file
 
 .. code-block:: C 
  
@@ -76,7 +76,7 @@ To solve the non-linear least squares problem
 
 .. include:: ../common/subroutines.rst
 
-.. c:function:: void nlls_solve(int n, int n, int m, double X[], ral_nlls_eval_r_type eval_r,ral_nlls_eval_j_type eval_J, ral_nlls_eval_hf_type eval_Hf, void* params, struct nlls_options const* options, struct nlls_inform* inform, double weights[], nlls_eval_HP_type eval_HP, double lower_bounds[], double upper_bounds[])
+.. c:function:: void nlls_solve(int n, int m, double X[], ral_nlls_eval_r_type eval_r,ral_nlls_eval_j_type eval_J, ral_nlls_eval_hf_type eval_Hf, void* params, struct nlls_options const* options, struct nlls_inform* inform, double weights[], nlls_eval_HP_type eval_HP, double lower_bounds[], double upper_bounds[])
 
    Solves the non-linear least squares problem.
    
@@ -88,9 +88,9 @@ To solve the non-linear least squares problem
 
    :param eval_r: |eval_r_desc| 
 			
-   :param eval_J: |eval_J_desc|
+   :param eval_J: |eval_J_desc|  If user does not provide the call-back it may be substituted by ``NULL`` and first order derivatives of the objective function are estimated using finite-differences.
 
-   :param eval_Hf: |eval_Hf_desc|
+   :param eval_Hf: |eval_Hf_desc| If user does not provide the call-back it may be substituted by ``NULL``.
 
    :param params: |params|
 
@@ -100,7 +100,7 @@ To solve the non-linear least squares problem
 
    :param weights: |weights|
 
-   :param eval_HP: |eval_HP_desc|
+   :param eval_HP: |eval_HP_desc| Further details of the format required are given in |eval_HP| in :ref:`user-routines`.
 
    :param lower_bounds: |lower_bounds|
 
@@ -128,7 +128,7 @@ To iterate once
 
    **n**, **m**, **eval_F**, **eval_J**, **eval_HF**, **params**, **info**,
    **options**, **weights**, **eval_HP**, **lower_bounds** and **upper_bounds**
-   are as in the desciption of |nlls_solve|.
+   are as in the description of |nlls_solve|.
 
    :param  X: |iterate_X|
 
@@ -202,6 +202,9 @@ It must have the following signature:
 
    :param status: |eval_J_status|
 
+If user does not provide the call-back it may be substituted by ``NULL`` and 
+first order derivatives of the objective function are estimated using finite-differences.
+
 
 For evaluating the function :math:`Hf = \sum_{i=1}^m r_i( {\bm x} )  {\bm W} \nabla^2 r_i( {\bm x} )`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -229,6 +232,8 @@ It must have the following signature:
 
    :param status: |eval_Hf_status|
 
+If user does not provide the call-back it may be substituted by ``NULL``.
+
 For evaluating the function :math:`P({\bm x},{\bm y}) := ( H_1({\bm x}){\bm y} \dots  H_m({\bm x}){\bm y})`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -250,6 +255,87 @@ subroutine must implement the following interface:
    :param HP: |eval_HP_HP|
 			   
    :param params: |eval_HP_params|
+
+
+.. _c_fd:
+
+Checking and approximating derivatives
+--------------------------------------
+
+Verifying user-supplied first derivatives matrix
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+One of the most common problems while trying to train a model is having wrong derivatives.
+Writing the derivative call-back function is error-prone and to address this, a derivative
+checker can be activated (set option ``check_derivatives``) for checking the
+derivatives provided by the call-back that evaluates :math:`J=\nabla r(x)`.
+The checker produces a table similar to
+
+.. code::
+
+    Begin Derivative Checker
+
+        Jacobian storage scheme (Fortran_Jacobian) = Fortran (column-major)
+
+        Jac[     1,     1] =   2.013752707470E+00 ~   0.000000000000E+00  [ 2.014E+04], ( 0.224E-06)  X  Skip
+        Jac[     1,     2] =   4.055199966845E+00 ~   0.000000000000E+00  [ 4.055E+04], ( 0.224E-06)  XT  Skip
+        Jac[     1,     3] =   3.311545195869E+01 ~   0.000000000000E+00  [ 3.312E+05], ( 0.224E-06)  XT  Skip
+        Jac[     2,     1] =   3.020629061206E+00 ~   3.020628836751E+00  [ 7.431E-08], ( 0.149E-06)
+        ...
+        Jac[    20,     3] =   9.866788062658E+01 ~   9.866785123348E+01  [ 2.979E-07], ( 0.149E-06)
+
+        Warning: derivative checker skipped      5 entries that have too tight bounds on the variable(s).
+
+        Note: derivative checker detected that     66 entries may correspond to the transpose.
+
+    End Derivative Checker
+
+
+The reported table has few sections. The initial line indicates the storage option set for the Jacobian matrix.
+The first column after the equal sign (``=``), is the derivative returned by the user-supplied call-back, the column
+after the ``~`` sign is the approximated finite-difference derivative, the value inside the brackets is the relative
+threshold
+:math:`\frac{|\mathrm{approx} - \mathrm{exact}|}{\max(|\mathrm{approx}|,\; \mathrm{fd_{ttol}})}`,
+(option :math:`\mathrm{fd_{ttol}}` is defined by the option ``derivative_test_tol``).
+The value inside the parenthesis is
+the relative tolerance to compare the relative threshold against. The last column provides some flags: ``X`` to
+indicate that the threshold is larger than the tolerance and is deemed likely to be wrong. ``T`` indicates that
+the value stored in :math:`J(i,j)` corresponds the to the value belonging to the transposed Jacobian matrix,
+providing a hint that possibly the storage sequence is likely wrong. It also hints to check that the matrix is
+being stored row-major and that the solver option ``Fortran_Jacobian`` is set to column-major or vice-versa.
+Finally, ``Skip`` indicates that either the associated variable is fixed (constrained to a fixed value) or the
+bounds on it are too tight to perform a finite-difference approximation and thus the check for this entry cannot be
+checked and is skipped.
+
+The derivative checker uses finite-differences to compare with the user provided derivatives and such the quality of
+the approximation depends on the finite-difference step used (see option ``finite_difference_step``).
+
+The option ``derivative_test_tol`` is involved in defining the relative tolerance to decide if the user-supplied
+derivative is correct, a smaller value implies a more stringent test.
+
+Under certain circumstances the checker may signal false-positives, tweaking the options ``finite_difference_step``
+and ``derivative_test_tol`` can help from this to happen.
+
+.. Note::
+
+    It is highly recommended that during the writing or development of the derivative call-back, to activate the option
+    ``check_derivatives``. After validating residual Jacobian matrix and to avoid performance impact, the option
+    can be reset.
+
+Not supplying first derivatives
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the user does not provide the first order derivatives, either because they are not available or by choice, then the
+solver will approximate the derivatives matrix using single-sided finite-differences method. In these cases the user
+can pass ``NULL`` as the call-back for ``eval_j``.
+
+Although the solver can estimate the derivatives it is highly recommended to provide them if they are available (and
+verify them with the derivative checker).
+
+It is also strongly encouraged to relax the convergence tolerances (see options) when approximating derivatives. If it is
+observed that solver “stagnates” or fails during the optimization process, tweaking the step value
+(option ``finite_difference_step``) is advised.
+
 
 .. _data_types:
 
@@ -335,7 +421,7 @@ The derived data type for holding options
    .. c:member:: double stop_g_absolute
 		 
 		 |stop_g_absolute|
-		 Defualt is 1e-5.
+		 Default is 1e-5.
 					   
    .. c:member:: double stop_g_relative
 
@@ -356,6 +442,23 @@ The derived data type for holding options
 		 
 		 |stop_s|
 		 Default is ``eps``.
+
+   **Approximating first order derivatives**
+
+   .. c:member:: bool check_derivatives
+
+         |check_derivatives|
+         Default is ``false``.
+
+   .. c:member:: double fd_step 
+   
+         |fd_step|
+         Default is 1.0e-7.
+
+   .. c:member:: double derivative_test_tol 
+
+         |derivative_test_tol|
+         Default is 1.0e-4.
    
    **Trust region radius/regularization behaviour**
       
@@ -649,7 +752,7 @@ The derived data type for holding information
 		 
 		 |status|
 
-   .. c:member:: character error_message(81)
+   .. c:member:: character error_message[81]
 
 		 |error_message|
 
@@ -657,7 +760,7 @@ The derived data type for holding information
       
 		 |alloc_status|
 
-   .. c:member:: character bad_alloc(81)
+   .. c:member:: character bad_alloc[81]
 		 
 		 |bad_alloc|
 
@@ -668,6 +771,11 @@ The derived data type for holding information
    .. c:member:: int f_eval 
 		 
 		 |f_eval|
+
+
+   .. c:member:: int fd_f_eval
+    
+         |fd_f_eval|
 		      
    .. c:member:: int g_eval 
 		 
@@ -693,11 +801,11 @@ The derived data type for holding information
 
 		 |convergence_norms|
 				   
-   .. c:member:: double resvec(iter+1)
+   .. c:member:: double resvec[iter+1]
 		 
 		 |resvec|
 
-   .. c:member:: double gradvec(iter+1)
+   .. c:member:: double gradvec[iter+1]
 		 
 		 |gradvec|
 
@@ -717,7 +825,7 @@ The derived data type for holding information
 			       
 		 |external_return|
    
-   .. c:member:: character external_name(81)
+   .. c:member:: character external_name[81]
 
 		 |external_name|
 
@@ -742,7 +850,7 @@ Warning and error messages
 
 A successful return from a subroutine in the package is indicated by ``status``
 in |nlls_inform| having the value zero.  
-A non-zero value is asscociated with an error message,
+A non-zero value is associated with an error message,
 which will be output on ``error`` in |nlls_inform|.
 
 .. include:: ../common/errors.rst

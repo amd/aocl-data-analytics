@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -22,9 +22,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 
-project(AOCL-DA VERSION 5.0.0)
+project(AOCL-DA VERSION 5.1.0)
 
 set(AOCLDA_VERSION
     "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
@@ -67,13 +67,7 @@ option(BUILD_EXAMPLES "Build the example programs" ON)
 option(BUILD_GTEST "Build Gtest unit-tests" ON)
 option(COVERAGE "Builds coverage of Gtests and examples (Debug/GCC)" OFF)
 option(BUILD_ILP64 "ILP64 Support" OFF)
-# Windows options only
-if(WIN32)
-  # Setting path to OpenMP runtime.
-  set(OpenMP_libomp_LIBRARY
-      "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib/libomp.lib"
-      CACHE STRING "openmp library path")
-else() # Linux options only
+if(NOT WIN32) # Linux options only
   option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
   option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
   option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
@@ -83,7 +77,12 @@ option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
-option(ARCH "-march or /arch flag ()")
+option(USE_LIBMEM "Link with AOCL LibMem" OFF)
+set(ARCH "native" CACHE STRING "Architecture(s) to build: dynamic, native, znver2, znver3, ... (default: native)")
+set(ARCH_LIST "dynamic" "native" "znver2" "znver3" "znver4" "znver5")
+if(NOT ARCH IN_LIST ARCH_LIST)
+    message(FATAL_ERROR "Invalid ARCH value: \"${ARCH}\"\n" "Valid values are: ${ARCH_LIST}")
+endif()
 option(BUILD_PYTHON "Python bindings" OFF)
 # Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
 set(CMAKE_AOCL_ROOT
@@ -101,6 +100,9 @@ set(LAPACK_INCLUDE_DIR
 set(SPARSE_INCLUDE_DIR
     ""
     CACHE STRING "Path to SPARSE include directory")
+set(UTILS_INCLUDE_DIR
+    ""
+    CACHE STRING "Path to UTILS include directory")
 set(BLAS_LIB
     ""
     CACHE STRING "Path to BLAS library")
@@ -119,6 +121,14 @@ set(UTILS_CPUID_LIB
 set(UTILS_CORE_LIB
     ""
     CACHE STRING "Path to AU_CORE library")
+if(USE_EXISTING_DA)
+  set(DA_LIB
+      ""
+      CACHE STRING "Path to existing DA library")
+endif()
+set(LIBMEM_LIB
+    ""
+    CACHE STRING "Path to LIBMEM library")
 
 if(BUILD_SMP OR UNIX)
   # Even serial builds need an OpenMP runtime to enable correct LAPACK linking
@@ -129,6 +139,15 @@ if(BUILD_SMP OR UNIX)
   endif()
 endif()
 
+# With MSVC suppress some unnecessary warnings and ensure we are linking to
+# sufficiently recent OpenMP
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4305")
+  if(BUILD_SMP)
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS} /openmp:llvm /openmp:experimental /wd4005")
+  endif()
+endif()
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
 # from Windows
 if(ASAN AND NOT UNIX)
@@ -153,6 +172,11 @@ if(COVERAGE
         OR NOT UNIX))
   message(WARNING "Coverage is only supported for  GNU/Linux GCC Debug build")
   set(COVERAGE OFF)
+endif()
+
+if(USE_LIBMEM AND NOT UNIX)
+  message(WARNING "LibMem is only supported on Linux")
+  set(USE_LIBMEM OFF)
 endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
@@ -205,7 +229,7 @@ if(WIN32)
   # them automatically with _s versions
   add_compile_definitions(
     _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
-    _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
+    _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1 _CRT_SECURE_NO_WARNINGS=1
     _SILENCE_CXX20_CISO646_REMOVED_WARNING=1)
 
   # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime
@@ -230,7 +254,8 @@ if(WIN32)
       file(TO_CMAKE_PATH $ENV{FLANG_COMPILER} FLANG_PATH)
       set(CMAKE_Fortran_COMPILER "${FLANG_PATH}/bin/flang.exe")
       set(FLANG_LIBS "${FLANG_PATH}/lib")
-      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib" "${FLANG_LIBS}/libpgmath.lib")
+      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib"
+                          "${FLANG_LIBS}/libpgmath.lib")
     else()
       set(IFORT_LIBS
           "$ENV{LIB}"
@@ -272,21 +297,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
     set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
+    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
   else()
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX2")
     set(COMPILER_FLAGS_RELEASE
         "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;/fp:fast")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
-  endif()
-  set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
-
-  if(USE_AVX512 AND (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang"))
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX512")
-  endif()
-
-  if(ARCH)
-    set(ARCH_FLAG "/arch:${ARCH}")
+    set(COMPILER_FLAGS_CXX
+        "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc;-Wno-nan-infinity-disabled;-Wno-macro-redefined"
+    )
   endif()
 
   if(VECTORIZATION_REPORTS)
@@ -297,31 +316,21 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
-  set(COMPILER_FLAGS_COMMON
-      "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
+  set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;")
+  set(COMPILER_FLAGS_CXX
+      "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled;-Wno-macro-redefined;-Wno-sign-conversion;"
   )
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    set(COMPILER_FLAGS_COMMON
-        "${COMPILER_FLAGS_COMMON};-mtune=native;-mavx2;-mfma;")
+    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-mavx2;-mfma;")
   endif()
 
   # Release flags
   set(COMPILER_FLAGS_RELEASE
       "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;")
-
   if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
   else()
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0;-gdwarf-5;-g3;")
-  endif()
-
-  if(USE_AVX512)
-    set(COMPILER_FLAGS_COMMON
-        "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
-  endif()
-
-  if(ARCH)
-    set(ARCH_FLAG "-march=${ARCH}")
   endif()
 
   if(VECTORIZATION_REPORTS)
@@ -336,8 +345,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   endif()
 endif()
 
-set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${ARCH_FLAG}")
-
 # Add convenience cleaning add "add_dependencies(cleanall ...) to all custom
 # cleans, e.g. clean-doc and clean-coverage is a dependency of cleanall Note:
 # this needs to be before any `add_dependencies`
@@ -351,6 +358,14 @@ endif()
 if(COVERAGE)
   # Include coverage flags and targets
   include(Coverage)
+endif()
+
+if((NOT WIN32) AND (NOT CMAKE_BUILD_TYPE MATCHES DEBUG))
+  # Avoid absolute file paths getting printed when using strings utility in
+  # linux
+  add_compile_options(
+    $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.>
+  )
 endif()
 
 add_compile_options(
@@ -372,55 +387,62 @@ if(NOT BUILD_DOC AND INTERNAL_DOC)
   set(INTERNAL_DOC Off)
 endif()
 
-# Compile external packages
-add_subdirectory(external/Lbfgsb.3.0)
-add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
+if(NOT USE_EXISTING_DA)
+  # Compile external packages
+  add_subdirectory(external/Lbfgsb.3.0)
+  add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
 
-# Compile data analytics core library
-add_subdirectory(source)
+  # add Boost for Boost.Sort functionality (assume Boost is installed on system)
+  set(BOOST_MIN_VERSION "1.66.0")
+  find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
 
-# Put all custom configuration BEFORE including "CTest"
-if(VALGRIND)
-  set(MEMORYCHECK_COMMAND_OPTIONS
-      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" # --gen-suppressions=all
-  )
-  set(MEMORYCHECK_TYPE "valgrind")
-  set(MEMORYCHECK_SUPPRESSIONS_FILE
-      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  # Compile data analytics core library
+  add_subdirectory(source)
+
+
+  # Put all custom configuration BEFORE including "CTest"
+  if(VALGRIND)
+    set(MEMORYCHECK_COMMAND_OPTIONS
+        "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" # --gen-suppressions=all
+    )
+    set(MEMORYCHECK_TYPE "valgrind")
+    set(MEMORYCHECK_SUPPRESSIONS_FILE
+        "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  endif()
+
+  # Build example and unit test programs
+  include(CTest)
+
+  # Suppression list file needs to be defined AFTER including ctest
+  if(VALGRIND)
+    set(MEMORYCHECK_SUPPRESSIONS_FILE
+        "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  endif()
+
+  add_subdirectory(tests)
 endif()
-
-# Build example and unit test programs
-include(CTest)
-
-# Suppression list file needs to be defined AFTER including ctest
-if(VALGRIND)
-  set(MEMORYCHECK_SUPPRESSIONS_FILE
-      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
-endif()
-
-add_subdirectory(tests)
 
 if(BUILD_PYTHON)
   add_subdirectory(python_interface)
 endif()
 
-# Install examples and README files
-install(
-  FILES README.md
-  DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES License DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(
-  DIRECTORY tests/examples/
-  DESTINATION examples
-  FILES_MATCHING
-  PATTERN "*.cpp"
-  PATTERN "*tree*" EXCLUDE
-  PATTERN "*.csv")
-install(
-  FILES tools/CMakeLists_examples.cmake
-  DESTINATION examples
-  RENAME CMakeLists.txt)
-install(FILES tests/examples/README.txt DESTINATION examples)
+if(NOT USE_EXISTING_DA)
+  # Install examples and README files
+  install(FILES README.md DESTINATION ${CMAKE_INSTALL_PREFIX})
+  install(FILES License DESTINATION ${CMAKE_INSTALL_PREFIX})
+  install(
+    DIRECTORY tests/examples/
+    DESTINATION examples
+    FILES_MATCHING
+    PATTERN "*.cpp"
+    PATTERN "*tree*" EXCLUDE
+    PATTERN "*.csv")
+  install(
+    FILES tools/CMakeLists_examples.cmake
+    DESTINATION examples
+    RENAME CMakeLists.txt)
+  install(FILES tests/examples/README.txt DESTINATION examples)
+endif()
 
 # Convenience banner, print relevant info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
@@ -443,7 +465,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
 endif()
 
 message(NOTICE "\nOPTIONS")
-message(NOTICE "Architecture flag         ARCH_FLAG............: ${ARCH_FLAG}")
+message(NOTICE "Requested architecture(s) ARCH.................: ${ARCH} (${BUILD_ARCHS})")
 message(NOTICE "Building with ASan        ASAN.................: ${ASAN}")
 message(NOTICE "Building docs             BUILD_DOC............: ${BUILD_DOC}")
 if(INTERNAL_DOC)
@@ -472,6 +494,7 @@ endif()
 message(
   NOTICE
   "Vectorization reports     VECTORIZATION_REPORTS: ${VECTORIZATION_REPORTS}")
+message(NOTICE "Building with LibMeM      USE_LIBMEM...........: ${USE_LIBMEM}")
 
 message(NOTICE "\nTARGETS")
 message(NOTICE
@@ -485,3 +508,12 @@ message(NOTICE "LAPACK           LAPACK=${LAPACK}")
 message(NOTICE "AOCL-Sparse      SPARSE=${SPARSE}")
 message(NOTICE "AOCL-Utils       UTILS=${UTILS}")
 message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")
+message(STATUS "LAPACK_INCLUDE_DIR    ${LAPACK_INCLUDE_DIR}")
+message(STATUS "BLAS_INCLUDE_DIR      ${BLAS_INCLUDE_DIR}")
+message(STATUS "UTILS_INCLUDE_DIR     ${UTILS_INCLUDE_DIR}")
+
+message(NOTICE "Boost include path    Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")
+if(USE_EXISTING_DA)
+  message(NOTICE "Existing AOCL-DA DA=${DA}")
+endif()
+message(NOTICE "AOCL-LibMem      LIBMEM=${LIBMEM}")

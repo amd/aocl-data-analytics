@@ -57,7 +57,8 @@ enum block_type {
     block_none,
     block_string,
     block_int,
-    block_real,
+    block_real_s,
+    block_real_d,
     block_char,
     block_str,
     block_bool // Primarily intended for uint8_t data obtained from true/false values in a CSV file
@@ -73,16 +74,16 @@ template <> struct get_block_type<da_int *> {
     constexpr operator block_type() const { return block_int; }
 };
 template <> struct get_block_type<float> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_s; }
 };
 template <> struct get_block_type<float *> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_s; }
 };
 template <> struct get_block_type<double> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_d; }
 };
 template <> struct get_block_type<double *> {
-    constexpr operator block_type() const { return block_real; }
+    constexpr operator block_type() const { return block_real_d; }
 };
 template <> struct get_block_type<std::string> {
     constexpr operator block_type() const { return block_string; }
@@ -177,7 +178,7 @@ template <class T> class block_dense : public block_base<T> {
      * C_data: if true, bl needs to be deallocated with free instead of new.
      */
     T *bl = nullptr;
-    da_ordering order;
+    da_order order;
     bool own_data = false;
     bool C_data = false;
 
@@ -192,8 +193,7 @@ template <class T> class block_dense : public block_base<T> {
      * It should be caught every time it is called
      */
     block_dense(da_int m, da_int n, T *data, da_errors::da_error_t &err,
-                da_ordering order = row_major, bool copy_data = false,
-                bool C_data = false) {
+                da_order order = row_major, bool copy_data = false, bool C_data = false) {
         if (m <= 0 || n <= 0 || data == nullptr)
             throw std::invalid_argument("");
         this->m = m;
@@ -227,7 +227,7 @@ template <class T> class block_dense : public block_base<T> {
             stride = this->n;
             break;
 
-        case col_major:
+        case column_major:
             *col = &bl[this->m * idx];
             stride = 1;
             break;
@@ -259,7 +259,7 @@ template <class T> class block_dense : public block_base<T> {
         nrows = rows.upper - rows.lower + 1;
         idx_d = 0;
         switch (order) {
-        case col_major:
+        case column_major:
             idx = cols.lower * this->m;
             for (da_int j = 0; j < ncols; j++) {
                 idx += rows.lower;
@@ -337,7 +337,7 @@ template <class T> class block_dense : public block_base<T> {
             }
             break;
 
-        case col_major:
+        case column_major:
             idx = cols.lower * this->m + rows.lower;
             for (da_int j = 0; j < ncols; j++) {
                 for (da_int i = 0; i < nrows; i++) {
@@ -460,7 +460,7 @@ class data_store {
      * - memory error
      */
     template <class T>
-    da_status concatenate_columns(da_int mc, da_int nc, T *data, da_ordering order,
+    da_status concatenate_columns(da_int mc, da_int nc, T *data, da_order order,
                                   bool copy_data = false, bool own_data = false,
                                   bool C_data = false) {
 
@@ -510,7 +510,7 @@ class data_store {
     }
 
     template <class T>
-    da_status concatenate_rows(da_int mr, da_int nr, T *data, da_ordering order,
+    da_status concatenate_rows(da_int mr, da_int nr, T *data, da_order order,
                                bool copy_data = false, bool C_data = false) {
         da_status status = da_status_success;
         bool found;
@@ -942,7 +942,8 @@ class data_store {
         return exit_status;
     }
 
-    template <class T> da_status extract_selection(std::string key, da_int ld, T *data) {
+    template <class T>
+    da_status extract_selection(std::string key, da_order order, da_int ld, T *data) {
         da_status exit_status = da_status_success, status;
 
         if (missing_block)
@@ -955,6 +956,7 @@ class data_store {
         da_int idx = 0;
         da_int ncols = 0;
         std::string internal_key;
+
         if (selections.empty()) {
             // No selection defined create a temporary selection All
             internal_key = DA_STRINTERNAL;
@@ -998,19 +1000,69 @@ class data_store {
             clear_cols = true;
         }
 
-        for (auto it_col = it->second.col_slice->begin();
-             it_col != it->second.col_slice->end(); ++it_col) {
-            idx = ncols * ld;
-            ncols += it_col->upper - it_col->lower + 1;
-            for (auto it_row = it->second.row_slice->begin();
-                 it_row != it->second.row_slice->end(); ++it_row) {
-                da_int nrows = it_row->upper - it_row->lower + 1;
-                status = extract_slice(*it_row, *it_col, ld, idx, data);
-                if (status != da_status_success) {
-                    exit_status = status;
-                    goto exit;
+        if (order == column_major) {
+
+            for (auto it_col = it->second.col_slice->begin();
+                 it_col != it->second.col_slice->end(); ++it_col) {
+                idx = ncols * ld;
+                ncols += it_col->upper - it_col->lower + 1;
+                for (auto it_row = it->second.row_slice->begin();
+                     it_row != it->second.row_slice->end(); ++it_row) {
+                    da_int nrows = it_row->upper - it_row->lower + 1;
+                    status = extract_slice(*it_row, *it_col, ld, idx, data);
+                    if (status != da_status_success) {
+                        exit_status = status;
+                        goto exit;
+                    }
+                    idx += nrows;
                 }
-                idx += nrows;
+            }
+
+        } else {
+
+            // For row-major ordering, we need to create a temporary array first
+            da_int n_cols = 0, n_rows = 0, ldd = 0;
+            for (auto it_col = it->second.col_slice->begin();
+                 it_col != it->second.col_slice->end(); ++it_col) {
+                n_cols += it_col->upper - it_col->lower + 1;
+                for (auto it_row = it->second.row_slice->begin();
+                     it_row != it->second.row_slice->end(); ++it_row) {
+                    n_rows += it_row->upper - it_row->lower + 1;
+                }
+            }
+            ldd = n_rows;
+            // ncols and nrows are now correctly set
+            std::vector<T> tmp_data;
+
+            try {
+                tmp_data.resize(n_cols * n_rows);
+            } catch (std::bad_alloc const &) {
+                exit_status = da_status_memory_error;
+                da_error(err, exit_status, "Memory allocation error");
+                goto exit;
+            }
+
+            for (auto it_col = it->second.col_slice->begin();
+                 it_col != it->second.col_slice->end(); ++it_col) {
+                idx = ncols * ld;
+                ncols += it_col->upper - it_col->lower + 1;
+                for (auto it_row = it->second.row_slice->begin();
+                     it_row != it->second.row_slice->end(); ++it_row) {
+                    da_int nrows = it_row->upper - it_row->lower + 1;
+                    status = extract_slice(*it_row, *it_col, ldd, idx, tmp_data.data());
+                    if (status != da_status_success) {
+                        exit_status = status;
+                        goto exit;
+                    }
+                    idx += nrows;
+                }
+            }
+
+            // Convert tmp_data to row-major output array
+            for (da_int i = 0; i < n_rows; i++) {
+                for (da_int j = 0; j < n_cols; j++) {
+                    data[j + i * ld] = tmp_data[i + j * ldd];
+                }
             }
         }
 
@@ -1370,7 +1422,7 @@ class data_store {
         }
 
         ncols = end_column - start_column + 1;
-        status = concatenate_cols_csv(nrows, ncols, bl, col_major, false, C_data);
+        status = concatenate_cols_csv(nrows, ncols, bl, column_major, false, C_data);
         if (status != da_status_success) {
             // LCOV_EXCL_START
             status = da_error_trace(err, da_status_internal_error,
@@ -1392,7 +1444,7 @@ class data_store {
     }
 
     template <class T>
-    da_status concatenate_cols_csv(da_int mc, da_int nc, T *data, da_ordering order,
+    da_status concatenate_cols_csv(da_int mc, da_int nc, T *data, da_order order,
                                    bool copy_data, bool C_data) {
         return concatenate_columns(mc, nc, data, order, copy_data, true, C_data);
     }
@@ -1621,7 +1673,7 @@ class data_store {
  */
 template <>
 da_status data_store::concatenate_cols_csv<char **>(da_int mc, da_int nc, char ***data,
-                                                    da_ordering order, bool copy_data,
+                                                    da_order order, bool copy_data,
                                                     bool C_data);
 template <>
 da_status data_store::raw_ptr_from_csv_columns<char **>(

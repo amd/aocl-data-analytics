@@ -26,10 +26,6 @@
 Creating and Destroying Handles
 *******************************
 
-.. doxygentypedef:: da_handle
-.. doxygentypedef:: da_handle_type
-.. doxygenenum:: da_handle_type_
-
 .. _da_handle_init:
 
 .. doxygenfunction:: da_handle_init_d
@@ -37,6 +33,10 @@ Creating and Destroying Handles
 .. doxygenfunction:: da_handle_init_s
 
 .. doxygenfunction:: da_handle_destroy
+
+.. doxygentypedef:: da_handle
+.. doxygentypedef:: da_handle_type
+.. doxygenenum:: da_handle_type_
 
 Note that the :cpp:type:`da_handle` functionality also includes :ref:`option setting <api_handle_options>`,
 :ref:`result extraction <extracting-results>` and :ref:`error handling <handle_error_api>`

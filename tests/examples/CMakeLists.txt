@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -25,6 +25,8 @@
 include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
 add_executable(nlls nlls.cpp)
+
+add_executable(nlls_single nlls_single.cpp)
 
 add_executable(nlls_lanczos_fd nlls_lanczos_fd.cpp)
 
@@ -62,12 +64,22 @@ target_compile_definitions(pca_cancer
 add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans PRIVATE aocl-da)
 
+add_executable(dbscan dbscan.cpp)
+target_link_libraries(dbscan PRIVATE aocl-da)
+
 add_executable(metrics metrics.cpp)
 
 add_executable(knn knn.cpp)
 
+add_executable(kernel_functions kernel_functions.cpp)
+
+add_executable(svc svc.cpp)
+
+add_executable(nusvr nusvr.cpp)
+
 set(EXAMPLE_EXES
     nlls
+    nlls_single
     nlls_lanczos_fd
     reglinear_model
     linear_model
@@ -76,11 +88,15 @@ set(EXAMPLE_EXES
     pca
     pca_cancer
     kmeans
+    dbscan
     datastore
     decision_tree
     random_forest
     metrics
-    knn)
+    knn
+    svc
+    nusvr
+    kernel_functions)
 
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)

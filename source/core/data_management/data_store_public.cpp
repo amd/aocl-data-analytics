@@ -116,7 +116,7 @@ da_status da_data_hconcat(da_datastore *store1, da_datastore *store2) {
 /* ********************************** Load routines ********************************** */
 /* *********************************************************************************** */
 da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
-                               da_int *block, da_ordering order, da_int copy_data) {
+                               da_int *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -130,7 +130,7 @@ da_status da_data_load_col_int(da_datastore store, da_int n_rows, da_int n_cols,
     return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
-                               da_int *block, da_ordering order, da_int copy_data) {
+                               da_int *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -145,7 +145,7 @@ da_status da_data_load_row_int(da_datastore store, da_int n_rows, da_int n_cols,
 }
 
 da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **block, da_ordering order) {
+                               const char **block, da_order order) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -159,7 +159,7 @@ da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
     return store->store->concatenate_columns(n_rows, n_cols, vecstr.data(), order, true);
 }
 da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
-                               const char **block, da_ordering order) {
+                               const char **block, da_order order) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -174,7 +174,7 @@ da_status da_data_load_row_str(da_datastore store, da_int n_rows, da_int n_cols,
 }
 
 da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *block, da_ordering order, da_int copy_data) {
+                                  double *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -188,7 +188,7 @@ da_status da_data_load_col_real_d(da_datastore store, da_int n_rows, da_int n_co
     return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_cols,
-                                  double *block, da_ordering order, da_int copy_data) {
+                                  double *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -203,7 +203,7 @@ da_status da_data_load_row_real_d(da_datastore store, da_int n_rows, da_int n_co
 }
 
 da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_cols,
-                                  float *block, da_ordering order, da_int copy_data) {
+                                  float *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -217,7 +217,7 @@ da_status da_data_load_col_real_s(da_datastore store, da_int n_rows, da_int n_co
     return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_cols,
-                                  float *block, da_ordering order, da_int copy_data) {
+                                  float *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -232,7 +232,7 @@ da_status da_data_load_row_real_s(da_datastore store, da_int n_rows, da_int n_co
 }
 
 da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *block, da_ordering order, da_int copy_data) {
+                                 uint8_t *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -246,7 +246,7 @@ da_status da_data_load_col_uint8(da_datastore store, da_int n_rows, da_int n_col
     return store->store->concatenate_columns(n_rows, n_cols, block, order, cpy);
 }
 da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_cols,
-                                 uint8_t *block, da_ordering order, da_int copy_data) {
+                                 uint8_t *block, da_order order, da_int copy_data) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -446,8 +446,8 @@ da_status da_data_extract_column_str(da_datastore store, da_int idx, da_int dim,
 
 /* ********************************* extract selections ****************************** */
 /* *********************************************************************************** */
-da_status da_data_extract_selection_int(da_datastore store, const char *key, da_int *data,
-                                        da_int lddata) {
+da_status da_data_extract_selection_int(da_datastore store, const char *key,
+                                        da_order order, da_int *data, da_int lddata) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -461,10 +461,10 @@ da_status da_data_extract_selection_int(da_datastore store, const char *key, da_
                         "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, lddata, data);
+    return store->store->extract_selection(key, order, lddata, data);
 }
 da_status da_data_extract_selection_real_d(da_datastore store, const char *key,
-                                           double *data, da_int lddata) {
+                                           da_order order, double *data, da_int lddata) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -478,10 +478,10 @@ da_status da_data_extract_selection_real_d(da_datastore store, const char *key,
                         "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, lddata, data);
+    return store->store->extract_selection(key, order, lddata, data);
 }
 da_status da_data_extract_selection_real_s(da_datastore store, const char *key,
-                                           float *data, da_int lddata) {
+                                           da_order order, float *data, da_int lddata) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -495,10 +495,10 @@ da_status da_data_extract_selection_real_s(da_datastore store, const char *key,
                         "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, lddata, data);
+    return store->store->extract_selection(key, order, lddata, data);
 }
 da_status da_data_extract_selection_uint8(da_datastore store, const char *key,
-                                          uint8_t *data, da_int lddata) {
+                                          da_order order, uint8_t *data, da_int lddata) {
     if (!store)
         return da_status_store_not_initialized;
     store->clear(); // Clean up store logs
@@ -512,7 +512,7 @@ da_status da_data_extract_selection_uint8(da_datastore store, const char *key,
                         "store seems to be invalid?");        // LCOV_EXCL_LINE
 
     std::string key_str(key);
-    return store->store->extract_selection(key, lddata, data);
+    return store->store->extract_selection(key, order, lddata, data);
 }
 
 /* ************************************* headings ************************************ */

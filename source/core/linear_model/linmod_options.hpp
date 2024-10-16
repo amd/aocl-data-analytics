@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,16 +21,21 @@
  *
  * ************************************************************************ */
 
-#ifndef LINMOD_OPTIONS_HPP
-#define LINMOD_OPTIONS_HPP
-
+#include "da_error.hpp"
 #include "linmod_types.hpp"
+#include "macros.h"
 #include "options.hpp"
 #include <limits>
 
+namespace ARCH {
+
 namespace da_linmod {
+
+using namespace da_linmod_types;
+
 template <class T>
-inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
+inline da_status register_linmod_options(da_options::OptionRegistry &opts,
+                                         da_errors::da_error_t &err) {
     using namespace da_options;
     T rmax = std::numeric_limits<T>::max();
     // Tolerance based on sqrt(safe_epsilon)
@@ -169,13 +174,17 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts) {
             "ssc"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {
-        return da_status_memory_error; // LCOV_EXCL_LINE
-    } catch (...) {                    // LCOV_EXCL_LINE
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) { // LCOV_EXCL_LINE
         // Invalid use of the constructor, shouldn't happen (invalid_argument)
-        return da_status_internal_error; // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
     }
 
     return da_status_success;
 }
+
 } // namespace da_linmod
-#endif //LINMOD_OPTIONS_HPP
+
+} // namespace ARCH

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,20 +25,81 @@
  *
  */
 
-#ifndef DA_RALFIT_DRIVER_HPP
-#define DA_RALFIT_DRIVER_HPP
-
 #include "aoclda.h"
 #define ral_int da_int
-#include "ral_nlls.h"
+#ifdef SINGLE_PRECISION
+#define SINGLE_PREC_TURNED_ON
+#endif
+#define SINGLE_PRECISION
+#undef ral_real
+#undef ral_nlls_h
+#undef PREC
+#include "ral_nlls.h" // Add declarations for single precision
+#undef SINGLE_PRECISION
+#undef ral_real
+#undef ral_nlls_h
+#undef PREC
+#include "ral_nlls.h" // Add declarations for double precision
+// clean up
+#ifndef SINGLE_PREC_TURNED_ON
+// turn back off
+#undef SINGLE_PRECISION
+#endif
+#undef SINGLE_PREC_TURNED_ON
+// clean name-space
+#undef ral_real
 #undef ral_int
+#undef ral_nlls_default_options
+#undef ral_nlls_options
+#undef ral_nlls_inform
+#undef nlls_solve
+#undef ral_nlls_init_workspace
+#undef ral_nlls_iterate
+#undef nlls_strerror
+#undef ral_nlls_free_workspace
+#undef PREC
+
+#include "macros.h"
+
 #include <cassert>
 #include <functional>
 #include <type_traits>
 
+namespace ARCH {
+
 namespace ralfit {
 
 using namespace std::literals::string_literals;
+
+// define ral_nlls types depending on typename T
+template <typename T>
+using ral_nlls_options_t =
+    typename std::conditional_t<std::is_same_v<T, double>, struct ral_nlls_options_d,
+                                struct ral_nlls_options_s>;
+template <typename T>
+using ral_nlls_inform_t =
+    typename std::conditional_t<std::is_same_v<T, double>, struct ral_nlls_inform_d,
+                                struct ral_nlls_inform_s>;
+
+template <typename T>
+using ral_nlls_eval_r_type_t =
+    typename std::conditional_t<std::is_same_v<T, double>, ral_nlls_eval_r_type_d,
+                                ral_nlls_eval_r_type_s>;
+
+template <typename T>
+using ral_nlls_eval_j_type_t =
+    typename std::conditional_t<std::is_same_v<T, double>, ral_nlls_eval_j_type_d,
+                                ral_nlls_eval_j_type_s>;
+
+template <typename T>
+using ral_nlls_eval_hf_type_t =
+    typename std::conditional_t<std::is_same_v<T, double>, ral_nlls_eval_hf_type_d,
+                                ral_nlls_eval_hf_type_s>;
+
+template <typename T>
+using ral_nlls_eval_hp_type_t =
+    typename std::conditional_t<std::is_same_v<T, double>, ral_nlls_eval_hp_type_d,
+                                ral_nlls_eval_hp_type_s>;
 
 const da_int RAL_NLLS_CB_DUMMY{-3024};
 const da_int RAL_NLLS_CB_FD{-45544554};
@@ -58,7 +119,7 @@ da_int da_nlls_eval_hf_dummy([[maybe_unused]] da_int n, [[maybe_unused]] da_int 
 
 // Copy RALFit's inform into DA's info array
 template <typename T>
-void copy_inform(struct ral_nlls_inform &inform, std::vector<T> &info) {
+void copy_inform(ral_nlls_inform_t<T> &inform, std::vector<T> &info) {
     info[da_optim_info_t::info_iter] = T(inform.iter);
     info[da_optim_info_t::info_nevalf] = T(inform.f_eval);
     info[da_optim_info_t::info_nevalg] = T(inform.g_eval);
@@ -72,7 +133,7 @@ void copy_inform(struct ral_nlls_inform &inform, std::vector<T> &info) {
 
 // Get RALFit's exit status/message and copy into DA's status
 template <typename T>
-da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t &err) {
+da_status get_exit_status(ral_nlls_inform_t<T> &inform, da_errors::da_error_t &err) {
     // Exit status: ral_int inform.status;
     // Error message: char inform.error_message[81]
     // See ral_nlls_workspaces.f90 / module
@@ -159,7 +220,7 @@ da_status get_exit_status(struct ral_nlls_inform &inform, da_errors::da_error_t 
 
 template <typename T>
 da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
-                                 struct ral_nlls_options &options,
+                                 ral_nlls_options_t<T> &options,
                                  da_errors::da_error_t &err, bool ok_eval_HF) {
     da_status status;
     const std::string msg{" option not found in the registry?"};
@@ -305,12 +366,12 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
 
     std::string storage;
     da_int istorage;
-    status = opts.get("storage scheme", storage, istorage);
+    status = opts.get("storage order", storage, istorage);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<storage scheme>"s + msg);
+                        "<storage order>"s + msg);
     }
-    if (istorage == da_optimization_options::storage_scheme::fortran) {
+    if (istorage == column_major) {
         options.Fortran_Jacobian = true;
     } else {
         options.Fortran_Jacobian = false;
@@ -324,10 +385,10 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
                         "<regularization power>"s + msg);
     }
     switch (ireg_power) {
-    case da_optimization_options::regularization::quadratic:
+    case da_optim_types::regularization::quadratic:
         options.regularization_power = 2.0;
         break;
-    case da_optimization_options::regularization::cubic:
+    case da_optim_types::regularization::cubic:
         options.regularization_power = 3.0;
         break;
     default:
@@ -352,79 +413,90 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
                         resfun_t<T> eval_r, resgrd_t<T> eval_J, reshes_t<T> eval_HF,
                         reshp_t<T> eval_HP, T *lower_bounds, T *upper_bounds, T *weights,
                         void *usrdata, std::vector<T> &info, da_errors::da_error_t &err) {
-    if constexpr (!std::is_same_v<T, double>) {
-        // Make sure we catch any not-implemented variant
-        return da_error(&err, da_status_not_implemented,
-                        "RALFit currently supports only double precision data type.");
+    ral_nlls_options_t<T> options;
+    ral_nlls_inform_t<T> inform;
+
+    // Initialize option values
+    if constexpr (std::is_same_v<T, double>) {
+        ral_nlls_default_options_d(&options);
     } else {
-        // Initialize option values
-        struct ral_nlls_options options;
-        ral_nlls_default_options(&options);
-
-        if (copy_options_to_ralfit<T>(opts, options, err, bool(eval_HF)) !=
-            da_status_success)
-            return da_error_trace(&err, da_status_internal_error,
-                                  "Could not copy the options into the RALFit struct.");
-
-        // Initialize the workspace
-        void *workspace;
-        void *inner_workspace;
-
-        // init_workspace allocates and links together workspace with inner_workspace
-        ral_nlls_init_workspace(&workspace, &inner_workspace);
-
-        struct ral_nlls_inform inform;
-
-        // Get address of eval_r
-        assert(typeid(ral_nlls_eval_r_type) == eval_r.target_type());
-        ral_nlls_eval_r_type ral_nlls_eval_r =
-            *(eval_r.template target<ral_nlls_eval_r_type>());
-
-        ral_nlls_eval_j_type ral_nlls_eval_J{nullptr};
-        ral_nlls_eval_hf_type ral_nlls_eval_HF{nullptr};
-        ral_nlls_eval_hp_type ral_nlls_eval_HP{nullptr};
-
-        // Get address of eval_J or dummy
-        if (eval_J) {
-            assert(typeid(ral_nlls_eval_j_type) == eval_J.target_type());
-            ral_nlls_eval_J = *(eval_J.template target<ral_nlls_eval_j_type>());
-        } else {
-            // Instantiate
-            da_nlls_eval_j_dummy<T>(0, 0, nullptr, nullptr, nullptr);
-            // Assign
-            ral_nlls_eval_J = da_nlls_eval_j_dummy<T>;
-        }
-
-        // Get address of eval_HF or dummy
-        if (eval_HF) {
-            assert(typeid(ral_nlls_eval_hf_type) == eval_HF.target_type());
-            ral_nlls_eval_HF = *(eval_HF.template target<ral_nlls_eval_hf_type>());
-        } else {
-            // Instantiate
-            da_nlls_eval_hf_dummy<T>(0, 0, nullptr, nullptr, nullptr, nullptr);
-            // Assign
-            ral_nlls_eval_HF = da_nlls_eval_hf_dummy<T>;
-        }
-
-        // Get address of eval_HP or nullptr
-        if (eval_HP) {
-            assert(typeid(ral_nlls_eval_hp_type) == eval_HP.target_type());
-            ral_nlls_eval_HP = *(eval_HP.template target<ral_nlls_eval_hp_type>());
-        }
-
-        nlls_solve(nvar, nres, x, ral_nlls_eval_r, ral_nlls_eval_J, ral_nlls_eval_HF,
-                   usrdata, &options, &inform, weights, ral_nlls_eval_HP, lower_bounds,
-                   upper_bounds);
-        ral_nlls_free_workspace(&workspace);
-        ral_nlls_free_workspace(&inner_workspace);
-
-        copy_inform(inform, info);
-
-        // Translate exit status -> severity
-        da_status status = get_exit_status<T>(inform, err);
-
-        return status; // err stack populated
+        ral_nlls_default_options_s(&options);
     }
+
+    if (copy_options_to_ralfit<T>(opts, options, err, bool(eval_HF)) != da_status_success)
+        return da_error_trace(&err, da_status_internal_error,
+                              "Could not copy the options into the RALFit struct.");
+
+    // Initialize the workspace
+    void *workspace;
+    void *inner_workspace;
+
+    // init_workspace allocates and links together workspace with inner_workspace
+    if constexpr (std::is_same_v<T, double>) {
+        ral_nlls_init_workspace_d(&workspace, &inner_workspace);
+    } else {
+        ral_nlls_init_workspace_s(&workspace, &inner_workspace);
+    }
+
+    // Get address of eval_r
+    assert(typeid(ral_nlls_eval_r_type_t<T>) == eval_r.target_type());
+
+    ral_nlls_eval_r_type_t<T> ral_nlls_eval_r =
+        *(eval_r.template target<ral_nlls_eval_r_type_t<T>>());
+
+    ral_nlls_eval_j_type_t<T> ral_nlls_eval_J{nullptr};
+    ral_nlls_eval_hf_type_t<T> ral_nlls_eval_HF{nullptr};
+    ral_nlls_eval_hp_type_t<T> ral_nlls_eval_HP{nullptr};
+
+    // Get address of eval_J or dummy
+    if (eval_J) {
+        assert(typeid(ral_nlls_eval_j_type_t<T>) == eval_J.target_type());
+        ral_nlls_eval_J = *(eval_J.template target<ral_nlls_eval_j_type_t<T>>());
+    } else {
+        // Instantiate
+        da_nlls_eval_j_dummy<T>(0, 0, nullptr, nullptr, nullptr);
+        // Assign
+        ral_nlls_eval_J = da_nlls_eval_j_dummy<T>;
+    }
+
+    // Get address of eval_HF or dummy
+    if (eval_HF) {
+        assert(typeid(ral_nlls_eval_hf_type_t<T>) == eval_HF.target_type());
+        ral_nlls_eval_HF = *(eval_HF.template target<ral_nlls_eval_hf_type_t<T>>());
+    } else {
+        // Instantiate
+        da_nlls_eval_hf_dummy<T>(0, 0, nullptr, nullptr, nullptr, nullptr);
+        // Assign
+        ral_nlls_eval_HF = da_nlls_eval_hf_dummy<T>;
+    }
+
+    // Get address of eval_HP or nullptr
+    if (eval_HP) {
+        assert(typeid(ral_nlls_eval_hp_type_t<T>) == eval_HP.target_type());
+        ral_nlls_eval_HP = *(eval_HP.template target<ral_nlls_eval_hp_type_t<T>>());
+    }
+
+    if constexpr (std::is_same_v<T, double>) {
+        nlls_solve_d(nvar, nres, x, ral_nlls_eval_r, ral_nlls_eval_J, ral_nlls_eval_HF,
+                     usrdata, &options, &inform, weights, ral_nlls_eval_HP, lower_bounds,
+                     upper_bounds);
+        ral_nlls_free_workspace_d(&workspace);
+        ral_nlls_free_workspace_d(&inner_workspace);
+    } else {
+        nlls_solve_s(nvar, nres, x, ral_nlls_eval_r, ral_nlls_eval_J, ral_nlls_eval_HF,
+                     usrdata, &options, &inform, weights, ral_nlls_eval_HP, lower_bounds,
+                     upper_bounds);
+        ral_nlls_free_workspace_s(&workspace);
+        ral_nlls_free_workspace_s(&inner_workspace);
+    }
+
+    copy_inform(inform, info);
+
+    // Translate exit status -> severity
+    da_status status = get_exit_status<T>(inform, err);
+
+    return status; // err stack populated
 }
 } // namespace ralfit
-#endif
+
+} // namespace ARCH

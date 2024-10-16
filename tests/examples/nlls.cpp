@@ -147,6 +147,8 @@ int main(void) {
         return 1;
     }
     pass &= da_options_set_int(handle, "print level", (da_int)2) == da_status_success;
+    pass &=
+        da_options_set_string(handle, "storage order", "row-major") == da_status_success;
     pass &= da_options_set_real_d(handle, "finite differences step", 1e-7) ==
             da_status_success;
     pass &= pass &=

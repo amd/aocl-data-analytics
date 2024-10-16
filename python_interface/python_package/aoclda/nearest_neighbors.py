@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -29,9 +29,11 @@
 aoclda.nearest_neighbors module
 """
 
+import numpy as np
 from ._aoclda.nearest_neighbors import pybind_knn_classifier
 
-class knn_classifier(pybind_knn_classifier):
+
+class knn_classifier():
     """
     A k-Nearest Neighbors (k-NN) classifier.
 
@@ -46,13 +48,26 @@ class knn_classifier(pybind_knn_classifier):
             This argument is included as a placeholder for more algorithms.
 
         metric (str, optional): The metric used for the distance computation.
-            Available metrics are 'euclidean' and 'sqeuclidean' (squared euclidean distances).
-            Default = 'euclidean'.
+            Available metrics are 'euclidean', 'l2', 'sqeuclidean' (squared euclidean distances),
+            'manhattan', 'l1', 'cityblock', 'cosine', or 'minkowski'. Default = 'euclidean'.
 
-        precision (str, optional): Whether to initialize the k-NN object in double or
-            single precision. It can take the values 'single' or 'double'.
-            Default = 'double'.
+        p (float, optional): The power parameter used for the Minkowski metric. For p = 1.0, 
+            this defaults to 'manhattan' metric and for p = 2.0 this defaults to 'euclidean' metric.
+            p is only used for Miknowski distance and will be ignored otherwise. Will return an
+            error when p is not positive. Default p = 2.0.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
+
+    def __init__(self, n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean',
+                 p=2.0, check_data=False):
+        self.knn_classifier_double = pybind_knn_classifier(n_neighbors, weights, algorithm, metric,
+                                                           "double", check_data)
+        self.knn_classifier_single = pybind_knn_classifier(n_neighbors, weights, algorithm, metric,
+                                                           "single", check_data)
+        self.knn_classifier = self.knn_classifier_double
+        self.p = p
+
     def fit(self, X, y):
         """
         Fit the k-NN classifier from the training data set provided.
@@ -66,7 +81,16 @@ class knn_classifier(pybind_knn_classifier):
         Returns:
             self (object): Returns the instance itself.
         """
-        return self.pybind_fit(X, y)
+
+        if X.dtype == "float32":
+            self.knn_classifier = self.knn_classifier_single
+            self.knn_classifier_double = None
+            self.p = np.float32(self.p)
+        else:
+            self.p = np.float64(self.p)
+
+        self.knn_classifier.pybind_fit(X, y, p=self.p)
+        return self
 
     def kneighbors(self, X, n_neighbors=0, return_distance=True):
         """
@@ -91,9 +115,9 @@ class knn_classifier(pybind_knn_classifier):
                 each neighbor.
         """
         if return_distance:
-            return self.pybind_kneighbors(X, n_neighbors)
+            return self.knn_classifier.pybind_kneighbors(X, n_neighbors)
 
-        return self.pybind_kneighbors_indices(X, n_neighbors)
+        return self.knn_classifier.pybind_kneighbors_indices(X, n_neighbors)
 
     def predict_proba(self, X):
         """
@@ -107,7 +131,7 @@ class knn_classifier(pybind_knn_classifier):
             numpy.ndarray of shape (n_queries, n_classes): The class probabilities of the test data.
             Classes are sorted in ascending order.
         """
-        return self.pybind_predict_proba(X)
+        return self.knn_classifier.pybind_predict_proba(X)
 
     def predict(self, X):
         """
@@ -120,4 +144,4 @@ class knn_classifier(pybind_knn_classifier):
         Returns:
             numpy.ndarray of shape (n_queries): The predicted labels of the test data.
         """
-        return self.pybind_predict(X)
+        return self.knn_classifier.pybind_predict(X)

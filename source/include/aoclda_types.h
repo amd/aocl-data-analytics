@@ -49,15 +49,15 @@ enum da_precision_ {
 typedef enum da_precision_ da_precision;
 
 /**
- * \brief Enumeration used to set column or row major ordering.
+ * \brief Enumeration used to set whether two-dimensional arrays are stored in column- or row-major order.
  */
-enum da_ordering_ {
-    row_major = 0, ///< Use row major ordering
-    col_major,     ///< Use column major ordering
+enum da_order_ {
+    row_major = 0, ///< Use row-major order
+    column_major,  ///< Use column-major order
 };
 
-/** @brief Alias for the \ref da_ordering_ enum. */
-typedef enum da_ordering_ da_ordering;
+/** @brief Alias for the \ref da_order_ enum. */
+typedef enum da_order_ da_order;
 
 /**
  * \def Build library for 64 bit integers

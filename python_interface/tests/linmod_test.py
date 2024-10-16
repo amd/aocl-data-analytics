@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -22,25 +22,26 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = missing-module-docstring
+# pylint: disable = missing-module-docstring,missing-function-docstring,invalid-name
+"""
+Linear models Python test script
+"""
 
 import numpy as np
 import pytest
 from aoclda.linear_model import linmod
-import aoclda as da
 
-@pytest.mark.parametrize("da_precision, numpy_precision", [
-    ("double", np.float64), ("single", np.float32),
-])
+
+@pytest.mark.parametrize("numpy_precision", [np.float64,  np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_linear_regression(da_precision, numpy_precision, numpy_order):
+def test_linear_regression(numpy_precision, numpy_order):
     X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]],
                  dtype=numpy_precision, order=numpy_order)
     y = np.array([3., 6.5, 10., 12., 13., 19.], dtype=numpy_precision)
     tol = np.sqrt(np.finfo(numpy_precision).eps)
 
     # compute linear regression without intercept
-    lmod = linmod("mse", precision=da_precision)
+    lmod = linmod("mse")
     lmod.fit(X, y)
 
     # check expected results
@@ -49,7 +50,7 @@ def test_linear_regression(da_precision, numpy_precision, numpy_order):
     assert norm < tol
 
     # same test with intercept
-    lmod = linmod("mse", precision=da_precision, intercept=True)
+    lmod = linmod("mse", intercept=True)
     lmod.fit(X, y)
 
     # check expected results
@@ -59,43 +60,45 @@ def test_linear_regression(da_precision, numpy_precision, numpy_order):
     assert norm < tol
 
 
-@pytest.mark.parametrize("da_precision, numpy_precision", [
-    ("double", np.float64), ("single", np.float32),
-])
+@pytest.mark.parametrize("numpy_precision", [np.float64,  np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_linear_regression_error_exits(da_precision, numpy_precision, numpy_order):
+def test_linear_regression_error_exits(numpy_precision, numpy_order):
     X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]],
                  dtype=numpy_precision, order=numpy_order)
     y = np.array([3., 6.5, 10., 12., 13., 19.], dtype=numpy_precision)
-    lmod = linmod("mse", precision=da_precision)
 
     # lambda out of bounds
     with pytest.raises(RuntimeError):
-        lmod.fit(X, y, reg_lambda=-1)
+        lmod = linmod("mse", reg_lambda=-1)
+        lmod.fit(X, y)
 
     # alpha out of bounds
     with pytest.raises(RuntimeError):
-        lmod.fit(X, y, reg_alpha=-1)
+        lmod = linmod("mse", reg_alpha=-1)
+        lmod.fit(X, y)
     with pytest.raises(RuntimeError):
-        lmod.fit(X, y, reg_alpha=1.1)
+        lmod = linmod("mse", reg_alpha=1.1)
+        lmod.fit(X, y)
 
     # max_iter out of bounds
     with pytest.raises(RuntimeError):
-        lmod = linmod("mse", max_iter=-1, precision=da_precision)
+        lmod = linmod("mse", max_iter=-1)
         lmod.fit(X, y)
 
     # solving lasso with cholesky
     with pytest.raises(RuntimeError):
-        lmod = linmod("mse", solver='cholesky', precision=da_precision)
-        lmod.fit(X, y, reg_alpha=1, reg_lambda=1)
+        lmod = linmod("mse", solver='cholesky', reg_alpha=1, reg_lambda=1)
+        lmod.fit(X, y)
 
     # solving ridge with qr
     with pytest.raises(RuntimeError):
-        lmod = linmod("mse", solver='qr', precision=da_precision)
-        lmod.fit(X, y, reg_alpha=0, reg_lambda=1)
-
-    # coordinate descent without scaling
-    with pytest.raises(RuntimeError):
-        lmod = linmod("mse", solver='coord', scaling='none',
-                      precision=da_precision)
+        lmod = linmod("mse", solver='qr', reg_alpha=0, reg_lambda=1)
         lmod.fit(X, y)
+
+    # NaN checking
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]],
+                 dtype=numpy_precision, order=numpy_order)
+    y = np.array([3., 6.5, 10., 12., np.nan, 19.], dtype=numpy_precision)
+    lmod2 = linmod("mse", check_data=True)
+    with pytest.raises(RuntimeError):
+        lmod2.fit(X, y)

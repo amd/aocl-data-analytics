@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,18 +28,20 @@
 #ifndef OPTIM_TYPES_HPP
 #define OPTIM_TYPES_HPP
 
-namespace da_optim {
+namespace da_optim_types {
 enum solvers {
     solver_undefined = 0,
     solver_lbfgsb = 1,
     solver_coord = 3,
     solver_ralfit = 7
 };
-}
 
 /* All constraint types
  * mainly used to check whether a specific type of constraint is defined in a bool array
  */
 enum cons_type { cons_bounds = 0, cons_linear = 1 };
+
+enum regularization { quadratic = 2, cubic = 3 };
+} // namespace da_optim_types
 
 #endif

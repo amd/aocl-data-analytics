@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -34,7 +34,7 @@
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.nearest_neighbors.knn_classifier(n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean', precision='double')
+      .. autoclass:: aoclda.nearest_neighbors.knn_classifier(n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean', p=2.0, check_data=false)
          :members:
 
    .. tab-item:: C

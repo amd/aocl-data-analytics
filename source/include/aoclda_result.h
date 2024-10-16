@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -63,7 +63,21 @@ enum da_result_ {
     da_kmeans_cluster_centres =
         501,          ///< Matrix of cluster centres computed in k-means clustering.
     da_kmeans_labels, ///< Labels of samples in the data matrix used to compute k-means clustering.
-    da_knn_model_params, ///< Model parameters for the trained and fitted k-nearest neighbors.
+    da_dbscan_labels, ///< Labels of samples in the data matrix used to compute DBSCAN clustering.
+    da_dbscan_n_clusters,     ///< The number of clusters found in DBSCAN clustering.
+    da_dbscan_n_core_samples, ///< The number of core samples found in DBSCAN clustering.
+    da_dbscan_core_sample_indices, ///< Indices of core samples in the data matrix used to compute DBSCAN clustering.
+    // KNN 601..700
+    da_knn_model_params =
+        601, ///< Model parameters for the trained and fitted k-nearest neighbors.
+    // SVM 701..800
+    da_svm_n_support_vectors = 701,     ///< Overall number of support vectors
+    da_svm_n_support_vectors_per_class, ///< Number of support vectors per each class
+    da_svm_idx_support_vectors,         ///< Indexes of support vectors
+    da_svm_n_iterations, ///< Number of iterations. In this context it counts the number of SMO subproblems solved, for each classifier.
+    da_svm_support_vectors, ///< Support vectors
+    da_svm_bias,            ///< Constant in decision function
+    da_svm_dual_coef, ///< Weights assigned to each support vector, reflecting their importance in defining the optimal decision boundary.
     // ...
 };
 

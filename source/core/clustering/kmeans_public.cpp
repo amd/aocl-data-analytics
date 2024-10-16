@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,9 +21,13 @@
  *
  * ************************************************************************ */
 
+#include "kmeans_public.hpp"
 #include "aoclda.h"
 #include "da_handle.hpp"
-#include "kmeans.hpp"
+#include "dynamic_dispatch.hpp"
+#include "macros.h"
+
+using namespace kmeans_public;
 
 da_status da_kmeans_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
                                const double *A, da_int lda) {
@@ -34,12 +38,8 @@ da_status da_kmeans_set_data_d(da_handle handle, da_int n_samples, da_int n_feat
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->kmeans_d == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_d->set_data(n_samples, n_features, A, lda);
+    DISPATCHER(handle->err, return (kmeans_set_data<da_kmeans::kmeans<double>, double>(
+                                handle, n_samples, n_features, A, lda)));
 }
 
 da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_features,
@@ -51,12 +51,8 @@ da_status da_kmeans_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->kmeans_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_s->set_data(n_samples, n_features, A, lda);
+    DISPATCHER(handle->err, return (kmeans_set_data<da_kmeans::kmeans<float>, float>(
+                                handle, n_samples, n_features, A, lda)));
 }
 
 da_status da_kmeans_set_init_centres_d(da_handle handle, const double *C, da_int ldc) {
@@ -67,12 +63,9 @@ da_status da_kmeans_set_init_centres_d(da_handle handle, const double *C, da_int
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->kmeans_d == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_d->set_init_centres(C, ldc);
+    DISPATCHER(handle->err,
+               return (kmeans_set_init_centres<da_kmeans::kmeans<double>, double>(
+                   handle, C, ldc)));
 }
 
 da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int ldc) {
@@ -83,12 +76,9 @@ da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int 
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->kmeans_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_s->set_init_centres(C, ldc);
+    DISPATCHER(handle->err,
+               return (kmeans_set_init_centres<da_kmeans::kmeans<float>, float>(handle, C,
+                                                                                ldc)));
 }
 
 da_status da_kmeans_compute_d(da_handle handle) {
@@ -99,12 +89,8 @@ da_status da_kmeans_compute_d(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->kmeans_d == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_d->compute();
+    DISPATCHER(handle->err,
+               return (kmeans_compute<da_kmeans::kmeans<double>, double>(handle)));
 }
 
 da_status da_kmeans_compute_s(da_handle handle) {
@@ -115,12 +101,8 @@ da_status da_kmeans_compute_s(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->kmeans_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_s->compute();
+    DISPATCHER(handle->err,
+               return (kmeans_compute<da_kmeans::kmeans<float>, float>(handle)));
 }
 
 da_status da_kmeans_transform_s(da_handle handle, da_int m_samples, da_int m_features,
@@ -133,13 +115,9 @@ da_status da_kmeans_transform_s(da_handle handle, da_int m_samples, da_int m_fea
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->kmeans_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_s->transform(m_samples, m_features, X, ldx, X_transform,
-                                       ldx_transform);
+    DISPATCHER(handle->err,
+               return (kmeans_transform<da_kmeans::kmeans<float>, float>(
+                   handle, m_samples, m_features, X, ldx, X_transform, ldx_transform)));
 }
 
 da_status da_kmeans_transform_d(da_handle handle, da_int m_samples, da_int m_features,
@@ -152,13 +130,9 @@ da_status da_kmeans_transform_d(da_handle handle, da_int m_samples, da_int m_fea
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->kmeans_d == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_d->transform(m_samples, m_features, X, ldx, X_transform,
-                                       ldx_transform);
+    DISPATCHER(handle->err,
+               return (kmeans_transform<da_kmeans::kmeans<double>, double>(
+                   handle, m_samples, m_features, X, ldx, X_transform, ldx_transform)));
 }
 
 da_status da_kmeans_predict_s(da_handle handle, da_int k_samples, da_int k_features,
@@ -170,12 +144,8 @@ da_status da_kmeans_predict_s(da_handle handle, da_int k_samples, da_int k_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    if (handle->kmeans_s == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_s->predict(k_samples, k_features, Y, ldy, Y_labels);
+    DISPATCHER(handle->err, return (kmeans_predict<da_kmeans::kmeans<float>, float>(
+                                handle, k_samples, k_features, Y, ldy, Y_labels)));
 }
 
 da_status da_kmeans_predict_d(da_handle handle, da_int k_samples, da_int k_features,
@@ -187,10 +157,6 @@ da_status da_kmeans_predict_d(da_handle handle, da_int k_samples, da_int k_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    if (handle->kmeans_d == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_kmeans or "
-                        "handle is invalid.");
-
-    return handle->kmeans_d->predict(k_samples, k_features, Y, ldy, Y_labels);
+    DISPATCHER(handle->err, return (kmeans_predict<da_kmeans::kmeans<double>, double>(
+                                handle, k_samples, k_features, Y, ldy, Y_labels)));
 }

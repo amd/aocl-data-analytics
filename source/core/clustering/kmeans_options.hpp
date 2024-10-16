@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,22 +21,27 @@
  *
  * ************************************************************************ */
 
-#ifndef KMEANS_OPTIONS_HPP
-#define KMEANS_OPTIONS_HPP
-
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
+#include "aoclda_types.h"
+#include "da_error.hpp"
 #include "kmeans_types.hpp"
+#include "macros.h"
 #include "options.hpp"
 
 #include <limits>
 
+namespace ARCH {
+
 namespace da_kmeans {
 
+using namespace da_kmeans_types;
+
 template <class T>
-inline da_status register_kmeans_options(da_options::OptionRegistry &opts) {
+inline da_status register_kmeans_options(da_options::OptionRegistry &opts,
+                                         da_errors::da_error_t &err) {
     using namespace da_options;
     da_int imax = std::numeric_limits<da_int>::max();
 
@@ -89,10 +94,12 @@ inline da_status register_kmeans_options(da_options::OptionRegistry &opts) {
         opts.register_opt(oT);
 
     } catch (std::bad_alloc &) {
-        return da_status_memory_error;
-    } catch (...) {
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) { // LCOV_EXCL_LINE
         // Invalid use of the constructor, shouldn't happen (invalid_argument)
-        return da_status_internal_error; // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
     }
 
     return da_status_success;
@@ -123,4 +130,4 @@ inline da_status reregister_kmeans_option(da_options::OptionRegistry &opts, da_i
 
 } // namespace da_kmeans
 
-#endif //KMEANS_OPTIONS_HPP
+} // namespace ARCH

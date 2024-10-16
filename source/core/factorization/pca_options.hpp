@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,15 +24,22 @@
 #ifndef PCA_OPTIONS_HPP
 #define PCA_OPTIONS_HPP
 
+#include "aoclda_types.h"
+#include "da_error.hpp"
+#include "macros.h"
 #include "options.hpp"
 #include "pca_types.hpp"
-
 #include <limits>
+
+namespace ARCH {
 
 namespace da_pca {
 
+using namespace da_pca_types;
+
 template <class T>
-inline da_status register_pca_options(da_options::OptionRegistry &opts) {
+inline da_status register_pca_options(da_options::OptionRegistry &opts,
+                                      da_errors::da_error_t &err) {
     using namespace da_options;
     da_int imax = std::numeric_limits<da_int>::max();
 
@@ -75,10 +82,12 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts) {
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {
-        return da_status_memory_error;
-    } catch (...) {
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) { // LCOV_EXCL_LINE
         // Invalid use of the constructor, shouldn't happen (invalid_argument)
-        return da_status_internal_error; // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
     }
 
     return da_status_success;
@@ -111,5 +120,6 @@ inline da_status reregister_pca_option(da_options::OptionRegistry &opts, da_int 
 }
 
 } // namespace da_pca
+} // namespace ARCH
 
 #endif //PCA_OPTIONS_HPP

@@ -5,3 +5,5 @@ pytest
 scikit-learn
 pylint
 setuptools
+auditwheel
+delvewheel

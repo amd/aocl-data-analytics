@@ -33,7 +33,7 @@
 
 /** \{
  * \brief Set an option, to be stored inside the \p handle argument.
- * \param[in,out] handle the \ref da_handle which will store the value of the option.
+ * \param[inout] handle the \ref da_handle which will store the value of the option.
  * \param[in] option the name of the option to set.
  * \param[in] value the value to set the option to.
  * \return \ref da_status. The function returns:
@@ -51,7 +51,7 @@ da_status da_options_set_string(da_handle handle, const char *option, const char
 
 /** \{
  * \brief Set an option, to be stored inside the \p handle argument.
- * \param[in,out] handle the \ref da_handle which will store the value of the option.
+ * \param[inout] handle the \ref da_handle which will store the value of the option.
  * \param[in] option the name of the option to set.
  * \param[in] value the value to set the option to.
  * \return \ref da_status. The function returns:
@@ -141,7 +141,7 @@ da_status da_options_print(da_handle handle);
 
 /** \{
  * \brief Set an option, to be stored inside the \p store argument.
- * \param[in,out] store the \ref da_datastore which will store the value of the option.
+ * \param[inout] store the \ref da_datastore which will store the value of the option.
  * \param[in] option the name of the option to set.
  * \param[in] value the value to set the option to.
  * \return \ref da_status. The function returns:
@@ -161,7 +161,7 @@ da_status da_datastore_options_set_string(da_datastore store, const char *option
 
 /** \{
  * \brief Set an option, to be stored inside the \p store argument.
- * \param[in,out] store the \ref da_datastore which will store the value of the option.
+ * \param[inout] store the \ref da_datastore which will store the value of the option.
  * \param[in] option the name of the option to set.
  * \param[in] value the value to set the option to.
  * \return \ref da_status. The function returns:

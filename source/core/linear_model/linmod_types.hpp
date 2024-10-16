@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,11 +30,12 @@
 
 #include "optim_types.hpp"
 
-namespace da_linmod {
+namespace da_linmod_types {
+
 enum linmod_method {
-    undefined = da_optim::solvers::solver_undefined,
-    lbfgsb = da_optim::solvers::solver_lbfgsb,
-    coord = da_optim::solvers::solver_coord,
+    undefined = da_optim_types::solvers::solver_undefined,
+    lbfgsb = da_optim_types::solvers::solver_lbfgsb,
+    coord = da_optim_types::solvers::solver_coord,
     svd = 30,
     cholesky = 31,
     cg = 32,
@@ -69,6 +70,6 @@ enum logistic_constraint {
     rsc = 1, // Reference category constraint
     ssc = 2, // Symmetric side constraint
 };
-} // namespace da_linmod
+} // namespace da_linmod_types
 
 #endif //LINMOD_TYPES_HPP

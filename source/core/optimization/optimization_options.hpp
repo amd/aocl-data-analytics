@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,24 +21,19 @@
  *
  * ************************************************************************ */
 
-#ifndef OPTIMIZATION_OPTIONS_HPP
-#define OPTIMIZATION_OPTIONS_HPP
-
 #include "da_error.hpp"
+#include "macros.h"
 #include "optim_types.hpp"
 #include "options.hpp"
 #include <limits>
 
-namespace da_optimization_options {
-enum storage_scheme { fortran = 1, c = 2 };
-enum regularization { quadratic = 2, cubic = 3 };
-} // namespace da_optimization_options
+namespace ARCH {
 
 template <class T>
 inline da_status register_optimization_options(da_errors::da_error_t &err,
                                                da_options::OptionRegistry &opts) {
     using namespace da_options;
-    using namespace da_optimization_options;
+    using namespace da_optim_types;
 
     const T rmax = std::numeric_limits<T>::max();
 
@@ -186,31 +181,32 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("ralfit convergence abs tol fun",
-                             "Absolute tolerance to declare convergence for the "
-                             "iterative optimization step. See "
-                             "details in optimization solver documentation.",
-                             0.0, da_options::lbound_t::greaterthan, 1.0,
-                             da_options::ubound_t::lessthan, 1.0e-8, "10^{-8}"));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence abs tol fun",
+            "Absolute tolerance to declare convergence for the "
+            "iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
+
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("ralfit convergence rel tol fun",
-                             "Relative tolerance to declare convergence for the "
-                             "iterative optimization step. See "
-                             "details in optimization solver documentation.",
-                             0.0, da_options::lbound_t::greaterthan, 1.0,
-                             da_options::ubound_t::lessthan, 1.0e-8, "10^{-8}"));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence rel tol fun",
+            "Relative tolerance to declare convergence for the "
+            "iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("ralfit convergence abs tol grd",
-                             "Absolute tolerance on the gradient norm to declare "
-                             "convergence for the iterative optimization step. See "
-                             "details in optimization solver documentation.",
-                             0.0, da_options::lbound_t::greaterthan, 1.0,
-                             da_options::ubound_t::lessthan, 1.0e-5, "10^{-5}"));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence abs tol grd",
+            "Absolute tolerance on the gradient norm to declare "
+            "convergence for the iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            tol.safe_eps((T)500), tol.safe_eps_latex((T)500)));
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -219,7 +215,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            1.0e-8, "10^{-8}"));
+            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -255,11 +251,11 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         os = std::make_shared<OptionString>(
             OptionString("optim method", "Select optimization solver to use.",
-                         {{"lbfgsb", da_optim::solvers::solver_lbfgsb},
-                          {"lbfgs", da_optim::solvers::solver_lbfgsb},
-                          {"bfgs", da_optim::solvers::solver_lbfgsb},
-                          {"coord", da_optim::solvers::solver_coord},
-                          {"ralfit", da_optim::solvers::solver_ralfit}},
+                         {{"lbfgsb", da_optim_types::solvers::solver_lbfgsb},
+                          {"lbfgs", da_optim_types::solvers::solver_lbfgsb},
+                          {"bfgs", da_optim_types::solvers::solver_lbfgsb},
+                          {"coord", da_optim_types::solvers::solver_coord},
+                          {"ralfit", da_optim_types::solvers::solver_ralfit}},
                          "lbfgsb"));
         opts.register_opt(os);
 
@@ -291,19 +287,6 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
         opts.register_opt(os);
 
         os = std::make_shared<OptionString>(OptionString(
-            "storage scheme",
-            "Define the storage scheme used to store multi-dimensional arrays (Jacobian "
-            "matrix, "
-            "etc).",
-            {{"fortran", storage_scheme::fortran},
-             {"f", storage_scheme::fortran},
-             {"column-major", storage_scheme::fortran},
-             {"c", storage_scheme::c},
-             {"row-major", storage_scheme::c}},
-            "c"));
-        opts.register_opt(os);
-
-        os = std::make_shared<OptionString>(OptionString(
             "regularization power", "Value of the regularization power term.",
             {{"quadratic", regularization::quadratic}, {"cubic", regularization::cubic}},
             "quadratic"));
@@ -321,4 +304,4 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
     return da_status_success;
 }
 
-#endif //OPTIMIZATION_OPTIONS_HPP
+} // namespace ARCH

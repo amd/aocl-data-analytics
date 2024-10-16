@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@ KMeans tests, check output of skpatch versus sklearn
 
 # pylint: disable = import-outside-toplevel, reimported, no-member
 
+import warnings
 import numpy as np
 import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
@@ -80,8 +81,9 @@ def test_kmeans(precision):
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn.cluster import KMeans
-    kmeans_sk = KMeans(n_clusters=2, init=c)
-    kmeans_sk.fit(a)
+    with warnings.catch_warnings(record=True):
+        kmeans_sk = KMeans(n_clusters=2, init=c)
+        kmeans_sk.fit(a)
     sk_centres = kmeans_sk.cluster_centers_
     sk_labels = kmeans_sk.labels_
     sk_inertia = kmeans_sk.inertia_
@@ -133,7 +135,10 @@ def test_double_solve(precision):
     from sklearn.cluster import KMeans
     kmeans_da = KMeans(n_clusters=2)
     kmeans_da = kmeans_da.fit(a)
+    inertia_pre = kmeans_da.inertia_
     kmeans_da = kmeans_da.fit(a)
+    inertia_post = kmeans_da.inertia_
+    assert not np.any(inertia_pre - inertia_post)
 
 
 def test_kmeans_errors():
@@ -190,6 +195,6 @@ def test_kmeans_errors():
 
 
 if __name__ == "__main__":
-    test_kmeans()
-    test_double_solve()
+    test_kmeans(precision=np.float64)
+    test_double_solve(precision=np.float64)
     test_kmeans_errors()

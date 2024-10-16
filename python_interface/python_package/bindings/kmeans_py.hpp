@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -41,12 +41,12 @@
 namespace py = pybind11;
 
 class kmeans : public pyda_handle {
-    da_precision precision = da_double;
 
   public:
     kmeans(da_int n_clusters = 1, std::string initialization_method = "k-means++",
            da_int n_init = 10, da_int max_iter = 300, da_int seed = -1,
-           std::string algorithm = "elkan", std::string prec = "double") {
+           std::string algorithm = "elkan", std::string prec = "double",
+           bool check_data = false) {
         if (prec == "double")
             da_handle_init<double>(&handle, da_handle_kmeans);
         else if (prec == "single") {
@@ -67,23 +67,38 @@ class kmeans : public pyda_handle {
         exception_check(status);
         status = da_options_set_int(handle, "n_init", n_init);
         exception_check(status);
+        if (check_data == true) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
+            exception_check(status);
+        }
     }
     ~kmeans() { da_handle_destroy(&handle); }
 
     template <typename T>
-    void fit(py::array_t<T, py::array::f_style> A,
-             std::optional<py::array_t<T, py::array::f_style>> C, T tol = 1.0e-4) {
+    void fit(py::array_t<T> A, std::optional<py::array_t<T>> C, T tol = 1.0e-4) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
         status = da_options_set(handle, "convergence tolerance", tol);
         exception_check(status);
-        da_int n_samples = A.shape()[0], n_features = A.shape()[1], lda = A.shape()[0];
+        da_int n_samples, n_features, lda, ldc, tmp1, tmp2;
+
+        get_numpy_array_properties(A, n_samples, n_features, lda);
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column-major");
+        }
+        exception_check(status);
         status = da_kmeans_set_data(handle, n_samples, n_features, A.data(), lda);
+
         exception_check(status);
         if (C.has_value()) {
+
+            get_numpy_array_properties(C.value(), tmp1, tmp2, ldc);
+
             status = da_options_set_string(handle, "initialization method", "supplied");
-            exception_check(status);
-            da_int ldc = C->shape()[0];
             status = da_kmeans_set_init_centres(handle, C->data(), ldc);
             exception_check(status);
         }
@@ -91,9 +106,10 @@ class kmeans : public pyda_handle {
         exception_check(status);
     }
 
-    template <typename T> py::array_t<T> transform(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> transform(py::array_t<T> X) {
         da_status status;
-        da_int m_samples = X.shape()[0], m_features = X.shape()[1], ldx = X.shape()[0];
+        da_int m_samples, m_features, ldx;
+        get_numpy_array_properties(X, m_samples, m_features, ldx);
 
         T result[5];
         da_int dim = 5;
@@ -101,11 +117,19 @@ class kmeans : public pyda_handle {
         status = da_handle_get_result(handle, da_rinfo, &dim, result);
         exception_check(status);
 
-        // define the output vector
-        da_int n_clusters = (da_int)result[2];
-        da_int ldx_transform = m_samples;
+        // Define the output vector
+        da_int n_clusters = (da_int)result[2], ldx_transform;
         size_t shape[2]{(size_t)m_samples, (size_t)n_clusters};
-        size_t strides[2]{sizeof(T), sizeof(T) * m_samples};
+        size_t strides[2];
+        if (order == c_contiguous) {
+            ldx_transform = n_clusters;
+            strides[0] = sizeof(T) * n_clusters;
+            strides[1] = sizeof(T);
+        } else {
+            ldx_transform = m_samples;
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * m_samples;
+        }
         auto X_transform = py::array_t<T>(shape, strides);
 
         status = da_kmeans_transform(handle, m_samples, m_features, X.data(), ldx,
@@ -114,10 +138,10 @@ class kmeans : public pyda_handle {
         return X_transform;
     }
 
-    template <typename T>
-    py::array_t<da_int> predict(py::array_t<T, py::array::f_style> Y) {
+    template <typename T> py::array_t<da_int> predict(py::array_t<T> Y) {
         da_status status;
-        da_int k_samples = Y.shape()[0], k_features = Y.shape()[1], ldy = Y.shape()[0];
+        da_int k_samples, k_features, ldy;
+        get_numpy_array_properties(Y, k_samples, k_features, ldy);
 
         T result[5];
         da_int dim = 5;
@@ -177,10 +201,20 @@ class kmeans : public pyda_handle {
 
         std::vector<size_t> shape, strides;
         shape.push_back(dim1);
-        strides.push_back(stride_size);
         if (dim2 > 1) {
             shape.push_back(dim2);
-            strides.push_back(stride_size * dim1);
+        }
+
+        if (order == c_contiguous) {
+            if (dim2 > 1) {
+                strides.push_back(stride_size * dim2);
+            }
+            strides.push_back(stride_size);
+        } else {
+            strides.push_back(stride_size);
+            if (dim2 > 1) {
+                strides.push_back(stride_size * dim1);
+            }
         }
 
         if (precision == da_single) {

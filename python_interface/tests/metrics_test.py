@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -22,7 +22,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = missing-module-docstring
+# pylint: disable = invalid-name, possibly-used-before-assignment, unused-variable
 """
 Metric Python test script
 """
@@ -36,7 +36,8 @@ import aoclda.metrics as da_metrics
     np.float64, np.float32
 ])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-@pytest.mark.parametrize("metric", ["euclidean", "sqeuclidean"])
+@pytest.mark.parametrize("metric", ['euclidean', 'l2', 'sqeuclidean', 'manhattan',
+                        'l1', 'cityblock', 'cosine', 'minkowski'])
 
 def test_metrics_functionality(numpy_precision, numpy_order, metric):
     """
@@ -50,10 +51,14 @@ def test_metrics_functionality(numpy_precision, numpy_order, metric):
     Y = np.array([[7., 8. ],
                   [9., 10.]], dtype=numpy_precision, order=numpy_order)
 
-    euclidean_distance_XY = da_metrics.pairwise_distances(X, Y, metric=metric)
+    if metric=="minkowski":
+        p = 4
+        computed_distance_XY = da_metrics.pairwise_distances(X, Y, metric=metric, p=p)
+    else:
+        computed_distance_XY = da_metrics.pairwise_distances(X, Y, metric=metric)
 
     sqrt2 = math.sqrt(2)
-    if metric == "euclidean":
+    if metric in ["euclidean", "l2"]:
         expected_XY = np.array([[6.*sqrt2, 8.*sqrt2],
                                 [4.*sqrt2, 6.*sqrt2],
                                 [2.*sqrt2, 4.*sqrt2]])
@@ -67,20 +72,56 @@ def test_metrics_functionality(numpy_precision, numpy_order, metric):
         expected_XX = np.array([[0.,  8., 32.],
                                 [8.,  0.,  8.],
                                 [32., 8.,  0.]])
-    # Check that distance matrix had the expected shape
-    assert euclidean_distance_XY.shape == expected_XY.shape
-    # Compare matrices element-wise
-    tol = np.finfo(numpy_precision).eps
-    assert np.allclose(euclidean_distance_XY, expected_XY, rtol=tol)
-    if metric == "euclidean":
-        euclidean_distance_XX = da_metrics.pairwise_distances(X)
-    else:
-        euclidean_distance_XX = da_metrics.pairwise_distances(X, metric=metric)
+    elif metric in ["manhattan", "l1", "cityblock"]:
+        expected_XY = np.array([[12., 16.],
+                                [ 8., 12.],
+                                [ 4.,  8.]])
+        expected_XX = np.array([[0.,  4., 8.],
+                                [4.,  0.,  4.],
+                                [8., 4,  0.]])
+    elif metric == "cosine":
+        expected_XY = np.array([[0.0323827276031562, 0.0360073817939262],
+                                [0.0028358795133868, 0.0039858440287971],
+                                [0.0002901915325176, 0.0007248347423349]],
+                                dtype=numpy_precision)
+        expected_XX = np.array([[0.,                 0.0161300899000926, 0.0265828316664239],
+                                [0.0161300899000926, 0.,                 0.0013123365234113],
+                                [0.0265828316664239, 0.0013123365234113, 0.                ]],
+                                dtype=numpy_precision)
+    elif metric == "minkowski":
+        expected_XY = np.array([[7.135242690016327, 9.513656920021768],
+                                [4.756828460010884, 7.135242690016327],
+                                [2.378414230005442, 4.756828460010884]], dtype=numpy_precision)
+        expected_XX = np.array([[0.,                2.378414230005442, 4.756828460010884],
+                                [2.378414230005442, 0.,                2.378414230005442],
+                                [4.756828460010884, 2.378414230005442, 0.               ]],
+                                dtype=numpy_precision)
+
+    assert X.dtype == computed_distance_XY.dtype
 
     # Check that distance matrix had the expected shape
-    assert euclidean_distance_XX.shape == expected_XX.shape
+    assert computed_distance_XY.shape == expected_XY.shape
     # Compare matrices element-wise
-    assert np.allclose(euclidean_distance_XX, expected_XX, rtol=tol)
+    if metric=="cosine":
+        tol = 10*np.finfo(numpy_precision).eps
+    else:
+        tol = np.finfo(numpy_precision).eps
+    assert np.allclose(computed_distance_XY, expected_XY, atol=tol)
+
+    if metric == "euclidean":
+        computed_distance_XX = da_metrics.pairwise_distances(X)
+    elif metric=="minkowski":
+        p = 4.0
+        computed_distance_XX = da_metrics.pairwise_distances(X, metric=metric, p=p)
+    else:
+        computed_distance_XX = da_metrics.pairwise_distances(X, metric=metric)
+
+    assert X.dtype == computed_distance_XX.dtype
+
+    # Check that distance matrix had the expected shape
+    assert computed_distance_XX.shape == expected_XX.shape
+    # Compare matrices element-wise
+    assert np.allclose(computed_distance_XX, expected_XX, atol=tol)
 
 @pytest.mark.parametrize("numpy_precision", [
     np.float64, np.float32
@@ -93,11 +134,7 @@ def test_metrics_error_exits(numpy_precision):
     Y = np.array([[1, 1], [2, 2]], dtype=numpy_precision)
 
     with pytest.raises(ValueError):
-        euclidean_distance_XX = da_metrics.pairwise_distances(X, Y=None, metric="nonexistent")
+        computed_distance_XX = da_metrics.pairwise_distances(X, Y=None, metric="nonexistent")
 
     with pytest.raises(ValueError):
-        euclidean_distance_XX = da_metrics.pairwise_distances(X, Y=None,
-            force_all_finite="nonexistent")
-
-    with pytest.raises(ValueError):
-        euclidean_distance_XX = da_metrics.pairwise_distances(X, Y)
+        computed_distance_XX = da_metrics.pairwise_distances(X, Y)

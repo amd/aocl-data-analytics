@@ -69,9 +69,8 @@ class kmeans(kmeans_sklearn):
         # new internal attributes
         self.aocl = True
         self.seed = random_state
-        self.precision = "double"
 
-        ## guard against some deprecated options in Scikit-learn
+        # guard against some deprecated options in Scikit-learn
         algorithm_internal = self.algorithm
         if algorithm_internal == "full" or algorithm_internal == "auto":
             algorithm_internal = "lloyd"
@@ -83,42 +82,20 @@ class kmeans(kmeans_sklearn):
             self.seed = -1
 
         if isinstance(init, np.ndarray):
-            self.kmeans_double = kmeans_da(n_clusters, initialization_method = "supplied", n_init = 1,
-                                    precision="double", max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = algorithm_internal)
-            self.kmeans_single = kmeans_da(n_clusters, initialization_method = "supplied", n_init = 1,
-                                    precision="single", max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = algorithm_internal)
+            self.kmeans = kmeans_da(n_clusters, initialization_method="supplied", n_init=1,
+                                    max_iter=self.max_iter, seed=self.seed, C=init,
+                                    algorithm=algorithm_internal, tol=self.tol)
         elif n_init == "auto":
-            self.kmeans_double = kmeans_da(n_clusters, initialization_method = self.init, n_init = 10,
-                                    precision="double", max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = algorithm_internal)
-            self.kmeans_single = kmeans_da(n_clusters, initialization_method = self.init, n_init = 10,
-                                    precision="single", max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = algorithm_internal)
+            self.kmeans = kmeans_da(n_clusters, initialization_method=self.init, n_init=10,
+                                    max_iter=self.max_iter, seed=self.seed, tol=self.tol,
+                                    algorithm=algorithm_internal)
         else:
-            self.kmeans_double = kmeans_da(n_clusters, initialization_method = self.init,
-                                    n_init = self.n_init, precision="double",
-                                    max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = algorithm_internal)
-            self.kmeans_single = kmeans_da(n_clusters, initialization_method = self.init,
-                                    n_init = self.n_init, precision="single",
-                                    max_iter = self.max_iter, seed = self.seed,
-                                    algorithm = algorithm_internal)
+            self.kmeans = kmeans_da(n_clusters, initialization_method=self.init,
+                                    n_init=self.n_init, max_iter=self.max_iter, tol=self.tol,
+                                    seed=self.seed, algorithm=algorithm_internal)
 
-        self.kmeans = self.kmeans_double
-
-    def fit(self, X, y=None, sample_weight = None):
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.kmeans = self.kmeans_single
-            self.kmeans_double = None
-
-        if isinstance(self.init, np.ndarray):
-            self.kmeans.fit(X, C = self.init, tol = self.tol)
-        else:
-            self.kmeans.fit(X, tol = self.tol)
+    def fit(self, X, y=None, sample_weight=None):
+        self.kmeans.fit(X)
         return self
 
     def transform(self, X):
@@ -175,19 +152,19 @@ class kmeans(kmeans_sklearn):
     # return None if not yet written
     @property
     def cluster_centers_(self):
-        return self.kmeans.get_cluster_centres()
+        return self.kmeans.cluster_centres
 
     @property
     def labels_(self):
-        return self.kmeans.get_labels()
+        return self.kmeans.labels
 
     @property
     def inertia_(self):
-        return self.kmeans.get_inertia().item(0)
+        return self.kmeans.inertia.item(0)
 
     @property
     def n_iter_(self):
-        return self.kmeans.get_n_iter()
+        return self.kmeans.n_iter
 
     @property
     def n_features_in_(self):

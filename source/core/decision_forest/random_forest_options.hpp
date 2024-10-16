@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,18 +25,21 @@
  *
  */
 
-#ifndef FOREST_OPTIONS_HPP
-#define FOREST_OPTIONS_HPP
-
+#include "aoclda_types.h"
+#include "da_error.hpp"
 #include "decision_tree_types.hpp"
+#include "macros.h"
 #include "options.hpp"
-#include "random_forest.hpp"
 
-namespace da_random_forest {
-using namespace da_decision_tree;
+namespace ARCH {
+
+namespace da_decision_forest {
+
+using namespace da_decision_tree_types;
 
 template <class T>
-inline da_status register_forest_options(da_options::OptionRegistry &opts) {
+inline da_status register_forest_options(da_options::OptionRegistry &opts,
+                                         da_errors::da_error_t &err) {
     da_status status = da_status_success;
 
     try {
@@ -55,6 +58,11 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
                           {"misclassification", misclassification},
                           {"misclass", misclassification}},
                          "gini"));
+        status = opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(
+            OptionString("sorting method", "Select sorting method to use.",
+                         {{"stl", stl_sort}, {"boost", boost_sort}}, "boost"));
         status = opts.register_opt(os);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
@@ -142,16 +150,16 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts) {
         status = opts.register_opt(oi);
 
     } catch (std::bad_alloc &) {
-        return da_status_memory_error; // LCOV_EXCL_LINE
-    } catch (std::invalid_argument &e) {
-        std::cerr << e.what() << std::endl; // LCOV_EXCL_LINE
-        return da_status_internal_error;    // LCOV_EXCL_LINE
-    } catch (...) {                         // LCOV_EXCL_LINE
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) { // LCOV_EXCL_LINE
         // Invalid use of the constructor, shouldn't happen (invalid_argument)
-        return da_status_internal_error; // LCOV_EXCL_LINE
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
     }
 
     return status;
 }
-} // namespace da_random_forest
-#endif
+} // namespace da_decision_forest
+
+} // namespace ARCH

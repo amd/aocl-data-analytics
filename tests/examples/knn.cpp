@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -50,27 +50,30 @@ int main() {
     da_int n_samples = 6;
     da_int n_queries = 3;
     da_int n_neigh = 3;
-    std::vector<double> X_train{-1., -2., -3., 1., 2., 3.,  -1., -1., -2.,
-                                3.,  5.,  -1., 2., 3., -1., 1.,  1.,  2.};
+
+    std::vector<double> X_train{-1, -1, 2, -2, -1, 3, -3, -2, -1,
+                                1,  3,  1, 2,  5,  1, 3,  -1, 2};
     std::vector<da_int> y_train{1, 2, 0, 1, 2, 2};
 
     // Set up and train the kNN
     da_handle knn_handle = nullptr;
     pass = da_handle_init_d(&knn_handle, da_handle_knn) == da_status_success;
+    da_options_set_string(knn_handle, "storage order", "row-major");
     pass &= da_knn_set_training_data_d(knn_handle, n_samples, n_features, X_train.data(),
-                                       n_samples, y_train.data()) == da_status_success;
+                                       n_features, y_train.data()) == da_status_success;
     // Set options
     pass &= da_options_set_int(knn_handle, "number of neighbors", n_neigh) ==
             da_status_success;
     pass &= da_options_set_string(knn_handle, "metric", "euclidean") == da_status_success;
     pass &= da_options_set_string(knn_handle, "weights", "uniform") == da_status_success;
+
     if (!pass) {
         std::cout << "Something went wrong setting up the knn data and "
                      "optional parameters.\n";
         return 1;
     }
 
-    std::vector<double> X_test{-2., -1., 2., 2., -2., 1., 3., -1., -3.};
+    std::vector<double> X_test{-2, 2, 3, -1, -2, -1, 2, 1, -3};
 
     // Compute the k-nearest neighbors and return the distances
     std::vector<double> k_dist(n_neigh * n_queries);

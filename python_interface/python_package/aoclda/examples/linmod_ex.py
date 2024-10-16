@@ -37,7 +37,7 @@ def linmod_example():
     """
     Linear regression with an intercept variable
     """
-    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9]])
+    X = np.array([[1., 1.], [2., 3.], [3., 5.], [4., 8.], [5., 7.], [6., 9.]])
     y = np.array([3., 6.5, 10., 12., 13., 19.])
     lmod = linmod("mse", intercept=True)
     lmod.fit(X, y)

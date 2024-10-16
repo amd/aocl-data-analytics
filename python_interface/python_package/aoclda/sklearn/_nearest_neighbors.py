@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -26,7 +26,7 @@
 """
 Patching scikit-learn classifier: KNeighborsClassifier
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, too-many-instance-attributes, too-many-arguments
+# pylint: disable = too-many-ancestors, super-init-not-called, too-many-arguments, too-many-instance-attributes
 
 import warnings
 from aoclda.nearest_neighbors import knn_classifier as knn_classifier_da
@@ -74,45 +74,22 @@ class KNeighborsClassifier(KNeighborsClassifier_sklearn):
         if algorithm not in ('brute'):
             algorithm = 'brute'
             warnings.warn(
-                "invalid algorithm chosen, defaulting to brute.", category=RuntimeWarning)
+                "Invalid algorithm chosen, defaulting to brute.", category=RuntimeWarning)
         if weights not in ('uniform','distance'):
             raise ValueError(
                 "invalid weights chosen, available options are 'uniform' and 'distance'.")
-        if metric == 'minkowski':
-            if p != 2:
-                raise ValueError(
-                "invalid Minkowski parameter, available option is 2.")
-            # if the error is not thrown minkowski with p=2 is requested, so euclidean
-            metric = 'euclidean'
 
-        available_metrics = ['euclidean', 'sqeuclidean', 'minkowski']
+        available_metrics = ['euclidean', 'l2', 'sqeuclidean', 'manhattan',
+                             'l1', 'cityblock', 'cosine', 'minkowski']
         if metric not in available_metrics:
             raise ValueError(
                 "invalid metric provided, available options are ", available_metrics)
 
-        self.knn_classifier_double = knn_classifier_da(n_neighbors = n_neighbors,
-                                                       weights = weights,
-                                                       algorithm = algorithm,
-                                                       metric = metric,
-                                                       precision = "double")
-
-        self.knn_classifier_single = knn_classifier_da(n_neighbors = n_neighbors,
-                                                       weights = weights,
-                                                       algorithm = algorithm,
-                                                       metric = metric,
-                                                       precision = "single")
-
-        self.knn_classifier = self.knn_classifier_double
+        self.knn_classifier = knn_classifier_da(n_neighbors = n_neighbors, weights = weights,
+                                                algorithm = algorithm, metric = metric, p = p)
 
     def fit(self, X, y):
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.knn_classifier = self.knn_classifier_single
-            self.knn_classifier_double = None
-
         self.knn_classifier.fit(X, y)
-
         return self
 
     def kneighbors(self, X=None, n_neighbors=None, return_distance=True):

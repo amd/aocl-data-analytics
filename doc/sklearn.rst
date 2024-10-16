@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -74,6 +74,9 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
      - Notes
    * - ``sklearn.cluster.KMeans``
      - ``fit``, ``transform``, ``predict``, ``fit_transform`` and ``fit_predict`` methods and various class attributes
+   * - ``sklearn.cluster.DBSCAN``
+     - * ``fit`` and ``fit_predict`` methods
+       * brute force algorithm and ``euclidean`` distance only
    * - ``sklearn.decomposition.PCA``
      - ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes
    * - ``sklearn.linear_model.LinearRegression``
@@ -86,16 +89,33 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
      - ``fit`` and ``predict`` methods and various class attributes
    * - ``sklearn.linear_model.LogisticRegression``
      - ``fit`` and ``predict`` methods and various class attributes
+   * - ``sklearn.metrics.pairwise``
+     - * ``pairwise_distances`` method with ``cityblock``, ``cosine``, ``euclidean``, ``sqeuclidean``, ``l1``, ``l2``, ``manhattan`` and ``minkowski`` distances
+       * ``ensure_all_finite`` option is not supported
+   * - ``sklearn.neighbors.KNeighborsClassifier``
+     - * ``fit``, ``kneighbors``, ``predict`` and ``predict_proba`` methods
+       * brute force algorithm only
+       * ``cityblock``, ``cosine``, ``euclidean``, ``sqeuclidean``, ``l1``, ``l2``, ``manhattan`` and ``minkowski`` distance metrics supported
+   * - ``sklearn.svm.SVC``
+     - * ``fit``, ``predict``, ``score`` and ``decision_function`` methods
+       * user-callable and precomputed kernels are not supported
+   * - ``sklearn.svm.NuSVC``
+     - * ``fit``, ``predict``, ``score`` and ``decision_function`` methods
+       * user-callable and precomputed kernels are not supported
+   * - ``sklearn.svm.SVR``
+     - * ``fit``, ``predict`` and ``score`` methods
+       * user-callable and precomputed kernels are not supported
+   * - ``sklearn.svm.NuSVR``
+     - * ``fit``, ``predict`` and ``score`` methods
+       * user-callable and precomputed kernels are not supported
    * - ``sklearn.tree.DecisionTreeClassifier``
      - ``fit``, ``predict``, ``score``, ``predict_proba`` and ``predict_log_proba`` methods and various class attributes
    * - ``sklearn.tree.RandomForestClassifier``
      - ``fit``, ``predict``, ``score``, ``predict_proba`` and ``predict_log_proba`` methods and various class attributes
-   * - ``sklearn.metrics.pairwise``
-     - ``pairwise_distances`` method with ``euclidean`` and ``sqeuclidean`` distances
 
 
 Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after
-patching, you attempt to call class member functions which have not been implemented by AOCL-DA,
+patching, you attempt to call class member functions which have not been implemented in AOCL-DA,
 then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
 you use the Python APIs described on the subsequent pages of this manual.
 

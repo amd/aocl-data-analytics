@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -35,7 +35,7 @@ Clustering APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.clustering.kmeans(n_clusters=1, initialization_method='k-means++', n_init=10, max_iter=300, seed=-1, algorithm='elkan',precision="double")
+      .. autoclass:: aoclda.clustering.kmeans(n_clusters=1, initialization_method='k-means++', C=None, n_init=10, max_iter=300, seed=-1, algorithm='elkan', tol=1.0e-4, check_data=false)
          :members:
 
    .. tab-item:: C
@@ -69,3 +69,27 @@ Clustering APIs
       .. doxygenfunction:: da_kmeans_predict_s
          :outline:
       .. doxygenfunction:: da_kmeans_predict_d
+
+DBSCAN
+========================================
+
+.. tab-set::
+
+   .. tab-item:: Python
+
+      .. autoclass:: aoclda.clustering.DBSCAN(min_samples=5, metric='euclidean', algorithm='brute', leaf_size=30, eps=0.5, power=2.0, check_data=false)
+         :members:
+
+   .. tab-item:: C
+
+      .. _da_dbscan_set_data:
+
+      .. doxygenfunction:: da_dbscan_set_data_s
+         :outline:
+      .. doxygenfunction:: da_dbscan_set_data_d
+
+      .. _da_dbscan_compute:
+
+      .. doxygenfunction:: da_dbscan_compute_s
+         :outline:
+      .. doxygenfunction:: da_dbscan_compute_d

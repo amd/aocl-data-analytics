@@ -31,11 +31,9 @@ import numpy as np
 import pytest
 from aoclda.decision_forest import decision_forest
 
-@pytest.mark.parametrize("da_precision, numpy_precision", [
-    ("double", np.float64), ("single", np.float32),
-])
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_decision_tree_functionality(da_precision, numpy_precision, numpy_order):
+def test_decision_forest_functionality(numpy_precision, numpy_order):
     """
     Test the functionality of the Python wrapper
     """
@@ -49,7 +47,7 @@ def test_decision_tree_functionality(da_precision, numpy_precision, numpy_order)
     y_test = np.array([[1]],
                       dtype=numpy_precision, order=numpy_order)
 
-    clf = decision_forest(precision=da_precision)
+    clf = decision_forest()
     clf.fit(X_train, y_train)
 
     pred = clf.predict(X_test)

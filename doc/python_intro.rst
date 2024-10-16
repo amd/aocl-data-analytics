@@ -35,19 +35,23 @@ This section contains general instructions for calling AOCL-DA using the Python 
 Installation
 =============
 
-Your AOCL-DA package comes bundled with a Python wheel, ``aoclda-*.whl``, where ``*`` depends on your particular system.
+AOCL-DA is available as a Python wheel, ``aoclda-*.whl``, where ``*`` depends on your particular system.
 To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.whl``. This will install the necessary libraries and dependencies.
+For Linux users, if you find that your system is incompatible with the supplied wheel, you can instead install the Python package using the Spack recipe at the following link: https://www.amd.com/en/developer/zen-software-studio/applications/spack/spack-aocl.html
 
 .. note::
-   Python support on Windows is currently experimental. A Fortran runtime library ``libifcore-mt.lib`` is required, so you will need to install the Intel Fortran compiler and set the environment variable ``FORTRAN_RUNTIME`` to point to the directory containing the corresponding DLL.
-   You may also need to install an OpenMP runtime and add it to your Windows environment. If you encounter issues using the Python wheel on Windows, please e-mail us on
+   Python support on Windows is currently experimental, and building from source is required. Source code and compilation instructions are available at https://github.com/amd/aocl-data-analytics/. If you encounter issues, please e-mail us on
    toolchainsupport@amd.com.
 
 NumPy arrays
 =============
 
 AOCL-DA Python interfaces typically expect data to be supplied as NumPy arrays. These can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
-The AOCL-DA interface will convert C-style NumPy arrays to Fortran style, so for best performance, it is recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions.
+For best performance, it is generally recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions since row-major arrays may be copied and transposed internally.
+
+In order to provide the best possible performance, the algorithmic functions will not automatically check for
+``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behaviour is undefined.
+It is therefore the user's responsibility to ensure data is sanitized (this can be done in Python, or by setting the ``check_data`` optional argument in the appropriate algorithmic APIs).
 
 .. _python_examples:
 
@@ -82,4 +86,4 @@ You can also inspect and run the examples from a Python interpreter. For example
     >>> from aoclda.examples import pca_ex
     >>> import inspect
     >>> print(''.join(inspect.getsourcelines(pca_ex)[0]))
-    >>> pca_ex.test_pca()
+    >>> pca_ex.pca_example()

@@ -39,14 +39,14 @@
 #include <stdexcept>
 
 class decision_tree : public pyda_handle {
-    da_precision precision = da_double;
     da_int n_class;
 
   public:
     decision_tree(da_int seed = -1, da_int max_depth = 29, da_int max_features = 0,
                   std::string criterion = "gini", da_int min_samples_split = 2,
                   std::string build_order = "breadth first",
-                  std::string prec = "double") {
+                  std::string sort_method = "boost", std::string prec = "double",
+                  bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_tree);
@@ -67,6 +67,13 @@ class decision_tree : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "tree building order", build_order.data());
         exception_check(status);
+        status = da_options_set(handle, "sorting method", sort_method.data());
+        exception_check(status);
+        if (check_data == true) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
+            exception_check(status);
+        }
     }
     ~decision_tree() { da_handle_destroy(&handle); }
 
@@ -77,9 +84,8 @@ class decision_tree : public pyda_handle {
     }
 
     template <typename T>
-    void fit(py::array_t<T, py::array::f_style> X, py::array_t<da_int> y,
-             T min_impurity_decrease = 0.0, T min_split_score = 0.0,
-             T feat_thresh = 0.0) {
+    void fit(py::array_t<T> X, py::array y, T min_impurity_decrease = 0.0,
+             T min_split_score = 0.0, T feat_thresh = 0.0) {
         da_status status;
 
         status =
@@ -90,70 +96,112 @@ class decision_tree : public pyda_handle {
         status = da_options_set(handle, "feature threshold", feat_thresh);
         exception_check(status);
 
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
-        n_class = (da_int)(std::round(*std::max_element(y.mutable_data(),
-                                                        y.mutable_data() + n_samples)) +
-                           1);
+        da_int n_samples, n_features, ldx;
 
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column-major");
+        }
+
+        auto y_int = py::array_t<da_int>(y); // Convert y to da_int.
+
+        n_class = (da_int)(std::round(*std::max_element(y_int.data(),
+                                                        y_int.data() + n_samples)) +
+                           1);
         status = da_tree_set_training_data(handle, n_samples, n_features, n_class,
-                                           X.mutable_data(), n_samples, y.mutable_data());
+                                           X.data(), ldx, y_int.data());
         exception_check(status); // throw an exception if status is not success
 
         status = da_tree_fit<T>(handle);
         exception_check(status);
     }
 
-    template <typename T>
-    T score(py::array_t<T, py::array::f_style> X_test, py::array_t<da_int> y_test) {
+    template <typename T> T score(py::array_t<T> X_test, py::array y_test) {
         da_status status;
+        da_int n_obs, d, ldx;
+
+        auto y_int = py::array_t<da_int>(y_test); // Convert y_test to da_int.
+
+        get_numpy_array_properties(X_test, n_obs, d, ldx);
+
         T score_val = 0.0;
-        da_int n_obs = X_test.shape()[0], d = X_test.shape()[1];
-        status = da_tree_score(handle, n_obs, d, X_test.mutable_data(), n_obs,
-                               y_test.mutable_data(), &score_val);
+
+        status =
+            da_tree_score(handle, n_obs, d, X_test.data(), ldx, y_int.data(), &score_val);
         exception_check(status);
         return score_val;
     }
 
-    template <typename T>
-    py::array_t<da_int> predict(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<da_int> predict(py::array_t<T> X) {
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+
+        da_int n_samples, n_features, ldx;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
         size_t shape[1]{(size_t)n_samples};
         size_t strides[1]{sizeof(da_int)};
+
         auto predictions = py::array_t<da_int>(shape, strides);
-        status = da_tree_predict(handle, n_samples, n_features, X.mutable_data(),
-                                 n_samples, predictions.mutable_data());
+        status = da_tree_predict(handle, n_samples, n_features, X.data(), ldx,
+                                 predictions.mutable_data());
         exception_check(status);
         return predictions;
     }
 
-    template <typename T>
-    py::array_t<T> predict_proba(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> predict_proba(py::array_t<T> X) {
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        da_int n_samples, n_features, ldx, ldy;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
         size_t shape[2]{(size_t)n_samples, (size_t)n_class};
-        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+
+        size_t strides[2];
+        if (order == c_contiguous) {
+            strides[0] = sizeof(T) * n_class;
+            strides[1] = sizeof(T);
+            ldy = n_class;
+        } else {
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * n_samples;
+            ldy = n_samples;
+        }
+
         auto proba = py::array_t<T>(shape, strides);
-        status =
-            da_tree_predict_proba(handle, n_samples, n_features, X.mutable_data(),
-                                  n_samples, proba.mutable_data(), n_class, n_samples);
+        status = da_tree_predict_proba(handle, n_samples, n_features, X.data(), ldx,
+                                       proba.mutable_data(), n_class, ldy);
+
         exception_check(status);
         return proba;
     }
 
-    template <typename T>
-    py::array_t<T> predict_log_proba(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> predict_log_proba(py::array_t<T> X) {
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+        da_int n_samples, n_features, ldx, ldy;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
         size_t shape[2]{(size_t)n_samples, (size_t)n_class};
-        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+        size_t strides[2];
+        if (order == c_contiguous) {
+            strides[0] = sizeof(T) * n_class;
+            strides[1] = sizeof(T);
+            ldy = n_class;
+        } else {
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * n_samples;
+            ldy = n_samples;
+        }
         auto proba = py::array_t<T>(shape, strides);
-        status = da_tree_predict_log_proba(handle, n_samples, n_features,
-                                           X.mutable_data(), n_samples,
-                                           proba.mutable_data(), n_class, n_samples);
+        status = da_tree_predict_log_proba(handle, n_samples, n_features, X.data(), ldx,
+                                           proba.mutable_data(), n_class, ldy);
         exception_check(status);
         return proba;
     }
@@ -217,7 +265,6 @@ class decision_tree : public pyda_handle {
 
 class decision_forest : public pyda_handle {
 
-    da_precision precision = da_double;
     da_int n_class;
 
   public:
@@ -225,7 +272,7 @@ class decision_forest : public pyda_handle {
                     da_int seed = -1, da_int max_depth = 29, da_int min_samples_split = 2,
                     std::string build_order = "breadth first", bool bootstrap = true,
                     std::string features_selection = "sqrt", da_int max_features = 0,
-                    std::string prec = "double") {
+                    std::string prec = "double", bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_forest);
@@ -255,6 +302,11 @@ class decision_forest : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "maximum features", max_features);
         exception_check(status);
+        if (check_data == true) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
+            exception_check(status);
+        }
     }
     ~decision_forest() { da_handle_destroy(&handle); }
 
@@ -271,9 +323,9 @@ class decision_forest : public pyda_handle {
     }
 
     template <typename T>
-    void fit(py::array_t<T, py::array::f_style> X, py::array_t<da_int> y,
-             T samples_factor = 0.8, T min_impurity_decrease = 0.0,
-             T min_split_score = 0.0, T feat_thresh = 0.03) {
+    void fit(py::array_t<T> X, py::array y, T samples_factor = 0.8,
+             T min_impurity_decrease = 0.0, T min_split_score = 0.0,
+             T feat_thresh = 0.03) {
         da_status status;
 
         status = da_options_set(handle, "bootstrap samples factor", samples_factor);
@@ -286,70 +338,116 @@ class decision_forest : public pyda_handle {
         status = da_options_set(handle, "feature threshold", feat_thresh);
         exception_check(status);
 
-        da_int n_obs = X.shape()[0], n_features = X.shape()[1];
-        n_class = (da_int)(std::round(*std::max_element(y.mutable_data(),
-                                                        y.mutable_data() + n_obs)) +
+        da_int n_samples, n_features, ldx;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
+        if (order == c_contiguous) {
+            status = da_options_set(handle, "storage order", "row-major");
+        } else {
+            status = da_options_set(handle, "storage order", "column-major");
+        }
+
+        auto y_int = py::array_t<da_int>(y); // Convert y to da_int.
+
+        n_class = (da_int)(std::round(*std::max_element(y_int.data(),
+                                                        y_int.data() + n_samples)) +
                            1);
 
-        status = da_forest_set_training_data(handle, n_obs, n_features, 2,
-                                             X.mutable_data(), n_obs, y.mutable_data());
+        status = da_forest_set_training_data(handle, n_samples, n_features, n_class,
+                                             X.data(), ldx, y_int.data());
         exception_check(status); // throw an exception if status is not success
 
         status = da_forest_fit<T>(handle);
         exception_check(status);
     }
 
-    template <typename T>
-    T score(py::array_t<T, py::array::f_style> X_test, py::array_t<da_int> y_test) {
+    template <typename T> T score(py::array_t<T> X_test, py::array y_test) {
         da_status status;
+
+        da_int n_obs, d, ldx;
+
+        auto y_int = py::array_t<da_int>(y_test); // Convert y_test to da_int.
+
+        get_numpy_array_properties(X_test, n_obs, d, ldx);
+
         T score_val = 0.0;
-        da_int n_obs = X_test.shape()[0], d = X_test.shape()[1];
-        status = da_forest_score(handle, n_obs, d, X_test.mutable_data(), n_obs,
-                                 y_test.mutable_data(), &score_val);
+
+        status = da_forest_score(handle, n_obs, d, X_test.data(), ldx, y_int.data(),
+                                 &score_val);
         exception_check(status);
         return score_val;
     }
 
-    template <typename T>
-    py::array_t<da_int> predict(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<da_int> predict(py::array_t<T> X) {
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+
+        da_int n_samples, n_features, ldx;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
         size_t shape[1]{(size_t)n_samples};
         size_t strides[1]{sizeof(da_int)};
         auto predictions = py::array_t<da_int>(shape, strides);
-        status = da_forest_predict(handle, n_samples, n_features, X.mutable_data(),
-                                   n_samples, predictions.mutable_data());
+        status = da_forest_predict(handle, n_samples, n_features, X.data(), ldx,
+                                   predictions.mutable_data());
         exception_check(status);
         return predictions;
     }
 
-    template <typename T>
-    py::array_t<T> predict_proba(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> predict_proba(py::array_t<T> X) {
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+
+        da_int n_samples, n_features, ldx, ldy;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
         size_t shape[2]{(size_t)n_samples, (size_t)n_class};
-        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+
+        size_t strides[2];
+        if (order == c_contiguous) {
+            strides[0] = sizeof(T) * n_class;
+            strides[1] = sizeof(T);
+            ldy = n_class;
+        } else {
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * n_samples;
+            ldy = n_samples;
+        }
+
         auto proba = py::array_t<T>(shape, strides);
-        status =
-            da_forest_predict_proba(handle, n_samples, n_features, X.mutable_data(),
-                                    n_samples, proba.mutable_data(), n_class, n_samples);
+        status = da_forest_predict_proba(handle, n_samples, n_features, X.data(), ldx,
+                                         proba.mutable_data(), n_class, ldy);
         exception_check(status);
         return proba;
     }
 
-    template <typename T>
-    py::array_t<T> predict_log_proba(py::array_t<T, py::array::f_style> X) {
+    template <typename T> py::array_t<T> predict_log_proba(py::array_t<T> X) {
 
         da_status status;
-        da_int n_samples = X.shape()[0], n_features = X.shape()[1];
+
+        da_int n_samples, n_features, ldx, ldy;
+
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+
         size_t shape[2]{(size_t)n_samples, (size_t)n_class};
-        size_t strides[2]{sizeof(T), sizeof(T) * n_samples};
+
+        size_t strides[2];
+        if (order == c_contiguous) {
+            strides[0] = sizeof(T) * n_class;
+            strides[1] = sizeof(T);
+            ldy = n_class;
+        } else {
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * n_samples;
+            ldy = n_samples;
+        }
+
         auto proba = py::array_t<T>(shape, strides);
-        status = da_forest_predict_log_proba(handle, n_samples, n_features,
-                                             X.mutable_data(), n_samples,
-                                             proba.mutable_data(), n_class, n_samples);
+        status = da_forest_predict_log_proba(handle, n_samples, n_features, X.data(), ldx,
+                                             proba.mutable_data(), n_class, ldy);
         exception_check(status);
         return proba;
     }

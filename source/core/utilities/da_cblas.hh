@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (c) 2024 - present Advanced Micro Devices, Inc. All rights reserved.
+* Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,17 @@
 extern "C" {
 #define BLIS_ENABLE_CBLAS
 #include "cblas.h"
+/*
+ * Adding those declarations because they do not exist in cblas.h
+ */
+void simatcopy_(char *trans, da_int *m, da_int *n, const float *alpha, float *A,
+                da_int *lda_in, da_int *lda_out);
+void dimatcopy_(char *trans, da_int *m, da_int *n, const double *alpha, double *A,
+                da_int *lda_in, da_int *lda_out);
+void somatcopy_(char *trans, da_int *m, da_int *n, const float *alpha, const float *A,
+                da_int *lda_in, float *B, da_int *ldb_out);
+void domatcopy_(char *trans, da_int *m, da_int *n, const double *alpha, const double *A,
+                da_int *lda_in, double *B, da_int *ldb_out);
 }
 
 #include <complex>
@@ -971,6 +982,27 @@ inline void cblas_her2k(CBLAS_ORDER layout, CBLAS_UPLO uplo, CBLAS_TRANSPOSE tra
                         std::complex<double> *C, da_int ldc) {
     cblas_zher2k(layout, uplo, trans, n, k, &alpha, A, lda, B, ldb, beta, C, ldc);
 }
+
+inline void imatcopy(char trans, da_int m, da_int n, float alpha, float *A, da_int lda_in,
+                     da_int lda_out) {
+    simatcopy_(&trans, &m, &n, (const float *)&alpha, A, &lda_in, &lda_out);
+}
+
+inline void imatcopy(char trans, da_int m, da_int n, double alpha, double *A,
+                     da_int lda_in, da_int lda_out) {
+    dimatcopy_(&trans, &m, &n, (const double *)&alpha, A, &lda_in, &lda_out);
+}
+
+inline void omatcopy(char trans, da_int m, da_int n, float alpha, const float *A,
+                     da_int lda_in, float *B, da_int ldb_out) {
+    somatcopy_(&trans, &m, &n, (const float *)&alpha, A, &lda_in, B, &ldb_out);
+}
+
+inline void omatcopy(char trans, da_int m, da_int n, double alpha, const double *A,
+                     da_int lda_in, double *B, da_int ldb_out) {
+    domatcopy_(&trans, &m, &n, (const double *)&alpha, A, &lda_in, B, &ldb_out);
+}
+
 } // namespace da_blas
 
 #endif //  #ifndef CBLAS_HH

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,13 +25,10 @@
  *
  */
 
-#ifndef NLLS_HPP
-#define NLLS_HPP
-
 #include "aoclda.h"
 #include "basic_handle.hpp"
-#include "callbacks.hpp"
 #include "da_error.hpp"
+#include "macros.h"
 #include "optimization.hpp"
 #include "options.hpp"
 #include <cstring>
@@ -49,303 +46,32 @@
  *  * sigma > 0, p=2,3 are the regularization hyperparams
  *
  */
+
+namespace da_optim {
+template <typename T> class da_optimization;
+}
+
+namespace ARCH {
+
 namespace da_nlls {
 
-template <typename T> class nlls : public basic_handle<T> {
+using namespace da_optim;
+
+template <typename T> class nlls : public da_optimization<T> {
   private:
-    // Pointer to error trace
-    da_errors::da_error_t *err{nullptr};
-
-    // True if the model has been successfully trained
-    bool model_trained{false};
-
-    /* Regression data
-     * n_res: number of residuals
-     */
-    da_int n_res{0};
-
-    /* Training data
-     * coef: vector containing the model coefficients
-     */
-    da_int n_coef{0};
-    std::vector<T> coef;
-
-    // Convenience pointers to model data defined in user-space
-    T *usrlower{nullptr};
-    T *usrupper{nullptr};
-    T *usrweights{nullptr};
-
-    // Pointer to user data
-    void *udata{nullptr};
-
-    // Pointers to the callbacks
-    resfun_t<T> resfun{nullptr};
-    resgrd_t<T> resgrd{nullptr};
-    reshes_t<T> reshes{nullptr};
-    reshp_t<T> reshp{nullptr};
-
   public:
-    // Optimization object
-    da_optim::da_optimization<T> *opt{nullptr};
-
     // Constructor
-    nlls(da_errors::da_error_t &err, da_status &status) {
-        // Assumes that err is valid
-        this->err = &err;
-        // Initialize the optimization framework and options registry
-        status = init_opt_solver();
-    }
+    nlls(da_status &status, da_errors::da_error_t &err);
 
-    // Destructor
-    ~nlls(void) {
-        this->err = nullptr;
-        this->udata = nullptr;
-        if (this->opt)
-            delete this->opt;
-    };
-
-    /* This function is called when data in the handle has changed, e.g. options
-     * changed. We mark the model untrained and prepare the handle in a way that
-     * it is suitable to solve again.
-     */
-    void refresh() {
-        if (model_trained) {
-            // Reset
-            model_trained = false;
-        }
-    };
-
-    da_status define_residuals(da_int n_coef, da_int n_res);
+    // da_status define_residuals(da_int n_coef, da_int n_res);
     da_status define_callbacks(resfun_t<T> resfun, resgrd_t<T> resgrd, reshes_t<T> reshes,
                                reshp_t<T> reshp);
-    da_status define_bounds(da_int n_coef, T *lower, T *upper);
-    da_status define_weights(da_int n_res, T *weights);
-    da_status init_opt_solver();
     da_status fit(da_int n_coef, T *coef, void *udata);
     da_status get_result(da_result query, da_int *dim, T *result);
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
                          [[maybe_unused]] da_int *result);
 };
 
-template <typename T>
-da_status nlls<T>::get_result(da_result query, da_int *dim, T *result) {
-    // Don't return anything if model not trained!
-    if (!model_trained)
-        return da_warn(this->err, da_status_unknown_query,
-                       "Handle does not contain data relevant to this query. Was the "
-                       "last call to the solver successful?");
-    switch (query) {
-    case da_result::da_rinfo:
-        return this->opt->get_info(*dim, result);
-        break;
-    default:
-        return da_warn(this->err, da_status_unknown_query,
-                       "The requested result could not be queried by this handle.");
-    }
-};
-template <typename T>
-da_status nlls<T>::get_result([[maybe_unused]] da_result query,
-                              [[maybe_unused]] da_int *dim,
-                              [[maybe_unused]] da_int *result) {
-    return da_warn(this->err, da_status_unknown_query,
-                   "Handle does not contain data relevant to this query.");
-};
-
-/* Store model features */
-template <typename T> da_status nlls<T>::define_residuals(da_int n_coef, da_int n_res) {
-    if (n_coef <= 0)
-        return da_error(this->err, da_status_invalid_input, "n_coef must be positive.");
-    if (n_res <= 0)
-        return da_error(this->err, da_status_invalid_input, "n_res must be positive.");
-
-    this->n_coef = n_coef;
-    this->n_res = n_res;
-    model_trained = false;
-
-    return da_status_success;
-}
-
-/* Store the user callbacks */
-template <typename T>
-da_status nlls<T>::define_callbacks(resfun_t<T> resfun, resgrd_t<T> resgrd,
-                                    reshes_t<T> reshes, reshp_t<T> reshp) {
-    if (!resfun)
-        return da_error(this->err, da_status_invalid_input,
-                        "resfun must point to the residual function.");
-
-    this->resfun = resfun;
-    this->resgrd = resgrd;
-    this->reshes = reshes;
-    this->reshp = reshp;
-    this->model_trained = false;
-
-    return da_status_success;
-}
-/* Define the box bounds */
-template <typename T>
-da_status nlls<T>::define_bounds(da_int n_coef, T *lower, T *upper) {
-    if (n_coef == 0) {
-        this->usrlower = nullptr;
-        this->usrupper = nullptr;
-    } else if (this->n_coef == n_coef) {
-        this->usrlower = lower;
-        this->usrupper = upper;
-    } else {
-        return da_error(this->err, da_status_invalid_input,
-                        "Invalid size of n_coef, it must match zero or the number of "
-                        "variables defined: " +
-                            std::to_string(this->n_coef) + ".");
-    }
-    this->model_trained = false;
-    return da_status_success;
-}
-
-/* Define the residual weights */
-template <typename T> da_status nlls<T>::define_weights(da_int n_res, T *weights) {
-    if (n_res == 0) {
-        this->usrweights = nullptr;
-    } else if (this->n_res == n_res) {
-        if (weights) {
-            this->usrweights = weights;
-        } else {
-            return da_error(this->err, da_status_invalid_pointer,
-                            "Invalid pointer to weights array, n_res is positive yet "
-                            "weights is invalid. To remove weights pass n_res=0.");
-        }
-    } else {
-        return da_error(this->err, da_status_invalid_input,
-                        "Invalid size of n_res, it must match zero or the "
-                        "number of residuals defined: " +
-                            std::to_string(this->n_res) + ".");
-    }
-    this->model_trained = false;
-    return da_status_success;
-}
-
-/* Common settings for optimization solvers
- * Called only once per handle initialization
- */
-template <typename T> da_status nlls<T>::init_opt_solver() {
-
-    da_status status;
-
-    // Initialize optimization framework
-    try {
-        opt = new da_optim::da_optimization<T>(status, *(this->err));
-    } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation error");
-    }
-
-    if (status != da_status_success) {
-        opt = nullptr;
-        return status; // Error message already loaded
-    }
-
-    // Select_solver based on problem and options
-    if (opt->opts.set("optim method", "ralfit", da_options::setby_t::solver) !=
-        da_status_success)
-        return da_error( // LCOV_EXCL_LINE
-            this->err, da_status_internal_error,
-            "expected option not found: optim method in the optimization registry");
-
-    return da_status_success;
-}
-
-template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata) {
-
-    // Copy the starting point
-    if (n_coef != 0 && n_coef != this->n_coef)
-        return da_error(err, da_status_invalid_array_dimension,
-                        "n_coef must match zero or the number of defined features. Array "
-                        "coef must be of size zero or " +
-                            std::to_string(this->n_coef) + ".");
-    if (n_coef > 0 && !coef) {
-        // Make sure it is a valid pointer
-        if (!coef) {
-            return da_error(err, da_status_invalid_pointer,
-                            "Pointer coef must be valid.");
-        }
-    }
-    try {
-        this->coef.resize(this->n_coef);
-    } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation error");
-    }
-
-    if (n_coef == 0)
-        // Initial guess is zeros...
-        std::fill(this->coef.begin(), this->coef.end(), T(0));
-    else {
-        // Copy
-        for (da_int i = 0; i < n_coef; ++i) {
-            this->coef[i] = coef[i];
-        }
-    }
-
-    this->udata = udata;
-
-    da_status status;
-
-    // Optimization framework
-    if (!this->opt) {
-        return da_error( // LCOV_EXCL_LINE
-            this->err, da_status_internal_error,
-            "Unexpectedly nlls did not provided a valid optimization object?");
-    }
-    // Add features
-    if (opt->add_vars(this->n_coef) != da_status_success) {
-        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "Unexpectedly n_coef is invalid?");
-    }
-    if (opt->add_res(this->n_res) != da_status_success) {
-        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "Unexpectedly n_res is invalid?");
-    }
-    // Add callbacks
-    if (opt->add_resfun(resfun) != da_status_success) {
-        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "Unexpectedly nlls provided an invalid residual "
-                        "function pointer?");
-    }
-    // These don't fail
-    opt->add_resgrd(resgrd);
-    opt->add_reshes(reshes);
-    opt->add_reshp(reshp);
-    // Add optional features
-    if (opt->add_bound_cons(this->n_coef, this->usrlower, this->usrupper) !=
-        da_status_success) {
-        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "Unexpectedly failed to set the bounds?");
-    }
-    if (opt->add_weights(n_res, this->usrweights) != da_status_success) {
-        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "Unexpectedly failed to set the weights?");
-    }
-
-    // Make sure user did not tamper with the optim method
-    if (opt->opts.set("optim method", "ralfit", da_options::setby_t::solver) !=
-        da_status_success)
-        return da_error(                         // LCOV_EXCL_LINE
-            this->err, da_status_internal_error, // LCOV_EXCL_LINE
-            "expected option not found: <optim method> in the optimization registry?");
-
-    status = opt->solve(this->coef, udata);
-
-    if (this->err->get_severity() == DA_ERROR) {
-        return status; // Error message already loaded
-    }
-
-    // Status is either success or warning with usable solution, continue
-    // copy out the solution found if user's n_coef is not zero.
-    for (da_int i = 0; i < n_coef; ++i) {
-        coef[i] = this->coef[i];
-    }
-
-    model_trained = true;
-    return status;
-}
-
 } // namespace da_nlls
-#endif
+
+} // namespace ARCH

@@ -24,7 +24,7 @@
 #
 
 set_source_files_properties(
-  c_compatibility.c
+  da_utilities/c_compatibility_nog_public.c
   PROPERTIES
     COMPILE_FLAGS
     "-Wno-unused-parameter"

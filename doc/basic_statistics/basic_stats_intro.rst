@@ -33,7 +33,7 @@ Basic Statistics
 This chapter contains functions to compute basic statistical quantities such as the mean,
 variance or quantiles of a data matrix. Utility routines for standardizing the data are
 also available, and correlation and covariance matrices can also be computed. For more information on basic statistical quantities, see :cite:t:`rice`, :cite:t:`kozw2000`.
-These functions operate on a ``n_rows`` :math:`\times`  ``n_cols`` matrix stored in column major format.
+These functions operate on a ``n_rows`` :math:`\times`  ``n_cols`` matrix stored in either column- or row-major order.
 
 Choosing an axis
 ------------------
@@ -59,6 +59,8 @@ Most statistical quantities can be computed by column, by row or for the data ma
       to ``col``, then ``n_cols`` means will be computed, one for each column. If the
       :py:attr:`axis` argument is set to ``all``, then a single mean will be computed.
 
+      Note that the functions in this chapter do not check for the presence of NaNs in your input data.
+
    .. tab-item:: C
       :sync: C
 
@@ -75,6 +77,9 @@ Most statistical quantities can be computed by column, by row or for the data ma
       For example, if the routine :cpp:func:`da_mean_s` is called with the :cpp:type:`da_axis` argument set
       to :cpp:enumerator:`da_axis_col`, then ``n_cols`` means will be computed, one for each column. If the
       :cpp:type:`da_axis` argument is set to ``da_axis_all``, then a single mean will be computed.
+
+      The functions in this chapter do not check for the presence of NaNs in your input data.
+      You can use the :cpp:func:`da_check_data_s` function to check for NaNs in your data.
 
 Examples
 --------

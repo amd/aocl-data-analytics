@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -41,58 +41,83 @@
 namespace py = pybind11;
 
 template <typename T>
-py::array_t<T>
-py_da_pairwise_distances(py::array_t<T, py::array::f_style> X,
-                         std::optional<py::array_t<T, py::array::f_style>> Y,
-                         std::string metric = "euclidean",
-                         std::string force_all_finite = "allow_infinite") {
+py::array_t<T> py_da_pairwise_distances(py::array_t<T> X, std::optional<py::array_t<T>> Y,
+                                        std::string metric = "euclidean", T p = 2.0) {
     da_status status;
-    da_int m = X.shape()[0], k = X.shape()[1];
+
+    da_int m, n, k_x, k_y, ldx, ldy, ldd;
+    da_order order_X, order_Y;
+
+    get_size(order_X, X, m, k_x, ldx);
+
     // Initialize numbers of columns for distance matrix D.
     // If Y is provided, D is m-by-n, otherwise it's m-by-m.
     da_int ncols = m;
+
     T *dummy = nullptr;
     // Check if the user provided matrix Y and set n accordingly
-    da_int n = 0;
+    n = 0;
     if (Y.has_value()) {
-        n = Y->shape()[0];
+        get_size(order_Y, Y.value(), n, k_y, ldy);
+
+        if (order_X != order_Y)
+            throw std::invalid_argument("Incompatible ordering for X and Y matrices.");
+
         // Y is provided, set number of columns correctly.
         ncols = n;
-        if (X.shape()[1] != Y->shape()[1])
+        if (k_x != k_y)
             throw std::invalid_argument(
                 "Incompatible dimension for X and Y matrices: X.shape[1]=" +
-                std::to_string(X.shape()[1]) +
-                " while Y.shape[1]=" + std::to_string(Y->shape()[1]) + ".");
+                std::to_string(k_x) + " while Y.shape[1]=" + std::to_string(k_y) + ".");
     }
 
     // Translate strings to enums
     da_metric metric_enum;
     if (metric == "euclidean") {
         metric_enum = da_euclidean;
+    } else if (metric == "l2") {
+        metric_enum = da_l2;
     } else if (metric == "sqeuclidean") {
         metric_enum = da_sqeuclidean;
+    } else if (metric == "manhattan") {
+        metric_enum = da_manhattan;
+    } else if (metric == "l1") {
+        metric_enum = da_l1;
+    } else if (metric == "cityblock") {
+        metric_enum = da_cityblock;
+    } else if (metric == "cosine") {
+        metric_enum = da_cosine;
+    } else if (metric == "minkowski") {
+        metric_enum = da_minkowski;
     } else {
         throw std::invalid_argument("Given metric does not exist. Available choices are: "
-                                    "'euclidean', 'sqeuclidean'.");
+                                    "'euclidean', 'l2', 'sqeuclidean', 'manhattan', "
+                                    "'l1', 'cityblock', 'cosine', 'minkowski'.");
     }
-    da_data_types force_all_finite_enum;
-    if (force_all_finite == "allow_infinite") {
-        force_all_finite_enum = da_allow_infinite;
-    } else {
-        throw std::invalid_argument("Given force_all_finite option does not exist. "
-                                    "Available choice is: 'allow_infinite'.");
-    }
+
     // Create the output distance matrix as a numpy array
+
     size_t shape[2]{(size_t)m, (size_t)ncols};
-    auto D = py::array_t<T, py::array::f_style>(shape);
+    size_t strides[2];
+    if (order_X == column_major) {
+        strides[0] = sizeof(T);
+        strides[1] = sizeof(T) * m;
+        ldd = m;
+    } else {
+        strides[0] = sizeof(T) * ncols;
+        strides[1] = sizeof(T);
+        ldd = ncols;
+    }
+
+    auto D = py::array_t<T>(shape, strides);
 
     if (Y.has_value()) {
-        status = da_pairwise_distances(m, n, k, X.data(), m, Y->mutable_data(), n,
-                                       D.mutable_data(), m, metric_enum,
-                                       force_all_finite_enum);
+        status =
+            da_pairwise_distances(order_X, m, n, k_x, X.data(), ldx, Y->mutable_data(),
+                                  ldy, D.mutable_data(), ldd, p, metric_enum);
     } else {
-        status = da_pairwise_distances(m, n, k, X.data(), m, dummy, n, D.mutable_data(),
-                                       m, metric_enum, force_all_finite_enum);
+        status = da_pairwise_distances(order_X, m, n, k_x, X.data(), ldx, dummy, n,
+                                       D.mutable_data(), ldd, p, metric_enum);
     }
     status_to_exception(status);
 

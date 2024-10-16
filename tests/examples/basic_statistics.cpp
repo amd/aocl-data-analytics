@@ -49,6 +49,7 @@ int main() {
     double X[20]{1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0, 2.0, 8.0,
                  4.0, 6.0, 9.0, 5.0, 4.0, 3.0, 1.0, 1.0, 2.0, 2.0};
     da_int n_rows = 4, n_cols = 5, ldx = 4, ldcov = 5, dof = 0, mode = 0;
+    da_order order = column_major;
 
     // Arrays for output data
     double harmonic_mean[5], mean[4], variance[4], kurtosis[4];
@@ -87,25 +88,25 @@ int main() {
     bool pass = true;
 
     // Compute column-wise harmonic means
-    pass = pass && (da_harmonic_mean_d(da_axis_col, n_rows, n_cols, X, ldx,
+    pass = pass && (da_harmonic_mean_d(order, da_axis_col, n_rows, n_cols, X, ldx,
                                        harmonic_mean) == da_status_success);
 
     // Compute row-wise mean, variance and kurtosis
-    pass = pass && (da_kurtosis_d(da_axis_row, n_rows, n_cols, X, ldx, mean, variance,
-                                  kurtosis) == da_status_success);
+    pass = pass && (da_kurtosis_d(order, da_axis_row, n_rows, n_cols, X, ldx, mean,
+                                  variance, kurtosis) == da_status_success);
 
     // Compute overall max/min, median and hinges
-    pass = pass && (da_five_point_summary_d(da_axis_all, n_rows, n_cols, X, ldx, minimum,
-                                            lower_hinge, median, upper_hinge,
+    pass = pass && (da_five_point_summary_d(order, da_axis_all, n_rows, n_cols, X, ldx,
+                                            minimum, lower_hinge, median, upper_hinge,
                                             maximum) == da_status_success);
 
     // Compute covariance matrix
-    pass = pass && (da_covariance_matrix_d(n_rows, n_cols, X, ldx, dof, cov, ldcov) ==
-                    da_status_success);
+    pass = pass && (da_covariance_matrix_d(order, n_rows, n_cols, X, ldx, dof, cov,
+                                           ldcov) == da_status_success);
 
     // Standardize the original data matrix
-    pass = pass && (da_standardize_d(da_axis_col, n_rows, n_cols, X, ldx, dof, mode,
-                                     dummy, dummy) == da_status_success);
+    pass = pass && (da_standardize_d(order, da_axis_col, n_rows, n_cols, X, ldx, dof,
+                                     mode, dummy, dummy) == da_status_success);
 
     // Check status (we could do this after every function call)
     if (pass) {

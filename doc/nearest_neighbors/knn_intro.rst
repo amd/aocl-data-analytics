@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -102,9 +102,12 @@ Options
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
          "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
-         "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `euclidean`, or `sqeuclidean`."
+         "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`."
          "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `brute`."
+         "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of k-nearest neighbors.", ":math:`0 < r`"
          "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 Examples
 ========

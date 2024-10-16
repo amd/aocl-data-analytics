@@ -41,7 +41,7 @@ Decision trees
    .. tab-item:: Python
       :sync: Python
 
-      .. autoclass:: aoclda.decision_tree.decision_tree(criterion='gini', seed=-1, max_depth=10, max_features=0, min_samples_split=2, build_order='breadth first', precision='double')
+      .. autoclass:: aoclda.decision_tree.decision_tree(criterion='gini', seed=-1, max_depth=10, max_features=0, min_samples_split=2, build_order='breadth first', min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-06, check_data=false)
          :members:
 
    .. tab-item:: C
@@ -65,6 +65,18 @@ Decision trees
          :outline:
       .. doxygenfunction:: da_tree_predict_d
 
+      .. _da_tree_predict_proba:
+
+      .. doxygenfunction:: da_tree_predict_proba_s
+         :outline:
+      .. doxygenfunction:: da_tree_predict_proba_d
+
+      .. _da_tree_predict_log_proba:
+
+      .. doxygenfunction:: da_tree_predict_log_proba_s
+         :outline:
+      .. doxygenfunction:: da_tree_predict_log_proba_d
+
       .. _da_tree_score:
 
       .. doxygenfunction:: da_tree_score_s
@@ -82,7 +94,7 @@ Decision forests
    .. tab-item:: Python
       :sync: Python
 
-      .. autoclass:: aoclda.decision_forest.decision_forest(criterion='gini', bootstrap=True, n_trees=100, features_selection='sqrt', max_features=0, seed=-1, max_depth=10, min_samples_split=2, build_order='breadth first', precision='double')
+      .. autoclass:: aoclda.decision_forest.decision_forest(criterion='gini', bootstrap=True, n_trees=100, features_selection='sqrt', max_features=0, seed=-1, max_depth=10, min_samples_split=2, build_order='breadth first', samples_factor=0.8, min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-06, check_data=false)
          :members:
 
    .. tab-item:: C
@@ -105,6 +117,18 @@ Decision forests
       .. doxygenfunction:: da_forest_predict_s
          :outline:
       .. doxygenfunction:: da_forest_predict_d
+
+      .. _da_forest_predict_proba:
+
+      .. doxygenfunction:: da_forest_predict_proba_s
+         :outline:
+      .. doxygenfunction:: da_forest_predict_proba_d
+
+      .. _da_forest_predict_log_proba:
+
+      .. doxygenfunction:: da_forest_predict_log_proba_s
+         :outline:
+      .. doxygenfunction:: da_forest_predict_log_proba_d
 
       .. _da_forest_score:
 

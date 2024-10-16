@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -37,8 +37,10 @@ import sklearn.tree as decision_tree_sklearn
 import sklearn.ensemble as decision_forest_sklearn
 import sklearn.metrics.pairwise as pairwise_sklearn
 import sklearn.neighbors as knn_sklearn
+import sklearn.svm as svm_sklearn
 from ._pca import PCA as PCA_da
 from ._kmeans import kmeans as kmeans_da
+from ._dbscan import DBSCAN as DBSCAN_da
 from ._linear_model import LinearRegression as LinearRegression_da
 from ._linear_model import Ridge as Ridge_da
 from ._linear_model import Lasso as Lasso_da
@@ -48,6 +50,7 @@ from ._decision_tree import DecisionTreeClassifier as DecisionTreeClassifier_da
 from ._decision_forest import RandomForestClassifier as RandomForestClassifier_da
 from ._metrics import pairwise_distances as pairwise_distances_da
 from ._nearest_neighbors import KNeighborsClassifier as KNeighborsClassifier_da
+from ._svm import SVC as SVC_da, SVR as SVR_da, NuSVC as NuSVC_da, NuSVR as NuSVR_da
 # Check if we should be using Intel's Scikit-learn extension
 try:
     USE_INTEL_SKLEARNEX = int(os.environ.get('USE_INTEL_SKLEARNEX'))
@@ -92,6 +95,9 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                'KMeans': {'pack': clustering_sklearn,
                           'sk_sym': getattr(clustering_sklearn, "KMeans"),
                           'da_sym': kmeans_da},
+               'DBSCAN': {'pack': clustering_sklearn,
+                          'sk_sym': getattr(clustering_sklearn, "DBSCAN"),
+                          'da_sym': DBSCAN_da},
                'DecisionTreeClassifier': {'pack': decision_tree_sklearn,
                                           'sk_sym': getattr(decision_tree_sklearn, 'DecisionTreeClassifier'),
                                           'da_sym': DecisionTreeClassifier_da},
@@ -104,11 +110,23 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                'KNeighborsClassifier': {'pack': knn_sklearn,
                                         'sk_sym': getattr(knn_sklearn, 'KNeighborsClassifier'),
                                         'da_sym': KNeighborsClassifier_da},
+               'SVC': {'pack': svm_sklearn,
+                       'sk_sym': getattr(svm_sklearn, 'SVC'),
+                       'da_sym': SVC_da},
+               'SVR': {'pack': svm_sklearn,
+                       'sk_sym': getattr(svm_sklearn, 'SVR'),
+                       'da_sym': SVR_da},
+               'NuSVC': {'pack': svm_sklearn,
+                         'sk_sym': getattr(svm_sklearn, 'NuSVC'),
+                         'da_sym': NuSVC_da},
+               'NuSVR': {'pack': svm_sklearn,
+                         'sk_sym': getattr(svm_sklearn, 'NuSVR'),
+                         'da_sym': NuSVR_da},
                }
 
 # List of symbols where AMD is chosen over Intel
-AMD_vs_INTEL = ['KMeans', 'LinearRegression',
-                'Ridge', 'PCA', 'DecisionTreeClassifier']
+AMD_vs_INTEL = ['KMeans', 'LinearRegression', 'KNeighborsClassifier',
+                'Ridge', 'PCA', 'DecisionTreeClassifier', 'DBSCAN']
 
 
 def skpatch(*args, print_patched=True):

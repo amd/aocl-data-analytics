@@ -190,7 +190,8 @@ In this documentation we frequently use ``_?`` at the end of routine names to in
 Array storage
 -------------
 
-Algorithmic routines in the library expect two-dimensional arrays to be in column major format.
+Algorithmic routines in the library can handle two-dimensional arrays in either column-major or row-major order.
+However, for best possible performance, it is recommended that you store your data in column-major format, since row-major arrays may be copied and transposed internally.
 
 Interpreting missing data
 -------------------------
@@ -198,10 +199,10 @@ Interpreting missing data
 When using a :cpp:type:`da_datastore` for data management, the special convention for floating point *not a number* (``NaN``) can be used to denote missing
 data. See :ref:`Data Management Functionalities<data-management>` for further details.
 
-In order to provide the best possible performance, the algorithmic functions will not check for
-``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behaviour is undefined.
-It is therefore the user's responsibility to ensure data is sanitized (for example, by using
-:cpp:func:`da_data_select_non_missing`) before passing it to one of the algorithms.
+In order to provide the best possible performance, the algorithmic functions will not automatically check for
+``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behavior is undefined.
+It is therefore the user's responsibility to ensure data is sanitized before passing it to one of the algorithms (for example, by using
+:cpp:func:`da_data_select_non_missing`, by calling :cpp:func:`da_check_data_s`, or by setting the ``check data`` option in the algorithmic APIs that use handles).
 
 Error handling
 --------------

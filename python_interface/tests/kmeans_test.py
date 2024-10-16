@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -22,6 +22,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# pylint: disable = import-error
 
 """
 k-means clustering Python test script
@@ -32,11 +33,9 @@ import pytest
 from aoclda.clustering import kmeans
 
 
-@pytest.mark.parametrize("da_precision, numpy_precision", [
-    ("double", np.float64), ("single", np.float32),
-])
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_kmeans_functionality(da_precision, numpy_precision, numpy_order):
+def test_kmeans_functionality(numpy_precision, numpy_order):
     """
     Test the functionality of the Python wrapper
     """
@@ -56,19 +55,19 @@ def test_kmeans_functionality(da_precision, numpy_precision, numpy_order):
     x = np.array([[0., 1.],
                   [0., -1.]], dtype=numpy_precision, order=numpy_order)
 
-    km = kmeans(n_clusters=2, precision=da_precision)
-    km.fit(a, c, 1.0e-4)
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, seed=23)
+    km.fit(a)
     x_transform = km.transform(x)
     x_labels = km.predict(x)
 
     expected_centres = np.array([[2., 2.], [-2., -2.]])
     expected_labels = np.array([0, 1, 0, 0, 1, 1, 1, 0])
 
-    print(km.cluster_centres)
-
     expected_x_transform = np.array([[2.23606797749979, 3.605551275463989],
                                      [3.605551275463989, 2.23606797749979]])
     expected_x_labels = np.array([0, 1])
+
+    assert x.flags.f_contiguous == x_transform.flags.f_contiguous
 
     # Check we have the right answer
     tol = np.finfo(numpy_precision).eps * 1000
@@ -102,12 +101,36 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
     a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision)
 
     with pytest.raises(RuntimeError):
-        km = kmeans(n_clusters=2, precision=da_precision, algorithm="floyd")
+        km = kmeans(n_clusters=2, algorithm="floyd")
 
-    km = kmeans(n_clusters=10, precision=da_precision)
+    km = kmeans(n_clusters=10)
     with pytest.warns(RuntimeWarning):
         km.fit(a)
 
-    b = np.array([1])
+    b = np.array([1], dtype=numpy_precision)
     with pytest.raises(RuntimeError):
         km.transform(b)
+
+    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
+    b = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="C")
+    km = kmeans(n_clusters=10)
+    with pytest.warns(RuntimeWarning):
+        km.fit(a)
+    with pytest.raises(RuntimeError):
+        km.transform(b)
+
+    a = np.array([[2., 1.],
+                  [-1., -2.],
+                  [np.nan, 2.],
+                  [2., 3.],
+                  [-3., -2.],
+                  [-2., -1.],
+                  [-2., -3.],
+                  [1., 2.]], dtype=numpy_precision)
+
+    c = np.array([[1., 1.],
+                  [-3., -3.]], dtype=numpy_precision)
+
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, check_data=True)
+    with pytest.raises(RuntimeError):
+        km.fit(a)

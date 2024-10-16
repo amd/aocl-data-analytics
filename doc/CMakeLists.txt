@@ -140,12 +140,12 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/process.awk
 
 add_custom_target(
     gen_options_tables
-    COMMAND doc_tests ARGS --gtest_filter=DocOptions*.RST*
+    COMMAND doc_internal ARGS --gtest_filter=DocOptions*.RST*
       --gtest_print_time=0 --gtest_brief=1 --gtest_color=no
     | ${AWK} -f ${CMAKE_CURRENT_BINARY_DIR}/process.awk
     > ${SPHINX_SOURCE}/options/all_table.rst
     COMMAND ${CMAKE_SOURCE_DIR}/tools/insert_license_info.py ${SPHINX_SOURCE}/options/all_table.rst
-    DEPENDS doc_tests
+    DEPENDS doc_internal
     COMMENT "Running unit-test for doc options tables"
     VERBATIM
 )

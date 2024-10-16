@@ -30,36 +30,3 @@ import sys
 from .patch_sklearn import skpatch, undo_skpatch
 
 __all__ = ["skpatch", "undo_skpatch"]
-
-
-def main():
-    '''
-    Load the scikit-learn patch then execute the user's script
-    '''
-
-    import argparse
-    import runpy
-
-    parser = argparse.ArgumentParser(
-        description="AOCL-DA Extension for scikit-learn")
-
-    parser.add_argument(
-        "-m", action="store_true", dest="is_module")
-    parser.add_argument("name", help="Your Python script or module name")
-    parser.add_argument("args", nargs=argparse.REMAINDER,
-                        help="Command line arguments for your Python script")
-
-    args = parser.parse_args()
-
-    # Call patch to replace scikit-learn symbols with AOCL-DA
-    skpatch()
-
-    sys.argv = [args.name] + args.args
-
-    if args.is_module:
-        runpy.run_module(args.name, run_name="__main__")
-    else:
-        runpy.run_path(args.name, run_name="__main__")
-
-if __name__ == "__main__":
-    sys.exit(main())
