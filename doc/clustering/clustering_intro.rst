@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -98,7 +98,7 @@ Options
    .. tab-item:: Python
       :sync: Python
 
-      The available Python options are detailed in the :func:`aoclda.factorization.kmeans` class constructor.
+      The available Python options are detailed in the :func:`aoclda.clustering.kmeans` class constructor.
 
    .. tab-item:: C
       :sync: C
@@ -126,6 +126,98 @@ If it is set to ``random partitions`` then the sample points are assigned to a r
 
 The standard algorithm for solving *k*-means problems is Lloyd's algorithm. Elkan's algorithm can be faster on naturally clustered datasets but uses considerably more memory. For more information on the available algorithms see :cite:t:`elkan`, :cite:t:`hartigan1979algorithm`, :cite:t:`lloyd1982least` and :cite:t:`macqueen1967some`.
 
+
+.. _dbscan_intro:
+
+DBSCAN clustering
+============================
+
+DBSCAN clustering partitions a set of :math:`n_{\mathrm{samples}}` data points :math:`\{x_1, x_2, \dots, x_{n_{\mathrm{samples}}}\}` into an unspecified number of clusters, determined at runtime by the density of points.
+
+The algorithm is governed by two parameters, ``eps`` and ``min_samples``.
+The ``eps`` parameter is the maximum distance between two samples for one to be considered as in the neighborhood of the other. The ``min_samples`` parameter is the number of samples in a neighborhood for a point to be classed as a *core sample*.
+
+The algorithm works as follows:
+
+1. The neighborhood of each sample point (that is, the indices of the points within distance ``eps``) is computed.
+2. The sample points are then considered in turn:
+
+   - If a point is not already assigned to a cluster and its neighborhood contains fewer than ``min_samples`` points, it is classed as noise.
+   - A point is classed as a *core sample* if its neighborhood contains at least ``min_samples`` points. A new cluster is created containing this point.
+   - The neighborhood of the core sample is then explored and any points not already assigned to a cluster are added to the cluster.
+
+3. This process is repeated until all points have been assigned to a cluster or classed as noise.
+
+Outputs from DBSCAN clustering
+---------------------------------
+After a DBSCAN clustering computation the following results are stored:
+
+- **n_clusters** - the number of clusters found.
+- **labels** - the cluster each sample in the data matrix belongs to. A label of -1 indicates that the point has been classified as noise and has not been assigned to a cluster.
+- **n_core_sample_indices** - the number of core samples found.
+- **core sample indices** - the indices of the points that were classed as core samples.
+
+Typical workflow for DBSCAN clustering
+-----------------------------------------
+
+The standard way of using DBSCAN clustering in AOCL-DA  is as follows.
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      1. Initialize a :func:`aoclda.clustering.DBSCAN` object with options set in the class constructor.
+      2. Optionally standardize the data.
+      3. Compute the DBSCAN clusters using :func:`aoclda.clustering.DBSCAN.fit`.
+      4. Extract results from the :func:`aoclda.clustering.DBSCAN` object via its class attributes.
+
+   .. tab-item:: C
+      :sync: C
+
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_dbscan``.
+      2. Pass data to the handle using :ref:`da_dbscan_set_data_? <da_dbscan_set_data>`.
+      3. Set the options using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <dbscan_options>`).
+      4. Compute the DBSCAN clusters using :ref:`da_dbscan_compute_? <da_dbscan_compute>`.
+      5. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`.
+
+
+.. _dbscan_options:
+
+Options
+-------
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      The available Python options are detailed in the :func:`aoclda.clustering.DBSCAN` class constructor.
+
+   .. tab-item:: C
+      :sync: C
+
+      The following options can be set using :ref:`da_options_set_? <da_options_set>`:
+
+      .. update options using table _opts_dbscanclustering
+
+      .. csv-table:: DBSCAN options
+         :header: "Option Name", "Type", "Default", "Description", "Constraints"
+
+         "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used (reserved for future use).", ":math:`0 \le r`"
+         "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances (reserved for future use).", ":math:`s=` `euclidean`, `manhattan`, `minkowski`, or `sqeuclidean`."
+         "algorithm", "string", ":math:`s=` `brute`", "Choice of algorithm (reserved for future use).", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
+         "leaf size", "integer", ":math:`i=30`", "Leaf size for KD tree or ball tree (reserved for future use).", ":math:`1 \le i`"
+         "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`"
+         "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`"
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
+
+Note that the ``power``, ``algorithm`` and ``metric`` options are reserved for future use.
+Currently the only supported algorithm is the brute-force method, with the Euclidean distance metric.
+
+
 Examples (clustering)
 ========================
 
@@ -142,14 +234,27 @@ Examples (clustering)
               :language: Python
               :linenos:
 
+      .. collapse:: DBSCAN Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/dbscan_ex.py
+              :language: Python
+              :linenos:
+
+
    .. tab-item:: C
       :sync: C
 
-      The code below can be found in ``kmeans.cpp`` in the ``examples`` folder of your installation.
+      The code below can be found in the ``examples`` folder of your installation.
 
       .. collapse:: k-means Example
 
          .. literalinclude:: ../../tests/examples/kmeans.cpp
+            :language: C++
+            :linenos:
+
+      .. collapse:: DBSCAN Example
+
+         .. literalinclude:: ../../tests/examples/dbscan.cpp
             :language: C++
             :linenos:
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -68,6 +68,14 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             break;
         case da_handle_kmeans:
             (*handle)->alg_handle_d = new da_kmeans::da_kmeans<double>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_d = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_dbscan:
+            (*handle)->alg_handle_d = new da_dbscan::da_dbscan<double>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_d = nullptr;
@@ -154,6 +162,14 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             break;
         case da_handle_kmeans:
             (*handle)->alg_handle_s = new da_kmeans::da_kmeans<float>(*(*handle)->err);
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_s = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_dbscan:
+            (*handle)->alg_handle_s = new da_dbscan::da_dbscan<float>(*(*handle)->err);
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_s = nullptr;

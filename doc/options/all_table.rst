@@ -1,6 +1,6 @@
 ..
     Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-    
+
 
 
 .. AUTO GENERATED. Do not hand edit this file! (see doc_test.cpp)
@@ -37,15 +37,15 @@ In all the following tables, :math:`\varepsilon`, refers to a *safe* machine pre
 
 .. _opts_linearmodels:
 
-Linear models
+linear models
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Linear models.`
+.. csv-table:: :strong:`Table of options for linear models.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
    "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
@@ -67,15 +67,15 @@ The following options are supported.
 
 .. _opts_principalcomponentanalysis:
 
-Principal component analysis
+principal component analysis
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Principal component analysis.`
+.. csv-table:: :strong:`Table of options for principal component analysis.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`."
    "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`."
    "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`"
@@ -95,7 +95,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for k-means clustering.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
    "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres.", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
    "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`"
@@ -107,17 +107,38 @@ The following options are supported.
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 
-.. _opts_decisiontrees:
+.. _opts_dbscanclustering:
 
-Decision trees
+DBSCAN clustering
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Decision trees.`
+.. csv-table:: :strong:`Table of options for DBSCAN clustering.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
+   "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used (reserved for future use).", ":math:`0 \le r`"
+   "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances (reserved for future use).", ":math:`s=` `euclidean`, `manhattan`, `minkowski`, or `sqeuclidean`."
+   "algorithm", "string", ":math:`s=` `brute`", "Choice of algorithm (reserved for future use).", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
+   "leaf size", "integer", ":math:`i=30`", "Leaf size for KD tree or ball tree (reserved for future use).", ":math:`1 \le i`"
+   "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`"
+   "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
+
+.. _opts_decisiontrees:
+
+decision trees
+==============================================
+
+The following options are supported.
+
+.. csv-table:: :strong:`Table of options for decision trees.`
+   :escape: ~
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
+
    "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
    "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
    "print timings", "string", ":math:`s=` `no`", "Print the timings of different parts of the fitting process.", ":math:`s=` `no`, or `yes`."
@@ -135,15 +156,15 @@ The following options are supported.
 
 .. _opts_decisionforests:
 
-Decision forests
+decision forests
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Decision forests.`
+.. csv-table:: :strong:`Table of options for decision forests.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
    "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
@@ -164,15 +185,15 @@ The following options are supported.
 
 .. _opts_nonlinearleastsquares:
 
-Nonlinear least squares
+nonlinear least squares
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of options for Nonlinear least squares.`
+.. csv-table:: :strong:`Table of options for nonlinear least squares.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`."
    "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`"
    "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`"
@@ -219,7 +240,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for k-nearest neighbors.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
    "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `euclidean`, or `sqeuclidean`."
    "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `brute`."
@@ -238,7 +259,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for` :cpp:type:`da_datastore`.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
+
    "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`."
    "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`."
    "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`"

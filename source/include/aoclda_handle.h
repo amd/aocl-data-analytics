@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -52,6 +52,9 @@ enum da_handle_type_ {
                    ///< @endrst
     da_handle_kmeans, ///< @rst
                       ///< the handle is to be used with functions for computing :ref:`k-means clustering <kmeans_intro>`.
+                      ///< @endrst
+    da_handle_dbscan, ///< @rst
+                      ///< the handle is to be used with functions for computing :ref:`DBSCAN clustering <dbscan_intro>`.
                       ///< @endrst
     da_handle_decision_tree, ///< @rst
                              ///< the handle is to be used with functions for computing :ref:`decision trees <decision_forest_intro>`.

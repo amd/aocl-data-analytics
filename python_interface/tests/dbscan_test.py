@@ -25,17 +25,16 @@
 # pylint: disable = import-error
 
 """
-k-means clustering Python test script
+DBSCAN clustering Python test script
 """
 
 import numpy as np
 import pytest
-from aoclda.clustering import kmeans
-
+from aoclda.clustering import DBSCAN, kmeans
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_kmeans_functionality(numpy_precision, numpy_order):
+def test_dbscan_functionality(numpy_precision, numpy_order):
     """
     Test the functionality of the Python wrapper
     """
@@ -49,75 +48,42 @@ def test_kmeans_functionality(numpy_precision, numpy_order):
                   [-2., -3.],
                   [1., 2.]], dtype=numpy_precision, order=numpy_order)
 
-    c = np.array([[1., 1.],
-                  [-3., -3.]], dtype=numpy_precision, order=numpy_order)
+    db = DBSCAN(eps=2.0, min_samples=2)
+    db.fit(a)
 
-    x = np.array([[0., 1.],
-                  [0., -1.]], dtype=numpy_precision, order=numpy_order)
-
-    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, seed=23)
-    km.fit(a)
-    x_transform = km.transform(x)
-    x_labels = km.predict(x)
-
-    expected_centres = np.array([[2., 2.], [-2., -2.]])
+    expected_n_clusters = 2
+    expected_n_core_samples = 8
     expected_labels = np.array([0, 1, 0, 0, 1, 1, 1, 0])
+    expected_core_sample_indices = np.array([0, 1, 2, 3, 4, 5, 6, 7])
 
-    expected_x_transform = np.array([[2.23606797749979, 3.605551275463989],
-                                     [3.605551275463989, 2.23606797749979]])
-    expected_x_labels = np.array([0, 1])
+    assert db.n_clusters == expected_n_clusters
 
-    assert x.flags.f_contiguous == x_transform.flags.f_contiguous
+    assert db.n_core_samples == expected_n_core_samples
 
-    # Check we have the right answer
-    tol = np.finfo(numpy_precision).eps * 1000
+    assert db.n_samples == a.shape[0]
 
-    norm = np.linalg.norm(km.cluster_centres - expected_centres)
-    assert norm < tol
+    assert db.n_features == a.shape[1]
 
-    norm = np.linalg.norm(x_transform - expected_x_transform)
-    assert norm < tol
+    assert not np.any(db.labels - expected_labels)
 
-    assert not np.any(km.labels - expected_labels)
-
-    assert not np.any(x_labels - expected_x_labels)
-
-    assert km.n_samples == 8
-
-    assert km.n_features == 2
-
-    assert km.n_clusters == 2
-
-    assert km.n_iter == 1
+    assert not np.any(db.core_sample_indices - expected_core_sample_indices)
 
 
-@pytest.mark.parametrize("da_precision, numpy_precision", [
-    ("double", np.float64), ("single", np.float32),
-])
-def test_kmeans_error_exits(da_precision, numpy_precision):
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+def test_dbscan_error_exits(numpy_precision):
     """
     Test error exits in the Python wrapper
     """
     a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision)
 
     with pytest.raises(RuntimeError):
-        km = kmeans(n_clusters=2, algorithm="floyd")
+        db = DBSCAN(algorithm="bruce")
 
-    km = kmeans(n_clusters=10)
-    with pytest.warns(RuntimeWarning):
-        km.fit(a)
-
-    b = np.array([1], dtype=numpy_precision)
     with pytest.raises(RuntimeError):
-        km.transform(b)
+        db = DBSCAN(metric="sqeuclidead")
 
-    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
-    b = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="C")
-    km = kmeans(n_clusters=10)
-    with pytest.warns(RuntimeWarning):
-        km.fit(a)
     with pytest.raises(RuntimeError):
-        km.transform(b)
+        db = DBSCAN(min_samples=-45)
 
     a = np.array([[2., 1.],
                   [-1., -2.],
@@ -128,9 +94,6 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
                   [-2., -3.],
                   [1., 2.]], dtype=numpy_precision)
 
-    c = np.array([[1., 1.],
-                  [-3., -3.]], dtype=numpy_precision)
-
-    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, check_data=True)
+    db = DBSCAN(check_data=True)
     with pytest.raises(RuntimeError):
-        km.fit(a)
+        db.fit(a)

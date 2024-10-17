@@ -49,7 +49,7 @@ AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
 
    * `-DCMAKE_BUILD_TYPE=Debug` or `Release`
 
-   * `-DCOVERAGE=On` to build code coverage report
+   * `-DCOVERAGE=On` to build code coverage report.  Use `cmake --build . --target coverage` to compile the coverage report itself
 
    * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are `On` by default
 
@@ -97,7 +97,7 @@ It is most likely to work if BLAS, LAPACK and Sparse are installed within your u
 
 3. Type `"C:\Program Files (x86)\Intel\oneAPI\setvars.bat"` to load the Intel compiler environment variables (if your compiler is installed elsewhere then you will need to edit this command accordingly).
 
-4. Type `cmake .. -DCMAKE_Fortran_COMPILER=ifort` along with any (or none) of the following options depending on the build that is desired:
+4. Type `cmake -T ClangCL .. -DCMAKE_Fortran_COMPILER=ifort -DOpenMP_libomp_LIBRARY=\Path\to\libomp.lib` (it is best to use libiomp5md as that is what other AOCL Windows libraries are compiled with)` along with any (or none) of the following options depending on the build that is desired:
 
    * `-DBUILD_ILP64=On` for 64-bit integer build
 
@@ -125,7 +125,7 @@ It is most likely to work if BLAS, LAPACK and Sparse are installed within your u
 
 * Open Visual Studio and load the `AOCL-DA.sln` file then build Debug or Release builds using the GUI, or
 
-* In your powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate or use `cmake --build .`)
+* In your powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate or use `cmake --build . --config Debug -j16`)
 
 8. Depending on whether BLAS/LAPACK/Sparse libraries are on your `PATH`, the compiled executables may only work if the BLAS, LAPACK and Sparse library dlls are in the same directory so you might need to copy `AOCL-LibBlis-Win-MT-dll.dll`, `AOCL-LibFlame-Win-MT-dll.dll` into, for example, `C:\path\to\aocl-da\build\tests\gtests\Debug`
 
@@ -141,11 +141,7 @@ For further troubleshooting, you can also try updating LIB:
    set LIB=%LIB%;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\ucrt\x64;C:\Program Files (x86)\Windows Kits\10\Lib\10.0.22621.0\um\x64
    ```
 
-11. Note that by default, the Windows build uses the MSVC compiler and the cmake supplied with Visual Studio generates Visual Studio makefiles. If you wish to use Clang with ifort, use the following commands:
-    ```
-    cmake -T ClangCL -DCMAKE_Fortran_COMPILER=ifort
-    ```
-to use Visual Studio's build system, or
+11. Note that by default, without `-T ClangCL`, the Windows build will use the MSVC compiler. On SMP builds this can cause issues with Microsoft's default old OpenMP library. It is recommended to therefore use the ClangCL layer together with ifort to access the LLVM OpenMP library. If you wish to avoid using Visual Studio Makefiles, you can try:
     ```
     cmake -G Ninja -DCMAKE_C_COMPILER=clang-cl -DCMAKE_CXX_COMPILER=clang-cl -DCMAKE_Fortran_COMPILER=ifort ..
     (optionally with e.g. -DCMAKE_BUILD_TYPE=Debug) then build using ninja. You can also specify an install directory, using -DCMAKE_INSTALL_PREFIX, and build with ninja install. Depending on your system, you may also need to contact IT to enable registry editing on your machine.

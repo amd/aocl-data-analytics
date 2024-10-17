@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -64,6 +64,9 @@ target_compile_definitions(pca_cancer
 add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans PRIVATE aocl-da)
 
+add_executable(dbscan dbscan.cpp)
+target_link_libraries(dbscan PRIVATE aocl-da)
+
 add_executable(metrics metrics.cpp)
 
 add_executable(knn knn.cpp)
@@ -79,6 +82,7 @@ set(EXAMPLE_EXES
     pca
     pca_cancer
     kmeans
+    dbscan
     datastore
     decision_tree
     random_forest

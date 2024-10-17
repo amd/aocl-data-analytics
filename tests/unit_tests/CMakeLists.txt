@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -141,6 +141,8 @@ target_link_libraries(utilities_public PRIVATE aocl-da)
 add_executable(printf_debug_internal da_utilities/printf_debug_internal.cpp)
 target_link_libraries(printf_debug_internal PRIVATE aocl-da)
 
+add_executable(da_vector_internal da_utilities/da_vector_internal.cpp)
+
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(da_utilities/c_compatibility_nog_public.c PROPERTIES LANGUAGE C)
 add_executable(c_compatibility_nog_public da_utilities/c_compatibility_nog_public.c)
@@ -154,6 +156,13 @@ target_compile_definitions(miscellaneous_internal PRIVATE ${VERS_DEF})
 ############## kmeans ################
 ######################################
 add_executable(kmeans_public kmeans/kmeans_public.cpp)
+
+######################################
+############## DBSCAN ################
+######################################
+add_executable(dbscan_public dbscan/dbscan_public.cpp)
+add_executable(dbscan_internal dbscan/dbscan_internal.cpp)
+target_link_libraries(dbscan_internal PRIVATE ${BLAS})
 
 ######################################
 ########### Optimization #############
@@ -207,7 +216,9 @@ set(GTEST_INTERNAL
     doc_internal
     coord_internal
     nlls_internal
-    miscellaneous_internal)
+    miscellaneous_internal
+    da_vector_internal
+    dbscan_internal)
 set(INDEP_INTERNAL
     printf_debug_internal
     lbfgsb_rc_internal
@@ -227,6 +238,7 @@ set(GTEST_PUBLIC
     errors_public
     pca_public
     kmeans_public
+    dbscan_public
     parallel_public
     utilities_public
     nlls_public

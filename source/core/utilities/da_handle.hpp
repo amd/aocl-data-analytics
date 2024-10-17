@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -36,6 +36,7 @@
 #include "basic_handle.hpp"
 #include "csv_reader.hpp"
 #include "da_error.hpp"
+#include "dbscan.hpp"
 #include "decision_tree.hpp"
 #include "kmeans.hpp"
 #include "knn.hpp"

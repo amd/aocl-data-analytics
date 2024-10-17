@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -63,6 +63,10 @@ enum da_result_ {
     da_kmeans_cluster_centres =
         501,          ///< Matrix of cluster centres computed in k-means clustering.
     da_kmeans_labels, ///< Labels of samples in the data matrix used to compute k-means clustering.
+    da_dbscan_labels, ///< Labels of samples in the data matrix used to compute DBSCAN clustering.
+    da_dbscan_n_clusters,     ///< The number of clusters found in DBSCAN clustering.
+    da_dbscan_n_core_samples, ///< The number of core samples found in DBSCAN clustering.
+    da_dbscan_core_sample_indices, ///< Indices of core samples in the data matrix used to compute DBSCAN clustering.
     da_knn_model_params, ///< Model parameters for the trained and fitted k-nearest neighbors.
     // ...
 };
