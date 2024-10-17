@@ -32,7 +32,7 @@ import numpy as np
 from aoclda.nearest_neighbors import knn_classifier
 
 
-def knn_classifier_example():
+def knn_example():
     """
     k-Nearest Neighbors classification
     """
@@ -101,6 +101,6 @@ def knn_classifier_example():
 
 if __name__ == "__main__":
     try:
-        knn_classifier_example()
+        knn_example()
     except RuntimeError:
         sys.exit(1)

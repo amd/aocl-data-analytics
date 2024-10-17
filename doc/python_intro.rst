@@ -87,4 +87,4 @@ You can also inspect and run the examples from a Python interpreter. For example
     >>> from aoclda.examples import pca_ex
     >>> import inspect
     >>> print(''.join(inspect.getsourcelines(pca_ex)[0]))
-    >>> pca_ex.test_pca()
+    >>> pca_ex.pca_example()
