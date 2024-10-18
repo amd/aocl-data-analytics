@@ -34,6 +34,7 @@ import math
 from aoclda.decision_tree import decision_tree as decision_tree_da
 from sklearn.tree import DecisionTreeClassifier as DecisionTreeClassifier_sklearn
 
+
 class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
     """
     Overwrite scikit-learn DecisionTreeClassifier to call AOCL-DA library
@@ -93,8 +94,6 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         if isinstance(max_features, str):
             self.features_selection = max_features
 
-
-
         if random_state is None:
             seed = -1
         elif not isinstance(random_state, int):
@@ -107,7 +106,7 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
             max_leaf_nodes is not None or
             class_weight is not None or
             ccp_alpha != 0.0 or
-            monotonic_cst is not None):
+                monotonic_cst is not None):
             warnings.warn(
                 "The parameters min_samples_leaf, max_leaf_nodes, "
                 "class_weight, ccp_alpha and monotonic_cst"
@@ -116,34 +115,16 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
         # new internal attributes
         self.aocl = True
 
-        self.decision_tree_double = decision_tree_da(criterion = score_criteria,
-                                                     max_depth = depth,
-                                                     min_samples_split = min_samples_split,
-                                                     seed = seed,
-                                                     precision = "double")
-
-        self.decision_tree_single = decision_tree_da(criterion = score_criteria,
-                                                     max_depth = depth,
-                                                     min_samples_split = min_samples_split,
-                                                     seed = seed,
-                                                     precision = "single")
-
-        self.decision_tree = self.decision_tree_double
-
+        self.decision_tree = decision_tree_da(criterion=score_criteria, max_depth=depth,
+                                              min_samples_split=min_samples_split, seed=seed)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
 
         if (sample_weight is not None or
-            check_input is not True):
+                check_input is not True):
             warnings.warn(
                 "The parameters sample_weight and check_input"
                 "are not supported and have been ignored.", category=RuntimeWarning)
-
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.decision_tree = self.decision_tree_single
-            self.decision_tree_double = None
 
         n_features = X.shape[1]
         if isinstance(self.max_features, str):
@@ -161,8 +142,7 @@ class DecisionTreeClassifier(DecisionTreeClassifier_sklearn):
             self.da_max_features = 0
 
         self.decision_tree.max_features = self.da_max_features
-        self.decision_tree.fit(X, y,
-                               min_impurity_decrease = self.min_impurity_decrease)
+        self.decision_tree.fit(X, y)
 
         return self
 

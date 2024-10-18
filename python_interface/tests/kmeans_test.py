@@ -57,8 +57,8 @@ def test_kmeans_functionality(da_precision, numpy_precision, numpy_order):
     x = np.array([[0., 1.],
                   [0., -1.]], dtype=numpy_precision, order=numpy_order)
 
-    km = kmeans(n_clusters=2, precision=da_precision)
-    km.fit(a, c, 1.0e-4)
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, seed=23)
+    km.fit(a)
     x_transform = km.transform(x)
     x_labels = km.predict(x)
 
@@ -103,9 +103,9 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
     a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision)
 
     with pytest.raises(RuntimeError):
-        km = kmeans(n_clusters=2, precision=da_precision, algorithm="floyd")
+        km = kmeans(n_clusters=2, algorithm="floyd")
 
-    km = kmeans(n_clusters=10, precision=da_precision)
+    km = kmeans(n_clusters=10)
     with pytest.warns(RuntimeWarning):
         km.fit(a)
 
@@ -115,7 +115,7 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
 
     a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
     b = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="C")
-    km = kmeans(n_clusters=10, precision=da_precision)
+    km = kmeans(n_clusters=10)
     with pytest.warns(RuntimeWarning):
         km.fit(a)
     with pytest.raises(RuntimeError):
@@ -133,6 +133,6 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
     c = np.array([[1., 1.],
                   [-3., -3.]], dtype=numpy_precision)
 
-    km = kmeans(n_clusters=2, precision=da_precision, check_data=True)
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, check_data=True)
     with pytest.raises(RuntimeError):
-        km.fit(a, c, 1.0e-4)
+        km.fit(a)

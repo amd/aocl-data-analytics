@@ -90,21 +90,10 @@ class PCA(PCA_sklearn):
         if svd_solver == 'covariance_eigh':
             solver = 'syevd'
 
-        # Initialize both single and double precision classes for now
-        self.pca_double = PCA_da(n_components, method="covariance",
-                                 solver=solver, precision="double", bias='unbiased')
-        self.pca_single = PCA_da(n_components, method="covariance",
-                                 solver=solver, precision="single", bias='unbiased')
-
-        self.pca = self.pca_double
+        self.pca = PCA_da(n_components, method="covariance",
+                          solver=solver, bias='unbiased')
 
     def fit(self, X, y=None):
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.pca = self.pca_single
-            self.pca_double = None
-
         self.pca.fit(X)
         return self
 
@@ -158,45 +147,45 @@ class PCA(PCA_sklearn):
     # return None if not yet written
     @property
     def components_(self):
-        return self.pca.get_principal_components()
+        return self.pca.principal_components
 
     @property
     def explained_variance_(self):
-        return self.pca.get_variance()
+        return self.pca.variance
 
     @property
     def explained_variance_ratio_(self):
-        return self.pca.get_variance() / self.pca.get_total_variance()
+        return self.pca.variance / self.pca.total_variance
 
     @property
     def singular_values_(self):
-        return self.pca.get_sigma()
+        return self.pca.sigma
 
     @property
     def mean_(self):
-        return self.pca.get_column_means()
+        return self.pca.column_means
 
     @property
     def n_components_(self):
-        return self.pca.get_n_components()
+        return self.pca.n_components
 
     @property
     def n_samples_(self):
-        return self.pca.get_n_samples()
+        return self.pca.n_samples
 
     @property
     def noise_variance_(self):
         n_discarded = min(self.pca.n_features,
                           self.pca.n_samples) - self.pca.n_components
         if n_discarded > 0:
-            return (self.pca.get_total_variance().item() - np.sum(self.pca.get_variance())) \
+            return (self.pca.total_variance - np.sum(self.pca.variance)) \
                 / n_discarded
 
         return 0.0
 
     @property
     def n_features_in_(self):
-        return self.pca.get_n_features()
+        return self.pca.n_features
 
     @property
     def feature_names_in_(self):
@@ -207,20 +196,20 @@ class PCA(PCA_sklearn):
 
     @property
     def scores(self):
-        return self.pca.get_scores()
+        return self.pca.scores
 
     @property
     def total_variance(self):
-        return self.pca.get_total_variance()
+        return self.pca.total_variance
 
     @property
     def u(self):
-        return self.pca.get_u()
+        return self.pca.u
 
     @property
     def vt(self):
-        return self.pca.get_vt()
+        return self.pca.vt
 
     @property
     def column_sdevs(self):
-        return self.pca.get_column_sdevs()
+        return self.pca.column_sdevs

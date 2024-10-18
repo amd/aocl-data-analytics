@@ -61,24 +61,15 @@ class LinearRegression(LinearRegression_sklearn):
         self.aocl = True
         self.intercept_val = None
         self.solver = solver
-        self.precision = "double"
 
         # Initialize both single and double precision classes for now
-        self.lmod_double = linmod_da(
-            "mse", solver=solver, intercept=fit_intercept, precision="double")
-        self.lmod_single = linmod_da(
-            "mse", solver=solver, intercept=fit_intercept, precision="single")
-        self.lmod = self.lmod_double
+        self.lmod = linmod_da("mse", solver=solver, intercept=fit_intercept)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
 
         # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.lmod = self.lmod_single
-            self.lmod_double = None
         self.lmod.fit(X, y)
         return self
 
@@ -111,7 +102,7 @@ class LinearRegression(LinearRegression_sklearn):
 
     @property
     def coef_(self):
-        coef = self.lmod.get_coef()
+        coef = self.lmod.coef
         if self.fit_intercept:
             if self.intercept_val is None:
                 self.intercept_val = coef[-1]
@@ -133,7 +124,7 @@ class LinearRegression(LinearRegression_sklearn):
     def intercept_(self):
         if self.fit_intercept:
             if self.intercept_val is None:
-                coef = self.lmod.get_coef()
+                coef = self.lmod.coef
                 self.intercept_val = coef[-1]
             return self.intercept_val
         else:
@@ -194,30 +185,14 @@ class Ridge(Ridge_sklearn):
                 "Constraints on the coefficients are not supported")
 
         # Initialize both single and double precision classes for now
-        self.lmod_double = linmod_da(
-            "mse", solver=solver, intercept=fit_intercept, precision="double")
-        self.lmod_single = linmod_da(
-            "mse", solver=solver, intercept=fit_intercept, precision="single")
-        self.lmod = self.lmod_double
+        self.lmod = linmod_da("mse", solver=solver, intercept=fit_intercept, reg_lambda=alpha,
+                              reg_alpha=0.0, tol=tol)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
-        # If data matrix is in single precision switch internally
 
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.lmod = self.lmod_single
-            self.lmod_double = None
-            reg_lambda_t = np.float32(self.alpha)
-            reg_alpha_t = np.float32(0.0)
-            tol_t = np.float32(self.tol)
-        else:
-            reg_lambda_t = np.float64(self.alpha)
-            reg_alpha_t = np.float64(0.0)
-            tol_t = np.float64(self.tol)
-
-        self.lmod.fit(X, y, reg_lambda=reg_lambda_t, reg_alpha=reg_alpha_t, tol=tol_t)
+        self.lmod.fit(X, y)
         return self
 
     def predict(self, X) -> np.ndarray:
@@ -252,7 +227,7 @@ class Ridge(Ridge_sklearn):
 
     @property
     def coef_(self):
-        coef = self.lmod.get_coef()
+        coef = self.lmod.coef
         if self.fit_intercept:
             if self.intercept_val is None:
                 self.intercept_val = coef[-1]
@@ -262,7 +237,7 @@ class Ridge(Ridge_sklearn):
 
     @property
     def n_iter_(self):
-        n_iter = self.lmod.get_n_iter()
+        n_iter = self.lmod.n_iter
         return n_iter
 
     @property
@@ -279,7 +254,7 @@ class Ridge(Ridge_sklearn):
     def intercept_(self):
         if self.fit_intercept:
             if self.intercept_val is None:
-                coef = self.lmod.get_coef()
+                coef = self.lmod.coef
                 self.intercept_val = coef[-1]
             return self.intercept_val
         else:
@@ -328,33 +303,14 @@ class Lasso(Lasso_sklearn):
         self.aocl = True
         self.intercept_val = None
 
-        # Initialize both single and double precision classes for now
-        self.lmod_double = linmod_da("mse",
-                                     intercept=fit_intercept,
-                                     max_iter=self.max_iter,
-                                     precision="double")
-        self.lmod_single = linmod_da("mse",
-                                     intercept=fit_intercept,
-                                     max_iter=self.max_iter,
-                                     precision="single")
-        self.lmod = self.lmod_double
+        self.lmod = linmod_da("mse", intercept=fit_intercept,
+                              max_iter=self.max_iter, reg_lambda=alpha, reg_alpha=1.0, tol=tol)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.lmod = self.lmod_single
-            self.lmod_double = None
-            reg_lambda_t = np.float32(self.alpha)
-            reg_alpha_t = np.float32(1.0)
-            tol_t = np.float32(self.tol)
-        else:
-            reg_lambda_t = np.float64(self.alpha)
-            reg_alpha_t = np.float64(1.0)
-            tol_t = np.float64(self.tol)
-        self.lmod.fit(X, y, reg_lambda=reg_lambda_t, reg_alpha=reg_alpha_t, tol=tol_t)
+
+        self.lmod.fit(X, y)
         return self
 
     def predict(self, X) -> np.ndarray:
@@ -391,7 +347,7 @@ class Lasso(Lasso_sklearn):
 
     @property
     def coef_(self):
-        coef = self.lmod.get_coef()
+        coef = self.lmod.coef
         if self.fit_intercept:
             if self.intercept_val is None:
                 self.intercept_val = coef[-1]
@@ -401,7 +357,7 @@ class Lasso(Lasso_sklearn):
 
     @property
     def n_iter_(self):
-        n_iter = self.lmod.get_n_iter()
+        n_iter = self.lmod.n_iter
         return n_iter
 
     @property
@@ -418,7 +374,7 @@ class Lasso(Lasso_sklearn):
     def intercept_(self):
         if self.fit_intercept:
             if self.intercept_val is None:
-                coef = self.lmod.get_coef()
+                coef = self.lmod.coef
                 self.intercept_val = coef[-1]
             return self.intercept_val
         else:
@@ -478,37 +434,14 @@ class ElasticNet(ElasticNet_sklearn):
         self.intercept_val = None
 
         # Initialize both single and double precision classes for now
-        self.lmod_double = linmod_da("mse",
-                                     intercept=fit_intercept,
-                                     max_iter=self.max_iter,
-                                     precision="double")
-        self.lmod_single = linmod_da("mse",
-                                     intercept=fit_intercept,
-                                     max_iter=self.max_iter,
-                                     precision="single")
-        self.lmod = self.lmod_double
+        self.lmod = linmod_da("mse", intercept=fit_intercept, max_iter=self.max_iter,
+                                     reg_lambda=alpha, reg_alpha=l1_ratio, tol=tol)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
             raise ValueError("sample_weight is not supported")
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.lmod = self.lmod_single
-            self.lmod_double = None
-            reg_lambda_t = np.float32(self.alpha)
-            reg_alpha_t = np.float32(self.l1_ratio)
-            tol_t = np.float32(self.tol)
-        else:
-            reg_lambda_t = np.float64(self.alpha)
-            reg_alpha_t = np.float64(self.l1_ratio)
-            tol_t = np.float64(self.tol)
 
-        self.lmod.fit(X,
-                      y,
-                      reg_lambda=reg_lambda_t,
-                      reg_alpha=reg_alpha_t,
-                      tol=tol_t)
+        self.lmod.fit(X, y)
         return self
 
     def predict(self, X) -> np.ndarray:
@@ -546,7 +479,7 @@ class ElasticNet(ElasticNet_sklearn):
 
     @property
     def coef_(self):
-        coef = self.lmod.get_coef()
+        coef = self.lmod.coef
         if self.fit_intercept:
             if self.intercept_val is None:
                 self.intercept_val = coef[-1]
@@ -556,7 +489,7 @@ class ElasticNet(ElasticNet_sklearn):
 
     @property
     def n_iter_(self):
-        n_iter = self.lmod.get_n_iter()
+        n_iter = self.lmod.n_iter
         return n_iter
 
     @property
@@ -583,7 +516,7 @@ class ElasticNet(ElasticNet_sklearn):
     def intercept_(self):
         if self.fit_intercept:
             if self.intercept_val is None:
-                coef = self.lmod.get_coef()
+                coef = self.lmod.coef
                 self.intercept_val = coef[-1]
             return self.intercept_val
         else:
@@ -687,17 +620,9 @@ class LogisticRegression(LogisticRegression_sklearn):
         self.n_class = None
 
         # Initialize aoclda object
-        self.lmod_double = linmod_da("logistic",
-                                     intercept=self.fit_intercept,
-                                     max_iter=self.max_iter,
-                                     constraint=self.constraint,
-                                     precision="double")
-        self.lmod_single = linmod_da("logistic",
-                                     intercept=self.fit_intercept,
-                                     max_iter=self.max_iter,
-                                     constraint=self.constraint,
-                                     precision="single")
-        self.lmod = self.lmod_double
+        self.lmod = linmod_da("logistic", intercept=self.fit_intercept, max_iter=self.max_iter,
+                              constraint=self.constraint, reg_alpha=l1_ratio,
+                              reg_lambda=self.reg_lambda, progress_factor=progress_factor)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
@@ -705,32 +630,8 @@ class LogisticRegression(LogisticRegression_sklearn):
         self.n_class = len(np.unique(y))
         if self.n_class == 2:
             self.n_class = 1
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.lmod = self.lmod_single
-            self.lmod_double = None
-            reg_lambda_t = np.float32(self.reg_lambda)
-            reg_alpha_t = np.float32(self.l1_ratio)
-            tol_t = np.float32(self.tol)
-            if self.progress_factor is not None:
-                progress_factor_t = np.float32(self.progress_factor)
-            else:
-                progress_factor_t = None
-        else:
-            reg_lambda_t = np.float64(self.reg_lambda)
-            reg_alpha_t = np.float64(self.l1_ratio)
-            tol_t = np.float64(self.tol)
-            if self.progress_factor is not None:
-                progress_factor_t = np.float64(self.progress_factor)
-            else:
-                progress_factor_t = None
-        self.lmod.fit(X,
-                      y,
-                      reg_lambda=reg_lambda_t,
-                      reg_alpha=reg_alpha_t,
-                      tol=tol_t,
-                      progress_factor=progress_factor_t)
+
+        self.lmod.fit(X, y)
         return self
 
     def predict(self, X) -> np.ndarray:
@@ -771,7 +672,7 @@ class LogisticRegression(LogisticRegression_sklearn):
 
     @property
     def coef_(self):
-        coef = self.lmod.get_coef()
+        coef = self.lmod.coef
         # We are returning a ndarray of shape (n_class-1, n_feat)
         if self.constraint == 'rsc':
             if self.fit_intercept:
@@ -792,7 +693,7 @@ class LogisticRegression(LogisticRegression_sklearn):
         if self.constraint == 'rsc':
             if self.fit_intercept:
                 if self.intercept_val is None:
-                    coef = self.lmod.get_coef()
+                    coef = self.lmod.coef
                     self.intercept_val = coef[-(self.n_class-1):]
                 return self.intercept_val
             else:
@@ -800,7 +701,7 @@ class LogisticRegression(LogisticRegression_sklearn):
         elif self.constraint == 'ssc':
             if self.fit_intercept:
                 if self.intercept_val is None:
-                    coef = self.lmod.get_coef()
+                    coef = self.lmod.coef
                     self.intercept_val = coef[-self.n_class:]
                 return self.intercept_val
             else:
@@ -818,5 +719,5 @@ class LogisticRegression(LogisticRegression_sklearn):
 
     @property
     def n_iter_(self):
-        n_iter = self.lmod.get_n_iter()
+        n_iter = self.lmod.n_iter
         return n_iter

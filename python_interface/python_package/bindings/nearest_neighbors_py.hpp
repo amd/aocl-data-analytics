@@ -51,7 +51,7 @@ class knn_classifier : public pyda_handle {
         da_status status;
         if (prec == "double") {
             status = da_handle_init<double>(&handle, da_handle_knn);
-        } else if (prec == "single") {
+        } else {
             status = da_handle_init<float>(&handle, da_handle_knn);
             precision = da_single;
         }

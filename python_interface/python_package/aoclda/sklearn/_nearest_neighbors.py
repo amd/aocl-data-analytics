@@ -74,7 +74,7 @@ class KNeighborsClassifier(KNeighborsClassifier_sklearn):
         if algorithm not in ('brute'):
             algorithm = 'brute'
             warnings.warn(
-                "invalid algorithm chosen, defaulting to brute.", category=RuntimeWarning)
+                "Invalid algorithm chosen, defaulting to brute.", category=RuntimeWarning)
         if weights not in ('uniform','distance'):
             raise ValueError(
                 "invalid weights chosen, available options are 'uniform' and 'distance'.")
@@ -90,27 +90,10 @@ class KNeighborsClassifier(KNeighborsClassifier_sklearn):
             raise ValueError(
                 "invalid metric provided, available options are ", available_metrics)
 
-        self.knn_classifier_double = knn_classifier_da(n_neighbors = n_neighbors,
-                                                       weights = weights,
-                                                       algorithm = algorithm,
-                                                       metric = metric,
-                                                       precision = "double")
-
-        self.knn_classifier_single = knn_classifier_da(n_neighbors = n_neighbors,
-                                                       weights = weights,
-                                                       algorithm = algorithm,
-                                                       metric = metric,
-                                                       precision = "single")
-
-        self.knn_classifier = self.knn_classifier_double
+        self.knn_classifier = knn_classifier_da(n_neighbors = n_neighbors, weights = weights,
+                                                algorithm = algorithm, metric = metric)
 
     def fit(self, X, y):
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.knn_classifier = self.knn_classifier_single
-            self.knn_classifier_double = None
-
         self.knn_classifier.fit(X, y)
 
         return self

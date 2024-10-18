@@ -29,7 +29,7 @@ aoclda.factorization module
 
 from ._aoclda.factorization import pybind_PCA
 
-class PCA(pybind_PCA):
+class PCA():
     """
     Principal component analysis (PCA).
 
@@ -68,81 +68,84 @@ class PCA(pybind_PCA):
             principal components, at the expense of some extra computation. This option cannot be
             used if ``solver = 'syevd'``. Default = False.
 
-        precision (str, optional): Whether to initialize the PCA object in double or
-            single precision. It can take the values 'single' or 'double'.
-            Default = 'double'.
-
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
 
     """
+
+    def __init__(self, n_components=1, bias='unbiased', method='covariance', solver='auto',
+                 store_U=False, check_data=False):
+        self.pca_double = pybind_PCA(n_components, bias, method, solver, store_U, 'double', check_data)
+        self.pca_single = pybind_PCA(n_components, bias, method, solver, store_U, 'single', check_data)
+        self.pca = self.pca_double
+
     @property
     def principal_components(self):
         """numpy.ndarray of shape (n_components, n_features): Principal axes in feature space,
             representing the directions of maximum variance in the data. Equivalently, the right
             singular vectors of the normalized input data, parallel to its eigenvectors. The
             components are sorted by decreasing ``variance``."""
-        return self.get_principal_components()
+        return self.pca.get_principal_components()
 
     @property
     def scores(self):
         """numpy.ndarray of shape (n_samples, n_components): The principal component scores,
             :math:`U\Sigma`."""
-        return self.get_scores()
+        return self.pca.get_scores()
 
     @property
     def variance(self):
         """numpy.ndarray of shape (n_components, ): The amount of variance explained by each of the
             selected components."""
-        return self.get_variance()
+        return self.pca.get_variance()
 
     @property
     def total_variance(self):
         """numpy.ndarray of shape (1, ): The total amount of variance within the dataset."""
-        return self.get_total_variance()
+        return self.pca.get_total_variance()
 
     @property
     def u(self):
         """numpy.ndarray of shape (n_samples, n_samples): The matrix :math:`U` from the SVD."""
-        return self.get_u()
+        return self.pca.get_u()
 
     @property
     def sigma(self):
         """numpy.ndarray of shape (n_components,): The diagonal values of :math:`\Sigma` from the
             SVD."""
-        return self.get_sigma()
+        return self.pca.get_sigma()
 
     @property
     def vt(self):
         """numpy.ndarray of shape (n_components, n_features): The matrix :math:`V^T` from the
             SVD."""
-        return self.get_vt()
+        return self.pca.get_vt()
 
     @property
     def column_means(self):
         """numpy.ndarray of shape (n_features, ): The column means of the data matrix.
             These are computed if ``method = 'correlation'`` or ``method = 'correlation'``."""
-        return self.get_column_means()
+        return self.pca.get_column_means()
 
     @property
     def column_sdevs(self):
         """numpy.ndarray of shape (n_features, ): The column standard deviations of the data matrix.
             These are only computed if ``method = 'correlation'``"""
-        return self.get_column_sdevs()
+        return self.pca.get_column_sdevs()
 
     @property
     def n_samples(self):
         """int: The number of samples in the data matrix used to compute the PCA. """
-        return self.get_n_samples()
+        return self.pca.get_n_samples()
 
     @property
     def n_features(self):
         """int: The number of features in the data matrix used to compute the PCA. """
-        return self.get_n_features()
+        return self.pca.get_n_features()
 
     @property
     def n_components(self):
         """int: The number of components found in the PCA. """
-        return self.get_n_components()
+        return self.pca.get_n_components()
 
     def fit(self, A):
         """
@@ -155,7 +158,12 @@ class PCA(pybind_PCA):
         Returns:
             self (object): Returns the instance itself.
         """
-        return self.pybind_fit(A)
+        if A.dtype == "float32":
+            self.pca = self.pca_single
+            self.pca_double = None
+
+        self.pca.pybind_fit(A)
+        return self
 
     def transform(self, X):
         """
@@ -174,7 +182,7 @@ class PCA(pybind_PCA):
         Returns:
             numpy.ndarray of shape (m_samples, n_components): The transformed matrix.
         """
-        return self.pybind_transform(X)
+        return self.pca.pybind_transform(X)
 
     def inverse_transform(self, Y):
         """
@@ -193,4 +201,4 @@ class PCA(pybind_PCA):
         Returns:
             numpy.ndarray of shape (k_samples, n_features): The transformed matrix.
         """
-        return self.pybind_inverse_transform(Y)
+        return self.pca.pybind_inverse_transform(Y)

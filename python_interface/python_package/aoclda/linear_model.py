@@ -29,10 +29,10 @@
 aoclda.linear_model module
 """
 
+import numpy as np
 from ._aoclda.linear_model import pybind_linmod
 
-
-class linmod(pybind_linmod):
+class linmod():
     """
     Linear models.
 
@@ -92,41 +92,41 @@ class linmod(pybind_linmod):
             - ``'ssc'`` means the sum of coefficients class-wise for each feature \
                 is 0. It will result in K class coefficients for K class problems.
 
-        precision (str, optional): Whether to compute the linear model in double or
-            single precision. It can take the values 'single' or 'double'.
-            Default = 'double'.
+        reg_lambda (float, optional): :math:`\lambda`, the magnitude of the regularization term.
+            Default=0.0.
+
+        reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` term in the
+            regularization. Default=0.0.
+
+        x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative solvers.
+            Default=None.
+
+        tol (float, optional): Convergence tolerance for iterative solvers. Applies only to
+            iterative solvers: 'sparse_cg', 'coord', 'lbfgs'. Default=1.0e-4.
+
+        progress_factor (float, optional): Applies only to 'lbfgs' and 'coord' solver. Factor used
+            to detect convergence of the iterative optimization step. Default=None.
 
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
-    # This is done to change the order of parameters, in pybind usage of std::optional for max_iter
-    # made it necessary to put it in the front, but more natural position is near the end.
-    def __init__(self,
-                 mod,
-                 intercept=False,
-                 solver='auto',
-                 scaling='auto',
-                 max_iter=None,
-                 constraint='ssc',
-                 precision='double',
-                 check_data=False):
-        super().__init__(mod=mod,
-                         max_iter=max_iter,
-                         intercept=intercept,
-                         solver=solver,
-                         scaling=scaling,
-                         constraint=constraint,
-                         precision=precision,
-                         check_data=check_data)
+    def __init__(self, mod, intercept=False, solver='auto', scaling='auto', max_iter=None,
+                 constraint='ssc', reg_lambda=0.0, reg_alpha=0.0, x0=None, tol=1.0e-4,
+                 progress_factor=None, check_data=False):
+        self.linmod_double = pybind_linmod(mod=mod, max_iter=max_iter, intercept=intercept,
+                                           solver=solver, scaling=scaling, constraint=constraint,
+                                           precision="double", check_data=check_data)
+        self.linmod_single = pybind_linmod(mod=mod, max_iter=max_iter, intercept=intercept,
+                                           solver=solver, scaling=scaling, constraint=constraint,
+                                           precision="single", check_data=check_data)
+        self.reg_lambda=reg_lambda
+        self.reg_alpha=reg_alpha
+        self.x0=x0
+        self.tol=tol
+        self.progress_factor=progress_factor
+        self.linmod=self.linmod_double
 
-    def fit(self,
-            X,
-            y,
-            reg_lambda=0.0,
-            reg_alpha=0.0,
-            x0=None,
-            tol=0.0001,
-            progress_factor=None):
+    def fit(self, X, y):
         """
         Computes the chosen linear model on the feature matrix ``X`` and response vector ``y``
 
@@ -136,31 +136,30 @@ class linmod(pybind_linmod):
 
             y (numpy.ndarray): The response vector. Its shape is (n_samples).
 
-            reg_lambda (float, optional): :math:`\lambda`, the magnitude of the regularization term.
-                Default=0.0.
-
-            reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` \
-                term in the regularization.
-
-            x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative \
-                solvers
-
-            tol (float, optional): Convergence tolerance for iterative solvers. Applies only \
-                to iterative solvers: 'sparse_cg', 'coord', 'lbfgs'.
-
-            progress_factor (float, optional): Applies only to 'lbfgs' and 'coord' solver. \
-                Factor used to detect convergence of the iterative optimization step.
-
         Returns:
             self (object): Returns the instance itself.
         """
-        self.pybind_fit(X,
-                        y,
-                        x0=x0,
-                        progress_factor=progress_factor,
-                        reg_lambda=reg_lambda,
-                        reg_alpha=reg_alpha,
-                        tol=tol)
+        if X.dtype == 'float32':
+            self.linmod=self.linmod_single
+            self.linmod_double=None
+            self.reg_alpha = np.float32(self.reg_alpha)
+            self.reg_lambda = np.float32(self.reg_lambda)
+            self.tol = np.float32(self.tol)
+            if self.x0 is not None:
+                self.x0 = np.float32(self.x0)
+            if self.progress_factor is not None:
+                self.progress_factor = np.float32(self.progress_factor)
+        else:
+            self.reg_alpha = np.float64(self.reg_alpha)
+            self.reg_lambda = np.float64(self.reg_lambda)
+            self.tol = np.float64(self.tol)
+            if self.x0 is not None:
+                self.x0 = np.float64(self.x0)
+            if self.progress_factor is not None:
+                self.progress_factor = np.float64(self.progress_factor)
+
+        self.linmod.pybind_fit(X, y, x0=self.x0, progress_factor=self.progress_factor,
+                        reg_lambda=self.reg_lambda, reg_alpha=self.reg_alpha, tol=self.tol)
         return self
 
     def predict(self, X):
@@ -175,7 +174,7 @@ class linmod(pybind_linmod):
             numpy.ndarray of length n_samples: The prediction vector, where n_samples is \
                 the number of rows of ``X``.
         """
-        return self.pybind_predict(X)
+        return self.linmod.pybind_predict(X)
 
     @property
     def coef(self):
@@ -183,30 +182,30 @@ class linmod(pybind_linmod):
         numpy.ndarray: contains the output coefficients of the model. If an intercept variable was
             required, it corresponds to the last element.
         """
-        return self.get_coef()
+        return self.linmod.get_coef()
 
     @property
     def loss(self):
         """numpy.ndarray of shape (1, ): The value of loss function :math:`L(\\beta_0, \\beta)`.
         """
-        return self.get_loss()
+        return self.linmod.get_loss()
 
     @property
     def nrm_gradient_loss(self):
         """numpy.ndarray of shape (1, ): The norm of the gradient of the loss function. Only valid \
             for iterative solvers.
         """
-        return self.get_norm_gradient_loss()
+        return self.linmod.get_norm_gradient_loss()
 
     @property
     def n_iter(self):
         """int: The number iterations performed to find the solution.
         Only valid for iterative solvers.
         """
-        return self.get_n_iter()
+        return self.linmod.get_n_iter()
 
     @property
     def time(self):
         """numpy.ndarray of shape (1, ): Compute time (wall clock time in seconds).
         """
-        return self.get_time()
+        return self.linmod.get_time()

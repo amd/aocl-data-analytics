@@ -107,7 +107,6 @@ class kmeans : public pyda_handle {
 
     template <typename T> py::array_t<T> transform(py::array_t<T> X) {
         da_status status;
-        bool row_order_X;
         da_int m_samples, m_features, ldx;
         get_numpy_array_properties(X, m_samples, m_features, ldx);
 

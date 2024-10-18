@@ -31,7 +31,8 @@ aoclda.decision_tree module
 
 from ._aoclda.decision_tree import pybind_decision_tree
 
-class decision_tree(pybind_decision_tree):
+
+class decision_tree():
     """
     A decision tree classifier.
 
@@ -55,22 +56,43 @@ class decision_tree(pybind_decision_tree):
         build_order (str, optional): Select in which order to explore the nodes. It can
             take the values 'breadth first' or 'depth first'. Default 'breadth first'.
 
+        min_impurity_decrease (float, optional): Minimum score improvement needed to consider a
+            split from the parent node. Default 0.0
+
+        min_split_score (float, optional): Minimum score needed for a node to be considered for
+            splitting. Default 0.0.
+
+        feat_thresh (float, optional): Minimum difference in feature value required for splitting.
+            Default 1.0e-06
+
         precision (str, optional): Whether to initialize the PCA object in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
 
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
+
     def __init__(self,
-             criterion = 'gini',
-             seed = -1, max_depth = 29,
-             min_samples_split = 2, build_order = 'breadth first',
-             max_features = 0, precision = 'double'):
-        super().__init__(criterion = criterion,
-             seed = seed, max_depth = max_depth,
-             min_samples_split = min_samples_split, build_order = build_order,
-             max_features = max_features, precision = precision)
+                 criterion='gini',
+                 seed=-1, max_depth=29,
+                 min_samples_split=2, build_order='breadth first',
+                 max_features=0, min_impurity_decrease=0.0, min_split_score=0.0,
+                 feat_thresh=1.0e-06, check_data=False):
+
+        self.decision_tree_double = pybind_decision_tree(criterion=criterion,
+                         seed=seed, max_depth=max_depth,
+                         min_samples_split=min_samples_split, build_order=build_order,
+                         max_features=max_features, precision="double", check_data=check_data)
+        self.decision_tree_single = pybind_decision_tree(criterion=criterion,
+                         seed=seed, max_depth=max_depth,
+                         min_samples_split=min_samples_split, build_order=build_order,
+                         max_features=max_features, precision="single", check_data=check_data)
+        self.decision_tree = self.decision_tree_double
+
         self.max_features = max_features
+        self.min_impurity_decrease = min_impurity_decrease
+        self.min_split_score = min_split_score
+        self.feat_thresh = feat_thresh
 
     @property
     def max_features(self):
@@ -78,9 +100,9 @@ class decision_tree(pybind_decision_tree):
 
     @max_features.setter
     def max_features(self, value):
-        self.set_max_features_opt(max_features=value)
+        self.decision_tree.set_max_features_opt(max_features=value)
 
-    def fit(self, X, y, min_impurity_decrease=0.0, min_split_score=0.0, feat_thresh=1.0e-06):
+    def fit(self, X, y):
         """
         Computes the decision tree on the feature matrix ``X`` and response vector ``y``
 
@@ -90,19 +112,14 @@ class decision_tree(pybind_decision_tree):
 
             y (numpy.ndarray): The response vector. Its shape is (n_samples).
 
-            min_impurity_decrease (float, optional): Minimum score improvement
-                needed to consider a split from the parent node. Default 0.0
-
-            min_split_score (float, optional): Minimum score needed for a node
-                to be considered for splitting. Default 0.0.
-
-            feat_thresh (float, optional): Minimum difference in feature value
-                required for splitting. Default 1.0e-06
-
         Returns:
             self (object): Returns the instance itself.
         """
-        return self.pybind_fit(X, y, min_impurity_decrease, min_split_score, feat_thresh)
+        if X.dtype == "float32":
+            self.decision_tree = self.decision_tree_single
+            self.decision_tree_double = None
+
+        return self.decision_tree.pybind_fit(X, y, self.min_impurity_decrease, self.min_split_score, self.feat_thresh)
 
     def score(self, X, y):
         """
@@ -118,7 +135,7 @@ class decision_tree(pybind_decision_tree):
         Returns:
             float: The mean accuracy of the model on the test data.
         """
-        return self.pybind_score(X, y)
+        return self.decision_tree.pybind_score(X, y)
 
     def predict(self, X):
         """
@@ -132,7 +149,7 @@ class decision_tree(pybind_decision_tree):
             numpy.ndarray of length n_samples: The prediction vector, where n_samples is
             the number of rows of ``X``.
         """
-        return self.pybind_predict(X)
+        return self.decision_tree.pybind_predict(X)
 
     def predict_proba(self, X):
         """
@@ -146,7 +163,7 @@ class decision_tree(pybind_decision_tree):
             numpy.ndarray of length n_samples: The prediction vector, where n_samples is
             the number of rows of ``X``.
         """
-        return self.pybind_predict_proba(X)
+        return self.decision_tree.pybind_predict_proba(X)
 
     def predict_log_proba(self, X):
         """
@@ -160,14 +177,14 @@ class decision_tree(pybind_decision_tree):
             numpy.ndarray of length n_samples: The prediction vector,
                 where n_samples is the number of rows of X.
         """
-        return self.pybind_predict_log_proba(X)
+        return self.decision_tree.pybind_predict_log_proba(X)
 
     @property
     def n_nodes(self):
         """int: The number of nodes in the trained tree"""
-        return self.get_n_nodes()
+        return self.decision_tree.get_n_nodes()
 
     @property
     def n_leaves(self):
         """int: The number of nodes in the trained tree"""
-        return self.get_n_leaves()
+        return self.decision_tree.get_n_leaves()

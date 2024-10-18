@@ -55,8 +55,8 @@ def kmeans_example():
 
     print("\nk-means clustering for a small data matrix\n")
     try:
-        km = kmeans(n_clusters=2)
-        km.fit(a, c)
+        km = kmeans(n_clusters=2, C = c)
+        km.fit(a)
         x_transform = km.transform(x)
         x_labels = km.predict(x)
     except RuntimeError:

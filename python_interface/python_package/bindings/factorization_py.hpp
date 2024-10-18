@@ -185,7 +185,7 @@ class pca : public pyda_handle {
         da_status status = da_status_success;
 
         da_int n_samples, n_features, n_components;
-        da_int dim = 3, dim1, dim2;
+        da_int dim = 3, dim1 = 0, dim2 = 0;
         size_t stride_size;
 
         get_rinfo(&n_samples, &n_features, &n_components, &stride_size);

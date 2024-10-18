@@ -61,7 +61,7 @@ class linmod : public pyda_handle {
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_linmod);
             status = da_linmod_select_model<double>(handle, mod_enum);
-        } else if (prec == "single") {
+        } else {
             da_handle_init<float>(&handle, da_handle_linmod);
             status = da_linmod_select_model<float>(handle, mod_enum);
             precision = da_single;
@@ -170,7 +170,7 @@ class linmod : public pyda_handle {
 
     auto get_coef() {
         da_status status = da_status_success;
-        da_int dim;
+        da_int dim = 0;
         switch (mod_enum) {
         case linmod_model_mse:
             dim = intercept ? n_feat + 1 : n_feat;

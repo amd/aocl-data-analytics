@@ -38,6 +38,7 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
     """
     Overwrite scikit-learn RandomForestClassifier to call AOCL-DA library
     """
+
     def __init__(
         self,
         n_estimators=100,
@@ -116,7 +117,7 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
             warm_start is not False or
             class_weight is not None or
             ccp_alpha != 0.0 or
-            monotonic_cst is not None):
+                monotonic_cst is not None):
             warnings.warn(
                 "The parameters min_samples_leaf, min_weight_fraction_leaf, max_leaf_nodes, "
                 "oob_score, n_jobs, warm_start, class_weight, ccp_alpha and monotonic_cst "
@@ -125,23 +126,12 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
         # new internal attributes
         self.aocl = True
 
-        self.decision_forest_double = decision_forest_da(seed = seed,
-                                                  criterion = score_criteria,
-                                                  n_trees = self.n_trees,
-                                                  max_depth = depth,
-                                                  min_samples_split = min_samples_split,
-                                                  bootstrap = bootstrap,
-                                                  precision = "double")
-
-        self.decision_forest_single = decision_forest_da(seed = seed,
-                                                  criterion = score_criteria,
-                                                  n_trees = self.n_trees,
-                                                  max_depth = depth,
-                                                  min_samples_split = min_samples_split,
-                                                  bootstrap = bootstrap,
-                                                  precision = "single")
-
-        self.decision_forest = self.decision_forest_double
+        self.decision_forest = decision_forest_da(seed=seed,
+                                                  criterion=score_criteria,
+                                                  n_trees=self.n_trees,
+                                                  max_depth=depth,
+                                                  min_samples_split=min_samples_split,
+                                                  bootstrap=bootstrap)
 
     def fit(self, X, y, sample_weight=None):
 
@@ -149,12 +139,6 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
             warnings.warn(
                 "The parameters sample_weight"
                 "is not supported and has been ignored.", category=RuntimeWarning)
-
-        # If data matrix is in single precision switch internally
-        if X.dtype == "float32":
-            self.precision = "single"
-            self.decision_forest = self.decision_forest_single
-            self.decision_forest_double = None
 
         n_features = X.shape[1]
         if isinstance(self.max_features, int):
@@ -173,9 +157,11 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
         if isinstance(self.max_samples, int):
             import numpy as np
             if X.dtype == "float32":
-                da_samples_factor = np.float32(self.max_samples) / np.float32(n_samples)
+                da_samples_factor = np.float32(
+                    self.max_samples) / np.float32(n_samples)
             if X.dtype == "float64":
-                da_samples_factor = np.float64(self.max_samples) / np.float64(n_samples)
+                da_samples_factor = np.float64(
+                    self.max_samples) / np.float64(n_samples)
         elif self.max_samples is None:
             da_samples_factor = 0.8
         else:
@@ -183,9 +169,7 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
 
         self.decision_forest.features_selection = self.features_selection
         self.decision_forest.max_features = self.da_max_features
-        self.decision_forest.fit(X, y,
-                                 samples_factor=da_samples_factor,
-                                 min_impurity_decrease = self.min_impurity_decrease)
+        self.decision_forest.fit(X, y)
 
         return self
 
