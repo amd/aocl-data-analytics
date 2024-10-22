@@ -191,6 +191,10 @@ Options
          "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
          "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
          "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
+
 
 
 

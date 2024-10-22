@@ -321,7 +321,8 @@ TYPED_TEST(KMeansTest, ErrorExits) {
     EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), da_status_incompatible_options);
 
     // Test that check_data works - could do this in any handle type really, so we will do it here
-    EXPECT_EQ(da_options_set(handle, "check data", (da_int)1), da_status_success);
+    std::string y = "yes";
+    EXPECT_EQ(da_options_set(handle, "check data", y.c_str()), da_status_success);
     TypeParam tmp = param.C.data()[0];
     param.C.data()[0] = std::numeric_limits<TypeParam>::quiet_NaN();
     EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),

@@ -30,7 +30,6 @@
 #include <limits>
 
 namespace da_optimization_options {
-enum storage_scheme { fortran = 1, c = 2 };
 enum regularization { quadratic = 2, cubic = 3 };
 } // namespace da_optimization_options
 
@@ -108,11 +107,6 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "ralfit iteration limit", "Maximum number of iterations to perform.", 1,
             da_options::lbound_t::greaterequal, max_da_int, da_options::ubound_t::p_inf,
             100));
-        opts.register_opt(oi);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "check data", "Check input data for NaNs prior to performing computation.", 0,
-            da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
         // ===========================================================================
@@ -293,19 +287,6 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "term and power option values.",
             {{"trust-region", 1}, {"tr", 1}, {"regularization", 2}, {"reg", 2}},
             "trust-region"));
-        opts.register_opt(os);
-
-        os = std::make_shared<OptionString>(OptionString(
-            "storage order",
-            "Define the storage scheme used to store multi-dimensional arrays (Jacobian "
-            "matrix, "
-            "etc).",
-            {{"fortran", storage_scheme::fortran},
-             {"f", storage_scheme::fortran},
-             {"column-major", storage_scheme::fortran},
-             {"c", storage_scheme::c},
-             {"row-major", storage_scheme::c}},
-            "c"));
         opts.register_opt(os);
 
         os = std::make_shared<OptionString>(OptionString(

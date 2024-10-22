@@ -131,7 +131,7 @@ TEST(linmod, invalidInput) {
               da_status_invalid_pointer);
 
     // Check we can handle NaN data correctly
-    EXPECT_EQ(da_options_set(handle_d, "check data", (da_int)1), da_status_success);
+    EXPECT_EQ(da_options_set(handle_d, "check data", "yes"), da_status_success);
     bd[0] = std::numeric_limits<double>::quiet_NaN();
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, bd),
               da_status_invalid_input);

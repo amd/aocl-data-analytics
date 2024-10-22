@@ -187,9 +187,7 @@ template <typename T> da_status da_optimization<T>::get_info(da_int &dim, T info
 
 template <typename T>
 da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &err)
-    : basic_handle<T>() {
-    // Assuming that err is valid
-    this->err = &err;
+    : basic_handle<T>(err) {
     try {
         this->info.resize(da_optim_info_t::info_number);
     } catch (...) {

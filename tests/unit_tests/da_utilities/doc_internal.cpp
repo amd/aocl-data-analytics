@@ -52,7 +52,9 @@ const static std::map<da_handle_type, std::string> htypes{
     {da_handle_kmeans, "k-means clustering"},
     {da_handle_decision_tree, "Decision trees"},
     {da_handle_decision_forest, "Decision forests"},
-    {da_handle_knn, "k-nearest neighbors"}};
+    {da_handle_knn, "k-nearest neighbors"},
+    {da_handle_nlls, "Nonlinear least squares"},
+};
 
 void options_print(da_handle_type htype) {
     da_handle handle = nullptr;
@@ -143,23 +145,6 @@ TEST(DocOptions, RST_store) {
         false, false, ":strong:`Table of options for` :cpp:type:`da_datastore`.");
     std::cout << std::endl;
     da_datastore_destroy(&store);
-}
-
-// Used to generate doc, name *must* start with ``RST``
-TEST(DocOptionsInternal, RST_optim) {
-    // ReStructuredText (restore std::out)
-    std::cout << "\n.. only:: internal\n"
-              << "\n.. _opts_optimizationsolvers:\n"
-              << "\nOptimization Solvers\n"
-              << "====================\n"
-              << std::endl;
-    da_options::OptionRegistry opt;
-    da_errors::da_error_t err(da_errors::action_t::DA_THROW);
-    EXPECT_EQ(register_optimization_options<double>(err, opt), da_status_success);
-    // ReStructuredText
-    opt.print_details(false, false,
-                      ":strong:`Table of options for optimization solvers.`");
-    std::cout << std::endl;
 }
 
 } // namespace

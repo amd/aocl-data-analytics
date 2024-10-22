@@ -250,7 +250,7 @@ Nonlinear least-squares options
       Various options can be set to customize the nonlinear models by calling one of these
       :ref:`functions <api_handle_options>`. The following table details the available options, where :math:`\epsilon` represents the machine precision.
 
-      .. update options using table _opts_optimizationsolvers
+      .. update options using table _opts_nonlinearleastsquares
 
       .. csv-table:: Nonlinear data fitting options
          :header: "Option name", "Type", "Default", "Description", "Constraints"
@@ -268,11 +268,11 @@ Nonlinear least-squares options
          "ralfit convergence step size", "real", ":math:`r=\varepsilon/2`", "Absolute tolerance over the step size to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
          "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`"
          "print options", "string", ":math:`s=` `no`", "Print options list.", ":math:`s=` `no`, or `yes`."
-         "storage order", "string", ":math:`s=` `c`", "Define the storage scheme used to store multi-dimensional arrays (Jacobian matrix, etc).", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
          "check derivatives", "string", ":math:`s=` `no`", "Check user-provided derivatives using finite-differences.", ":math:`s=` `no`, or `yes`."
          "finite differences step", "real", ":math:`r=10\;\sqrt{2\,\varepsilon}`", "Size of step to use for estimating derivatives using finite-differences.", ":math:`0 < r < 10`"
          "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`"
-
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 Examples
 ========

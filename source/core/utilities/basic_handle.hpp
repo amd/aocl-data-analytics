@@ -122,8 +122,8 @@ da_status basic_handle<T>::check_1D_array(da_int n, const T *data,
 
     // Check for NaNs if the `check data` option has been set
     da_int check_data = 0;
-
-    this->opts.get("check data", check_data);
+    std::string check_data_str;
+    this->opts.get("check data", check_data_str, check_data);
     if (check_data) {
         da_status status = da_utils::check_data(column_major, n, 1, data, n);
         if (status == da_status_invalid_input)
@@ -199,7 +199,8 @@ da_status basic_handle<T>::store_2D_array(
     // Check for NaNs if the `check data` option has been set
     da_int check_data = 0;
     if (mode == 0) {
-        this->opts.get("check data", check_data);
+        std::string check_data_str;
+        this->opts.get("check data", check_data_str, check_data);
         if (check_data) {
             da_status status =
                 da_utils::check_data((da_order)this->order, n_rows, n_cols, data, lddata);

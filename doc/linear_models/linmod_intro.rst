@@ -379,6 +379,8 @@ Linear model options
          "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
          "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`"
          "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`"
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
       For the complete list of optional parameters see :ref:`linear model options <opts_linearmodels>`.
 

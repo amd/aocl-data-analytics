@@ -34,22 +34,25 @@ inline da_status register_common_options(da_options::OptionRegistry &opts,
 
     try {
 
-        // Integer options
-        std::shared_ptr<OptionNumeric<da_int>> oi;
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "check data", "Check input data for NaNs prior to performing computation.", 0,
-            da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
-        opts.register_opt(oi);
-
         // String options
         std::shared_ptr<OptionString> os;
 
         os = std::make_shared<OptionString>(OptionString(
             "storage order",
             "Whether data is supplied and returned in row- or column-major order.",
-            {{"row-major", row_major}, {"column-major", column_major}}, "column-major"));
+            {{"row-major", row_major},
+             {"column-major", column_major},
+             {"fortran", column_major},
+             {"f", column_major},
+             {"c", row_major}},
+            "column-major"));
         opts.register_opt(os);
+
+        os = std::make_shared<OptionString>(OptionString(
+            "check data", "Check input data for NaNs prior to performing computation.",
+            {{"yes", 1}, {"no", 0}}, "no"));
+        opts.register_opt(os);
+
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");

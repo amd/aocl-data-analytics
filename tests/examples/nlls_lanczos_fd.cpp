@@ -91,6 +91,8 @@ int main(void) {
 
     pass &= da_options_set_string(handle, "ralfit globalization method",
                                   "regularization") == da_status_success;
+    pass &=
+        da_options_set_string(handle, "storage order", "row-major") == da_status_success;
     pass &= da_options_set_int(handle, "ralfit iteration limit", (da_int)200) ==
             da_status_success;
     pass &= da_options_set_real_d(handle, "finite differences step", 1e-5) ==

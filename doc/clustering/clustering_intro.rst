@@ -117,6 +117,9 @@ Options
          "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`"
          "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`"
          "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`"
+         "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+         "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
 
 Note that if the initialization method is set to ``random`` then the initial cluster centres are chosen randomly from the sample points.
 If it is set to ``random partitions`` then the sample points are assigned to a random cluster and the corresponding cluster centres are computed and used as the starting point.

@@ -310,7 +310,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
                         "<storage order>"s + msg);
     }
-    if (istorage == da_optimization_options::storage_scheme::fortran) {
+    if (istorage == column_major) {
         options.Fortran_Jacobian = true;
     } else {
         options.Fortran_Jacobian = false;
