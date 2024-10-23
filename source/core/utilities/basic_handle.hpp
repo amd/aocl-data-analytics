@@ -44,7 +44,7 @@
  */
 template <typename T> class basic_handle {
   public:
-    basic_handle(){};
+    basic_handle(da_errors::da_error_t *err = nullptr) { this->err = err; };
     basic_handle(da_errors::da_error_t &err) {
         // Assumes that err is valid
         this->err = &err;
