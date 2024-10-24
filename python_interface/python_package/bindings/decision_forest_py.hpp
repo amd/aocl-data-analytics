@@ -66,6 +66,11 @@ class decision_tree : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "tree building order", build_order.data());
         exception_check(status);
+        if (check_data == true) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
+            exception_check(status);
+        }
     }
     ~decision_tree() { da_handle_destroy(&handle); }
 
@@ -295,7 +300,8 @@ class decision_forest : public pyda_handle {
         status = da_options_set(handle, "maximum features", max_features);
         exception_check(status);
         if (check_data == true) {
-            status = da_options_set_int(handle, "check data", 1);
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
             exception_check(status);
         }
     }

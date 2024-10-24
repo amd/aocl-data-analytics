@@ -64,7 +64,8 @@ class pca : public pyda_handle {
             exception_check(status);
         }
         if (check_data == true) {
-            status = da_options_set_int(handle, "check data", 1);
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
             exception_check(status);
         }
     }

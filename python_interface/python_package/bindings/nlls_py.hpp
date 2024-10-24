@@ -343,7 +343,8 @@ class nlls : public pyda_handle {
             da_options_set(handle, "print options", "yes");
         }
         if (check_data == true) {
-            status = da_options_set_int(handle, "check data", 1);
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "check data", yes_str.data());
             exception_check(status);
         }
 
@@ -462,9 +463,9 @@ class nlls : public pyda_handle {
         da_int okey;
         status = da_options_get(handle, "storage order", opt_order, &lorder, &okey);
         exception_check(status);
-        // namespace da_optimization_options { enum storage_scheme { fortran = 1, c = 2 };
-        // see optimization_options.hpp
-        this->storage_scheme_c = okey == 2;
+        // da_order type { fortran = 1, c = 0 };
+        // see aoclda_types.h
+        this->storage_scheme_c = okey == 0;
 
         this->n_coef = n_coef;
         this->n_res = n_res;
