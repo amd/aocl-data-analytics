@@ -67,7 +67,7 @@ setup(
     name="aoclda",
     cmdclass={'bdist_wheel': spec_bdist_wheel},
     long_description="AOCL-DA Python Interfaces",
-    version="5.0.0",
+    version="5.0.1",
     packages=find_packages(),
     include_package_data=True,
     package_data={'aoclda': dep_libs},
