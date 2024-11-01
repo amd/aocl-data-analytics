@@ -119,6 +119,11 @@ set(UTILS_CPUID_LIB
 set(UTILS_CORE_LIB
     ""
     CACHE STRING "Path to AU_CORE library")
+if(USE_EXISTING_DA)
+  set(DA_LIB
+      ""
+      CACHE STRING "Path to existing DA library")
+endif()
 
 if(BUILD_SMP OR UNIX)
   # Even serial builds need an OpenMP runtime to enable correct LAPACK linking
@@ -230,7 +235,8 @@ if(WIN32)
       file(TO_CMAKE_PATH $ENV{FLANG_COMPILER} FLANG_PATH)
       set(CMAKE_Fortran_COMPILER "${FLANG_PATH}/bin/flang.exe")
       set(FLANG_LIBS "${FLANG_PATH}/lib")
-      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib" "${FLANG_LIBS}/libpgmath.lib")
+      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib"
+                          "${FLANG_LIBS}/libpgmath.lib")
     else()
       set(IFORT_LIBS
           "$ENV{LIB}"
@@ -372,55 +378,57 @@ if(NOT BUILD_DOC AND INTERNAL_DOC)
   set(INTERNAL_DOC Off)
 endif()
 
-# Compile external packages
-add_subdirectory(external/Lbfgsb.3.0)
-add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
+if(NOT USE_EXISTING_DA)
+  # Compile external packages
+  add_subdirectory(external/Lbfgsb.3.0)
+  add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
 
-# Compile data analytics core library
-add_subdirectory(source)
+  # Compile data analytics core library
+  add_subdirectory(source)
 
-# Put all custom configuration BEFORE including "CTest"
-if(VALGRIND)
-  set(MEMORYCHECK_COMMAND_OPTIONS
-      "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" # --gen-suppressions=all
-  )
-  set(MEMORYCHECK_TYPE "valgrind")
-  set(MEMORYCHECK_SUPPRESSIONS_FILE
-      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  # Put all custom configuration BEFORE including "CTest"
+  if(VALGRIND)
+    set(MEMORYCHECK_COMMAND_OPTIONS
+        "--track-origins=yes --leak-check=full -s --show-leak-kinds=all" # --gen-suppressions=all
+    )
+    set(MEMORYCHECK_TYPE "valgrind")
+    set(MEMORYCHECK_SUPPRESSIONS_FILE
+        "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  endif()
+
+  # Build example and unit test programs
+  include(CTest)
+
+  # Suppression list file needs to be defined AFTER including ctest
+  if(VALGRIND)
+    set(MEMORYCHECK_SUPPRESSIONS_FILE
+        "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
+  endif()
+
+  add_subdirectory(tests)
 endif()
-
-# Build example and unit test programs
-include(CTest)
-
-# Suppression list file needs to be defined AFTER including ctest
-if(VALGRIND)
-  set(MEMORYCHECK_SUPPRESSIONS_FILE
-      "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
-endif()
-
-add_subdirectory(tests)
 
 if(BUILD_PYTHON)
   add_subdirectory(python_interface)
 endif()
 
-# Install examples and README files
-install(
-  FILES README.md
-  DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(FILES NOTICES DESTINATION ${CMAKE_INSTALL_PREFIX})
-install(
-  DIRECTORY tests/examples/
-  DESTINATION examples
-  FILES_MATCHING
-  PATTERN "*.cpp"
-  PATTERN "*tree*" EXCLUDE
-  PATTERN "*.csv")
-install(
-  FILES tools/CMakeLists_examples.cmake
-  DESTINATION examples
-  RENAME CMakeLists.txt)
-install(FILES tests/examples/README.txt DESTINATION examples)
+if(NOT USE_EXISTING_DA)
+  # Install examples and README files
+  install(FILES README.md DESTINATION ${CMAKE_INSTALL_PREFIX})
+  install(FILES NOTICES DESTINATION ${CMAKE_INSTALL_PREFIX})
+  install(
+    DIRECTORY tests/examples/
+    DESTINATION examples
+    FILES_MATCHING
+    PATTERN "*.cpp"
+    PATTERN "*tree*" EXCLUDE
+    PATTERN "*.csv")
+  install(
+    FILES tools/CMakeLists_examples.cmake
+    DESTINATION examples
+    RENAME CMakeLists.txt)
+  install(FILES tests/examples/README.txt DESTINATION examples)
+endif()
 
 # Convenience banner, print relevant info
 message(STATUS "Building AOCL-DA ${AOCLDA_VERSION} (${CMAKE_BUILD_TYPE})")
@@ -485,3 +493,6 @@ message(NOTICE "LAPACK           LAPACK=${LAPACK}")
 message(NOTICE "AOCL-Sparse      SPARSE=${SPARSE}")
 message(NOTICE "AOCL-Utils       UTILS=${UTILS}")
 message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")
+if(USE_EXISTING_DA)
+  message(NOTICE "Existing AOCL-DA DA=${DA}")
+endif()

@@ -72,6 +72,8 @@ AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` to specify a location for AOCL libraries. It is set to the environment variable `$AOCL_ROOT` by default
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>`. Path where to install the library (using the build target `install` of step 5)
+   
+   * `-DUSE_EXISTING_DA=On` to build only the Python bindings, against an existing aocl-da build. Ths build system will look in AOCL_ROOT unless you also specify `-DDA_LIB`
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR`, `-DBLAS_INCLUDE_DIR` and `-DSPARSE_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS, LAPACK or Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
@@ -108,6 +110,8 @@ It is most likely to work if BLAS, LAPACK and Sparse are installed within your u
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 
    * `-DARCH=<arch>` to set the `/arch:<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. AVX512
+
+   * `-DUSE_EXISTING_DA=On` to build only the Python bindings, against an existing aocl-da build. Ths build system will look in AOCL_ROOT unless you also specify `-DDA_LIB`
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS, LAPACK and Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 

@@ -27,9 +27,12 @@ file(GLOB wheel_files "${CMAKE_INSTALL_PREFIX}/python_package/*.whl")
 
 foreach(file ${wheel_files})
   if(WIN32)
+  execute_process(
+      COMMAND delvewheel show ${file}
+              --add-path ${CMAKE_INSTALL_PREFIX}/python_package/aoclda)
     execute_process(
       COMMAND delvewheel repair ${file}
-              --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package/repaired --add-path ${CMAKE_INSTALL_PREFIX}/python_package/aoclda)
+              --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package/repaired --add-path ${CMAKE_INSTALL_PREFIX}/python_package/aoclda --ignore-existing)
   else()
     # Repair the wheel using auditwheel
 

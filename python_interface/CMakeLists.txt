@@ -44,7 +44,8 @@ set(BASE_DEP_LIBS
     ${LAPACK_SERIAL}
     ${SPARSE}
     ${UTILS}
-    ${UTILS_CPUID})
+    ${UTILS_CPUID}
+    ${DA}) # Only used if we are building with a pre-existing build of aocl-da
 set(DEP_LIBS "")
 
 if(WIN32)
@@ -70,11 +71,18 @@ install(
   DESTINATION python_package/aoclda
   OPTIONAL)
 # Optional accounts for lack of a dll in case that static utils was linked)
-install(
-  TARGETS aocl-da
-  ARCHIVE DESTINATION python_package/aoclda
-  LIBRARY DESTINATION python_package/aoclda
-  RUNTIME DESTINATION python_package/aoclda)
+
+if(NOT USE_EXISTING_DA)
+  install(
+    TARGETS aocl-da
+    ARCHIVE DESTINATION python_package/aoclda
+    LIBRARY DESTINATION python_package/aoclda
+    RUNTIME DESTINATION python_package/aoclda)
+endif()
+
+if (WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    install(FILES "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/bin/libomp.dll" DESTINATION python_package/aoclda)
+endif()
 
 if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
   if(WIN32)
@@ -101,8 +109,7 @@ if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
       message(FATAL_ERROR "Flang runtimes not found")
     endif()
     # Lists of required runtimes and symlinks
-    set(RUNTIME_LIBS libflang.so libflangrti.so libpgmath.so libompstub.so
-                     libomp.so)
+    set(RUNTIME_LIBS libflang.so libflangrti.so libpgmath.so libomp.so)
     set(SYMLINK_LIBS libamdlibm.so libamdalloc.so)
     # Install the runtimes
     foreach(LIB ${RUNTIME_LIBS})
@@ -129,6 +136,10 @@ if(NOT WIN32)
   # interpreter
   install(
     CODE "execute_process(COMMAND ${PATCHELF} --set-rpath \$ORIGIN ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/libaocl-da.so)"
+  )
+  # Remove libompstub from dependencies
+  install(
+    CODE "execute_process(COMMAND ${PATCHELF} --remove-needed libompstub.so ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/libaocl-da.so)"
   )
 endif()
 
