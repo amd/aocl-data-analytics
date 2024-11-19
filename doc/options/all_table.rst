@@ -228,23 +228,6 @@ The following options are supported.
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 
-.. _opts_k-nearestneighbors:
-
-k-nearest neighbors
-==============================================
-
-The following options are supported.
-
-.. csv-table:: :strong:`Table of options for k-nearest neighbors.`
-   :escape: ~
-   :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
-   "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
-   "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `euclidean`, or `sqeuclidean`."
-   "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `brute`."
-   "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
-
-
 .. _opts_datastore:
 
 Datastore handle :cpp:type:`da_datastore`
