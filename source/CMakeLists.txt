@@ -117,8 +117,9 @@ if(NOT WIN32)
 endif()
 
 # Create combined library from da_core and Fortran libraries
-add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
-                    $<TARGET_OBJECTS:lbfgsb_s> $<TARGET_OBJECTS:ral_nlls_object>)
+add_library(aocl-da $<TARGET_OBJECTS:da_core>
+                    $<TARGET_OBJECTS:lbfgsb> $<TARGET_OBJECTS:lbfgsb_s>
+                    ${nlls_obj_list})
 target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS}
                                       ${FORTRAN_RUNTIME})
 

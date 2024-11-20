@@ -26,6 +26,8 @@ include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
 add_executable(nlls nlls.cpp)
 
+add_executable(nlls_single nlls_single.cpp)
+
 add_executable(nlls_lanczos_fd nlls_lanczos_fd.cpp)
 
 add_executable(basic_statistics basic_statistics.cpp)
@@ -68,6 +70,7 @@ add_executable(knn knn.cpp)
 
 set(EXAMPLE_EXES
     nlls
+    nlls_single
     nlls_lanczos_fd
     reglinear_model
     linear_model

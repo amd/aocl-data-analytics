@@ -1,19 +1,16 @@
-! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 ! Copyright (c) 2019, The Numerical Algorithms Group Ltd (NAG)
 ! All rights reserved.
 ! Copyright (c) 2019, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
+! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+
+#include "../src/preprocessor.FPP"
 
 program nlls_test
 
-! Test deck for nlls_module
-
-! use ral_nlls_double
-! use ral_nlls_internal
-  use example_module
+  use MODULE_PREC(unit_test_mod)
 
   implicit none
-
 
   type( NLLS_inform )  :: status
   type( NLLS_options ) :: options
@@ -21,7 +18,7 @@ program nlls_test
 !  type( user_box_type ), target :: params_box
   real(wp), allocatable :: w(:),x(:),blx(:),bux(:)
   real(wp), allocatable :: resvec(:)
-  real(wp) :: resvec_error
+  real(wp) :: resvec_error, tol
   integer :: m, n, i, no_errors_helpers, no_errors_main
   integer :: nlls_method, model, tr_update, inner_method
   logical :: test_all, test_subs, oki
@@ -956,13 +953,25 @@ program nlls_test
      call reset_default_options(options)
      options%maxit = 2
      options%print_level=0
+     if (wp == lp) then
+        ! relax convergence criteria
+        options%stop_g_absolute = 1.0e-4
+     end if
      x(:) = (/0.3199787042575630E+00, 0.2752509146444680E-01/)
      call solve_basic(X,params,options,status,.True.)
      if ( .Not. (status%status == 0 .And. status%iter == 0) ) then
         write(*,*) 'Error: x0 solution but not caught'
         no_errors_main = no_errors_main + 1
      end if
-     status%status = 0
+
+     call reset_default_options(options)
+     options%maxit = 2
+     options%print_level=0
+     if (wp == lp) then
+        ! relax convergence criteria
+        options%stop_g_absolute = 1.0e-4
+     end if
+     x(:) = (/0.3199787042575630E+00, 0.2752509146444680E-01/)
      Allocate(blx(n), bux(n))
      blx(1:n) = -1.0
      bux(1:n) = blx(1:n)
@@ -1086,6 +1095,10 @@ program nlls_test
      options%maxit = 2
      options%print_level = 2
      options%check_derivatives = 1
+     if (wp == lp) then
+        options%fd_step = 1.0e-3_wp
+        options%derivative_test_tol = 5.0e-3_wp
+     end if
      x(:) = (/0.0, 0.0/)
      status%status = 0
      blx(1:n) = 1.0
@@ -1141,14 +1154,14 @@ program nlls_test
      end if
 
      ! Fail the derivative test (too stringent)
-     options%derivative_test_tol = 1.0e-16
+     options%derivative_test_tol = 1.0e-16_wp
      options%print_level = 1
      call solve_basic(X,params,options,status)
      if ( .Not. ( status%status == -19 ) ) then
         write(*,*) 'Error: check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
-     options%derivative_test_tol = 1.0e-4
+     options%derivative_test_tol = 1.0e-4_wp
 
      ! Solve the problem using FD (Fortran storage)
      options%Fortran_Jacobian = .True.
@@ -1156,57 +1169,81 @@ program nlls_test
      options%check_derivatives = 0
      options%maxit = 100
      call solve_basic(X,params,options,status,use_fd=.True.)
-     oki = abs(x(1) - 0.3199787) <= 1.e-6 .And. abs(x(2)-0.02752509) < 1.e-6
+     if (wp == np) then
+        tol = 1.e-6_wp
+     else
+        ! Relax tolerance for lower precision
+        tol = 5e-5_wp
+     end if
+     oki = abs(x(1) - 0.319978704257563_wp) <= tol .And. abs(x(2)-0.2752509146444680E-1_wp) < tol
      write(options%out,*) 'Solution (F): ', x(1:n)
-     write(options%out,*) 'Expected: ', (/0.3199787042575630E+00, 0.2752509146444680E-01/)
+     write(options%out,*) 'Expected: ', (/0.319978704257563_wp, 0.2752509146444680E-1_wp/)
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve: unexpected status value or wronge solution'
+        write(*,*) 'Error: FD solve: unexpected status value or wrong solution'
         no_errors_main = no_errors_main + 1
      end if
 
      ! Solve the problem using FD (C storage)
      options%Fortran_Jacobian = .False.
-     options%print_level = 0
-     options%check_derivatives = 0
-     options%maxit = 100
+     options%print_level = 3
      call solve_basic(X,params,options,status,use_fd=.True.)
-     oki = abs(x(1) - 0.3199787) <= 1.e-6 .And. abs(x(2)-0.02752509) < 1.e-6
+     oki = abs(x(1) - 0.3199787) <= tol .And. abs(x(2)-0.02752509) < tol
      write(options%out,*) 'Solution (C): ', x(1:n)
      write(options%out,*) 'Expected: ', (/0.3199787042575630E+00, 0.2752509146444680E-01/)
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve: unexpected status value or wronge solution'
+        write(*,*) 'Error: FD solve: unexpected status value or wrong solution'
         no_errors_main = no_errors_main + 1
      end if
 
      ! Solve with one fixed variable
      options%Fortran_Jacobian = .False.
-     options%print_level = 0
-     options%check_derivatives = 0
-     options%maxit = 100
+     options%print_options = .True.
      blx(:) = (/0.0, 0.0/)
      bux(:) = (/0.0, 1.0/)
+     if (wp == np) then
+        tol = 1.e-6_wp
+        ! options%box_gamma = 0.99999_wp
+     else
+        ! Relax tolerance for lower precision
+        tol = 2e-3_wp
+     end if
      call solve_basic(X,params,options,status,use_fd=.True.,blx=blx,bux=bux)
-     oki = abs(x(1) - 0.0) <= 1.e-6 .And. abs(x(2)-0.923618046017) < 1.e-6
+     oki = x(1) == 0.0 .And. abs(x(2)-0.923618046017) < tol
      write(options%out,*) 'Solution (C): ', x(1:n)
      write(options%out,*) 'Expected: ', (/0.0, 0.92361804601/)
+     write(options%out,*) 'DIFF: ', abs(x(2)-0.92361804601), '(',tol,')'
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve: unexpected status value or wronge solution'
+        write(*,*) 'Error: FD solve 3: unexpected status value or wrong solution'
+        write(*,*) '       status = ', status%status, "(expected 0)"
+        write(*,*) '       Solution (C): ', x(1:n)
+        write(*,*) '       Expected: ', (/0.0, 0.92361804601/)
+        write(*,*) '       DIFF: ', abs(x(2)-0.92361804601), '(',tol,')'
         no_errors_main = no_errors_main + 1
      end if
+
+     Call reset_default_options(options)
 
      ! Solve with one active variable
      options%Fortran_Jacobian = .True.
      options%print_level = 3
      options%check_derivatives = 0
-     options%maxit = 100
      blx(:) = (/0.32, 0.0/)
      bux(:) = (/1.0, 1.0/)
+     if (wp == np) then
+        tol = 1.e-6_wp
+        options%maxit = 100
+     else
+        ! Relax tolerance for lower precision
+        tol = 2.0e-5_wp
+        options%fd_step = 9.0e-3_wp
+        options%maxit = 200
+     end if
      call solve_basic(X,params,options,status,use_fd=.True.,blx=blx,bux=bux)
-     oki = abs(x(1) - 0.32) <= 1.e-6 .And. abs(x(2)-2.7447762174312485E-002) < 1.e-6
+     oki = abs(x(1) - 0.32) <= tol .And. abs(x(2)-2.7447762174312485E-2) < tol
      write(options%out,*) 'Solution (F): ', x(1:n)
-     write(options%out,*) 'Expected: ', (/0.32, 2.7447762174312485E-002/)
+     write(options%out,*) 'Expected: ', (/0.32, 2.7447762174312485E-2/)
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve: unexpected status value or wronge solution'
+        write(*,*) 'Error: FD solve: unexpected status value or wrong solution'
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1372,6 +1409,13 @@ close(unit = 17)
     write(*,*) '**************************************'
     stop 0    ! needed for talking with ctest
  else
+    write(*,*) ' '
+    write(*,*) ' Error summary for all tests:'
+    write(*,*) '  TOTAL:           ', no_errors_main + no_errors_helpers
+    write(*,*) '    Main tests:    ', no_errors_main
+    write(*,*) '    Helpers tests: ', no_errors_helpers
+    write(*,*) ' '
+    write(*,*) ' ** UNIT TESTS FAILED **'
     stop 1    ! needed for talking with ctest
   end if
 

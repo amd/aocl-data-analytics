@@ -27,10 +27,9 @@
 
 /* UT are not for the solver but rather to exercise the interface */
 
+#include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "nlls_functions.hpp"
-// #include "da_handle.hpp"
-#include "../utest_utils.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
@@ -39,8 +38,8 @@
 namespace {
 
 /* RALFit examples as test of interface */
-TEST(nlls, template_double_nlls_example_box_2d) {
-    using namespace template_nlls_example_box_fortran;
+TEST(nlls, double_nlls_example_box_fortran) {
+    using namespace double_nlls_example_box_fortran;
     const double t[5]{1.0, 2.0, 4.0, 5.0, 8.0};
     const double y[5]{3.0, 4.0, 6.0, 11.0, 20.0};
     const struct udata_t udata = {t, y};
@@ -90,254 +89,25 @@ TEST(nlls, template_double_nlls_example_box_2d) {
     da_handle_destroy(&handle);
 }
 
-TEST(nlls, template_double_nlls_example_box_c) {
-    using namespace template_nlls_example_box_c;
-    using T = double;
-    // Data to be fitted
-    const da_int m = 5;
-    const da_int n = 2;
-    T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
-    T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
-    struct params_type<T> params {
-        t, y
-    };
-
-    // Call fitting routine
-    T x[n]{1.0, 1.0}; // Initial guess
-
-    T lower_bounds[n]{0.0, 1.0};
-    T upper_bounds[n]{1.0, 10.0};
-    T weights[m]{0.1, 0.1, 0.1, 0.1, 0.1};
-
-    da_handle handle{nullptr};
-    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
-              da_status_success);
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, eval_HF<T>, nullptr),
-        da_status_success);
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, upper_bounds),
-              da_status_success);
-    EXPECT_EQ(da_nlls_define_weights(handle, m, weights), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "print level", (da_int)2), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "print options", "yes"), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "Storage Order", "Fortran"), da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-    // Check output
-    std::vector<T> info(100);
-    da_int dim{100};
-    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
-              da_status_success);
-    std::vector<T> info_exp(0);
-    if (std::is_same_v<T, double>)
-        //                   0     1   2  3    4  5  6  7   8   9 10    11
-        info_exp.assign({0.779, 6e-6, 24, 0, 212, 0, 0, 0, 33, 12, 0, 5e-6});
-    else
-        info_exp.assign(da_optim_info_t::info_number, T(0));
-
-    // relaxed lower bounds
-    EXPECT_LE(std::abs(info[0] - info_exp[0]), 0.1);
-    EXPECT_LE(std::abs(info[1] - info_exp[1]), 0.001);
-    EXPECT_LE(std::abs(info[11] - info_exp[11]), 0.001);
-
-    EXPECT_EQ(info[3], 0);
-    EXPECT_EQ(info[5], 0);
-    EXPECT_EQ(info[6], 0);
-    EXPECT_EQ(info[7], 0);
-    EXPECT_EQ(info[10], 0);
-
-    EXPECT_GT(info[2], 5);
-    EXPECT_GT(info[4], 15);
-    EXPECT_GT(info[8], 10);
-    EXPECT_GT(info[9], 4);
-
-    // double call Warm start
-    EXPECT_EQ(da_options_set(handle, "print options", "no"), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "print level", (da_int)5), da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
-              da_status_success);
-    EXPECT_EQ(info[da_optim_info_t::info_iter], T(0));
-    EXPECT_EQ(info[da_optim_info_t::info_nevalf], T(1));
-    EXPECT_EQ(info[da_optim_info_t::info_nevalg], T(1));
-    EXPECT_EQ(info[da_optim_info_t::info_nevalh], T(0));
-    EXPECT_EQ(info[da_optim_info_t::info_nevalhp], T(0));
-    EXPECT_EQ(da_options_set(handle, "print level", (da_int)0), da_status_success);
-
-    // initial x0 not provided
-    EXPECT_EQ(da_nlls_fit(handle, 0, x, &params), da_status_success);
-    EXPECT_EQ(da_nlls_fit_d(handle, 0, nullptr, &params), da_status_success);
-    EXPECT_EQ(da_nlls_fit_d(handle, n, nullptr, &params), da_status_invalid_pointer);
-    EXPECT_EQ(da_nlls_fit(handle, n - 1, x, &params), da_status_invalid_array_dimension);
-
-    // call with wrong bounds
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, upper_bounds, lower_bounds),
-              da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_option_invalid_bounds);
-
-    // call with no search space
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, lower_bounds),
-              da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-
-    // call with missing bound
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, nullptr, upper_bounds), da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, nullptr), da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-
-    da_handle_destroy(&handle);
+TEST(nlls, nlls_example_box_c) {
+    template_nlls_example_box_c::driver<double>();
+    template_nlls_example_box_c::driver<float>();
 }
 
-TEST(nlls, template_double_lm_example_c) {
-    using namespace template_lm_example_c;
-    using T = double;
-    // Data to be fitted
-    const da_int m = 40;
-    const da_int n = 3;
-    const double rnorm[m]{
-        0.042609947,  -0.022738876, 0.036553029,  0.025512666,  0.086793270,
-        0.047511025,  -0.119396222, -0.042148599, -0.060072244, 0.034911810,
-        -0.101209931, -0.103685375, 0.245487401,  -0.038353027, -0.119823715,
-        -0.262366501, -0.191863895, -0.015469065, -0.200587427, 0.029074121,
-        -0.231842121, 0.056358818,  -0.035592133, -0.105945032, -0.132918722,
-        -0.040054318, 0.060915270,  0.041010165,  0.087690256,  0.041471613,
-        -0.015124534, 0.090526818,  -0.086582542, -0.026412243, 0.005523387,
-        0.006404224,  -0.030465898, 0.097183478,  0.136050209,  -0.038862787};
-    double sigma[m];
-    double y[m];
-    /* Model
-     * for (i = 0; i < n; i++)
-     *   double t = i;
-     *   sigma[i] = 0.1;
-     *   y[i] = 1 + 5 * exp (-sigma[i] * t) + rnorm(0.1);
-     *   A = amplitude = 5.0
-     *   sigma = lambda = 0.1
-     *   b = intercept = 1.0
-     */
-    const double Amplitude{5};
-    const double lambda{0.1};
-    const double intercept{1};
-    for (da_int i = 0; i < m; ++i) {
-        double t = double(i);
-        sigma[i] = lambda;
-        y[i] = intercept + Amplitude * std::exp(-sigma[i] * t) + rnorm[i];
-    }
-
-    struct usertype params {
-        sigma, y
-    };
-
-    double x[n]{1.0, 0.0, 0.0};
-
-    da_handle handle{nullptr};
-    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
-              da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r, eval_J, nullptr, nullptr),
-              da_status_success);
-    EXPECT_EQ(da_options_set(handle, "ralfit model", "gauss-newton"), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "ralfit nlls method", "more-sorensen"),
-              da_status_success);
-    EXPECT_EQ(da_options_set(handle, "Storage Order", "C"), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "print level", da_int(2)), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
-    EXPECT_EQ(da_options_set(handle, "derivative test tol", 9.0e-5), da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-    // Check output
-    std::vector<T> info(100);
-    da_int dim{100};
-    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
-              da_status_success);
-
-    EXPECT_GE(info[da_optim_info_t::info_iter], 5.0);
-    EXPECT_LE(info[da_optim_info_t::info_objective], 25.0);
-    EXPECT_LE(info[da_optim_info_t::info_grad_norm], 1.0e-3);
-
-    // wrong query...
-    T result[2];
-    EXPECT_EQ(
-        da_handle_get_result(handle, da_result::da_pca_total_variance, &dim, result),
-        da_status_unknown_query);
-
-    // Check solution point
-    std::cout << "Amplitude A  = " << x[0] << std::endl;
-    std::cout << "sigma/lambda = " << x[1] << std::endl;
-    std::cout << "intercept b  = " << x[2] << std::endl;
-
-    EXPECT_LE(std::abs(x[0] - Amplitude), 0.1);
-    EXPECT_LE(std::abs(x[1] - lambda), 0.01);
-    EXPECT_LE(std::abs(x[2] - intercept), 0.1);
-
-    // solve again without initial guess
-    EXPECT_EQ(da_options_set(handle, "check derivatives", "no"), da_status_success);
-    EXPECT_EQ(da_nlls_fit_d(handle, 0, nullptr, &params), da_status_success);
-
-    // solve again using fd
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r, nullptr, nullptr, nullptr),
-              da_status_success);
-    x[0] = 1.0;
-    x[1] = 0.0;
-    x[2] = 0.0;
-    EXPECT_EQ(da_options_set(handle, "finite differences step", 1.0e-7),
-              da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-    // Check output
-    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
-              da_status_success);
-
-    EXPECT_GE(info[da_optim_info_t::info_iter], 5.0);
-    EXPECT_LE(info[da_optim_info_t::info_objective], 25.0);
-    EXPECT_LE(info[da_optim_info_t::info_grad_norm], 1.0e-3);
-
-    // Check solution point
-    std::cout << "FD: Amplitude A  = " << x[0] << std::endl;
-    std::cout << "FD: sigma/lambda = " << x[1] << std::endl;
-    std::cout << "FD: intercept b  = " << x[2] << std::endl;
-
-    EXPECT_LE(std::abs(x[0] - Amplitude), 0.1);
-    EXPECT_LE(std::abs(x[1] - lambda), 0.01);
-    EXPECT_LE(std::abs(x[2] - intercept), 0.1);
-
-    // solve again using fd (with Fortran storage scheme)
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r, nullptr, nullptr, nullptr),
-              da_status_success);
-    x[0] = 1.0;
-    x[1] = 0.0;
-    x[2] = 0.0;
-    EXPECT_EQ(da_options_set(handle, "storage order", "Fortran"), da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_success);
-    // Check output
-    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, info.data()),
-              da_status_success);
-
-    EXPECT_GE(info[da_optim_info_t::info_iter], 5.0);
-    EXPECT_LE(info[da_optim_info_t::info_objective], 25.0);
-    EXPECT_LE(info[da_optim_info_t::info_grad_norm], 1.0e-3);
-
-    // Check solution point
-    std::cout << "F/FD: Amplitude A  = " << x[0] << std::endl;
-    std::cout << "F/FD: sigma/lambda = " << x[1] << std::endl;
-    std::cout << "F/FD: intercept b  = " << x[2] << std::endl;
-
-    EXPECT_LE(std::abs(x[0] - Amplitude), 0.1);
-    EXPECT_LE(std::abs(x[1] - lambda), 0.01);
-    EXPECT_LE(std::abs(x[2] - intercept), 0.1);
-
-    // Check for errors in eval_j
-    EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r, eval_J_bad, nullptr, nullptr),
-        da_status_success);
-    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_bad_derivatives);
-
-    da_handle_destroy(&handle);
+TEST(nlls, lm_example_c) {
+    template_lm_example_c::driver<double>();
+    // disabled template_lm_example_c::driver<float>();
 }
 
 TEST(nlls, ifaceChecks) {
     using namespace template_nlls_example_box_c;
     using T = double;
-    da_handle handle{nullptr};
-    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
+    using S = float;
+    da_handle handle_d{nullptr};
+    da_handle handle_s{nullptr};
+    EXPECT_EQ(da_handle_init<T>(&handle_d, da_handle_type::da_handle_nlls),
+              da_status_success);
+    EXPECT_EQ(da_handle_init<S>(&handle_s, da_handle_type::da_handle_nlls),
               da_status_success);
     // exercise define_residuals
     da_int n = 1;
@@ -345,71 +115,106 @@ TEST(nlls, ifaceChecks) {
     EXPECT_EQ(
         da_nlls_define_residuals(nullptr, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
         da_status_handle_not_initialized);
+    EXPECT_EQ(
+        da_nlls_define_residuals(nullptr, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
+        da_status_handle_not_initialized);
 
     // get results without training
     da_int dim{2};
-    T result[2];
-    EXPECT_EQ(da_handle_get_result(handle, da_result::da_rinfo, &dim, result),
+    T result_d[2];
+    S result_s[2];
+    EXPECT_EQ(da_handle_get_result(handle_d, da_result::da_rinfo, &dim, result_d),
+              da_status_unknown_query);
+    EXPECT_EQ(da_handle_get_result(handle_s, da_result::da_rinfo, &dim, result_s),
               da_status_unknown_query);
 
     da_int iresult[2];
     EXPECT_EQ(
-        da_handle_get_result(handle, da_result::da_pca_total_variance, &dim, iresult),
+        da_handle_get_result(handle_d, da_result::da_pca_total_variance, &dim, iresult),
+        da_status_unknown_query);
+    EXPECT_EQ(
+        da_handle_get_result(handle_d, da_result::da_pca_total_variance, &dim, iresult),
         da_status_unknown_query);
     // eval_r
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, nullptr, eval_J<T>, nullptr, nullptr),
+        da_nlls_define_residuals(handle_d, n, m, nullptr, eval_J<T>, nullptr, nullptr),
+        da_status_invalid_input);
+    EXPECT_EQ(
+        da_nlls_define_residuals(handle_s, n, m, nullptr, eval_J<S>, nullptr, nullptr),
         da_status_invalid_input);
     n = -1;
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_status_invalid_input);
+    EXPECT_EQ(
+        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
         da_status_invalid_input);
     n = 1;
     m = -1;
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_status_invalid_input);
+    EXPECT_EQ(
+        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
         da_status_invalid_input);
     m = 5;
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
+        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, nullptr, nullptr, nullptr),
+        da_status_success);
+    EXPECT_EQ(
+        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, nullptr, nullptr, nullptr),
         da_status_success);
     n = 2;
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_status_success);
+    EXPECT_EQ(
+        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
         da_status_success);
 
     // exercise define bounds
-    std::vector<T> lower_bounds = {0.0, -1.0}, upper_bounds = {1.0, 2.0};
-    EXPECT_EQ(da_nlls_define_bounds(nullptr, n, lower_bounds.data(), upper_bounds.data()),
-              da_status_handle_not_initialized);
+    std::vector<T> lower_bounds_d = {0.0, -1.0}, upper_bounds_d = {1.0, 2.0};
+    std::vector<S> lower_bounds_s = {0.0f, -1.0f}, upper_bounds_s = {1.0f, 2.0f};
+    EXPECT_EQ(
+        da_nlls_define_bounds(nullptr, n, lower_bounds_d.data(), upper_bounds_d.data()),
+        da_status_handle_not_initialized);
     n = 0; // remove bounds
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds.data(), upper_bounds.data()),
-              da_status_success);
+    EXPECT_EQ(
+        da_nlls_define_bounds(handle_d, n, lower_bounds_d.data(), upper_bounds_d.data()),
+        da_status_success);
     n = 1; // wrong size n_coef
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds.data(), upper_bounds.data()),
-              da_status_invalid_input);
+    EXPECT_EQ(
+        da_nlls_define_bounds(handle_s, n, lower_bounds_s.data(), upper_bounds_s.data()),
+        da_status_invalid_input);
     n = 2;
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, nullptr, upper_bounds.data()),
+    EXPECT_EQ(da_nlls_define_bounds(handle_d, n, nullptr, upper_bounds_d.data()),
               da_status_success);
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds.data(), nullptr),
+    EXPECT_EQ(da_nlls_define_bounds(handle_s, n, lower_bounds_s.data(), nullptr),
               da_status_success);
 
-    T weights[5];
+    T weights_d[5];
+    S weights_s[5];
     // Exercise weights
-    EXPECT_EQ(da_nlls_define_weights(nullptr, m, weights),
+    EXPECT_EQ(da_nlls_define_weights(nullptr, m, weights_d),
               da_status_handle_not_initialized);
     m = 2; // wrong nsamples
-    EXPECT_EQ(da_nlls_define_weights(handle, m, weights), da_status_invalid_input);
+    EXPECT_EQ(da_nlls_define_weights(handle_d, m, weights_d), da_status_invalid_input);
     m = 5;
     // correct nres but wrong pointer
-    EXPECT_EQ(da_nlls_define_weights(handle, m, (double *)nullptr),
+    EXPECT_EQ(da_nlls_define_weights(handle_d, m, (T *)nullptr),
               da_status_invalid_pointer);
     // add weights
-    EXPECT_EQ(da_nlls_define_weights(handle, m, weights), da_status_success);
+    EXPECT_EQ(da_nlls_define_weights(handle_d, m, weights_d), da_status_success);
     // remove weights
     m = 0;
-    EXPECT_EQ(da_nlls_define_weights(handle, m, (double *)nullptr), da_status_success);
-    da_handle_destroy(&handle);
+    EXPECT_EQ(da_nlls_define_weights(handle_d, m, (T *)nullptr), da_status_success);
+    // add weights
+    EXPECT_EQ(da_nlls_define_weights(handle_s, m, weights_s), da_status_success);
+    // remove weights
+    m = 0;
+    EXPECT_EQ(da_nlls_define_weights(handle_s, m, (S *)nullptr), da_status_success);
+    da_handle_destroy(&handle_d);
+    da_handle_destroy(&handle_s);
 }
 
 TEST(nlls, solverCheckX0Rubbish) {
@@ -560,25 +365,6 @@ TEST(nlls, wrongType) {
               da_status_wrong_type);
     double x[2]{0};
     EXPECT_EQ(da_nlls_fit(handle, n, x, nullptr), da_status_wrong_type);
-    da_handle_destroy(&handle);
-}
-
-TEST(nlls, tempNotImplemented) {
-    using T = float;
-    using namespace template_nlls_example_box_c;
-    da_handle handle{nullptr};
-    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
-              da_status_success);
-    da_int n{2}, m{5};
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
-        da_status_success);
-    float lower_bounds[2]{0};
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, nullptr), da_status_success);
-    float weights[5]{0};
-    EXPECT_EQ(da_nlls_define_weights(handle, m, weights), da_status_success);
-    float x[2]{0};
-    EXPECT_EQ(da_nlls_fit(handle, n, x, nullptr), da_status_not_implemented);
     da_handle_destroy(&handle);
 }
 

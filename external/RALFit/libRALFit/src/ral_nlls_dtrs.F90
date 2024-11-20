@@ -14,7 +14,9 @@
 !  For full documentation, see
 !   http://galahad.rl.ac.uk/galahad-www/specs.html
 
-   MODULE RAL_NLLS_ROOTS_double
+#include "preprocessor.FPP"
+
+   MODULE MODULE_PREC(RAL_NLLS_ROOTS)
 
 !     --------------------------------------------------------------------
 !     |                                                                  |
@@ -22,7 +24,8 @@
 !     |                                                                  |
 !     --------------------------------------------------------------------
 
-      USE RAL_NLLS_SYMBOLS
+      USE MODULE_PREC(RAL_NLLS_TYPES), ONLY: lp, np, wp
+      USE MODULE_PREC(RAL_NLLS_SYMBOLS)
 
       IMPLICIT NONE
 
@@ -33,7 +36,7 @@
 !   P r e c i s i o n
 !--------------------
 
-      INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
+!     INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
 
 !----------------------
 !   P a r a m e t e r s
@@ -64,20 +67,22 @@
       INTERFACE HSEQR
         SUBROUTINE SHSEQR( job, compz, n, ilo, ihi, H, ldh,  WR, WI, Z, ldz,   &
                            WORK, lwork, info )
+        import :: lp
         INTEGER, INTENT( IN ) :: ihi, ilo, ldh, ldz, lwork, n
         INTEGER, INTENT( OUT ) :: info
         CHARACTER ( LEN = 1 ), INTENT( IN ) :: compz, job
-        REAL, INTENT( INOUT ) :: H( ldh, * ), Z( ldz, * )
-        REAL, INTENT( OUT ) :: WI( * ), WR( * ), WORK( * )
+        REAL(KIND=lp), INTENT( INOUT ) :: H( ldh, * ), Z( ldz, * )
+        REAL(KIND=lp), INTENT( OUT ) :: WI( * ), WR( * ), WORK( * )
         END SUBROUTINE SHSEQR
 
         SUBROUTINE DHSEQR( job, compz, n, ilo, ihi, H, ldh,  WR, WI, Z, ldz,   &
                            WORK, lwork, info )
+        import :: np
         INTEGER, INTENT( IN ) :: ihi, ilo, ldh, ldz, lwork, n
         INTEGER, INTENT( OUT ) :: info
         CHARACTER ( LEN = 1 ), INTENT( IN ) :: compz, job
-        DOUBLE PRECISION, INTENT( INOUT ) :: H( ldh, * ), Z( ldz, * )
-        DOUBLE PRECISION, INTENT( OUT ) :: WI( * ), WR( * ), WORK( * )
+        REAL(KIND=np), INTENT( INOUT ) :: H( ldh, * ), Z( ldz, * )
+        REAL(KIND=np), INTENT( OUT ) :: WI( * ), WR( * ), WORK( * )
         END SUBROUTINE DHSEQR
       END INTERFACE HSEQR
 
@@ -711,7 +716,7 @@
 
 !  End of module ROOTS
 
-   END MODULE RAL_NLLS_ROOTS_double
+   END MODULE MODULE_PREC(RAL_NLLS_ROOTS)
 
 ! THIS VERSION: RAL_NLLS 1.2 - 04/03/2020 AT 13:15 GMT.
 
@@ -723,7 +728,7 @@
 !  History -
 !   extracted from GALAHAD package TRS, December 22nd, 2015
 
-   MODULE RAL_NLLS_DTRS_double
+   MODULE MODULE_PREC(RAL_NLLS_DTRS)
 
 !       -----------------------------------------------
 !      |                                               |
@@ -737,8 +742,9 @@
 !      |                                               |
 !       -----------------------------------------------
 
-      USE RAL_NLLS_SYMBOLS
-      USE RAL_NLLS_ROOTS_double, ONLY: ROOTS_cubic
+      USE MODULE_PREC(ral_nlls_types), Only: lp, np, wp
+      USE MODULE_PREC(RAL_NLLS_SYMBOLS)
+      USE MODULE_PREC(RAL_NLLS_ROOTS), ONLY: ROOTS_cubic
 
       IMPLICIT NONE
 
@@ -749,7 +755,7 @@
 !   P r e c i s i o n
 !--------------------
 
-      INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
+!     INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
 
 !----------------------
 !   P a r a m e t e r s
@@ -906,15 +912,17 @@
      INTERFACE NRM2
 
        FUNCTION SNRM2( n, X, incx )
-       REAL :: SNRM2
+       import :: lp
+       REAL(KIND=lp) :: SNRM2
        INTEGER, INTENT( IN ) :: n, incx
-       REAL, INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
+       REAL(KIND=lp), INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
        END FUNCTION SNRM2
 
        FUNCTION DNRM2( n, X, incx )
-       DOUBLE PRECISION :: DNRM2
+       import :: np
+       REAL(KIND=np):: DNRM2
        INTEGER, INTENT( IN ) :: n, incx
-       DOUBLE PRECISION, INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
+       REAL(KIND=np), INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
        END FUNCTION DNRM2
 
      END INTERFACE
@@ -1687,62 +1695,6 @@
 
       END SUBROUTINE DTRS_pi_derivs
 
-!-*-*-*-*-*  D T R S _ T H E T A _ D E R I V S   S U B R O U T I N E   *-*-*-*-
-
-      SUBROUTINE DTRS_theta_derivs( max_order, beta, lambda, sigma,            &
-                                     theta_beta )
-
-! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-!
-!  Compute theta_beta = (lambda/sigma)^beta and its derivatives
-!
-!  Arguments:
-!  =========
-!
-!  Input -
-!   max_order - maximum order of derivative
-!   beta - power
-!   lambda, sigma - lambda and sigma
-!  Output -
-!   theta_beta - (0) value of (lambda/sigma)^beta,
-!             (i) ith derivative of (lambda/sigma)^beta, i = 1, max_order
-!
-!  Extracted wholesale from module RAL_NLLS_RQS
-!
-! =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-!-----------------------------------------------
-!   D u m m y   A r g u m e n t s
-!-----------------------------------------------
-
-      INTEGER, INTENT( IN ) :: max_order
-      REAL ( KIND = wp ), INTENT( IN ) :: beta, lambda, sigma
-      REAL ( KIND = wp ), INTENT( OUT ) :: theta_beta( 0 : max_order )
-
-!-----------------------------------------------
-!   L o c a l   V a r i a b l e
-!-----------------------------------------------
-
-      REAL ( KIND = wp ) :: los, oos
-
-      los = lambda / sigma
-      oos = one / sigma
-
-      theta_beta( 0 ) = los ** beta
-      theta_beta( 1 ) = beta * ( los ** ( beta - one ) ) * oos
-      IF ( max_order == 1 ) RETURN
-      theta_beta( 2 ) = beta * ( los ** ( beta - two ) ) *                    &
-                        ( beta - one ) * oos ** 2
-      IF ( max_order == 2 ) RETURN
-      theta_beta( 3 ) = beta * ( los ** ( beta - three ) ) *                  &
-                        ( beta - one ) * ( beta - two ) * oos ** 3
-
-      RETURN
-
-!  End of subroutine DTRS_theta_derivs
-
-      END SUBROUTINE DTRS_theta_derivs
-
 !-*-*-*-*-  G A L A H A D   T W O  _ N O R M   F U N C T I O N   -*-*-*-*-
 
        FUNCTION TWO_NORM( X )
@@ -1772,7 +1724,7 @@
 
 !-*-*-*-*-*-  End of R A L _ N L L S _ D T R S  double  M O D U L E  *-*-*-*-*-
 
-   END MODULE RAL_NLLS_DTRS_double
+   END MODULE MODULE_PREC(RAL_NLLS_DTRS)
 
 
 
@@ -1789,7 +1741,7 @@
 !  For full documentation, see
 !   http://galahad.rl.ac.uk/galahad-www/specs.html
 
-   MODULE RAL_NLLS_DRQS_double
+   MODULE MODULE_PREC(RAL_NLLS_DRQS)
 
 !       --------------------------------------------
 !      |                                            |
@@ -1802,8 +1754,9 @@
 !      |                                            |
 !       --------------------------------------------
 
-      USE RAL_NLLS_SYMBOLS
-      USE RAL_NLLS_ROOTS_double
+      USE MODULE_PREC(ral_nlls_types), Only: lp, np, wp
+      USE MODULE_PREC(RAL_NLLS_SYMBOLS)
+      USE MODULE_PREC(RAL_NLLS_ROOTS)
 
       IMPLICIT NONE
 
@@ -1814,7 +1767,7 @@
 !   P r e c i s i o n
 !--------------------
 
-      INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
+!     INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
 
 !----------------------
 !   P a r a m e t e r s
@@ -1979,15 +1932,17 @@
      INTERFACE NRM2
 
        FUNCTION SNRM2( n, X, incx )
-       REAL :: SNRM2
+       import :: lp
+       REAL(KIND=lp) :: SNRM2
        INTEGER, INTENT( IN ) :: n, incx
-       REAL, INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
+       REAL(KIND=lp), INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
        END FUNCTION SNRM2
 
        FUNCTION DNRM2( n, X, incx )
-       DOUBLE PRECISION :: DNRM2
+       import :: np
+       REAL(KIND=np):: DNRM2
        INTEGER, INTENT( IN ) :: n, incx
-       DOUBLE PRECISION, INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
+       REAL(KIND=np), INTENT( IN ), DIMENSION( incx * ( n - 1 ) + 1 ) :: X
        END FUNCTION DNRM2
 
      END INTERFACE
@@ -2257,7 +2212,7 @@
 
 !  output problem data
 
-4      IF ( control%problem > 0 ) THEN
+       IF ( control%problem > 0 ) THEN
         INQUIRE( FILE = control%problem_file, EXIST = problem_file_exists )
         IF ( problem_file_exists ) THEN
           OPEN( control%problem, FILE = control%problem_file,                  &
@@ -3379,4 +3334,4 @@
 
 !-*-*-*-*-*-  End of R A L _ N L L S _ R Q S  double  M O D U L E  *-*-*-*-*-*-
 
-   END MODULE RAL_NLLS_DRQS_double
+   END MODULE MODULE_PREC(RAL_NLLS_DRQS)

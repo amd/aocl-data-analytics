@@ -5,7 +5,13 @@
 ! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 ! ral_nlls_workspaces :: module to keep all the workspaces
 
-module ral_nlls_workspaces
+#include "preprocessor.FPP"
+
+module MODULE_PREC(ral_nlls_workspaces)
+
+  Use MODULE_PREC(ral_nlls_types), Only: wp, np, lp, params_base_type,         &
+                                         eval_f_type, eval_j_type,             &
+                                         eval_hf_type, eval_hp_type
 
   implicit none
 
@@ -13,7 +19,6 @@ module ral_nlls_workspaces
 
   ! define derived types and subroutines for workspace arrays.
 
-  Integer, Parameter, Public          :: wp = kind(1.0d0)
   Real (Kind = wp), Parameter, Public :: epsmch = epsilon(1.0_wp)
   Real (Kind = wp), Parameter, Public :: toltm4= epsmch**(0.25_wp)
   Real (Kind = wp), Parameter, Public :: toltm8 = sqrt(epsmch)
@@ -254,8 +259,8 @@ module ral_nlls_workspaces
 
      LOGICAL :: exact_second_derivatives = .false.
 
-!   use a factorization (dsyev) to find the smallest eigenvalue for the subproblem
-!    solve? (alternative is an iterative method (dsyevx)
+!   use a factorization (?syev) to find the smallest eigenvalue for the subproblem
+!    solve? (alternative is an iterative method (?syevx)
      LOGICAL :: subproblem_eig_fact = .FALSE. ! undocumented....
 
      ! use eigendecomposition in subproblem solve?
@@ -515,59 +520,6 @@ module ral_nlls_workspaces
 
   END TYPE nlls_inform
 
-  type, public :: params_base_type
-     ! deliberately empty
-  end type params_base_type
-
-  abstract interface
-     subroutine eval_f_type(status, n, m, x, f, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(out) :: f
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_f_type
-  end interface
-
-  abstract interface
-     subroutine eval_j_type(status, n, m, x, J, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(out) :: J
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_j_type
-  end interface
-  abstract interface
-     subroutine eval_hf_type(status, n, m, x, f, h, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(in)  :: f
-       double precision, dimension(*), intent(out) :: h
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_hf_type
-  end interface
-
-  abstract interface
-     subroutine eval_hp_type(status, n, m, x, y, hp, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(in)  :: y
-       double precision, dimension(*), intent(out) :: hp
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_hp_type
-  end interface
-
   type, extends( params_base_type ), public :: tensor_params_type
      real(wp), dimension(:), allocatable :: f
      real(wp), dimension(:), allocatable :: x
@@ -778,6 +730,9 @@ module ral_nlls_workspaces
      type (NLLS_workspace), Pointer :: iw_ptr => NULL()
   end type NLLS_workspace
 
+  public :: lp, np, wp
+  Public :: params_base_type
+  Public :: eval_f_type, eval_j_type, eval_hf_type, eval_hp_type
   public :: setup_workspaces, remove_workspaces
   public :: setup_workspace_dogleg, setup_workspace_AINT_tr
   public :: setup_workspace_more_sorensen, setup_workspace_solve_galahad
@@ -1436,7 +1391,7 @@ contains
 
     real(wp), allocatable :: workquery(:)
     integer :: lwork, eigsout, ierr_dummy
-    Real(Kind=wp) :: w_dummy(1), z_dummy(1,1)
+    Real(Kind=wp) :: w_dummy(1), z_dummy(1)
 
     inform%status = 0
     allocate(w%A(n,n),workquery(1),stat = inform%alloc_status)
@@ -1453,14 +1408,14 @@ contains
          inform%bad_alloc = "setup_workspace_min_eig_symm"
          GoTo 100
        End If
-       call dsyev('V', & ! both ew's and ev's
+       call PREC(syev)('V', & ! both ew's and ev's
             'U', & ! upper triangle of A
             n, w%A, max(1,n), & ! data about A
             w%ew, workquery, -1, &
             inform%external_return)
        If (inform%external_return .ne. 0) then
           inform%status = NLLS_ERROR_FROM_EXTERNAL
-          inform%external_name = "lapack_dsyev"
+          inform%external_name = "lapack_?syev"
           goto 100
        End If
     else
@@ -1472,9 +1427,9 @@ contains
          GoTo 100
        End If
        w_dummy(1) = 1.0_wp
-       z_dummy(1,1) = 1.0_wp
-       ! make a workspace query to dsyevx
-       call dsyevx( 'V',& ! get both ew's and ev's
+       z_dummy(1) = 1.0_wp
+       ! make a workspace query to ?syevx
+       call PREC(syevx)( 'V',& ! get both ew's and ev's
             'I',& ! just the numbered eigenvalues
             'U',& ! upper triangle of A
             n, w%A, n, &
@@ -1489,7 +1444,7 @@ contains
             inform%external_return)
        If (inform%external_return .ne. 0) Then
          inform%status = NLLS_ERROR_FROM_EXTERNAL
-         inform%external_name = "lapack_dsyevx"
+         inform%external_name = "lapack_?syevx"
          goto 100
        End If
     end if
@@ -1553,8 +1508,8 @@ contains
     B_dummy(1,1) = 1.0_wp
     vl_dummy(1,1) = 0.1_wp
     vr_dummy(1,1) = 0.1_wp
-    ! make a workspace query to dggev
-    call dggev('N', & ! No left eigenvectors
+    ! make a workspace query to ?ggev
+    call PREC(ggev)('N', & ! No left eigenvectors
          'V', &! Yes right eigenvectors
          2*n, A_dummy, max(1,2*n), B_dummy, max(1,2*n), &
          w%alphaR, W%alphaI, w%beta, & ! eigenvalue data
@@ -1563,7 +1518,7 @@ contains
          workquery, -1, inform%external_return)
     If (inform%external_return > 0) Then
       inform%status = NLLS_ERROR_FROM_EXTERNAL
-      inform%external_name = "lapack_dggev"
+      inform%external_name = "lapack_?ggev"
       GoTo 100
     End If
     lwork = int(workquery(1))
@@ -1719,7 +1674,7 @@ contains
     type( nlls_inform ), intent(inout) :: inform
 
     real(wp), allocatable :: workquery(:)
-    real(wp) :: A_dummy(1)
+    real(wp) :: A_dummy(1,1)
     integer :: lwork, ierr_dummy
 
     inform%status = 0
@@ -1732,14 +1687,14 @@ contains
     End If
     A_dummy = 1.0_wp
     w%ew(:) = 1.0_wp
-    call dsyev('V', & ! both ew's and ev's
+    call PREC(syev)('V', & ! both ew's and ev's
          'U', & ! upper triangle of A
          n, A_dummy, max(1,n), & ! data about A
          w%ew, workquery, -1, &
          inform%external_return)
     If (inform%external_return .ne. 0) Then
       inform%status = NLLS_ERROR_FROM_EXTERNAL
-      inform%external_name = "lapack_dsyev"
+      inform%external_name = "lapack_?syev"
       GoTo 100
     End If
 
@@ -2061,4 +2016,4 @@ contains
 
    End Subroutine free_iparams_type
 
-end module ral_nlls_workspaces
+end module MODULE_PREC(ral_nlls_workspaces)

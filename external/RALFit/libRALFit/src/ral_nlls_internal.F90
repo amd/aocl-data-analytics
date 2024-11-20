@@ -4,67 +4,19 @@
 ! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 ! ral_nlls_internal :: internal subroutines for ral_nlls
 
-module ral_nlls_internal
+#include "preprocessor.FPP"
 
-  use RAL_NLLS_DTRS_double
-  use RAL_NLLS_DRQS_double
-  use ral_nlls_workspaces
-  Use ral_nlls_printing
-  Use ral_nlls_bounds
+module MODULE_PREC(ral_nlls_internal)
+
+  use MODULE_PREC(RAL_NLLS_DTRS)
+  use MODULE_PREC(RAL_NLLS_DRQS)
+  use MODULE_PREC(ral_nlls_workspaces)
+  Use MODULE_PREC(ral_nlls_printing)
+  Use MODULE_PREC(ral_nlls_bounds)
 
   implicit none
 
   private
-
-  abstract interface
-     subroutine eval_f_type(status, n, m, x, f, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(out) :: f
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_f_type
-  end interface
-
-  abstract interface
-     subroutine eval_j_type(status, n, m, x, J, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(out) :: J
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_j_type
-  end interface
-
-  abstract interface
-     subroutine eval_hf_type(status, n, m, x, f, h, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(in)  :: f
-       double precision, dimension(*), intent(out) :: h
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_hf_type
-  end interface
-
-  abstract interface
-     subroutine eval_hp_type(status, n, m, x, y, hp, params)
-       import :: params_base_type
-       implicit none
-       integer, intent(out) :: status
-       integer, intent(in) :: n,m
-       double precision, dimension(*), intent(in)  :: x
-       double precision, dimension(*), intent(in)  :: y
-       double precision, dimension(*), intent(out) :: hp
-       class(params_base_type), intent(inout) :: params
-     end subroutine eval_hp_type
-  end interface
 
     public :: nlls_solve, nlls_iterate, nlls_finalize, nlls_strerror
     public :: solve_galahad, findbeta, mult_j
@@ -102,8 +54,8 @@ contains
 !  Authors: RAL NA Group (Iain Duff, Nick Gould, Jonathan Hogg, Tyrone Rees,
 !                         Jennifer Scott)
 !  -----------------------------------------------------------------------------
-    Use nag_export_mod, Only: calculate_covm
-    Use ral_nlls_fd, Only: eval_f_wrap, eval_j_wrap, eval_hf_wrap
+    Use MODULE_PREC(nag_export_mod), Only: calculate_covm
+    Use MODULE_PREC(ral_nlls_fd), Only: eval_f_wrap, eval_j_wrap, eval_hf_wrap
 !   Dummy arguments
     implicit none
 
@@ -214,7 +166,7 @@ contains
                           inform, options, weights,  &
                           eval_HP,                   &
                           lower_bounds, upper_bounds)
-    Use ral_nlls_fd, Only: eval_hp_wrap, check_jacobian
+    Use MODULE_PREC(ral_nlls_fd), Only: eval_hp_wrap, check_jacobian
     implicit none
     INTEGER, INTENT( IN ) :: n, m
     REAL( wp ), DIMENSION( n ), INTENT( INOUT ) :: X
@@ -236,7 +188,7 @@ contains
     logical :: success
     character :: second
     integer :: num_successful_steps
-    integer :: nrec, ierr_dummy
+    integer :: nrec
     integer :: eval_f_status, eval_J_status
     Character(Len=220) :: rec(3)
     Character(Len=1) :: it_type, inn_flag
@@ -1184,7 +1136,6 @@ lp: do while (.not. success)
 !    Unsuccessfull iteration partial information
 9020 Format(I7,37X,1X,2(Es9.2e2,1X),A4,1X,I7)
 ! print level > 2
-3110 FORMAT('Initial trust region radius taken as ', ES12.4)
 3120 Format('||J^Tf|| too large or not available. Reducing TR radius.')
   end subroutine nlls_iterate
 
@@ -1455,7 +1406,7 @@ lp: do while (.not. success)
        IF (scaling_used) then
           do i = 1,n
              w%v(i) = w%v(i) / w%scale(i)
-             call dscal(n, 1/w%scale(i), w%A(:,i), 1)
+             call PREC(scal)(n, 1/w%scale(i), w%A(:,i), 1)
           end do
           do jj = 1, n ! swap order for efficiency
              do i = 1, n
@@ -1465,7 +1416,7 @@ lp: do while (.not. success)
 
           ! Let's test how well other methods work...
 !          do i = 1, n
-!             call dscal(n, 1/1.0_wp, w%A(:,i), 1)
+!             call PREC(scal)(n, 1/1.0_wp, w%A(:,i), 1)
 !          end do
        end IF
 
@@ -2270,7 +2221,7 @@ lp:  do i = 1, options%more_sorensen_maxits
         end if
 
         w%q(:) = d ! w%q = R'\d
-        CALL DTRSM( 'Left', 'Lower', 'No Transpose', 'Non-unit', n, &
+        CALL PREC(trsm)( 'Left', 'Lower', 'No Transpose', 'Non-unit', n, &
              1, 1.0_wp, w%AplusSigma, n, w%q, n ) ! AplusSigma now holds the chol. factors
 
         nq = norm2(w%q)
@@ -2319,7 +2270,6 @@ lp:  do i = 1, options%more_sorensen_maxits
 5000 FORMAT('iter',4x,'nd',12x,'sigma',9x,'sigma_shift')
 5010 FORMAT(i4,2x,ES12.4,2x,ES12.4,2x,ES12.4)
 5020 FORMAT('More-Sorensen failed to converge within max number of iterations')
-5030 FORMAT('More-Sorensen converged at iteration ',i4)
 5040 FORMAT('Leaving More-Sorensen')
 ! print_level >= 3
 6000 FORMAT('A is symmetric positive definite')
@@ -2330,7 +2280,6 @@ lp:  do i = 1, options%more_sorensen_maxits
 6040 FORMAT('Sigma tiny, so exit')
 6050 FORMAT('||d|| = Delta, so exit')
 6060 FORMAT('Return d + alpha*y_1')
-6070 FORMAT('Converged! ||d|| = Delta at iteration ',i4)
 6080 FORMAT('nq = ',ES12.4)
    end subroutine more_sorensen_ew
 
@@ -2361,7 +2310,7 @@ lp:  do i = 1, options%more_sorensen_maxits
      real(wp) :: sigma_l, sigma_u
      integer :: region ! 1:N, 2:L, 3:G (2-3:F)
      real(wp) :: normF_A, norminf_A
-     real(wp) :: dlange, dasum
+     real(wp) :: PREC(lange), PREC(asum)
      real(wp) :: Aii, abs_Aii_sum, lower_sum, upper_sum, min_Aii, max_lower_sum, max_upper_sum, nv
      real(wp) :: uHu, dHd, theta, kappa_easy, kappa_hard, indef_delta
      integer :: location_of_breakdown
@@ -2385,11 +2334,11 @@ lp:  do i = 1, options%more_sorensen_maxits
      kappa_hard = 0.002_wp
 
      ! Set up the initial variables....
-     normF_A = dlange('F',n,n,A,n,w%norm_work)
-     norminf_A = dlange('I',n,n,A,n,w%norm_work)
+     normF_A = PREC(lange)('F',n,n,A,n,w%norm_work)
+     norminf_A = PREC(lange)('I',n,n,A,n,w%norm_work)
      do i = 1, n
         Aii = A(i,i)
-        abs_Aii_sum = dasum(n,A(:,i),1) ! = sum |A_ij|
+        abs_Aii_sum = PREC(asum)(n,A(:,i),1) ! = sum |A_ij|
         if (Aii < 0.0_wp) then
            lower_sum = abs_Aii_sum + 2*Aii ! A_ij + sum_(i ne j) |A_ij|
            upper_sum = abs_Aii_sum
@@ -2495,7 +2444,7 @@ lp:  do i = 1, options%more_sorensen_maxits
 
         if (region .ne. 1 ) then ! in F
            w%q(:) = d ! w%q = R'\d
-           CALL DTRSM( 'Left', 'Lower', 'No Transpose', 'Non-unit', n, &
+           CALL PREC(trsm)( 'Left', 'Lower', 'No Transpose', 'Non-unit', n, &
                 1, 1.0_wp, w%LtL, n, w%q, n )
            nq = norm2(w%q)
            If (buildmsg(5,.False.,options)) Then
@@ -2722,7 +2671,7 @@ lp:  do i = 1, options%more_sorensen_maxits
 
      ! in the above, u is the w in the TR book
      ! now set u = L'\u
-     CALL DTRSM( 'Left', 'Lower', 'Transpose', 'Non-unit', n, &
+     CALL PREC(trsm)( 'Left', 'Lower', 'Transpose', 'Non-unit', n, &
           1, 1.0_wp, mLLt, n, u, n )
      u = u / norm2(u)   ! and normalize
 
@@ -2922,8 +2871,6 @@ lp:  do i = 1, options%more_sorensen_maxits
 
 100 continue
 
-2000 FORMAT('Regularization order used = ',ES12.4)
-
    end subroutine solve_galahad
 
    subroutine regularization_solver(A,v,n,m,Delta,num_successful_steps,&
@@ -2984,7 +2931,7 @@ lp:  do i = 1, options%more_sorensen_maxits
        logical, Intent(In) :: Fortran_Jacobian
 
        integer, Parameter :: nrhs = 1
-       integer :: lwork, lda, ldb, i, k
+       integer :: lwork, lda, ldb
        type( solve_LLS_work ), Intent(inout) :: w
 
        If (.not. w%allocated) Then
@@ -2999,17 +2946,17 @@ lp:  do i = 1, options%more_sorensen_maxits
        If (Fortran_Jacobian) Then
           lda = m
           ldb = max(m,n)
-          call dgels('N', m, n, nrhs, w%Jlls, lda, w%temp, ldb, w%work, lwork, &
+          call PREC(gels)('N', m, n, nrhs, w%Jlls, lda, w%temp, ldb, w%work, lwork, &
                inform%external_return)
        else
           lda = n
           ldb = max(m,n)
-          call dgels('T', n, m, nrhs, w%Jlls, lda, w%temp, ldb, w%work, lwork, &
+          call PREC(gels)('T', n, m, nrhs, w%Jlls, lda, w%temp, ldb, w%work, lwork, &
                inform%external_return)
        end If
        if (inform%external_return .ne. 0 ) then
           inform%status = NLLS_ERROR_FROM_EXTERNAL
-          inform%external_name = 'lapack_dgels'
+          inform%external_name = 'lapack_?gels'
           Go To 100
        end if
 
@@ -3329,12 +3276,12 @@ lp:  do i = 1, options%more_sorensen_maxits
 
        ! hf = hf + (1/yts) (y# - Sk d)^T y:
        alpha = 1.0_wp/yts
-       call dGER(n,n,alpha,w%ysharpSks,1,w%y,1,hf,n)
+       call PREC(ger)(n,n,alpha,w%ysharpSks,1,w%y,1,hf,n)
        ! hf = hf + (1/yts) y^T (y# - Sk d):
-       call dGER(n,n,alpha,w%y,1,w%ysharpSks,1,hf,n)
+       call PREC(ger)(n,n,alpha,w%y,1,w%ysharpSks,1,hf,n)
        ! hf = hf - ((y# - Sk d)^T d)/((yts)**2)) * y y^T
        alpha = -dot_product(w%ysharpSks,w%d)/(yts**2)
-       call dGER(n,n,alpha,w%y,1,w%y,1,hf,n)
+       call PREC(ger)(n,n,alpha,w%y,1,w%y,1,hf,n)
 100    Continue
      end subroutine rank_one_update
 
@@ -3496,20 +3443,20 @@ lp:  do i = 1, options%more_sorensen_maxits
 
        If (.not. Fortran_Jacobian) then
          ! Jacobian held in row major format...
-         call dgemv('T',n,m,alpha,J,max(1,n),x,1,beta,Jx,1)
+         call PREC(gemv)('T',n,m,alpha,J,max(1,n),x,1,beta,Jx,1)
        Else
-         call dgemv('N',m,n,alpha,J,max(1,m),x,1,beta,Jx,1)
+         call PREC(gemv)('N',m,n,alpha,J,max(1,m),x,1,beta,Jx,1)
        End If
      end subroutine mult_J
 
      subroutine mult_Jt(J,n,m,x,Jtx,Fortran_Jacobian)
        Implicit None
-       double precision, intent(in) :: J(*), x(*)
+       real(Kind=wp), intent(in) :: J(*), x(*)
        integer, intent(in) :: n,m
-       double precision, intent(out) :: Jtx(*)
+       real(Kind=wp), intent(out) :: Jtx(*)
        logical, intent(in) :: fortran_jacobian
 
-       double precision :: alpha, beta
+       real(Kind=wp) :: alpha, beta
 
        Jtx(1:n) = 1.0_wp
        alpha = 1.0_wp
@@ -3517,9 +3464,9 @@ lp:  do i = 1, options%more_sorensen_maxits
 
        If (.not. Fortran_Jacobian) then
          ! Jacobian held in row major format...
-         call dgemv('N',n,m,alpha,J,max(1,n),x,1,beta,Jtx,1)
+         call PREC(gemv)('N',n,m,alpha,J,max(1,n),x,1,beta,Jtx,1)
        Else
-         call dgemv('T',m,n,alpha,J,max(1,m),x,1,beta,Jtx,1)
+         call PREC(gemv)('T',m,n,alpha,J,max(1,m),x,1,beta,Jtx,1)
        End If
      end subroutine mult_Jt
 
@@ -3554,7 +3501,6 @@ lp:  do i = 1, options%more_sorensen_maxits
        procedure( eval_j_type ) :: eval_J
        real( wp ), intent(in), contiguous, optional :: weights(:)
 
-       integer :: i
        real (wp) :: normjfnew
 
        ! Inform FD machinery to use x and f
@@ -3631,15 +3577,15 @@ lp:  do i = 1, options%more_sorensen_maxits
        integer, intent(in) :: n
        type( nlls_inform), intent(inout) :: inform
        inform%status = 0
-       ! Wrapper for the lapack subroutine dposv
+       ! Wrapper for the lapack subroutine ?posv
        ! Given A and b, solves
        !       A x = -b
        LtL(1:n,1:n) = A(1:n,1:n)
        x(1:n) = -b(1:n)
-       call dposv('L', n, 1, LtL, n, x, n, inform%external_return)
+       call PREC(posv)('L', n, 1, LtL, n, x, n, inform%external_return)
        if (inform%external_return .ne. 0) then
           inform%status = NLLS_ERROR_FROM_EXTERNAL
-          inform%external_name = 'lapack_dposv'
+          inform%external_name = 'lapack_?posv'
        end if
      end subroutine minus_solve_spd
 
@@ -3651,15 +3597,15 @@ lp:  do i = 1, options%more_sorensen_maxits
        integer, intent(in) :: n
        type( nlls_inform), intent(inout) :: inform
        inform%status = 0
-       ! Wrapper for the lapack subroutine dposv
+       ! Wrapper for the lapack subroutine ?posv
        ! NOTE: A will be destroyed
        ! Given A and b, solves
        !       A x = -b
        x(1:n) = -b(1:n)
-       call dposv('L', n, 1, A, n, x, n, inform%external_return)
+       call PREC(posv)('L', n, 1, A, n, x, n, inform%external_return)
        if (inform%external_return .ne. 0) then
           inform%status = NLLS_ERROR_FROM_EXTERNAL
-          inform%external_name = 'lapack_dposv'
+          inform%external_name = 'lapack_?posv'
        end if
      end subroutine minus_solve_spd_nocopy
 
@@ -3671,7 +3617,7 @@ lp:  do i = 1, options%more_sorensen_maxits
        integer, intent(in) :: n
        type( nlls_inform ), intent(inout) :: inform
        type( minus_solve_general_work ),Intent(inout) :: w
-       ! Wrapper for the lapack subroutine dposv
+       ! Wrapper for the lapack subroutine ?gesv
        ! NOTE: A would be destroyed
        ! Given A and b, solves
        !       A x = -b
@@ -3683,10 +3629,10 @@ lp:  do i = 1, options%more_sorensen_maxits
 
        w%A(1:n,1:n) = A(1:n,1:n)
        x(1:n) = -b(1:n)
-       call dgesv( n, 1, w%A, n, w%ipiv, x, n, inform%external_return)
+       call PREC(gesv)( n, 1, w%A, n, w%ipiv, x, n, inform%external_return)
        if (inform%external_return .ne. 0 ) then
           inform%status = NLLS_ERROR_FROM_EXTERNAL
-          inform%external_name = 'lapack_dgesv'
+          inform%external_name = 'lapack_?gesv'
        end if
 
 100    continue
@@ -3726,12 +3672,12 @@ lp:  do i = 1, options%more_sorensen_maxits
        if ( present(options) ) Then
          If (.not. options%Fortran_Jacobian) then
            ! c format
-           call dgemm('N','T',n, n, m, 1.0_wp, J, n, J, n, 0.0_wp, A, n)
+           call PREC(gemm)('N','T',n, n, m, 1.0_wp, J, n, J, n, 0.0_wp, A, n)
          Else
-           call dgemm('T','N',n, n, m, 1.0_wp, J, m, J, m, 0.0_wp, A, n)
+           call PREC(gemm)('T','N',n, n, m, 1.0_wp, J, m, J, m, 0.0_wp, A, n)
          End If
        Else
-          call dgemm('T','N',n, n, m, 1.0_wp, J, m, J, m, 0.0_wp, A, n)
+          call PREC(gemm)('T','N',n, n, m, 1.0_wp, J, m, J, m, 0.0_wp, A, n)
        End If
      end subroutine matmult_inner
      subroutine matmult_outer(J,n,m,A)
@@ -3744,7 +3690,7 @@ lp:  do i = 1, options%more_sorensen_maxits
        ! m x m matrix A given by
        ! A = J * J'
 
-       call dgemm('N','T',m, m, n, 1.0_wp, J, m, J, m, 0.0_wp, A, m)
+       call PREC(gemm)('N','T',m, m, n, 1.0_wp, J, m, J, m, 0.0_wp, A, m)
      end subroutine matmult_outer
 
      subroutine outer_product(x,n,xxt)
@@ -3758,7 +3704,7 @@ lp:  do i = 1, options%more_sorensen_maxits
        ! xxt = x * x'
 
        xxt(1:n,1:n) = 0.0_wp
-       call dger(n, n, 1.0_wp, x, 1, x, 1, xxt, n)
+       call PREC(ger)(n, n, 1.0_wp, x, 1, x, 1, xxt, n)
      end subroutine outer_product
 
      subroutine all_eig_symm(A,n,ew,ev,w,inform)
@@ -3780,15 +3726,15 @@ lp:  do i = 1, options%more_sorensen_maxits
        ev(1:n,1:n) = A(1:n,1:n)
 
        lwork = size(w%work)
-       ! call dsyev --> all eigs of a symmetric matrix
-       call dsyev('V', & ! both ew's and ev's
+       ! call ?syev --> all eigs of a symmetric matrix
+       call PREC(syev)('V', & ! both ew's and ev's
             'U', & ! upper triangle of A
             n, ev, n, & ! data about A
             ew, w%work, lwork, &
             inform%external_return)
        if (inform%external_return .ne. 0) then
           inform%status = NLLS_ERROR_FROM_EXTERNAL
-          inform%external_name = 'lapack_dsyev'
+          inform%external_name = 'lapack_?syev'
        end if
 100   continue
      end subroutine all_eig_symm
@@ -3804,7 +3750,7 @@ lp:  do i = 1, options%more_sorensen_maxits
        type( nlls_options ), INTENT( IN ) :: options
        type( min_eig_symm_work ), Intent(Inout) :: w
 
-       real(wp) :: tol, dlamch
+       real(wp) :: tol, PREC(lamch)
        integer :: lwork, eigsout, minindex(1)
 
        If ( .not. w%allocated ) Then
@@ -3812,32 +3758,32 @@ lp:  do i = 1, options%more_sorensen_maxits
          goto 100
        End If
 
-       tol = 2.0_wp*dlamch('S')
+       tol = 2.0_wp*PREC(lamch)('S')
 
-       w%A(1:n,1:n) = A(1:n,1:n) ! copy A, as workspace for dsyev(x)
-       ! note that dsyevx (but not dsyev) only destroys the lower (or upper) part of A
+       w%A(1:n,1:n) = A(1:n,1:n) ! copy A, as workspace for ?syev(x)
+       ! note that ?syevx (but not ?syev) only destroys the lower (or upper) part of A
        ! so we could possibly reduce memory use here...leaving for
        ! ease of understanding for now.
 
        lwork = size(w%work)
        if ( options%subproblem_eig_fact ) then
-          ! call dsyev --> all eigs of a symmetric matrix
-          call dsyev('V', & ! both ew's and ev's
+          ! call ?syev --> all eigs of a symmetric matrix
+          call PREC(syev)('V', & ! both ew's and ev's
                'U', & ! upper triangle of A
                n, w%A, n, & ! data about A
                w%ew, w%work, lwork, &
                inform%external_return)
           if (inform%external_return .ne. 0) then
              inform%status = NLLS_ERROR_FROM_EXTERNAL
-             inform%external_name = 'lapack_dsyev'
+             inform%external_name = 'lapack_?syev'
              Go To 100
           end if
           minindex = minloc(w%ew)
           ew = w%ew(minindex(1))
           ev = w%A(1:n,minindex(1))
        else
-          ! call dsyevx --> selected eigs of a symmetric matrix
-          call dsyevx( 'V',& ! get both ew's and ev's
+          ! call ?syevx --> selected eigs of a symmetric matrix
+          call PREC(syevx)( 'V',& ! get both ew's and ev's
                'I',& ! just the numbered eigenvalues
                'U',& ! upper triangle of A
                n, w%A, n, &
@@ -3852,7 +3798,7 @@ lp:  do i = 1, options%more_sorensen_maxits
                inform%external_return)
           if (inform%external_return .ne. 0) then
              inform%status = NLLS_ERROR_FROM_EXTERNAL
-             inform%external_name = 'lapack_dsyevx'
+             inform%external_name = 'lapack_?syevx'
              Go To 100
           end if
           ew = w%ew(1)
@@ -3894,7 +3840,7 @@ lp:  do i = 1, options%more_sorensen_maxits
 
        halfn = n/2
        lwork = size(w%work)
-       call dggev('N', & ! No left eigenvectors
+       call PREC(ggev)('N', & ! No left eigenvectors
             'V', &! Yes right eigenvectors
             n, A, n, B, n, &
             w%alphaR, w%alphaI, w%beta, & ! eigenvalue data
@@ -3903,7 +3849,7 @@ lp:  do i = 1, options%more_sorensen_maxits
             w%work, lwork, inform%external_return)
        if (inform%external_return .ne. 0) then
           inform%status = NLLS_ERROR_FROM_EXTERNAL
-          inform%external_name = 'lapack_dggev'
+          inform%external_name = 'lapack_?ggev'
           Go To 100
        end if
 
@@ -4202,10 +4148,10 @@ lp:    do i = 1, w%tensor_options%maxit
              do ii = 1,params%m
                 params%tenJ%H(1:n,1:n) = params%Hi(1:n,1:n,ii)
                 params%tenJ%Hs(1:n,ii) = 0.0_wp
-                call dgemv('N',n,n,1.0_wp,params%tenJ%H(1,1),n,s,1,0.0_wp,params%tenJ%Hs(1,ii),1)
+                call PREC(gemv)('N',n,n,1.0_wp,params%tenJ%H(1,1),n,s,1,0.0_wp,params%tenJ%Hs(1,ii),1)
              end do
           end if
-          call dgemv('T',n,params%m,1.0_wp,params%tenJ%Hs(1,1),n,s,1,0.0_wp, params%tenJ%stHs(1),1)
+          call PREC(gemv)('T',n,params%m,1.0_wp,params%tenJ%Hs(1,1),n,s,1,0.0_wp, params%tenJ%stHs(1),1)
        end select
      end subroutine calculate_sHs
 
@@ -4255,16 +4201,16 @@ lp:    do i = 1, w%tensor_options%maxit
                v = sqrt( (params%p)/(2.0_wp * params%Delta) ) *                &
                     (norm2(s(1:n))**( (params%p/2.0_wp) - 2.0_wp))
                ! J(m*(ii-1) + params%m + ii) = v * s(ii)
-               call dcopy(n, s, 1, J(m), m)
-               call dscal(n, v, J(m), m )
+               call PREC(copy)(n, s, 1, J(m), m)
+               call PREC(scal)(n, v, J(m), m )
             end if
           else
              ! Jacobian is provided row-wise
              !Do jj = 1, params%m
              ! J( (jj-1)*n+1 : jj*n ) = params%J( (jj-1)*n+1 : jj*n ) + params%tenJ%Hs(:,jj)
              !End Do
-             call dcopy(n*params%m,params%J,1,J,1)
-             call daxpy(n*params%m, 1.0_wp, params%tenJ%Hs(1,1),1, J, 1)
+             call PREC(copy)(n*params%m,params%J,1,J,1)
+             call PREC(axpy)(n*params%m, 1.0_wp, params%tenJ%Hs(1,1),1, J, 1)
 
             if (params%extra == 1) then
                ! we're passing in the regularization via the function/Jacobian
@@ -4279,8 +4225,8 @@ lp:    do i = 1, w%tensor_options%maxit
                     (norm2(s(1:n))**( (params%p/2.0_wp) - 2.0_wp))
               ! avoid auto allocation
               ! J((m-1)*n+1 : m*n) = v * s(1:n)
-              call dcopy(n, s, 1, J((m-1)*n+1), 1 )
-              call dscal(n, v, J((m-1)*n+1), 1 )
+              call PREC(copy)(n, s, 1, J((m-1)*n+1), 1 )
+              call PREC(scal)(n, v, J((m-1)*n+1), 1 )
             end if
           end if
 
@@ -4509,7 +4455,8 @@ lp:    do i = 1, w%tensor_options%maxit
 !     logic since uncmin.f operates in the original (unscaled) variable space.
       Recursive Subroutine lnsrch(n,m,x,f,g,p,alpha,sigma,xpls,fpls,eval_f,mxtake,   &
         stepmx,steptl,fnew,inform,params,options,iretcd,box_ws,weights,sx)
-        Use ral_nlls_workspaces
+        Use MODULE_PREC(ral_nlls_workspaces)
+        Use MODULE_PREC(ral_nlls_types), Only: prn_pinf
         Implicit None
 
         Integer, Intent (In)           :: n, m
@@ -4569,7 +4516,7 @@ lp:    do i = 1, w%tensor_options%maxit
           Write (rec(1),Fmt=99999)
           Write (rec(2),Fmt=99996) 'Dennis-Schnabel Line Search'
           Write (rec(3),Fmt=99998) 'It', 'alpn', 'fpls', 'pi', 'flag'
-          Write (rec(4),Fmt=99997) 0, 1.0E100_wp, f, slp, 0
+          Write (rec(4),Fmt=99997) 0, prn_pinf, f, slp, 0
           Call printmsg(5, .False., options, 4, rec)
         End If
 99999   Format (60('-'))
@@ -4707,7 +4654,7 @@ lp:    do i = 1, w%tensor_options%maxit
       Recursive Subroutine ls_step_ds(m,n,x,fdx,normfnew,normJFnew,normx,params, &
         eval_f,eval_J,inform,options,w,alpha,ierr,weights)
 
-        Use ral_nlls_workspaces
+        Use MODULE_PREC(ral_nlls_workspaces)
 
         Implicit None
         Integer, Intent (In)           :: n, m
@@ -4807,7 +4754,7 @@ lp:    do i = 1, w%tensor_options%maxit
 !-------------------------------------------------------------------------------
       Recursive Subroutine ls_step_hz(normf,m,fnew,nvar,x,fdx,dir,normfnew,xnew,normx,params,  &
         eval_f,inform,options,alpn,eval_j,normJFnew,ierr,w,weights)
-        Use ral_nlls_workspaces
+        Use MODULE_PREC(ral_nlls_workspaces)
         Implicit None
         Integer, Intent (In)           :: nvar, m
         Integer, Intent (Out)          :: ierr
@@ -4910,8 +4857,8 @@ lp:    do i = 1, w%tensor_options%maxit
       Recursive Subroutine nmls_pg(m,fnew,n,x,fdx,normfnew,xnew,normx,box_ws,params,       &
         eval_f,inform,options,alpha,ierr,weights)
 !       Assumes fdx is actually -fdx !!!
-        Use nag_export_mod
-        Use ral_nlls_workspaces
+        Use MODULE_PREC(nag_export_mod)
+        Use MODULE_PREC(ral_nlls_workspaces)
         Implicit None
         Real(Kind=wp), Parameter        :: smallstep = sqrt(epsmch)/100.0_wp
         Integer, Intent (In)           :: n, m
@@ -5028,12 +4975,11 @@ armijo: Do
 19996   Format ('Projected Gradient Linesearch')
 19997   Format ('it      alpn   normF(new)         pi        eval  flag')
 22222   Format (I2,1X,A,2X,A5,5X,L1)
-99999   Format (I2,1X,Es9.2e2,1X,Es20.12e2,1X,Es9.2e2,1X,L1,1X,I4,4X)
 99998   Format (I2,1X,A9,1X,Es20.12e2,1X,Es9.2e2,1X,1X,4X,A5)
 99997   Format (Es9.2e2,1X,Es20.12e2,1X,Es9.2e2,3X,L1)
 99996   Format ('Linesearch exit code=',I0)
 
       End Subroutine nmls_pg
 
-   end module ral_nlls_internal
+   end module MODULE_PREC(ral_nlls_internal)
 

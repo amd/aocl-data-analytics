@@ -1,9 +1,13 @@
+! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 ! Copyright (c) 2020, The Numerical Algorithms Group Ltd (NAG)
 ! All rights reserved.
 ! Copyright (c) 2020, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
-Module NAG_EXPORT_MOD
-      Use ral_nlls_workspaces, Only: wp
+
+#include "preprocessor.FPP"
+
+Module MODULE_PREC(NAG_EXPORT_MOD)
+      Use MODULE_PREC(ral_nlls_types), Only: wp
       Implicit None
       Private
       Public :: e04rlln, e04rlpn, calculate_covm
@@ -320,7 +324,7 @@ Module NAG_EXPORT_MOD
 
 !     NAG COPYRIGHT 2020.
 !     .. Use Statements ..
-      Use ral_nlls_workspaces, Only: nlls_options, nlls_inform
+      Use MODULE_PREC(ral_nlls_workspaces), Only: nlls_options, nlls_inform
 !     .. Implicit None Statement ..
       Implicit None
 !     .. Scalar Arguments ..
@@ -336,8 +340,6 @@ Module NAG_EXPORT_MOD
       Character (1)                    :: transa, transb
 !     .. Intrinsic Procedures ..
       Intrinsic                        :: allocated, merge, real
-!     real(wp) :: dlange
-      External dgemm, dpotrf, dpotri
 !     .. Executable Statements ..
 
       Continue
@@ -371,21 +373,21 @@ Module NAG_EXPORT_MOD
       End if
 
 !     Build cov = J^T J
-      Call dgemm(transa, transb, n, n, m, 1.0_wp, j, ld, j, ld, 0.0_wp, inform%cov, n)
+      Call PREC(gemm)(transa, transb, n, n, m, 1.0_wp, j, ld, j, ld, 0.0_wp, inform%cov, n)
       If (iflag==3) Then
 !       Return  only cov = H = J^T J
         Go To 100
       End If
 
 !     Invert J^T J using LAPACK
-      Call dpotrf('u', n, inform%cov, n, ierr)
+      Call PREC(potrf)('u', n, inform%cov, n, ierr)
       if (ierr /= 0) Then
 !       Cholesky factorization failed
         Deallocate(inform%cov, stat=ierr)
         Go To 100
       End If
 
-      Call dpotri('u', n, inform%cov, n, ierr)
+      Call PREC(potri)('u', n, inform%cov, n, ierr)
       if (ierr /= 0) Then
 !       Inverse of Cholesky factor failed
         Deallocate(inform%cov, stat=ierr)
@@ -434,4 +436,4 @@ Module NAG_EXPORT_MOD
 
     End Subroutine calculate_covm
 
-End Module NAG_EXPORT_MOD
+End Module MODULE_PREC(NAG_EXPORT_MOD)

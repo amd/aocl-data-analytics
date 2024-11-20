@@ -216,13 +216,11 @@ The standard way of computing a nonlinear model using AOCL-DA is as follows.
          * The following results are available in the :code:`info[100]` array:
 
             * info[0]: objective value,
-            * info[1]: gradient norm of objective,
+            * info[1]: norm of objective gradient,
             * info[2]: number of iterations,
             * info[3]: reserved for future use,
             * info[4]: number of function callback evaluations (includes ``info[12]``),
-            * info[5]: reserved for future use,
-            * info[6]: reserved for future use,
-            * info[7]: reserved for future use,
+            * info[5-7]: reserved for future use,
             * info[8]: number of gradient callback evaluations,
             * info[9]: number of Hessian callback evaluations,
             * info[10]: number of Hessian-vector callback evaluations,

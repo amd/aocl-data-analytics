@@ -3,12 +3,15 @@
 ! All rights reserved.
 ! Copyright (c) 2016, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
-module example_module
 
-  use :: ral_nlls_double
-  use :: ral_nlls_internal
-  use :: ral_nlls_workspaces
-  implicit none 
+#include "../src/preprocessor.FPP"
+
+module MODULE_PREC(unit_test_mod)
+
+  use MODULE_PREC(ral_nlls)
+  use MODULE_PREC(ral_nlls_internal)
+  use MODULE_PREC(ral_nlls_workspaces)
+  implicit none
 
   type, extends( params_base_type ) :: user_type
      real(wp), allocatable :: x_values(:)
@@ -24,7 +27,75 @@ module example_module
   end type user_type
 
 contains
+
+Subroutine check_resvec(c, f, atol, reltol, prn, Ok)
+    Implicit None
+    Real(Kind=wp), Dimension(:), Intent(In) :: f, c
+    Real(Kind=wp), Intent(In) :: atol
+    Real(Kind=wp), Optional, Intent(In) :: reltol
+    Logical, Optional, Intent(In) :: prn
+    Logical, Optional, Intent(Out) :: Ok
+    Integer :: i, l
+    Real(Kind=wp) :: nrm2, rnrmi, dif, rdif, rtol
+    Character (Len=4) :: flag2, flagi
+    Logical :: oki
+    Continue
+    Oki = .False.
+    flag2 = "IGN "
+    flagi = "IGN "
+    rtol = -1.0_wp
+    if (present(reltol)) rtol = reltol
+
+    ! Assumes f and c are same size
+    ! Get norm-2 and relative norm-inf
+    l = size(f)
+    nrm2 = 0.0_wp
+    rnrmi = 0.0_wp
+    Do i = 1, l
+        dif = c(i) - f(i)
+        nrm2 = nrm2 + dif**2
+        rdif = Abs(dif) / Max(1.0_wp, Abs(c(i)))
+        If (rdif > rnrmi) Then
+            rnrmi = rdif
+        End If
+    End Do
+    nrm2 = sqrt(nrm2)
+
+    ! Check if norm2 of the difference is less than the absolute tolerance
+    If (atol >= 0.0_wp) Then
+        oki = nrm2 <= atol
+        flag2 = merge("PASS", "FAIL", Oki)
+    End If
   
+    ! Check if relative norm-inf of the difference is less than the relative tolerance
+    If (.Not. Oki .And. rtol >= 0.0_wp) Then
+        oki = rnrmi <= rtol
+        flagi = merge("PASS", "FAIL", oki)
+    End If
+
+    If (present(prn)) Then
+    If (prn) Then
+        Write (*,Fmt=9999) "Checking Residual vectors (C vs Fortran)"
+        Write (*,Fmt=9999) "Absolute norm-2 diff |c-f|_2           = ", nrm2, atol, flag2
+        Write (*,Fmt=9999) "Relative norm-inf diff |c-f|_inf / |c| = ", rnrmi, rtol, flagi
+        Write (*,*) 'Details'
+        write(*, Fmt=9998) 'Iter', 'c_resvec', 'f_resvec', 'abs diff', 'rel diff'
+        Do i = 1, l
+            write(*,Fmt=9997) i, c(i), f(i), Abs(c(i) - f(i)),             &
+                Abs(c(i) - f(i)) / Max(1.0_wp, Abs(c(i)))
+        End Do
+    End If
+    End If
+
+    If (present(Ok)) Then
+        Ok = Oki
+    End If
+
+9999 Format (1X, A, Es16.8e3, 2X, "(", Es9.2e2, ")", 2X, A)
+9998 Format (A5,4(2X,A16))
+9997 Format (I5,4(2X,Es16.7e3))
+
+End Subroutine check_resvec
   
 SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 
@@ -32,9 +103,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  eval_F, a subroutine for evaluating the function f at a point X
 !  -------------------------------------------------------------------
 
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: f
@@ -66,7 +134,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !!$            end do
 !!$          End If
        Class Default
-         Stop 'wrong class'
+         Stop 'FATAL ERROR: Unexpectedly in user call-back got a wrong class?'
        end select
        status = 0
        
@@ -114,9 +182,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  eval_F, a subroutine for evaluating the function f at a point X
 !  -------------------------------------------------------------------
 
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: f
@@ -150,9 +215,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  eval_F, a subroutine for evaluating the function f at a point X
 !  -------------------------------------------------------------------
 
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: f
@@ -188,10 +250,8 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  -------------------------------------------------------------------
 !  eval_F, a subroutine for evaluating the function f at a point X
 !  -------------------------------------------------------------------
-
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
+       USE MODULE_PREC(ral_nlls_types), Only: test_big
+       Implicit None
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: f
@@ -204,7 +264,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
        type is(user_type)
           if (params%iter == 2) then
              do i = 1, m
-                f(i) = 1e100_wp!exp(88.0)
+                f(i) = test_big
              end do
           else
              do i = 1,m
@@ -226,9 +286,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  eval_F, a subroutine for evaluating the function f at a point X
 !  -------------------------------------------------------------------
 
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: f
@@ -262,10 +319,8 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  -------------------------------------------------------------------
 !  eval_J, a subroutine for evaluating the Jacobian J at a point X
 !  -------------------------------------------------------------------
-
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
+       USE MODULE_PREC(ral_nlls_types), Only: test_big
+       Implicit None
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: J
@@ -277,7 +332,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
        type is(user_type)
           if (params%iter == 2) then
              do i = 1,2*m
-                J(i) = 1e100_wp!exp(88.0)
+                J(i) = test_big
              end do
              params%iter = params%iter + 1
           else
@@ -294,9 +349,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      
      subroutine eval_F_error( status, n_dummy, m_dummy, X_dummy, f_dummy, params_dummy)
        ! a fake eval_f to flag an error 
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m_dummy
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: f_dummy
@@ -312,10 +364,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  -------------------------------------------------------------------
 !  eval_J, a subroutine for evaluating the Jacobian J at a point X
 !  -------------------------------------------------------------------
-
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: J
@@ -337,7 +385,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
              J(m + i) = - exp( X(1) * params%x_values(i) + X(2) )
           end do
        Class Default
-         Stop 'Wrong class'
+         Stop 'FATAL ERROR: Unexpectedly in user call-back got a wrong class?'
        end select
        
        status = 0
@@ -364,10 +412,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  -------------------------------------------------------------------
 !  eval_J, a subroutine for evaluating the Jacobian J at a point X
 !  -------------------------------------------------------------------
-
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: J
@@ -392,7 +436,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      END SUBROUTINE eval_J_one_error
 
      SUBROUTINE eval_J_bad( status, n_dummy, m, X, J, params)
-       USE ISO_FORTRAN_ENV
+       USE MODULE_PREC(ral_nlls_types), Only: test_big, test_very_big, test_very_small
        Implicit None
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
@@ -409,11 +453,11 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
              J(m + i) = - exp( X(1) * params%x_values(i) + X(2) )
              if (i == 3) J(i) = 2 * J(i)
              ! exersize printing
-             if (i == 4) J(i) = 1.0e-100_wp ! ~0
-             if (i == 5) J(i) = 1.0e+100_wp ! +Inf
-             if (i == 6) J(i) = -1.0e+100_wp ! -Inf
-             if (i == 7) J(i) = 1.0e+105_wp ! +Inf
-             if (i == 8) J(i) = -1.0e+105_wp ! -Inf
+             if (i == 4) J(i) = test_very_small ! ~0
+             if (i == 5) J(i) = test_big        ! +Inf
+             if (i == 6) J(i) = -test_big       ! -Inf
+             if (i == 7) J(i) = test_very_big   ! +Inf
+             if (i == 8) J(i) = -test_very_big  ! -Inf
           end do
        end select
      
@@ -425,9 +469,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  eval_J, a subroutine for evaluating the Jacobian J at a point X
 !  -------------------------------------------------------------------
 
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: J
@@ -476,9 +517,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      
      subroutine eval_J_error( status, n_dummy, m_dummy, X_dummy, J_dummy, params_dummy)
        ! a fake eval_J to flag an error 
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m_dummy
        REAL ( wp ), DIMENSION( * ),INTENT( OUT ) :: J_dummy
@@ -494,10 +532,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  -------------------------------------------------------------------
 !  eval_H, a subroutine for evaluating the second derivative hessian terms
 !  -------------------------------------------------------------------
-
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( IN )  :: f
@@ -533,7 +567,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
           end do
           h(3) = h(2)
        Class Default
-          Stop 'Wrong Class'
+         Stop 'FATAL ERROR: Unexpectedly in user call-back got a wrong class?'
        end select
 
        status = 0
@@ -553,10 +587,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  -------------------------------------------------------------------
 !  a fake eval_H for flagging an error
 !  -------------------------------------------------------------------
-
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m_dummy
        REAL ( wp ), DIMENSION( * ),INTENT( IN )  :: f_dummy
@@ -573,10 +603,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  -------------------------------------------------------------------
 !  eval_H, a subroutine for evaluating the second derivative hessian terms
 !  -------------------------------------------------------------------
-
-       USE ISO_FORTRAN_ENV
-
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n_dummy, m
        REAL ( wp ), DIMENSION( * ),INTENT( IN )  :: f
@@ -623,8 +649,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 
      
      subroutine eval_HP ( status, n, m, x, y, hp, params )
-       
-       INTEGER, PARAMETER :: wp = KIND( 1.0D+0 )
        INTEGER, INTENT( OUT ) :: status
        INTEGER, INTENT( IN ) :: n, m 
        REAL ( wp ), DIMENSION( * ),INTENT( IN )  :: x
@@ -651,7 +675,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
           end do
           
        Class default
-          Stop 'Wrong class'
+         Stop 'FATAL ERROR: Unexpectedly in user call-back got a wrong class?'
        end select
 
        status = 0
@@ -1079,7 +1103,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
            4.870205182453842 /)
 
          Class default
-           stop "Wrong class"
+           Stop 'FATAL ERROR: Unexpectedly in user call-back got a wrong class?'
          End Select
      end subroutine generate_data_example
 
@@ -1144,7 +1168,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
                    0.0698E+00, &
                    0.0624E+00 /)
          Class default
-           stop "Wrong class"
+            Stop 'FATAL ERROR: Unexpectedly in user call-back got a wrong class?'
          End Select
      end subroutine generate_data_lanczos
 
@@ -1376,19 +1400,20 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
       if ( c_status%iter == status%iter ) then
          resvec_error = norm2(c_status%resvec(1:c_status%iter+1) - &
               status%resvec(1:status%iter+1))
-         if (resvec_error > 1e-8) then
+         if (resvec_error > 1e-8_wp) then
             write(*,*) 'error: fortran and c jacobians'
             write(*,*) 'have different resvecs'
             write(*,*) 'NLLS_METHOD = ', options%nlls_method
             write(*,*) 'MODEL = ', options%model
             write(*,*) 'TR_UPDATE = ', options%tr_update_strategy
             write(*,*) 'inner_method = ', options%inner_method
-            write(*,*) '||r_f - r_c|| = ', resvec_error
+            Call check_resvec(c_status%resvec(1:c_status%iter+1), &
+               status%resvec(1:status%iter+1), 1e-8_wp, reltol=-1.0_wp, prn=.true.)
             fails = fails + 1
          end if
       else
          write(*,*) 'error: fortran and c jacobians'
-         write(*,*) 'took different numbers of iterations'
+         write(*,*) 'took different numbers of iterations: F iters=', status%iter, "C iters=", c_status%iter
          write(*,*) 'NLLS_METHOD = ', options%nlls_method
          write(*,*) 'MODEL = ', options%model
          write(*,*) 'TR_UPDATE = ', options%tr_update_strategy
@@ -1958,7 +1983,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      integer, intent(out) :: fails
      
      real(wp), allocatable :: g(:), d(:), A(:,:)
-     real(wp) :: Delta, normd
+     real(wp) :: Delta, normd, tol
      type( nlls_inform ) :: status
      type( nlls_workspace ) :: work
      type( nlls_workspace ), Target :: iw
@@ -1974,7 +1999,13 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      n = 2
      m = 5
      
-     num_successful_steps = 0 
+     num_successful_steps = 0
+
+     if (wp == np) then
+        tol = 1.0e-12_wp
+     else
+        tol = 5.0e-10_wp
+     end if
      
      allocate(A(n,n), g(n), d(n))
 
@@ -1988,11 +2019,11 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
         
         call setup_workspaces(work,n,m,options,status) 
         
-        A(1,1) = 10.0
-        A(1,2) = 2.0
-        A(2,1) = 2.0
-        A(2,2) = 10.0
-        g = [-7.4, -28.9]
+        A(1,1) = 10.0_wp
+        A(1,2) = 2.0_wp
+        A(2,1) = 2.0_wp
+        A(2,2) = 10.0_wp
+        g = [-7.4_wp, -28.9_wp]
         Delta = 0.02_wp
         call solve_galahad(A,g,n,m,Delta,num_successful_steps,& 
              d,normd,2.0_wp,options,status,&
@@ -2004,9 +2035,10 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
         
         if (i == 1) then
            ! check result lies within the trust region
-           if ( abs(dot_product(d,d) - Delta**2) > 1e-12 ) then
+           if ( abs(dot_product(d,d) - Delta**2) > tol ) then
               write(*,*) testname,'failed'
-              write(*,*) 'Delta = ', Delta, '||d|| = ', dot_product(d,d)
+              write(*,*) 'Delta = ', Delta, '||d|| = ', sqrt(dot_product(d,d))
+              write(*,*) 'sq diff = ', abs(dot_product(d,d) - Delta**2), 'tol = ', tol
               fails = fails + 1
            end if
         end if
@@ -2136,7 +2168,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
           work%calculate_step_ws%dogleg_ws%solve_LLS_ws,.True.)
      if ( status%status .ne. 0 ) then
         write(*,*) 'solve_LLS test failed: wrong error message returned'
-        write(*,*) 'status = ', status%status, " (expected ",NLLS_ERROR_FROM_EXTERNAL,")"
+        write(*,*) 'status = ', status%status, " (expected ",0,")"
         fails = fails + 1
      end if
      ! check answer
@@ -2163,7 +2195,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
           work%calculate_step_ws%dogleg_ws%solve_LLS_ws,.False.)
      if ( status%status .ne. 0 ) then
         write(*,*) 'solve_LLS test failed: wrong error message returned'
-        write(*,*) 'status = ', status%status, " (expected ",NLLS_ERROR_FROM_EXTERNAL,")"
+        write(*,*) 'status = ', status%status, " (expected ",0,")"
         fails = fails + 1
      end if
      ! check answer using J and not JT!!!
@@ -2179,15 +2211,15 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      end if
 
 
-     n = 100
-     m = 20
+     n = 50
+     m = 5
      deallocate(J,f,Jd,d)
-     allocate(J(n*m), f(m), d(n)) ! f has wrong size
+     allocate(J(n*m), f(m), d(n))
 
      call setup_workspaces(work,n,m,options,status)
 
-     J = 1.0_wp
-     f = 1.0_wp
+     J(:) = 1.0_wp ! Matrix is rank deficient ?GELS can not compute LLS solution
+     f(:) = 1.0_wp
      call solve_LLS(J,f,n,m,d,status, &
           work%calculate_step_ws%dogleg_ws%solve_LLS_ws,.True.)
      if ( status%status .ne. NLLS_ERROR_FROM_EXTERNAL ) then
@@ -2559,9 +2591,16 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      type( nlls_options ), intent(inout) :: options
      integer, intent(out) :: fails
 
-     real(wp), allocatable :: A(:,:), b(:), LtL(:,:), x_calc(:), x_true(:)
+     real(wp), allocatable :: A(:,:), b(:), LtL(:,:), x_calc(:), x_true(:), tol
      integer :: n
      type( nlls_inform ) :: status
+
+     continue
+     if (wp == np) then
+        tol = 1.0e-12_wp
+     else
+        tol = 5.0e-7_wp
+     end if
 
      fails = 0
 
@@ -2576,8 +2615,9 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      if (status%status .ne. 0) then
         write(*,*) 'Error: minus_solve_spd info = ', status%status, ' returned from minus_solve_spd'
         fails = fails + 1
-     else if (norm2(x_calc-x_true) > 1e-12) then
+     else if (norm2(x_calc-x_true) > tol) then
         write(*,*) 'Error: incorrect value returned from minus_solve_spd'
+        write(*,*) 'diff norm 2 = ', norm2(x_calc-x_true), 'tol = ', tol
         fails = fails + 1
      end if
 
@@ -2586,8 +2626,9 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      if (status%status .ne. 0) then
         write(*,*) 'Error: minus_solve_spd_nocopy info = ', status%status, ' returned from minus_solve_spd'
         fails = fails + 1
-     else if (norm2(x_calc-x_true) > 1e-12) then
+     else if (norm2(x_calc-x_true) > tol) then
         write(*,*) 'Error: incorrect value returned from minus_solve_spd_nocopy'
+        write(*,*) 'diff norm 2 = ', norm2(x_calc-x_true), 'tol = ', tol
         fails = fails + 1
      end if
 
@@ -2755,7 +2796,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      integer, intent(out) :: fails
 
      real(wp), allocatable :: A(:,:), ev(:)
-     real(wp) :: ew
+     real(wp) :: ew, tol
      type( nlls_inform ) :: status
      type( nlls_workspace ) :: work
      type( nlls_workspace ), Target :: iw
@@ -2767,6 +2808,12 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 
      n = 4
      m = 4
+
+     if (wp == np) then
+        tol = 1e-12_wp
+     else
+        tol = 1.5e-6_wp
+     end if
 
      allocate(ev(n), A(n,n))
 
@@ -2799,11 +2846,13 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
         call min_eig_symm(A,n,ew,ev,options,status, &
              work%calculate_step_ws%more_sorensen_ws%min_eig_symm_ws)
 
-        if ( (abs( ew + 6.0 ) > 1e-12).or.(status%status .ne. 0) ) then
+        if ( (abs( ew + 6.0_wp ) > tol ).or.(status%status .ne. 0) ) then
            write(*,*) 'error :: min_eig_symm test failed -- wrong eig found'
+           write(*,*) 'diff = ', abs( ew + 6.0_wp ), 'tol = ', tol
            fails = fails +1
-        elseif ( norm2(matmul(A,ev) - ew*ev) > 1e-12 ) then
+        elseif ( norm2(matmul(A,ev) - ew*ev) > tol ) then
            write(*,*) 'error :: min_eig_symm test failed -- not an eigenvector'
+           write(*,*) 'diff = ', norm2(matmul(A,ev) - ew*ev), 'tol = ', tol
            fails = fails +1
         end if
 
@@ -2828,7 +2877,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      integer, intent(out) :: fails
 
      real(wp), allocatable :: A(:,:), B(:,:), ev(:), nullevs(:,:), shapenull(:), diff(:)
-     real(wp) :: ew
+     real(wp) :: ew, tol
      type( nlls_inform ) :: status
      type( nlls_workspace ) :: work
      type( nlls_workspace ), Target :: iw
@@ -2840,6 +2889,12 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 
      n = 2
      m = 2
+
+     if (wp == np) then
+        tol = 1.0e-12_wp
+     else
+        tol = 1.0e-6_wp
+     end if
 
      allocate(ev(2*n), A(2*n,2*n), B(2*n,2*n),nullevs(n,2))
 
@@ -2861,7 +2916,7 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
      if ( status%status .ne. 0 ) then
         write(*,*) 'error :: max_eig test failed, status = ', status%status
         fails = fails + 1
-     elseif ( (abs( ew - 10.0_wp) > 1e-12) ) then
+     elseif ( (abs( ew - 10.0_wp) > tol) ) then
         write(*,*) 'error :: max_eig test failed, incorrect answer'
         write(*,*) 'expected 10.0, got ', ew
         fails = fails + 1
@@ -3277,7 +3332,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
                                    'Variance (opt=2)  ', &
                                    'J^T*J (opt=3)     ', &
                                    'Invalid           '/)
-  real(wp), parameter :: tol = 5.0e-5_wp
   real(wp), parameter :: cert_x(6) = (/ 8.6816414977E-02, 9.5498101505E-01,    &
     8.4400777463E-01, 2.9515951832E+00, 1.5825685901E+00, 4.9863565084E+00 /)
   real(wp), parameter :: cert_sd(6) = (/ 1.7197908859E-02, 9.7041624475E-02,   &
@@ -3293,6 +3347,10 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
   type(user_type) :: params
   real(wp) :: sd, abserr, JTJ_ik
   logical :: ok, testok
+  real(wp) :: tol = 5.0e-5_wp
+
+  Continue
+
   fails = 0
   ! data to be fitted
   ! m = 24
@@ -3301,7 +3359,6 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
   ! call fitting routine
   n = 6
   allocate(x(n),J(n*m))
-  x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
 
 !  options%print_level = 2
 !  options%out = 6
@@ -3317,6 +3374,19 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
 !  options%inner_method = 2
 !  options%maxit = 100
 
+   if (wp == np) then
+    ! Solve from SP1 just to exercise solver, technically it is also OK
+    ! to have it solved and just exercise the covariance logic...
+     x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
+    tol = 5.0e-5_wp
+   else
+     ! For lower precision we start at solution and relax convergence tolerance
+     ! to exercise covariance logic at the same point as the certified values
+     x(:) = cert_x(:)
+    options%stop_f_absolute = 9.0e-1_wp
+    tol = 6.0e-2_wp
+   end if
+
   Do jtype = 1, 2
     options%fortran_jacobian = merge(.True., .False., jtype==1)
     params%fortran_jacobian = options%fortran_jacobian
@@ -3328,8 +3398,9 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
       call nlls_solve(n,m,x, lanczos_eval_r, lanczos_eval_J, lanczos_eval_HF,      &
         params, options, inform, eval_HP=eval_HP)
       if(inform%status.ne.0) then
-         print *, "ral_nlls() returned with error flag ", inform%status
-         stop
+         print *, "ERROR: nlls_solve(jtype=",jtype,",opt=",opt,") returned with error flag ", inform%status, "Expecting 0"
+         fails = 1
+         Go to 100
       endif
       abserr = abs(cert_SoS - 2.0_wp * inform%obj)
       ok = abserr < tol
@@ -3394,7 +3465,9 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
         status = 0
         Call lanczos_eval_J(status, n, m, x, J, params)
         if (status /= 0) then
-          stop "ERROR: Jacobian could not be evaluated!"
+          Write(*,*) "ERROR: Jacobian callback lanczos_eval_J could not be evaluated!"
+          fails = 1
+          Go to 100
         end if
         abserr = 0.0_wp
         if (options%fortran_jacobian) then
@@ -3447,6 +3520,8 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
     end do
   end do
 
+100 Continue
+
   ! Free memory
   if (allocated(x)) then
     deallocate(x)
@@ -3462,9 +3537,8 @@ SUBROUTINE eval_F( status, n_dummy, m, X, f, params)
   end if
 
 30000 Format (1X,A3,2(3X,A17),1(3X,Es17.10e2),1X,A6)
-20000 Format (1X,A3,3(3X,A17),1X,A6)
-10000 Format (1X,I3,3(3X,Es17.10e2),1X,A6)
-10001 Format (1X,A,1X,A6)
+20000 Format (1X,A3,3(3X,A17),1X,A6,3X,A17,1X,A6)
+10000 Format (1X,I3,3(3X,Es17.10e2),1X,A6,3X,Es17.10e2,1X,A6)
 end subroutine covariance_matrix_tests
 
 
@@ -3578,4 +3652,4 @@ subroutine evaltensor_J_tests(options, fails)
 
 End subroutine evaltensor_J_tests
 
- end module example_module
+ end module MODULE_PREC(unit_test_mod)

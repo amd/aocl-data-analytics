@@ -185,31 +185,32 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("ralfit convergence abs tol fun",
-                             "Absolute tolerance to declare convergence for the "
-                             "iterative optimization step. See "
-                             "details in optimization solver documentation.",
-                             0.0, da_options::lbound_t::greaterthan, 1.0,
-                             da_options::ubound_t::lessthan, 1.0e-8, "10^{-8}"));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence abs tol fun",
+            "Absolute tolerance to declare convergence for the "
+            "iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
+
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("ralfit convergence rel tol fun",
-                             "Relative tolerance to declare convergence for the "
-                             "iterative optimization step. See "
-                             "details in optimization solver documentation.",
-                             0.0, da_options::lbound_t::greaterthan, 1.0,
-                             da_options::ubound_t::lessthan, 1.0e-8, "10^{-8}"));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence rel tol fun",
+            "Relative tolerance to declare convergence for the "
+            "iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("ralfit convergence abs tol grd",
-                             "Absolute tolerance on the gradient norm to declare "
-                             "convergence for the iterative optimization step. See "
-                             "details in optimization solver documentation.",
-                             0.0, da_options::lbound_t::greaterthan, 1.0,
-                             da_options::ubound_t::lessthan, 1.0e-5, "10^{-5}"));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "ralfit convergence abs tol grd",
+            "Absolute tolerance on the gradient norm to declare "
+            "convergence for the iterative optimization step. See "
+            "details in optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
+            tol.safe_eps((T)500), tol.safe_eps_latex((T)500)));
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -218,7 +219,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "iterative optimization step. See "
             "details in optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            1.0e-8, "10^{-8}"));
+            tol.safe_eps((T)10, (T)21), tol.safe_eps_latex((T)10, (T)21)));
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(

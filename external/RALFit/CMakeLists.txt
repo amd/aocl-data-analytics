@@ -63,3 +63,5 @@ add_subdirectory(libRALFit/src EXCLUDE_FROM_ALL)
 message(NOTICE "RALFit: Fortran Compiler ID       : ${CMAKE_Fortran_COMPILER_ID}")
 
 message(NOTICE "RALFit: Fortran Compiler flags    : ${CMAKE_Fortran_FLAGS}")
+
+set(nlls_obj_list ${nlls_obj_list} PARENT_SCOPE)

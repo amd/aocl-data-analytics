@@ -16,7 +16,9 @@
 !  History -
 !   extracted from GALAHAD package SYMBOLS, December 22nd, 2015
 
-   MODULE RAL_NLLS_SYMBOLS
+#include "preprocessor.FPP"
+
+   MODULE MODULE_PREC(RAL_NLLS_SYMBOLS)
 
 !  This module provides the list of all symbolic names that are common to
 !  the RAL_NLLS modules. It is just intended as a dictionary for use in other
@@ -414,4 +416,4 @@
 
      END SUBROUTINE SYMBOLS_status
 
-   END MODULE RAL_NLLS_SYMBOLS
+   END MODULE MODULE_PREC(RAL_NLLS_SYMBOLS)

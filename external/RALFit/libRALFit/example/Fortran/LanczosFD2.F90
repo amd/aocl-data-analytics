@@ -13,12 +13,15 @@
 ! next call only the exact jacobian is returned and this regime is repeated
 ! until conversion.
 
-module lanczos_module_fd
-   use ral_nlls_double, only: params_base_type, jacobian_handle, jacobian_calc
+module lanczos_module_fd2
+
+#if SINGLE_PRECISION
+   use ral_nlls_single
+#else
+   use ral_nlls_double
+#endif
 
    implicit none
-
-   integer, parameter, public :: wp = kind(0d0)
 
    type, extends(params_base_type) :: params_type
       real(wp), dimension(:), allocatable :: t ! The m data points t_i
@@ -44,6 +47,7 @@ contains
    end subroutine assign
 
    subroutine eval_r(status, n, m, x, r, params)
+      implicit none
       ! r_i = y_i - x_1 e^(-x_2 t_i) - x_3 e^(-x_4 t_i) - x_5 e^(-x_6 t_i)
       integer, intent(out) :: status
       integer, intent(in) :: n
@@ -66,6 +70,7 @@ contains
 
    ! the call-back provides exact jacobian every CNT calls estimates t
    subroutine eval_J(status, n, m, x, J, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -103,13 +108,11 @@ contains
 
    end subroutine eval_J
 
-end module lanczos_module_fd
+end module lanczos_module_fd2
 
-program lanczos_fd
+program lanczos_fd2
 
-   use ral_nlls_double, only: nlls_options, nlls_inform, &
-      ral_nlls_eval_hf_dummy, nlls_solve, jacobian_setup, jacobian_free
-   use lanczos_module_fd
+   use lanczos_module_fd2
 
    implicit none
 
@@ -122,10 +125,10 @@ program lanczos_fd
    type(params_type) :: params
    real(wp) :: tic, toc
 
-   real(wp), parameter :: tol = 5.0e-4_wp
    real(wp), parameter, Dimension(6) :: x_exp = (/ 8.6811579049232354E-002, &
       0.95495550838468568, 0.84399029667347680, 2.9515586935011613,         &
       1.5825909814491355, 4.9863421286471254 /)
+   real(wp) :: tol = 0.0_wp
    logical :: ok
    logical :: oki
    integer :: i, status
@@ -188,7 +191,6 @@ program lanczos_fd
    ! call fitting routine
    n = 6
    allocate(x(n))
-   x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
    ok = .False.
 
    options%print_level = 4
@@ -199,13 +201,25 @@ program lanczos_fd
    options%reg_order = -1.0
    options%inner_method = 2
    options%maxit = 1000
-   options%fd_step = 1.0e-5
+
+   if (wp == lp) then
+      ! Start solver closer to the expected solution when using low precision
+      x(1:6) = (/ 8.68E-2, 0.95, 0.843, 2.95, 1.58, 4.98 /)
+      options%fd_step = 1.0e-3
+      tol = 5.0e-3_wp
+      params%reset = 3 ! times FD is used before providing exact derivatives
+   else
+      x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
+      options%fd_step = 1.0e-5
+      tol = 5.0e-4_wp
+      params%reset = 10 ! times FD is used before providing exact derivatives
+   end if
 
    ! setup up FD machinery
 
-   params%reset = 10 ! times FD is used before providing exact derivatives
    params%cnt = params%reset
    params%fd_step = options%fd_step
+
 
 
    call jacobian_setup(status, params%handle, n, m, x, eval_r, params)
@@ -252,4 +266,4 @@ program lanczos_fd
 
 99999 Format (5X,I3,1X,2(Es13.6e2,2X),A4)
 99998 Format (5X,A3,1X,2(A13,2X))
-end program lanczos_fd
+end program lanczos_fd2

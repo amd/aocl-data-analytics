@@ -30,3 +30,13 @@ set_source_files_properties(
   PROPERTIES
     COMPILE_FLAGS
     "-Wno-unused-variable -Wno-compare-reals -Wno-unused-dummy-argument -Wno-maybe-uninitialized")
+
+# RALFit source code
+set_source_files_properties(
+  ral_nlls_workspaces.F90 ral_nlls_fd.F90 ral_nlls_ciface.F90
+  ral_nlls_internal.F90 ral_nlls_workspaces.F90
+  ral_nlls_dtrs.F90 ral_nlls_bounds.F90 ral_nlls_fd.F90
+  PROPERTIES
+    COMPILE_FLAGS
+    "-Wno-compare-reals -Wno-unused-dummy-argument -Wno-unused-function -Wno-unused-label -Wno-character-truncation -Wno-unused-variable -Wno-maybe-uninitialized"
+)
