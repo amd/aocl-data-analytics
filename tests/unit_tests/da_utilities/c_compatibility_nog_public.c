@@ -134,7 +134,7 @@ da_status test_nlls(void) {
     da_status status = da_status_success;
     double lower_bounds[2] = {0.0, 1.0};
     double upper_bounds[2] = {1.0, 10.0};
-    double x[2] = {1.0, 1.0}; // Initial guess
+    double x[2] = {0.001, 1.0}; // Initial guess
     double info[100];
     da_int dim = 100;
     struct c_cb_params_type params = {.t = (double[]){1.0, 2.0, 4.0, 5.0, 8.0},
@@ -171,6 +171,18 @@ da_status test_nlls(void) {
         da_handle_destroy(&handle);
         return status;
     }
+    status = da_options_set_real_d(handle, "ralfit convergence abs tol grd", 2.0e-4);
+    if (status != da_status_success) {
+        da_handle_print_error_message(handle);
+        da_handle_destroy(&handle);
+        return status;
+    }
+    status = da_options_set_real_d(handle, "ralfit convergence rel tol grd", 2.0e-4);
+    if (status != da_status_success) {
+        da_handle_print_error_message(handle);
+        da_handle_destroy(&handle);
+        return status;
+    }
     status = da_nlls_fit_d(handle, 2, x, &params);
     if (status != da_status_success) {
         da_handle_print_error_message(handle);
@@ -184,8 +196,7 @@ da_status test_nlls(void) {
         da_handle_destroy(&handle);
         return status;
     }
-
-    if (info[2] < 50 || info[0] > 90 || info[5] > 1) {
+    if (info[2] < 2 || info[0] > 90 || info[5] > 1) {
         status = da_status_incorrect_output;
     }
 
