@@ -27,6 +27,10 @@ AOCL-DA is built with CMake, with supported compilers GNU and AOCC on Linux and 
 
 AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
 
+AOCL-DA is also dependent on the [Boost.Sort C++ Library](https://www.boost.org/doc/libs/1_86_0/libs/sort/doc/html/index.html).  Instructions for installing Boost on Linux can be found [here](https://www.boost.org/doc/libs/1_86_0/more/getting_started/unix-variants.html).  Instructions for installing Boost on Windows can be found [here](https://www.boost.org/doc/libs/1_86_0/more/getting_started/windows.html).  Documentation for Boost CMake support infrastructure can be found [here](https://github.com/boostorg/cmake) and [here](https://cmake.org/cmake/help/latest/module/FindBoost.html).
+
+For example, one way of including a Boost download in your CMake build of AOCL-DA would be to add the following arguments to the CMake configure step: `-DBoost_ROOT=${BASE_DIR}/DA-projects/aocl-da/external/boost-1.86.0 -DBoost_NO_BOOST_CMAKE=ON`.  However, if you have Boost installed on your system path, CMake should be able to locate it automatically.
+
 Building on Linux
 -----------------
 

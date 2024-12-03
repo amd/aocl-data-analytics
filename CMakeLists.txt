@@ -383,6 +383,10 @@ if(NOT USE_EXISTING_DA)
   add_subdirectory(external/Lbfgsb.3.0)
   add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
 
+  # add Boost for Boost.Sort functionality (assume Boost is installed on system)
+  SET(BOOST_MIN_VERSION "1.66.0")
+  find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
+
   # Compile data analytics core library
   add_subdirectory(source)
 
@@ -493,6 +497,8 @@ message(NOTICE "LAPACK           LAPACK=${LAPACK}")
 message(NOTICE "AOCL-Sparse      SPARSE=${SPARSE}")
 message(NOTICE "AOCL-Utils       UTILS=${UTILS}")
 message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")
+
+message(NOTICE "Boost include path    Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")
 if(USE_EXISTING_DA)
   message(NOTICE "Existing AOCL-DA DA=${DA}")
 endif()

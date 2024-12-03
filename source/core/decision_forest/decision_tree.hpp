@@ -41,7 +41,10 @@
 #include <limits>
 #include <numeric>
 #include <random>
+#include <type_traits>
 #include <vector>
+
+#include "boost/sort/spreadsort/spreadsort.hpp"
 
 namespace da_decision_tree {
 
@@ -185,7 +188,6 @@ template <typename T> class decision_tree : public basic_handle<T> {
     std::vector<da_int> features_idx;
 
     // Random number generation
-    da_int seed;
     std::mt19937 mt_engine;
 
     // Scoring function
@@ -200,7 +202,8 @@ template <typename T> class decision_tree : public basic_handle<T> {
     // set by reading the option registry if used by external user.
     // Set by the alternate constructor if used by a forest
     bool read_public_options = true;
-    da_int max_depth, min_node_sample, method, prn_times, build_order, nfeat_split;
+    da_int max_depth, min_node_sample, method, prn_times, build_order, nfeat_split, seed,
+        sort_method;
     T min_split_score, feat_thresh, min_improvement;
     bool bootstrap = false;
 
@@ -216,10 +219,11 @@ template <typename T> class decision_tree : public basic_handle<T> {
     // Values will NOT be checked
     decision_tree(da_int max_depth, da_int min_node_sample, da_int method,
                   da_int prn_times, da_int build_order, da_int nfeat_split, da_int seed,
-                  T min_split_score, T feat_thresh, T min_improvement, bool bootstrap)
-        : seed(seed), max_depth(max_depth), min_node_sample(min_node_sample),
-          method(method), prn_times(prn_times), build_order(build_order),
-          nfeat_split(nfeat_split), min_split_score(min_split_score),
+                  da_int sort_method, T min_split_score, T feat_thresh, T min_improvement,
+                  bool bootstrap)
+        : max_depth(max_depth), min_node_sample(min_node_sample), method(method),
+          prn_times(prn_times), build_order(build_order), nfeat_split(nfeat_split),
+          seed(seed), sort_method(sort_method), min_split_score(min_split_score),
           feat_thresh(feat_thresh), min_improvement(min_improvement),
           bootstrap(bootstrap) {
         this->err = nullptr;
@@ -235,7 +239,8 @@ template <typename T> class decision_tree : public basic_handle<T> {
                                 da_int n_obs = 0, da_int *samples_subset = nullptr);
     void count_class_occurences(std::vector<da_int> &class_occ, da_int start_idx,
                                 da_int end_idx);
-    void sort_samples(node<T> &node, da_int feat_idx);
+    void sort_samples(node<T> &nd, da_int feat_idx);
+
     void partition_samples(const node<T> &nd);
     da_status add_node(da_int parent_idx, bool is_left, T score, da_int split_idx);
     da_int get_next_node_idx(da_int build_order);
@@ -462,6 +467,47 @@ template <typename T> void decision_tree<T>::partition_samples(const node<T> &nd
     }
 }
 
+template <class T>
+void boost_sort_samples(const T *X, da_int ldx, da_int feat_idx,
+                        std::vector<da_int>::iterator start,
+                        std::vector<da_int>::iterator stop) {
+    // namespace for spreadsort::float_sort and spreadsort::float_mem_cast
+    using namespace boost::sort;
+    auto rightshift_64 = [&](const da_int &idx, const unsigned offset) {
+        int64_t X_cast =
+            spreadsort::float_mem_cast<double, int64_t>(X[ldx * feat_idx + idx]);
+        return X_cast >> offset;
+    };
+    auto rightshift_32 = [&](const da_int &idx, const unsigned offset) {
+        int32_t X_cast =
+            spreadsort::float_mem_cast<float, int32_t>(X[ldx * feat_idx + idx]);
+        return X_cast >> offset;
+    };
+    if constexpr (std::is_same<T, double>::value) {
+        // call spreadsort::float_sort with casting to INT64
+        spreadsort::float_sort(start, stop, rightshift_64,
+                               [&](const da_int &i1, const da_int &i2) {
+                                   return X[ldx * feat_idx + i1] < X[ldx * feat_idx + i2];
+                               });
+
+    } else if constexpr (std::is_same<T, float>::value) {
+        // define function for casting to INT32
+        spreadsort::float_sort(start, stop, rightshift_32,
+                               [&](const da_int &i1, const da_int &i2) {
+                                   return X[ldx * feat_idx + i1] < X[ldx * feat_idx + i2];
+                               });
+    }
+}
+
+template <class T>
+void std_sort_samples(const T *X, da_int ldx, da_int feat_idx,
+                      std::vector<da_int>::iterator start,
+                      std::vector<da_int>::iterator stop) {
+    std::sort(start, stop, [&](const da_int &i1, const da_int &i2) {
+        return X[ldx * feat_idx + i1] < X[ldx * feat_idx + i2];
+    });
+}
+
 template <class T> void decision_tree<T>::sort_samples(node<T> &nd, da_int feat_idx) {
     /* Sort samples_idx according to the values of a given feature.
      * On output:
@@ -475,9 +521,16 @@ template <class T> void decision_tree<T>::sort_samples(node<T> &nd, da_int feat_
     std::vector<da_int>::iterator stop =
         samples_idx.begin() + nd.start_idx + nd.n_samples;
 
-    std::sort(start, stop, [&](const da_int &i1, const da_int &i2) {
-        return X[ldx * feat_idx + i1] < X[ldx * feat_idx + i2];
-    });
+    switch (sort_method) {
+    case stl_sort:
+        std_sort_samples(X, ldx, feat_idx, start, stop);
+        break;
+
+    case boost_sort:
+        boost_sort_samples(X, ldx, feat_idx, start, stop);
+        break;
+    }
+
     for (da_int i = nd.start_idx; i <= nd.end_idx; i++)
         feature_values[i] = X[ldx * feat_idx + samples_idx[i]];
 }
@@ -584,8 +637,12 @@ template <typename T> da_status decision_tree<T>::fit() {
         opt_pass &= this->opts.get("feature threshold", feat_thresh) == da_status_success;
         opt_pass &= this->opts.get("minimum split improvement", min_improvement) ==
                     da_status_success;
+        opt_pass &= this->opts.get("minimum split improvement", min_improvement) ==
+                    da_status_success;
         opt_pass &=
             this->opts.get("print timings", opt_val, prn_times) == da_status_success;
+        opt_pass &=
+            this->opts.get("sorting method", opt_val, sort_method) == da_status_success;
         if (!opt_pass)
             return da_error_bypass(
                 this->err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -605,6 +662,7 @@ template <typename T> da_status decision_tree<T>::fit() {
         score_function = misclassification_score<T>;
         break;
     }
+
     if (nfeat_split == 0 || nfeat_split > n_features) {
         // All the features are to be considered in splitting a node
         nfeat_split = n_features;

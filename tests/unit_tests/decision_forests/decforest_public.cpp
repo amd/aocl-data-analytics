@@ -398,6 +398,11 @@ const forest_param_t forest_param_pos[] = {
     {"inference_37_blocks", "gen_200x10_3class", {{"number of trees", 25},
         {"seed", 42}, {"block size", 37}}, {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
 
+    // sorting method
+    {"iris_gini", "iris", {{"number of trees", 25}, {"seed", 42}},
+        {{"scoring function", "gini"}, {"sorting method", "stl"}}, {}, {}, 0.95},
+    {"gen1_entropy", "gen1", {{"number of trees", 25}, {"seed", 42}},
+        {{"scoring function", "cross-entropy"}, {"sorting method", "stl"}}, {}, {}, 0.93},
 };
 // clang-format on
 

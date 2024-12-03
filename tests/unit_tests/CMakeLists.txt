@@ -48,7 +48,8 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/source/include
   ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
   ${CMAKE_SOURCE_DIR}/external/RALFit
-  ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include)
+  ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
+  ${Boost_INCLUDE_DIRS})
 
 set(INTERNAL_INC_DIRS ${CMAKE_SOURCE_DIR}/source/core/csv
                       ${CMAKE_SOURCE_DIR}/source/core/clustering
