@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -84,6 +84,7 @@ template <typename T> class da_optimization : public basic_handle<T> {
     objfun_t<T> objfun = nullptr;
     objgrd_t<T> objgrd = nullptr;
     stepfun_t<T> stepfun = nullptr;
+    stepchk_t<T> stepchk = nullptr;
     monit_t<T> monit = nullptr;
     resfun_t<T> resfun = nullptr;
     resgrd_t<T> resgrd = nullptr;
@@ -120,6 +121,7 @@ template <typename T> class da_optimization : public basic_handle<T> {
     da_status add_objfun(objfun_t<T> usrfun);
     da_status add_objgrd(objgrd_t<T> usrgrd);
     da_status add_stepfun(stepfun_t<T> usrstep);
+    da_status add_stepchk(stepchk_t<T> usrstepchk);
     da_status add_monit(monit_t<T> monit);
     da_status add_resfun(resfun_t<T> resfun);
     da_status add_resgrd(resgrd_t<T> resgrd);
@@ -340,6 +342,14 @@ template <typename T> da_status da_optimization<T>::add_stepfun(stepfun_t<T> usr
     return da_status_success;
 }
 
+template <typename T> da_status da_optimization<T>::add_stepchk(stepchk_t<T> usrstepchk) {
+    if (!usrstepchk) {
+        return da_status_invalid_pointer;
+    }
+    stepchk = usrstepchk;
+    return da_status_success;
+}
+
 template <typename T> da_status da_optimization<T>::add_monit(monit_t<T> monit) {
     if (!monit) {
         return da_status_invalid_pointer;
@@ -450,8 +460,9 @@ da_status da_optimization<T>::solve(std::vector<T> &x, void *usrdata) {
         }
         if (prn == "yes")
             this->opts.print_options();
-        status = coord::coord(this->opts, this->nvar, x, this->l, this->u, this->info,
-                              this->stepfun, this->monit, usrdata, *this->err);
+        status =
+            coord::coord(this->opts, this->nvar, x, this->l, this->u, this->info,
+                         this->stepfun, this->monit, usrdata, *this->err, this->stepchk);
         break;
     case solver_ralfit:
         if (prnlvl > 0) {

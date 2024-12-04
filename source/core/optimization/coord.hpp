@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -41,6 +41,14 @@
 #include <vector>
 
 #define HDRCNT 30 // how frequently to print iteration banner
+// Scaling for the convergence check
+// 0 - absolute: ||Delta_W||_inf < tol
+// 1 - relative: ||Delta_W||_inf < tol * ||W||_inf <------ sklearn / oneDAL
+// 2 - safe:     ||Delta_W||_inf < tol * max(1, ||W||_inf) <--- safe-guard version for the cases where
+// |Delta_W||_ing / ||W||_inf converges to a constant far from zero, say 1, and
+// relative tolerance check is never satisfied. Set to 1 when benchmarking "well-behaved" problems
+// Also can happen for problems where solution is zero (or when projecting to the positive cone)
+#define __DA_COORD_SCALE_CONV_TOL 1
 
 // LCOV_EXCL_START
 // Excluding bound constraint class, this feature is for
@@ -52,7 +60,7 @@ enum bound_t { none = 0, lower = 1, both = 2, upper = 3 };
   *  ===========================
   * if constrained = false
   *  * btyp = not allocated
-  *  * lptr and uptr and not set
+  *  * lptr and uptr are not set
   * if constrained = true
   *  * vector btyp(n) = {none|lower|upper|both}
   *  * lptr => user l (readonly)
@@ -300,7 +308,7 @@ template <typename T>
 da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 std::vector<T> &l, std::vector<T> &u, std::vector<T> &info,
                 const stepfun_t<T> stepfun, const monit_t<T> monit, void *usrdata,
-                da_errors::da_error_t &err) {
+                da_errors::da_error_t &err, const stepchk_t<T> stepchk) {
 
     if (!stepfun)
         return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
@@ -413,7 +421,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     if (status != da_status_success)
         return status; // Error message already loaded
 
-    da_int hdr{0}, fcnt{0}, lowrk{0}, iter{0}, k{0}, action{0};
+    da_int hdr{0}, fcnt{0}, lowrk{0}, iter{0}, k{0}, action{0}, chkcnt{0};
     T *f = &info[da_optim_info_t::info_objective];
     T *time = &info[da_optim_info_t::info_time];
     T newxk{T(0)};
@@ -541,14 +549,14 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             }
             break;
         case OPTIMCHK:
-            cbflag = 0;
+            ++chkcnt;
+            cbflag = stepchk(n, &x[0], usrdata, &optim);
             if (cbflag) {
                 status = da_error(
                     &err, da_status_numerical_difficulties,
                     "Optimality check call-back returned error at current iterate.");
                 cbstop = true;
             }
-            optim = T(-1);
             break;
         case NEWX:
         case STOP: // Copy and print for the last time
@@ -559,14 +567,15 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             if (prnlvl > 1) {
                 if (hdr == 0 || prnlvl >= 4) {
                     hdr = HDRCNT;
-                    std::cout << std::setw(54) << std::setfill('-') << "" << std::endl
+                    std::cout << std::setw(65) << std::setfill('-') << "" << std::endl
                               << std::setfill(' ');
                     std::cout << std::setw(10) << "iteration" << std::setw(1) << ""
                               << std::setw(9) << std::scientific << "objective"
                               << std::setw(1) << "" << std::setw(9) << "maxchange"
                               << std::setw(12) << "neval" << std::setw(12) << "lowrk"
+                              << std::setw(1) << "" << std::setw(9) << "optim"
                               << std::endl;
-                    std::cout << std::setw(54) << std::setfill('-') << "" << std::endl
+                    std::cout << std::setw(65) << std::setfill('-') << "" << std::endl
                               << std::setfill(' ');
                 }
                 --hdr;
@@ -574,7 +583,11 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 std::cout << std::setw(10) << iter << std::setw(1) << ""
                           << std::scientific << std::setw(9) << *f << std::setw(1) << ""
                           << std::setw(9) << inorm << std::setw(12) << fcnt
-                          << std::setw(12) << lowrk << std::endl;
+                          << std::setw(12) << lowrk;
+                if (optim < std::numeric_limits<T>::infinity()) {
+                    std::cout << std::setw(1) << "" << std::setw(9) << optim << std::endl;
+                }
+                std::cout << std::endl;
                 std::cout.precision(coutprec);
                 if (prnlvl >= 5) {
                     std::cout << "Current coefficients:" << std::endl;
@@ -589,6 +602,8 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             info[da_optim_info_t::info_ncheap] = (T)lowrk;
             info[da_optim_info_t::info_inorm] = inorm;
             info[da_optim_info_t::info_iter] = (T)iter;
+            info[da_optim_info_t::info_optim] = optim;
+            info[da_optim_info_t::info_optimcnt] = (T)chkcnt;
             *time = std::chrono::duration<T>(std::chrono::system_clock::now() - clock)
                         .count();
 
@@ -651,12 +666,17 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     if (prnlvl > 0) {
         // Exit summary message
         std::cout << std::endl << "Solver summary" << std::endl;
-        std::cout << " Total number of step calls:   " << fcnt + lowrk << std::endl;
-        std::cout << "    Number of expensive calls: " << fcnt << std::endl;
-        std::cout << "    Number of cheap calls:     " << lowrk << std::endl;
+        std::cout << " Objective value (scaled problem): " << *f << std::endl;
+        if (optim < std::numeric_limits<T>::infinity()) {
+            std::cout << " Optimality measure:           " << optim << std::endl;
+        } else {
+            std::cout << " Optimality measure:           Infinity" << std::endl;
+        }
+        std::cout << " Number of optimality checks:  " << chkcnt << std::endl;
+        std::cout << " Total number of step calls (cheap):   " << fcnt + lowrk << " ("
+                  << lowrk << ")" << std::endl;
         std::cout << " Total solve time: " << *time << " sec" << std::endl;
         std::cout << " Total number of iterations: " << iter << std::endl;
-        std::cout << " Objective value (scaled problem): " << *f << std::endl;
         if (status == da_status_success) {
             std::cout
                 << " Convergence status: "
@@ -735,6 +755,8 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         inorm = T(0);
         // Infinity-norm of the coefficient vector
         w.inormbeta = T(0);
+        // reset optimality measure
+        optim = std::numeric_limits<T>::infinity();
         return da_status_success;
         break;
     case EVAL:
@@ -800,8 +822,16 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         if (endcycle) {
             // Completed a full cycle
             ++iter;
+            T itol = tol;
+            if (__DA_COORD_SCALE_CONV_TOL >= 1)
+                itol *= w.inormbeta;
+            if (__DA_COORD_SCALE_CONV_TOL >= 2)
+                itol = std::max(itol, tol);
+
+            // Should it also safe-guard and check for
+            // error < machine epsilon and inorm < machine epsilon?
+
             // Check for convergence or search-space exhaustion
-            T itol = std::max(tol, w.inormbeta * tol);
             if (w.inormbeta == T(0) || inorm <= itol || k == kold) {
                 if (w.check_skip_ledger()) {
                     // No coordinates were skipped and tolerance reached.

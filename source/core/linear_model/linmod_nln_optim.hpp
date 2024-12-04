@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,10 @@
 #define LINMOD_NLN_OPTIM_HPP
 
 #undef max
-
 #include "aoclda.h"
 #include "da_cblas.hh"
 #include "linmod_types.hpp"
+#include <iostream> // FIXME REMOVE
 
 /* Base class of the callback user data to be passed as void pointers
  * Contain all the basic data to compute */
@@ -128,23 +128,29 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
 /* This function evaluates the feature matrix X over the parameter vector x (taking into account the intercept),
  * it performs the GEMV operation
  *
- * v = [X, 1^T] * x OR v = [X, 1^T]^T x
+ * v = alpha * [X, 1^T] * x + beta * v      OR
+ * v = alpha * [X, 1^T]^T x + beta * v
+ * if trans = false
+ * x[n], X[m,n], v[m]
+ * if trans = true
+ * x[m], X[m,n], v[n]
  */
 template <typename T>
-void eval_feature_matrix(da_int n, const T *x, da_int nsamples, const T *X, T *v,
-                         bool intercept, bool trans = false) {
-    T alpha = 1.0, beta = 0.0;
+void eval_feature_matrix(da_int n, const T *x, da_int m, const T *X, T *v, bool intercept,
+                         bool trans = false, T alpha = 1.0, T beta = 0.0) {
 
     da_int aux = intercept ? 1 : 0;
     enum CBLAS_TRANSPOSE transpose = trans ? CblasTrans : CblasNoTrans;
-    da_blas::cblas_gemv(CblasColMajor, transpose, nsamples, n - aux, alpha, X, nsamples,
-                        x, 1, beta, v, 1);
+    // if CblasColMajor, then lda = m, else lda = n
+    da_int ldX = m;
+    da_blas::cblas_gemv(CblasColMajor, transpose, m, n - aux, alpha, X, ldX, x, 1, beta,
+                        v, 1);
     if (intercept && !trans) {
-        for (da_int i = 0; i < nsamples; i++)
+        for (da_int i = 0; i < m; i++)
             v[i] += x[n - 1];
     } else if (intercept && trans) {
         v[n - 1] = T(0);
-        for (da_int i = 0; i < nsamples; i++)
+        for (da_int i = 0; i < m; i++)
             v[n - 1] += x[i];
     }
 }
@@ -683,19 +689,20 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
  *  WARNING nfeat CAN include intercept, nmod provides the user coefficient count
  */
 template <typename T>
-da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udata,
-                      da_int action, T kdiff) {
+da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udata,
+                             da_int action, T kdiff) {
     stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
 
     const da_int nmod = data->intercept ? nfeat - 1 : nfeat;
     const da_int nsamples = data->nsamples;
 
     if (f) { // Quick exit, just provide f
-        *f = (T)0;
+        T facc = (T)0;
         for (da_int i = 0; i < nsamples; ++i) {
             T res = data->residual[i];
-            *f += res * res;
+            facc += res * res;
         }
+        *f = facc;
         *f /= ((T)2 * (T)nsamples);
         // Add regularization (exclude intercept)
         *f += regfun(nmod, coef, data->l1reg, data->l2reg);
@@ -739,7 +746,6 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
         return (sign(z) * std::max(std::abs(z) - Gamma, (T)0));
     };
 
-    T xk;
     T betak;
     T gk{T(0)};
     T xvk{T(1)};
@@ -753,7 +759,7 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
     if (k < nmod) {
         // handle model coefficients beta1..betaN=coef[0]..coef[nmod-1]
         for (da_int i = 0; i < nsamples; ++i) {
-            xk = data->X[k * nsamples + i];
+            T xk = data->X[k * nsamples + i];
             gk += xk * data->residual[i];
         }
         if (standardized) {
@@ -779,4 +785,119 @@ da_int stepfun_linreg(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udat
     return 0;
 }
 
+template <typename T>
+da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udata,
+                              da_int action, [[maybe_unused]] T kdiff) {
+    stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
+
+    const da_int nmod = data->intercept ? nfeat - 1 : nfeat;
+    const da_int nsamples = data->nsamples;
+    const bool positive = false; // FIXME data->positive;
+
+    if (f) { // Quick exit, just provide f
+        T facc = (T)0;
+        for (da_int i = 0; i < nsamples; ++i) {
+            T res = data->residual[i];
+            facc += res * res;
+        }
+        *f = facc;
+        *f /= ((T)2 * (T)nsamples);
+        // Add regularization (exclude intercept)
+        *f += regfun(nmod, coef, data->l1reg, data->l2reg);
+        return 0;
+    }
+
+    if (action > 0) {
+        // Compute X*coef = *y (takes care of intercept)
+        eval_feature_matrix(nfeat, coef, nsamples, data->X, data->residual.data(),
+                            data->intercept);
+        // Compute residuals
+        for (da_int i = 0; i < nsamples; ++i) {
+            data->residual[i] = data->y[i] - data->residual[i];
+        }
+    }
+
+    auto sign = [](T num) {
+        const T absnum = std::abs(num);
+        return (absnum == (T)0 ? (T)0 : num / absnum);
+    };
+
+    if (k < nmod) {
+        if (data->xv[k] == T(0)) {
+            // Quick return
+            *knew = T(0);
+            data = nullptr;
+            return 0;
+        }
+    }
+
+    // data->xv = diagonal(X^T * X)
+    const T l1{T(nsamples) * data->l1reg}; // N * lambdahat * alpha
+    // Note that data->l2reg = lambdahat (1-alpha) / 2;
+    const T l2{T(nsamples * 2) * data->l2reg};
+    T betak;
+
+    if (coef[k] != T(0)) {
+        if (k < nmod) {
+            for (da_int i = 0; i < nsamples; ++i) {
+                data->residual[i] += coef[k] * data->X[k * nsamples + i];
+            }
+        } else { // Intercept
+            for (da_int i = 0; i < nsamples; ++i) {
+                data->residual[i] += coef[k];
+            }
+        }
+    }
+
+    T gk = T(0);
+    if (k < nmod) {
+        for (da_int i = 0; i < nsamples; ++i) {
+            T xk = data->X[k * nsamples + i];
+            gk += data->residual[i] * xk;
+        }
+    } else { // Intercept
+        for (da_int i = 0; i < nsamples; ++i) {
+            gk += data->residual[i];
+        }
+    }
+
+    if (positive && gk < T(0))
+        betak = T(0);
+    else {
+        T xv;
+        if (k < nmod) {
+            xv = data->xv[k];
+        } else { // Intercept
+            xv = T(1);
+        }
+        betak = sign(gk) * std::max(std::abs(gk) - l1, T(0)) / (xv + l2);
+    }
+
+    if (betak != T(0)) {
+        if (k < nmod) {
+            for (da_int i = 0; i < nsamples; ++i) {
+                T xk = data->X[k * nsamples + i];
+                data->residual[i] -= betak * xk;
+            }
+        } else { // Intercept
+            for (da_int i = 0; i < nsamples; ++i) {
+                data->residual[i] -= betak;
+            }
+        }
+    }
+
+    *knew = betak;
+
+    data = nullptr;
+    return 0;
+}
+
+/* Dual gap for linear least squares (sklearn variant) */
+template <typename T>
+da_int stepchk_linreg_sklearn([[maybe_unused]] da_int nfeat,
+                              [[maybe_unused]] const T *coef,
+                              [[maybe_unused]] void *udata, T *gap) {
+    *gap = T(0);
+    return 0;
+}
 #endif

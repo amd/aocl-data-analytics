@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -71,6 +71,7 @@
  */
 namespace da_linmod {
 enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq, fit_opt_coord };
+enum class coord_algo_t { undefined = 0, GLMNet = 1, sklearn = 2 };
 
 template <typename T> class linear_model : public basic_handle<T> {
   private:
@@ -115,8 +116,8 @@ template <typename T> class linear_model : public basic_handle<T> {
     scaling_t scaling = scaling_t::none;
     std::vector<T> std_shifts; // column-wise means [ X | y ], size nfeat + 1
     std::vector<T> std_scales; // column-wise scales stored as [ X | y ] size nfeat + 1
-    std::vector<T> std_xv;     // column-wise X (variance) "proportions" of size nfeat
-
+    // column-wise X (variance) "proportions" of size nfeat (or norm squared of X)
+    std::vector<T> std_xv;
     /* Training data
      * coef: vector containing the trained coefficients of the model
        dual_coef: vector containing the trained dual coefficients of the model
@@ -777,11 +778,7 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         // Scaling
         if (scaling == scaling_t::automatic) {
             switch (method_id) {
-            // Remove intercept by centering (and scaling) both X and y
             case linmod_method::coord:
-                scaling = scaling_t::scale_only;
-                scalingstr = "scale only";
-                break;
             case linmod_method::svd:
             case linmod_method::qr:
                 if (intercept) {
@@ -820,35 +817,46 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             return status; // message already loaded
         }
 
-        // Agreed standardising policy (matching glmnet and sklearn)
-        // If scaling==standardise we are guaranteeing matching glmnet for lasso/ridge/elastic net
-        // If scaling==scale_only for Lasso and Ridge only we are guaranteeing to match sklearn, and for Elastic Net we match glmnet (in future we will match sklearn)
-        // If scaling==centering for Ridge we are guaranteeing sklearn solution except coord solver (which cannot be run on 'centering')
+        /* Agreed standardising policy (matching GLMnet and sklearn)
+         * asterisk (*) means both
+         * Regularization        NoReg  Ridge(L2)  Lasso(L1)  Elastic Net(L1+L2)
+         * Scaling
+         * none (w/o intercept)    *     sklearn    sklearn         sklearn
+         * centering               *     sklearn    sklearn         sklearn
+         * scale only (intercept)  *        *          *            GLMnet
+         * standardize             *      GLMnet     GLMnet         GLMnet
+         *
+         * Note on "scale only", the GLMnet step function follows a different path than sklearn, but
+         * both coincide at the extremes of the regularization path.
+         *
+         */
 
         // If L2 regression
         if (alpha == T(0.0) && lambda != T(0.0)) {
-            if (scaling == scaling_t::scale_only) {
-                lambda /= T(nsamples);
-            }
             if (scaling == scaling_t::standardize) {
                 lambda /= std_scales[nfeat];
-                if (method_id == linmod_method::svd ||
-                    method_id == linmod_method::cholesky ||
-                    method_id == linmod_method::cg) {
+                if (method_id != linmod_method::coord &&
+                    method_id != linmod_method::lbfgsb) {
+                    // GLMnet/BFGS already scale lambda
                     lambda *= T(nsamples);
                 }
+            } else if (scaling == scaling_t::scale_only) {
+                lambda /= T(nsamples);
             }
-            // Rescale lambda when scaling != "standardize" and the solver is not coord, ie,
-            // need the scaled lambda for the objective and gradient
+            // Rescale lambda when scaling != "standardize" and the solver == "lbfgsb"
             if ((method_id == linmod_method::lbfgsb) &&
                 (scaling != scaling_t::standardize)) {
                 lambda /= T(nsamples);
             }
+            if ((method_id == linmod_method::coord) &&
+                (scaling != scaling_t::standardize && scaling != scaling_t::scale_only)) {
+                lambda /= T(nsamples);
+            }
         }
-        // If Lasso or Elastic Net
+        // If Lasso or Elastic Net and scaling is "standardize" or "scale only"
         if (alpha != T(0.0) && lambda != T(0.0)) {
+            // Match with GLMnet
             if (scaling == scaling_t::standardize || scaling == scaling_t::scale_only) {
-                // Rescale lambda
                 lambda /= std_scales[nfeat];
             }
         }
@@ -861,11 +869,13 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
         if (copycoefs && method_id == linmod_method::cg && !is_well_determined) {
             copycoefs &= usr_ncoefs >= nsamples;
             use_dual_coefs = true;
-            da_warn(this->err, da_status_invalid_input, // LCOV_EXCL_LINE
-                    "In underdetermined system we are expecting dual coefficients as an "
-                    "initial guess for a CG solver. If you want to use primal "
-                    "coefficients as a starting point consider using LBFGS or Coordinate "
-                    "Descent solver. ");
+            // Push warning into the error stack
+            da_warn_trace(
+                this->err, da_status_invalid_input, // LCOV_EXCL_LINE
+                "In underdetermined system we are expecting dual coefficients as an "
+                "initial guess for a CG solver. If you want to use primal "
+                "coefficients as a starting point consider using LBFGS or Coordinate "
+                "Descent solver.");
         } else {
             copycoefs &= usr_ncoefs >= nfeat;
         }
@@ -911,14 +921,13 @@ template <typename T> da_status linear_model<T>::fit(da_int usr_ncoefs, const T 
             break;
 
         case linmod_method::qr:
-
             // No regularization, standard linear least-squares through QR factorization
             status = qr_lsq();
 
             break;
 
         case linmod_method::coord:
-            // Elastic Nets (l1 + l2 regularization) Coordinate Descent Method
+            // Elastic Nets (l1 + l2 regularization) Coordinate Descent method
             status = fit_linreg_coord();
             break;
 
@@ -1049,12 +1058,32 @@ template <class T> da_status linear_model<T>::fit_linreg_coord() {
     if (status != da_status_success) {
         return status; // Error message already loaded
     }
+
     // Add callback
-    if (opt->add_stepfun(stepfun_linreg<T>) != da_status_success) {
+    if (scaling == scaling_t::none || scaling == scaling_t::centering) {
+        // Use sklearn step function
+        status = opt->add_stepfun(stepfun_linreg_sklearn<T>);
+    } else {
+        // Use GLMnet step function
+        status = opt->add_stepfun(stepfun_linreg_glmnet<T>);
+    }
+    if (status != da_status_success) {
         return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
                         "Unexpectedly linear model provided an invalid step "
                         "function pointer.");
     }
+    // Add callback for optimality checks
+    if (scaling == scaling_t::none || scaling == scaling_t::centering) {
+        status = opt->add_stepchk(stepchk_linreg_sklearn<T>);
+    } else {
+        status = opt->add_stepchk(stepchk_linreg_sklearn<T>);
+    }
+    if (status != da_status_success) {
+        return da_error(opt->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpectedly linear model provided an invalid "
+                        "optimality check function pointer.");
+    }
+
     // Ready to solve
     status = opt->solve(coef, udata);
     if (status == da_status_success || this->err->get_severity() != DA_ERROR) {
@@ -1416,12 +1445,6 @@ template <typename T> da_status linear_model<T>::validate_options(da_int method)
         else if (method == linmod_method::qr && lambda != T(0))
             return da_error(this->err, da_status_incompatible_options,
                             "The QR solver is incompatible with regularization.");
-        // User wants to use coord with scaling other than scale only or standardise (or 'auto')
-        else if (method == linmod_method::coord &&
-                 (scaling == scaling_t::none || scaling == scaling_t::centering))
-            return da_error(this->err, da_status_incompatible_options,
-                            "Coordinate Descent solver can only be used with "
-                            "scaling=='scale only' or 'standardize'.");
         // User wants to solve with intercept without scaling in underdetermined case, we cannot
         // do it since only correct strategy that don't penalise intercept is to center data
         else if (!is_well_determined && scaling == scaling_t::none && intercept &&
@@ -1530,16 +1553,36 @@ template <typename T> da_status linear_model<T>::choose_method() {
      * |-------------------------------------------------------------------------------------------------------------------------------------
      * | std_scales       |[sigma(X);sigma(Y)]|[sigma(X);nrm(Y)/sqrt(N)|[1;sigma(Y)]    |[1;nrm(Y)/sqrt(N)]|       1          |      1      |
      * |-------------------------------------------------------------------------------------------------------------------------------------
-     * | std_xv[j]        |         1         |<X[j],X[j]>/N*var(X[j]) | var(X[j])      | <X[j],X[j]>/N    |       1          |      1      |
+     * | std_xv[j]        |         1         |<X[j],X[j]>/N*var(X[j]) | var(X[j])      | <X[j],X[j]>/N    |   <X[j],X[j]>    | <X[j],X[j]> |
      * |-------------------------------------------------------------------------------------------------------------------------------------
      *
-     * Note see reverse_scaling for reverting of the scaling on the model coefficients (solution)
+     * Notes
+     * 1. for coord solver even with no scaling we use std_xv to store column norms squared <X[j],X[j]>
+     * 2. see reverse_scaling for reverting of the scaling on the model coefficients (solution)
      *
      */
 template <typename T> da_status linear_model<T>::model_scaling(da_int method_id) {
     // For SVD and QR we still will want to copy X and y, even for scaling == none
     if (scaling == scaling_t::none && method_id != linmod_method::svd &&
-        method_id != linmod_method::qr) {
+        method_id != linmod_method::qr && method_id != linmod_method::coord) {
+        return da_status_success;
+    }
+
+    const bool use_xv = method_id == linmod_method::coord; // for now only coord uses xv
+
+    // coord with no scalling we still need to store column norms squared
+    if (scaling == scaling_t::none && method_id == linmod_method::coord) {
+        try {
+            std_xv.resize(nfeat);
+        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error.");
+        }
+        // set std_xv[j] = <X[j], X[j]>
+        for (da_int j = 0; j < nfeat; j++) {
+            std_xv[j] =
+                da_blas::cblas_dot(nsamples, &X[j * nsamples], 1, &X[j * nsamples], 1);
+        }
         return da_status_success;
     }
 
@@ -1552,7 +1595,9 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
     try {
         std_scales.assign(nfeat + 1, T(0));
         std_shifts.assign(nfeat + 1, T(0));
-        std_xv.assign(nfeat, T(0));
+        if (use_xv) {
+            std_xv.assign(nfeat, T(0));
+        }
         X = new T[nsamples * nfeat];
         y = new T[nsamples];
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
@@ -1591,11 +1636,18 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
     if (scaling == scaling_t::centering) {
         std_scales.assign(nfeat + 1, T(1));
         std_shifts.assign(nfeat + 1, T(0));
-        std_xv.assign(nfeat, T(1));
         if (!intercept) {
+            if (use_xv) {
+                // set std_xv[j] = <X[j], X[j]>
+                for (da_int j = 0; j < nfeat; j++) {
+                    std_xv[j] = da_blas::cblas_dot(nsamples, &X[j * nsamples], 1,
+                                                   &X[j * nsamples], 1);
+                }
+            }
             // Data copied XUSR -> X and yusr -> y, set-up scaling vectors and exit
             return da_status_success;
         }
+        // center data
         if (da_basic_statistics::standardize(column_major, axis, nrow, ncol, X, nrow,
                                              nrow, 0, std_shifts.data(),
                                              (T *)nullptr) != da_status_success) {
@@ -1610,6 +1662,13 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
                 this->err, da_status_internal_error, // LCOV_EXCL_LINE
                 "Call to standardize on response vector unexpectedly failed.");
         }
+        if (use_xv) {
+            // set std_xv[j] = <X[j], X[j]>
+            for (da_int j = 0; j < nfeat; j++) {
+                std_xv[j] = da_blas::cblas_dot(nsamples, &X[j * nsamples], 1,
+                                               &X[j * nsamples], 1);
+            }
+        }
         return da_status_success;
     }
 
@@ -1623,7 +1682,9 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
 
     if (standardize && intercept) {
         // intercept -> shift and scale X
-        std_xv.assign(nfeat, T(1));
+        if (use_xv) {
+            std_xv.assign(nfeat, T(1));
+        }
         if (da_basic_statistics::standardize(column_major, axis, nrow, ncol, X, nrow,
                                              nrow, 0, std_shifts.data(),
                                              std_scales.data()) != da_status_success) {
@@ -1653,8 +1714,10 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
             xcj *= xcj;
             sqdof = sqdof / nsamples;
 
-            // These are used for updating the coefficients (betas).
-            std_xv[j] = sqdof / (sqdof - xcj);
+            if (use_xv) {
+                // These are used for updating the coefficients (betas).
+                std_xv[j] = sqdof / (sqdof - xcj);
+            }
 
             sqdof =
                 sqrt(sqdof -
@@ -1682,11 +1745,14 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
         }
     } else if (!standardize && intercept) {
         // Intercept -> shift and scale X
-        if (da_basic_statistics::variance(column_major, axis, nrow, ncol, X, nrow, nrow,
-                                          std_shifts.data(),
-                                          std_xv.data()) != da_status_success) {
-            return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
-                            "Call to variance on feature matrix unexpectedly failed.");
+        if (use_xv) {
+            if (da_basic_statistics::variance(column_major, axis, nrow, ncol, X, nrow,
+                                              nrow, std_shifts.data(),
+                                              std_xv.data()) != da_status_success) {
+                return da_error(
+                    this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                    "Call to variance on feature matrix unexpectedly failed.");
+            }
         }
         std_scales.assign(nfeat + 1, sqrt(T(nsamples)));
         if (da_basic_statistics::standardize(column_major, axis, nrow, ncol, X, nrow, 1,
@@ -1723,8 +1789,10 @@ template <typename T> da_status linear_model<T>::model_scaling(da_int method_id)
                 xjdot += xj * xj;
                 X[j * nsamples + i] /= sqrtn;
             }
-            // These are used for updating the coefficients (betas).
-            std_xv[j] = xjdot / T(nsamples);
+            if (use_xv) {
+                // These are used for updating the coefficients (betas).
+                std_xv[j] = xjdot / T(nsamples);
+            }
             std_scales[j] = T(1);
             std_shifts[j] = T(0);
         }

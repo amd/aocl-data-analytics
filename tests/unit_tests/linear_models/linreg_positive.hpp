@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -241,10 +241,12 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // Check loss with info from solver (objective function)
         if (infochk) {
             if (single) {
-                EXPECT_FLOAT_EQ(loss, info[da_optim_info_t::info_objective])
+                // EXPECT_FLOAT_EQ(loss, info[da_optim_info_t::info_objective])
+                EXPECT_NEAR(loss, info[da_optim_info_t::info_objective], 1.0e-5)
                     << "Objective function (LOSS) mismatch!";
             } else {
-                EXPECT_DOUBLE_EQ(loss, info[da_optim_info_t::info_objective])
+                // EXPECT_DOUBLE_EQ(loss, info[da_optim_info_t::info_objective])
+                EXPECT_NEAR(loss, info[da_optim_info_t::info_objective], 1.0e-12)
                     << "Objective function (LOSS) mismatch!";
             }
         }

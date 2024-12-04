@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -38,6 +38,12 @@
 #include "optimization_options.hpp"
 
 using T = double;
+da_int stepchk_dummy([[maybe_unused]] da_int n, [[maybe_unused]] T *x,
+                     [[maybe_unused]] void *usrdata, T *optim) {
+    *optim = T(0);
+    return 0;
+}
+
 da_int stepfun_cycleend(da_int n, T *x, T *newxk, da_int k, T *f, void *usrdata,
                         da_int action, [[maybe_unused]] T kdiff) {
     /* Actions regarding feature matrix evaluation
@@ -57,8 +63,9 @@ da_int stepfun_cycleend(da_int n, T *x, T *newxk, da_int k, T *f, void *usrdata,
     if (f) {
         *f = 0;
         for (auto i = 0; i < n; i++) {
-            *f += std::abs(x[i]);
+            *f += (1.0 - x[i]) * (1.0 - x[i]);
         }
+        *f /= (2.0 * n);
         return 0;
     }
 
@@ -75,11 +82,7 @@ da_int stepfun_cycleend(da_int n, T *x, T *newxk, da_int k, T *f, void *usrdata,
     if (action > 0)
         *calls = 0U;
 
-    // if (*calls < n - 3 || *calls >= 50 - 3)
-    *newxk = x[k] / 2;
-    // else
-    //   *newxk = x[k] - static_cast<T>(1.0e-7);
-
+    *newxk = x[k] + (1.0 - x[k]) / 2; // step towards the solution 1.0
     ++(*calls);
 
     calls = nullptr;
@@ -88,7 +91,7 @@ da_int stepfun_cycleend(da_int n, T *x, T *newxk, da_int k, T *f, void *usrdata,
 
 // Verify that the end-cycle logic is correct
 TEST(Coord, CycleEnd) {
-    da_errors::da_error_t err(da_errors::DA_THROW);
+    da_errors::da_error_t err(da_errors::DA_RECORD);
     da_options::OptionRegistry opts;
     da_status status;
     status = register_optimization_options<T>(err, opts);
@@ -116,7 +119,8 @@ TEST(Coord, CycleEnd) {
     status = opts.set("coord iteration limit", da_int(1500), da_options::setby_t::user);
     EXPECT_EQ(status, da_status_success) << "error setting coord iteration limit";
     opts.print_options();
-    status = coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit, usrdata, err);
+    status = coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit, usrdata, err,
+                          stepchk_dummy);
     EXPECT_EQ(status, da_status_success) << "error from coord";
 
     // Check info array
@@ -141,7 +145,8 @@ TEST(Coord, CycleEnd) {
     EXPECT_EQ(info[da_optim_info_t::info_inorm_init], inorm_init);
 
     // Second call at solution
-    status = coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit, usrdata, err);
+    status = coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit, usrdata, err,
+                          stepchk_dummy);
     EXPECT_EQ(status, da_status_success) << "error from 2nd call to coord";
 
     EXPECT_LE(info[da_optim_info_t::info_iter], 1);
