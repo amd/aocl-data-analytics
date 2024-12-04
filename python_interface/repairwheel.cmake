@@ -32,7 +32,7 @@ foreach(file ${wheel_files})
               --add-path ${CMAKE_INSTALL_PREFIX}/python_package/aoclda)
     execute_process(
       COMMAND delvewheel repair ${file}
-              --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package/repaired --add-path ${CMAKE_INSTALL_PREFIX}/python_package/aoclda --ignore-existing)
+              --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package --add-path ${CMAKE_INSTALL_PREFIX}/python_package/aoclda --ignore-existing)
   else()
     # Repair the wheel using auditwheel
 
@@ -40,7 +40,7 @@ foreach(file ${wheel_files})
       COMMAND
         auditwheel repair ${file} --plat
         linux_x86_64 --wheel-dir
-        ${CMAKE_INSTALL_PREFIX}/python_package/repaired)
+        ${CMAKE_INSTALL_PREFIX}/python_package)
 
   endif()
 endforeach()

@@ -80,10 +80,6 @@ if(NOT USE_EXISTING_DA)
     RUNTIME DESTINATION python_package/aoclda)
 endif()
 
-if (WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    install(FILES "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/bin/libomp.dll" DESTINATION python_package/aoclda)
-endif()
-
 if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
   if(WIN32)
     # Install Fortran runtimes
