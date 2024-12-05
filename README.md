@@ -2,10 +2,10 @@ AOCL Data Analytics Library
 ===========================
 
 The AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing
-optimized building blocks for data analysis. It is written with a `C`-compatible
+optimized building blocks for data analysis and machine learning. It is written with a `C`-compatible
 interface to make it as seamless as possible to integrate with the library from
 whichever programming language you are using. For further details on the library
-contents, please refer to the online help or PDF user guide.
+contents, please refer to the online help or PDF user guide. Note that prebuilt binaries for AOCL-DA are available from https://www.amd.com/en/developer/aocl.html.
 
 The intended workflow for using the library is as follows:
 
