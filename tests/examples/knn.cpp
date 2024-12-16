@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -50,9 +50,6 @@ int main() {
     da_int n_samples = 6;
     da_int n_queries = 3;
     da_int n_neigh = 3;
-    //std::vector<double> X_train{-1., -2., -3., 1., 2., 3.,  -1., -1., -2.,
-    //                          3.,  5.,  -1., 2., 3., -1., 1.,  1.,  2.};
-    //std::vector<da_int> y_train{1, 2, 0, 1, 2, 2};
 
     std::vector<double> X_train{-1, -1, 2, -2, -1, 3, -3, -2, -1,
                                 1,  3,  1, 2,  5,  1, 3,  -1, 2};
@@ -76,7 +73,6 @@ int main() {
         return 1;
     }
 
-    //    std::vector<double> X_test{-2., -1., 2., 2., -2., 1., 3., -1., -3.};
     std::vector<double> X_test{-2, 2, 3, -1, -2, -1, 2, 1, -3};
 
     // Compute the k-nearest neighbors and return the distances

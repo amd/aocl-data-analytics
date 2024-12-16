@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -37,8 +37,6 @@
 #include "euclidean_distance.hpp"
 #include "knn_options.hpp"
 #include <numeric>
-
-#define BLOCK_SIZE 16
 
 namespace da_knn {
 
@@ -97,13 +95,26 @@ template <typename T> class da_knn : public basic_handle<T> {
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X_train,
                                 da_int ldx_train, const da_int *y_train);
     // Compute the k-nearest neighbors and optionally the corresponding distances
+    // Includes the appropriate checks for input arguments
     da_status kneighbors(da_int n_queries, da_int n_features, const T *X_test,
                          da_int ldx_test, da_int *n_ind, T *n_dist, da_int k = 0,
                          bool return_distance = 0);
+    // Compute kernel for the k-nearest neighbors and optionally the corresponding distances
+    da_status kneighbors_compute(da_int n_queries, da_int n_features, const T *X_test,
+                                 da_int ldx_test, da_int *n_ind, T *n_dist,
+                                 da_int n_neigh, bool return_distance);
+    // Computational kernel that computes kneighbors using blocking on Xtest for overall algorithm.
+    // In addition, it uses blocking for Xtrain only for the distance computation.
+    template <da_int XTRAIN_BLOCK, da_int XTEST_BLOCK>
+    da_status kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
+                                       const T *X_test, da_int ldx_test, da_int *n_ind,
+                                       T *n_dist, da_int n_neigh, bool return_distance);
     // Compute the k-nearest neighbors and optionally the corresponding distances
-    void kneighbors_kernel(da_int n_queries, da_int n_features, const T *X_test,
-                           da_int ldx_test, T *D, da_int *n_ind, T *n_dist, da_int k = 0,
-                           bool return_distance = 0);
+    template <da_int XTRAIN_BLOCK>
+    da_status kneighbors_kernel(da_int xtrain_block_size, da_int n_blocks_train,
+                                da_int block_rem_train, da_int n_queries,
+                                da_int n_features, const T *X_test, da_int ldx_test, T *D,
+                                da_int *n_ind, T *n_dist, da_int k, bool return_distance);
     // Compute probability estimates for provided test data
     da_status predict_proba(da_int n_queries, da_int n_features, const T *X_test,
                             da_int ldx_test, T *proba);
@@ -206,55 +217,219 @@ da_status da_knn<T>::set_training_data(da_int n_samples, da_int n_features,
     return da_status_success;
 }
 
+// Given a vector D of length n and an integer k, this function returns in the first k positions
+// of a vector k_dist, the k smaller values of D (unordered) and in the first k positions of a vector
+// k_ind, the corresponding indices of the original vector D, where initial indices are
+// init_index, init_index+1, ...
 template <typename T>
-void da_knn<T>::kneighbors_kernel(da_int n_queries, da_int n_features, const T *X_test,
-                                  da_int ldx_test, T *D, da_int *n_ind, T *n_dist,
-                                  da_int n_neigh, bool return_distance) {
-    // ToDo: Make this generic for any distance.
-    // Call function that computes the squared euclidean distance
+inline void smaller_values_and_indices(da_int n, T *D, da_int k, da_int *k_ind, T *k_dist,
+                                       da_int init_index, bool init = true) {
+    // Initialize the first k values of k_ind with init_index, init_index+1, ..., init_index+k-1
+    if (init)
+        std::iota(k_ind, k_ind + k, init_index);
+    // Find the index of the maximum element and the corresponding maximum value.
+    da_int max_index = da_blas::cblas_iamax(k, k_dist, 1);
+    T max_val = k_dist[max_index];
 
-    da_metrics::pairwise_distances::euclidean(column_major, this->n_samples, n_queries,
-                                              n_features, this->X_train, this->ldx_train,
-                                              X_test, ldx_test, D, this->n_samples, true);
-    for (da_int k = 0; k < n_queries; k++) {
-        // Initialize the values of ind with 0-n_neigh
-        std::iota(n_ind + k * n_neigh, n_ind + (k + 1) * n_neigh, 0);
-        da_int max_index = da_blas::cblas_iamax(n_neigh, D + k * this->n_samples, 1);
-        T max_val = D[max_index + k * this->n_samples];
-
-        for (da_int i = n_neigh; i < this->n_samples; i++) {
-            // Check if an element of D is smaller than the maximum value. If it is,
-            // we need to replace it's index in ind and replace the corresponding D[i] in dist.
-            if (D[i + k * this->n_samples] <= max_val) {
-                // We know D[i] is smaller than Dmax. So we update n_ind[max_index] and D[max_indexk * this->n_samples]
-                // so that they hold the new value.
-                n_ind[max_index + k * n_neigh] = i;
-                D[max_index + k * this->n_samples] = D[i + k * this->n_samples];
-                // Now we need to find the new maximum so that we compare against that in the next iteration.
-                max_index = da_blas::cblas_iamax(n_neigh, D + k * this->n_samples, 1);
-                max_val = D[max_index + k * this->n_samples];
-            }
-        }
-
-        std::stable_sort(
-            n_ind + k * n_neigh, n_ind + (k + 1) * n_neigh, [&](da_int i, da_int j) {
-                return D[i + k * this->n_samples] < D[j + k * this->n_samples];
-            });
-        std::stable_sort(D + k * this->n_samples, D + k * this->n_samples + n_neigh);
-
-        if (return_distance) {
-            if ((this->internal_metric == da_sqeuclidean) &&
-                (this->metric != da_sqeuclidean)) {
-                for (da_int i = 0; i < n_neigh; i++) {
-                    n_dist[i + k * n_neigh] = std::sqrt(D[i + k * this->n_samples]);
-                }
-            } else {
-                for (da_int i = 0; i < n_neigh; i++) {
-                    n_dist[i + k * n_neigh] = D[i + k * this->n_samples];
-                }
-            }
+    for (da_int i = k; i < n; i++) {
+        // Check if an element of D is smaller than the maximum value. If it is,
+        // we need to replace it's index in k_ind and replace the corresponding D[i] in k_dist.
+        if (D[i] <= max_val) {
+            // We know D[i] is smaller than Dmax. So we update k_ind[max_index] and D[max_index]
+            // so that they hold the new value.
+            k_ind[max_index] = i;
+            k_dist[max_index] = D[i];
+            // Now we need to find the new maximum so that we compare against that in the next iteration.
+            max_index = da_blas::cblas_iamax(k, k_dist, 1);
+            max_val = k_dist[max_index];
         }
     }
+}
+
+// Given a vector k_ind of length n, and a vector that holds the corresponding indices, return into two arrays n_dist and n_ind
+// the sorted distances of D and the sorted indices, respectivelly.
+template <typename T>
+inline void sorted_n_dist_n_ind(da_int n, T *k_dist, da_int *k_ind, T *n_dist,
+                                da_int *n_ind, da_int *perm_vector, bool return_distance,
+                                da_int internal_metric, da_int metric) {
+    // We sort with respect to partial distances and then we use the sorted array to reorder the array of indices.
+    std::iota(perm_vector, perm_vector + n, 0);
+
+    std::stable_sort(perm_vector, perm_vector + n,
+                     [&](da_int i, da_int j) { return k_dist[i] < k_dist[j]; });
+
+    for (da_int i = 0; i < n; i++)
+        n_ind[i] = k_ind[perm_vector[i]];
+
+    if (return_distance) {
+        if ((internal_metric == da_sqeuclidean) && (metric != da_sqeuclidean)) {
+            for (da_int i = 0; i < n; i++)
+                n_dist[i] = std::sqrt(k_dist[perm_vector[i]]);
+        } else {
+            for (da_int i = 0; i < n; i++)
+                n_dist[i] = k_dist[perm_vector[i]];
+        }
+    }
+}
+
+template <typename T>
+template <da_int XTRAIN_BLOCK>
+da_status da_knn<T>::kneighbors_kernel(da_int xtrain_block_size, da_int n_blocks_train,
+                                       da_int block_rem_train, da_int n_queries,
+                                       da_int n_features, const T *X_test,
+                                       da_int ldx_test, T *D, da_int *n_ind, T *n_dist,
+                                       da_int n_neigh, bool return_distance) {
+    da_status status = da_status_success;
+    // Set blocking of X_train depending on the block size
+    constexpr bool block_xtrain = XTRAIN_BLOCK != 1;
+    // ToDo: Make this generic for any distance.
+    // Call function that computes the squared euclidean distance
+    // Add error checking.
+    if constexpr (block_xtrain) {
+        // Compute values for the blocks of X_train
+        //da_int xtrain_block_size = std::min(XTRAIN_BLOCK, n_samples);
+        //da_int n_blocks_train, block_rem_train;
+        //da_utils::blocking_scheme(n_samples, xtrain_block_size, n_blocks_train,
+        //                          block_rem_train);
+        da_int xtrain_subblock = xtrain_block_size;
+        for (da_int iblock = 0; iblock < n_blocks_train; iblock++) {
+            if (iblock == n_blocks_train - 1 && block_rem_train > 0)
+                xtrain_subblock = block_rem_train;
+
+            status = da_metrics::pairwise_distances::euclidean(
+                column_major, xtrain_subblock, n_queries, n_features,
+                X_train + iblock * xtrain_block_size, ldx_train, X_test, ldx_test,
+                D + iblock * xtrain_block_size, n_samples, true);
+        }
+    } else {
+        status = da_metrics::pairwise_distances::euclidean(
+            column_major, this->n_samples, n_queries, n_features, this->X_train,
+            this->ldx_train, X_test, ldx_test, D, this->n_samples, true);
+    }
+    if (status != da_status_success) {
+        return status;
+    }
+    // Get the first n_neigh smaller values of D on k_dist and the correspondind distances on n_dist.
+    // Here we can use D and replace the smaller values in place since D is not used later on.
+    T *k_dist = D;
+    std::vector<da_int> perm_vector;
+    std::vector<da_int> k_ind;
+    try {
+        perm_vector.resize(n_neigh);
+        k_ind.resize(n_queries * n_neigh);
+    } catch (std::bad_alloc const &) {
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+    for (da_int k = 0; k < n_queries; k++) {
+        smaller_values_and_indices(this->n_samples, D + k * this->n_samples, n_neigh,
+                                   k_ind.data() + k * n_neigh,
+                                   k_dist + k * this->n_samples, 0);
+        sorted_n_dist_n_ind(n_neigh, k_dist + k * this->n_samples,
+                            k_ind.data() + k * n_neigh, n_dist + k * n_neigh,
+                            n_ind + k * n_neigh, perm_vector.data(), return_distance,
+                            this->internal_metric, this->metric);
+    }
+
+    return status;
+}
+
+// Computational kernel that computes kneighbors using blocking on Xtest for overall algorithm.
+// In addition, it uses blocking for Xtrain only for the distance computation.
+template <typename T>
+template <da_int XTRAIN_BLOCK, da_int XTEST_BLOCK>
+da_status da_knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
+                                              const T *X_test, da_int ldx_test,
+                                              da_int *n_ind, T *n_dist, da_int n_neigh,
+                                              bool return_distance) {
+    std::vector<T> D;
+    da_int xtest_block_size = std::min(XTEST_BLOCK, n_queries);
+    da_int n_blocks_test, block_rem_test;
+    da_utils::blocking_scheme(n_queries, xtest_block_size, n_blocks_test, block_rem_test);
+    da_int n_threads = da_utils::get_n_threads_loop(std::max(n_blocks_test, (da_int)1));
+    try {
+        D.resize(this->n_samples * xtest_block_size * n_threads);
+    } catch (std::bad_alloc const &) {
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+    da_int threading_error = 0;
+    da_int xtrain_block_size = std::min(XTRAIN_BLOCK, n_samples);
+    da_int n_blocks_train, block_rem_train;
+    da_utils::blocking_scheme(n_samples, xtrain_block_size, n_blocks_train,
+                              block_rem_train);
+    da_status private_status = da_status_success;
+    // Iterate through the number of blocks
+#pragma omp parallel default(none)                                                       \
+    shared(xtest_block_size, n_blocks_test, block_rem_test, n_features, X_test,          \
+               n_queries, n_ind, n_dist, n_neigh, ldx_test, return_distance, D,          \
+               threading_error, xtrain_block_size, n_blocks_train,                       \
+               block_rem_train) private(private_status) num_threads(n_threads)
+    {
+        da_int task_thread = (da_int)omp_get_thread_num();
+        da_int D_index = task_thread * this->n_samples * xtest_block_size;
+        da_int xtest_subblock = xtest_block_size;
+#pragma omp for schedule(dynamic)
+        for (da_int jblock = 0; jblock < n_blocks_test; jblock++) {
+            if (jblock == n_blocks_test - 1 && block_rem_test > 0)
+                xtest_subblock = block_rem_test;
+            // If the remaining numbers of queries is ge than the block size
+            // the size of the submatrix we are computing is xtest_block_size
+            private_status = kneighbors_kernel<XTRAIN_BLOCK>(
+                xtrain_block_size, n_blocks_train, block_rem_train, xtest_subblock,
+                n_features, X_test + jblock * xtest_block_size, ldx_test, &D[D_index],
+                n_ind + jblock * xtest_block_size * n_neigh,
+                n_dist + jblock * xtest_block_size * n_neigh, n_neigh, return_distance);
+            if (private_status != da_status_success)
+#pragma omp atomic write
+                threading_error = 1;
+        }
+    }
+    if (threading_error == 1)
+        return da_status_memory_error;
+
+    return da_status_success;
+}
+
+/**
+ * Returns the indices of the k-nearest neighbors for each point in a test data set and, optionally, the
+ * corresponding distances to each neighbor.
+ *
+ * This algorithm has the following steps:
+ * - If X_test is nullptr, compute the distance matrix D(X_train, X_train). Otherwise, compute D(X_train, X).
+ * - Create a matrix so that its j-th column holds the indices of each point in X_train in ascending order
+ *   to the distance, where j is each point in X_test (or X_train when X_test is nullptr).
+ * - Return in n_ind only the first k indices for each column (those would be the k-nearest neighbors).
+ * - If return_distance is true, return the corresponding distances between each test point and
+ *   its neighbors.
+ */
+template <typename T>
+da_status da_knn<T>::kneighbors_compute(da_int n_queries, da_int n_features,
+                                        const T *X_test, da_int ldx_test, da_int *n_ind,
+                                        T *n_dist, da_int n_neigh, bool return_distance) {
+
+    if (this->order == column_major) {
+// If da_int is 64 bit, cast to double
+#if defined(AOCLDA_ILP64)
+        da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<double *>(n_ind),
+                          n_neigh, n_queries);
+#else // da_int is 32 bit, cast to float
+        da_blas::imatcopy('T', n_neigh, n_queries, 1.0, reinterpret_cast<float *>(n_ind),
+                          n_neigh, n_queries);
+#endif
+        // transpose distances
+        if (return_distance) {
+            da_blas::imatcopy('T', n_neigh, n_queries, 1.0, n_dist, n_neigh, n_queries);
+        }
+    };
+    bool is_threaded = omp_get_max_threads() != 1;
+    if (is_threaded)
+        return kneighbors_blocked_Xtest<1, 16>(n_queries, n_features, X_test, ldx_test,
+                                               n_ind, n_dist, n_neigh, return_distance);
+    else
+        return kneighbors_blocked_Xtest<2048, 16>(n_queries, n_features, X_test, ldx_test,
+                                                  n_ind, n_dist, n_neigh,
+                                                  return_distance);
 }
 
 /**
@@ -265,15 +440,7 @@ void da_knn<T>::kneighbors_kernel(da_int n_queries, da_int n_features, const T *
  * and compute the k-nearest neighbors of the training data matrix provided via set_training_data(),
  * not considering itself as a neighbor.
  * - If X_test is not nullptr, then X_test is the test data matrix of size m-by-n, and for each of its points
- * kneighbors() computes its neighbors in the training data matrix.
- *
- * This algorithm has the following steps:
- * - If X_test is nullptr, compute the distance matrix D(X_train, X_train). Otherwise, compute D(X_train, X).
- * - Create a matrix so that its j-th column holds the indices of each point in X_train in ascending order
- *   to the distance, where j is each point in X_test (or X_train when X_test is nullptr).
- * - Return in n_ind only the first k indices for each column (those would be the k-nearest neighbors).
- * - If return_distance is true, return the corresponding distances between each test point and
- *   its neighbors.
+ * kneighbors() computes its neighbors in the training data matrix using kneighbors_compute().
  */
 template <typename T>
 da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_test,
@@ -340,52 +507,10 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
                                    "n_dist is not a valid pointer.");
         }
     }
-    std::vector<T> D;
-    // If ldx_test is bigger than n_queries, don't do blocking.
-    if (ldx_test_temp > n_queries) {
-        try {
-            D.resize(this->n_samples * n_queries);
-        } catch (std::bad_alloc const &) {
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation failed.");
-        }
-        kneighbors_kernel(n_queries, n_features, X_test_temp, ldx_test_temp, D.data(),
-                          n_ind, n_dist, n_neigh, return_distance);
-    } else {
 
-        // If the leading dimension and n_queries match, optimize using blocking.
-        da_int n_blocks = n_queries / BLOCK_SIZE;
-        da_int block_rem = n_queries % BLOCK_SIZE;
-        da_int n_threads = da_utils::get_n_threads_loop(std::max(n_blocks, (da_int)1));
-        try {
-            D.resize(this->n_samples * BLOCK_SIZE * n_threads);
-        } catch (std::bad_alloc const &) {
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation failed.");
-        }
-// Iterate through the number of blocks
-#pragma omp parallel for default(none)                                                   \
-    shared(n_blocks, n_features, X_test_temp, n_queries, n_ind, n_dist, n_neigh,         \
-               ldx_test_temp, return_distance, D) num_threads(n_threads)
-        for (da_int iblock = 0; iblock < n_blocks; iblock++) {
-            da_int D_index = (da_int)omp_get_thread_num() * this->n_samples * BLOCK_SIZE;
-            // If the remaining numbers of queries is ge than the block size
-            // the size of the submatrix we are computing is BLOCK_SIZE
-            kneighbors_kernel(
-                BLOCK_SIZE, n_features, X_test_temp + iblock * BLOCK_SIZE, ldx_test_temp,
-                &D[D_index], n_ind + iblock * BLOCK_SIZE * n_neigh,
-                n_dist + iblock * BLOCK_SIZE * n_neigh, n_neigh, return_distance);
-        }
-
-        // Need to point to the remainder
-        if (block_rem > 0) {
-            da_int D_index = (da_int)omp_get_thread_num() * this->n_samples * BLOCK_SIZE;
-            kneighbors_kernel(
-                block_rem, n_features, X_test_temp + n_blocks * BLOCK_SIZE, ldx_test_temp,
-                &D[D_index], n_ind + n_blocks * BLOCK_SIZE * n_neigh,
-                n_dist + n_blocks * BLOCK_SIZE * n_neigh, n_neigh, return_distance);
-        }
-    }
+    status =
+        da_knn<T>::kneighbors_compute(n_queries, n_features, X_test_temp, ldx_test_temp,
+                                      n_ind, n_dist, n_neigh, return_distance);
 
     if (this->order == column_major) {
 // If da_int is 64 bit, cast to double
@@ -401,11 +526,10 @@ da_status da_knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_
             da_blas::imatcopy('T', n_neigh, n_queries, 1.0, n_dist, n_neigh, n_queries);
         }
     } else {
-
         delete[] (utility_ptr1);
     }
 
-    return da_status_success;
+    return status;
 }
 
 /*
