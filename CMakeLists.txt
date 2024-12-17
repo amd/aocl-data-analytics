@@ -419,7 +419,7 @@ endif()
 if(NOT USE_EXISTING_DA)
   # Install examples and README files
   install(FILES README.md DESTINATION ${CMAKE_INSTALL_PREFIX})
-  install(FILES DESTINATION ${CMAKE_INSTALL_PREFIX})
+  install(FILES License DESTINATION ${CMAKE_INSTALL_PREFIX})
   install(
     DIRECTORY tests/examples/
     DESTINATION examples
