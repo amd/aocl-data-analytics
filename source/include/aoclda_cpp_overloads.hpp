@@ -34,15 +34,6 @@
 /* da_handle overloaded functions */
 template <class T>
 da_status da_handle_init(da_handle *handle, da_handle_type handle_type);
-template <>
-da_status da_handle_init<double>(da_handle *handle, da_handle_type handle_type) {
-    return da_handle_init_d(handle, handle_type);
-}
-template <>
-da_status da_handle_init<float>(da_handle *handle, da_handle_type handle_type) {
-    return da_handle_init_s(handle, handle_type);
-}
-
 inline da_status da_handle_get_result(da_handle handle, da_result query, da_int *dim,
                                       double *result) {
     return da_handle_get_result_d(handle, query, dim, result);
@@ -264,12 +255,6 @@ inline da_status da_correlation_matrix(da_order order, da_int n_rows, da_int n_c
 
 /* Linear model overloaded functions */
 template <class T> da_status da_linmod_select_model(da_handle handle, linmod_model mod);
-template <> da_status da_linmod_select_model<double>(da_handle handle, linmod_model mod) {
-    return da_linmod_select_model_d(handle, mod);
-}
-template <> da_status da_linmod_select_model<float>(da_handle handle, linmod_model mod) {
-    return da_linmod_select_model_s(handle, mod);
-}
 
 inline da_status da_linmod_define_features(da_handle handle, da_int n_samples,
                                            da_int n_features, const float *X,
@@ -283,24 +268,9 @@ inline da_status da_linmod_define_features(da_handle handle, da_int n_samples,
 }
 
 template <class T> da_status da_linmod_fit(da_handle handle);
-template <> da_status da_linmod_fit<double>(da_handle handle) {
-    return da_linmod_fit_d(handle);
-}
-template <> da_status da_linmod_fit<float>(da_handle handle) {
-    return da_linmod_fit_s(handle);
-}
 
 template <class T>
 da_status da_linmod_fit_start(da_handle handle, da_int ncoef, const T *coefs);
-template <>
-da_status da_linmod_fit_start<double>(da_handle handle, da_int ncoef,
-                                      const double *coefs) {
-    return da_linmod_fit_start_d(handle, ncoef, coefs);
-}
-template <>
-da_status da_linmod_fit_start<float>(da_handle handle, da_int ncoef, const float *coefs) {
-    return da_linmod_fit_start_s(handle, ncoef, coefs);
-}
 
 inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
                                           const double *X, double *predictions,
@@ -368,15 +338,7 @@ inline da_status da_pca_set_data(da_handle handle, da_int n_samples, da_int n_fe
     return da_pca_set_data_s(handle, n_samples, n_features, A, lda);
 }
 
-template <class T> inline da_status da_pca_compute(da_handle handle);
-
-template <> inline da_status da_pca_compute<double>(da_handle handle) {
-    return da_pca_compute_d(handle);
-}
-
-template <> inline da_status da_pca_compute<float>(da_handle handle) {
-    return da_pca_compute_s(handle);
-}
+template <class T> da_status da_pca_compute(da_handle handle);
 
 inline da_status da_pca_transform(da_handle handle, da_int m_samples, da_int m_features,
                                   const double *X, da_int ldx, double *X_transform,
@@ -429,15 +391,7 @@ inline da_status da_kmeans_set_init_centres(da_handle handle, const double *C,
     return da_kmeans_set_init_centres_d(handle, C, ldc);
 }
 
-template <class T> inline da_status da_kmeans_compute(da_handle handle);
-
-template <> inline da_status da_kmeans_compute<double>(da_handle handle) {
-    return da_kmeans_compute_d(handle);
-}
-
-template <> inline da_status da_kmeans_compute<float>(da_handle handle) {
-    return da_kmeans_compute_s(handle);
-}
+template <class T> da_status da_kmeans_compute(da_handle handle);
 
 inline da_status da_kmeans_transform(da_handle handle, da_int m_samples,
                                      da_int m_features, const double *X, da_int ldx,
@@ -476,13 +430,7 @@ inline da_status da_tree_set_training_data(da_handle handle, da_int n_samples,
     return da_tree_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx, y);
 }
 
-template <typename T> inline da_status da_tree_fit(da_handle handle);
-template <> inline da_status da_tree_fit<double>(da_handle handle) {
-    return da_tree_fit_d(handle);
-}
-template <> inline da_status da_tree_fit<float>(da_handle handle) {
-    return da_tree_fit_s(handle);
-}
+template <typename T> da_status da_tree_fit(da_handle handle);
 
 inline da_status da_tree_predict(da_handle handle, da_int n_samples, da_int n_features,
                                  const double *X_test, da_int ldx_test, da_int *y_pred) {
@@ -552,13 +500,7 @@ inline da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
                                          y);
 }
 
-template <typename T> inline da_status da_forest_fit(da_handle handle);
-template <> inline da_status da_forest_fit<double>(da_handle handle) {
-    return da_forest_fit_d(handle);
-}
-template <> inline da_status da_forest_fit<float>(da_handle handle) {
-    return da_forest_fit_s(handle);
-}
+template <typename T> da_status da_forest_fit(da_handle handle);
 
 inline da_status da_forest_predict(da_handle handle, da_int n_samples, da_int n_features,
                                    const double *X_test, da_int ldx_test,
@@ -705,14 +647,6 @@ inline da_status da_knn_kneighbors(da_handle handle, da_int n_queries, da_int n_
 
 template <class T>
 da_status da_knn_classes(da_handle handle, da_int *n_classes, da_int *classes);
-template <>
-da_status da_knn_classes<double>(da_handle handle, da_int *n_classes, da_int *classes) {
-    return da_knn_classes_d(handle, n_classes, classes);
-}
-template <>
-da_status da_knn_classes<float>(da_handle handle, da_int *n_classes, da_int *classes) {
-    return da_knn_classes_s(handle, n_classes, classes);
-}
 
 inline da_status da_knn_predict_proba(da_handle handle, da_int n_queries,
                                       da_int n_features, const double *X_test,
@@ -741,29 +675,24 @@ inline da_status da_check_data(da_order order, da_int n_rows, da_int n_cols,
                                const double *X, da_int ldx) {
     return da_check_data_d(order, n_rows, n_cols, X, ldx);
 }
-
 inline da_status da_check_data(da_order order, da_int n_rows, da_int n_cols,
                                const float *X, da_int ldx) {
     return da_check_data_s(order, n_rows, n_cols, X, ldx);
 }
-
 inline da_status da_switch_order_copy(da_order order_X, da_int n_rows, da_int n_cols,
                                       const float *X, da_int ldx, float *Y, da_int ldy) {
     return da_switch_order_copy_s(order_X, n_rows, n_cols, X, ldx, Y, ldy);
 }
-
 inline da_status da_switch_order_copy(da_order order_X, da_int n_rows, da_int n_cols,
                                       const double *X, da_int ldx, double *Y,
                                       da_int ldy) {
     return da_switch_order_copy_d(order_X, n_rows, n_cols, X, ldx, Y, ldy);
 }
-
 inline da_status da_switch_order_in_place(da_order order_X_in, da_int n_rows,
                                           da_int n_cols, float *X, da_int ldx_in,
                                           da_int ldx_out) {
     return da_switch_order_in_place_s(order_X_in, n_rows, n_cols, X, ldx_in, ldx_out);
 }
-
 inline da_status da_switch_order_in_place(da_order order_X_in, da_int n_rows,
                                           da_int n_cols, double *X, da_int ldx_in,
                                           da_int ldx_out) {

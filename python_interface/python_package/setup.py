@@ -49,12 +49,7 @@ class spec_bdist_wheel(bdist_wheel):
         if 'manylinux' in str(platform_tag):
             platform_tag = 'linux_x86_64'
 
-
         return python_tag, abi_tag, platform_tag
-
-    def finalize_options(self):
-        bdist_wheel.finalize_options(self)
-        self.root_is_pure = False
 
 # List of all dependent libraries that were copied in the python_package install
 lib_extensions = ['.so', '.dll', '.lib', '.pyd']

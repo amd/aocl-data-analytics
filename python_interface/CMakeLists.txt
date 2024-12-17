@@ -79,23 +79,14 @@ install(
 if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
   if(WIN32)
     # Install Fortran runtimes
-    set(RUNTIME_LIBS
-        flang.lib
-        flangrti.lib
-        libomp.lib
-        ompstub.lib
-        libpgmath.lib)
-	set(RUNTIME_DLLS
-        flang.dll
-        flangrti.dll
-        libomp.dll
-        ompstub.dll
-        pgmath.dll)
+    set(RUNTIME_LIBS flang.lib flangrti.lib libomp.lib ompstub.lib
+                     libpgmath.lib)
+    set(RUNTIME_DLLS flang.dll flangrti.dll libomp.dll ompstub.dll pgmath.dll)
     foreach(LIB ${RUNTIME_LIBS})
       install(FILES "$ENV{FLANG_COMPILER}/lib/${LIB}"
               DESTINATION python_package/aoclda)
     endforeach()
-	foreach(DLL ${RUNTIME_DLLS})
+    foreach(DLL ${RUNTIME_DLLS})
       install(FILES "$ENV{FLANG_COMPILER}/bin/${DLL}"
               DESTINATION python_package/aoclda)
     endforeach()
@@ -155,7 +146,9 @@ endif()
 # Build the Python bindings
 add_subdirectory(python_package)
 
-# create the wheel after installation
+# Create the wheel after installation
 install(
   CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel ${CMAKE_INSTALL_PREFIX}/python_package/ --no-deps --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package)"
 )
+
+install(CODE "include(\"${CMAKE_CURRENT_SOURCE_DIR}/repairwheel.cmake\")")

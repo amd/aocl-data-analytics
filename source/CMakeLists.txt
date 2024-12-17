@@ -40,7 +40,7 @@ set(DA_DATA
 set(DA_MISC core/utilities/miscellaneous.cpp)
 set(DA_METRICS core/metrics/pairwise_distances_public.cpp)
 set(DA_UTILS_INTERNAL core/utilities/da_utils.cpp)
-set(DA_UTILS core/utilities/utils_public.cpp)
+set(DA_UTILS core/utilities/utils_public.cpp core/utilities/aoclda_cpp_overloads.cpp)
 set(DA_NEAREST_NEIGHBORS core/nearest_neighbors/knn_public.cpp)
 
 set(DA_CORE_SRC
