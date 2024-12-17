@@ -2,10 +2,10 @@ AOCL Data Analytics Library
 ===========================
 
 The AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing
-optimized building blocks for data analysis. It is written with a `C`-compatible
+optimized building blocks for data analysis and machine learning. It is written with a `C`-compatible
 interface to make it as seamless as possible to integrate with the library from
 whichever programming language you are using. For further details on the library
-contents, please refer to the online help or PDF user guide.
+contents, please refer to the online help or PDF user guide. Note that prebuilt binaries for AOCL-DA are available from https://www.amd.com/en/developer/aocl.html.
 
 The intended workflow for using the library is as follows:
 
@@ -26,6 +26,10 @@ Building the Library
 AOCL-DA is built with CMake, with supported compilers GNU and AOCC on Linux and MSVC on MS Windows.
 
 AOCL-DA is dependent on AOCL-BLAS, AOCL-LAPACK, AOCL-Sparse and AOCL-Utils.
+
+AOCL-DA is also dependent on the [Boost.Sort C++ Library](https://www.boost.org/doc/libs/1_86_0/libs/sort/doc/html/index.html).  Instructions for installing Boost on Linux can be found [here](https://www.boost.org/doc/libs/1_86_0/more/getting_started/unix-variants.html).  Instructions for installing Boost on Windows can be found [here](https://www.boost.org/doc/libs/1_86_0/more/getting_started/windows.html).  Documentation for Boost CMake support infrastructure can be found [here](https://github.com/boostorg/cmake) and [here](https://cmake.org/cmake/help/latest/module/FindBoost.html).
+
+For example, one way of including a Boost download in your CMake build of AOCL-DA would be to add the following arguments to the CMake configure step: `-DBoost_ROOT=${BASE_DIR}/DA-projects/aocl-da/external/boost-1.86.0 -DBoost_NO_BOOST_CMAKE=ON`.  However, if you have Boost installed on your system path, CMake should be able to locate it automatically.
 
 Building on Linux
 -----------------

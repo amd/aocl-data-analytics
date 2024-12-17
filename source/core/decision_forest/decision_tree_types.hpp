@@ -37,6 +37,8 @@ enum score_method {
     misclassification,
 };
 
+enum sort_method { stl_sort = 0, boost_sort };
+
 enum tree_order {
     depth_first = 0,
     breadth_first,

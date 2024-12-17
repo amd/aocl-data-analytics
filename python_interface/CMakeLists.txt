@@ -34,101 +34,35 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 # Note on Windows we need something like: set
 # CMAKE_PREFIX_PATH=C:\path\to\python\site-packages\pybind11\share\cmake\pybind11;%CMAKE_PREFIX_PATH%
 
-# Install the full python package as well as all the dependent libraries in
-# python_package/aoclda. The BLAS_SERIAL and LAPACK_SERIAL variables are only
-# set in Windows SMP builds to allow aoclsparse to have its dependent libraries
-set(BASE_DEP_LIBS
-    ${BLAS}
-    ${LAPACK}
-    ${BLAS_SERIAL}
-    ${LAPACK_SERIAL}
-    ${SPARSE}
-    ${UTILS}
-    ${UTILS_CPUID})
-set(DEP_LIBS "")
-
-if(WIN32)
-  # create the list of all the libraries and their dll versions
-  foreach(LIB ${BASE_DEP_LIBS})
-    set(DLL ${LIB})
-    cmake_path(REPLACE_EXTENSION DLL ".dll")
-    list(APPEND DEP_LIBS ${LIB} ${DLL})
-  endforeach()
-else()
-  # create the list of all the libraries and their symlink versions
-  foreach(LIB ${BASE_DEP_LIBS})
-    file(GLOB LIB_ALL_SYM "${LIB}*")
-    list(APPEND DEP_LIBS ${LIB_ALL_SYM})
-  endforeach()
-endif()
-
 set(CMAKE_INSTALL_MODE COPY)
 install(DIRECTORY python_package/aoclda DESTINATION python_package)
 install(FILES python_package/setup.py DESTINATION python_package)
-install(
-  FILES ${DEP_LIBS}
-  DESTINATION python_package/aoclda
-  OPTIONAL)
-# Optional accounts for lack of a dll in case that static utils was linked)
-install(
-  TARGETS aocl-da
-  ARCHIVE DESTINATION python_package/aoclda
-  LIBRARY DESTINATION python_package/aoclda
-  RUNTIME DESTINATION python_package/aoclda)
 
-if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-  if(WIN32)
-    # Install Fortran runtimes
-    set(RUNTIME_LIBS flang.lib flangrti.lib libomp.lib ompstub.lib
-                     libpgmath.lib)
-    set(RUNTIME_DLLS flang.dll flangrti.dll libomp.dll ompstub.dll pgmath.dll)
-    foreach(LIB ${RUNTIME_LIBS})
-      install(FILES "$ENV{FLANG_COMPILER}/lib/${LIB}"
-              DESTINATION python_package/aoclda)
-    endforeach()
-    foreach(DLL ${RUNTIME_DLLS})
-      install(FILES "$ENV{FLANG_COMPILER}/bin/${DLL}"
-              DESTINATION python_package/aoclda)
-    endforeach()
-  else()
-    # Find where the Flang runtime folder is
-    string(REPLACE ":" ";" LD_LIBRARY_PATH_LIST $ENV{LD_LIBRARY_PATH})
-    find_path(
-      FLANG_RUNTIME_DIR
-      NAMES libflang.so
-      HINTS ${LD_LIBRARY_PATH_LIST})
-    if(NOT FLANG_RUNTIME_DIR)
-      message(FATAL_ERROR "Flang runtimes not found")
-    endif()
-    # Lists of required runtimes and symlinks
-    set(RUNTIME_LIBS libflang.so libflangrti.so libpgmath.so libompstub.so
-                     libomp.so)
-    set(SYMLINK_LIBS libamdlibm.so libamdalloc.so)
-    # Install the runtimes
-    foreach(LIB ${RUNTIME_LIBS})
-      install(FILES "${FLANG_RUNTIME_DIR}/${LIB}"
-              DESTINATION python_package/aoclda)
-    endforeach()
-    # Recreate the symlinks
-    foreach(LIB ${SYMLINK_LIBS})
-      get_filename_component(LIB_TARGET "${FLANG_RUNTIME_DIR}/${LIB}" REALPATH)
-      get_filename_component(LIB_TARGET_NAME ${LIB_TARGET} NAME)
-      install(FILES ${LIB_TARGET} DESTINATION python_package/aoclda)
-      install(
-        CODE "execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/${LIB_TARGET_NAME} ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/${LIB})"
-      )
-    endforeach()
-
-  endif()
+if(NOT USE_EXISTING_DA)
+  # Install aocl-da libraries in a temporary folder
+  install(
+    TARGETS aocl-da
+    ARCHIVE DESTINATION tmp
+    LIBRARY DESTINATION tmp
+    RUNTIME DESTINATION tmp)
 endif()
 
 if(NOT WIN32)
   find_program(PATCHELF name patchelf REQUIRED)
-  # Change the runpath of aocl-da to $ORIGIN, making it look for its
-  # dependencies in its own directory $ORIGIN is evaluated at runtime by the
-  # interpreter
+
+  if(USE_EXISTING_DA)
+    # Copy libaocl-da.so into a temporary folder so we can remove the libompstub
+    # dependency
+    install(FILES ${DA} DESTINATION tmp)
+  endif()
+
   install(
-    CODE "execute_process(COMMAND ${PATCHELF} --set-rpath \$ORIGIN ${CMAKE_INSTALL_PREFIX}/python_package/aoclda/libaocl-da.so)"
+    CODE "execute_process(COMMAND ${PATCHELF} --set-rpath \$ORIGIN ${CMAKE_INSTALL_PREFIX}/tmp/libaocl-da.so)"
+  )
+
+  # Remove libompstub from dependencies
+  install(
+    CODE "execute_process(COMMAND ${PATCHELF} --remove-needed libompstub.so ${CMAKE_INSTALL_PREFIX}/tmp/libaocl-da.so)"
   )
 endif()
 
@@ -150,5 +84,10 @@ add_subdirectory(python_package)
 install(
   CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel ${CMAKE_INSTALL_PREFIX}/python_package/ --no-deps --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package)"
 )
+
+install(CODE "set(BLAS \"${BLAS}\")")
+install(CODE "set(LAPACK \"${LAPACK}\")")
+install(CODE "set(SPARSE \"${SPARSE}\")")
+install(CODE "set(UTILS \"${UTILS}\")")
 
 install(CODE "include(\"${CMAKE_CURRENT_SOURCE_DIR}/repairwheel.cmake\")")

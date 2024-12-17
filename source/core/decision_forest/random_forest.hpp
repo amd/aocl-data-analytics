@@ -171,7 +171,7 @@ template <typename T> da_status random_forest<T>::fit() {
     // Read optional parameters
     bool opt_pass = true, bootstrap;
     da_int max_depth, min_node_sample, method, build_order, nfeat_split, bootstrap_opt,
-        feat_select;
+        feat_select, sort_method;
     T feat_thresh, min_split_score, min_improvement, prop;
     std::string opt_val;
     opt_pass &= this->opts.get("number of trees", n_tree) == da_status_success;
@@ -195,6 +195,8 @@ template <typename T> da_status random_forest<T>::fit() {
     opt_pass &= this->opts.get("bootstrap", opt_val, bootstrap_opt) == da_status_success;
     opt_pass &= this->opts.get("bootstrap samples factor", prop) == da_status_success;
     opt_pass &= this->opts.get("block size", block_size) == da_status_success;
+    opt_pass &=
+        this->opts.get("sorting method", opt_val, sort_method) == da_status_success;
     if (!opt_pass)
         return da_error_trace(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                               "Unexpected error while reading the optional parameters.");
@@ -251,14 +253,15 @@ template <typename T> da_status random_forest<T>::fit() {
 #pragma omp parallel for shared(                                                         \
         n_failed_tree, forest, n_tree, max_depth, min_node_sample, method, prn_times,    \
             build_order, seed_tree, min_split_score, feat_thresh, min_improvement,       \
-            n_samples, n_features, X, ldx, y, n_class, n_obs, nfeat_split,               \
-            bootstrap) default(none) schedule(dynamic)
+            n_samples, n_features, X, ldx, y, n_class, n_obs, nfeat_split, bootstrap,    \
+            sort_method) default(none) schedule(dynamic)
     for (da_int i = 0; i < n_tree; i++) {
         // Set tree optional parameters
         try {
-            forest[i] = std::make_unique<decision_tree<T>>(decision_tree(
-                max_depth, min_node_sample, method, prn_times, build_order, nfeat_split,
-                seed_tree[i], min_split_score, feat_thresh, min_improvement, bootstrap));
+            forest[i] = std::make_unique<decision_tree<T>>(
+                decision_tree(max_depth, min_node_sample, method, prn_times, build_order,
+                              nfeat_split, seed_tree[i], sort_method, min_split_score,
+                              feat_thresh, min_improvement, bootstrap));
         } catch (std::bad_alloc &) {
 #pragma omp atomic
             n_failed_tree++;

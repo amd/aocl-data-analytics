@@ -356,6 +356,9 @@ const dectree_param_t dectree_param_pos[] = {
     {"gen200x10_depth2", "gen_200x10_3class", {{"maximum depth", 1}}, {{"scoring function", "gini"}}, {}, {}, 0.6},
     {"gen_500x20_depth3", "gen_500x20_4class", {{"maximum depth", 2}}, {{"scoring function", "gini"}}, {}, {}, 0.7},
 
+    // sorting method
+    {"iris_gini", "iris", {}, {{"scoring function", "gini"}, {"sorting method", "stl"}}, {}, {}, 0.95},
+    {"gen1_entropy", "gen1", {}, {{"scoring function", "cross-entropy"}, {"sorting method", "stl"}}, {}, {}, 0.93},
 };
 // clang-format on
 

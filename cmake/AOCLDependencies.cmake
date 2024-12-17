@@ -51,6 +51,10 @@ function(linalg_libs)
     if(UTILS_LIB STREQUAL "")
       set(UTILS_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-utils/lib)
     endif()
+    if(DA_LIB STREQUAL "")
+      # Only used if we are building Python with an existing DA build
+      set(DA_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-da/lib/${INT_LIB})
+    endif()
   else()
     if(BLAS_INCLUDE_DIR STREQUAL "")
       set(BLAS_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
@@ -73,6 +77,10 @@ function(linalg_libs)
     if(UTILS_LIB STREQUAL "")
       set(UTILS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
+    if(DA_LIB STREQUAL "")
+      # Only used if we are building Python with an existing DA build
+      set(DA_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+    endif()
   endif()
 
   # Set names of the libraries we search for
@@ -84,8 +92,9 @@ function(linalg_libs)
       set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
       set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
       if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-        # On Windows, certain SMP builds need both serial and threaded BLAS/LAPACK in
-        # order to build the Python wheel, since aoclsparse requires serial versions
+        # On Windows, certain SMP builds need both serial and threaded
+        # BLAS/LAPACK in order to build the Python wheel, since aoclsparse
+        # requires serial versions
         set(BLAS_NAME_SERIAL "AOCL-LibBlis-Win-dll")
         set(LAPACK_NAME_SERIAL "AOCL-LibFlame-Win-dll")
         find_library(
@@ -104,6 +113,8 @@ function(linalg_libs)
     set(SPARSE_NAME "aoclsparse")
     set(UTILS_NAME "libaoclutils")
     set(UTILS_CPUID_NAME "au_cpuid")
+    set(DA_NAME "aocl-da") # Only used if we are building Python with an
+                           # existing DA build
   else(WIN32) # linux
     set(CMAKE_FIND_LIBRARY_PREFIXES "lib")
     if(NOT BUILD_SHARED_LIBS)
@@ -117,6 +128,8 @@ function(linalg_libs)
     set(SPARSE_NAME "aoclsparse")
     set(UTILS_NAME "aoclutils")
     set(UTILS_CPUID_NAME "au_cpuid")
+    set(DA_NAME "aocl-da") # Only used if we are building Python with an
+                           # existing DA build
   endif()
 
   if(BLAS_LIB STREQUAL "")
@@ -174,6 +187,19 @@ function(linalg_libs)
         PARENT_SCOPE)
   endif()
 
+  if(USE_EXISTING_DA)
+    if(DA_LIB STREQUAL "")
+      find_library(
+        DA name ${DA_NAME}
+        PATHS ${DA_LIB_DIR} REQUIRED
+        NO_DEFAULT_PATH)
+    else()
+      set(DA
+          ${DA_LIB}
+          PARENT_SCOPE)
+    endif()
+  endif()
+
   include_directories(${LAPACK_INCLUDE_DIR})
   include_directories(${BLAS_INCLUDE_DIR})
   include_directories(${SPARSE_INCLUDE_DIR})
@@ -195,5 +221,6 @@ set(LAPACK)
 set(SPARSE)
 set(UTILS)
 set(UTILS_CPUID)
+set(DA)
 
 linalg_libs()

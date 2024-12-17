@@ -30,6 +30,7 @@
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
 #include "gtest/gtest.h"
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <vector>
