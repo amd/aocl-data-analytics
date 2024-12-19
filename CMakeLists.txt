@@ -285,7 +285,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
   endif()
-  set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
+  set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc;-Wno-nan-infinity-disabled")
 
   if(USE_AVX512 AND (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang"))
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX512")
@@ -304,7 +304,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
   set(COMPILER_FLAGS_COMMON
-      "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
+      "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion:-Wno-nan-infinity-disabled>;"
   )
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     set(COMPILER_FLAGS_COMMON
