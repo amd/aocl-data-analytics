@@ -59,10 +59,14 @@ endif()
 # Create the pybind11 modules
 pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp
                     bindings/utilities_py.cpp)
-# Do not add any new directories here. This is to keep the python
-# wrapper separate from the main library
+# Do not add any new directories here. This is to keep the python wrapper
+# separate from the main library
 target_include_directories(_aoclda PRIVATE ${CMAKE_SOURCE_DIR}/source/include)
-target_link_libraries(_aoclda PRIVATE aocl-da)
+if(USE_EXISTING_DA)
+  target_link_libraries(_aoclda PRIVATE ${DA})
+else()
+  target_link_libraries(_aoclda PRIVATE aocl-da)
+endif()
 if(BUILD_SMP OR UNIX)
   target_link_libraries(_aoclda PRIVATE OpenMP::OpenMP_CXX)
 endif()

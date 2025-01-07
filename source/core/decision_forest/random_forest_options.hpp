@@ -60,6 +60,11 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts,
                          "gini"));
         status = opts.register_opt(os);
 
+        os = std::make_shared<OptionString>(
+            OptionString("sorting method", "Select sorting method to use.",
+                         {{"stl", stl_sort}, {"boost", boost_sort}}, "boost"));
+        status = opts.register_opt(os);
+
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "maximum depth", "Set the maximum depth of trees.", 0, lbound_t::greaterequal,
             (da_int)(std::numeric_limits<da_int>::digits) - 2, ubound_t::lessequal, 29));

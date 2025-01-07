@@ -65,6 +65,10 @@ class decision_tree():
         feat_thresh (float, optional): Minimum difference in feature value required for splitting.
             Default 1.0e-06
 
+        sort_method  (str, optional): Select sorting to use. It can take the values
+            'boost', or 'stl'.
+            Default = 'boost'.
+
         precision (str, optional): Whether to initialize the PCA object in double or
             single precision. It can take the values 'single' or 'double'.
             Default = 'double'.
@@ -76,16 +80,19 @@ class decision_tree():
                  criterion='gini',
                  seed=-1, max_depth=29,
                  min_samples_split=2, build_order='breadth first',
+                 sort_method='boost',
                  max_features=0, min_impurity_decrease=0.0, min_split_score=0.0,
                  feat_thresh=1.0e-06, check_data=False):
 
         self.decision_tree_double = pybind_decision_tree(criterion=criterion,
                          seed=seed, max_depth=max_depth,
                          min_samples_split=min_samples_split, build_order=build_order,
+                         sort_method = sort_method,
                          max_features=max_features, precision="double", check_data=check_data)
         self.decision_tree_single = pybind_decision_tree(criterion=criterion,
                          seed=seed, max_depth=max_depth,
                          min_samples_split=min_samples_split, build_order=build_order,
+                         sort_method = sort_method,
                          max_features=max_features, precision="single", check_data=check_data)
         self.decision_tree = self.decision_tree_double
 
@@ -119,7 +126,10 @@ class decision_tree():
             self.decision_tree = self.decision_tree_single
             self.decision_tree_double = None
 
-        return self.decision_tree.pybind_fit(X, y, self.min_impurity_decrease, self.min_split_score, self.feat_thresh)
+        return self.decision_tree.pybind_fit(X, y,
+                                             self.min_impurity_decrease,
+                                             self.min_split_score,
+                                             self.feat_thresh)
 
     def score(self, X, y):
         """

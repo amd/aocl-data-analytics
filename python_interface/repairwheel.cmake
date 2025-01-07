@@ -27,17 +27,38 @@ file(GLOB wheel_files "${CMAKE_INSTALL_PREFIX}/python_package/*.whl")
 
 foreach(file ${wheel_files})
   if(WIN32)
-    execute_process(
-      COMMAND delvewheel repair ${file}
-              --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package/repaired --add-path ${CMAKE_INSTALL_PREFIX}/python_package/aoclda)
-  else()
-    # Repair the wheel using auditwheel
-
+    execute_process(COMMAND delvewheel show ${file} --add-path
+                            ${CMAKE_INSTALL_PREFIX}/tmp)
     execute_process(
       COMMAND
-        auditwheel repair ${file} --plat
-        linux_x86_64 --wheel-dir
-        ${CMAKE_INSTALL_PREFIX}/python_package/repaired)
+        delvewheel repair ${file} --wheel-dir
+        ${CMAKE_INSTALL_PREFIX}/python_package --add-path
+        ${CMAKE_INSTALL_PREFIX}/tmp)
+  else()
+
+    get_filename_component(SPARSE_DIR ${SPARSE} DIRECTORY)
+    get_filename_component(BLAS_DIR ${BLAS} DIRECTORY)
+    get_filename_component(LAPACK_DIR ${LAPACK} DIRECTORY)
+    get_filename_component(UTILS_DIR ${UTILS} DIRECTORY)
+
+    set(ENV{LD_LIBRARY_PATH}
+        "${SPARSE_DIR}:${LAPACK_DIR}:${BLAS_DIR}:${UTILS_DIR}:${CMAKE_INSTALL_PREFIX}/tmp:$ENV{LD_LIBRARY_PATH}"
+    )
+    message(NOTICE "LD_LIBRARY_PATH             $ENV{LD_LIBRARY_PATH}")
+    # Repair the wheel using auditwheel
+    execute_process(COMMAND auditwheel show ${file})
+    execute_process(
+      # Future auditwheel versions are likely to permit wildcards - for now we
+      # also explicitly list the excluded libraries
+      COMMAND
+        auditwheel repair ${file} --plat linux_x86_64 --wheel-dir
+        ${CMAKE_INSTALL_PREFIX}/python_package --exclude "libc.so" --exclude
+        "libc.so.6" --exclude "libgcc_s.so.1" --exclude "libstdc++.so.6"
+        --exclude "libstdc++.so.8" --exclude "libgcc_s.so.*" --exclude
+        "libc.so.*" --exclude "librt.so.*" --exclude "librt.so.1" --exclude
+        "libdl.so.*" --exclude "libdl.so.2" --exclude
+        "libpthread.so.*" --exclude "libpthread.so.0" --exclude
+        "libm.so.*" --exclude "libm.so.6")
 
   endif()
 endforeach()

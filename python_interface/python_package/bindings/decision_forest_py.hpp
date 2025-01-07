@@ -44,7 +44,8 @@ class decision_tree : public pyda_handle {
   public:
     decision_tree(da_int seed = -1, da_int max_depth = 29, da_int max_features = 0,
                   std::string criterion = "gini", da_int min_samples_split = 2,
-                  std::string build_order = "breadth first", std::string prec = "double",
+                  std::string build_order = "breadth first",
+                  std::string sort_method = "boost", std::string prec = "double",
                   bool check_data = false) {
         da_status status;
         if (prec == "double") {
@@ -65,6 +66,8 @@ class decision_tree : public pyda_handle {
         status = da_options_set(handle, "node minimum samples", min_samples_split);
         exception_check(status);
         status = da_options_set(handle, "tree building order", build_order.data());
+        exception_check(status);
+        status = da_options_set(handle, "sorting method", sort_method.data());
         exception_check(status);
         if (check_data == true) {
             std::string yes_str = "yes";

@@ -30,6 +30,9 @@ Decision tree Python test script
 import numpy as np
 import pytest
 from aoclda.decision_tree import decision_tree
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+import time
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
@@ -62,3 +65,41 @@ def test_decision_tree_functionality(numpy_precision, numpy_order):
     print(f"predictions: [{pred[0]:d}]")
     print(f"probabilities: [{proba[0,0]:.3f}, {proba[0,1]:.3f}]")
     print(f"score: {score:.3f}")
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+@pytest.mark.parametrize("iseed, expected_score", [(42,0.918), (66, 0.972)])
+@pytest.mark.parametrize("sort_method", ["boost", "stl"])
+def test_decision_tree_synthetic(numpy_precision, numpy_order,
+                                 iseed, expected_score, sort_method):
+    """
+    Synthetic problem with 5,000 observations and 5 features
+    """
+
+    X, y = make_classification(
+        n_samples=5_000, random_state=iseed, n_features=5)
+    X = X.reshape(X.shape, order=numpy_order).astype(numpy_precision)
+    y = y.reshape(y.shape, order=numpy_order).astype(numpy_precision)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.1, random_state=42)
+
+    print(type(X[0][0]))
+
+    seed = 747
+    tree_da = decision_tree(seed=seed, max_depth=5,
+                        max_features=5,
+                        sort_method=sort_method)
+    start_da_fit = time.time()
+    tree_da.fit(X_train, y_train)
+    time_da_fit = time.time() - start_da_fit
+    score = tree_da.score(X_test, y_test)
+
+    print("DA score: ", score)
+    print("expected score: ", expected_score)
+    print("Fit time: ", time_da_fit)
+    print("Number of leaves: ", tree_da.n_leaves)
+
+    tol = 1.0e-4
+    assert np.abs(score - expected_score) < tol

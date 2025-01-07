@@ -240,11 +240,11 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_decision_tree = m.def_submodule("decision_tree", "Decision trees.");
     py::class_<decision_tree, pyda_handle>(m_decision_tree, "pybind_decision_tree")
         .def(py::init<da_int, da_int, da_int, std::string, da_int, std::string,
-                      std::string &, bool>(),
+                      std::string, std::string &, bool>(),
              py::arg("seed") = -1, py::arg("max_depth") = 29, py::arg("max_features") = 0,
              py::arg("criterion") = "gini", py::arg("min_samples_split") = 2,
-             py::arg("build_order") = "breadth first", py::arg("precision") = "double",
-             py::arg("check_data") = false)
+             py::arg("build_order") = "breadth first", py::arg("sort_method") = "boost",
+             py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &decision_tree::fit<float>, "Fit the decision tree", "X"_a,
              "y"_a, py::arg("min_impurity_decrease") = 0.0,
              py::arg("min_split_score") = 0.0, py::arg("feat_thresh") = 0.0)

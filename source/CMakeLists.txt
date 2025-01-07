@@ -80,6 +80,7 @@ target_include_directories(
           ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
           ${CMAKE_SOURCE_DIR}/external/RALFit
           ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
+          ${Boost_INCLUDE_DIRS}
           )
 
 # Add definitions that depend on the CMake configuration.
