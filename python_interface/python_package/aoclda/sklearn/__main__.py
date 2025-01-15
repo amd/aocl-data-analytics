@@ -23,11 +23,41 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-set_source_files_properties(
-  ral_nlls_workspaces.f90 ral_nlls_fd.f90 ral_nlls_ciface
-  ral_nlls_internal.f90 ral_nlls_workspaces.f90
-  ral_nlls_dtrs_double.f90 ral_nlls_bounds.f90
-  PROPERTIES
-    COMPILE_FLAGS
-    "-Wno-compare-reals -Wno-unused-dummy-argument -Wno-unused-function -Wno-unused-label -Wno-character-truncation -Wno-unused-variable -Wno-maybe-uninitialized"
-)
+# pylint: disable = missing-module-docstring, import-outside-toplevel, no-member
+
+import sys
+from aoclda.sklearn import skpatch
+
+def main():
+    '''
+    Load the scikit-learn patch then execute the user's script
+    '''
+
+    import argparse
+    import runpy
+
+    parser = argparse.ArgumentParser(
+        description="AOCL-DA Extension for scikit-learn")
+
+    parser.add_argument(
+        "-m", action="store_true", dest="is_module")
+    parser.add_argument("name", help="Your Python script or module name")
+    parser.add_argument("args", nargs=argparse.REMAINDER,
+                        help="Command line arguments for your Python script")
+    parser.add_argument("--print-patch", default=True, dest="print_patched",
+                        help="Print welcome message", action=argparse.BooleanOptionalAction)
+
+    args = parser.parse_args()
+
+    # Call patch to replace scikit-learn symbols with AOCL-DA
+    skpatch(print_patched=args.print_patched)
+
+    sys.argv = [args.name] + args.args
+
+    if args.is_module:
+        runpy.run_module(args.name, run_name="__main__")
+    else:
+        runpy.run_path(args.name, run_name="__main__")
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,9 +29,7 @@
 #endif
 
 #include "aoclda.h"
-#include "aoclda_kmeans.h"
 #include "basic_handle.hpp"
-#include "callbacks.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"

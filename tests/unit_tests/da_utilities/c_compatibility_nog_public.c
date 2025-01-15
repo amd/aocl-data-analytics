@@ -134,7 +134,7 @@ da_status test_nlls(void) {
     da_status status = da_status_success;
     double lower_bounds[2] = {0.0, 1.0};
     double upper_bounds[2] = {1.0, 10.0};
-    double x[2] = {0.001, 1.0}; // Initial guess
+    double x[2] = {0.001, 0.9}; // Initial guess
     double info[100];
     da_int dim = 100;
     struct c_cb_params_type params = {.t = (double[]){1.0, 2.0, 4.0, 5.0, 8.0},
@@ -196,7 +196,8 @@ da_status test_nlls(void) {
         da_handle_destroy(&handle);
         return status;
     }
-    if (info[2] < 2 || info[0] > 90 || info[5] > 1) {
+
+    if (info[2] < 2 || info[0] > 90 || info[1] > 1) {
         status = da_status_incorrect_output;
     }
 

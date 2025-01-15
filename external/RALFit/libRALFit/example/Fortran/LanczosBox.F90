@@ -6,9 +6,14 @@
 ! examples/Fortran/LanczosBox.f90
 
 module lanczos_box_module
+
+#if SINGLE_PRECISION
+   use ral_nlls_single
+#else
    use ral_nlls_double
+#endif
+
    implicit none
-   integer, parameter :: wp = kind(0d0)
 
    type, extends(params_base_type) :: params_type
       real(wp), dimension(:), allocatable :: t ! The m data points t_i
@@ -18,6 +23,7 @@ module lanczos_box_module
 contains
 
    subroutine eval_r(status, n, m, x, r, params)
+      implicit none
       ! r_i = y_i - x_1 e^(-x_2 t_i) - x_3 e^(-x_4 t_i) - x_5 e^(-x_6 t_i)
       integer, intent(out) :: status
       integer, intent(in) :: n
@@ -41,13 +47,13 @@ contains
    end subroutine eval_r
 
    subroutine eval_J(status, n, m, x, J, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
       real(wp), dimension(*), intent(in) :: x
       real(wp), dimension(*), intent(out) :: J
       class(params_base_type), intent(inout) :: params
-      Integer :: r, c
 
       select type(params)
        type is(params_type)
@@ -66,6 +72,7 @@ contains
    end subroutine eval_J
 
    subroutine eval_HF(status, n, m, x, r, HF, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -104,9 +111,7 @@ program lanczos_box
    type(nlls_options) :: options
    type(nlls_inform) :: inform
 
-   real(wp), parameter :: tol = 1.0e-6_wp
-   real(wp), parameter, Dimension(6) :: x_exp = (/ 9.236787E-01, 1.873455, &
-      2.068291, 4.640229, -4.791827E-01, 1.873492 /)
+   real(wp), dimension(6) :: x_exp
    logical ok
    logical oki
 
@@ -115,7 +120,7 @@ program lanczos_box
    real(wp), allocatable :: x(:), xnew(:), blx(:), bux(:)
    type(params_type) :: params
    integer :: i
-   real(wp) :: tic, toc
+   real(wp) :: tic, toc, tol
 
    Continue
 
@@ -188,18 +193,26 @@ program lanczos_box
    bux(6) = 10.0
 
    options%print_level = 3
-   options%maxit = 100
    options%exact_second_derivatives = .true.
    options%model = 3
    options%type_of_method = 1
    options%inner_method = 1
    options%nlls_method = 4
    options%box_max_ntrfail = 2
+   if (wp == lp) then
+      options%maxit = 400
+      options%stop_g_absolute = 1.2e-1_wp
+      tol = 1.0e-4_wp
+      x_exp = (/6.3079E-1, 1.966, 2.0293, 4.686, -1.4685E-1, 2.0341/)
+   else
+      x_exp(:) = (/ 9.236787E-01, 1.873455, 2.068291, 4.640229, -4.791827E-01, 1.873492 /)
+      tol = 1.0e-6_wp
+   end if
 
    ! call fitting routine
    call cpu_time(tic)
    call nlls_solve(n,m,x,eval_r, eval_J, eval_HF, params, options, inform, &
-      lower_bounds=blx, upper_bounds=bux)
+                   lower_bounds=blx, upper_bounds=bux)
    if(inform%status.ne.0) then
       print *, "nlls_solve() returned with nonzero flag: ", inform%status
       goto 100
@@ -238,5 +251,4 @@ program lanczos_box
 
 99999 Format (5X,I3,1X,4(Es13.6e2,2X),A4)
 99998 Format (5X,A3,1X,4(A13,2X))
-99997 Format (5X,I3,16X,Es13.6e2)
 end program lanczos_box

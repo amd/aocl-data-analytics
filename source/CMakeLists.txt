@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -25,7 +25,7 @@
 set(LINMOD_SRC core/linear_model/linmod_public.cpp)
 set(BASIC_STATISTICS_SRC core/basic_statistics/basic_statistics_public.cpp)
 set(DA_FACTORIZATION core/factorization/pca_public.cpp)
-set(DA_CLUSTERING core/clustering/kmeans_public.cpp)
+set(DA_CLUSTERING core/clustering/kmeans_public.cpp core/clustering/dbscan_public.cpp)
 set(DA_DECISION_FOREST core/decision_forest/decision_tree_public.cpp
                        core/decision_forest/random_forest_public.cpp)
 set(NLLS_SRC core/nlls/nlls_public.cpp)
@@ -117,8 +117,9 @@ if(NOT WIN32)
 endif()
 
 # Create combined library from da_core and Fortran libraries
-add_library(aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:lbfgsb>
-                    $<TARGET_OBJECTS:lbfgsb_s> $<TARGET_OBJECTS:ral_nlls_object>)
+add_library(aocl-da $<TARGET_OBJECTS:da_core>
+                    $<TARGET_OBJECTS:lbfgsb> $<TARGET_OBJECTS:lbfgsb_s>
+                    ${nlls_obj_list})
 target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS}
                                       ${FORTRAN_RUNTIME})
 

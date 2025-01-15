@@ -6,10 +6,14 @@
 ! Attempts to fit the model y_i = x_1 e^(x_2 t_i)
 ! For parameters x_1 and x_2, and input data (t_i, y_i)
 module fndef_example
-   use ral_nlls_double, only : params_base_type
-   implicit none
 
-   integer, parameter :: wp = kind(0d0)
+#if SINGLE_PRECISION
+   use ral_nlls_single
+#else
+   use ral_nlls_double
+#endif
+
+   implicit none
 
    type, extends(params_base_type) :: params_type
       real(wp), dimension(:), allocatable :: t ! The m data points t_i
@@ -19,6 +23,7 @@ module fndef_example
 contains
    ! Calculate r_i(x; t_i, y_i) = x_1 e^(x_2 * t_i) - y_i
    subroutine eval_r(status, n, m, x, r, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -41,6 +46,7 @@ contains
    ! J_i1 = e^(x_2 * t_i)
    ! J_i2 = t_i x_1 e^(x_2 * t_i)
    subroutine eval_J(status, n, m, x, J, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -65,6 +71,7 @@ contains
    ! Where H_i = [ 0                t_i e^(x_2 t_i)    ]
    !             [ t_i e^(x_2 t_i)  t_i^2 x_1 e^(x_2 t_i)  ]
    subroutine eval_HF(status, n, m, x, r, HF, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -90,7 +97,6 @@ contains
 end module fndef_example
 
 program nlls_example
-   use ral_nlls_double
    use fndef_example
    implicit none
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,7 +27,7 @@
 aoclda.factorization module
 """
 
-from ._aoclda.clustering import pybind_kmeans
+from ._aoclda.clustering import pybind_kmeans, pybind_DBSCAN
 
 
 class kmeans():
@@ -120,8 +120,8 @@ class kmeans():
 
     def fit(self, A):
         """
-        Computes k-means clusters the supplied data matrix, optionally using the supplied centres as
-        the starting point.
+        Computes k-means clusters for the supplied data matrix, optionally using the supplied
+        centres as the starting point.
 
         Args:
             A (numpy.ndarray): The data matrix with which to compute the k-means clusters. It has
@@ -129,6 +129,7 @@ class kmeans():
 
         Returns:
             self (object): Returns the instance itself.
+
         """
         if A.dtype == "float32":
             self.kmeans = self.kmeans_single
@@ -171,3 +172,97 @@ class kmeans():
             numpy.ndarray of shape (k_samples, ): The labels.
         """
         return self.kmeans.pybind_predict(Y)
+
+class DBSCAN():
+    """
+    DBSCAN clustering.
+
+    Partition a data matrix into clusters using DBSCAN clustering.
+
+    Args:
+
+        min_samples (int, optional): Minimum number of neighborhood samples for a sample point to be
+            considered a core point. Default = 5.
+
+        metric (str, optional): The distance metric used to compare sample points. Reserved for
+            future use. Default = 'euclidean'.
+
+        algorithm (str, optional): The algorithm used to compute the clusters. Reserved for future
+            use. Default = 'brute'.
+
+        leaf_size (int, optional): Leaf size for the KD tree or ball tree algorithms. Reserved for
+            future use. Default = 30.
+
+        eps (float, optional): Maximum distance between two samples for them to be considered in
+            each other's neighborhood. Default = 0.5.
+
+        power (float, optional): Power used in computing the Minkowski metric. Reserved for future
+            use. Default = 2.0.
+
+        check_data (bool, optional): Whether to check the data for NaNs. Default = False.
+
+    """
+    def __init__(self, min_samples=5, metric='euclidean', algorithm='brute', leaf_size=30, eps=0.5,
+                 power=2.0, check_data=False):
+
+        self.DBSCAN_double = pybind_DBSCAN(min_samples, metric, algorithm, leaf_size, 'double',
+                                           check_data)
+        self.DBSCAN_single = pybind_DBSCAN(min_samples, metric, algorithm, leaf_size, 'single',
+                                           check_data)
+
+        self.eps=eps
+        self.power = power
+        self.DBSCAN = self.DBSCAN_double
+
+
+    @property
+    def labels(self):
+        """numpy.ndarray of shape (n_samples, ): The label (i.e. which cluster) of each sample point
+           in the data matrix.  A label of -1 indicates that the point has been classified as noise
+           and has not been assigned to a cluster."""
+        return self.DBSCAN.get_labels()
+
+    @property
+    def core_sample_indices(self):
+        """numpy.ndarray of shape (n_core_samples, ): The indices of the core samples in the data
+           matrix."""
+        return self.DBSCAN.get_core_sample_indices()
+
+    @property
+    def n_samples(self):
+        """int: The number of samples in the data matrix. """
+        return self.DBSCAN.get_n_samples()
+
+    @property
+    def n_core_samples(self):
+        """int: The number of core samples found in the data matrix. """
+        return self.DBSCAN.get_n_core_samples()
+
+    @property
+    def n_features(self):
+        """int: The number of features in the data matrix. """
+        return self.DBSCAN.get_n_features()
+
+    @property
+    def n_clusters(self):
+        """int: The number of clusters found. """
+        return self.DBSCAN.get_n_clusters()
+
+    def fit(self, A):
+        """
+        Computes DBSCAN clusters for the supplied data matrix.
+
+        Args:
+            A (numpy.ndarray): The data matrix with which to compute the DBSCAN clusters. It has
+              shape (n_samples, n_features).
+
+        Returns:
+            self (object): Returns the instance itself.
+        """
+
+        if A.dtype == "float32":
+            self.DBSCAN = self.DBSCAN_single
+            self.DBSCAN_double = None
+
+        self.DBSCAN.pybind_fit(A, self.eps, self.power)
+        return self

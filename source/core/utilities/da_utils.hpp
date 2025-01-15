@@ -93,7 +93,9 @@ da_status check_data(da_order order, da_int n_rows, da_int n_cols, const T *X,
             return da_status_invalid_leading_dimension;
         for (da_int i = 0; i < n_rows; i++) {
             for (da_int j = 0; j < n_cols; j++) {
-                if (std::isnan(X[i * ldx + j])) {
+                // x==x+1 check needed to get round a pybind1 + clang 18 Windows release build bug
+                if (std::isnan(X[i * ldx + j]) ||
+                    X[i * ldx + j] == X[i * ldx + j] + (T)1) {
                     return da_status_invalid_input;
                 }
             }
@@ -103,7 +105,8 @@ da_status check_data(da_order order, da_int n_rows, da_int n_cols, const T *X,
             return da_status_invalid_leading_dimension;
         for (da_int j = 0; j < n_cols; j++) {
             for (da_int i = 0; i < n_rows; i++) {
-                if (std::isnan(X[i + j * ldx])) {
+                if (std::isnan(X[i + j * ldx]) ||
+                    X[i + j * ldx] == X[i + j * ldx] + (T)1) {
                     return da_status_invalid_input;
                 }
             }

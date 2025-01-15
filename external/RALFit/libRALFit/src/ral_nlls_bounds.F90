@@ -2,7 +2,10 @@
 ! All rights reserved.
 ! Copyright (c) 2020, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
-Module ral_nlls_bounds
+
+#include "preprocessor.FPP"
+
+Module MODULE_PREC(ral_nlls_bounds)
 Implicit None
 Private
 ! Routines used by ral_nlls_internal
@@ -11,7 +14,7 @@ Public :: box_proj, box_projdir
 Contains
 
 Subroutine box_proj(w, n, x, xnew, dir, alpha)
-    Use ral_nlls_workspaces, Only: box_type, wp
+    Use MODULE_PREC(ral_nlls_workspaces), Only: box_type, wp
 !   Two modes
 !   If xnew and d are present, then project x+alpha*dir, otherwise just
 !   make x feasible (ignoring either dir or xnew) and return
@@ -63,7 +66,7 @@ Subroutine box_proj(w, n, x, xnew, dir, alpha)
   End Subroutine box_proj
 
   Subroutine box_projdir(w, n, x, dir, normg, sigma)
-    Use ral_nlls_workspaces, Only: wp, box_type
+    Use MODULE_PREC(ral_nlls_workspaces), Only: wp, box_type
     !   Calculate the projected dir and it's two-norm
     !   Assumes dir = -fdx
     !   If there is no box, then normPD=normg and if pdir is allocated then
@@ -102,4 +105,4 @@ Subroutine box_proj(w, n, x, xnew, dir, alpha)
   End Subroutine box_projdir
 
 
-End Module ral_nlls_bounds
+End Module MODULE_PREC(ral_nlls_bounds)

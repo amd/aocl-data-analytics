@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -39,6 +39,7 @@ import sklearn.metrics.pairwise as pairwise_sklearn
 import sklearn.neighbors as knn_sklearn
 from ._pca import PCA as PCA_da
 from ._kmeans import kmeans as kmeans_da
+from ._dbscan import DBSCAN as DBSCAN_da
 from ._linear_model import LinearRegression as LinearRegression_da
 from ._linear_model import Ridge as Ridge_da
 from ._linear_model import Lasso as Lasso_da
@@ -92,6 +93,9 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                'KMeans': {'pack': clustering_sklearn,
                           'sk_sym': getattr(clustering_sklearn, "KMeans"),
                           'da_sym': kmeans_da},
+                'DBSCAN': {'pack': clustering_sklearn,
+                          'sk_sym': getattr(clustering_sklearn, "DBSCAN"),
+                          'da_sym': DBSCAN_da},
                'DecisionTreeClassifier': {'pack': decision_tree_sklearn,
                                           'sk_sym': getattr(decision_tree_sklearn, 'DecisionTreeClassifier'),
                                           'da_sym': DecisionTreeClassifier_da},

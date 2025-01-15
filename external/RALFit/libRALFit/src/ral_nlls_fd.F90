@@ -23,10 +23,15 @@
 ! POSSIBILITY OF SUCH DAMAGE.
 !
 ! ral_nlls_fd :: Finite differences
-module ral_nlls_fd
 
-   Use ral_nlls_workspaces, Only : params_base_type, params_internal_type,     &
-      nlls_options, nlls_inform, nlls_workspace, wp, box_type
+#include "preprocessor.FPP"
+
+module MODULE_PREC(ral_nlls_fd)
+
+   Use MODULE_PREC(ral_nlls_workspaces), Only : params_base_type, params_internal_type,     &
+      nlls_options, nlls_inform, nlls_workspace, wp, box_type, eval_f_type, eval_j_type,    &
+      eval_hf_type, eval_hp_type
+   Use MODULE_PREC(ral_nlls_types), Only : prn_minf, prn_pinf, prn_small
 
    Implicit None
 
@@ -37,56 +42,6 @@ module ral_nlls_fd
    Public :: ral_nlls_eval_j_dummy, ral_nlls_eval_hf_dummy
 
    Private
-
-   abstract interface
-      subroutine eval_f_type(status, n, m, x, f, params)
-         import :: params_base_type
-         implicit none
-         integer, intent(out) :: status
-         integer, intent(in) :: n,m
-         double precision, dimension(*), intent(in)  :: x
-         double precision, dimension(*), intent(out) :: f
-         class(params_base_type), intent(inout) :: params
-      end subroutine eval_f_type
-   end interface
-
-   abstract interface
-      subroutine eval_j_type(status, n, m, x, J, params)
-         import :: params_base_type
-         implicit none
-         integer, intent(out) :: status
-         integer, intent(in) :: n,m
-         double precision, dimension(*), intent(in)  :: x
-         double precision, dimension(*), intent(out) :: J
-         class(params_base_type), intent(inout) :: params
-      end subroutine eval_j_type
-   end interface
-
-   abstract interface
-      subroutine eval_hf_type(status, n, m, x, f, h, params)
-         import :: params_base_type
-         implicit none
-         integer, intent(out) :: status
-         integer, intent(in) :: n,m
-         double precision, dimension(*), intent(in)  :: x
-         double precision, dimension(*), intent(in)  :: f
-         double precision, dimension(*), intent(out) :: h
-         class(params_base_type), intent(inout) :: params
-      end subroutine eval_hf_type
-   end interface
-
-   abstract interface
-      subroutine eval_hp_type(status, n, m, x, y, hp, params)
-         import :: params_base_type
-         implicit none
-         integer, intent(out) :: status
-         integer, intent(in) :: n,m
-         double precision, dimension(*), intent(in)  :: x
-         double precision, dimension(*), intent(in)  :: y
-         double precision, dimension(*), intent(out) :: hp
-         class(params_base_type), intent(inout) :: params
-      end subroutine eval_hp_type
-   end interface
 
    ! handle
    Type :: jacobian_handle
@@ -110,8 +65,8 @@ Contains
       implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n,m
-      double precision, dimension(*), intent(in)  :: x
-      double precision, dimension(*), intent(out) :: J
+      Real(Kind=wp), dimension(*), intent(in)  :: x
+      Real(Kind=wp), dimension(*), intent(out) :: J
       class(params_base_type), intent(inout) :: params
 
       status = -45544554 ! Magic number to request FD
@@ -122,16 +77,16 @@ Contains
       implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n,m
-      double precision, dimension(*), intent(in)  :: x
-      double precision, dimension(*), intent(in)  :: f
-      double precision, dimension(*), intent(out) :: h
+      Real(Kind=wp), dimension(*), intent(in)  :: x
+      Real(Kind=wp), dimension(*), intent(in)  :: f
+      Real(Kind=wp), dimension(*), intent(out) :: h
       class(params_base_type), intent(inout) :: params
 
       status = -1023
    end subroutine ral_nlls_eval_hf_dummy
 
    Subroutine jacobian_setup(status, handle, n, m, x, eval_f, params, lower, upper, f_storage)
-      Use ral_nlls_workspaces, Only : params_internal_type, wp, NLLS_options, &
+      Use MODULE_PREC(ral_nlls_workspaces), Only : params_internal_type, wp, NLLS_options, &
          nlls_inform, setup_bounds_type, setup_iparams_type, NLLS_ERROR_ALLOCATION
       Implicit None
       Integer, Intent(out) :: status
@@ -196,7 +151,7 @@ Contains
    End subroutine jacobian_setup
 
    Subroutine jacobian_free(handle)
-      Use ral_nlls_workspaces, Only : free_iparams_type, remove_workspace_bounds
+      Use MODULE_PREC(ral_nlls_workspaces), Only : free_iparams_type, remove_workspace_bounds
       Implicit None
       Type(jacobian_handle), Intent(Inout) :: handle
 
@@ -213,7 +168,7 @@ Contains
 
    ! Assumes x and f are allocated and than f = f(x)
    subroutine jacobian_calc(status, handle, x, f, J, fd_step)
-      use ral_nlls_workspaces, only : wp, NLLS_ERROR_WORKSPACE_ERROR
+      use MODULE_PREC(ral_nlls_workspaces), only : wp, NLLS_ERROR_WORKSPACE_ERROR
       implicit none
       integer, intent(out) :: status
       Type(jacobian_handle), Intent(Inout) :: handle
@@ -240,13 +195,13 @@ Contains
 
    ! Add an internal wrapper for eval_J (used to provide finite-differences)
    subroutine eval_j_wrap(status, n, m, x, J, params)
-      use ral_nlls_workspaces, only : params_base_type, params_internal_type,  &
+      use MODULE_PREC(ral_nlls_workspaces), only : params_base_type, params_internal_type,  &
          nlls_options, nlls_inform, nlls_workspace
       implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n,m
-      double precision, dimension(*), intent(in)  :: x
-      double precision, dimension(*), intent(out) :: J
+      Real(Kind=wp), dimension(*), intent(in)  :: x
+      Real(Kind=wp), dimension(*), intent(out) :: J
       class(params_base_type), intent(inout) :: params
 
       Continue
@@ -282,12 +237,12 @@ Contains
 
    ! transparent wrappers for eval_f, eval_h*
    subroutine eval_f_wrap(status, n, m, x, f, params)
-      use ral_nlls_workspaces, only : params_base_type, params_internal_type
+      use MODULE_PREC(ral_nlls_workspaces), only : params_base_type, params_internal_type
       implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n,m
-      double precision, dimension(*), intent(in)  :: x
-      double precision, dimension(*), intent(out) :: f
+      Real(Kind=wp), dimension(*), intent(in)  :: x
+      Real(Kind=wp), dimension(*), intent(out) :: f
       class(params_base_type), intent(inout) :: params
 
       ! Make sure we have the correct object for params
@@ -300,13 +255,13 @@ Contains
    end subroutine eval_f_wrap
 
    subroutine eval_hf_wrap(status, n, m, x, f, h, params)
-      use ral_nlls_workspaces, only : params_base_type, params_internal_type
+      use MODULE_PREC(ral_nlls_workspaces), only : params_base_type, params_internal_type
       implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n,m
-      double precision, dimension(*), intent(in)  :: x
-      double precision, dimension(*), intent(in)  :: f
-      double precision, dimension(*), intent(out) :: h
+      Real(Kind=wp), dimension(*), intent(in)  :: x
+      Real(Kind=wp), dimension(*), intent(in)  :: f
+      Real(Kind=wp), dimension(*), intent(out) :: h
       class(params_base_type), intent(inout) :: params
 
       ! Make sure we have the correct object for params
@@ -319,13 +274,13 @@ Contains
    end subroutine eval_hf_wrap
 
    subroutine eval_hp_wrap(status, n, m, x, y, hp, params)
-      use ral_nlls_workspaces, only : params_base_type, params_internal_type
+      use MODULE_PREC(ral_nlls_workspaces), only : params_base_type, params_internal_type
       implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n,m
-      double precision, dimension(*), intent(in)  :: x
-      double precision, dimension(*), intent(in)  :: y
-      double precision, dimension(*), intent(out) :: hp
+      Real(Kind=wp), dimension(*), intent(in)  :: x
+      Real(Kind=wp), dimension(*), intent(in)  :: y
+      Real(Kind=wp), dimension(*), intent(out) :: hp
       class(params_base_type), intent(inout) :: params
 
       ! Make sure we have the correct object for params
@@ -341,10 +296,10 @@ Contains
    ! Compares the user call-back provided Jacobian agains a FD approximation
    ! The check is done is the caller is from nlls_solve only
    Subroutine check_jacobian(n, m, J, iparams)
-      Use ral_nlls_workspaces, only: NLLS_ERROR_UNEXPECTED, &
+      Use MODULE_PREC(ral_nlls_workspaces), only: NLLS_ERROR_UNEXPECTED, &
          NLLS_ERROR_ALLOCATION, NLLS_ERROR_FROM_EXTERNAL, &
          NLLS_ERROR_BAD_JACOBIAN
-      Use ral_nlls_printing, only: printmsg
+      Use MODULE_PREC(ral_nlls_printing), only: printmsg
       Implicit None
       Integer, Intent(In) :: n, m
       Real(Kind=wp), Dimension(:), Intent(In) :: J
@@ -353,7 +308,7 @@ Contains
       Real(Kind=wp), Allocatable, Dimension(:) :: J_fd
       Integer :: ierr, ivar, jcon, iivar, jjcon, idx, idx_tran, prlvl, tcnt, skip
       Real(Kind=wp) :: perturbation, this_perturbation, relerr, relerr_tran, test_tol
-      Logical :: Fortran_Jacobian, box, okgap, oklo, okup, okij, ok_tran, prn, ok
+      Logical :: Fortran_Jacobian, box, okgap, oklo, okup, okij, ok_tran, prn
       Character(Len=1) :: flagx, flagt
       Character(Len=10) :: rstr
       Character(Len=20) :: jstr, jfdstr
@@ -456,27 +411,27 @@ Contains
             if (prn) then
                flagx = merge(' ', 'X', okij)
                flagt = merge('T', ' ', (.Not. okij) .And. ok_tran)
-               if (J(idx) /= 0.0 .And. abs(J(idx)) < 1.0e-99_wp) then
-                  jstr = ' ~0.0                '
-               else if (J(idx)> 9.99e+99_wp) then
+               if (J(idx) /= 0.0 .And. abs(J(idx)) < prn_small) then
+                  jstr = ' ~0.0               '
+               else if (J(idx)>prn_pinf) then
                   jstr = '       +Inf         '
-               else if (J(idx)< -9.99e+99_wp) then
+               else if (J(idx)< prn_minf) then
                   jstr = '       -Inf         '
                else
                   Write(jstr, '(Es20.12e2)') J(idx)
                end if
-               if (J_fd(idx) /= 0.0 .And. abs(J_fd(idx)) < 1.0e-99_wp) then
+               if (J_fd(idx) /= 0.0 .And. abs(J_fd(idx)) < prn_small) then
                   jfdstr = '~0.0                '
-               else if (J_fd(idx)> 9.99e+99_wp) then
+               else if (J_fd(idx)>prn_pinf) then
                   jfdstr = '       +Inf         '
-               else if (J_fd(idx)< -9.99e+99_wp) then
+               else if (J_fd(idx)< prn_minf) then
                   jfdstr = '       -Inf         '
                else
                   Write(jfdstr, '(Es20.12e2)') J_fd(idx)
                end if
-               if (relerr /= 0.0 .And. relerr < 1.0e-99_wp) then
+               if (relerr /= 0.0 .And. relerr < prn_small) then
                   rstr = '~0.0     '
-               else if (relerr > 9.9e+99_wp) then
+               else if (relerr > prn_pinf) then
                   rstr = '   +Inf   '
                else
                   write(rstr, '(Es10.3e2)') relerr
@@ -528,7 +483,7 @@ Contains
 99999 Format (1X,'Begin Derivative Checker')
 99998 Format (1X,'End Derivative Checker')
 99997 Format (4X,'Jacobian storage scheme (Fortran_Jacobian) = ',A)
-99911 Format (4X,'Jac[',I6,',',I6,'] = ',A20,' ~ ', A20, 2X,'[',A10,'], (',E10.3e2,')',2X,2(A1),1X,A)
+99911 Format (4X,'Jac[',I6,',',I6,'] = ',A20,' ~ ', A20, 2X,'[',A10,'], (',Es9.3e2,')',2X,2(A1),1X,A)
 80000 Format (4X,'Derivative checker detected ',I6,1X,'likely error(s)')
 80001 Format (4X,'It seems that derivatives are OK.')
 80002 Format (4X,'Note: derivative checker detected that ',I6,' entries may correspond to the transpose.')
@@ -545,9 +500,9 @@ Contains
       Implicit None
       integer, intent(out) :: status
       integer, intent(in) :: n, m
-      double precision, dimension(*), intent(inout) :: x
-      double precision, dimension(*), intent(in) :: f
-      double precision, dimension(*), intent(out) :: J
+      Real(Kind=wp), dimension(*), intent(inout) :: x
+      Real(Kind=wp), dimension(*), intent(in) :: f
+      Real(Kind=wp), dimension(*), intent(out) :: J
       type(params_internal_type), intent(inout) :: iparams
 
       integer :: ivar, jcon, idx
@@ -609,5 +564,5 @@ Contains
    End Subroutine fd_jacobian
 
 
-end module ral_nlls_fd
+end module MODULE_PREC(ral_nlls_fd)
 

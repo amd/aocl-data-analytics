@@ -7,11 +7,14 @@
 ! jacobian_free as a stand-alone use case.
 
 module jacobian_module_fd
-   use ral_nlls_double, only: params_base_type
+
+#if SINGLE_PRECISION
+   use ral_nlls_single
+#else
+   use ral_nlls_double
+#endif
 
    implicit none
-
-   integer, parameter, public :: wp = kind(0d0)
 
    type, extends(params_base_type) :: params_type
       real(wp), dimension(:), allocatable :: t ! The m data points t_i
@@ -21,6 +24,7 @@ module jacobian_module_fd
 contains
 
    subroutine eval_f(status, n, m, x, r, params)
+      implicit none
       ! r_i = y_i - x_1 e^(-x_2 t_i) - x_3 e^(-x_4 t_i) - x_5 e^(-x_6 t_i)
       integer, intent(out) :: status
       integer, intent(in) :: n
@@ -43,6 +47,7 @@ contains
 
    ! Exact Jacobian used to validate the FD Jacobian
    subroutine eval_J(status, n, m, x, J, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -67,22 +72,29 @@ end module jacobian_module_fd
 
 program jacobian
 
-   use ral_nlls_double, only: nlls_options, nlls_inform, &
-      jacobian_setup, jacobian_free, jacobian_handle, jacobian_calc
    use jacobian_module_fd
 
    implicit none
 
+
    integer :: m, n
    real(wp), allocatable :: x(:), fx(:), j(:), j_exp(:)
    type(params_type) :: params
-   real(wp) :: tic, toc, nrm2
+   real(wp) :: tic, toc, nrm2, tol, fd_step
    Type(jacobian_handle) :: handle
-   real(wp), parameter :: tol = 5.0e-7_wp
    logical :: ok, oki
    integer :: i, status, colj_start, colj_end
 
    Continue
+   if (wp == lp) then
+      ! Single precision
+      tol = 7.0e-4_wp
+      fd_step = 1.0e-3_wp
+   else
+      ! Double precision
+      tol = 5.0e-7_wp
+      fd_step = 1.0e-7_wp
+   end if
 
    ! data to be fitted
    n = 6
@@ -159,7 +171,7 @@ program jacobian
    endif
 
    ! estimate the jacobian matrix at point x, fx is the residual at point x
-   call jacobian_calc(status, handle, x, fx, j, fd_step=1.0e-7_wp)
+   call jacobian_calc(status, handle, x, fx, j, fd_step=fd_step)
    if (status /= 0) then
       print *, 'Problem while calling jacobian_calc'
       goto 100
@@ -171,7 +183,7 @@ program jacobian
    ! Print result and check solution
    call eval_j(status, n, m, x, j_exp, params)
    if (status /= 0) then
-      print *, 'Problem while calling eval_f'
+      print *, 'Problem while calling eval_j'
       goto 100
    endif
 

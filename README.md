@@ -39,7 +39,7 @@ Building on Linux
 2. Make sure you have set the environment variable `$AOCL_ROOT` to where the AOCL libraries are
    installed e.g. `/home/username/amd/aocl/4.0`.
 
-3. Configure cmake with any of the following options:
+3. Configure cmake with `-T ClangCL -DOpenMP_libomp_LIBRARY=\Path\to\libomp.lib` and any of the following options:
 
    * `-DMEMSAN=On` for memory sanitization
 
@@ -51,7 +51,7 @@ Building on Linux
 
    * `-DCMAKE_BUILD_TYPE=Debug` or `Release`
 
-   * `-DCOVERAGE=On` to build code coverage report
+   * `-DCOVERAGE=On` to build code coverage report. Use `cmake --build . --target coverage` to compile the coverage report itself
 
    * `-DBUILD_EXAMPLES=On` and `–DBUILD_GTEST=On` both of which are `On` by default
 
@@ -115,7 +115,7 @@ Building on MS Windows
 
    * Open Visual Studio and load the `AOCL-DA.sln` file then build Debug or Release builds using the GUI, or
 
-   * In a powershell type `devenv .\AOCL-DA.sln /build "Debug"` to build the solution (change to Release as appropriate)
+   * In a command prompt type `devenv .\AOCL-DA.sln /build "Debug"` or `cmake --build . --config Debug` to build the solution (change to Release as appropriate)
 
    * If using the GNU toolchain, build using cmake and Ninja.
 

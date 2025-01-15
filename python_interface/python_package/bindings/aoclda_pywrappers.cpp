@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
 #include "basic_stats_py.hpp"
+#include "dbscan_py.hpp"
 #include "decision_forest_py.hpp"
 #include "factorization_py.hpp"
 #include "kmeans_py.hpp"
@@ -233,6 +234,26 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_features", &kmeans::get_n_features)
         .def("get_n_clusters", &kmeans::get_n_clusters)
         .def("get_n_iter", &kmeans::get_n_iter);
+
+    /**********************************/
+    /*       DBSCAN clustering        */
+    /**********************************/
+
+    py::class_<DBSCAN, pyda_handle>(m_clustering, "pybind_DBSCAN")
+        .def(py::init<da_int, std::string, std::string, da_int, std::string &, bool>(),
+             py::arg("min_samples") = 5, py::arg("metric") = "euclidean",
+             py::arg("algorithm") = "brute", py::arg("leaf_size") = 30,
+             py::arg("precision") = "double", py::arg("check_data") = false)
+        .def("pybind_fit", &DBSCAN::fit<float>, "Fit the DBSCAN clusters", "A"_a,
+             py::arg("eps") = (float)0.5, py::arg("power") = (float)2.0)
+        .def("pybind_fit", &DBSCAN::fit<double>, "Fit the DBSCAN clusters", "A"_a,
+             py::arg("eps") = (double)0.5, py::arg("power") = (double)2.0)
+        .def("get_labels", &DBSCAN::get_labels)
+        .def("get_n_samples", &DBSCAN::get_n_samples)
+        .def("get_n_features", &DBSCAN::get_n_features)
+        .def("get_n_core_samples", &DBSCAN::get_n_core_samples)
+        .def("get_core_sample_indices", &DBSCAN::get_core_sample_indices)
+        .def("get_n_clusters", &DBSCAN::get_n_clusters);
 
     /**********************************/
     /*        Decision Trees          */
