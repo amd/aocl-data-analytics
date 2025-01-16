@@ -177,10 +177,10 @@ Options
          :escape: ~
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
-         "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
+         "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 9223372036854775807`"
          "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`2 \le i`"
          "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
-         "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
+         "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 61`"
          "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
          "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes.", ":math:`s=` `breadth first`, or `depth first`."
          "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"

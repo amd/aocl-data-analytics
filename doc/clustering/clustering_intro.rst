@@ -206,7 +206,7 @@ Options
 
          "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used (reserved for future use).", ":math:`0 \le r`"
          "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances (reserved for future use).", ":math:`s=` `euclidean`, `manhattan`, `minkowski`, or `sqeuclidean`."
-         "algorithm", "string", ":math:`s=` `brute`", "Choice of algorithm (reserved for future use).", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
+         "algorithm", "string", ":math:`s=` `brute`", "Choice of algorithm (reserved for future use).", ":math:`s=` `auto`, `ball tree`, `brute`, `brute serial`, or `kd tree`."
          "leaf size", "integer", ":math:`i=30`", "Leaf size for KD tree or ball tree (reserved for future use).", ":math:`1 \le i`"
          "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`"
          "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`"
