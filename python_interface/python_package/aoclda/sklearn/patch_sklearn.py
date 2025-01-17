@@ -111,7 +111,7 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                }
 
 # List of symbols where AMD is chosen over Intel
-AMD_vs_INTEL = ['KMeans', 'LinearRegression',
+AMD_vs_INTEL = ['KMeans', 'LinearRegression', 'KNeighborsClassifier',
                 'Ridge', 'PCA', 'DecisionTreeClassifier']
 
 
