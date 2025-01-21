@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,27 +21,31 @@
  *
  * ************************************************************************ */
 
-#ifndef LINMOD_CHOLESKY_REG_HPP
-#define LINMOD_CHOLESKY_REG_HPP
-
 #include "aoclda.h"
+#include "convert_num.hpp"
+#include "da_cblas.hh"
+#include "linear_model.hpp"
+#include "macros.h"
+#include "sparse_overloads.hpp"
 #include <vector>
 
-namespace da_linmod {
-// Data for cholesky solver in linear regression
-template <typename T> struct cholesky_data {
-    std::vector<T> A, b;
-    da_int min_order;
-    T alpha = 1.0, beta = 0.0;
+namespace ARCH {
 
-    // Constructors
-    cholesky_data(da_int nsamples, da_int ncoef) {
-        // Work arrays for the cholesky
-        min_order = std::min(nsamples, ncoef);
-        A.resize(min_order * min_order);
-        b.resize(min_order);
-    };
+namespace da_linmod {
+
+using namespace da_linmod_types;
+
+// Data for cholesky solver in linear regression
+template <typename T> cholesky_data<T>::cholesky_data(da_int nsamples, da_int ncoef) {
+    // Work arrays for the cholesky
+    min_order = std::min(nsamples, ncoef);
+    A.resize(min_order * min_order);
+    b.resize(min_order);
 };
+
+template struct cholesky_data<float>;
+template struct cholesky_data<double>;
+
 } // namespace da_linmod
 
-#endif
+} // namespace ARCH

@@ -25,21 +25,18 @@
  *
  */
 
-#ifndef BASESVM_HPP
-#define BASESVM_HPP
-
 // Deal with some Windows compilation issues regarding max/min macros
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
 #include "aoclda.h"
-#include "basic_handle.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
-#include "kernel_function_local.hpp"
-#include "moment_statistics.hpp"
+#include "kernel_functions.hpp"
+#include "macros.h"
 #include "options.hpp"
+#include "svm.hpp"
 #include "svm_options.hpp"
 #include "svm_types.hpp"
 #include <climits>
@@ -56,131 +53,27 @@
  * are common for all SVM models.
  *
  * This handle is inherited by all specialized svm handles.
- * 
+ *
  * The inheritance scheme is as follows:
- * 
+ *
  *                          SVM
  *                         /   \
- *                        /     \ 
+ *                        /     \
  *                   C-SVM       Nu-SVM
  *                  /     \      /     \
  *                 /       \    /       \
  *              SVC       SVR Nu-SVC   Nu-SVR
  */
+
+namespace ARCH {
+
 namespace da_svm {
+
+using namespace da_svm_types;
+
 // This forward declaration is here to allow for "friending" it with base_svm few lines below
-template <typename T> class svm;
-
-template <typename T> class base_svm {
-  public:
-    // n x p (samples x features)
-    da_int n = 0;
-    da_int p = 0;
-    // User's data
-    const T *XUSR;
-    const T *yusr;
-    // Data that we operate on (in SVR / binary classification it is same as user's data)
-    T *X = nullptr;
-    // Second ldx is here for case when we have multiclass, X is created internally dense, so we want to proceed with ldx_2 = nsamples
-    // However in other cases we use user's pointer where we want ldx_2 = ldx
-    da_int ldx, ldx_2;
-    T *y = nullptr;
-    // actual_size = 2n if (SVR or nuSVR), otherwise n
-    da_int actual_size;
-
-    // Used in multi-class classification (memory allocated in svm.hpp set_data())
-    std::vector<da_int> idx_class; // indexes of observations where class is either i or j
-    std::vector<da_int> support_indexes_pos, support_indexes_neg;
-    std::vector<bool> idx_is_positive;
-    bool ismulticlass = false;
-    da_int pos_class, neg_class;
-
-    // Kernel function to use for computation
-    da_int kernel_function = rbf;
-    // Kernel specific parameters
-    T gamma = 1.0;
-    da_int degree = 3;
-    T coef0 = 0.0;
-    // Regularisation parameters
-    T C = 1, eps = 0.1, nu = 0.5, tau = 1e-6;
-    // Convergence tolerance
-    T tol = 1.0e-3;
-    da_int max_iter;
-    da_int iter;
-
-    // Variable is being set at the contructors of spiecialised classes
-    da_svm_model mod = svm_undefined;
-
-    // Pointer to error trace
-    da_errors::da_error_t *err = nullptr;
-
-    // Variables for result handling
-    std::vector<T> gradient, alpha, response;
-    da_int n_support;                    // Number of support vectors
-    std::vector<da_int> support_indexes, // Indexes of support vectors
-        n_support_per_class;
-    std::vector<T> support_coefficients; // Alphas of support vectors
-    std::vector<T>
-        support_vectors; // Observations that are support vectors (subset of X rows)
-    T bias;              // Constant in decision function
-
-    // Internal working variables
-    std::vector<T> alpha_diff;
-    std::vector<T> kernel_matrix;
-    da_int ws_size;        // Size of working set
-    std::vector<T> X_temp; // Contain relevant slices of X for kernel computation
-    std::vector<T> local_alpha, local_gradient, local_response, local_kernel_matrix;
-    std::vector<T> x_norm_aux, y_norm_aux; // Work array for kernel computation
-    std::vector<bool> I_low_p, I_up_p, I_low_n, I_up_n;
-
-    // ws_indexes is array with indexes of outer working set
-    // index_aux is array with argsorted gradient array
-    std::vector<da_int> ws_indexes, index_aux;
-    std::vector<bool> ws_indicator;
-
-  public:
-    // This friend is here to allow following "svm" class to set protected members of "base_svm" class, such as kernel_function, X or y.
-    friend class svm<T>;
-    base_svm(){};
-    virtual ~base_svm(){}; // Virtual to remove warnings
-
-    // Main functions
-    da_status compute();
-    da_status predict(da_int nsamples, da_int nfeat, const T *X_test, da_int ldx_test,
-                      T *decision_values);
-    da_status decision_function(da_int nsamples, da_int nfeat, const T *X_test,
-                                da_int ldx_test, T *decision_values);
-
-    // General auxiliary functions
-    void update_gradient(std::vector<T> &gradient, std::vector<T> &alpha_diff,
-                         da_int &nrow, da_int &ncol, std::vector<T> &kernel_matrix);
-    void kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
-                        std::vector<T> &X_temp, std::vector<T> &kernel_matrix);
-    void compute_ws_size(da_int &ws_size);
-    da_int maxpowtwo(da_int &n);
-    void wssi(std::vector<bool> &I_up, std::vector<T> &gradient, da_int &i, T &min_grad);
-    void wssj(std::vector<bool> &I_low, std::vector<T> &gradient, da_int &i, T &min_grad,
-              da_int &j, T &max_grad, std::vector<T> &kernel_matrix, T &delta,
-              T &max_fun);
-
-    // Functions that need specialisation
-    virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
-                                     std::vector<T> &response, std::vector<T> &alpha) = 0;
-    virtual void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
-                           std::vector<bool> &selected_ws_indicator,
-                           da_int &n_selected) = 0;
-    virtual void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                           std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
-                           std::vector<T> &local_alpha, std::vector<T> &gradient,
-                           std::vector<T> &local_gradient, std::vector<T> &response,
-                           std::vector<T> &local_response, std::vector<bool> &I_low_p,
-                           std::vector<bool> &I_up_p, std::vector<bool> &I_low_n,
-                           std::vector<bool> &I_up_n, T &first_diff,
-                           std::vector<T> &alpha_diff, std::optional<T> tol) = 0;
-    virtual void set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
-                          std::vector<T> &response, da_int &size, T &bias) = 0;
-    virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
-};
+template <typename T> base_svm<T>::base_svm(){};
+template <typename T> base_svm<T>::~base_svm(){};
 
 /* Main function which contains Thunder loop */
 template <typename T> da_status base_svm<T>::compute() {
@@ -339,25 +232,26 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
     // Compute kernel matrix K between support vectors and test data
     switch (kernel_function) {
     case rbf:
-        rbf_kernel_local(column_major, n_support, nsamples, nfeat, support_vectors.data(),
-                         x_aux.data(), n_support, X_test, y_aux.data(), ldx_test,
-                         kernel_matrix.data(), n_support, gamma, false);
+        ARCH::rbf_kernel_local(column_major, n_support, nsamples, nfeat,
+                               support_vectors.data(), x_aux.data(), n_support, X_test,
+                               y_aux.data(), ldx_test, kernel_matrix.data(), n_support,
+                               gamma, false);
         break;
     case linear:
-        linear_kernel_local(column_major, n_support, nsamples, nfeat,
-                            support_vectors.data(), n_support, X_test, ldx_test,
-                            kernel_matrix.data(), n_support, false);
+        ARCH::linear_kernel_local(column_major, n_support, nsamples, nfeat,
+                                  support_vectors.data(), n_support, X_test, ldx_test,
+                                  kernel_matrix.data(), n_support, false);
         break;
     case polynomial:
-        polynomial_kernel_local(column_major, n_support, nsamples, nfeat,
-                                support_vectors.data(), n_support, X_test, ldx_test,
-                                kernel_matrix.data(), n_support, gamma, degree, coef0,
-                                false);
+        ARCH::polynomial_kernel_local(column_major, n_support, nsamples, nfeat,
+                                      support_vectors.data(), n_support, X_test, ldx_test,
+                                      kernel_matrix.data(), n_support, gamma, degree,
+                                      coef0, false);
         break;
     case sigmoid:
-        sigmoid_kernel_local(column_major, n_support, nsamples, nfeat,
-                             support_vectors.data(), n_support, X_test, ldx_test,
-                             kernel_matrix.data(), n_support, gamma, coef0, false);
+        ARCH::sigmoid_kernel_local(column_major, n_support, nsamples, nfeat,
+                                   support_vectors.data(), n_support, X_test, ldx_test,
+                                   kernel_matrix.data(), n_support, gamma, coef0, false);
         break;
     }
     // Compute decision_values = K'*alpha + bias
@@ -505,5 +399,9 @@ void base_svm<T>::wssj(std::vector<bool> &I_low, std::vector<T> &gradient, da_in
     j = max_grad_idx;
 };
 
+template class base_svm<float>;
+template class base_svm<double>;
+
 } // namespace da_svm
-#endif
+
+} // namespace ARCH

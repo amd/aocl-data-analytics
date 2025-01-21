@@ -25,23 +25,26 @@
  *
  */
 
-#ifndef NUSVM_HPP
-#define NUSVM_HPP
-
 // Deal with some Windows compilation issues regarding max/min macros
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
 #include "aoclda.h"
-#include "base_svm.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "macros.h"
+#include "svm.hpp"
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <iostream>
+#include <numeric>
+#include <optional>
 #include <utility>
 #include <vector>
+
+namespace ARCH {
 
 // This function returns whether observation is in I_up set and is a positive class
 template <typename T> bool is_upper_pos(T &alpha, const T &y, T &C) {
@@ -68,12 +71,12 @@ template <typename T> bool is_lower_neg(T &alpha, const T &y, T &C) {
  * are common for all SVM models that are Nu problem.
  *
  * This handle is inherited by nuSVC and nuSVR.
- * 
+ *
  * The inheritance scheme is as follows:
- * 
+ *
  *                          SVM
  *                         /   \
- *                        /     \ 
+ *                        /     \
  *                   C-SVM       Nu-SVM
  *                  /     \      /     \
  *                 /       \    /       \
@@ -81,54 +84,15 @@ template <typename T> bool is_lower_neg(T &alpha, const T &y, T &C) {
  */
 namespace da_svm {
 
-template <typename T> class nusvm : public base_svm<T> {
-  private:
-  public:
-    virtual ~nusvm(){}; // Make the destructor virtual to remove warnings
-    // Important functions
-    void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
-                   std::vector<bool> &selected_ws_indicator, da_int &n_selected);
-    void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                   std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
-                   std::vector<T> &local_alpha, std::vector<T> &gradient,
-                   std::vector<T> &local_gradient, std::vector<T> &response,
-                   std::vector<T> &local_response, std::vector<bool> &I_low_p,
-                   std::vector<bool> &I_up_p, std::vector<bool> &I_low_n,
-                   std::vector<bool> &I_up_n, T &first_diff, std::vector<T> &alpha_diff,
-                   std::optional<T> tol);
-    void set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
-                  std::vector<T> &response, da_int &size, T &bias);
+using namespace da_svm_types;
 
-    da_status initialise_gradient(std::vector<T> &alpha_diff, da_int counter,
-                                  std::vector<T> &gradient);
+template <typename T> nusvm<T>::~nusvm(){};
 
-    // Inherited functions
-    virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
-                                     std::vector<T> &response, std::vector<T> &alpha) = 0;
-    virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
-};
+template <typename T> nusvc<T>::nusvc() { this->mod = da_svm_model::nusvc; };
+template <typename T> nusvc<T>::~nusvc(){};
 
-template <typename T> class nusvc : public nusvm<T> {
-  private:
-  public:
-    nusvc() { this->mod = da_svm_model::nusvc; };
-    virtual ~nusvc(){}; // Make the destructor virtual to remove warnings
-    // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
-    da_status set_sv(std::vector<T> &alpha, da_int &n_support);
-};
-
-template <typename T> class nusvr : public nusvm<T> {
-  private:
-  public:
-    nusvr() { this->mod = da_svm_model::nusvr; };
-    virtual ~nusvr(){}; // Make the destructor virtual to remove warnings
-    // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
-    da_status set_sv(std::vector<T> &alpha, da_int &n_support);
-};
+template <typename T> nusvr<T>::nusvr() { this->mod = da_svm_model::nusvr; };
+template <typename T> nusvr<T>::~nusvr(){};
 
 template <typename T>
 void nusvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
@@ -591,5 +555,22 @@ da_status nusvr<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     return da_status_success;
 }
 
+template class nusvm<float>;
+template class nusvm<double>;
+template class nusvc<float>;
+template class nusvc<double>;
+template class nusvr<float>;
+template class nusvr<double>;
+
 } // namespace da_svm
-#endif
+
+template bool is_upper_pos<double>(double &alpha, const double &y, double &C);
+template bool is_upper_pos<float>(float &alpha, const float &y, float &C);
+template bool is_lower_pos<double>(double &alpha, const double &y);
+template bool is_lower_pos<float>(float &alpha, const float &y);
+template bool is_upper_neg<double>(double &alpha, const double &y);
+template bool is_upper_neg<float>(float &alpha, const float &y);
+template bool is_lower_neg<double>(double &alpha, const double &y, double &C);
+template bool is_lower_neg<float>(float &alpha, const float &y, float &C);
+
+} // namespace ARCH

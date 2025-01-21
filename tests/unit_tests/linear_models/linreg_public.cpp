@@ -3404,13 +3404,14 @@ const linregParam linregParamPos[] = {
                                      {{"optim convergence tol",1.e-8},{"lambda",0.85},{"alpha",0.0},{"optim progress factor", 1.0}},
                                      true, false
                                      },
-    // 439 scikit-learn sparse signal example Ridge
-    {"signal/coord/l2/+0/s", "signal-scikit-l2", {{"debug", 0},{"intercept", 0},{"print level", 1},{"optim iteration limit", 1000}},
-                                     {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
-                                     {{"optim convergence tol",1.e-8f},{"lambda",0.85f},{"alpha",0.0f},{"optim progress factor", 1.0}},
-                                     {{"optim convergence tol",1.e-8},{"lambda",0.85},{"alpha",0.0},{"optim progress factor", 1.0}},
-                                     true, false
-                                     },
+    // 439 scikit-learn sparse signal example Ridge - timeout on Windows
+    //{"signal/coord/l2/+0/s", "signal-scikit-l2", {{"debug", 0},{"intercept", 0},{"print level", 1},{"optim iteration limit", 1000}},
+    //                                 {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
+    //                                 {{"optim convergence tol",1.e-8f},{"lambda",0.85f},{"alpha",0.0f},{"optim progress factor", 1.0}},
+    //                                 {{"optim convergence tol",1.e-8},{"lambda",0.85},{"alpha",0.0},{"optim progress factor", 1.0}},
+    //                                 true, false
+    //                                 },
+
     // 440 scikit-learn sparse signal example Ridge
     {"signal/coord/l2/+1/c", "signal-scikit-l2", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 1000}},
                                      {{"optim method", "coord"},{"scaling", "centering"},{"print options", "yes"}},

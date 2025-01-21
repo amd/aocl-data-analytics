@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,16 +25,15 @@
  *
  */
 
-#ifndef CORRELATION_AND_COVARIANCE_HPP
-#define CORRELATION_AND_COVARIANCE_HPP
-
 #include "aoclda.h"
+#include "basic_statistics.hpp"
 #include "da_cblas.hh"
-#include "moment_statistics.hpp"
-#include "statistical_utilities.hpp"
+#include "macros.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
+namespace ARCH {
 
 namespace da_basic_statistics {
 
@@ -145,6 +144,25 @@ da_status correlation_matrix(da_order order, da_int n, da_int p, const T *x, da_
     return cov_corr_matrix(order, n, p, x, ldx, 0, corr, ldcorr, true);
 }
 
+template da_status covariance_matrix<float>(da_order order, da_int n, da_int p,
+                                            const float *x, da_int ldx, da_int dof,
+                                            float *cov, da_int ldcov);
+template da_status covariance_matrix<double>(da_order order, da_int n, da_int p,
+                                             const double *x, da_int ldx, da_int dof,
+                                             double *cov, da_int ldcov);
+template da_status correlation_matrix<float>(da_order order, da_int n, da_int p,
+                                             const float *x, da_int ldx, float *corr,
+                                             da_int ldcorr);
+template da_status correlation_matrix<double>(da_order order, da_int n, da_int p,
+                                              const double *x, da_int ldx, double *corr,
+                                              da_int ldcorr);
+template da_status cov_corr_matrix<float>(da_order order, da_int n, da_int p,
+                                          const float *x, da_int ldx, da_int dof,
+                                          float *mat, da_int ldmat, bool compute_corr);
+template da_status cov_corr_matrix<double>(da_order order, da_int n, da_int p,
+                                           const double *x, da_int ldx, da_int dof,
+                                           double *mat, da_int ldmat, bool compute_corr);
+
 } // namespace da_basic_statistics
 
-#endif
+} // namespace ARCH

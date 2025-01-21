@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,14 +25,16 @@
  *
  */
 
-#pragma once
-
 #include "aoclda.h"
 #include "aoclda_types.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "macros.h"
+#include "pairwise_distances.hpp"
 #include <iostream>
 #include <vector>
+
+namespace ARCH {
 
 /*
 An important kernel used repeatedly in k-means and SVM computations, among others.
@@ -49,10 +51,10 @@ Various options are available:
   instead of gemm and only the upper triangle is referenced and stored. Need m=n, otherwise garbage will come out
 */
 template <typename T>
-inline void euclidean_distance(da_order order, da_int m, da_int n, da_int k, const T *X,
-                               da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
-                               T *X_norms, da_int compute_X_norms, T *Y_norms,
-                               da_int compute_Y_norms, bool square, bool X_is_Y) {
+void euclidean_distance(da_order order, da_int m, da_int n, da_int k, const T *X,
+                        da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T *X_norms,
+                        da_int compute_X_norms, T *Y_norms, da_int compute_Y_norms,
+                        bool square, bool X_is_Y) {
 
     CBLAS_ORDER cblas_order =
         (order == column_major) ? CBLAS_ORDER::CblasColMajor : CBLAS_ORDER::CblasRowMajor;
@@ -237,6 +239,19 @@ inline void euclidean_distance(da_order order, da_int m, da_int n, da_int k, con
     }
 }
 
+template void euclidean_distance<float>(da_order order, da_int m, da_int n, da_int k,
+                                        const float *X, da_int ldx, const float *Y,
+                                        da_int ldy, float *D, da_int ldd, float *X_norms,
+                                        da_int compute_X_norms, float *Y_norms,
+                                        da_int compute_Y_norms, bool square, bool X_is_Y);
+
+template void euclidean_distance<double>(da_order order, da_int m, da_int n, da_int k,
+                                         const double *X, da_int ldx, const double *Y,
+                                         da_int ldy, double *D, da_int ldd,
+                                         double *X_norms, da_int compute_X_norms,
+                                         double *Y_norms, da_int compute_Y_norms,
+                                         bool square, bool X_is_Y);
+
 namespace da_metrics {
 namespace pairwise_distances {
 
@@ -283,5 +298,17 @@ da_status euclidean(da_order order, da_int m, da_int n, da_int k, const T *X, da
 
     return status;
 }
+
+template da_status euclidean<float>(da_order order, da_int m, da_int n, da_int k,
+                                    const float *X, da_int ldx, const float *Y,
+                                    da_int ldy, float *D, da_int ldd,
+                                    bool square_distances);
+template da_status euclidean<double>(da_order order, da_int m, da_int n, da_int k,
+                                     const double *X, da_int ldx, const double *Y,
+                                     da_int ldy, double *D, da_int ldd,
+                                     bool square_distances);
+
 } // namespace pairwise_distances
 } // namespace da_metrics
+
+} // namespace ARCH

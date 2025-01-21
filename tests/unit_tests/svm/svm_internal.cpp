@@ -32,6 +32,8 @@
 #include "gtest/gtest.h"
 #include <list>
 
+using namespace TEST_ARCH;
+
 template <typename T> class svm_internal_test : public testing::Test {
   public:
     using List = std::list<T>;

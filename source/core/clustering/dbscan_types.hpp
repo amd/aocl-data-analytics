@@ -27,11 +27,11 @@
 #define NOISE -1
 #define UNVISITED -2
 
-namespace da_dbscan {
+namespace da_dbscan_types {
 
 enum dbscan_algorithm { brute = 0, brute_serial, ball_tree, kd_tree, automatic };
 enum dbscan_metric { euclidean, sqeuclidean, minkowski, manhattan };
 
-} // namespace da_dbscan
+} // namespace da_dbscan_types
 
 #endif // DBSCAN_TYPES_HPP

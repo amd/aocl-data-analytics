@@ -28,14 +28,14 @@
 #include "../utest_utils.hpp"
 #include "algorithm"
 #include "aoclda.h"
+#include "da_error.hpp"
 #include "da_handle.hpp"
+#include "optimization.hpp"
+#include "optimization_options.hpp"
 #include "options.hpp"
 #include "gtest/gtest.h"
 
-#include "callbacks.hpp"
-#include "coord.hpp"
-#include "da_error.hpp"
-#include "optimization_options.hpp"
+using namespace TEST_ARCH;
 
 using T = double;
 da_int stepchk_dummy([[maybe_unused]] da_int n, [[maybe_unused]] T *x,
@@ -94,14 +94,15 @@ TEST(Coord, CycleEnd) {
     da_errors::da_error_t err(da_errors::DA_RECORD);
     da_options::OptionRegistry opts;
     da_status status;
-    status = register_optimization_options<T>(err, opts);
+    status =
+        da_dynamic_dispatch_ARCHITECTURE::register_optimization_options<T>(err, opts);
     EXPECT_EQ(status, da_status_success) << "error from register_optimization_options()";
     const da_int n = 10;
     std::vector<double> x(n, 10.0), l(0, 0.0), u(0, 0.0), info(100, 0.0);
     std::transform(x.begin(), x.begin() + 5, x.begin(), [](double y) { return y / 2; });
     da_int calls = 0; // must match cb calls type
     void *usrdata = &calls;
-    monit_t<T> monit = nullptr;
+    TEST_ARCH::monit_t<T> monit = nullptr;
     const T tol = da_numeric::tolerance<T>::safe_tol();
     const T inorm_init{10.0};
     const T ftol = da_numeric::tolerance<T>::tol(10);
@@ -119,8 +120,8 @@ TEST(Coord, CycleEnd) {
     status = opts.set("coord iteration limit", da_int(1500), da_options::setby_t::user);
     EXPECT_EQ(status, da_status_success) << "error setting coord iteration limit";
     opts.print_options();
-    status = coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit, usrdata, err,
-                          stepchk_dummy);
+    status = TEST_ARCH::coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit,
+                                     usrdata, err, stepchk_dummy);
     EXPECT_EQ(status, da_status_success) << "error from coord";
 
     // Check info array
@@ -145,8 +146,8 @@ TEST(Coord, CycleEnd) {
     EXPECT_EQ(info[da_optim_info_t::info_inorm_init], inorm_init);
 
     // Second call at solution
-    status = coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit, usrdata, err,
-                          stepchk_dummy);
+    status = TEST_ARCH::coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit,
+                                     usrdata, err, stepchk_dummy);
     EXPECT_EQ(status, da_status_success) << "error from 2nd call to coord";
 
     EXPECT_LE(info[da_optim_info_t::info_iter], 1);

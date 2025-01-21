@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -34,17 +34,10 @@
 
 #include "aoclda.h"
 #include "basic_handle.hpp"
+#include "context.hpp"
 #include "csv_reader.hpp"
 #include "da_error.hpp"
-#include "dbscan.hpp"
-#include "decision_tree.hpp"
-#include "kmeans.hpp"
-#include "knn.hpp"
-#include "linear_model.hpp"
-#include "nlls.hpp"
-#include "pca.hpp"
-#include "random_forest.hpp"
-#include "svm.hpp"
+#include "dynamic_dispatch.hpp"
 
 /**
  * @brief Handle structure containing input / output data required for functions such as fit and predict
@@ -70,6 +63,8 @@ struct _da_handle {
     };
 
     da_status get_current_opts(da_options::OptionRegistry **opts, bool refresh = false);
+
+    template <typename T> basic_handle<T> *get_alg_handle();
 };
 
 #endif

@@ -25,16 +25,15 @@
  *
  */
 
-#ifndef COORD_HPP
-#define COORD_HPP
-
 #include "aoclda_error.h"
 #include "aoclda_result.h"
+#include "callbacks.hpp"
 #include "da_error.hpp"
-#include "linmod_nln_optim.hpp"
+#include "macros.h"
 #include "options.hpp"
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -49,6 +48,8 @@
 // relative tolerance check is never satisfied. Set to 1 when benchmarking "well-behaved" problems
 // Also can happen for problems where solution is zero (or when projecting to the positive cone)
 #define __DA_COORD_SCALE_CONV_TOL 1
+
+namespace ARCH {
 
 // LCOV_EXCL_START
 // Excluding bound constraint class, this feature is for
@@ -304,6 +305,9 @@ da_status coord_rcomm(da_int n, std::vector<T> &x, constraints::bound_constr<T> 
  * and satisfies \nabla x_k f(x) = 0, that is, the next iterate x_k minimizes f with respect to the k-th coordinate.
  * Regularization is taken care implicitly in f(x)
  */
+
+using namespace ARCH;
+
 template <typename T>
 da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 std::vector<T> &l, std::vector<T> &u, std::vector<T> &info,
@@ -909,4 +913,5 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
 }
 
 } // namespace coord
-#endif
+
+} // namespace ARCH

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,11 +27,14 @@
 
 /* Example on how to call internally the NLP solver(s) */
 
+#include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "da_error.hpp"
 #include "optimization.hpp"
 #include <cmath>
 #include <iostream>
+
+using namespace TEST_ARCH;
 
 da_int objfun(da_int n [[maybe_unused]], double *x, double *val, void *usrdata) {
     double *params = (double *)usrdata;

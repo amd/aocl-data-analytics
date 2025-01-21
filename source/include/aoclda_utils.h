@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -75,9 +75,9 @@ da_status da_check_data_s(da_order order, da_int n_rows, da_int n_cols, const fl
  * - \ref da_status_invalid_array_dimension - either \p n_rows @f$< 1@f$ or \p n_cols @f$< 1@f$.
  * - \ref da_status_invalid_pointer - one of the arrays \p X or \p Y was null.
  */
-da_status da_switch_order_copy_d(da_order order, da_int n_rows, da_int n_cols,
+da_status da_switch_order_copy_d(da_order order_X, da_int n_rows, da_int n_cols,
                                  const double *X, da_int ldx, double *Y, da_int ldy);
-da_status da_switch_order_copy_s(da_order order, da_int n_rows, da_int n_cols,
+da_status da_switch_order_copy_s(da_order order_X, da_int n_rows, da_int n_cols,
                                  const float *X, da_int ldx, float *Y, da_int ldy);
 /** \} */
 
@@ -103,5 +103,27 @@ da_status da_switch_order_in_place_d(da_order order_X_in, da_int n_rows, da_int 
 da_status da_switch_order_in_place_s(da_order order_X_in, da_int n_rows, da_int n_cols,
                                      float *X, da_int ldx_in, da_int ldx_out);
 /** \} */
+
+/** hiddent doc {
+ * \brief Get information about the selected CPU architecture.
+ *
+ * Returns or prints the architecture currently selected to be used by the library's API.
+ *
+ * Calling this function also refreshes the context for the dynamic dispach querying the
+ * value of the environmental variable \c AOCL_DA_ARCH.
+ *
+ * Note: This function is targeted to debugging the library.
+ *
+ * If \p arch, or \p ns are NULL or \p len point to a non-positive value, then print to standard output the architecture info.
+ * If \p arch, and \p ns are provided and len is valid, fills buffer with architecture information strings.
+ *
+ * \param[inout] len length of the output buffer. If 0, returns required buffer size.
+ * \param[out] arch buffer to store local architecture information string. Can be NULL if \p len is 0.
+ * \param[out] ns buffer to store dispatched architecture information string. Can be NULL if \p len is 0.
+ * \return \ref da_status. The function returns:
+ * - \ref da_status_success - operation completed successfully.
+ * - \ref da_status_invalid_array_dimension - provided buffer length too small, returns in \p len the minimum size.
+ */
+da_status da_get_arch_info(da_int *len, char *arch, char *ns);
 
 #endif

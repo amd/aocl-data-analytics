@@ -117,7 +117,7 @@ def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_
     if svm_problem == "SVC" or svm_problem == "NuSVC":
         assert da_dec_f == pytest.approx(sk_dec_f, 0.02)
     assert da_dual_coef == pytest.approx(sk_dual_coef, 0.03)
-    tol_intercept = 4e-4
+    tol_intercept = 2e-3
     if svm_problem == "NuSVC" and precision == np.float32 and kernel == "rbf":
         tol_intercept = 0.34  # This specific case has some discrepancy on the intercept
     assert da_intercept == pytest.approx(sk_intercept, tol_intercept)

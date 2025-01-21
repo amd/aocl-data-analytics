@@ -37,6 +37,9 @@ function(linalg_libs)
     if(SPARSE_INCLUDE_DIR STREQUAL "")
       set(SPARSE_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/amd-sparse/include/)
     endif()
+    if(UTILS_INCLUDE_DIR STREQUAL "")
+      set(UTILS_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/amd-utils/include/)
+    endif()
     if(BLAS_LIB STREQUAL "")
       set(BLAS_LIB_DIR ${CMAKE_AOCL_ROOT}/amd-blis/lib/${INT_LIB})
     endif()
@@ -64,6 +67,9 @@ function(linalg_libs)
     endif()
     if(SPARSE_INCLUDE_DIR STREQUAL "")
       set(SPARSE_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
+    endif()
+    if(UTILS_INCLUDE_DIR STREQUAL "")
+      set(UTILS_INCLUDE_DIR ${CMAKE_AOCL_ROOT}/include_${INT_LIB})
     endif()
     if(BLAS_LIB STREQUAL "")
       set(BLAS_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
@@ -220,6 +226,7 @@ function(linalg_libs)
   include_directories(${LAPACK_INCLUDE_DIR})
   include_directories(${BLAS_INCLUDE_DIR})
   include_directories(${SPARSE_INCLUDE_DIR})
+  include_directories(${UTILS_INCLUDE_DIR})
 
   set(BLAS_INCLUDE_DIR
       ${BLAS_INCLUDE_DIR}
@@ -230,6 +237,10 @@ function(linalg_libs)
   set(SPARSE_INCLUDE_DIR
       ${SPARSE_INCLUDE_DIR}
       PARENT_SCOPE)
+  set(UTILS_INCLUDE_DIR
+      ${UTILS_INCLUDE_DIR}
+      PARENT_SCOPE)
+
 endfunction(linalg_libs)
 
 # Reset all libraries

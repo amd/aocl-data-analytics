@@ -25,18 +25,16 @@
  *
  */
 
-#ifndef CSVM_HPP
-#define CSVM_HPP
-
 // Deal with some Windows compilation issues regarding max/min macros
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
 #include "aoclda.h"
-#include "base_svm.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "macros.h"
+#include "svm.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -44,6 +42,8 @@
 #include <numeric>
 #include <utility>
 #include <vector>
+
+namespace ARCH {
 
 // This function returns whether observation is in I_up set
 template <typename T> bool is_upper(T &alpha, const T &y, T &C) {
@@ -54,69 +54,17 @@ template <typename T> bool is_lower(T &alpha, const T &y, T &C) {
     return ((alpha < C && y < 0) || (alpha > 0 && y > 0));
 };
 
-/*
- * C-SVM handle class that contains members that
- * are common for all SVM models that are not Nu problem.
- *
- * This handle is inherited by SVC and SVR.
- * 
- * The inheritance scheme is as follows:
- * 
- *                          SVM
- *                         /   \
- *                        /     \ 
- *                   C-SVM       Nu-SVM
- *                  /     \      /     \
- *                 /       \    /       \
- *              SVC       SVR Nu-SVC   Nu-SVR
- */
 namespace da_svm {
 
-template <typename T> class csvm : public base_svm<T> {
-  private:
-  public:
-    virtual ~csvm(){}; // Make the destructor virtual to remove warnings
-    // Specialised functions
-    void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
-                   std::vector<bool> &selected_ws_indicator, da_int &n_selected);
-    void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                   std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
-                   std::vector<T> &local_alpha, std::vector<T> &gradient,
-                   std::vector<T> &local_gradient, std::vector<T> &response,
-                   std::vector<T> &local_response, std::vector<bool> &I_low_p,
-                   std::vector<bool> &I_up_p, std::vector<bool> &I_low_n,
-                   std::vector<bool> &I_up_n, T &first_diff, std::vector<T> &alpha_diff,
-                   std::optional<T> tol);
-    void set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
-                  std::vector<T> &response, da_int &size, T &bias);
+using namespace da_svm_types;
 
-    // Inherited functions
-    virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
-                                     std::vector<T> &response, std::vector<T> &alpha) = 0;
-    virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
-};
+template <typename T> csvm<T>::~csvm(){};
 
-template <typename T> class svc : public csvm<T> {
-  private:
-  public:
-    svc() { this->mod = da_svm_model::svc; };
-    virtual ~svc(){}; // Make the destructor virtual to remove warnings
-    // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
-    da_status set_sv(std::vector<T> &alpha, da_int &n_support);
-};
+template <typename T> svc<T>::svc() { this->mod = da_svm_model::svc; };
+template <typename T> svc<T>::~svc(){};
 
-template <typename T> class svr : public csvm<T> {
-  private:
-  public:
-    svr() { this->mod = da_svm_model::svr; };
-    virtual ~svr(){}; // Make the destructor virtual to remove warnings
-    // Specialised functions
-    da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
-    da_status set_sv(std::vector<T> &alpha, da_int &n_support);
-};
+template <typename T> svr<T>::svr() { this->mod = da_svm_model::svr; };
+template <typename T> svr<T>::~svr(){};
 
 template <typename T>
 void csvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
@@ -395,5 +343,18 @@ template <typename T> da_status svr<T>::set_sv(std::vector<T> &alpha, da_int &n_
     return da_status_success;
 }
 
+template class csvm<float>;
+template class csvm<double>;
+template class svc<float>;
+template class svc<double>;
+template class svr<float>;
+template class svr<double>;
+
 } // namespace da_svm
-#endif
+
+template bool is_upper<double>(double &alpha, const double &y, double &C);
+template bool is_upper<float>(float &alpha, const float &y, float &C);
+template bool is_lower<double>(double &alpha, const double &y, double &C);
+template bool is_lower<float>(float &alpha, const float &y, float &C);
+
+} // namespace ARCH

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,10 +25,11 @@
  *
  */
 
-#ifndef ROW_TO_COL_MAJOR_HPP
-#define ROW_TO_COL_MAJOR_HPP
-
 #include "aoclda.h"
+#include "basic_statistics.hpp"
+#include "macros.h"
+
+namespace ARCH {
 
 namespace da_basic_statistics {
 
@@ -38,9 +39,8 @@ namespace da_basic_statistics {
     If order is row_major, then we swap the axis, check validity of n_in, p_in and ldx and copy to p and n respectively.
     This ensures that the calling function can continue as if it was a column major order computation.
     */
-da_status inline row_to_col_major(da_order order, da_axis axis_in, da_int n_in,
-                                  da_int p_in, da_int ldx, da_axis &axis, da_int &n,
-                                  da_int &p) {
+da_status row_to_col_major(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
+                           da_int ldx, da_axis &axis, da_int &n, da_int &p) {
     if (n_in < 1 || p_in < 1)
         return da_status_invalid_array_dimension;
 
@@ -65,6 +65,7 @@ da_status inline row_to_col_major(da_order order, da_axis axis_in, da_int n_in,
         return da_status_success;
     }
 }
+
 } // namespace da_basic_statistics
 
-#endif // ROW_TO_COL_MAJOR_HPP
+} // namespace ARCH

@@ -21,9 +21,6 @@
  *
  * ************************************************************************ */
 
-#ifndef DBSCAN_OPTIONS_HPP
-#define DBSCAN_OPTIONS_HPP
-
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -31,11 +28,16 @@
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "dbscan_types.hpp"
+#include "macros.h"
 #include "options.hpp"
 
 #include <limits>
 
+namespace ARCH {
+
 namespace da_dbscan {
+
+using namespace da_dbscan_types;
 
 template <class T>
 inline da_status register_dbscan_options(da_options::OptionRegistry &opts,
@@ -102,4 +104,4 @@ inline da_status register_dbscan_options(da_options::OptionRegistry &opts,
 
 } // namespace da_dbscan
 
-#endif //DBSCAN_OPTIONS_HPP
+} // namespace ARCH

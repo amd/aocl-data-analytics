@@ -26,10 +26,10 @@
 
 #define MAX_KERNEL_SIZE da_int(1024)
 
-namespace da_svm {
+namespace da_svm_types {
 
 enum svm_kernel { rbf = 0, linear, polynomial, sigmoid };
 
-} // namespace da_svm
+} // namespace da_svm_types
 
 #endif //SVM_TYPES_HPP

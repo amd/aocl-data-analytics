@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,8 @@
 #include "da_handle.hpp"
 #include "nlls_functions.hpp"
 #include "gtest/gtest.h"
+
+using namespace TEST_ARCH;
 
 TEST(nlls, tamperNllsHandle) {
     using namespace template_nlls_example_box_c;

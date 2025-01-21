@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -24,9 +24,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
-#ifndef DA_RALFIT_DRIVER_HPP
-#define DA_RALFIT_DRIVER_HPP
 
 #include "aoclda.h"
 #define ral_int da_int
@@ -62,9 +59,13 @@
 #undef ral_nlls_free_workspace
 #undef PREC
 
+#include "macros.h"
+
 #include <cassert>
 #include <functional>
 #include <type_traits>
+
+namespace ARCH {
 
 namespace ralfit {
 
@@ -384,10 +385,10 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
                         "<regularization power>"s + msg);
     }
     switch (ireg_power) {
-    case da_optimization_options::regularization::quadratic:
+    case da_optim_types::regularization::quadratic:
         options.regularization_power = 2.0;
         break;
-    case da_optimization_options::regularization::cubic:
+    case da_optim_types::regularization::cubic:
         options.regularization_power = 3.0;
         break;
     default:
@@ -497,4 +498,5 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
     return status; // err stack populated
 }
 } // namespace ralfit
-#endif
+
+} // namespace ARCH

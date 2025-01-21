@@ -25,11 +25,10 @@
  *
  */
 
-#ifndef CALLBACKS_HPP
-#define CALLBACKS_HPP
-#include "aoclda.h"
-#include <cmath>
+#include "macros.h"
 #include <functional>
+
+namespace ARCH {
 
 /* Generic function pointers to user callbacks for
  * optimization function / gradient and monitoring
@@ -156,4 +155,4 @@ template <typename T> struct meta_reshpcb {
 };
 template <typename T> using reshp_t = typename meta_reshpcb<T>::type;
 
-#endif
+} // namespace ARCH

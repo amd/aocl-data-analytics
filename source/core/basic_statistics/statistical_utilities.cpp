@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,15 +25,14 @@
  *
  */
 
-#ifndef STATISTICAL_UTILITIES_HPP
-#define STATISTICAL_UTILITIES_HPP
-
 #include "aoclda.h"
-#include "moment_statistics.hpp"
-#include "row_to_col_major.hpp"
+#include "basic_statistics.hpp"
+#include "macros.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
+namespace ARCH {
 
 namespace da_basic_statistics {
 
@@ -270,6 +269,15 @@ da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
     return status;
 }
 
+template bool is_zero<double>(double *arr, da_int len);
+template bool is_zero<float>(float *arr, da_int len);
+template da_status standardize<double>(da_order order, da_axis axis_in, da_int n_in,
+                                       da_int p_in, double *x, da_int ldx, da_int dof,
+                                       da_int mode, double *shift, double *scale);
+template da_status standardize<float>(da_order order, da_axis axis_in, da_int n_in,
+                                      da_int p_in, float *x, da_int ldx, da_int dof,
+                                      da_int mode, float *shift, float *scale);
+
 } // namespace da_basic_statistics
 
-#endif
+} // namespace ARCH

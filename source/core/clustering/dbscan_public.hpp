@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,34 +21,33 @@
  *
  * ************************************************************************ */
 
-#ifndef LINMOD_SVD_REG_HPP
-#define LINMOD_SVD_REG_HPP
-
 #include "aoclda.h"
-#include <vector>
+#include "da_handle.hpp"
+#include "dynamic_dispatch.hpp"
+#include "macros.h"
 
-namespace da_linmod {
-// Data for svd used in linear regression
-template <typename T> struct svd_data {
-    std::vector<T> S, U, Vt, temp, work;
-    std::vector<da_int> iwork;
-    da_int lwork = 0, min_order;
-    T alpha = 1.0, beta = 0.0;
+namespace dbscan_public {
 
-    // Constructors
-    svd_data(da_int nsamples, da_int nfeat) {
+template <typename dbscan_class, typename T>
+da_status dbscan_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                          const T *A, da_int lda) {
+    dbscan_class *dbscan = dynamic_cast<dbscan_class *>(handle->get_alg_handle<T>());
+    if (dbscan == nullptr)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_dbscan or "
+                        "handle is invalid.");
 
-        // Work arrays for the SVD
-        min_order = std::min(nsamples, nfeat);
-        S.resize(min_order);
-        U.resize(nsamples * min_order);
-        Vt.resize(min_order * nfeat);
-        temp.resize(min_order);
-        lwork = 4 * min_order * min_order + 7 * min_order;
-        iwork.resize(8 * min_order);
-        work.resize(lwork);
-    };
-};
-} // namespace da_linmod
+    return dbscan->set_data(n_samples, n_features, A, lda);
+}
 
-#endif
+template <typename dbscan_class, typename T> da_status dbscan_compute(da_handle handle) {
+    dbscan_class *dbscan = dynamic_cast<dbscan_class *>(handle->get_alg_handle<T>());
+    if (dbscan == nullptr)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_dbscan or "
+                        "handle is invalid.");
+
+    return dbscan->compute();
+}
+
+} // namespace dbscan_public

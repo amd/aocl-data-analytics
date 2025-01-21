@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 #ifndef PCA_TYPES_HPP
 #define PCA_TYPES_HPP
 
-namespace da_pca {
+namespace da_pca_types {
 
 enum pca_method { pca_method_cov = 0, pca_method_corr, pca_method_svd };
 enum svd_solver {
@@ -35,6 +35,6 @@ enum svd_solver {
     solver_syevd
 };
 
-} // namespace da_pca
+} // namespace da_pca_types
 
 #endif //PCA_TYPES_HPP

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,8 +32,20 @@
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <cmath>
+#ifdef WIN32
+#include <stdlib.h>
+#else
+#include <cstdlib>
+#endif
 #include <iostream>
 #include <vector>
+
+// Auxiliary macro for token concatenation
+#define CONCAT_HELPER(a, b) a##b
+#define CONCAT(a, b) CONCAT_HELPER(a, b)
+
+// Define a macro that will define the dynamic dispatch namespace used for internal tests
+#define TEST_ARCH CONCAT(da_dynamic_dispatch_, ZNVER_MAX)
 
 #define EXPECT_ARR_NEAR(n, x, y, abs_error)                                              \
     for (da_int j = 0; j < (n); j++)                                                     \
@@ -99,6 +111,16 @@ template <typename T> inline void free_data(T **arr, [[maybe_unused]] da_int n) 
 }
 
 inline void free_data(char ***arr, da_int n) { da_delete_string_array(arr, n); }
+
+// Helper function to set an environment variable
+inline int da_setenv(const char *name, const char *value, int overwrite) {
+#ifdef WIN32
+    return _putenv_s(name, value);
+#else
+    return setenv(name, value, overwrite);
+#endif
+}
+
 } // namespace da_test
 
 #endif

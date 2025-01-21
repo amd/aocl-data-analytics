@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,12 +26,16 @@
 
 #include "aoclda_types.h"
 #include "da_error.hpp"
+#include "macros.h"
 #include "options.hpp"
 #include "pca_types.hpp"
-
 #include <limits>
 
+namespace ARCH {
+
 namespace da_pca {
+
+using namespace da_pca_types;
 
 template <class T>
 inline da_status register_pca_options(da_options::OptionRegistry &opts,
@@ -116,5 +120,6 @@ inline da_status reregister_pca_option(da_options::OptionRegistry &opts, da_int 
 }
 
 } // namespace da_pca
+} // namespace ARCH
 
 #endif //PCA_OPTIONS_HPP

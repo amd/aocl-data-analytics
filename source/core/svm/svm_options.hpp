@@ -21,21 +21,23 @@
  *
  * ************************************************************************ */
 
-#ifndef SVM_OPTIONS_HPP
-#define SVM_OPTIONS_HPP
-
 // Deal with some Windows compilation issues regarding max/min macros
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
 #include "da_error.hpp"
+#include "macros.h"
 #include "options.hpp"
 #include "svm_types.hpp"
 
 #include <limits>
 
+namespace ARCH {
+
 namespace da_svm {
+
+using namespace da_svm_types;
 
 template <class T>
 inline da_status register_svm_options(da_options::OptionRegistry &opts,
@@ -142,4 +144,4 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
 
 } // namespace da_svm
 
-#endif //SVM_OPTIONS_HPP
+} // namespace ARCH

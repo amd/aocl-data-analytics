@@ -25,14 +25,13 @@
  *
  */
 
-#ifndef DECISION_TREE_HPP
-#define DECISION_TREE_HPP
-
 #include "aoclda.h"
-#include "basic_handle.hpp"
 #include "da_error.hpp"
+#include "da_omp.hpp"
+#include "decision_forest.hpp"
 #include "decision_tree_options.hpp"
 #include "decision_tree_types.hpp"
+#include "macros.h"
 #include "options.hpp"
 
 #include <chrono>
@@ -46,54 +45,22 @@
 
 #include "boost/sort/spreadsort/spreadsort.hpp"
 
-namespace da_decision_tree {
+namespace ARCH {
 
-template <typename T> class node {
-  public:
-    // Tree data
-    // left|right_child_idx: index in the tree (vector of Node) of the 2 children
-    // If the node is a leaf, the children indices are ignored
-    bool is_leaf = true;
-    da_int left_child_idx = -1;
-    da_int right_child_idx = -1;
-    da_int depth = 0;
-    T score = std::numeric_limits<T>::max();
+namespace da_decision_forest {
 
-    // prediction data
-    // y_pred: contains the predicted class of the data if all children were pruned
-    // feature: Index of the feature the node is branching on, ignore if leaf
-    // x_threshold: branch to the left child if x[feature] < threshold, right otherwise
-    da_int y_pred = 0;
-    da_int feature = -1;
-    T x_threshold = 0.0;
+using namespace da_decision_tree_types;
 
-    // start|end_idx: all the sample indices in the node and its children are stored in
-    // samples_idx[start_idx:end_idx]
-    da_int start_idx = -1, end_idx = -1;
-    da_int n_samples = 0;
-};
+template <typename T> void node<T>::dummy() {}
 
-template <typename T> struct split {
-    /* Contains split information
-     * feat_idx: index of the features we are splitting on
-     * samp_idx: index in the sorted samples_idx array of the sample before the split
-     * threshold: threshold for the feat_idx split feature
-     * score: average score of the 2 children if created
-     * left_score: score of the left child if created
-     * right_score: score of the right child if created
-     */
-    da_int feat_idx, samp_idx;
-    T score, threshold, left_score, right_score;
-
-    void copy(split const &sp) {
-        feat_idx = sp.feat_idx;
-        samp_idx = sp.samp_idx;
-        score = sp.score;
-        threshold = sp.threshold;
-        left_score = sp.left_score;
-        right_score = sp.right_score;
-    }
-};
+template <typename T> void split<T>::copy(split const &sp) {
+    feat_idx = sp.feat_idx;
+    samp_idx = sp.samp_idx;
+    score = sp.score;
+    threshold = sp.threshold;
+    left_score = sp.left_score;
+    right_score = sp.right_score;
+}
 
 /* Compute the impurity of a node containing n_samples samples.
  * On input, count_classes[i] is assumed to contain the number of
@@ -131,170 +98,91 @@ T misclassification_score(da_int n_samples, [[maybe_unused]] da_int n_class,
     return score;
 }
 
-template <typename T> class decision_tree : public basic_handle<T> {
+template <typename T>
+decision_tree<T>::decision_tree(da_errors::da_error_t &err) : basic_handle<T>(err) {
+    // Initialize the options registry
+    // Any error is stored err->status[.] and this needs to be checked
+    // by the caller.
+    register_decision_tree_options<T>(this->opts, *this->err);
+}
 
-    bool model_trained = false;
-    da_int predict_proba_opt = true;
+// Constructor bypassing the optional parameters for internal forest use
+// Values will NOT be checked
+template <typename T>
+decision_tree<T>::decision_tree(da_int max_depth, da_int min_node_sample, da_int method,
+                                da_int prn_times, da_int build_order, da_int nfeat_split,
+                                da_int seed, da_int sort_method, T min_split_score,
+                                T feat_thresh, T min_improvement, bool bootstrap)
+    : max_depth(max_depth), min_node_sample(min_node_sample), method(method),
+      prn_times(prn_times), build_order(build_order), nfeat_split(nfeat_split),
+      seed(seed), sort_method(sort_method), min_split_score(min_split_score),
+      feat_thresh(feat_thresh), min_improvement(min_improvement), bootstrap(bootstrap) {
+    this->err = nullptr;
+    read_public_options = false;
+}
 
-    // user data. Never modified by the classifier
-    // X[n_samples x n_features]: features -- floating point matrix, column major
-    // y[n_samples]: labels -- integer array, 0,...,n_classes-1 values
-    // n_obs: the number of observations to pick randomly from the total samples.
-    //        After call to set_training_data, 0 < n_obs <= n_samples
-    // depth: the depth of the tree once trained
-    // ldx: X leading dimension
-    const T *X = nullptr;
-    const da_int *y = nullptr;
-    da_int ldx;
-    da_int n_samples = 0;
-    da_int n_features = 0;
-    da_int n_class = 0;
-    da_int n_obs;
-    da_int depth = 0;
+template <typename T> decision_tree<T>::~decision_tree() {
+    // Destructor needs to handle arrays that were allocated due to row major storage of input data
+    if (X_temp)
+        delete[] (X_temp);
+}
 
-    //Utility pointer to column major allocated copy of user's data
-    T *X_temp = nullptr;
+template <typename T> void decision_tree<T>::refresh() {
+    model_trained = false;
+    if (tree.capacity() > 0)
+        tree = std::vector<node<T>>();
+}
 
-    // Tree structure
-    // tree (vector): contains the all the nodes, each node stores the indices of its children
-    // class_props (vector): contains the proportions in each class for each node
-    // nodes_to_treat: double ended queue containing the indices of the nodes yet to be treated
-    da_int n_nodes = 0, n_leaves = 0;
-    std::vector<node<T>> tree;
-    std::vector<T> class_props;
-    std::deque<da_int> nodes_to_treat;
-
-    // All memory to compute scores
-    // samples_idx: size n_obs. used to store the indices covered by a given node.
-    //              after a node is inserted in a tree, samples_idx[start_idx:end_idx] contains
-    //              the indices of samples covered by a node and its children
-    // samples_subset: optional array of samples index containing a subset samples_idx
-    //                 (with potential repetition). Used mainly to get repeatable sequences
-    //                 for testing purposes
-    // count_classes: size n_class. Used to count the number of occurrences of all classes in a set
-    //                of samples
-    // count_left|right_classes: same as count classes for potential children
-    // feature_values: size n_samples. used to copy and sort the feature values while computing
-    //                 the score of a node
-    std::vector<da_int> samples_idx;
-    da_int *samples_subset = nullptr;
-    std::vector<da_int> count_classes;
-    std::vector<da_int> count_left_classes, count_right_classes;
-    std::vector<T> feature_values;
-
-    // features_idx: size n_features. Vector containing all the indices of the features.
-    //               primarily used to pick a random subselection of indices to consider
-    //               for splitting a node
-    std::vector<da_int> features_idx;
-
-    // Random number generation
-    std::mt19937 mt_engine;
-
-    // Scoring function
-    score_fun_t<T> score_function;
-
-    // Profiling info
-    // duration<float> fit_time = seconds(0), sort_time = seconds(0),
-    //                 split_time = seconds(0), count_class_time = seconds(0),
-    //                 setup_time = seconds(0);
-
-    // Optional parameter values.
-    // set by reading the option registry if used by external user.
-    // Set by the alternate constructor if used by a forest
-    bool read_public_options = true;
-    da_int max_depth, min_node_sample, method, prn_times, build_order, nfeat_split, seed,
-        sort_method;
-    T min_split_score, feat_thresh, min_improvement;
-    bool bootstrap = false;
-
-  public:
-    // Constructor for public interfaces
-    decision_tree(da_errors::da_error_t &err) : basic_handle<T>(err) {
-        // Initialize the options registry
-        // Any error is stored err->status[.] and this needs to be checked
-        // by the caller.
-        register_decision_tree_options<T>(this->opts, *this->err);
+template <typename T> da_status decision_tree<T>::resize_tree(size_t new_size) {
+    try {
+        tree.resize(new_size);
+        class_props.resize(new_size * this->n_class);
+        return da_status_success;
+    } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE
+        return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                               "Memory allocation error");
     }
-    // Constructor bypassing the optional parameters for internal forest use
-    // Values will NOT be checked
-    decision_tree(da_int max_depth, da_int min_node_sample, da_int method,
-                  da_int prn_times, da_int build_order, da_int nfeat_split, da_int seed,
-                  da_int sort_method, T min_split_score, T feat_thresh, T min_improvement,
-                  bool bootstrap)
-        : max_depth(max_depth), min_node_sample(min_node_sample), method(method),
-          prn_times(prn_times), build_order(build_order), nfeat_split(nfeat_split),
-          seed(seed), sort_method(sort_method), min_split_score(min_split_score),
-          feat_thresh(feat_thresh), min_improvement(min_improvement),
-          bootstrap(bootstrap) {
-        this->err = nullptr;
-        read_public_options = false;
-    }
-    ~decision_tree() {
-        // Destructor needs to handle arrays that were allocated due to row major storage of input data
-        if (X_temp)
-            delete[] (X_temp);
-    }
-    da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
-                                da_int ldx, const da_int *y, da_int n_class = 0,
-                                da_int n_obs = 0, da_int *samples_subset = nullptr);
-    void count_class_occurences(std::vector<da_int> &class_occ, da_int start_idx,
-                                da_int end_idx);
-    void sort_samples(node<T> &nd, da_int feat_idx);
+}
 
-    void partition_samples(const node<T> &nd);
-    da_status add_node(da_int parent_idx, bool is_left, T score, da_int split_idx);
-    da_int get_next_node_idx(da_int build_order);
-    void find_best_split(node<T> &current_node, T feat_thresh, T maximum_split_score,
-                         split<T> &sp);
-    da_status fit();
-    da_status predict(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
-                      da_int *y_pred, da_int mode = 0);
-    da_status predict_proba(da_int nsamp, da_int n_features, const T *X_test, da_int ldx,
-                            T *y_pred, da_int n_class, da_int ldy, da_int mode = 0);
-    da_status predict_log_proba(da_int nsamp, da_int n_features, const T *X_test,
-                                da_int ldx, T *y_pred, da_int n_class, da_int ldy);
-    da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx,
-                    const da_int *y_test, T *accuracy);
-    void clear_working_memory();
+template <typename T>
+da_status decision_tree<T>::get_result([[maybe_unused]] da_result query,
+                                       [[maybe_unused]] da_int *dim,
+                                       [[maybe_unused]] da_int *result) {
 
-    void refresh() {
-        model_trained = false;
-        if (tree.capacity() > 0)
-            tree = std::vector<node<T>>();
-    }
-
-    da_status resize_tree(size_t new_size) {
-        try {
-            tree.resize(new_size);
-            class_props.resize(new_size * this->n_class);
-            return da_status_success;
-        } catch (std::bad_alloc &) {                                  // LCOV_EXCL_LINE
-            return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                                   "Memory allocation error");
-        }
-    }
-
-    da_status get_result(da_result query, da_int *dim, T *result);
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result) {
-
-        return da_warn_bypass(this->err, da_status_unknown_query,
-                              "There are no integer results available for this API.");
-    };
-
-    // Getters for testing purposes
-    std::vector<da_int> const &get_samples_idx() { return samples_idx; }
-    std::vector<T> const &get_features_values() { return feature_values; }
-    std::vector<da_int> const &get_count_classes() { return count_classes; }
-    std::vector<da_int> const &get_count_left_classes() { return count_left_classes; }
-    std::vector<da_int> const &get_count_right_classes() { return count_right_classes; }
-    std::vector<da_int> const &get_features_idx() { return features_idx; }
-    bool model_is_trained() { return model_trained; }
-    std::vector<node<T>> const &get_tree() { return tree; }
-
-    // Setters for testing purposes
-    void set_bootstrap(bool bs) { this->bootstrap = bs; }
+    return da_warn_bypass(this->err, da_status_unknown_query,
+                          "There are no integer results available for this API.");
 };
+
+// Getters for testing purposes
+template <typename T> std::vector<da_int> const &decision_tree<T>::get_samples_idx() {
+    return samples_idx;
+}
+template <typename T> std::vector<T> const &decision_tree<T>::get_features_values() {
+    return feature_values;
+}
+template <typename T> std::vector<da_int> const &decision_tree<T>::get_count_classes() {
+    return count_classes;
+}
+template <typename T>
+std::vector<da_int> const &decision_tree<T>::get_count_left_classes() {
+    return count_left_classes;
+}
+template <typename T>
+std::vector<da_int> const &decision_tree<T>::get_count_right_classes() {
+    return count_right_classes;
+}
+template <typename T> std::vector<da_int> const &decision_tree<T>::get_features_idx() {
+    return features_idx;
+}
+template <typename T> bool decision_tree<T>::model_is_trained() { return model_trained; }
+template <typename T> std::vector<node<T>> const &decision_tree<T>::get_tree() {
+    return tree;
+}
+
+// Setters for testing purposes
+template <typename T> void decision_tree<T>::set_bootstrap(bool bs) {
+    this->bootstrap = bs;
+}
 
 template <typename T>
 da_status decision_tree<T>::get_result(da_result query, da_int *dim, T *result) {
@@ -1014,6 +902,31 @@ template <typename T> void decision_tree<T>::clear_working_memory() {
     }
 }
 
-} // namespace da_decision_tree
+template <class T>
+using score_fun_t = typename std::function<T(da_int, da_int, std::vector<da_int> &)>;
 
-#endif
+template double gini_score<double>(da_int n_samples, da_int n_class,
+                                   std::vector<da_int> &count_classes);
+
+template float gini_score<float>(da_int n_samples, da_int n_class,
+                                 std::vector<da_int> &count_classes);
+
+template double entropy_score<double>(da_int n_samples, da_int n_class,
+                                      std::vector<da_int> &count_classes);
+
+template float entropy_score<float>(da_int n_samples, da_int n_class,
+                                    std::vector<da_int> &count_classes);
+
+template double misclassification_score<double>(da_int n_samples,
+                                                [[maybe_unused]] da_int n_class,
+                                                std::vector<da_int> &count_classes);
+
+template float misclassification_score<float>(da_int n_samples,
+                                              [[maybe_unused]] da_int n_class,
+                                              std::vector<da_int> &count_classes);
+template class decision_tree<double>;
+template class decision_tree<float>;
+
+} // namespace da_decision_forest
+
+} // namespace ARCH

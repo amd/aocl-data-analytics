@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -334,6 +334,16 @@ constexpr const char *basename(const char *const path) { return &path[strip_path
     (e)->rec(status, (msg), "",                                                          \
              std::string(da_errors::basename(__FILE__)) + std::string(":"), __LINE__,    \
              DA_WARNING, true)
+
+struct error_bypass_t {
+    da_status rec([[maybe_unused]] da_status status, [[maybe_unused]] string msg,
+                  [[maybe_unused]] string det = "", [[maybe_unused]] string tel = "",
+                  [[maybe_unused]] size_t ln = 0,
+                  [[maybe_unused]] da_severity sev = DA_ERROR,
+                  [[maybe_unused]] bool stack = false) {
+        return da_status_success;
+    };
+};
 
 // Special implementations where stack is not filled if invalid
 #define da_error_bypass(e, status, msg)                                                  \

@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,32 +21,36 @@
  *
  * ************************************************************************ */
 
-#ifndef LINMOD_QR_REG_HPP
-#define LINMOD_QR_REG_HPP
-
 #include "aoclda.h"
+#include "convert_num.hpp"
+#include "da_cblas.hh"
+#include "linear_model.hpp"
+#include "macros.h"
+#include "sparse_overloads.hpp"
 #include <vector>
 
-namespace da_linmod {
-// Data for QR factorization used in standard linear least squares
-template <typename T> struct qr_data {
-    // X needs to be copied as lapack's dgeqr modifies the matrix
-    std::vector<T> tau, work;
-    da_int lwork = 0, n_col, n_row;
+namespace ARCH {
 
-    // Constructors
-    qr_data(da_int nsamples, da_int nfeat) {
-        // Work arrays for the LAPACK QR factorization
-        /* Naming convention of n_col and n_row comes from the fact that in QR we are always
+namespace da_linmod {
+
+using namespace da_linmod_types;
+
+// Data for QR factorization used in standard linear least squares
+template <typename T> qr_data<T>::qr_data(da_int nsamples, da_int nfeat) {
+    // Work arrays for the LAPACK QR factorization
+    /* Naming convention of n_col and n_row comes from the fact that in QR we are always
             dealing with tall matrix (if we don't, we transpose it so that we do). So it's more
             natural to call it this way rather than min_order/max_order */
-        n_col = std::min(nsamples, nfeat);
-        n_row = std::max(nsamples, nfeat);
-        tau.resize(n_col);
-        lwork = n_col;
-        work.resize(lwork);
-    };
+    n_col = std::min(nsamples, nfeat);
+    n_row = std::max(nsamples, nfeat);
+    tau.resize(n_col);
+    lwork = n_col;
+    work.resize(lwork);
 };
+
+template struct qr_data<float>;
+template struct qr_data<double>;
+
 } // namespace da_linmod
 
-#endif
+} // namespace ARCH

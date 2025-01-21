@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,19 +25,19 @@
  *
  */
 
-#ifndef ORDER_STATISTICS_HPP
-#define ORDER_STATISTICS_HPP
-
 // Deal with some Windows compilation issues regarding max/min macros
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
 #include "aoclda.h"
-#include "row_to_col_major.hpp"
+#include "basic_statistics.hpp"
+#include "macros.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
+namespace ARCH {
 
 namespace da_basic_statistics {
 
@@ -418,6 +418,23 @@ da_status five_point_summary(da_order order, da_axis axis_in, da_int n_in, da_in
     return da_status_success;
 }
 
+template da_status quantile<float>(da_order order, da_axis axis_in, da_int n_in,
+                                   da_int p_in, const float *x, da_int ldx, float q,
+                                   float *quant, da_quantile_type quantile_type);
+template da_status quantile<double>(da_order order, da_axis axis_in, da_int n_in,
+                                    da_int p_in, const double *x, da_int ldx, double q,
+                                    double *quant, da_quantile_type quantile_type);
+template da_status five_point_summary<float>(da_order order, da_axis axis_in, da_int n_in,
+                                             da_int p_in, const float *x, da_int ldx,
+                                             float *minimum, float *lower_hinge,
+                                             float *median, float *upper_hinge,
+                                             float *maximum);
+template da_status five_point_summary<double>(da_order order, da_axis axis_in,
+                                              da_int n_in, da_int p_in, const double *x,
+                                              da_int ldx, double *minimum,
+                                              double *lower_hinge, double *median,
+                                              double *upper_hinge, double *maximum);
+
 } // namespace da_basic_statistics
 
-#endif
+} // namespace ARCH

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,14 +25,12 @@
  *
  */
 
-#ifndef DA_QR_HPP
-#define DA_QR_HPP
-
 #include "aoclda.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "lapack_templates.hpp"
+#include "macros.h"
 #include <vector>
 
 /* This function implements a blocked, parallelized QR algorithm for tall skinny matrices, similar to
@@ -92,6 +90,9 @@
 
 #define MAX_NUM_BLOCKS da_int(256)
 #define MIN_BLOCK_SIZE da_int(1024)
+
+namespace ARCH {
+
 template <typename T>
 da_status da_qr(da_int m, da_int n, std::vector<T> &A, da_int lda, std::vector<T> &tau,
                 std::vector<T> &R_blocked, std::vector<T> &tau_R_blocked,
@@ -430,5 +431,4 @@ da_status da_qr_apply(da_int n, std::vector<T> &A, da_int lda, std::vector<T> &t
 
     return da_status_success;
 }
-
-#endif
+} // namespace ARCH

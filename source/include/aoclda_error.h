@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -62,6 +62,7 @@ enum da_status_ {
     da_status_maxtime,          ///< Time limit reached without converging
     da_status_numerical_difficulties, ///< Numerical difficulties
     da_status_bad_derivatives, ///< Likely errors are detected in the user-supplied derivatives
+    da_status_arch_not_supported, ///< The architecture is not supported
 
     // CSV errors 100-199
     da_status_file_reading_error = 100, ///< An error occurred when reading a CSV file

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,12 +25,14 @@
  *
  */
 
-#ifndef MOMENT_STATISTICS_HPP
-#define MOMENT_STATISTICS_HPP
-
 #include "aoclda.h"
-#include "row_to_col_major.hpp"
+#include "basic_statistics.hpp"
+#include "macros.h"
+#include <algorithm>
 #include <cmath>
+#include <limits>
+
+namespace ARCH {
 
 namespace da_basic_statistics {
 
@@ -560,6 +562,51 @@ da_status moment(da_order order, da_axis axis_in, da_int n_in, da_int p_in, cons
     return da_status_success;
 }
 
+// Explicit template instantiations
+template double power<double>(double a, da_int exponent);
+template float power<float>(float a, da_int exponent);
+template da_status mean<double>(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
+                                const double *x, da_int ldx, double *amean);
+template da_status mean<float>(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
+                               const float *x, da_int ldx, float *amean);
+template da_status geometric_mean<double>(da_order order, da_axis axis_in, da_int n_in,
+                                          da_int p_in, const double *x, da_int ldx,
+                                          double *gmean);
+template da_status geometric_mean<float>(da_order order, da_axis axis_in, da_int n_in,
+                                         da_int p_in, const float *x, da_int ldx,
+                                         float *gmean);
+template da_status harmonic_mean<double>(da_order order, da_axis axis_in, da_int n_in,
+                                         da_int p_in, const double *x, da_int ldx,
+                                         double *hmean);
+template da_status harmonic_mean<float>(da_order order, da_axis axis_in, da_int n_in,
+                                        da_int p_in, const float *x, da_int ldx,
+                                        float *hmean);
+template da_status variance<double>(da_order order, da_axis axis_in, da_int n_in,
+                                    da_int p_in, const double *x, da_int ldx, da_int dof,
+                                    double *amean, double *var);
+template da_status variance<float>(da_order order, da_axis axis_in, da_int n_in,
+                                   da_int p_in, const float *x, da_int ldx, da_int dof,
+                                   float *amean, float *var);
+template da_status skewness<double>(da_order order, da_axis axis_in, da_int n_in,
+                                    da_int p_in, const double *x, da_int ldx,
+                                    double *amean, double *var, double *skew);
+template da_status skewness<float>(da_order order, da_axis axis_in, da_int n_in,
+                                   da_int p_in, const float *x, da_int ldx, float *amean,
+                                   float *var, float *skew);
+template da_status kurtosis<double>(da_order order, da_axis axis_in, da_int n_in,
+                                    da_int p_in, const double *x, da_int ldx,
+                                    double *amean, double *var, double *kurt);
+template da_status kurtosis<float>(da_order order, da_axis axis_in, da_int n_in,
+                                   da_int p_in, const float *x, da_int ldx, float *amean,
+                                   float *var, float *kurt);
+template da_status moment<double>(da_order order, da_axis axis_in, da_int n_in,
+                                  da_int p_in, const double *x, da_int ldx, da_int k,
+                                  da_int use_precomputed_mean, double *amean,
+                                  double *mom);
+template da_status moment<float>(da_order order, da_axis axis_in, da_int n_in,
+                                 da_int p_in, const float *x, da_int ldx, da_int k,
+                                 da_int use_precomputed_mean, float *amean, float *mom);
+
 } // namespace da_basic_statistics
 
-#endif
+} // namespace ARCH

@@ -21,109 +21,68 @@
  *
  * ************************************************************************ */
 
-#ifndef LINMOD_NLN_OPTIM_HPP
-#define LINMOD_NLN_OPTIM_HPP
-
 #undef max
 #include "aoclda.h"
 #include "da_cblas.hh"
+#include "linear_model.hpp"
 #include "linmod_types.hpp"
-#include <iostream> // FIXME REMOVE
+#include "macros.h"
+
+using namespace da_linmod_types;
+
+namespace ARCH {
 
 /* Base class of the callback user data to be passed as void pointers
  * Contain all the basic data to compute */
-template <class T> class usrdata_base {
-  public:
-    da_int nsamples = 0, nfeat = 0;
-    // Feature matrix of size (nsamples x nfeat)
-    const T *X = nullptr;
-    // Response vector
-    const T *y = nullptr;
+template <class T>
+usrdata_base<T>::usrdata_base(const T *X, const T *y, da_int nsamples, da_int nfeat,
+                              bool intercept, T lambda, T alpha, const T *xv,
+                              da_linmod_types::scaling_t scaling)
+    : nsamples(nsamples), nfeat(nfeat), X(X), y(y), intercept(intercept), xv(xv),
+      scaling(scaling) {
+    l1reg = lambda * alpha;
+    l2reg = lambda * (T(1) - alpha) / T(2);
+}
 
-    // Intercept
-    bool intercept = false;
-
-    // Additional parameters that enhance the model
-
-    // Regularization
-    T l1reg = T(0);
-    T l2reg = T(0);
-    /* Pointer to rescaled penalty factors for each coefficient
-     * in the case of standardization these are scale[k]/scale[y],
-     * and are used in the regularization terms.
-     * See details in the standardization function
-     * pointer to an array of at least nfeat
-     */
-    const T *xv{nullptr};
-    da_linmod::scaling_t scaling{da_linmod::scaling_t::none};
-
-    usrdata_base(const T *X, const T *y, da_int nsamples, da_int nfeat, bool intercept,
-                 T lambda, T alpha, const T *xv = nullptr,
-                 da_linmod::scaling_t scaling = da_linmod::scaling_t::none)
-        : nsamples(nsamples), nfeat(nfeat), X(X), y(y), intercept(intercept), xv(xv),
-          scaling(scaling) {
-        l1reg = lambda * alpha;
-        l2reg = lambda * (T(1) - alpha) / T(2);
-    }
-    virtual ~usrdata_base() {}
-};
+template <class T> usrdata_base<T>::~usrdata_base() {}
 
 /* User data for the nonlinear optimization callbacks of the logistic regression */
-template <class T> class cb_usrdata_logreg : public usrdata_base<T> {
-  public:
-    da_int nclass;
-    /* Add 4 working memory arrays
-     * maxexp[nsamples]: used to store the maximum values of each X_k beta_k (k as class index) for the logsumexp trick
-     * sumexp[nsamples]: used to store the sum of the exponents of each X_k beta_k (k as class index) for the logsumexp trick
-     * lincomb[nsamples*(nclass-1) OR nsamples*nclass]: used to store all the X_k beta_k values
-     * gradients_p[nsamples*(nclass-1) OR nsamples*nclass]: used to store all the pointwise gradients
-     */
-    std::vector<T> maxexp, sumexp, lincomb, gradients_p;
+template <class T>
+cb_usrdata_logreg<T>::cb_usrdata_logreg(const T *X, const T *y, da_int nsamples,
+                                        da_int nfeat, bool intercept, T lambda, T alpha,
+                                        da_int nclass, da_int nparam)
+    : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha), nclass(nclass) {
+    maxexp.resize(nsamples);
+    sumexp.resize(nsamples);
+    lincomb.resize(nsamples * nparam);
+    gradients_p.resize(nsamples * nparam);
+}
 
-    cb_usrdata_logreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                      bool intercept, T lambda, T alpha, da_int nclass, da_int nparam)
-        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha),
-          nclass(nclass) {
-        maxexp.resize(nsamples);
-        sumexp.resize(nsamples);
-        lincomb.resize(nsamples * nparam);
-        gradients_p.resize(nsamples * nparam);
-    }
-    ~cb_usrdata_logreg() {}
-};
+template <class T> cb_usrdata_logreg<T>::~cb_usrdata_logreg() {}
 
 /* User data for the nonlinear optimization callbacks of the lineqr regression */
-template <class T> class cb_usrdata_linreg : public usrdata_base<T> {
-  public:
-    /* Add a working memory arrays
-     * matvec[nsamples]: typically used to compute the matrix vector product X * coef
-     */
-    std::vector<T> matvec;
+template <class T>
+cb_usrdata_linreg<T>::cb_usrdata_linreg(const T *X, const T *y, da_int nsamples,
+                                        da_int nfeat, bool intercept, T lambda, T alpha)
+    : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha) {
+    matvec.resize(nsamples);
+}
 
-    cb_usrdata_linreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                      bool intercept, T lambda, T alpha)
-        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha) {
-        matvec.resize(nsamples);
-    }
-    ~cb_usrdata_linreg() {}
-};
+template <class T> cb_usrdata_linreg<T>::~cb_usrdata_linreg() {}
 
 /* User data for the coordinate descent step function of the linear regression */
-template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
-  public:
-    /* Add working memory array
-     * residual[nsamples]: holds the residual (and all the intermediate calculations)
-     */
-    std::vector<T> residual;
+template <class T>
+stepfun_usrdata_linreg<T>::stepfun_usrdata_linreg(const T *X, const T *y, da_int nsamples,
+                                                  da_int nfeat, bool intercept, T lambda,
+                                                  T alpha, const T *xv,
+                                                  da_linmod_types::scaling_t scaling)
+    : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha, xv, scaling) {
+    residual.resize(nsamples);
+}
 
-    stepfun_usrdata_linreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                           bool intercept, T lambda, T alpha, const T *xv,
-                           da_linmod::scaling_t scaling)
-        : usrdata_base<T>(X, y, nsamples, nfeat, intercept, lambda, alpha, xv, scaling) {
-        residual.resize(nsamples);
-    }
-    ~stepfun_usrdata_linreg() { usrdata_base<T>::xv = nullptr; }
-};
+template <class T> stepfun_usrdata_linreg<T>::~stepfun_usrdata_linreg() {
+    usrdata_base<T>::xv = nullptr;
+}
 
 /* This function evaluates the feature matrix X over the parameter vector x (taking into account the intercept),
  * it performs the GEMV operation
@@ -137,7 +96,7 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
  */
 template <typename T>
 void eval_feature_matrix(da_int n, const T *x, da_int m, const T *X, T *v, bool intercept,
-                         bool trans = false, T alpha = 1.0, T beta = 0.0) {
+                         bool trans, T alpha, T beta) {
 
     da_int aux = intercept ? 1 : 0;
     enum CBLAS_TRANSPOSE transpose = trans ? CblasTrans : CblasNoTrans;
@@ -750,9 +709,9 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
     T gk{T(0)};
     T xvk{T(1)};
 
-    const bool standardized = data->scaling == da_linmod::scaling_t::standardize;
-    const bool usexv = data->scaling == da_linmod::scaling_t::standardize ||
-                       data->scaling == da_linmod::scaling_t::scale_only;
+    const bool standardized = data->scaling == da_linmod_types::scaling_t::standardize;
+    const bool usexv = data->scaling == da_linmod_types::scaling_t::standardize ||
+                       data->scaling == da_linmod_types::scaling_t::scale_only;
     const T l1{data->l1reg};        // lambdahat * alpha
     const T l2{T(2) * data->l2reg}; // Note that data->l2reg = lambdahat (1-alpha) / 2;
 
@@ -900,4 +859,79 @@ da_int stepchk_linreg_sklearn([[maybe_unused]] da_int nfeat,
     *gap = T(0);
     return 0;
 }
-#endif
+
+template class usrdata_base<double>;
+template class usrdata_base<float>;
+template class cb_usrdata_linreg<double>;
+template class cb_usrdata_linreg<float>;
+template class cb_usrdata_logreg<double>;
+template class cb_usrdata_logreg<float>;
+template class stepfun_usrdata_linreg<double>;
+template class stepfun_usrdata_linreg<float>;
+
+template void eval_feature_matrix<double>(da_int n, const double *x, da_int m,
+                                          const double *X, double *v, bool intercept,
+                                          bool trans = false, double alpha = 1.0,
+                                          double beta = 0.0);
+template void eval_feature_matrix<float>(da_int n, const float *x, da_int m,
+                                         const float *X, float *v, bool intercept,
+                                         bool trans = false, float alpha = 1.0,
+                                         float beta = 0.0);
+template double regfun<double>(da_int n, const double *x, double l1reg, double l2reg);
+template float regfun<float>(da_int n, const float *x, float l1reg, float l2reg);
+template void reggrd<double>(da_int n, const double *x, double l1reg, double l2reg,
+                             double *grad);
+template void reggrd<float>(da_int n, const float *x, float l1reg, float l2reg,
+                            float *grad);
+template da_int objfun_logistic_rsc<double>(da_int n, double *x, double *f, void *udata);
+template da_int objfun_logistic_rsc<float>(da_int n, float *x, float *f, void *udata);
+template da_int objgrd_logistic_rsc<double>(da_int n, double *x, double *grad,
+                                            void *udata, da_int xnew);
+template da_int objgrd_logistic_rsc<float>(da_int n, float *x, float *grad, void *udata,
+                                           da_int xnew);
+template da_int objfun_logistic_two_class<double>(da_int n, double *x, double *f,
+                                                  void *udata);
+template da_int objfun_logistic_two_class<float>(da_int n, float *x, float *f,
+                                                 void *udata);
+template da_int objgrd_logistic_two_class<double>(da_int n, double *x, double *grad,
+                                                  void *udata, da_int xnew);
+template da_int objgrd_logistic_two_class<float>(da_int n, float *x, float *grad,
+                                                 void *udata, da_int xnew);
+template da_int objfun_logistic_ssc<double>(da_int n, double *x, double *f, void *udata);
+template da_int objfun_logistic_ssc<float>(da_int n, float *x, float *f, void *udata);
+template da_int objgrd_logistic_ssc<double>(da_int n, double *x, double *grad,
+                                            void *udata, da_int xnew);
+template da_int objgrd_logistic_ssc<float>(da_int n, float *x, float *grad, void *udata,
+                                           da_int xnew);
+template da_int objfun_mse<double>(da_int n, double *x, double *loss, void *udata);
+template da_int objfun_mse<float>(da_int n, float *x, float *loss, void *udata);
+template da_int objgrd_mse<double>(da_int n, double *x, double *grad, void *udata,
+                                   da_int xnew);
+template da_int objgrd_mse<float>(da_int n, float *x, float *grad, void *udata,
+                                  da_int xnew);
+template da_int loss_mse<double>(da_int nsamples, da_int nfeat, const double *X,
+                                 bool intercept, double l1reg, double l2reg,
+                                 const double *coef, const double *y, double *loss,
+                                 double *pred);
+template da_int loss_mse<float>(da_int nsamples, da_int nfeat, const float *X,
+                                bool intercept, float l1reg, float l2reg,
+                                const float *coef, const float *y, float *loss,
+                                float *pred);
+template da_int stepfun_linreg_glmnet<double>(da_int nfeat, double *coef, double *knew,
+                                              da_int k, double *f, void *udata,
+                                              da_int action, double kdiff);
+template da_int stepfun_linreg_glmnet<float>(da_int nfeat, float *coef, float *knew,
+                                             da_int k, float *f, void *udata,
+                                             da_int action, float kdiff);
+template da_int stepfun_linreg_sklearn<double>(da_int nfeat, double *coef, double *knew,
+                                               da_int k, double *f, void *udata,
+                                               da_int action, double kdiff);
+template da_int stepfun_linreg_sklearn<float>(da_int nfeat, float *coef, float *knew,
+                                              da_int k, float *f, void *udata,
+                                              da_int action, float kdiff);
+template da_int stepchk_linreg_sklearn<double>(da_int nfeat, const double *coef,
+                                               void *udata, double *gap);
+template da_int stepchk_linreg_sklearn<float>(da_int nfeat, const float *coef,
+                                              void *udata, float *gap);
+
+} // namespace ARCH

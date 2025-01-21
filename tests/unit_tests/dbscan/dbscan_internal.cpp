@@ -78,8 +78,8 @@ TYPED_TEST(DBSCANTest, radius_neighbors_small) {
     da_errors::da_error_t *err =
         new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
 
-    EXPECT_EQ(da_radius_neighbors::radius_neighbors(n_samples, n_features, A.data(), lda,
-                                                    eps, neighbors, err),
+    EXPECT_EQ(TEST_ARCH::da_radius_neighbors::radius_neighbors(
+                  n_samples, n_features, A.data(), lda, eps, neighbors, err),
               da_status_success);
 
     // In-place sort to allow for different ordering of stored indices in neighbors
@@ -116,8 +116,8 @@ TYPED_TEST(DBSCANTest, radius_neighbors_large) {
     da_errors::da_error_t *err =
         new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
 
-    EXPECT_EQ(da_radius_neighbors::radius_neighbors(n_samples, n_features, A.data(), lda,
-                                                    eps, neighbors, err),
+    EXPECT_EQ(TEST_ARCH::da_radius_neighbors::radius_neighbors(
+                  n_samples, n_features, A.data(), lda, eps, neighbors, err),
               da_status_success);
 
     // In-place sort to allow for different ordering of stored indices in neighbors

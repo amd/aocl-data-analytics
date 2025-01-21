@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,10 @@
 #include "aoclda_metrics.h"
 #include "aoclda_types.h"
 #include "da_error.hpp"
+#include "macros.h"
 #include "options.hpp"
+
+namespace ARCH {
 
 namespace da_knn {
 
@@ -76,5 +79,7 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
 };
 
 } // namespace da_knn
+
+} // namespace ARCH
 
 #endif

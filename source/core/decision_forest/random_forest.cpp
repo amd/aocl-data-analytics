@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,80 +25,54 @@
  *
  */
 
-#ifndef FOREST_HPP
-#define FOREST_HPP
-
 #include "aoclda.h"
 #include "da_error.hpp"
 #include "da_omp.hpp"
-#include "da_utils.hpp"
-#include "decision_tree.hpp"
+#include "decision_forest.hpp"
+#include "decision_tree_types.hpp"
+#include "macros.h"
+#include "options.hpp"
 #include "random_forest_options.hpp"
 
-namespace da_random_forest {
-using namespace da_decision_tree;
+#include <chrono>
+#include <deque>
+#include <functional>
+#include <limits>
+#include <numeric>
+#include <random>
+#include <type_traits>
+#include <vector>
+
+#include "boost/sort/spreadsort/spreadsort.hpp"
+
+namespace ARCH {
+
+namespace da_decision_forest {
+
+using namespace da_decision_tree_types;
+
 using namespace da_errors;
 
-template <typename T> class random_forest : public basic_handle<T> {
+template <typename T>
+random_forest<T>::random_forest(da_errors::da_error_t &err) : basic_handle<T>(err) {
+    // Initialize the options registry
+    // Any error is stored err->status[.] and this NEEDS to be checked
+    // by the caller.
+    register_forest_options<T>(this->opts, *this->err);
+}
 
-    bool model_trained = false;
+template <typename T> random_forest<T>::~random_forest() {
+    // Destructor needs to handle arrays that were allocated due to row major storage of input data
+    if (X_temp)
+        delete[] (X_temp);
+}
 
-    // User data. Never modified by the classifier
-    // X[n_samples X n_features]: features -- floating point matrix, column major
-    // y[n_samples]: labels -- integer array, 0,...,n_classes-1 values
-    const T *X = nullptr;
-    const da_int *y = nullptr;
-    da_int n_samples = 0;
-    da_int ldx = 0;
-    da_int n_features = 0;
-    da_int n_class = 0;
-
-    //Utility pointer to column major allocated copy of user's data
-    T *X_temp = nullptr;
-
-    // Options
-    da_int n_tree = 0;
-    da_int seed, n_obs;
-    da_int block_size;
-
-    // Model data
-    std::vector<std::unique_ptr<decision_tree<T>>> forest;
-
-  public:
-    random_forest(da_errors::da_error_t &err) : basic_handle<T>(err) {
-        // Initialize the options registry
-        // Any error is stored err->status[.] and this NEEDS to be checked
-        // by the caller.
-        register_forest_options<T>(this->opts, *this->err);
-    }
-    ~random_forest() {
-        // Destructor needs to handle arrays that were allocated due to row major storage of input data
-        if (X_temp)
-            delete[] (X_temp);
-    }
-    da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
-                                da_int ldx, const da_int *y, da_int n_class = 0);
-    da_status fit();
-    void parallel_count_classes(const T *X_test, da_int ldx_test, const da_int &n_blocks,
-                                const da_int &block_size, const da_int &block_rem,
-                                const da_int &n_threads,
-                                std::vector<da_int> &count_classes,
-                                std::vector<da_int> &y_pred_tree);
-    da_status predict(da_int nn_samples, da_int n_features, const T *X, da_int ldx,
-                      da_int *y_pred);
-    da_status predict_proba(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test,
-                            T *y_proba, da_int nclass, da_int ldy);
-    da_status predict_log_proba(da_int nsamp, da_int n_features, const T *X_test,
-                                da_int ldx, T *y_pred, da_int n_class, da_int ldy);
-    da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test,
-                    const da_int *y_test, T *score);
-
-    da_status get_result(da_result query, da_int *dim, T *result);
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result) {
-        return da_warn(this->err, da_status_unknown_query,
-                       "There are no integer results available for this API.");
-    };
+template <typename T>
+da_status random_forest<T>::get_result([[maybe_unused]] da_result query,
+                                       [[maybe_unused]] da_int *dim,
+                                       [[maybe_unused]] da_int *result) {
+    return da_warn(this->err, da_status_unknown_query,
+                   "There are no integer results available for this API.");
 };
 
 template <typename T>
@@ -599,5 +573,9 @@ da_status random_forest<T>::score(da_int nsamp, da_int nfeat, const T *X_test,
     return da_status_success;
 }
 
-} // namespace da_random_forest
-#endif
+template class random_forest<double>;
+template class random_forest<float>;
+
+} // namespace da_decision_forest
+
+} // namespace ARCH

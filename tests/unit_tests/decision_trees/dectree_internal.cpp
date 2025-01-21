@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -26,13 +26,13 @@
  */
 
 #include "../utest_utils.hpp"
-#include "decision_tree.hpp"
+#include "decision_forest.hpp"
 #include "dectree_utils.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <list>
 
-using namespace da_decision_tree;
+using namespace TEST_ARCH::da_decision_forest;
 
 template <typename T> class dectree_internal_test : public testing::Test {
   public:
