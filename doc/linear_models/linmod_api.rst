@@ -37,9 +37,6 @@ Linear Model APIs
 
    .. tab-item:: C
 
-      .. doxygentypedef:: linmod_model
-      .. doxygenenum:: linmod_model_
-
       .. _da_linmod_select_model:
 
       .. doxygenfunction:: da_linmod_select_model_s
@@ -70,3 +67,5 @@ Linear Model APIs
          :outline:
       .. doxygenfunction:: da_linmod_evaluate_model_d
 
+      .. doxygentypedef:: linmod_model
+      .. doxygenenum:: linmod_model_

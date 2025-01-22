@@ -30,9 +30,20 @@ Patching scikit learn svm: SVC, SVR, nuSVC, nuSVR
 # pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
 
 import warnings
-from sklearn.svm import SVC as SVC_sklearn, SVR as SVR_sklearn, NuSVC as NuSVC_sklearn, NuSVR as NuSVR_sklearn
-from aoclda.svm import SVC as SVC_da, SVR as SVR_da, NuSVC as NuSVC_da, NuSVR as NuSVR_da
 import numpy as np
+from sklearn.svm import (
+    SVC as SVC_sklearn,
+    SVR as SVR_sklearn,
+    NuSVC as NuSVC_sklearn,
+    NuSVR as NuSVR_sklearn
+)
+
+from aoclda.svm import (
+    SVC as SVC_da,
+    SVR as SVR_da,
+    NuSVC as NuSVC_da,
+    NuSVR as NuSVR_da
+)
 
 
 class SVC(SVC_sklearn):
@@ -98,7 +109,7 @@ class SVC(SVC_sklearn):
 
         # Translate options to aocl-da ones
         self.svc = SVC_da(C=self.C, kernel=self.kernel, degree=self.degree, gamma=self.gamma,
-                          coef0=self.coef0, tol=self.tol, max_iter=self.max_iter, decision_function_shape=self.decision_function_shape)
+                          coef0=self.coef0, tol=self.tol, max_iter=self.max_iter)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -115,7 +126,7 @@ class SVC(SVC_sklearn):
         return self.svc.predict(X)
 
     def decision_function(self, X):
-        return self.svc.decision_function(X)
+        return self.svc.decision_function(X, self.decision_function_shape)
 
     def score(self, X, y):
         return self.svc.score(X, y)
@@ -195,8 +206,7 @@ class SVC(SVC_sklearn):
 
     @property
     def n_iter_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.svc.n_iter
 
     @property
     def support_(self):
@@ -231,8 +241,8 @@ class SVR(SVR_sklearn):
     Overwrite sklearn SVR to call DA library
     """
 
-    def __init__(self, kernel='rbf', degree=3, gamma='scale', coef0=0.0, tol=0.001, C=1.0, epsilon=0.1, shrinking=False,
-                 cache_size=200, verbose=False, max_iter=-1):
+    def __init__(self, kernel='rbf', degree=3, gamma='scale', coef0=0.0, tol=0.001, C=1.0,
+                 epsilon=0.1, shrinking=False, cache_size=200, verbose=False, max_iter=-1):
         # Supported attributes
         self.epsilon = epsilon
         self.C = C
@@ -267,8 +277,8 @@ class SVR(SVR_sklearn):
         self.aocl = True
 
         # Translate options to aocl-da ones
-        self.svr = SVR_da(C=self.C, epsilon=self.epsilon, kernel=self.kernel, degree=self.degree, gamma=self.gamma,
-                          coef0=self.coef0, tol=self.tol, max_iter=self.max_iter)
+        self.svr = SVR_da(C=self.C, epsilon=self.epsilon, kernel=self.kernel, degree=self.degree,
+                          gamma=self.gamma, coef0=self.coef0, tol=self.tol, max_iter=self.max_iter)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -342,8 +352,7 @@ class SVR(SVR_sklearn):
 
     @property
     def n_iter_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.svr.n_iter
 
     @property
     def n_support_(self):
@@ -426,7 +435,7 @@ class NuSVC(NuSVC_sklearn):
 
         # Translate options to aocl-da ones
         self.nusvc = NuSVC_da(nu=self.nu, kernel=self.kernel, degree=self.degree, gamma=self.gamma,
-                              coef0=self.coef0, tol=self.tol, max_iter=self.max_iter, decision_function_shape=self.decision_function_shape)
+                              coef0=self.coef0, tol=self.tol, max_iter=self.max_iter)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -443,7 +452,7 @@ class NuSVC(NuSVC_sklearn):
         return self.nusvc.predict(X)
 
     def decision_function(self, X):
-        return self.nusvc.decision_function(X)
+        return self.nusvc.decision_function(X, self.decision_function_shape)
 
     def score(self, X, y):
         return self.nusvc.score(X, y)
@@ -523,8 +532,7 @@ class NuSVC(NuSVC_sklearn):
 
     @property
     def n_iter_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.nusvc.n_iter
 
     @property
     def support_(self):
@@ -559,8 +567,8 @@ class NuSVR(NuSVR_sklearn):
     Overwrite sklearn NuSVR to call DA library
     """
 
-    def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=False,
-                 tol=0.001, cache_size=200, verbose=False, max_iter=-1):
+    def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0,
+                 shrinking=False, tol=0.001, cache_size=200, verbose=False, max_iter=-1):
         # Supported attributes
         self.nu = nu
         self.C = C
@@ -595,8 +603,8 @@ class NuSVR(NuSVR_sklearn):
         self.aocl = True
 
         # Translate options to aocl-da ones
-        self.nusvr = NuSVR_da(nu=self.nu, C=self.C, kernel=self.kernel, degree=self.degree, gamma=self.gamma,
-                              coef0=self.coef0, tol=self.tol, max_iter=self.max_iter)
+        self.nusvr = NuSVR_da(nu=self.nu, C=self.C, kernel=self.kernel, degree=self.degree,
+                              gamma=self.gamma, coef0=self.coef0, tol=self.tol, max_iter=self.max_iter)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -670,8 +678,7 @@ class NuSVR(NuSVR_sklearn):
 
     @property
     def n_iter_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.nusvr.n_iter
 
     @property
     def n_support_(self):

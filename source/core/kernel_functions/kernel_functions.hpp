@@ -29,7 +29,6 @@
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "macros.h"
-#include <iostream>
 #include <vector>
 
 namespace ARCH {
@@ -37,10 +36,10 @@ namespace ARCH {
 /*
 Auxiliary function to check dimensions of given parameters (taken from pairwise_distances.hpp)
 */
+
 template <typename T>
 inline da_status check_input(da_order order, da_int m, da_int n, da_int k, const T *X,
                              da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd);
-
 /*
 Auxiliary function to create work arrays
 */
@@ -55,14 +54,12 @@ Given an m by k matrix X and an n by k matrix Y (both column major), computes th
 template <typename T>
 da_status rbf_kernel(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
                      const T *Y, da_int ldy, T *D, da_int ldd, T gamma);
-
 /*
 Linear kernel
 */
 template <typename T>
 da_status linear_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,
                         da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd);
-
 /*
 Polynomial kernel
 */
@@ -70,7 +67,6 @@ template <typename T>
 da_status polynomial_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,
                             da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma,
                             da_int degree, T coef0);
-
 /*
 Sigmoid kernel
 */
@@ -78,36 +74,47 @@ template <typename T>
 da_status sigmoid_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,
                          da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma,
                          T coef0);
-
 /*
 RBF kernel
 Given an m by k matrix X and an n by k matrix Y (both column major), computes the m by n kernel matrix D
 */
 template <typename T>
-void rbf_kernel_local(da_order order, da_int m, da_int n, da_int k, const T *X,
-                      T *X_norms, da_int ldx, const T *Y, T *Y_norms, da_int ldy, T *D,
-                      da_int ldd, T gamma, bool X_is_Y);
-
+void rbf_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *X,
+                         T *X_norms, da_int ldx, const T *Y, T *Y_norms, da_int ldy, T *D,
+                         da_int ldd, T gamma, bool X_is_Y);
 /*
 Linear kernel
 */
 template <typename T>
-void linear_kernel_local(da_order order, da_int m, da_int n, da_int k, const T *X,
-                         da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
-                         bool X_is_Y);
+void linear_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *X,
+                            da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
+                            bool X_is_Y);
 /*
 Polynomial kernel
 */
 template <typename T>
-void polynomial_kernel_local(da_order order, da_int m, da_int n, da_int k, const T *X,
-                             da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
-                             T gamma, da_int degree, T coef0, bool X_is_Y);
+void polynomial_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *X,
+                                da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
+                                T gamma, da_int degree, T coef0, bool X_is_Y);
 /*
 Sigmoid kernel
 */
 template <typename T>
-void sigmoid_kernel_local(da_order order, da_int m, da_int n, da_int k, const T *X,
-                          da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma,
-                          T coef0, bool X_is_Y);
+void sigmoid_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *X,
+                             da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
+                             T gamma, T coef0, bool X_is_Y);
+/*
+Helper function to transpose upper trainagular matrix to a symmetric
+*/
+template <typename T>
+inline void fill_upper_traingular(da_order order, da_int m, T *D, da_int ldd);
+
+/*
+Helper function to compute gemm/syrk
+*/
+template <typename T>
+inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *X,
+                         da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma,
+                         bool X_is_Y);
 
 } // namespace ARCH

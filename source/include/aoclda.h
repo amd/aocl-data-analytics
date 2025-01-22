@@ -39,7 +39,7 @@ extern "C" {
 #include "aoclda_decision_forest.h"
 #include "aoclda_error.h"
 #include "aoclda_handle.h"
-#include "aoclda_kernel_function.h"
+#include "aoclda_kernel_functions.h"
 #include "aoclda_kmeans.h"
 #include "aoclda_knn.h"
 #include "aoclda_linmod.h"

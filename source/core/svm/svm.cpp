@@ -78,13 +78,9 @@ da_status svm<T>::get_result(da_result query, da_int *dim, T *result) {
                        "or da_svm_compute_d before extracting results.");
     }
 
-    da_int rinfo_size = 3;
+    da_int rinfo_size = 100;
     da_int size;
 
-    if (result == nullptr) {
-        return da_warn(this->err, da_status_invalid_array_dimension,
-                       "The results array has not been allocated.");
-    }
     switch (query) {
     case da_result::da_rinfo:
         if (*dim < rinfo_size) {
@@ -110,6 +106,7 @@ da_status svm<T>::get_result(da_result query, da_int *dim, T *result) {
         this->copy_2D_results_array(n_class - 1, n_sv, support_coefficients.data(),
                                     n_class - 1, result);
         break;
+    // support_vectors = slices of X matrix along rows specified in support_indexes
     case da_result::da_svm_support_vectors:
         size = n_sv * ncol;
         if (*dim < size) {
@@ -118,6 +115,19 @@ da_status svm<T>::get_result(da_result query, da_int *dim, T *result) {
                            "The array is too small. Please provide an array of at "
                            "least size: " +
                                std::to_string(size) + ".");
+        }
+        try {
+            support_vectors.resize(size);
+        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        // Construct a matrix consisting of only support vectors (can be optimised in row major)
+        for (da_int i = 0; i < n_sv; i++) {
+            da_int current_idx = support_indexes[i];
+            for (da_int j = 0; j < ncol; j++) {
+                support_vectors[i + j * n_sv] = X[current_idx + j * nrow];
+            }
         }
         this->copy_2D_results_array(n_sv, ncol, support_vectors.data(), n_sv, result);
         break;
@@ -179,6 +189,19 @@ da_status svm<T>::get_result(da_result query, da_int *dim, da_int *result) {
         else
             result[0] = n_sv;
         break;
+    case da_result::da_svm_n_iterations:
+        size = n_classifiers;
+        if (*dim < size) {
+            *dim = size;
+            return da_warn(this->err, da_status_invalid_array_dimension,
+                           "The array is too small. Please provide an array of at "
+                           "least size: " +
+                               std::to_string(size) + ".");
+        }
+        for (da_int i = 0; i < size; i++)
+            result[i] = n_iteration[i];
+
+        break;
     case da_result::da_svm_idx_support_vectors:
         size = n_sv;
         if (*dim < size) {
@@ -200,12 +223,13 @@ da_status svm<T>::get_result(da_result query, da_int *dim, da_int *result) {
 
 /* Store the user's data matrix in preparation for SVM computation */
 template <typename T>
-da_status svm<T>::set_data(da_int n, da_int p, const T *X_in, da_int ldx_train,
-                           const T *y_in) {
-    nrow = n;
-    ncol = p;
+da_status svm<T>::set_data(da_int n_samples, da_int n_features, const T *X_in,
+                           da_int ldx_train, const T *y_in) {
+    nrow = n_samples;
+    ncol = n_features;
+    ismulticlass = false;
     try {
-        is_sv.resize(n);
+        is_sv.resize(n_samples);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
@@ -222,111 +246,103 @@ da_status svm<T>::set_data(da_int n, da_int p, const T *X_in, da_int ldx_train,
                         "SVM model has not been selected.");
 
     da_status status =
-        this->store_2D_array(n, p, X_in, ldx_train, &X_temp, &X, this->ldx_train,
-                             "n_samples", "n_features", "X", "ldx");
+        this->store_2D_array(n_samples, n_features, X_in, ldx_train, &X_temp, &X,
+                             this->ldx_train, "n_samples", "n_features", "X", "ldx");
     if (status != da_status_success)
         return status;
 
-    status = this->check_1D_array(n, y_in, "n", "y", 1);
+    status = this->check_1D_array(n_samples, y_in, "n_samples", "y", 1);
     if (status != da_status_success)
         return status;
 
     y = y_in;
-
+    // Find n_class and validate y for classification
     if (mod == da_svm_model::svc || mod == da_svm_model::nusvc) {
+        // Check if y contains only whole numbers
+        for (da_int i = 0; i < n_samples; i++)
+            if (y[i] != std::round(y[i]))
+                return da_error(this->err, da_status_invalid_input,
+                                "Labels must be whole numbers from 0 to K-1, where K is "
+                                "the number of classes.");
         // y is assumed to only contain values from 0 to K-1 (K being the number of classes)
-        n_class = (da_int)(std::round(*std::max_element(y, y + n)) + 1);
+        n_class = (da_int)(std::round(*std::max_element(y, y + n_samples)) + 1);
+        if (n_class < 2)
+            return da_error(this->err, da_status_invalid_input,
+                            "Number of classes must be at least 2.");
         n_classifiers = n_class * (n_class - 1) / 2;
-        try {
-            classifiers.resize(n_classifiers);
-            class_sizes.resize(n_class);
-            bias.resize(n_classifiers);
-        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation error");
-        }
-        da_int k = 0;
-        // Layout of OVO problems in classifiers vector is: 0v1, 0v2, ..., 0v(k-1), 1v2, 1v3, ... etc.
-        if (n_class > 2) {
-            ismulticlass = true;
-            for (da_int i = 0; i < n_class; i++)
-                for (da_int j = i + 1; j < n_class; j++) {
-                    if (mod == da_svm_model::svc)
-                        classifiers[k] = std::make_unique<svc<T>>();
-                    else
-                        classifiers[k] = std::make_unique<nusvc<T>>();
-                    da_int size = 0, pos_size = 0;
-                    // Vector that will store all indexes whose label is i or j (reserve bigger size here and then copy only necessary)
-                    std::vector<da_int> all_idx(n);
-                    classifiers[k]->XUSR = X;
-                    classifiers[k]->yusr = y;
-                    classifiers[k]->ldx = this->ldx_train;
-                    classifiers[k]->p = p;
-                    classifiers[k]->ismulticlass = true;
-                    classifiers[k]->pos_class = i;
-                    classifiers[k]->neg_class = j;
-                    // Pick all indexes where label is i or j
-                    for (da_int row = 0; row < n; row++)
-                        if (y[row] == i || y[row] == j)
-                            all_idx[size++] = row;
-
-                    // Among the picked indexes assign ones where class==i as positive
-                    std::vector<bool> is_positive(size, false);
-                    std::vector<da_int> pos_idx(size), neg_idx(size);
-                    for (da_int idx = 0; idx < size; idx++) {
-                        if (y[all_idx[idx]] == i) {
-                            is_positive[idx] = true;
-                            pos_idx[pos_size++] = all_idx[idx];
-                        }
-                    }
-                    try {
-                        classifiers[k]->idx_class.resize(size);
-                        classifiers[k]->idx_is_positive.resize(size);
-                    } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
-                        return da_error(this->err,
-                                        da_status_memory_error, // LCOV_EXCL_LINE
-                                        "Memory allocation error");
-                    }
-                    std::copy_n(all_idx.begin(), size, classifiers[k]->idx_class.begin());
-                    std::copy_n(is_positive.begin(), size,
-                                classifiers[k]->idx_is_positive.begin());
-                    classifiers[k]->n = size;
-                    class_sizes[i] = pos_size;
-                    k++;
-                }
-        } else {
-            ismulticlass = false;
-            if (mod == da_svm_model::svc)
-                classifiers[0] = std::make_unique<svc<T>>();
-            else
-                classifiers[0] = std::make_unique<nusvc<T>>();
-            classifiers[0]->XUSR = X;
-            classifiers[0]->yusr = y;
-            classifiers[0]->ldx = this->ldx_train;
-            classifiers[0]->n = n;
-            classifiers[0]->p = p;
-        }
-
-    } else {
-        ismulticlass = false;
+    } else { // Regression
         n_class = 2;
         n_classifiers = 1;
-        try {
-            classifiers.resize(1);
-            bias.resize(1);
-        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation error");
-        }
-        if (mod == da_svm_model::svr)
-            classifiers[0] = std::make_unique<svr<T>>();
-        else
-            classifiers[0] = std::make_unique<nusvr<T>>();
-        classifiers[0]->XUSR = X;
-        classifiers[0]->yusr = y;
-        classifiers[0]->ldx = this->ldx_train;
-        classifiers[0]->n = n;
-        classifiers[0]->p = p;
+    }
+    try {
+        classifiers.resize(n_classifiers);
+        class_sizes.resize(n_class);
+        bias.resize(n_classifiers);
+        n_iteration.resize(n_classifiers);
+    } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation error");
+    }
+    for (da_int i = 0; i < n_classifiers; i++) {
+        if (mod == da_svm_model::svc)
+            classifiers[i] =
+                std::make_unique<svc<T>>(X, y, n_samples, n_features, this->ldx_train);
+        else if (mod == da_svm_model::nusvc)
+            classifiers[i] =
+                std::make_unique<nusvc<T>>(X, y, n_samples, n_features, this->ldx_train);
+        else if (mod == da_svm_model::svr)
+            classifiers[i] =
+                std::make_unique<svr<T>>(X, y, n_samples, n_features, this->ldx_train);
+        else if (mod == da_svm_model::nusvr)
+            classifiers[i] =
+                std::make_unique<nusvr<T>>(X, y, n_samples, n_features, this->ldx_train);
+    }
+    da_int k = 0;
+    // Layout of OVO problems in classifiers vector is: 0v1, 0v2, ..., 0v(k-1), 1v2, 1v3, ... etc.
+    if (n_class > 2) {
+        ismulticlass = true;
+        for (da_int i = 0; i < n_class; i++)
+            for (da_int j = i + 1; j < n_class; j++) {
+                da_int size = 0, pos_size = 0;
+                // Vector that will store all indexes whose label is i or j (reserve bigger size here and then copy only necessary)
+                std::vector<da_int> all_idx(n_samples);
+                classifiers[k]->ismulticlass = true;
+                classifiers[k]->pos_class = i;
+                classifiers[k]->neg_class = j;
+                // Pick all indexes where label is i or j
+                for (da_int row = 0; row < n_samples; row++)
+                    if (y[row] == i || y[row] == j)
+                        all_idx[size++] = row;
+
+                // Among the picked indexes assign ones where class==i is positive
+                std::vector<bool> is_positive(size, false);
+                std::vector<da_int> pos_idx(size), neg_idx(size);
+                for (da_int idx = 0; idx < size; idx++) {
+                    if (y[all_idx[idx]] == i) {
+                        is_positive[idx] = true;
+                        pos_idx[pos_size++] = all_idx[idx];
+                    }
+                }
+                // Stop execution if one of the classes has no samples (triggered when y is in the wrong format, i.e not 0 to K-1)
+                if (pos_size == 0 || size - pos_size == 0)
+                    return da_error(
+                        this->err, da_status_invalid_input,
+                        "One of the classes has no samples. Check if your label "
+                        "array is in the right format, i.e. 0 to K-1.");
+                try {
+                    classifiers[k]->idx_class.resize(size);
+                    classifiers[k]->idx_is_positive.resize(size);
+                } catch (std::bad_alloc &) {   // LCOV_EXCL_LINE
+                    return da_error(this->err, // LCOV_EXCL_LINE
+                                    da_status_memory_error, "Memory allocation error");
+                }
+                std::copy_n(all_idx.begin(), size, classifiers[k]->idx_class.begin());
+                std::copy_n(is_positive.begin(), size,
+                            classifiers[k]->idx_is_positive.begin());
+                classifiers[k]->n = size;
+                class_sizes[i] = pos_size;
+                k++;
+            }
     }
     // Record that initialization is complete but computation has not yet been performed
     loadingdone = true;
@@ -356,22 +372,31 @@ template <typename T> da_status svm<T>::select_model(da_svm_model mod) {
 template <typename T> da_status svm<T>::compute() {
     da_status status;
     std::string kernel_string;
+    da_int kernel_enum;
     std::string order_string;
     if (!loadingdone)
         return da_error(this->err, da_status_no_data,
                         "No data has been passed to the handle. Please call "
                         "da_svm_set_data_s or da_svm_set_data_d.");
-    // Here is logic to get default gamma 1/(p*var(X))
-    T gamma_temp;
-    this->opts.get("gamma", gamma_temp);
-    if (gamma_temp < 0) {
-        T mean, variance = 1;
-        ARCH::da_basic_statistics::variance(column_major, da_axis_all, nrow, ncol, X,
-                                            ldx_train, -1, &mean, &variance);
-        gamma_temp = 1 / (ncol * variance);
+
+    // Here is logic to get default gamma 1/(ncol*var(X)), we only do that for kernels that use gamma
+    T gamma_temp = 1;
+    this->opts.get("kernel", kernel_string, kernel_enum);
+    if (kernel_enum == rbf || kernel_enum == polynomial || kernel_enum == sigmoid) {
+        this->opts.get("gamma", gamma_temp);
+        if (gamma_temp < 0) {
+            T mean, variance = 1;
+            ARCH::da_basic_statistics::variance(column_major, da_axis_all, nrow, ncol, X,
+                                                ldx_train, -1, &mean, &variance);
+            if (variance == 0)
+                return da_error(
+                    this->err, da_status_invalid_input,
+                    "Variance of the input data is zero. Use different gamma.");
+            gamma_temp = 1 / (ncol * variance);
+        }
     }
 
-    // Necessary to reset when svm is called multiple times on the same handle
+    // Necessary to reset some variables to ensure svm being called multiple times on the same handle works
     std::fill(is_sv.begin(), is_sv.end(), false);
     n_sv = 0;
     try {
@@ -382,18 +407,30 @@ template <typename T> da_status svm<T>::compute() {
     }
     std::fill(n_sv_per_class.begin(), n_sv_per_class.end(), 0);
 
-    for (da_int i = 0; i < n_classifiers; i++) {
+    // Get the options set by user
+    T C, epsilon, nu, tolerance, coef0, tau;
+    da_int degree, max_iter;
+    this->opts.get("C", C);
+    this->opts.get("epsilon", epsilon);
+    this->opts.get("nu", nu);
+    this->opts.get("coef0", coef0);
+    this->opts.get("degree", degree);
+    this->opts.get("tolerance", tolerance);
+    this->opts.get("max_iter", max_iter);
+    this->opts.get("tau", tau);
 
-        this->opts.get("kernel", kernel_string, classifiers[i]->kernel_function);
-        this->opts.get("C", classifiers[i]->C);
-        this->opts.get("epsilon", classifiers[i]->eps);
-        this->opts.get("nu", classifiers[i]->nu);
-        this->opts.get("tolerance", classifiers[i]->tol);
-        this->opts.get("degree", classifiers[i]->degree);
-        this->opts.get("coef0", classifiers[i]->coef0);
-        this->opts.get("tau", classifiers[i]->tau);
-        this->opts.get("max_iter", classifiers[i]->max_iter);
+    // Compute each created classifier in the order 0v1, 0v2, ..., 0v(k-1), 1v2, 1v3, ... etc.
+    for (da_int i = 0; i < n_classifiers; i++) {
+        classifiers[i]->C = C;
+        classifiers[i]->eps = epsilon;
+        classifiers[i]->nu = nu;
+        classifiers[i]->coef0 = coef0;
+        classifiers[i]->degree = degree;
+        classifiers[i]->tol = tolerance;
+        classifiers[i]->max_iter = max_iter;
+        classifiers[i]->tau = tau;
         classifiers[i]->gamma = gamma_temp;
+        classifiers[i]->kernel_function = kernel_enum;
 
         status = classifiers[i]->compute();
 
@@ -401,7 +438,9 @@ template <typename T> da_status svm<T>::compute() {
             return status; // Error message already loaded
 
         bias[i] = classifiers[i]->bias;
+        n_iteration[i] = classifiers[i]->iter;
 
+        // We increment the total number of new support vectors and support vectors in specific class
         if (ismulticlass) {
             // n_sv_per_class = [n_sv_0, n_sv_1, ..., n_sv_(k-1)] where k is class number
             for (auto &support_index : classifiers[i]->support_indexes_pos) {
@@ -419,23 +458,34 @@ template <typename T> da_status svm<T>::compute() {
                 }
             }
         } else {
+            // For non-multiclass problems, we just set the results of the first classifier
             n_sv = classifiers[0]->n_support;
             n_sv_per_class = classifiers[0]->n_support_per_class;
             support_coefficients = classifiers[0]->support_coefficients;
-            support_vectors = classifiers[0]->support_vectors;
             support_indexes = classifiers[0]->support_indexes;
         }
     }
+    // Check if any support vectors were found
+    if (n_sv == 0)
+        status = da_warn(
+            this->err, da_status_numerical_difficulties,
+            "No support vectors found. Check if your data is in the right format.");
 
-    // Path to aggregate results for multiclass problem
+    // Get support coefficients and support indexes for multiclass problem
+    // NOTE: support coefficients have quite an unusual layout to match scikit-learn (LibSVM)
+    // The shape of support_coefficients is (n_class-1, n_sv) where columns are filled from left to right
+    // with coefficients corresponding to support vectors of the first class, then the second class, etc.
+    // References: https://www.csie.ntu.edu.tw/~cjlin/libsvm/faq.html#f402 and
+    // https://scikit-learn.org/stable/modules/svm.html#svm-multi-class (expand "details on multi-class strategies")
     if (ismulticlass) {
-        std::vector<da_int> starting_col_idx, starting_col_idx_copy, starting_row_idx;
+        // starting_col_idx - will tell at which position (column) to start filling support_coefficients for each class, effectively partial sum of n_sv_per_class
+        // starting_row_idx - will tell at which row to start filling support_coefficients for each class
+        std::vector<da_int> starting_col_idx, starting_row_idx;
         try {
             starting_col_idx.resize(n_class);
             starting_row_idx.resize(n_class);
             support_coefficients.resize((n_class - 1) * n_sv);
             support_indexes.resize(n_sv);
-            support_vectors.resize(n_sv * ncol);
         } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation error");
@@ -445,7 +495,10 @@ template <typename T> da_status svm<T>::compute() {
         partial_sum(n_sv_per_class.begin(), n_sv_per_class.end() - 1,
                     starting_col_idx.begin() + 1);
 
-        // support_coefficients = nontrivial design
+        // Approach to fill the support coefficients array:
+        // For each classifier get starting column index for positive (i) and negative (j) class
+        // and then iterate over all rows that are either class i or j and are support vectors
+        // to fill the support coefficients array with alphas. Effectively we are filling the support_coefficients row-wise
         da_int k = 0;
         for (da_int i = 0; i < n_class; i++) {
             for (da_int j = i + 1; j < n_class; j++) {
@@ -470,6 +523,7 @@ template <typename T> da_status svm<T>::compute() {
             }
         }
 
+        // support indexes is a vector which lists support indexes of each class one after another
         // support_indexes = [support_indexes_0, support_indexes_1, ..., support_indexes_(k-1)]
         // where each support_indexes_k is array of length n_sv_k
         for (da_int i = 0; i < nrow; i++) {
@@ -478,18 +532,10 @@ template <typename T> da_status svm<T>::compute() {
                 support_indexes[starting_col_idx[class_]++] = i;
             }
         }
-        // support_vectors = slices of X matrix along rows specified in support_indexes
-        // can be optimised for row major
-        for (da_int i = 0; i < n_sv; i++) {
-            da_int current_idx = support_indexes[i];
-            for (da_int j = 0; j < ncol; j++) {
-                support_vectors[i + j * n_sv] = X[current_idx + j * nrow];
-            }
-        }
     }
 
     iscomputed = true;
-    return da_status_success;
+    return status;
 }
 
 /* Predict SVM */
@@ -538,8 +584,10 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
                 return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                                 "Memory allocation error");
             }
-            classifiers[i]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
-                                    votes_temp.data());
+            status = classifiers[i]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
+                                             votes_temp.data());
+            if (status != da_status_success)
+                return status;
             da_int pos_class = classifiers[i]->pos_class,
                    neg_class = classifiers[i]->neg_class;
             for (da_int j = 0; j < nsamples; j++) {
@@ -560,18 +608,19 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
             predictions[i] = max_idx;
         }
     } else {
-        classifiers[0]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp, predictions);
+        status = classifiers[0]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
+                                         predictions);
     }
     if (utility_ptr1)
         delete[] (utility_ptr1);
-    return da_status_success;
+    return status;
 }
 
 /* Decision function SVM */
 template <typename T>
 da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_test,
-                                    da_int ldx_test, T *decision_values, da_int ldd,
-                                    da_svm_decision_function_shape shape) {
+                                    da_int ldx_test, da_svm_decision_function_shape shape,
+                                    T *decision_values, da_int ldd) {
     if (decision_values == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_pointer,
                                "decision_values is not valid pointers.");
@@ -620,9 +669,13 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
                         "Memory allocation error");
     }
     // Obtain OVO decision function values
-    for (da_int i = 0; i < n_classifiers; i++)
-        classifiers[i]->decision_function(nsamples, nfeat, X_test_temp, ldx_test_temp,
-                                          decision_values_ovo.data() + i * nsamples);
+    for (da_int i = 0; i < n_classifiers; i++) {
+        status =
+            classifiers[i]->decision_function(nsamples, nfeat, X_test_temp, ldx_test_temp,
+                                              decision_values_ovo.data() + i * nsamples);
+        if (status != da_status_success)
+            return status;
+    }
 
     // Path where decision values are 1D - binary classification (have to be OVO)
     if (!ismulticlass) {
@@ -735,6 +788,7 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
     status = predict(nsamples, nfeat, X_test, ldx_test, predictions.data());
     // Calculate accuracy for classification and R^2 for regression
     if (mod == da_svm_model::svc || mod == da_svm_model::nusvc) {
+        // Accuracy implementation
         *score = 0.;
         for (da_int i = 0; i < nsamples; i++) {
             if (predictions[i] == y_test[i]) {
@@ -743,6 +797,7 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
         }
         *score = *score / (T)nsamples;
     } else {
+        // R^2 implementation
         T y_test_mean, rss = 0, tss = 0;
         ARCH::da_basic_statistics::mean(column_major, da_axis_all, nsamples, 1, y_test,
                                         nsamples, &y_test_mean);
@@ -750,7 +805,14 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
             rss += pow(y_test[i] - predictions[i], 2);
             tss += pow(y_test[i] - y_test_mean, 2);
         }
-        *score = T(1 - rss / tss);
+        // If 0 in numerator, return 1.0 as perfect score
+        // If 0 in denominator and nonzero numerator, return 0.0 (sklearn behavior)
+        if (rss == 0)
+            *score = 1.0;
+        else if (tss == 0)
+            *score = 0.0;
+        else
+            *score = T(1 - rss / tss);
     }
     if (utility_ptr1)
         delete[] (utility_ptr1);

@@ -46,6 +46,8 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
     da_int imax = std::numeric_limits<da_int>::max();
     T rmax = std::numeric_limits<T>::max();
     T nrmax = -rmax;
+    // Tolerance based on sqrt(safe_epsilon)
+    da_options::safe_tol<T> tol;
 
     try {
         /* Integer options */
@@ -58,9 +60,8 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "max_iter",
-            "Maximum number of iterations. If the value is -1, it is set to infinity.",
-            -1, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
-            -1));
+            "Sets the maximum number of iterations. Use 0 to specify no limit.", 0,
+            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 0));
         opts.register_opt(oi);
 
         /* Float options */
@@ -69,28 +70,28 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "C",
             "Regularization parameter. Controls the trade-off between maximizing the "
-            "margin between classes and minimizing classification errors. The larger "
+            "margin between classes and minimizing classification errors. A larger "
             "value means higher penalty to the loss function on misclassified "
-            "observations.",
+            "observations. Applies to SVC, SVR and NuSVR.",
             0.0, da_options::lbound_t::greaterthan, rmax, da_options::ubound_t::p_inf,
             1.0));
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("epsilon",
-                             "Epsilon in the SVR model. Defines the tolerance for errors "
-                             "in predictions by creating an acceptable margin (tube) "
-                             "within which errors are not penalized.",
+                             "Defines the tolerance for errors in predictions by "
+                             "creating an acceptable margin (tube) "
+                             "within which errors are not penalized. Applies to SVR",
                              0.0, da_options::lbound_t::greaterequal, rmax,
                              da_options::ubound_t::p_inf, 0.1));
         opts.register_opt(oT);
 
-        oT = std::make_shared<OptionNumeric<T>>(
-            OptionNumeric<T>("nu",
-                             "An upper bound on the fraction of margin errors and a "
-                             "lower bound of the fraction of support vectors.",
-                             0.0, da_options::lbound_t::greaterthan, 1.0,
-                             da_options::ubound_t::lessequal, 0.5));
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "nu",
+            "An upper bound on the fraction of margin errors and a "
+            "lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessequal,
+            0.5));
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -112,9 +113,11 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "tau", "Parameter used in working set selection.", 0.0,
-            da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,
-            static_cast<T>(1.0e-12), "10^{-12}"));
+            "tau",
+            "Numerical stability parameter used in working set selection when kernel is "
+            "not positive semi definite.",
+            0.0, da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,
+            tol.mcheps(1, 1), tol.mcheps_latex(1, 1)));
         opts.register_opt(oT);
 
         /* String options */

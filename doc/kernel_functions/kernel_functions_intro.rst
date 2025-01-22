@@ -31,7 +31,6 @@ Kernel Functions
 ****************
 
 A kernel function computes the inner product of two data points in some (potentially high-dimensional) feature space without requiring an explicit mapping. 
-This approach, commonly known as the *kernel trick*, is fundamental to various machine learning algorithms, including SVMs, kernel ridge regression, and kernel principal component analysis.
 By carefully choosing the kernel, one can capture complex relationships or nonlinear separations in the data.
 
 Common Kernel Functions
@@ -41,28 +40,28 @@ Common Kernel Functions
     Useful if the data are approximately linearly separable.
     
     .. math::
-        K(x, y) = x \cdot y
+        K(x, y) = x \cdot y.
 
 2. **RBF (Radial Basis Function) Kernel**:
     Projects every data point into an infinite-dimensional feature space, enabling nonlinear decision boundaries. 
-    A common choice in many applications due to its flexibility and strong performance.
+    Due to its flexibility, the RBF kernel often works well on a wide range of datasets and is a common default method.
     
     .. math::
-        K(x, y) = \exp(-\gamma \|x - y\|^2)
+        K(x, y) = \exp(-\gamma \|x - y\|^2).
 
 3. **Polynomial Kernel**:
     Maps data points into higher-dimensional feature space via polynomial terms. 
     Useful for capturing polynomial relationships between features.
     
     .. math::
-        K(x, y) = (\gamma x \cdot y + c)^d
+        K(x, y) = (\gamma x \cdot y + c)^d.
 
 4. **Sigmoid Kernel**:
     Similar to neural network activation functions. 
     Sometimes used for certain data distributions, though not as common as RBF or polynomial.
     
     .. math::
-        K(x, y) = \tanh(\gamma x \cdot y + c)
+        K(x, y) = \tanh(\gamma x \cdot y + c).
 
 
 Examples
@@ -84,7 +83,7 @@ Examples
    .. tab-item:: C
       :sync: C
 
-      The showcased examples sources and more, can be found in the ``examples`` folder of your installation.
+      The example sources can be found in the ``examples`` folder of your installation.
 
       .. collapse:: Kernel Functions Example
 

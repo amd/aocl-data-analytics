@@ -48,6 +48,43 @@
 #include <utility>
 #include <vector>
 
+namespace ARCH {
+
+template <typename T>
+static void rbf_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
+                        T *x_norm, da_int ldx, const T *Y, T *y_norm, da_int ldy, T *D,
+                        da_int ldd, T gamma, da_int /*degree*/, T /*coef0*/,
+                        bool X_is_Y) {
+    return ARCH::rbf_kernel_internal(order, m, n, k, X, x_norm, ldx, Y, y_norm, ldy, D,
+                                     ldd, gamma, X_is_Y);
+}
+
+template <typename T>
+static void linear_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
+                           T * /*x_norm*/, da_int ldx, const T *Y, T * /*y_norm*/,
+                           da_int ldy, T *D, da_int ldd, T /*gamma*/, da_int /*degree*/,
+                           T /*coef0*/, bool X_is_Y) {
+    return ARCH::linear_kernel_internal(order, m, n, k, X, ldx, Y, ldy, D, ldd, X_is_Y);
+}
+
+template <typename T>
+static void sigmoid_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
+                            T * /*x_norm*/, da_int ldx, const T *Y, T * /*y_norm*/,
+                            da_int ldy, T *D, da_int ldd, T gamma, da_int /*degree*/,
+                            T coef0, bool X_is_Y) {
+    return ARCH::sigmoid_kernel_internal(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma,
+                                         coef0, X_is_Y);
+}
+
+template <typename T>
+static void polynomial_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
+                               T * /*x_norm*/, da_int ldx, const T *Y, T * /*y_norm*/,
+                               da_int ldy, T *D, da_int ldd, T gamma, da_int degree,
+                               T coef0, bool X_is_Y) {
+    return ARCH::polynomial_kernel_internal(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma,
+                                            degree, coef0, X_is_Y);
+}
+
 /*
  * Base SVM handle class that contains members that
  * are common for all SVM models.
@@ -55,8 +92,8 @@
  * This handle is inherited by all specialized svm handles.
  *
  * The inheritance scheme is as follows:
- *
- *                          SVM
+ * 
+ *                       BASE_SVM
  *                         /   \
  *                        /     \
  *                   C-SVM       Nu-SVM
@@ -65,30 +102,51 @@
  *              SVC       SVR Nu-SVC   Nu-SVR
  */
 
-namespace ARCH {
-
 namespace da_svm {
 
 using namespace da_svm_types;
 
 // This forward declaration is here to allow for "friending" it with base_svm few lines below
-template <typename T> base_svm<T>::base_svm(){};
+template <typename T>
+base_svm<T>::base_svm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train)
+    : XUSR(XUSR), yusr(yusr), n(n), p(p), ldx(ldx_train){};
 template <typename T> base_svm<T>::~base_svm(){};
 
 /* Main function which contains Thunder loop */
 template <typename T> da_status base_svm<T>::compute() {
     da_status status = da_status_success;
-    actual_size = mod == da_svm_model::svr || mod == da_svm_model::nusvr ? n * 2 : n;
+    // Define them in this scope since they are large matrices and do not need to be in the class scope
+    std::vector<T> kernel_matrix, local_kernel_matrix;
+    std::vector<T> X_temp; // Contain relevant slices of X for kernel computation
+
+    if (mod == da_svm_model::svr || mod == da_svm_model::nusvr)
+        actual_size = n * 2;
+    else
+        actual_size = n;
+
     iter = 0;
-    if (max_iter == -1)
-        max_iter = INT_MAX;
-    else if (max_iter == 0)
-        return da_error(err, da_status_invalid_option, "max_iter must be positive or -1");
+    if (max_iter == 0)
+        max_iter = DA_INT_MAX;
     // Variable to keep track of number of selected indexes in working set. At iter==0 equals 0, later ws_size/2 because we copy last half to the first half.
     da_int n_selected;
     // Global convergence variables, if first diff of local SMO does not change for some number of iterations, then stop
     T first_diff = T(0), previous_first_diff = T(0);
     da_int no_diff_counter = 0;
+    // Initialise which kernel function will be used
+    switch (kernel_function) {
+    case rbf:
+        kernel_f = &rbf_wrapper<T>;
+        break;
+    case linear:
+        kernel_f = &linear_wrapper<T>;
+        break;
+    case polynomial:
+        kernel_f = &polynomial_wrapper<T>;
+        break;
+    case sigmoid:
+        kernel_f = &sigmoid_wrapper<T>;
+        break;
+    }
     // For multiclass we take slices of user's data on indexes where class is i or j (those indexes are stored in idx_class and obtained in set_data())
     if (ismulticlass) {
         X = new T[n * p];
@@ -167,9 +225,9 @@ template <typename T> da_status base_svm<T>::compute() {
         // Compute kernel matrix using working set indexes
         kernel_compute(ws_indexes, ws_size, X_temp, kernel_matrix);
         // Use kernel matrix to perform local SMO (as a result alpha, alpha_diff and first_diff are updated)
-        local_smo(ws_size, ws_indexes, local_kernel_matrix, alpha, local_alpha, gradient,
-                  local_gradient, response, local_response, I_low_p, I_up_p, I_low_n,
-                  I_up_n, first_diff, alpha_diff, std::nullopt);
+        local_smo(ws_size, ws_indexes, kernel_matrix, local_kernel_matrix, alpha,
+                  local_alpha, gradient, local_gradient, response, local_response,
+                  I_low_p, I_up_p, I_low_n, I_up_n, first_diff, alpha_diff, std::nullopt);
         // Global gradient update based on alpha_diff
         update_gradient(gradient, alpha_diff, n, ws_size, kernel_matrix);
         // Check global convergence
@@ -183,7 +241,9 @@ template <typename T> da_status base_svm<T>::compute() {
             break;
     }
     // Interpret results and save them into appropriate arrays
-    set_bias(alpha, gradient, response, actual_size, bias);
+    status = set_bias(alpha, gradient, response, actual_size, bias);
+    if (status != da_status_success)
+        return status;
     status = set_sv(alpha, n_support);
     if (ismulticlass) {
         delete[] X;
@@ -198,15 +258,10 @@ da_status base_svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test,
                                da_int ldx_test, T *predictions) {
     da_status status = da_status_success;
     // Vector that will store decision values
-    std::vector<T> decision_values(nsamples);
-    status = decision_function(nsamples, nfeat, X_test, ldx_test, decision_values.data());
+    status = decision_function(nsamples, nfeat, X_test, ldx_test, predictions);
     if (mod == da_svm_model::svc || mod == da_svm_model::nusvc) {
         for (da_int i = 0; i < nsamples; i++) {
-            predictions[i] = decision_values[i] > 0 ? 1 : 0;
-        }
-    } else {
-        for (da_int i = 0; i < nsamples; i++) {
-            predictions[i] = decision_values[i];
+            predictions[i] = predictions[i] > 0 ? 1 : 0;
         }
     }
     return status;
@@ -217,56 +272,75 @@ template <typename T>
 da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_test,
                                          da_int ldx_test, T *decision_values) {
     da_status status = da_status_success;
-    std::vector<T> x_aux, y_aux, kernel_matrix;
-    try {
-        x_aux.resize(n_support);
-        y_aux.resize(nsamples);
-        kernel_matrix.resize(n_support * nsamples);
-    } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation error");
-    }
     // Initialise decision values to constant (bias)
     for (da_int i = 0; i < nsamples; i++)
         decision_values[i] = bias;
-    // Compute kernel matrix K between support vectors and test data
-    switch (kernel_function) {
-    case rbf:
-        ARCH::rbf_kernel_local(column_major, n_support, nsamples, nfeat,
-                               support_vectors.data(), x_aux.data(), n_support, X_test,
-                               y_aux.data(), ldx_test, kernel_matrix.data(), n_support,
-                               gamma, false);
-        break;
-    case linear:
-        ARCH::linear_kernel_local(column_major, n_support, nsamples, nfeat,
-                                  support_vectors.data(), n_support, X_test, ldx_test,
-                                  kernel_matrix.data(), n_support, false);
-        break;
-    case polynomial:
-        ARCH::polynomial_kernel_local(column_major, n_support, nsamples, nfeat,
-                                      support_vectors.data(), n_support, X_test, ldx_test,
-                                      kernel_matrix.data(), n_support, gamma, degree,
-                                      coef0, false);
-        break;
-    case sigmoid:
-        ARCH::sigmoid_kernel_local(column_major, n_support, nsamples, nfeat,
-                                   support_vectors.data(), n_support, X_test, ldx_test,
-                                   kernel_matrix.data(), n_support, gamma, coef0, false);
-        break;
+    // Stop early if there are no support vectors
+    if (n_support == 0)
+        return status;
+    // Perform blocked decision function evaluation (n_support can be up to n_samples and
+    // then kernel_matrix (n_support by n_samples) can be too large)
+    std::vector<da_int> sv_idx(n_support);
+    if (ismulticlass) {
+        for (da_int i = 0; i < n_support; i++) {
+            sv_idx[i] = idx_class[support_indexes[i]];
+        }
+    } else {
+        sv_idx = support_indexes;
     }
-    // Compute decision_values = K'*alpha + bias
-    da_blas::cblas_gemv(CblasColMajor, CblasTrans, n_support, nsamples, (T)1.0,
-                        kernel_matrix.data(), n_support, support_coefficients.data(), 1,
-                        (T)1.0, decision_values, 1);
+    // Note that this blocking tends to have negative impact on time, we might not want to do it
+    // since memory footprint not that significant in the end
+    da_int block_size = std::min(n_support, SVM_MAX_BLOCK_SIZE);
+    da_int n_blocks = n_support / block_size, residual = n_support % block_size;
+    for (da_int i = 0; i <= n_blocks; i++) {
+        da_int current_block_size = (i < n_blocks) ? block_size : residual;
+        if (current_block_size == 0) {
+            continue;
+        }
 
+        std::vector<T> x_aux, y_aux, kernel_matrix, block_support_vectors;
+        try {
+            x_aux.resize(current_block_size);
+            y_aux.resize(nsamples);
+            kernel_matrix.resize(current_block_size * nsamples);
+            block_support_vectors.resize(current_block_size * nfeat);
+        } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
+            return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        da_int offset;
+        if (i < n_blocks) // we are in block
+            offset = i * block_size;
+        else // we are in residual
+            offset = n_blocks * block_size;
+        // Get the relevant slices of support vectors
+        for (da_int j = 0; j < current_block_size; j++) {
+            da_int current_idx = sv_idx[offset + j];
+            for (da_int k = 0; k < nfeat; k++) {
+                block_support_vectors[j + k * current_block_size] =
+                    XUSR[current_idx + k * ldx];
+            }
+        }
+
+        // Compute kernel matrix K between support vectors and test data
+        kernel_f(column_major, current_block_size, nsamples, nfeat,
+                 block_support_vectors.data(), x_aux.data(), current_block_size, X_test,
+                 y_aux.data(), ldx_test, kernel_matrix.data(), current_block_size, gamma,
+                 degree, coef0, false);
+        // Compute decision_values = K'*alpha + bias
+        da_blas::cblas_gemv(CblasColMajor, CblasTrans, current_block_size, nsamples,
+                            (T)1.0, kernel_matrix.data(), current_block_size,
+                            support_coefficients.data() + offset, 1, (T)1.0,
+                            decision_values, 1);
+    }
     return status;
 }
 
 /* Compute size of the outer working set */
 template <typename T> void base_svm<T>::compute_ws_size(da_int &ws_size) {
-    // Pick minimum between maximum power of two such that it is less than n, or some constant in this case 1024 (TODO: should be tuned to our hardware)
+    // Pick minimum between maximum power of two such that it is less than n, or some constant in this case 1024
     da_int pow_two = maxpowtwo(actual_size);
-    ws_size = std::min(pow_two, MAX_KERNEL_SIZE);
+    ws_size = std::min(pow_two, SVM_MAX_KERNEL_SIZE);
 }
 
 template <typename T>
@@ -281,26 +355,9 @@ void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
         }
     }
     // Call to appropriate kernel function
-    switch (kernel_function) {
-    case rbf:
-        rbf_kernel_local(column_major, n, idx_size, p, X, x_norm_aux.data(), ldx_2,
-                         X_temp.data(), y_norm_aux.data(), idx_size, kernel_matrix.data(),
-                         n, gamma, false);
-        break;
-    case linear:
-        linear_kernel_local(column_major, n, idx_size, p, X, ldx_2, X_temp.data(),
-                            idx_size, kernel_matrix.data(), n, false);
-        break;
-    case polynomial:
-        polynomial_kernel_local(column_major, n, idx_size, p, X, ldx_2, X_temp.data(),
-                                idx_size, kernel_matrix.data(), n, gamma, degree, coef0,
-                                false);
-        break;
-    case sigmoid:
-        sigmoid_kernel_local(column_major, n, idx_size, p, X, ldx_2, X_temp.data(),
-                             idx_size, kernel_matrix.data(), n, gamma, coef0, false);
-        break;
-    }
+    kernel_f(column_major, n, idx_size, p, X, x_norm_aux.data(), ldx_2, X_temp.data(),
+             y_norm_aux.data(), idx_size, kernel_matrix.data(), n, gamma, degree, coef0,
+             false);
 };
 
 // Formula for global gradient update is:   gradient = gradient + sum_over_columns(alpha_diff[i] * i_th_column_kernel_matrix)
@@ -330,8 +387,7 @@ void base_svm<T>::update_gradient(std::vector<T> &gradient, std::vector<T> &alph
     }
 };
 
-// This function calculates highest power of 2, that is smaller n (number of rows in data)
-// TODO: To be optimised
+// This function calculates highest power of 2, that is smaller or equal to n (number of rows in data)
 template <typename T> da_int base_svm<T>::maxpowtwo(da_int &n) {
     da_int power = 1;
     while (power * 2 <= n) {
@@ -366,8 +422,8 @@ void base_svm<T>::wssj(std::vector<bool> &I_low, std::vector<T> &gradient, da_in
                        T &min_grad, da_int &j, T &max_grad, std::vector<T> &kernel_matrix,
                        T &delta, T &max_fun) {
     // Start with very large negative value to find maximum and its index
-    T max_grad_value = -std::numeric_limits<T>::max();
-    T max_function_val = -std::numeric_limits<T>::max();
+    T max_grad_value = std::numeric_limits<T>::lowest();
+    T max_function_val = std::numeric_limits<T>::lowest();
     da_int max_grad_idx = -1;
     T a, b, function_val, ratio, current_gradient;
     delta = 0;
@@ -403,5 +459,46 @@ template class base_svm<float>;
 template class base_svm<double>;
 
 } // namespace da_svm
+
+template void rbf_wrapper<double>(da_order order, da_int m, da_int n, da_int k,
+                                  const double *X, double *x_norm, da_int ldx,
+                                  const double *Y, double *y_norm, da_int ldy, double *D,
+                                  da_int ldd, double gamma, da_int /*degree*/,
+                                  double /*coef0*/, bool X_is_Y);
+template void rbf_wrapper<float>(da_order order, da_int m, da_int n, da_int k,
+                                 const float *X, float *x_norm, da_int ldx,
+                                 const float *Y, float *y_norm, da_int ldy, float *D,
+                                 da_int ldd, float gamma, da_int /*degree*/,
+                                 float /*coef0*/, bool X_is_Y);
+template void linear_wrapper<double>(da_order order, da_int m, da_int n, da_int k,
+                                     const double *X, double * /*x_norm*/, da_int ldx,
+                                     const double *Y, double * /*y_norm*/, da_int ldy,
+                                     double *D, da_int ldd, double /*gamma*/,
+                                     da_int /*degree*/, double /*coef0*/, bool X_is_Y);
+template void linear_wrapper<float>(da_order order, da_int m, da_int n, da_int k,
+                                    const float *X, float * /*x_norm*/, da_int ldx,
+                                    const float *Y, float * /*y_norm*/, da_int ldy,
+                                    float *D, da_int ldd, float /*gamma*/,
+                                    da_int /*degree*/, float /*coef0*/, bool X_is_Y);
+template void sigmoid_wrapper<double>(da_order order, da_int m, da_int n, da_int k,
+                                      const double *X, double * /*x_norm*/, da_int ldx,
+                                      const double *Y, double * /*y_norm*/, da_int ldy,
+                                      double *D, da_int ldd, double gamma,
+                                      da_int /*degree*/, double coef0, bool X_is_Y);
+template void sigmoid_wrapper<float>(da_order order, da_int m, da_int n, da_int k,
+                                     const float *X, float * /*x_norm*/, da_int ldx,
+                                     const float *Y, float * /*y_norm*/, da_int ldy,
+                                     float *D, da_int ldd, float gamma, da_int /*degree*/,
+                                     float coef0, bool X_is_Y);
+template void polynomial_wrapper<double>(da_order order, da_int m, da_int n, da_int k,
+                                         const double *X, double * /*x_norm*/, da_int ldx,
+                                         const double *Y, double * /*y_norm*/, da_int ldy,
+                                         double *D, da_int ldd, double gamma,
+                                         da_int degree, double coef0, bool X_is_Y);
+template void polynomial_wrapper<float>(da_order order, da_int m, da_int n, da_int k,
+                                        const float *X, float * /*x_norm*/, da_int ldx,
+                                        const float *Y, float * /*y_norm*/, da_int ldy,
+                                        float *D, da_int ldd, float gamma, da_int degree,
+                                        float coef0, bool X_is_Y);
 
 } // namespace ARCH

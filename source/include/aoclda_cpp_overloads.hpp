@@ -765,13 +765,13 @@ inline da_status da_sigmoid_kernel(da_order order, da_int m, da_int n, da_int k,
 template <class T> da_status da_svm_select_model(da_handle handle, da_svm_model mod);
 
 inline da_status da_svm_set_data(da_handle handle, da_int n_samples, da_int n_features,
-                                 const double *X, da_int ldx_train, const double *y) {
-    return da_svm_set_data_d(handle, n_samples, n_features, X, ldx_train, y);
+                                 const double *X, da_int ldx, const double *y) {
+    return da_svm_set_data_d(handle, n_samples, n_features, X, ldx, y);
 }
 
 inline da_status da_svm_set_data(da_handle handle, da_int n_samples, da_int n_features,
-                                 const float *X, da_int ldx_train, const float *y) {
-    return da_svm_set_data_s(handle, n_samples, n_features, X, ldx_train, y);
+                                 const float *X, da_int ldx, const float *y) {
+    return da_svm_set_data_s(handle, n_samples, n_features, X, ldx, y);
 }
 template <class T> da_status da_svm_compute(da_handle handle);
 
@@ -789,20 +789,20 @@ inline da_status da_svm_predict(da_handle handle, da_int n_samples, da_int n_fea
 
 inline da_status da_svm_decision_function(da_handle handle, da_int n_samples,
                                           da_int n_features, const double *X_test,
-                                          da_int ldx_test, double *decision_values,
-                                          da_int ldd,
-                                          da_svm_decision_function_shape shape = ovr) {
+                                          da_int ldx_test,
+                                          da_svm_decision_function_shape shape,
+                                          double *decision_values, da_int ldd) {
     return da_svm_decision_function_d(handle, n_samples, n_features, X_test, ldx_test,
-                                      decision_values, ldd, shape);
+                                      shape, decision_values, ldd);
 }
 
 inline da_status da_svm_decision_function(da_handle handle, da_int n_samples,
                                           da_int n_features, const float *X_test,
-                                          da_int ldx_test, float *decision_values,
-                                          da_int ldd,
-                                          da_svm_decision_function_shape shape = ovr) {
+                                          da_int ldx_test,
+                                          da_svm_decision_function_shape shape,
+                                          float *decision_values, da_int ldd) {
     return da_svm_decision_function_s(handle, n_samples, n_features, X_test, ldx_test,
-                                      decision_values, ldd, shape);
+                                      shape, decision_values, ldd);
 }
 
 inline da_status da_svm_score(da_handle handle, da_int n_samples, da_int n_features,

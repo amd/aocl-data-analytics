@@ -41,26 +41,25 @@ def test_rbf_functionality(numpy_precision, numpy_order):
     """
     Test the functionality of the rbf kernel function
     """
-    tol = np.finfo(numpy_precision).eps
+    tol = np.sqrt(np.finfo(numpy_precision).eps)
 
-    X = np.array([[1., 2.],
-                  [3., 4.],
-                  [5., 6.]], dtype=numpy_precision, order=numpy_order)
+    X = np.array([[10., 10.],
+                  [11., 11.]], dtype=numpy_precision, order=numpy_order)
 
-    Y = np.array([[7., 8.],
-                  [9., 10.]], dtype=numpy_precision, order=numpy_order)
+    Y = np.array([[10.1, 10.1],
+                  [11.1, 11.1]], dtype=numpy_precision, order=numpy_order)
 
-    expected_XY = np.array([[0.23692775868212176, 0.07730474044329974], [
-                           0.5272924240430485, 0.23692775868212176], [0.8521437889662113, 0.5272924240430485]])
-    expected_XX = np.array([[1.0, 0.8521437889662113, 0.5272924240430485], [
-                           0.8521437889662113, 1.0, 0.8521437889662113], [0.5272924240430485, 0.8521437889662113, 1.0]])
+    expected_XY = np.array([[0.9801986733067731, 0.08892161745938744], [
+                           0.1978986990836138, 0.9801986733067453]])
+    expected_XX = np.array(
+        [[1.0, 0.1353352832366127], [0.1353352832366127, 1.0]])
 
-    kernel_XY = rbf_kernel(X, Y, gamma=0.02)
+    kernel_XY = rbf_kernel(X, Y, gamma=1)
     assert X.dtype == kernel_XY.dtype
     assert kernel_XY.shape == expected_XY.shape
     assert np.allclose(kernel_XY, expected_XY, rtol=tol)
 
-    kernel_XX = rbf_kernel(X, gamma=0.02)
+    kernel_XX = rbf_kernel(X, gamma=1)
     assert X.dtype == kernel_XX.dtype
     assert kernel_XX.shape == expected_XX.shape
     assert np.allclose(kernel_XX, expected_XX, rtol=tol)
@@ -183,13 +182,13 @@ def test_kernel_function_error_exits(kernel_function, numpy_precision):
     module = importlib.import_module('aoclda.kernel_functions')
     function = getattr(module, kernel_function)
 
-    if kernel_function is not "linear_kernel":
+    if kernel_function != "linear_kernel":
         with pytest.raises(ValueError):
             kernel_XX = function(X, gamma=-1)
         with pytest.raises(ValueError):
             kernel_XY = function(X, Y, gamma=-1)
 
-    if kernel_function is "polynomial_kernel":
+    if kernel_function == "polynomial_kernel":
         with pytest.raises(ValueError):
             kernel_XX = function(X, degree=-1)
         with pytest.raises(ValueError):

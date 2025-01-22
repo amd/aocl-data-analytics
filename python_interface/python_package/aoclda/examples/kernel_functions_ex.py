@@ -31,6 +31,7 @@ import sys
 import numpy as np
 from aoclda.kernel_functions import rbf_kernel, linear_kernel, polynomial_kernel, sigmoid_kernel
 
+
 def kernel_functions_examples():
     """
     Demonstrate usage of the kernel functions on small datasets.
@@ -50,36 +51,27 @@ def kernel_functions_examples():
 
     # Linear kernel
     print("Linear kernel (X, Y):")
-    try:
-        lin = linear_kernel(X, Y)
-    except RuntimeError:
-        sys.exit(1)
+    lin = linear_kernel(X, Y)
     print(lin)
 
     # RBF kernel
     print("\nRBF kernel (X, Y), gamma=0.5:")
-    try:
-        rbf = rbf_kernel(X, Y, gamma=0.5)
-    except RuntimeError:
-        sys.exit(1)
+    rbf = rbf_kernel(X, Y, gamma=0.5)
     print(rbf)
 
     # Polynomial kernel
     print("\nPolynomial kernel (X, X), degree=2, gamma=1.0, coef0=1.0:")
-    try:
-        poly = polynomial_kernel(X, degree=2, gamma=1.0, coef0=1.0)
-    except RuntimeError:
-        sys.exit(1)
+    poly = polynomial_kernel(X, degree=2, gamma=1.0, coef0=1.0)
     print(poly)
 
     # Sigmoid kernel
     print("\nSigmoid kernel (X, Y), gamma=0.2, coef0=0.0:")
-    try:
-        sig = sigmoid_kernel(X, gamma=0.2, coef0=0.0)
-    except RuntimeError:
-        sys.exit(1)
+    sig = sigmoid_kernel(X, gamma=0.2, coef0=0.0)
     print(sig)
 
 
 if __name__ == "__main__":
-    kernel_functions_examples()
+    try:
+        kernel_functions_examples()
+    except RuntimeError:
+        sys.exit(1)

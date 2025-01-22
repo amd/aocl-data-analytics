@@ -89,6 +89,7 @@ def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_
     da_support_vectors = svm_da.support_vectors_
     da_n_support = svm_da.n_support_
     da_n_features_in_ = svm_da.n_features_in_
+    da_n_iter = svm_da.n_iter_
     assert svm_da.aocl is True
 
     # unpatch and solve the same problem with sklearn
@@ -126,6 +127,7 @@ def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_
     assert da_n_support == pytest.approx(sk_n_support, 1e-10)
     assert da_n_features_in_ == sk_n_features_in_
     assert da_params == sk_params
+    assert da_n_iter.all() > 0
 
     # Additional test for OVO decision function shape
     if svm_problem == "SVC" or svm_problem == "NuSVC":
@@ -258,7 +260,6 @@ def test_svm_errors(svm_problem, X_train, y_train):
     assert svm_da.coef_ is None
     assert svm_da.fit_status is None
     assert svm_da.feature_names_in_ is None
-    assert svm_da.n_iter_ is None
     assert svm_da.shape_fit_ is None
 
     if svm_problem in ["SVC", "NuSVC"]:

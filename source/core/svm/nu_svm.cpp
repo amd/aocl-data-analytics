@@ -74,7 +74,7 @@ template <typename T> bool is_lower_neg(T &alpha, const T &y, T &C) {
  *
  * The inheritance scheme is as follows:
  *
- *                          SVM
+ *                       BASE_SVM
  *                         /   \
  *                        /     \
  *                   C-SVM       Nu-SVM
@@ -82,16 +82,28 @@ template <typename T> bool is_lower_neg(T &alpha, const T &y, T &C) {
  *                 /       \    /       \
  *              SVC       SVR Nu-SVC   Nu-SVR
  */
+
 namespace da_svm {
 
 using namespace da_svm_types;
 
+template <typename T>
+nusvm<T>::nusvm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train)
+    : base_svm<T>(XUSR, yusr, n, p, ldx_train){};
 template <typename T> nusvm<T>::~nusvm(){};
 
-template <typename T> nusvc<T>::nusvc() { this->mod = da_svm_model::nusvc; };
+template <typename T>
+nusvc<T>::nusvc(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train)
+    : nusvm<T>(XUSR, yusr, n, p, ldx_train) {
+    this->mod = da_svm_model::nusvc;
+};
 template <typename T> nusvc<T>::~nusvc(){};
 
-template <typename T> nusvr<T>::nusvr() { this->mod = da_svm_model::nusvr; };
+template <typename T>
+nusvr<T>::nusvr(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train)
+    : nusvm<T>(XUSR, yusr, n, p, ldx_train) {
+    this->mod = da_svm_model::nusvr;
+};
 template <typename T> nusvr<T>::~nusvr(){};
 
 template <typename T>
@@ -199,6 +211,7 @@ void nusvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
 
 template <typename T>
 void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
+                         std::vector<T> &kernel_matrix,
                          std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
                          std::vector<T> &local_alpha, std::vector<T> &gradient,
                          std::vector<T> &local_gradient, std::vector<T> &response,
@@ -217,7 +230,7 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
         // This can benefit from kernel matrix being stored in row-major
         for (da_int j = 0; j < ws_size; j++) {
             local_kernel_matrix[j * ws_size + iter] =
-                this->kernel_matrix[j * this->n + (idx[iter] % this->n)];
+                kernel_matrix[j * this->n + (idx[iter] % this->n)];
         }
     }
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
@@ -225,8 +238,9 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
     da_int max_iter_inner = ws_size * 100;
     T min_grad_p, min_grad_n, max_grad_p, max_grad_n, max_fun_p, max_fun_n, delta,
         delta_p, delta_n, diff, epsilon = 1;
-    // alpha_x_diff - value explained in the libsvm paper, potential update value of alpha_x
+    // alpha_?_diff - Update values of alpha (we will pick minimum between alpha_i_diff and alpha_j_diff)
     T alpha_i_diff, alpha_j_diff;
+    // Custom epsilon functionality is purely for the internal testing reasons
     bool is_custom_epsilon = false;
     if (tol.has_value()) {
         epsilon = tol.value();
@@ -293,8 +307,8 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
 }
 
 template <typename T>
-void nusvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
-                        std::vector<T> &response, da_int &size, T &bias) {
+da_status nusvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
+                             std::vector<T> &response, da_int &size, T &bias) {
     T gradient_sum_p = 0, gradient_sum_n = 0;
     da_int n_free_p = 0, n_free_n = 0;
     T min_value_p = std::numeric_limits<T>::max();
@@ -326,18 +340,30 @@ void nusvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
     bias = (bias_n - bias_p) / 2;
     if (this->mod == da_svm_model_::nusvc) {
         T scale = (bias_p + bias_n) / 2;
+        if (scale == 0)
+            return da_error(this->err, da_status_numerical_difficulties,
+                            "Cannot divide by zero in bias calculation.");
         for (da_int i = 0; i < size; i++)
             alpha[i] /= scale;
         bias /= scale;
     }
+    return da_status_success;
 }
 
 template <typename T>
 da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int counter,
                                         std::vector<T> &gradient) {
-    da_int MAX_BLOCK_SIZE = 2048;
-    da_int block_size = std::min(counter, MAX_BLOCK_SIZE);
+    da_int block_size = std::min(counter, SVM_MAX_BLOCK_SIZE);
     da_int n_blocks = counter / block_size, residual = counter % block_size;
+    std::vector<T> current_alpha_diff;
+    std::vector<da_int> current_idx;
+    try {
+        current_idx.resize(block_size);
+        current_alpha_diff.resize(block_size);
+    } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation error");
+    }
     for (da_int i = 0; i <= n_blocks; i++) {
         da_int current_block_size = (i < n_blocks) ? block_size : residual;
         if (current_block_size == 0) {
@@ -355,8 +381,6 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation error");
         }
-        std::vector<da_int> current_idx;
-        std::vector<T> current_alpha_diff;
         if (i < n_blocks) { // we are in block
             current_idx.assign(this->index_aux.begin() + i * block_size,
                                this->index_aux.begin() + (i + 1) * block_size);
@@ -373,9 +397,11 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
         this->update_gradient(gradient, current_alpha_diff, this->n, current_block_size,
                               kernel_matrix);
         if (this->mod == da_svm_model::nusvr) {
-            // Is it appropriate to use std::transform? The goal is just to negate the values in current_alpha_diff
-            std::transform(current_alpha_diff.begin(), current_alpha_diff.end(),
-                           current_alpha_diff.begin(), std::negate<T>());
+            // alpha_diff is just of size n (when technically it should be 2n) but since
+            // second half of alpha_diff is just first half negated, we can just multiply by -1
+            // and call update_gradient again with new values
+            std::for_each(current_alpha_diff.begin(), current_alpha_diff.end(),
+                          [](T &value) { value = -value; });
             this->update_gradient(gradient, current_alpha_diff, this->n,
                                   current_block_size, kernel_matrix);
         }
@@ -461,10 +487,11 @@ da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
 template <typename T>
 da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     n_support = 0;
+    T epsilon = std::numeric_limits<T>::epsilon();
     for (da_int i = 0; i < this->n; i++) {
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (alpha[i] != 0) {
+        if (std::abs(alpha[i]) > epsilon) {
             n_support++;
             alpha[i] *= this->response[i];
             // n_support_per_class will hold n_support of negative class at index 0, and positive at index 1
@@ -479,7 +506,6 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
         this->support_indexes_neg.resize(this->n_support_per_class[0]);
         this->support_indexes_pos.resize(this->n_support_per_class[1]);
         this->support_coefficients.resize(n_support);
-        this->support_vectors.resize(n_support * this->p);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
@@ -487,7 +513,7 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     da_int position = 0;
     if (!this->ismulticlass) {
         for (da_int i = 0; i < this->n; i++) {
-            if (alpha[i] != 0) {
+            if (std::abs(alpha[i]) > epsilon) {
                 this->support_indexes[position] = i;
                 this->support_coefficients[position++] = alpha[i];
             }
@@ -495,7 +521,7 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     } else {
         da_int position_pos = 0, position_neg = 0;
         for (da_int i = 0; i < this->n; i++) {
-            if (alpha[i] != 0) {
+            if (std::abs(alpha[i]) > epsilon) {
                 if (this->idx_is_positive[i]) {
                     this->support_indexes_pos[position_pos++] = i;
                 } else {
@@ -506,14 +532,6 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
             }
         }
     }
-    // Construct a matrix consisting of only support vectors (can be optimised in row major)
-    for (da_int i = 0; i < n_support; i++) {
-        da_int current_idx = this->support_indexes[i];
-        for (da_int j = 0; j < this->p; j++) {
-            this->support_vectors[i + j * n_support] =
-                this->X[current_idx + j * this->ldx_2];
-        }
-    }
     return da_status_success;
 }
 
@@ -521,35 +539,27 @@ da_status nusvc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
 template <typename T>
 da_status nusvr<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     n_support = 0;
+    T epsilon = std::numeric_limits<T>::epsilon();
     for (da_int i = 0; i < this->n; i++) {
         alpha[i] = alpha[i] - alpha[i + this->n];
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (alpha[i] != 0)
+        if (std::abs(alpha[i]) > epsilon)
             n_support++;
     }
     try {
         this->support_indexes.resize(n_support);
         this->support_coefficients.resize(n_support);
-        this->support_vectors.resize(n_support * this->p);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
     da_int position = 0;
     for (da_int i = 0; i < this->n; i++) {
-        if (alpha[i] != 0) {
+        if (std::abs(alpha[i]) > epsilon) {
             this->support_indexes[position] = i;
             this->support_coefficients[position] = alpha[i];
             position++;
-        }
-    }
-    // Construct a matrix consisting of only support vectors (can be optimised in row major)
-    for (da_int i = 0; i < n_support; i++) {
-        da_int current_idx = this->support_indexes[i];
-        for (da_int j = 0; j < this->p; j++) {
-            this->support_vectors[i + j * n_support] =
-                this->X[current_idx + j * this->ldx_2];
         }
     }
     return da_status_success;

@@ -27,12 +27,133 @@
 """
 aoclda.svm module
 """
-
 import numpy as np
 from ._aoclda.svm import pybind_svc, pybind_svr, pybind_nusvc, pybind_nusvr
 
 
-class SVC:
+class BaseSVM:
+    def __init__(
+        self,
+        kernel="rbf",
+        degree=3,
+        gamma=-1.0,
+        coef0=0.0,
+        tol=0.001,
+        max_iter=0,
+        tau=None,
+        check_data=False,
+    ):
+        if max_iter == -1:
+            max_iter = 0
+        self.kernel = kernel
+        self.degree = degree
+        self.gamma = gamma
+        self.coef0 = coef0
+        self.tol = tol
+        self.max_iter = max_iter
+        self.tau = tau
+        self.check_data = check_data
+        self.precision = "double"  # default precision
+        # Objects to bind with C++ backend (assigned by subclasses)
+        self._model_double = None
+        self._model_single = None
+        self._model = None
+
+    def fit(self, X, y, **kwargs):
+        if kwargs.get("tau") is None:
+            del kwargs["tau"]
+        if X.dtype == np.float32:
+            self._model = self._model_single
+            self.precision = "single"
+            for key in kwargs:
+                kwargs[key] = np.float32(kwargs[key])
+        else:
+            self._model = self._model_double
+            self.precision = "double"
+            for key in kwargs:
+                kwargs[key] = np.float64(kwargs[key])
+
+        if y.dtype.kind in np.typecodes["AllInteger"]:
+            y = y.astype(X.dtype, copy=False)
+
+        self._model.pybind_fit(X, y, **kwargs)
+
+        return self
+
+    def predict(self, X):
+        preds = self._model.pybind_predict(X)
+        return preds
+
+    def score(self, X, y):
+        if y.dtype.kind in np.typecodes["AllInteger"]:
+            y = y.astype(X.dtype, copy=False)
+        return self._model.pybind_score(X, y)
+
+    @property
+    def n_samples(self):
+        """
+        int: The number of training samples used to fit the model.
+        """
+        return self._model.get_n_samples()
+
+    @property
+    def n_features(self):
+        """
+        int: The number of features in the training data.
+        """
+        return self._model.get_n_features()
+
+    @property
+    def n_iter(self):
+        """
+        int: The number of features in the training data.
+        """
+        return self._model.get_n_iterations()
+
+    @property
+    def n_support(self):
+        """
+        int: The total number of support vectors.
+        """
+        return self._model.get_n_sv()
+
+    @property
+    def n_support_per_class(self):
+        """
+        numpy.ndarray of shape (n_classes,): The number of support vectors for each class.
+        """
+        return self._model.get_n_sv_per_class()
+
+    @property
+    def dual_coef(self):
+        """
+        numpy.ndarray of shape (n_classes-1, n_support): The dual coefficients of the support vectors.
+        """
+        return self._model.get_dual_coef()
+
+    @property
+    def support_vectors_idx(self):
+        """
+        numpy.ndarray of shape (n_support,): The indices of the support vectors.
+        """
+        return self._model.get_support_vectors_idx()
+
+    @property
+    def support_vectors(self):
+        """
+        numpy.ndarray of shape (n_support, n_features): The support vectors used by the model.
+        """
+        return self._model.get_sv()
+
+    @property
+    def bias(self):
+        """
+        numpy.ndarray or float: The bias term(s) of the model (also known as the intercept).
+        """
+        return self._model.get_bias()
+
+
+class SVC(BaseSVM):
     """
     Support Vector Classification.
 
@@ -40,7 +161,7 @@ class SVC:
 
     Args:
         C (float, optional): Regularization parameter. Controls the trade-off between maximizing \
-            the margin between classes and minimizing classification errors. The larger \
+            the margin between classes and minimizing classification errors. A larger \
             value means higher penalty to the loss function on misclassified observations. Must be \
             strictly positive. Default=1.0.
         kernel (str, optional): Kernel type to use in the algorithm. Possible values: \
@@ -49,50 +170,63 @@ class SVC:
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
             :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function. It is only used \
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
+            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
             in 'poly' and 'sigmoid' kernel functions. Default=0.0.
         probability (bool, optional): Currently not supported. Whether to enable \
             probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
-        max_iter (int, optional): Hard limit on iterations within solver, or -1 for no limit. \
-            Default=-1.
-        decision_function_shape (str, optional): Whether to return a one-vs-rest ('ovr') \
-            decision function or the original one-vs-one ('ovo'). Default='ovr'.
-        tau (float, optional): Numerical stability parameter. Default=1.0e-12.
+        max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
+            Default=0.
+
+        tau (float, optional): Numerical stability parameter. If it is None then machine \
+            epsilon is used. Default=None.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
-    def __init__(self,
-                 C=1.0,
-                 kernel="rbf",
-                 degree=3,
-                 gamma=-1.0,
-                 coef0=0.0,
-                 probability=False,
-                 tol=0.001,
-                 max_iter=-1,
-                 decision_function_shape="ovr",
-                 tau=1.0e-12,
-                 check_data=False):
-        self.svc_double = pybind_svc(kernel=kernel,
-                                     degree=degree,
-                                     max_iter=max_iter,
-                                     dec_f_shape=decision_function_shape,
-                                     precision="double",
-                                     check_data=check_data)
-        self.svc_single = pybind_svc(kernel=kernel,
-                                     degree=degree,
-                                     max_iter=max_iter,
-                                     dec_f_shape=decision_function_shape,
-                                     precision="single",
-                                     check_data=check_data)
+    def __init__(
+        self,
+        C=1.0,
+        kernel="rbf",
+        degree=3,
+        gamma=-1.0,
+        coef0=0.0,
+        probability=False,
+        tol=0.001,
+        max_iter=0,
+        tau=None,
+        check_data=False,
+    ):
+        super().__init__(
+            kernel=kernel,
+            degree=degree,
+            gamma=gamma,
+            coef0=coef0,
+            tol=tol,
+            max_iter=max_iter,
+            tau=tau,
+            check_data=check_data,
+        )
+        # Create backend objects with chosen precision
+        self._model_double = pybind_svc(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="double",
+            check_data=self.check_data,
+        )
+        self._model_single = pybind_svc(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="single",
+            check_data=self.check_data,
+        )
+        self._model = self._model_double
+        # Not supported yet
+        self.probability = probability
+        # Supported
         self.C = C
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.tol = tol
-        self.tau = tau
-        self.svc = self.svc_double
-        self.precision = "double"
 
     def fit(self, X, y):
         """
@@ -105,32 +239,9 @@ class SVC:
         Returns:
             self (object): Returns the instance itself.
         """
-        if X.dtype == 'float32':
-            self.svc = self.svc_single
-            self.svc_double = None
-            self.C = np.float32(self.C)
-            self.gamma = np.float32(self.gamma)
-            self.coef0 = np.float32(self.coef0)
-            self.tol = np.float32(self.tol)
-            self.tau = np.float32(self.tau)
-            self.precision = "single"
-        else:
-            self.C = np.float64(self.C)
-            self.gamma = np.float64(self.gamma)
-            self.coef0 = np.float64(self.coef0)
-            self.tol = np.float64(self.tol)
-            self.tau = np.float64(self.tau)
-
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        self.svc.pybind_fit(X,
-                            y,
-                            C=self.C,
-                            gamma=self.gamma,
-                            coef0=self.coef0,
-                            tol=self.tol,
-                            tau=self.tau)
+        parameters = {"C": self.C, "gamma": self.gamma,
+                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau}
+        super().fit(X, y, **parameters)
         return self
 
     def predict(self, X):
@@ -143,24 +254,31 @@ class SVC:
         Returns:
             numpy.ndarray: Predicted class labels for samples in X.
         """
-        preds = self.svc.pybind_predict(X)
+        preds = super().predict(X)
         if self.precision == "double":
             preds = preds.astype(np.int64)
         else:
             preds = preds.astype(np.int32)
         return preds
 
-    def decision_function(self, X):
+    def decision_function(self, X, shape="ovr"):
         """
         Evaluate the decision function for the samples in X.
 
+        In multi-class problems, you can use the 'shape' parameter to choose \
+        between one-vs-rest ('ovr') and one-vs-one ('ovo') decision function shape. \
+        Note that in our case, OvR decision values are derived from OvO. \
+        For binary problems, this parameter is ignored.
+
         Args:
             X (numpy.ndarray): Input vectors of shape (n_samples, n_features).
+            shape (str, optional): Whether to return a one-vs-rest ('ovr') \
+            decision function or the original one-vs-one ('ovo'). Default='ovr'.
 
         Returns:
             numpy.ndarray: Decision function values for each sample.
         """
-        return self.svc.pybind_decision_function(X)
+        return self._model.pybind_decision_function(X, shape)
 
     def score(self, X, y):
         """
@@ -173,81 +291,17 @@ class SVC:
         Returns:
             float: Mean accuracy of self.predict(X) wrt. y.
         """
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        return self.svc.pybind_score(X, y)
-
-    @property
-    def n_samples(self):
-        """
-        int: The number of training samples used to fit the model.
-        """
-        return self.svc.get_n_samples()
-
-    @property
-    def n_features(self):
-        """
-        int: The number of features in the training data.
-        """
-        return self.svc.get_n_features()
+        return super().score(X, y)
 
     @property
     def n_classes(self):
         """
         int: The number of classes in the classification problem.
         """
-        return self.svc.get_n_classes()
-
-    @property
-    def n_support(self):
-        """
-        int: The total number of support vectors.
-        """
-        return self.svc.get_n_sv()
-
-    @property
-    def n_support_per_class(self):
-        """
-        numpy.ndarray of shape (n_classes,):
-            The number of support vectors for each class.
-        """
-        return self.svc.get_n_sv_per_class()
-
-    @property
-    def dual_coef(self):
-        """
-        numpy.ndarray of shape (n_classes-1, n_support):
-            The dual coefficients of the support vectors.
-        """
-        return self.svc.get_dual_coef()
-
-    @property
-    def support_vectors_idx(self):
-        """
-        numpy.ndarray of shape (n_support,):
-            The indices of the support vectors.
-        """
-        return self.svc.get_support_vectors_idx()
-
-    @property
-    def support_vectors(self):
-        """
-        numpy.ndarray of shape (n_support, n_features):
-            The support vectors used by the model.
-        """
-        return self.svc.get_sv()
-
-    @property
-    def bias(self):
-        """
-        numpy.ndarray or float:
-            The bias term(s) of the model (also known as intercept).
-        """
-        return self.svc.get_bias()
+        return self._model.get_n_classes()
 
 
-class SVR():
+class SVR(BaseSVM):
     """
     Support Vector Regression.
 
@@ -255,7 +309,7 @@ class SVR():
 
     Args:
         C (float, optional): Regularization parameter. Controls the trade-off between maximizing \
-            the margin between classes and minimizing classification errors. The larger \
+            the margin between classes and minimizing classification errors. A larger \
             value means higher penalty to the loss function on misclassified observations. Must be \
             strictly positive. Default=1.0.
         epsilon (float, optional): Epsilon in the SVR model. Defines the tolerance for errors in \
@@ -267,47 +321,60 @@ class SVR():
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
             :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function. It is only used \
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
+            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
             in 'poly' and 'sigmoid' kernel functions. Default=0.0.
         probability (bool, optional): Currently not supported. Whether to enable \
             probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
-        max_iter (int, optional): Hard limit on iterations within solver, or -1 for no limit. \
-            Default=-1.
-        tau (float, optional): Numerical stability parameter. Default=1.0e-12.
+        max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
+            Default=0.
+        tau (float, optional): Numerical stability parameter. If it is None then machine \
+            epsilon is used. Default=None.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
-    def __init__(self,
-                 C=1.0,
-                 epsilon=0.1,
-                 kernel="rbf",
-                 degree=3,
-                 gamma=-1.0,
-                 coef0=0.0,
-                 probability=False,
-                 tol=0.001,
-                 max_iter=-1,
-                 tau=1.0e-12,
-                 check_data=False):
-        self.svr_double = pybind_svr(kernel=kernel,
-                                     degree=degree,
-                                     max_iter=max_iter,
-                                     precision="double",
-                                     check_data=check_data)
-        self.svr_single = pybind_svr(kernel=kernel,
-                                     degree=degree,
-                                     max_iter=max_iter,
-                                     precision="single",
-                                     check_data=check_data)
+    def __init__(
+        self,
+        C=1.0,
+        epsilon=0.1,
+        kernel="rbf",
+        degree=3,
+        gamma=-1.0,
+        coef0=0.0,
+        tol=0.001,
+        max_iter=0,
+        tau=None,
+        check_data=False,
+    ):
+        super().__init__(
+            kernel=kernel,
+            degree=degree,
+            gamma=gamma,
+            coef0=coef0,
+            tol=tol,
+            max_iter=max_iter,
+            tau=tau,
+            check_data=check_data,
+        )
+        self._model_double = pybind_svr(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="double",
+            check_data=self.check_data,
+        )
+        self._model_single = pybind_svr(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="single",
+            check_data=self.check_data,
+        )
+        self._model = self._model_double
+        # Supported
         self.C = C
         self.epsilon = epsilon
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.tol = tol
-        self.tau = tau
-        self.svr = self.svr_double
-        self.precision = "double"
 
     def fit(self, X, y):
         """
@@ -320,35 +387,9 @@ class SVR():
         Returns:
             self (object): Returns the instance itself.
         """
-        if X.dtype == 'float32':
-            self.svr = self.svr_single
-            self.svr_double = None
-            self.C = np.float32(self.C)
-            self.epsilon = np.float32(self.epsilon)
-            self.gamma = np.float32(self.gamma)
-            self.coef0 = np.float32(self.coef0)
-            self.tol = np.float32(self.tol)
-            self.tau = np.float32(self.tau)
-            self.precision = "single"
-        else:
-            self.C = np.float64(self.C)
-            self.epsilon = np.float64(self.epsilon)
-            self.gamma = np.float64(self.gamma)
-            self.coef0 = np.float64(self.coef0)
-            self.tol = np.float64(self.tol)
-            self.tau = np.float64(self.tau)
-
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        self.svr.pybind_fit(X,
-                            y,
-                            C=self.C,
-                            epsilon=self.epsilon,
-                            gamma=self.gamma,
-                            coef0=self.coef0,
-                            tol=self.tol,
-                            tau=self.tau)
+        parameters = {"C": self.C, "epsilon": self.epsilon, "gamma": self.gamma,
+                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau}
+        super().fit(X, y, **parameters)
         return self
 
     def predict(self, X):
@@ -361,7 +402,7 @@ class SVR():
         Returns:
             numpy.ndarray: Predicted values.
         """
-        return self.svr.pybind_predict(X)
+        return super().predict(X)
 
     def score(self, X, y):
         """
@@ -374,66 +415,10 @@ class SVR():
         Returns:
             float: :math:`R^2` of self.predict(X) wrt. y.
         """
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        return self.svr.pybind_score(X, y)
-
-    @property
-    def n_samples(self):
-        """
-        int: The number of training samples used to fit the model.
-        """
-        return self.svr.get_n_samples()
-
-    @property
-    def n_features(self):
-        """
-        int: The number of features in the training data.
-        """
-        return self.svr.get_n_features()
-
-    @property
-    def n_support(self):
-        """
-        int: The total number of support vectors.
-        """
-        return self.svr.get_n_sv()
-
-    @property
-    def dual_coef(self):
-        """
-        numpy.ndarray of shape (1, n_support):
-            The dual coefficients of the support vectors.
-        """
-        return self.svr.get_dual_coef()
-
-    @property
-    def support_vectors_idx(self):
-        """
-        numpy.ndarray of indices:
-            The indices of the support vectors.
-        """
-        return self.svr.get_support_vectors_idx()
-
-    @property
-    def support_vectors(self):
-        """
-        numpy.ndarray of shape (n_support, n_features):
-            The support vectors used by the model.
-        """
-        return self.svr.get_sv()
-
-    @property
-    def bias(self):
-        """
-        float:
-            The bias term of the model (also known as the intercept).
-        """
-        return self.svr.get_bias()
+        return super().score(X, y)
 
 
-class NuSVC():
+class NuSVC(BaseSVM):
     """
     Nu-Support Vector Classification.
 
@@ -448,50 +433,61 @@ class NuSVC():
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
             :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function. It is only used \
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
+            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
             in 'poly' and 'sigmoid' kernel functions. Default=0.0.
         probability (bool, optional): Currently not supported. Whether to enable \
             probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
-        max_iter (int, optional): Hard limit on iterations within solver, or -1 for no limit. \
-            Default=-1.
-        decision_function_shape (str, optional): Whether to return a one-vs-rest ('ovr') \
-            decision function or the original one-vs-one ('ovo'). Default='ovr'.
-        tau (float, optional): Numerical stability parameter. Default=1.0e-12.
+        max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
+            Default=0.
+        tau (float, optional): Numerical stability parameter. If it is None then machine \
+            epsilon is used. Default=None.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
-    def __init__(self,
-                 nu=0.5,
-                 kernel="rbf",
-                 degree=3,
-                 gamma=-1.0,
-                 coef0=0.0,
-                 probability=False,
-                 tol=0.001,
-                 max_iter=-1,
-                 decision_function_shape="ovr",
-                 tau=1.0e-12,
-                 check_data=False):
-        self.nusvc_double = pybind_nusvc(kernel=kernel,
-                                         degree=degree,
-                                         max_iter=max_iter,
-                                         dec_f_shape=decision_function_shape,
-                                         precision="double",
-                                         check_data=check_data)
-        self.nusvc_single = pybind_nusvc(kernel=kernel,
-                                         degree=degree,
-                                         max_iter=max_iter,
-                                         dec_f_shape=decision_function_shape,
-                                         precision="single",
-                                         check_data=check_data)
+    def __init__(
+        self,
+        nu=0.5,
+        kernel="rbf",
+        degree=3,
+        gamma=-1.0,
+        coef0=0.0,
+        probability=False,
+        tol=0.001,
+        max_iter=0,
+        tau=None,
+        check_data=False,
+    ):
+        super().__init__(
+            kernel=kernel,
+            degree=degree,
+            gamma=gamma,
+            coef0=coef0,
+            tol=tol,
+            max_iter=max_iter,
+            tau=tau,
+            check_data=check_data,
+        )
+        self._model_double = pybind_nusvc(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="double",
+            check_data=self.check_data,
+        )
+        self._model_single = pybind_nusvc(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="single",
+            check_data=self.check_data,
+        )
+        self._model = self._model_double
+        # Not supported yet
+        self.probability = probability
+        # Supported
         self.nu = nu
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.tol = tol
-        self.tau = tau
-        self.nusvc = self.nusvc_double
-        self.precision = "double"
 
     def fit(self, X, y):
         """
@@ -504,32 +500,9 @@ class NuSVC():
         Returns:
             self (object): Returns the instance itself.
         """
-        if X.dtype == 'float32':
-            self.nusvc = self.nusvc_single
-            self.nusvc_double = None
-            self.nu = np.float32(self.nu)
-            self.gamma = np.float32(self.gamma)
-            self.coef0 = np.float32(self.coef0)
-            self.tol = np.float32(self.tol)
-            self.tau = np.float32(self.tau)
-            self.precision = "single"
-        else:
-            self.nu = np.float64(self.nu)
-            self.gamma = np.float64(self.gamma)
-            self.coef0 = np.float64(self.coef0)
-            self.tol = np.float64(self.tol)
-            self.tau = np.float64(self.tau)
-
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        self.nusvc.pybind_fit(X,
-                              y,
-                              nu=self.nu,
-                              gamma=self.gamma,
-                              coef0=self.coef0,
-                              tol=self.tol,
-                              tau=self.tau)
+        parameters = {"nu": self.nu, "gamma": self.gamma,
+                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau}
+        super().fit(X, y, **parameters)
         return self
 
     def predict(self, X):
@@ -542,24 +515,31 @@ class NuSVC():
         Returns:
             numpy.ndarray: Predicted class labels for samples in X.
         """
-        preds = self.nusvc.pybind_predict(X)
+        preds = super().predict(X)
         if self.precision == "double":
             preds = preds.astype(np.int64)
         else:
             preds = preds.astype(np.int32)
         return preds
 
-    def decision_function(self, X):
+    def decision_function(self, X, shape="ovr"):
         """
         Evaluate the decision function for the samples in X.
 
+        In multi-class problems, you can use the 'shape' parameter to choose \
+        between one-vs-rest ('ovr') and one-vs-one ('ovo') decision function shape. \
+        Note that in our case, OvR decision values are derived from OvO. \
+        For binary problems, this parameter is ignored.
+
         Args:
             X (numpy.ndarray): Input vectors of shape (n_samples, n_features).
+            shape (str, optional): Whether to return a one-vs-rest ('ovr') \
+            decision function or the original one-vs-one ('ovo'). Default='ovr'.
 
         Returns:
             numpy.ndarray: Decision function values for each sample.
         """
-        return self.nusvc.pybind_decision_function(X)
+        return self._model.pybind_decision_function(X, shape)
 
     def score(self, X, y):
         """
@@ -572,81 +552,17 @@ class NuSVC():
         Returns:
             float: Mean accuracy of self.predict(X) wrt. y.
         """
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        return self.nusvc.pybind_score(X, y)
-
-    @property
-    def n_samples(self):
-        """
-        int: The number of training samples used to fit the model.
-        """
-        return self.nusvc.get_n_samples()
-
-    @property
-    def n_features(self):
-        """
-        int: The number of features in the training data.
-        """
-        return self.nusvc.get_n_features()
+        return super().score(X, y)
 
     @property
     def n_classes(self):
         """
         int: The number of classes in the classification problem.
         """
-        return self.nusvc.get_n_classes()
-
-    @property
-    def n_support(self):
-        """
-        int: The total number of support vectors.
-        """
-        return self.nusvc.get_n_sv()
-
-    @property
-    def n_support_per_class(self):
-        """
-        numpy.ndarray of shape (n_classes,):
-            The number of support vectors for each class.
-        """
-        return self.nusvc.get_n_sv_per_class()
-
-    @property
-    def dual_coef(self):
-        """
-        numpy.ndarray of shape (n_classes-1, n_support):
-            The dual coefficients of the support vectors.
-        """
-        return self.nusvc.get_dual_coef()
-
-    @property
-    def support_vectors_idx(self):
-        """
-        numpy.ndarray of size (n_support,):
-            The indices of the support vectors.
-        """
-        return self.nusvc.get_support_vectors_idx()
-
-    @property
-    def support_vectors(self):
-        """
-        numpy.ndarray of shape (n_support, n_features):
-            The support vectors used by the model.
-        """
-        return self.nusvc.get_sv()
-
-    @property
-    def bias(self):
-        """
-        numpy.ndarray or float:
-            The bias term(s) of the model (also known as the intercept).
-        """
-        return self.nusvc.get_bias()
+        return self._model.get_n_classes()
 
 
-class NuSVR():
+class NuSVR(BaseSVM):
     """
     Nu-Support Vector Regression.
 
@@ -656,7 +572,7 @@ class NuSVR():
         nu (float, optional): An upper bound on the fraction of training errors and a lower \
             bound of the fraction of support vectors. Default=0.5.
         C (float, optional): Regularization parameter. Controls the trade-off between maximizing \
-            the margin between classes and minimizing classification errors. The larger \
+            the margin between classes and minimizing classification errors. A larger \
             value means higher penalty to the loss function on misclassified observations. Must be \
             strictly positive. Default=1.0.
         kernel (str, optional): Kernel type to use in the algorithm. Possible values: \
@@ -665,47 +581,60 @@ class NuSVR():
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
             :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function. It is only used \
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
+            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
             in 'poly' and 'sigmoid' kernel functions. Default=0.0.
         probability (bool, optional): Currently not supported. Whether to enable \
             probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
-        max_iter (int, optional): Hard limit on iterations within solver, or -1 for no limit. \
-            Default=-1.
-        tau (float, optional): Numerical stability parameter. Default=1.0e-12.
+        max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
+            Default=0.
+        tau (float, optional): Numerical stability parameter. If it is None then machine \
+            epsilon is used. Default=None.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
-    def __init__(self,
-                 nu=0.5,
-                 C=1.0,
-                 kernel="rbf",
-                 degree=3,
-                 gamma=-1.0,
-                 coef0=0.0,
-                 probability=False,
-                 tol=0.001,
-                 max_iter=-1,
-                 tau=1.0e-12,
-                 check_data=False):
-        self.nusvr_double = pybind_nusvr(kernel=kernel,
-                                         degree=degree,
-                                         max_iter=max_iter,
-                                         precision="double",
-                                         check_data=check_data)
-        self.nusvr_single = pybind_nusvr(kernel=kernel,
-                                         degree=degree,
-                                         max_iter=max_iter,
-                                         precision="single",
-                                         check_data=check_data)
+    def __init__(
+        self,
+        nu=0.5,
+        C=1.0,
+        kernel="rbf",
+        degree=3,
+        gamma=-1.0,
+        coef0=0.0,
+        tol=0.001,
+        max_iter=0,
+        tau=None,
+        check_data=False,
+    ):
+        super().__init__(
+            kernel=kernel,
+            degree=degree,
+            gamma=gamma,
+            coef0=coef0,
+            tol=tol,
+            max_iter=max_iter,
+            tau=tau,
+            check_data=check_data,
+        )
+        self._model_double = pybind_nusvr(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="double",
+            check_data=self.check_data,
+        )
+        self._model_single = pybind_nusvr(
+            kernel=self.kernel,
+            degree=self.degree,
+            max_iter=self.max_iter,
+            precision="single",
+            check_data=self.check_data,
+        )
+        self._model = self._model_double
+        # Supported
         self.nu = nu
         self.C = C
-        self.gamma = gamma
-        self.coef0 = coef0
-        self.tol = tol
-        self.tau = tau
-        self.nusvr = self.nusvr_double
-        self.precision = "double"
 
     def fit(self, X, y):
         """
@@ -718,35 +647,9 @@ class NuSVR():
         Returns:
             self (object): Returns the instance itself.
         """
-        if X.dtype == 'float32':
-            self.nusvr = self.nusvr_single
-            self.nusvr_double = None
-            self.nu = np.float32(self.nu)
-            self.C = np.float32(self.C)
-            self.gamma = np.float32(self.gamma)
-            self.coef0 = np.float32(self.coef0)
-            self.tol = np.float32(self.tol)
-            self.tau = np.float32(self.tau)
-            self.precision = "single"
-        else:
-            self.nu = np.float64(self.nu)
-            self.C = np.float64(self.C)
-            self.gamma = np.float64(self.gamma)
-            self.coef0 = np.float64(self.coef0)
-            self.tol = np.float64(self.tol)
-            self.tau = np.float64(self.tau)
-
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        self.nusvr.pybind_fit(X,
-                              y,
-                              nu=self.nu,
-                              C=self.C,
-                              gamma=self.gamma,
-                              coef0=self.coef0,
-                              tol=self.tol,
-                              tau=self.tau)
+        parameters = {"C": self.C, "nu": self.nu, "gamma": self.gamma,
+                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau}
+        super().fit(X, y, **parameters)
         return self
 
     def predict(self, X):
@@ -759,7 +662,7 @@ class NuSVR():
         Returns:
             numpy.ndarray: Predicted values.
         """
-        return self.nusvr.pybind_predict(X)
+        return super().predict(X)
 
     def score(self, X, y):
         """
@@ -772,60 +675,4 @@ class NuSVR():
         Returns:
             float: :math:`R^2` of self.predict(X) wrt. y.
         """
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        return self.nusvr.pybind_score(X, y)
-
-    @property
-    def n_samples(self):
-        """
-        int: The number of training samples used to fit the model.
-        """
-        return self.nusvr.get_n_samples()
-
-    @property
-    def n_features(self):
-        """
-        int: The number of features in the training data.
-        """
-        return self.nusvr.get_n_features()
-
-    @property
-    def n_support(self):
-        """
-        int: The total number of support vectors.
-        """
-        return self.nusvr.get_n_sv()
-
-    @property
-    def dual_coef(self):
-        """
-        numpy.ndarray of shape (1, n_support):
-            The dual coefficients of the support vectors.
-        """
-        return self.nusvr.get_dual_coef()
-
-    @property
-    def support_vectors_idx(self):
-        """
-        numpy.ndarray of indices:
-            The indices of the support vectors.
-        """
-        return self.nusvr.get_support_vectors_idx()
-
-    @property
-    def support_vectors(self):
-        """
-        numpy.ndarray of shape (n_support, n_features):
-            The support vectors used by the model.
-        """
-        return self.nusvr.get_sv()
-
-    @property
-    def bias(self):
-        """
-        float:
-            The bias term of the model (also known as intercept).
-        """
-        return self.nusvr.get_bias()
+        return super().score(X, y)

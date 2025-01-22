@@ -86,20 +86,18 @@ TYPED_TEST(svm_internal_test, local_smo) {
             I_low_n(data.n);
 
         /////////////////////////////// SVC test
-        da_svm::svc<TypeParam> svc_obj;
+        da_svm::svc<TypeParam> svc_obj(nullptr, nullptr, data.n, 1, 1);
 
         svc_obj.ws_size = data.n;
-        svc_obj.kernel_matrix = data.kernel_data;
-        svc_obj.n = data.n;
         svc_obj.ws_indexes = data.idx;
         svc_obj.C = data.C;
         svc_obj.y = data.y.data();
 
         svc_obj.initialisation(data.n, gradient, response, alpha);
 
-        svc_obj.local_smo(data.n, data.idx, data.local_kernel_data, alpha,
-                          data.local_alpha, gradient, data.local_gradient, response,
-                          data.local_response, I_low_p, I_up_p, I_low_n, I_up_n,
+        svc_obj.local_smo(data.n, data.idx, data.kernel_data, data.local_kernel_data,
+                          alpha, data.local_alpha, gradient, data.local_gradient,
+                          response, data.local_response, I_low_p, I_up_p, I_low_n, I_up_n,
                           data.first_diff, alpha_diff, data.tol);
 
         svc_obj.set_bias(alpha, data.local_gradient, response, data.n, bias);
@@ -112,13 +110,11 @@ TYPED_TEST(svm_internal_test, local_smo) {
         EXPECT_ARR_NEAR(data.n, alpha, data.svc_alpha_expected, tolerance);
 
         /////////////////////////////// nu-SVC test
-        da_svm::nusvc<TypeParam> nusvc_obj;
+        da_svm::nusvc<TypeParam> nusvc_obj(nullptr, nullptr, data.n, 1, 1);
         std::fill(alpha.begin(), alpha.end(), 0.0);
         std::fill(gradient.begin(), gradient.end(), 0.0);
 
         nusvc_obj.ws_size = data.n;
-        nusvc_obj.kernel_matrix = data.kernel_data;
-        nusvc_obj.n = data.n;
         nusvc_obj.ws_indexes = data.idx;
         nusvc_obj.nu = data.nu;
         nusvc_obj.y = data.y.data();
@@ -163,10 +159,10 @@ TYPED_TEST(svm_internal_test, local_smo) {
                                   kernel_matrix_nusvc);
         ////////
 
-        nusvc_obj.local_smo(data.n, data.idx, data.local_kernel_data, alpha,
-                            data.local_alpha, gradient, data.local_gradient, response,
-                            data.local_response, I_low_p, I_up_p, I_low_n, I_up_n,
-                            data.first_diff, alpha_diff, data.tol);
+        nusvc_obj.local_smo(data.n, data.idx, data.kernel_data, data.local_kernel_data,
+                            alpha, data.local_alpha, gradient, data.local_gradient,
+                            response, data.local_response, I_low_p, I_up_p, I_low_n,
+                            I_up_n, data.first_diff, alpha_diff, data.tol);
 
         nusvc_obj.set_bias(alpha, data.local_gradient, response, data.n, bias);
 
@@ -203,9 +199,8 @@ TYPED_TEST(svm_internal_test, WSS) {
     GetWSSData(params);
     for (auto &data : params) {
         TypeParam tolerance = 1.0e-7;
-        da_svm::svc<TypeParam> svc_obj;
+        da_svm::svc<TypeParam> svc_obj(nullptr, nullptr, data.size, 1, 1);
         svc_obj.ws_size = data.size;
-        svc_obj.n = data.size;
         svc_obj.ws_indexes = data.idx;
         svc_obj.C = data.C;
         svc_obj.tau = data.tau;

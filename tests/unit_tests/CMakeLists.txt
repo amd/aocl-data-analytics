@@ -64,37 +64,37 @@ set(INTERNAL_INC_DIRS
     ${CMAKE_SOURCE_DIR}/source/core/linear_model
     ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
     ${CMAKE_SOURCE_DIR}/source/core/dynamic_dispatch
-    ${CMAKE_SOURCE_DIR}/source/core/kernel_function
+    ${CMAKE_SOURCE_DIR}/source/core/kernel_functions
     ${CMAKE_SOURCE_DIR}/source/core/svm)
 
 set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
-# ##############################################################################
-# ########### Basic stats #############
-# ##############################################################################
+##############################################################################
+########### Basic stats #############
+##############################################################################
 add_executable(basic_stats_public basic_statistics/basic_stats_public.cpp)
 target_link_libraries(basic_stats_public PRIVATE ${BLAS})
 
-# ##############################################################################
-# ############# Metrics ###############
-# ##############################################################################
+##############################################################################
+############# Metrics ###############
+##############################################################################
 add_executable(metrics_public metrics/metric_public.cpp)
 target_link_libraries(metrics_public PRIVATE ${BLAS})
 add_executable(euclidean_distance_internal
                metrics/euclidean_distance_internal.cpp)
 target_link_libraries(euclidean_distance_internal PRIVATE ${BLAS})
 
-# ##############################################################################
-# ############### CSV #################
-# ##############################################################################
+##############################################################################
+############### CSV #################
+##############################################################################
 add_executable(csv_public csv/csv_utils.cpp csv/csv_public.cpp)
 target_compile_definitions(csv_public PRIVATE DATA_DIR="${DATA_PATH}")
 
 add_executable(csv_internal csv/csv_utils.cpp csv/csv_internal.cpp)
 
-# ##############################################################################
-# ########## Linear models ############
-# ##############################################################################
+##############################################################################
+########## Linear models ############
+##############################################################################
 add_executable(linmod_public linear_models/linmod_public.cpp)
 add_executable(linmod_internal linear_models/linmod_internal.cpp)
 
@@ -104,9 +104,9 @@ target_compile_definitions(logreg_public PRIVATE DATA_DIR="${DATA_PATH}")
 add_executable(linreg_public linear_models/linreg_public.cpp)
 target_compile_definitions(linreg_public PRIVATE DATA_DIR="${DATA_PATH}")
 
-# ##############################################################################
-# Decision trees/forests ########
-# ##############################################################################
+##############################################################################
+######## Decision trees/forests ########
+##############################################################################
 add_executable(dectree_public decision_trees/dectree_public.cpp)
 target_compile_definitions(dectree_public PRIVATE DATA_DIR="${DATA_PATH}")
 target_link_libraries(dectree_public PRIVATE ${BLAS})
@@ -117,9 +117,9 @@ add_executable(decforest_public decision_forests/decforest_public.cpp)
 target_compile_definitions(decforest_public PRIVATE DATA_DIR="${DATA_PATH}")
 target_link_libraries(decforest_public PRIVATE ${BLAS})
 
-# ##############################################################################
-# DA Utilities (opts, errors, ...) ##
-# ##############################################################################
+##############################################################################
+######## DA Utilities (opts, errors, ...) ########
+##############################################################################
 add_executable(option_registry_internal
                da_utilities/option_registry_internal.cpp)
 
@@ -149,21 +149,21 @@ target_link_libraries(c_compatibility_nog_public PRIVATE aocl-da)
 add_executable(miscellaneous_internal da_utilities/miscellaneous_internal.cpp)
 target_compile_definitions(miscellaneous_internal PRIVATE ${VERS_DEF})
 
-# ##############################################################################
-# ############# kmeans ################
-# ##############################################################################
+##############################################################################
+############# kmeans ################
+##############################################################################
 add_executable(kmeans_public kmeans/kmeans_public.cpp)
 
-# ##############################################################################
-# ############# DBSCAN ################
-# ##############################################################################
+##############################################################################
+############# DBSCAN ################
+##############################################################################
 add_executable(dbscan_public dbscan/dbscan_public.cpp)
 add_executable(dbscan_internal dbscan/dbscan_internal.cpp)
 target_link_libraries(dbscan_internal PRIVATE ${BLAS})
 
-# ##############################################################################
-# ########## Optimization #############
-# ##############################################################################
+##############################################################################
+########## Optimization #############
+##############################################################################
 add_executable(nlls_public optimization/nlls_public.cpp)
 add_executable(nlls_internal optimization/nlls_internal.cpp)
 
@@ -175,15 +175,15 @@ target_link_libraries(lbfgsb_fcomm_internal PRIVATE aocl-da)
 
 add_executable(coord_internal optimization/coord_internal.cpp)
 
-# ##############################################################################
-# ############## PCA ##################
-# ##############################################################################
+##############################################################################
+############## PCA ##################
+##############################################################################
 add_executable(pca_public factorization/pca_public.cpp)
 target_link_libraries(pca_public PRIVATE ${BLAS})
 
-# ##############################################################################
-# ######### Data management ###########
-# ##############################################################################
+##############################################################################
+######### Data management ###########
+##############################################################################
 add_executable(data_public data_management/data_public.cpp)
 target_compile_definitions(data_public PRIVATE DATA_DIR="${DATA_PATH}")
 add_executable(data_internal data_management/data_internal.cpp)
@@ -192,21 +192,20 @@ target_compile_definitions(data_internal PRIVATE DATA_DIR="${DATA_PATH}")
 add_executable(interval_map_internal data_management/interval_map_internal.cpp)
 add_executable(interval_set_internal data_management/interval_set_internal.cpp)
 
-# ##############################################################################
-# ############## knn ##################
-# ##############################################################################
+##############################################################################
+############## knn ##################
+##############################################################################
 add_executable(knn_public knn/knn_public.cpp)
 target_link_libraries(knn_public PRIVATE aocl-da ${BLAS})
 
-# ##############################################################################
-# ######### Kernel function ###########
-# ##############################################################################
-add_executable(kernel_function_public
-               kernel_function/kernel_function_public.cpp)
+######################################
+########## Kernel function ###########
+######################################
+add_executable(kernel_functions_public kernel_functions/kernel_functions_public.cpp)
 
-# ##############################################################################
-# ############### SVM #################
-# ##############################################################################
+##############################################################################
+############### SVM #################
+##############################################################################
 add_executable(svm_internal svm/svm_internal.cpp)
 target_link_libraries(svm_internal PRIVATE ${BLAS})
 
@@ -253,7 +252,7 @@ set(GTEST_PUBLIC
     utilities_public
     nlls_public
     knn_public
-    kernel_function_public
+    kernel_functions_public
     svm_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)
 set(PUBLIC_UTESTS ${GTEST_PUBLIC} ${INDEP_PUBLIC})

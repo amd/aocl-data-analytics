@@ -53,6 +53,7 @@ int main() {
     da_int n_samples = 8;
     da_int n_samples_test = 5;
     da_int n_features = 2;
+    da_int n_class = 2;
     da_int ldx = n_samples;
     da_int ldx_test = n_samples_test;
 
@@ -115,17 +116,19 @@ int main() {
     }
 
     // Step 7: Extract dual coefficients
-    da_int n_sv, one = 1;
+    da_int n_sv = 0, one = 1;
+    da_int n_classifiers = n_class * (n_class - 1) / 2;
     pass = pass && (da_handle_get_result_int(handle, da_svm_n_support_vectors, &one,
                                              &n_sv) == da_status_success);
+    da_int size = n_sv * n_classifiers;
     if (pass) {
-        std::vector<double> dual_coefficients(n_sv);
+        std::vector<double> dual_coefficients(size);
         pass = pass &&
-               (da_handle_get_result_d(handle, da_svm_dual_coef, &n_sv,
+               (da_handle_get_result_d(handle, da_svm_dual_coef, &size,
                                        dual_coefficients.data()) == da_status_success);
         if (pass) {
             std::cout << std::endl << "Dual coefficients: " << std::endl;
-            for (da_int i = 0; i < n_sv; i++) {
+            for (da_int i = 0; i < size; i++) {
                 std::cout << dual_coefficients[i] << " ";
             }
             std::cout << std::endl;

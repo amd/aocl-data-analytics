@@ -35,28 +35,29 @@ template <typename T> struct test_local_smo_type {
     std::vector<T> y, local_response;
     std::vector<da_int> idx;
     std::vector<T> alpha_diff;
-    T first_diff;
-    da_int n;
-    T tol, C, nu, eps;
-    T svc_expected_bias, nusvc_expected_bias;
+    T first_diff = 0.0;
+    da_int n = 0;
+    T tol = 0.0, C = 0.0, nu = 0.0, eps = 0.0;
+    T svc_expected_bias = 0.0, nusvc_expected_bias = 0.0;
 };
 
 template <typename T> struct test_is_upper_lower_type {
-    T alpha, y, C;
-    bool is_low, is_up;
+    T alpha = 0.0, y = 0.0, C = 0.0;
+    bool is_low = false, is_up = false;
 };
 
 template <typename T> struct test_working_set_selection_type {
     std::vector<T> alpha, gradient, response;
-    da_int i, j, i_expected, j_expected;
+    da_int i = 0, j, i_expected = 0, j_expected = 0;
     std::vector<da_int> idx;
     std::vector<bool> I_up, I_low;
     T tau = 1e-6;
-    da_int size;
-    T C, min_gradient, min_gradient_expected;
+    da_int size = 0;
+    T C = 0.0, min_gradient = 0.0, min_gradient_expected = 0.0;
     // parameters for j
     std::vector<T> kernel_matrix;
-    T delta, delta_expected, max_gradient, max_gradient_expected, max_function;
+    T delta = 0.0, delta_expected = 0.0, max_gradient = 0.0, max_gradient_expected = 0.0,
+      max_function = 0.0;
 };
 
 template <typename T> struct test_ldx_type {
@@ -64,22 +65,22 @@ template <typename T> struct test_ldx_type {
     std::vector<T> y_train;
     std::vector<T> X_test, X_test_row;
     std::vector<T> y_test;
-    da_svm_model model;
+    da_svm_model model = svm_undefined;
     std::string kernel;
     da_int ldx_train, ldx_test, ldx_train_row, ldx_test_row, lddecision_values = 1,
                                                              lddecision_values_row = 1;
-    da_int n_samples_test, n_samples_train, n_feat, n_class = 1;
+    da_int n_samples_test = 0, n_samples_train = 0, n_feat = 0, n_class = 1;
     // Arrays to check
     std::vector<T> decision_values, decision_values_row, y_pred;
-    T score;
+    T score = 0.0;
 };
 
 template <typename T> struct test_get_results_type {
     std::vector<T> X_train, X_train_row;
     std::vector<T> y_train;
-    da_svm_model model;
+    da_svm_model model = svm_undefined;
     std::string kernel;
-    da_int n_samples, n_feat, n_class, n_support_expected;
+    da_int n_samples = 0, n_feat = 0, n_class = 0, n_support_expected = 0;
     // Arrays to check
     std::vector<T> bias_expected;
     std::vector<da_int> n_support_per_class_expected, support_indexes_expected;
@@ -90,17 +91,27 @@ template <typename T> struct test_get_results_type {
 template <typename T> struct test_row_major_type {
     std::vector<T> X_train, y_train;
     std::vector<T> X_test, y_test;
-    da_svm_model model;
+    da_svm_model model = svm_undefined;
     std::string kernel;
-    da_int n_samples, n_samples_test, n_feat, n_feat_test, n_class;
+    da_int n_samples = 0, n_samples_test = 0, n_feat = 0, n_feat_test = 0, n_class = 0;
     // Arrays to check
     std::vector<T> decision_values_ovr, decision_values_ovo, y_pred;
-    T score;
+    T score = 0.0;
     // For 'multiple calls' test to test get_results apart from standard functions like compute, predict, score
     std::vector<T> bias_expected;
-    da_int n_support_expected;
+    da_int n_support_expected = 0;
     std::vector<da_int> n_support_per_class_expected, support_indexes_expected;
     std::vector<T> support_coefficients_expected, support_vectors_expected;
+};
+
+template <typename T> struct test_invalid_data_type {
+    std::vector<T> X_train, y_train;
+    std::vector<da_svm_model> model;
+    std::string kernel;
+    da_int n_samples = 0, n_feat = 0;
+    da_status set_data_expected_status = da_status_success,
+              compute_expected_status = da_status_success,
+              predict_expected_status = da_status_success;
 };
 
 template <typename T>
@@ -1682,4 +1693,158 @@ void set_row_major_test_data_15x2_linear_nusvr(test_row_major_type<T> &data) {
     data.support_vectors_expected = {1.86,  1.15, 0.71,  1.0,   -0.2,  -1.19,
                                      -0.25, 2.43, -0.86, -0.98, -0.36, 0.06};
     data.support_coefficients_expected = {1.0, 1.0, -1.0, 0.5, -1.0, -0.5};
+}
+
+// y is all zeros => only one class detected => invalid_input
+template <typename T> void set_invalid_data_y_zeros(test_invalid_data_type<T> &data) {
+    data.n_samples = 5, data.n_feat = 2;
+
+    data.X_train = {-2.99, -0.15, -0.09, 0.45, -1.03, -0.02, 1.59, 0.34, 0.04, 2.52};
+    data.y_train = {0.0, 0.0, 0.0, 0.0, 0.0};
+
+    data.kernel = "linear";
+    data.model = {svc, nusvc};
+
+    data.set_data_expected_status = da_status_invalid_input;
+    data.compute_expected_status =
+        da_status_no_data; // setting data failed so this will fail too
+    data.predict_expected_status =
+        da_status_out_of_date; // compute failed so this will fail too
+}
+
+// y is all twos => three classes detected => class 0 and class 1 has no samples => invalid_input
+template <typename T> void set_invalid_data_y_twos(test_invalid_data_type<T> &data) {
+    data.n_samples = 5, data.n_feat = 2;
+
+    data.X_train = {-2.99, -0.15, -0.09, 0.45, -1.03, -0.02, 1.59, 0.34, 0.04, 2.52};
+    data.y_train = {2.0, 2.0, 2.0, 2.0, 2.0};
+
+    data.kernel = "linear";
+    data.model = {svc, nusvc};
+
+    data.set_data_expected_status = da_status_invalid_input;
+    data.compute_expected_status =
+        da_status_no_data; // setting data failed so this will fail too
+    data.predict_expected_status =
+        da_status_out_of_date; // compute failed so this will fail too
+}
+
+// y is all twos => one label => no support vectors => numerical_difficulties
+template <typename T> void set_invalid_data_y_twos_regr(test_invalid_data_type<T> &data) {
+    data.n_samples = 5, data.n_feat = 2;
+
+    data.X_train = {-2.99, -0.15, -0.09, 0.45, -1.03, -0.02, 1.59, 0.34, 0.04, 2.52};
+    data.y_train = {2.0, 2.0, 2.0, 2.0, 2.0};
+
+    data.kernel = "rbf";
+    data.model = {svr, nusvr};
+
+    data.set_data_expected_status = da_status_success;
+    data.compute_expected_status = da_status_numerical_difficulties;
+    data.predict_expected_status =
+        da_status_success; // above is just a warning so predict should pass
+}
+
+// y is has samples for classes 1,2,3 => so samples for class 0 => invalid_input
+template <typename T>
+void set_invalid_data_y_missing_class(test_invalid_data_type<T> &data) {
+    data.n_samples = 5, data.n_feat = 2;
+
+    data.X_train = {-2.99, -0.15, -0.09, 0.45, -1.03, -0.02, 1.59, 0.34, 0.04, 2.52};
+    data.y_train = {1.0, 2.0, 3.0, 1.0, 2.0};
+
+    data.kernel = "linear";
+    data.model = {svc, nusvc};
+
+    data.set_data_expected_status = da_status_invalid_input;
+    data.compute_expected_status =
+        da_status_no_data; // setting data failed so this will fail too
+    data.predict_expected_status =
+        da_status_out_of_date; // compute failed so this will fail too
+}
+
+// y not whole numbers => wrong format of y => invalid_input
+template <typename T> void set_invalid_data_y_not_whole(test_invalid_data_type<T> &data) {
+    data.n_samples = 5, data.n_feat = 2;
+
+    data.X_train = {-2.99, -0.15, -0.09, 0.45, -1.03, -0.02, 1.59, 0.34, 0.04, 2.52};
+    data.y_train = {0.0, 1.0, 2.0, 1.5, 0.0};
+
+    data.kernel = "linear";
+    data.model = {svc, nusvc};
+
+    data.set_data_expected_status = da_status_invalid_input;
+    data.compute_expected_status =
+        da_status_no_data; // setting data failed so this will fail too
+    data.predict_expected_status =
+        da_status_out_of_date; // compute failed so this will fail too
+}
+
+// y has negative numbers => detected number of classes < 2 => invalid_input
+template <typename T> void set_invalid_data_y_negative(test_invalid_data_type<T> &data) {
+    data.n_samples = 5, data.n_feat = 2;
+
+    data.X_train = {-2.99, -0.15, -0.09, 0.45, -1.03, -0.02, 1.59, 0.34, 0.04, 2.52};
+    data.y_train = {0.0, -1.0, -1.0, 0.0, 0.0};
+
+    data.kernel = "linear";
+    data.model = {svc, nusvc};
+
+    data.set_data_expected_status = da_status_invalid_input;
+    data.compute_expected_status =
+        da_status_no_data; // setting data failed so this will fail too
+    data.predict_expected_status =
+        da_status_out_of_date; // compute failed so this will fail too
+}
+
+// X is all zeros => variance == 0 => default value of gamma cannot be calculated (0 denominator)
+template <typename T> void set_invalid_data_X_zeros(test_invalid_data_type<T> &data) {
+    data.n_samples = 5, data.n_feat = 2;
+
+    data.X_train = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    data.y_train = {1.0, 2.0, 0.0, 1.0, 0.0};
+
+    data.kernel = "rbf";
+    data.model = {svc, nusvc, svr, nusvr};
+
+    data.set_data_expected_status = da_status_success;
+    data.compute_expected_status =
+        da_status_invalid_input; // we try to compute gamma at this stage
+    data.predict_expected_status =
+        da_status_out_of_date; // compute failed so this will fail too
+}
+
+// X is 1 by 2 => one class detected => invalid_input
+template <typename T> void set_invalid_data_X_small(test_invalid_data_type<T> &data) {
+    data.n_samples = 1, data.n_feat = 2;
+
+    data.X_train = {0.0, 1.0};
+    data.y_train = {0.0};
+
+    data.kernel = "rbf";
+    data.model = {svc, nusvc};
+
+    data.set_data_expected_status = da_status_invalid_input;
+    data.compute_expected_status =
+        da_status_no_data; // setting data failed so this will fail too
+    data.predict_expected_status =
+        da_status_out_of_date; // compute failed so this will fail too
+}
+
+// X is 1 by 2 => same label => no support vectors => numerical_difficulties
+// (note that variance can be 0 here because we use linear kernel that do not use gamma)
+template <typename T>
+void set_invalid_data_X_small_regr(test_invalid_data_type<T> &data) {
+    data.n_samples = 1, data.n_feat = 2;
+
+    data.X_train = {0.0, 0.0};
+    data.y_train = {0.0};
+
+    data.kernel = "linear";
+    data.model = {svr, nusvr};
+
+    data.set_data_expected_status = da_status_success;
+    data.compute_expected_status = da_status_numerical_difficulties;
+    data.predict_expected_status =
+        da_status_success; // above is just a warning so predict should pass
 }

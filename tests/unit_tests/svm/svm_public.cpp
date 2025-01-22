@@ -78,10 +78,10 @@ TYPED_TEST(svm_public_test, ldx_test) {
         if (data.model == svc || data.model == nusvc) {
             std::vector<TypeParam> decision_values_pred(data.n_class *
                                                         data.lddecision_values);
-            EXPECT_EQ(da_svm_decision_function(svm_handle, data.n_samples_test,
-                                               data.n_feat, data.X_test.data(),
-                                               data.ldx_test, decision_values_pred.data(),
-                                               data.lddecision_values, ovr),
+            EXPECT_EQ(da_svm_decision_function(
+                          svm_handle, data.n_samples_test, data.n_feat,
+                          data.X_test.data(), data.ldx_test, ovr,
+                          decision_values_pred.data(), data.lddecision_values),
                       da_status_success);
             EXPECT_ARR_NEAR(data.n_samples_test * data.lddecision_values,
                             decision_values_pred, data.decision_values, tol);
@@ -113,8 +113,8 @@ TYPED_TEST(svm_public_test, ldx_test) {
                                                         data.lddecision_values_row);
             EXPECT_EQ(da_svm_decision_function(
                           svm_handle, data.n_samples_test, data.n_feat,
-                          data.X_test_row.data(), data.ldx_test_row,
-                          decision_values_pred.data(), data.lddecision_values_row, ovr),
+                          data.X_test_row.data(), data.ldx_test_row, ovr,
+                          decision_values_pred.data(), data.lddecision_values_row),
                       da_status_success);
             EXPECT_ARR_NEAR(data.n_feat * data.lddecision_values_row,
                             decision_values_pred, data.decision_values_row, tol);
@@ -164,7 +164,7 @@ TYPED_TEST(svm_public_test, get_results_test) {
 
         ////////// COLUMN MAJOR
         // Get the rinfo results and check the values
-        da_int dim = 3;
+        da_int dim = 100;
         std::vector<TypeParam> rinfo(dim);
         EXPECT_EQ(
             da_handle_get_result(svm_handle, da_result::da_rinfo, &dim, rinfo.data()),
@@ -209,6 +209,16 @@ TYPED_TEST(svm_public_test, get_results_test) {
             da_status_success);
         EXPECT_ARR_NEAR(dim, bias, data.bias_expected, tol);
 
+        // Get the n_iterations and check the values
+        dim = data.bias_expected.size();
+        std::vector<da_int> n_iterations(dim);
+        EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_n_iterations, &dim,
+                                       n_iterations.data()),
+                  da_status_success);
+        for (auto iter : n_iterations) {
+            EXPECT_GT(iter, 4);
+        }
+
         // Get the support vectors and check the values
         dim = data.support_vectors_expected.size();
         std::vector<TypeParam> support_vectors(dim);
@@ -234,7 +244,7 @@ TYPED_TEST(svm_public_test, get_results_test) {
                   da_status_success);
         EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
         // Get the rinfo results and check the values
-        dim = 3;
+        dim = 100;
         std::vector<TypeParam> rinfo_row(dim);
         EXPECT_EQ(
             da_handle_get_result(svm_handle, da_result::da_rinfo, &dim, rinfo_row.data()),
@@ -270,6 +280,15 @@ TYPED_TEST(svm_public_test, get_results_test) {
             da_status_success);
         EXPECT_ARR_NEAR(dim, bias, data.bias_expected, tol);
 
+        // Get the n_iterations and check the values
+        dim = data.bias_expected.size();
+        EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_n_iterations, &dim,
+                                       n_iterations.data()),
+                  da_status_success);
+        for (auto iter : n_iterations) {
+            EXPECT_GT(iter, 4);
+        }
+
         // Get the support vectors and check the values
         dim = data.support_vectors_row_expected.size();
         EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_support_vectors,
@@ -285,17 +304,20 @@ TYPED_TEST(svm_public_test, get_results_test) {
         EXPECT_ARR_NEAR(dim, support_coeff, data.support_coefficients_row_expected, tol);
 
         ////////// FAIL EXITS
-        // Check that other queries fail
+        // Check that querying other algorithm fails
         EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_linmod_coef, &dim,
                                        rinfo.data()),
                   da_status_unknown_query);
-
+        // int variant
+        EXPECT_EQ(
+            da_handle_get_result(svm_handle, da_result::da_linmod_coef, &dim, &n_sv),
+            da_status_unknown_query);
         // Check the wrong dimension
         dim = 0;
         EXPECT_EQ(
             da_handle_get_result(svm_handle, da_result::da_rinfo, &dim, rinfo.data()),
             da_status_invalid_array_dimension);
-        EXPECT_EQ(dim, 3);
+        EXPECT_EQ(dim, 100);
         dim = 0;
         EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_dual_coef, &dim,
                                        rinfo.data()),
@@ -318,6 +340,13 @@ TYPED_TEST(svm_public_test, get_results_test) {
                   da_status_invalid_array_dimension);
         EXPECT_EQ(dim, 1);
         dim = 0;
+        EXPECT_EQ(
+            da_handle_get_result(svm_handle, da_result::da_svm_n_iterations, &dim, &n_sv),
+            da_status_invalid_array_dimension);
+        EXPECT_EQ(
+            dim,
+            data.bias_expected.size()); // n_iterations array is same length as bias array
+        dim = 0;
         EXPECT_EQ(da_handle_get_result(svm_handle,
                                        da_result::da_svm_n_support_vectors_per_class,
                                        &dim, &n_sv),
@@ -332,7 +361,7 @@ TYPED_TEST(svm_public_test, get_results_test) {
         // Change an option and check that results are no longer available
         EXPECT_EQ(da_options_set(svm_handle, "epsilon", TypeParam(0.2)),
                   da_status_success);
-        dim = 3;
+        dim = 100;
         EXPECT_EQ(
             da_handle_get_result(svm_handle, da_result::da_rinfo, &dim, rinfo.data()),
             da_status_unknown_query);
@@ -389,8 +418,8 @@ TYPED_TEST(svm_public_test, row_major_test) {
             std::vector<TypeParam> decision_function_ovr(data.decision_values_ovr.size());
             EXPECT_EQ(da_svm_decision_function(
                           svm_handle, data.n_samples_test, data.n_feat_test,
-                          data.X_test.data(), data.n_feat_test,
-                          decision_function_ovr.data(), data.n_class, ovr),
+                          data.X_test.data(), data.n_feat_test, ovr,
+                          decision_function_ovr.data(), data.n_class),
                       da_status_success);
             EXPECT_ARR_NEAR((da_int)decision_function_ovr.size(), decision_function_ovr,
                             data.decision_values_ovr, tol);
@@ -398,8 +427,8 @@ TYPED_TEST(svm_public_test, row_major_test) {
             std::vector<TypeParam> decision_function_ovo(data.decision_values_ovo.size());
             EXPECT_EQ(da_svm_decision_function(
                           svm_handle, data.n_samples_test, data.n_feat_test,
-                          data.X_test.data(), data.n_feat_test,
-                          decision_function_ovo.data(), n_classifiers, ovo),
+                          data.X_test.data(), data.n_feat_test, ovo,
+                          decision_function_ovo.data(), n_classifiers),
                       da_status_success);
             EXPECT_ARR_NEAR((da_int)decision_function_ovo.size(), decision_function_ovo,
                             data.decision_values_ovo, tol);
@@ -457,14 +486,14 @@ TYPED_TEST(svm_public_test, multiple_calls) {
             std::vector<TypeParam> decision_function_ovr(data.decision_values_ovr.size());
             EXPECT_EQ(da_svm_decision_function(
                           svm_handle, data.n_samples_test, data.n_feat_test,
-                          data.X_test.data(), data.n_feat_test,
-                          decision_function_ovr.data(), data.n_class, ovr),
+                          data.X_test.data(), data.n_feat_test, ovr,
+                          decision_function_ovr.data(), data.n_class),
                       da_status_success);
             EXPECT_ARR_NEAR((da_int)data.decision_values_ovr.size(),
                             decision_function_ovr, data.decision_values_ovr, tol);
         }
 
-        da_int dim = 3;
+        da_int dim = 100;
         std::vector<TypeParam> rinfo(dim);
         EXPECT_EQ(
             da_handle_get_result(svm_handle, da_result::da_rinfo, &dim, rinfo.data()),
@@ -533,19 +562,16 @@ TYPED_TEST(svm_public_test, invalid_input) {
 
     std::vector<TypeParam> X{0.0, 1.0, 0.0, 2.0};
     std::vector<TypeParam> y{0.0, 1.0};
-
-    // Initialize the decision tree class and fit model
-    da_handle svm_handle = nullptr;
-    EXPECT_EQ(da_handle_init<TypeParam>(&svm_handle, da_handle_svm), da_status_success);
-
-    // call set_data with invalid values
     da_int n_samples = 2, n_features = 2;
     TypeParam score;
+
+    da_handle svm_handle = nullptr;
+    EXPECT_EQ(da_handle_init<TypeParam>(&svm_handle, da_handle_svm), da_status_success);
 
     // select_model
     EXPECT_EQ(da_svm_select_model<TypeParam>(nullptr, svc),
               da_status_handle_not_initialized);
-    // EXPECT_EQ(da_svm_select_model<TypeParam>(svm_handle, 5), da_status_unknown_query);
+    // EXPECT_EQ(da_svm_select_model<TypeParam>(svm_handle, 5), da_status_unknown_query); // Won't compile. Why?
 
     // set_data
     // Correct input but trying to set data before picking a model
@@ -586,7 +612,7 @@ TYPED_TEST(svm_public_test, invalid_input) {
                            y.data(), &score),
               da_status_out_of_date); // Score without succesful compute()
     EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, n_features, X.data(),
-                                       n_samples, y.data(), n_samples),
+                                       n_samples, ovr, y.data(), n_samples),
               da_status_out_of_date); // Dec func without succesful compute()
     EXPECT_EQ(da_svm_compute<TypeParam>(nullptr), da_status_handle_not_initialized);
     EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
@@ -643,32 +669,107 @@ TYPED_TEST(svm_public_test, invalid_input) {
     // Decision function
     // Invalid pointers
     EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, n_features, X_invalid,
-                                       n_samples, y.data(), n_samples),
+                                       n_samples, ovr, y.data(), n_samples),
               da_status_invalid_pointer);
     EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, n_features, X.data(),
-                                       n_samples, y_invalid, n_samples),
+                                       n_samples, ovr, y_invalid, n_samples),
               da_status_invalid_pointer);
     EXPECT_EQ(da_svm_decision_function(nullptr, n_samples, n_features, X.data(),
-                                       n_samples, y.data(), n_samples),
+                                       n_samples, ovr, y.data(), n_samples),
               da_status_handle_not_initialized);
     // Wrong dimensions
     EXPECT_EQ(da_svm_decision_function(svm_handle, 0, n_features, X.data(), n_samples,
-                                       y.data(), n_samples),
+                                       ovr, y.data(), n_samples),
               da_status_invalid_array_dimension);
-    EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, 0, X.data(), n_samples,
+    EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, 0, X.data(), n_samples, ovr,
                                        y.data(), n_samples),
               da_status_invalid_input);
-    EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, 4, X.data(), n_samples,
+    EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, 4, X.data(), n_samples, ovr,
                                        y.data(), n_samples),
               da_status_invalid_input);
     EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, n_features, X.data(), 1,
-                                       y.data(), n_samples),
+                                       ovr, y.data(), n_samples),
               da_status_invalid_leading_dimension);
     EXPECT_EQ(da_svm_decision_function(svm_handle, n_samples, n_features, X.data(),
-                                       n_samples, y.data(), 1),
+                                       n_samples, ovr, y.data(), 1),
               da_status_invalid_leading_dimension);
 
     da_handle_destroy(&svm_handle);
+}
+
+TYPED_TEST(svm_public_test, invalid_data) {
+    // Get some data to use
+    std::function<void(test_invalid_data_type<TypeParam> & data)> set_test_data[] = {
+        set_invalid_data_y_zeros<TypeParam>,
+        set_invalid_data_y_twos<TypeParam>,
+        set_invalid_data_y_twos_regr<TypeParam>,
+        set_invalid_data_y_missing_class<TypeParam>,
+        set_invalid_data_y_negative<TypeParam>,
+        set_invalid_data_y_not_whole<TypeParam>,
+        set_invalid_data_X_small<TypeParam>,
+        set_invalid_data_X_small_regr<TypeParam>,
+        set_invalid_data_X_zeros<TypeParam>};
+    test_invalid_data_type<TypeParam> data;
+
+    for (auto &data_fun : set_test_data) {
+        data_fun(data);
+        for (auto &model : data.model) {
+            da_handle svm_handle = nullptr;
+            EXPECT_EQ(da_handle_init<TypeParam>(&svm_handle, da_handle_svm),
+                      da_status_success);
+            EXPECT_EQ(da_options_set(svm_handle, "kernel", data.kernel.c_str()),
+                      da_status_success);
+            EXPECT_EQ(da_svm_select_model<TypeParam>(svm_handle, model),
+                      da_status_success);
+            EXPECT_EQ(da_svm_set_data(svm_handle, data.n_samples, data.n_feat,
+                                      data.X_train.data(), data.n_samples,
+                                      data.y_train.data()),
+                      data.set_data_expected_status);
+            EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle),
+                      data.compute_expected_status);
+            EXPECT_EQ(da_svm_predict(svm_handle, data.n_samples, data.n_feat,
+                                     data.X_train.data(), data.n_samples,
+                                     data.y_train.data()),
+                      data.predict_expected_status);
+            da_handle_destroy(&svm_handle);
+        }
+    }
+}
+
+TYPED_TEST(svm_public_test, bad_handle_tests) {
+
+    // handle not initialized
+    da_handle handle = nullptr;
+    TypeParam A = 1;
+    TypeParam labels = 1;
+
+    EXPECT_EQ(da_svm_select_model<TypeParam>(handle, svc),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_svm_set_data(handle, 1, 1, &A, 1, &labels),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_svm_compute<TypeParam>(handle), da_status_handle_not_initialized);
+    EXPECT_EQ(da_svm_predict(handle, 1, 1, &A, 1, &labels),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_svm_decision_function(handle, 1, 1, &A, 1, ovr, &labels, 1),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_svm_score(handle, 1, 1, &A, 1, &labels, &labels),
+              da_status_handle_not_initialized);
+
+    // Incorrect handle type
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
+
+    EXPECT_EQ(da_svm_select_model<TypeParam>(handle, svc), da_status_invalid_handle_type);
+    EXPECT_EQ(da_svm_set_data(handle, 1, 1, &A, 1, &labels),
+              da_status_invalid_handle_type);
+    EXPECT_EQ(da_svm_compute<TypeParam>(handle), da_status_invalid_handle_type);
+    EXPECT_EQ(da_svm_predict(handle, 1, 1, &A, 1, &labels),
+              da_status_invalid_handle_type);
+    EXPECT_EQ(da_svm_decision_function(handle, 1, 1, &A, 1, ovr, &labels, 1),
+              da_status_invalid_handle_type);
+    EXPECT_EQ(da_svm_score(handle, 1, 1, &A, 1, &labels, &labels),
+              da_status_invalid_handle_type);
+
+    da_handle_destroy(&handle);
 }
 
 TEST(svm_public_test, incorrect_handle_precision) {
@@ -706,10 +807,10 @@ TEST(svm_public_test, incorrect_handle_precision) {
               da_status_wrong_type);
 
     EXPECT_EQ(da_svm_decision_function_s(handle_d, n_samples, n_features, X_s.data(),
-                                         n_samples, y_s.data(), n_samples, ovr),
+                                         n_samples, ovr, y_s.data(), n_samples),
               da_status_wrong_type);
     EXPECT_EQ(da_svm_decision_function_d(handle_s, n_samples, n_features, X_d.data(),
-                                         n_samples, y_d.data(), n_samples, ovr),
+                                         n_samples, ovr, y_d.data(), n_samples),
               da_status_wrong_type);
 
     EXPECT_EQ(da_svm_score_s(handle_d, n_samples, n_features, X_s.data(), n_samples,
@@ -765,10 +866,10 @@ const svm_param_t svm_param_pos[] = {
     {"nusvc_binary_random_tall_polynomial", "binary_random_tall", da_svm_model::nusvc, {{"degree", 4}}, {{"kernel", "poly"}}, {{"tolerance", 1e-2f}, {"nu", 0.4f}, {"gamma", 1.0f}, {"coef0", 2.0f}}, {{"tolerance", 1e-8}, {"nu", 0.4}, {"gamma", 1.0}, {"coef0", 2.0}}, 0.86},
     {"nusvc_binary_random_tall_sigmoid", "binary_random_tall", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"nu", 0.4f}, {"gamma", 1.0f}, {"coef0", 2.0f}}, {{"tolerance", 1e-8}, {"nu", 0.4}, {"gamma", 1.0}, {"coef0", 2.0}}, 0.86},
     
-    {"nusvc_binary_random_wide_rbf", "binary_random_wide", da_svm_model::nusvc, {}, {}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", 1.2f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", 1.2}}, 0.416},
+    {"nusvc_binary_random_wide_rbf", "binary_random_wide", da_svm_model::nusvc, {}, {}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", -1.0f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", -1.0}}, 0.416},
     {"nusvc_binary_random_wide_linear", "binary_random_wide", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}}, {{"tolerance", 1e-8}, {"nu", 0.75}}, 0.416},
-    {"nusvc_binary_random_wide_polynomial", "binary_random_wide", da_svm_model::nusvc, {{"degree", 4}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", 1.2f}, {"coef0", 2.2f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", 1.2}, {"coef0", 2.2}}, 0.416},
-    {"nusvc_binary_random_wide_sigmoid", "binary_random_wide", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", 1.2f}, {"coef0", 2.2f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", 1.2}, {"coef0", 2.2}}, 0.416},
+    {"nusvc_binary_random_wide_polynomial", "binary_random_wide", da_svm_model::nusvc, {{"degree", 3}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", -1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", -1.0}, {"coef0", 0.2}}, 0.416},
+    {"nusvc_binary_random_wide_sigmoid", "binary_random_wide", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", -1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", -1.0}, {"coef0", 0.2}}, 0.416},
 
     {"nusvc_multiclass_random_tall_rbf", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-4f}, {"nu", 0.5f}}, {{"tolerance", 1e-8}, {"nu", 0.5}}, 0.6, 10},
     {"nusvc_multiclass_random_tall_linear", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"nu", 0.5f}}, {{"tolerance", 1e-8}, {"nu", 0.5}}, 0.566},
@@ -784,7 +885,7 @@ const svm_param_t svm_param_pos[] = {
     
     {"svr_regression_random_wide_rbf", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}}, -0.403},
     {"svr_regression_random_wide_linear", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}}, -0.395},
-    {"svr_regression_random_wide_polynomial", "regression_random_wide", da_svm_model::svr, {{"degree", 4}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}, {"coef0", 3.0f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}, {"coef0", 3.0}}, -0.554},
+    {"svr_regression_random_wide_polynomial", "regression_random_wide", da_svm_model::svr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}, {"coef0", 3.0f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}, {"coef0", 3.0}}, -0.475},
     {"svr_regression_random_wide_sigmoid", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}, {"coef0", 3.0f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}, {"coef0", 3.0}}, -0.407},
     
     // nuSVR

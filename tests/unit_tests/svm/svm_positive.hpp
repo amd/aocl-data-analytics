@@ -139,14 +139,15 @@ void test_svm_positive(std::string csvname, da_svm_model model,
               da_status_success);
     // Train SVM
     EXPECT_EQ(da_svm_compute<T>(svm_handle), da_status_success);
+    da_handle_print_error_message(svm_handle);
 
     //////////////////////////
     // Check dual coefficients
     //////////////////////////
     da_int n_SV;
-    da_int one = 1, three = 3;
-    T rinfo[3];
-    EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_rinfo, &three, rinfo),
+    da_int one = 1, size = 100;
+    T rinfo[100];
+    EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_rinfo, &size, rinfo),
               da_status_success);
     da_int nclass = rinfo[2];
     T *coef_exp{nullptr};
@@ -175,6 +176,8 @@ void test_svm_positive(std::string csvname, da_svm_model model,
             << "Checking coefficients (solution)";
         free(coef_exp);
     } else {
+        da_handle_destroy(&svm_handle);
+        da_datastore_destroy(&csv_store);
         FAIL() << "Check of coefficients was requested but the solution file "
                << coef_fname << " could not be opened.";
     }
@@ -222,8 +225,8 @@ void test_svm_positive(std::string csvname, da_svm_model model,
             dim = nsamples;
         std::vector<T> decision_values(dim);
         EXPECT_EQ(da_svm_decision_function(svm_handle, nsamples, nfeat, X_test.data(),
-                                           nsamples, decision_values.data(), nsamples,
-                                           ovr),
+                                           nsamples, ovr, decision_values.data(),
+                                           nsamples),
                   da_status_success);
         std::string dec_fname = std::string(DATA_DIR) + "/svm_data/" +
                                 get_model_name(model) + "/" + csvname + "_" + kernel_str +
@@ -242,6 +245,8 @@ void test_svm_positive(std::string csvname, da_svm_model model,
                 << "Checking decision function values (solution)";
             free(dec_exp);
         } else {
+            da_handle_destroy(&svm_handle);
+            da_datastore_destroy(&csv_store);
             FAIL() << "Check of decision function values was requested but the solution "
                       "file "
                    << dec_fname << " could not be opened.";
@@ -272,6 +277,8 @@ void test_svm_positive(std::string csvname, da_svm_model model,
             << "Checking test labels (solution)";
         free(pred_exp);
     } else {
+        da_handle_destroy(&svm_handle);
+        da_datastore_destroy(&csv_store);
         FAIL() << "Check of test labels was requested but the solution file "
                << pred_fname << " could not be opened.";
     }

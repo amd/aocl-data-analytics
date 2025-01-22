@@ -42,30 +42,20 @@ class py_svm : public pyda_handle {
   protected:
     da_precision precision = da_double;
     da_int n_samples, n_feat;
-    std::string dec_shape;
 
   public:
     py_svm(da_svm_model model, std::string kernel = "rbf", da_int degree = 3,
-           da_int max_iter = -1, std::string dec_f_shape = "ovr",
-           std::string prec = "double", bool check_data = false) {
+           da_int max_iter = -1, std::string prec = "double", bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_svm);
             status = da_svm_select_model<double>(handle, model);
-        } else if (prec == "single") {
+        } else {
             da_handle_init<float>(&handle, da_handle_svm);
             status = da_svm_select_model<float>(handle, model);
             precision = da_single;
         }
         exception_check(status);
-        if (dec_f_shape == "ovo") {
-            dec_shape = "ovo";
-        } else if (dec_f_shape == "ovr") {
-            dec_shape = "ovr";
-        } else {
-            throw std::invalid_argument("Given decision function shape does not exist. "
-                                        "Available choices are: 'ovo', 'ovr'.");
-        }
         // Set optional parameters
         status = da_options_set(handle, "kernel", kernel.c_str());
         exception_check(status);
@@ -83,7 +73,7 @@ class py_svm : public pyda_handle {
 
     template <typename T>
     void common_fit(py::array_t<T> &X, py::array_t<T> &y, T gamma, T coef0, T tol,
-                    T tau) {
+                    std::optional<T> tau) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
         da_int ldx;
@@ -94,8 +84,10 @@ class py_svm : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "tolerance", tol);
         exception_check(status);
-        status = da_options_set(handle, "tau", tau);
-        exception_check(status);
+        if (tau.has_value()) {
+            status = da_options_set(handle, "tau", tau.value());
+            exception_check(status);
+        }
 
         get_numpy_array_properties(X, n_samples, n_feat, ldx);
 
@@ -127,16 +119,24 @@ class py_svm : public pyda_handle {
         return predictions;
     }
 
-    template <typename T> py::array_t<T> decision_function(py::array_t<T> X) {
-
+    template <typename T>
+    py::array_t<T> decision_function(py::array_t<T> X, std::string shape = "ovr") {
         da_status status;
         da_int n_samples, n_features, ldx, ldd;
         get_numpy_array_properties(X, n_samples, n_features, ldx);
         da_int nclass = get_n_classes();
         da_int nclassifiers = nclass * (nclass - 1) / 2;
-        da_svm_decision_function_shape dec_shape_enum = dec_shape == "ovo" ? ovo : ovr;
+        da_svm_decision_function_shape shape_enum;
+        if (shape == "ovo") {
+            shape_enum = ovo;
+        } else if (shape == "ovr") {
+            shape_enum = ovr;
+        } else {
+            throw std::invalid_argument("Given decision function shape does not exist. "
+                                        "Available choices are: 'ovo', 'ovr'.");
+        }
         if (nclass > 2) {
-            da_int n_col = dec_shape_enum == ovo ? nclassifiers : nclass;
+            da_int n_col = shape_enum == ovo ? nclassifiers : nclass;
             size_t shape[2]{(size_t)n_samples, (size_t)n_col};
             size_t strides[2];
             if (order == c_contiguous) {
@@ -149,9 +149,9 @@ class py_svm : public pyda_handle {
                 strides[1] = sizeof(T) * n_samples;
             }
             auto decision_values = py::array_t<T>(shape, strides);
-            status = da_svm_decision_function(
-                handle, n_samples, n_features, X.mutable_data(), ldx,
-                decision_values.mutable_data(), ldd, dec_shape_enum);
+            status =
+                da_svm_decision_function(handle, n_samples, n_features, X.data(), ldx,
+                                         shape_enum, decision_values.mutable_data(), ldd);
             exception_check(status);
             return decision_values;
         } else {
@@ -159,9 +159,9 @@ class py_svm : public pyda_handle {
             size_t strides[1]{sizeof(T)};
 
             auto decision_values = py::array_t<T>(shape, strides);
-            status = da_svm_decision_function(
-                handle, n_samples, n_features, X.mutable_data(), ldx,
-                decision_values.mutable_data(), n_samples, dec_shape_enum);
+            status = da_svm_decision_function(handle, n_samples, n_features, X.data(),
+                                              ldx, shape_enum,
+                                              decision_values.mutable_data(), n_samples);
             exception_check(status);
             return decision_values;
         }
@@ -183,16 +183,16 @@ class py_svm : public pyda_handle {
     void get_rinfo(da_int *n_samples, da_int *n_features, da_int *n_classes) {
         da_status status;
 
-        da_int dim = 3;
+        da_int dim = 100;
 
         if (precision == da_single) {
-            float rinfo[3];
+            float rinfo[100];
             status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
             *n_samples = (da_int)rinfo[0];
             *n_features = (da_int)rinfo[1];
             *n_classes = (da_int)rinfo[2];
         } else {
-            double rinfo[3];
+            double rinfo[100];
             status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
             *n_samples = (da_int)rinfo[0];
             *n_features = (da_int)rinfo[1];
@@ -267,6 +267,21 @@ class py_svm : public pyda_handle {
             py::array ret = py::reinterpret_borrow<py::array>(bias);
             return ret;
         }
+    }
+
+    auto get_n_iterations() {
+        da_status status = da_status_success;
+        da_int n_samples, n_features, n_classes;
+        get_rinfo(&n_samples, &n_features, &n_classes);
+        da_int n_classifiers = n_classes * (n_classes - 1) / 2;
+        size_t shape[1]{(size_t)n_classifiers};
+        size_t strides[1]{sizeof(da_int)};
+        auto n_iteration = py::array_t<da_int>(shape, strides);
+        status = da_handle_get_result(handle, da_svm_n_iterations, &n_classifiers,
+                                      n_iteration.mutable_data());
+        exception_check(status);
+        py::array ret = py::reinterpret_borrow<py::array>(n_iteration);
+        return ret;
     }
 
     auto get_dual_coef() {
@@ -377,14 +392,13 @@ class py_svc : public py_svm {
 
   public:
     py_svc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
-           std::string dec_f_shape = "ovr", std::string prec = "double",
-           bool check_data = false)
-        : py_svm(svc, kernel, degree, max_iter, dec_f_shape, prec, check_data) {}
+           std::string prec = "double", bool check_data = false)
+        : py_svm(svc, kernel, degree, max_iter, prec, check_data) {}
     ~py_svc() {}
 
     template <typename T>
-    void fit(py::array_t<T> X, py::array_t<T> y, T C = 1.0, T gamma = 1, T coef0 = 0.0,
-             T tol = 0.001, T tau = 1e-12) {
+    void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T C = 1.0,
+             T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
@@ -402,12 +416,12 @@ class py_svr : public py_svm {
   public:
     py_svr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
            std::string prec = "double", bool check_data = false)
-        : py_svm(svr, kernel, degree, max_iter, "ovo", prec, check_data) {}
+        : py_svm(svr, kernel, degree, max_iter, prec, check_data) {}
     ~py_svr() {}
 
     template <typename T>
-    void fit(py::array_t<T> X, py::array_t<T> y, T C = 1.0, T epsilon = 0.1, T gamma = 1,
-             T coef0 = 0.0, T tol = 0.001, T tau = 1e-12) {
+    void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T C = 1.0,
+             T epsilon = 0.1, T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
@@ -426,14 +440,13 @@ class py_nusvc : public py_svm {
 
   public:
     py_nusvc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
-             std::string dec_f_shape = "ovr", std::string prec = "double",
-             bool check_data = false)
-        : py_svm(nusvc, kernel, degree, max_iter, dec_f_shape, prec, check_data) {}
+             std::string prec = "double", bool check_data = false)
+        : py_svm(nusvc, kernel, degree, max_iter, prec, check_data) {}
     ~py_nusvc() {}
 
     template <typename T>
-    void fit(py::array_t<T> X, py::array_t<T> y, T nu = 0.5, T gamma = 1, T coef0 = 0.0,
-             T tol = 0.001, T tau = 1e-12) {
+    void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T nu = 0.5,
+             T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
@@ -451,12 +464,12 @@ class py_nusvr : public py_svm {
   public:
     py_nusvr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
              std::string prec = "double", bool check_data = false)
-        : py_svm(nusvr, kernel, degree, max_iter, "ovo", prec, check_data) {}
+        : py_svm(nusvr, kernel, degree, max_iter, prec, check_data) {}
     ~py_nusvr() {}
 
     template <typename T>
-    void fit(py::array_t<T> X, py::array_t<T> y, T nu = 0.5, T C = 1.0, T gamma = 1,
-             T coef0 = 0.0, T tol = 0.001, T tau = 1e-12) {
+    void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T nu = 0.5,
+             T C = 1.0, T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 

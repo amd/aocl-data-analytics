@@ -437,53 +437,52 @@ PYBIND11_MODULE(_aoclda, m) {
     /*         Kernel Functions       */
     /**********************************/
     auto m_kernel_functions = m.def_submodule("kernel_functions", "Kernel Functions.");
-    m_kernel_functions.def("pybind_rbf_kernel_float", &py_da_rbf_kernel<float>, "X"_a,
+    m_kernel_functions.def("pybind_rbf_kernel", &py_da_rbf_kernel<float>, "X"_a,
                            "Y"_a = py::none(), "gamma"_a = (float)1.0);
-    m_kernel_functions.def("pybind_rbf_kernel_double", &py_da_rbf_kernel<double>, "X"_a,
+    m_kernel_functions.def("pybind_rbf_kernel", &py_da_rbf_kernel<double>, "X"_a,
                            "Y"_a = py::none(), "gamma"_a = (double)1.0);
     m_kernel_functions.def("pybind_linear_kernel", &py_da_linear_kernel<float>, "X"_a,
                            "Y"_a = py::none());
     m_kernel_functions.def("pybind_linear_kernel", &py_da_linear_kernel<double>, "X"_a,
                            "Y"_a = py::none());
-    m_kernel_functions.def("pybind_polynomial_kernel_float",
-                           &py_da_polynomial_kernel<float>, "X"_a, "Y"_a = py::none(),
-                           "degree"_a = (da_int)3, "gamma"_a = (float)1.0,
+    m_kernel_functions.def("pybind_polynomial_kernel", &py_da_polynomial_kernel<float>,
+                           "X"_a, "Y"_a = py::none(), "degree"_a = (da_int)3,
+                           "gamma"_a = (float)1.0, "coef0"_a = (float)1.0);
+    m_kernel_functions.def("pybind_polynomial_kernel", &py_da_polynomial_kernel<double>,
+                           "X"_a, "Y"_a = py::none(), "degree"_a = (da_int)3,
+                           "gamma"_a = (double)1.0, "coef0"_a = (double)1.0);
+    m_kernel_functions.def("pybind_sigmoid_kernel", &py_da_sigmoid_kernel<float>, "X"_a,
+                           "Y"_a = py::none(), "gamma"_a = (float)1.0,
                            "coef0"_a = (float)1.0);
-    m_kernel_functions.def("pybind_polynomial_kernel_double",
-                           &py_da_polynomial_kernel<double>, "X"_a, "Y"_a = py::none(),
-                           "degree"_a = (da_int)3, "gamma"_a = (double)1.0,
-                           "coef0"_a = (double)1.0);
-    m_kernel_functions.def("pybind_sigmoid_kernel_float", &py_da_sigmoid_kernel<float>,
-                           "X"_a, "Y"_a = py::none(), "gamma"_a = (float)1.0,
-                           "coef0"_a = (float)1.0);
-    m_kernel_functions.def("pybind_sigmoid_kernel_double", &py_da_sigmoid_kernel<double>,
-                           "X"_a, "Y"_a = py::none(), "gamma"_a = (double)1.0,
+    m_kernel_functions.def("pybind_sigmoid_kernel", &py_da_sigmoid_kernel<double>, "X"_a,
+                           "Y"_a = py::none(), "gamma"_a = (double)1.0,
                            "coef0"_a = (double)1.0);
 
     /*******************/
     /*      SVM        */
     /*******************/
-    auto m_svm = m.def_submodule("svm", "Support Vector Machines");
+    auto m_svm = m.def_submodule("svm", "Support Vector Machine");
     // SVC
     py::class_<py_svc, pyda_handle>(m_svm, "pybind_svc")
-        .def(py::init<std::string, da_int, da_int, std::string, std::string, bool &>(),
+        .def(py::init<std::string, da_int, da_int, std::string, bool &>(),
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
-             py::arg("dec_f_shape") = "ovr", py::arg("precision") = "double",
-             py::arg("check_data") = false)
+             py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &py_svc::fit<float>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("C") = 1.0, py::arg("gamma") = 1, py::arg("coef0") = 0.0,
-             py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("gamma") = 1,
+             py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_fit", &py_svc::fit<double>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("C") = 1.0, py::arg("gamma") = 1, py::arg("coef0") = 0.0,
-             py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("gamma") = 1,
+             py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_decision_function", &py_svm::decision_function<float>,
-             "Compute the decision function for the test data", "X"_a)
+             "Compute the decision function for the test data", "X"_a,
+             py::arg("shape") = "ovr")
         .def("pybind_decision_function", &py_svm::decision_function<double>,
-             "Compute the decision function for the test data", "X"_a)
+             "Compute the decision function for the test data", "X"_a,
+             py::arg("shape") = "ovr")
         .def("pybind_score", &py_svm::score<float>, "Compute the score for the test data",
              "X"_a, "y"_a)
         .def("pybind_score", &py_svm::score<double>,
@@ -491,6 +490,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_samples", &py_svm::get_n_samples)
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
+        .def("get_n_iterations", &py_svm::get_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_n_sv_per_class", &py_svm::get_n_sv_per_class)
         .def("get_dual_coef", &py_svm::get_dual_coef)
@@ -503,11 +503,11 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
              py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &py_svr::fit<float>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("C") = 1.0, py::arg("epsilon") = 0.1, py::arg("gamma") = 1,
-             py::arg("coef0") = 0.0, py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("epsilon") = 0.1,
+             py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_fit", &py_svr::fit<double>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("C") = 1.0, py::arg("epsilon") = 0.1, py::arg("gamma") = 1,
-             py::arg("coef0") = 0.0, py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("epsilon") = 0.1,
+             py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
@@ -519,6 +519,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_samples", &py_svm::get_n_samples)
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
+        .def("get_n_iterations", &py_svm::get_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)
@@ -526,24 +527,25 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_sv", &py_svm::get_sv);
     // nuSVC
     py::class_<py_nusvc, pyda_handle>(m_svm, "pybind_nusvc")
-        .def(py::init<std::string, da_int, da_int, std::string, std::string, bool &>(),
+        .def(py::init<std::string, da_int, da_int, std::string, bool &>(),
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
-             py::arg("dec_f_shape") = "ovr", py::arg("precision") = "double",
-             py::arg("check_data") = false)
+             py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &py_nusvc::fit<float>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("nu") = 0.5, py::arg("gamma") = 1, py::arg("coef0") = 0.0,
-             py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("gamma") = 1,
+             py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_fit", &py_nusvc::fit<double>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("nu") = 0.5, py::arg("gamma") = 1, py::arg("coef0") = 0.0,
-             py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("gamma") = 1,
+             py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_decision_function", &py_svm::decision_function<float>,
-             "Compute the decision function for the test data", "X"_a)
+             "Compute the decision function for the test data", "X"_a,
+             py::arg("shape") = "ovr")
         .def("pybind_decision_function", &py_svm::decision_function<double>,
-             "Compute the decision function for the test data", "X"_a)
+             "Compute the decision function for the test data", "X"_a,
+             py::arg("shape") = "ovr")
         .def("pybind_score", &py_svm::score<float>, "Compute the score for the test data",
              "X"_a, "y"_a)
         .def("pybind_score", &py_svm::score<double>,
@@ -551,6 +553,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_samples", &py_svm::get_n_samples)
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
+        .def("get_n_iterations", &py_svm::get_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_n_sv_per_class", &py_svm::get_n_sv_per_class)
         .def("get_dual_coef", &py_svm::get_dual_coef)
@@ -563,11 +566,11 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
              py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &py_nusvr::fit<float>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("nu") = 0.5, py::arg("C") = 1.0, py::arg("gamma") = 1,
-             py::arg("coef0") = 0.0, py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("C") = 1.0,
+             py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_fit", &py_nusvr::fit<double>, "Fit the SVC model", "X"_a, "y"_a,
-             py::arg("nu") = 0.5, py::arg("C") = 1.0, py::arg("gamma") = 1,
-             py::arg("coef0") = 0.0, py::arg("tol") = 0.001, py::arg("tau") = 1e-12)
+             py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("C") = 1.0,
+             py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
@@ -579,6 +582,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_samples", &py_svm::get_n_samples)
         .def("get_n_features", &py_svm::get_n_features)
         .def("get_n_classes", &py_svm::get_n_classes)
+        .def("get_n_iterations", &py_svm::get_n_iterations)
         .def("get_n_sv", &py_svm::get_n_sv)
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)

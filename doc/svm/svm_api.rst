@@ -25,29 +25,27 @@
 
 
 
-Support Vector Machines APIs
+Support Vector Machine APIs
 ****************************
 
 .. tab-set::
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.svm.SVC(C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, max_iter=-1, decision_function_shape="ovr", tau=1.0e-12, check_data=False)
+      .. autoclass:: aoclda.svm.SVC(C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, max_iter=-1, tau=1.0e-12, check_data=False)
          :members:
-      .. autoclass:: aoclda.svm.SVR(C=1.0, epsilon=0.1, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, max_iter=-1, decision_function_shape="ovr", tau=1.0e-12, check_data=False)
+         :inherited-members:
+      .. autoclass:: aoclda.svm.SVR(C=1.0, epsilon=0.1, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, tol=0.001, max_iter=-1, tau=1.0e-12, check_data=False)
          :members:
-      .. autoclass:: aoclda.svm.NuSVC(nu=0.5, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, max_iter=-1, decision_function_shape="ovr", tau=1.0e-12, check_data=False)
+         :inherited-members:
+      .. autoclass:: aoclda.svm.NuSVC(nu=0.5, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, max_iter=-1, tau=1.0e-12, check_data=False)
          :members:
-      .. autoclass:: aoclda.svm.NuSVR(nu=0.5, C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, probability=False, tol=0.001, max_iter=-1, decision_function_shape="ovr", tau=1.0e-12, check_data=False)
+         :inherited-members:
+      .. autoclass:: aoclda.svm.NuSVR(nu=0.5, C=1.0, kernel="rbf", degree=3, gamma=-1.0, coef0=0.0, tol=0.001, max_iter=-1, tau=1.0e-12, check_data=False)
          :members:
+         :inherited-members:
 
    .. tab-item:: C
-
-      .. doxygentypedef:: da_svm_model
-      .. doxygenenum:: da_svm_model_
-
-      .. doxygentypedef:: da_svm_decision_function_shape
-      .. doxygenenum:: da_svm_decision_function_shape_
 
       .. _da_svm_select_model:
 
@@ -85,3 +83,8 @@ Support Vector Machines APIs
          :outline:
       .. doxygenfunction:: da_svm_score_d
 
+      .. doxygentypedef:: da_svm_model
+      .. doxygenenum:: da_svm_model_
+
+      .. doxygentypedef:: da_svm_decision_function_shape
+      .. doxygenenum:: da_svm_decision_function_shape_

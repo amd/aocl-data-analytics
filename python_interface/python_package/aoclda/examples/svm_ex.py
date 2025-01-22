@@ -45,24 +45,18 @@ def svm_examples():
     y_cls = np.array([0, 0, 0, 1, 0, 0, 1, 1])
 
     print("\nSVC classification example\n")
-    try:
-        svc_model = SVC(kernel="rbf", C=1.0)
-        svc_model.fit(X_cls, y_cls)
-        y_pred_svc = svc_model.predict(X_cls)
-    except RuntimeError:
-        sys.exit(1)
+    svc_model = SVC(kernel="rbf", C=1.0)
+    svc_model.fit(X_cls, y_cls)
+    y_pred_svc = svc_model.predict(X_cls)
     print(f"SVC predictions: {y_pred_svc}")
 
     # --------------------------
     # NuSVC example (classification)
     # --------------------------
     print("\nNuSVC classification example\n")
-    try:
-        nusvc_model = NuSVC(nu=0.5, kernel="rbf")
-        nusvc_model.fit(X_cls, y_cls)
-        y_pred_nusvc = nusvc_model.predict(X_cls)
-    except RuntimeError:
-        sys.exit(1)
+    nusvc_model = NuSVC(nu=0.5, kernel="rbf")
+    nusvc_model.fit(X_cls, y_cls)
+    y_pred_nusvc = nusvc_model.predict(X_cls)
     print(f"NuSVC predictions: {y_pred_nusvc}")
 
     # --------------------------
@@ -74,26 +68,23 @@ def svm_examples():
                      79.45, -56.15, 109.22, 85.06])
 
     print("\nSVR regression example\n")
-    try:
-        svr_model = SVR(kernel="rbf", C=1.0)
-        svr_model.fit(X_reg, y_reg)
-        y_pred_svr = svr_model.predict(X_reg)
-    except RuntimeError:
-        sys.exit(1)
+    svr_model = SVR(kernel="rbf", C=1.0)
+    svr_model.fit(X_reg, y_reg)
+    y_pred_svr = svr_model.predict(X_reg)
     print(f"SVR predictions: {y_pred_svr}")
 
     # --------------------------
     # NuSVR example (regression)
     # --------------------------
     print("\nNuSVR regression example\n")
-    try:
-        nusvr_model = NuSVR(nu=0.4, kernel="rbf")
-        nusvr_model.fit(X_reg, y_reg)
-        y_pred_nusvr = nusvr_model.predict(X_reg)
-    except RuntimeError:
-        sys.exit(1)
+    nusvr_model = NuSVR(nu=0.4, kernel="rbf")
+    nusvr_model.fit(X_reg, y_reg)
+    y_pred_nusvr = nusvr_model.predict(X_reg)
     print(f"NuSVR predictions: {y_pred_nusvr}")
 
 
 if __name__ == "__main__":
-    svm_examples()
+    try:
+        svm_examples()
+    except RuntimeError:
+        sys.exit(1)

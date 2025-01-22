@@ -75,16 +75,17 @@ da_status svm_predict(da_handle handle, da_int n_samples, da_int n_features,
 
 template <typename svm_class, typename T>
 da_status svm_decision_function(da_handle handle, da_int n_samples, da_int n_features,
-                                const T *X_test, da_int ldx_test, T *decision_values,
-                                da_int ldd, da_svm_decision_function_shape shape) {
+                                const T *X_test, da_int ldx_test,
+                                da_svm_decision_function_shape shape, T *decision_values,
+                                da_int ldd) {
     svm_class *svm = dynamic_cast<svm_class *>(handle->get_alg_handle<T>());
     if (svm == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_svm or "
                         "handle is invalid.");
 
-    return svm->decision_function(n_samples, n_features, X_test, ldx_test,
-                                  decision_values, ldd, shape);
+    return svm->decision_function(n_samples, n_features, X_test, ldx_test, shape,
+                                  decision_values, ldd);
 }
 
 template <typename svm_class, typename T>

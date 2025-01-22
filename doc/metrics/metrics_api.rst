@@ -34,13 +34,13 @@ Distance Metrics APIs
 
     .. tab-item:: C
 
-        .. doxygentypedef:: da_metric
-        .. doxygenenum:: da_metric_
-        .. doxygentypedef:: da_data_types
-        .. doxygenenum:: da_data_types_
-
         .. _da_pairwise_distances:
 
         .. doxygenfunction:: da_pairwise_distances_s
             :outline:
         .. doxygenfunction:: da_pairwise_distances_d
+
+        .. doxygentypedef:: da_metric
+        .. doxygenenum:: da_metric_
+        .. doxygentypedef:: da_data_types
+        .. doxygenenum:: da_data_types_

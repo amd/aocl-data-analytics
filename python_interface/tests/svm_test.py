@@ -60,20 +60,22 @@ def test_svc_functionality(numpy_precision, numpy_order):
         [[1.92, -0.52], [1.76, 0.84], [2.86, -0.43], [0.79, 1.34], [-1.02, 0.94]])
     expected_predict = np.array([0, 2])
     expected_score = 0.5
-    expected_decision = np.array(
+    expected_decision_ovr = np.array(
         [[2.1647936191078374, 0.9012607489781155, -0.1192298001005942], [1.0595892420507806, -0.20380478276768527, 2.191835754976765]])
+    expected_decision_ovo = np.array(
+        [[0.5080428914586723, 0.4697303287293784, 0.08714885163887187], [0.638684111555492, -0.42100181649081425, -0.9347511031340464]])
 
     tol = np.sqrt(np.finfo(numpy_precision).eps)
 
     norm = np.linalg.norm(svc.bias - expected_bias)
-    assert norm < tol * 10  # double precision case on windows
+    assert norm < tol * 10
 
     assert not np.any(svc.n_support_per_class - expected_n_support_per_class)
 
     assert not np.any(svc.support_vectors_idx - expected_support_idx)
 
     norm = np.linalg.norm(svc.dual_coef - expected_dual_coef)
-    assert norm < tol * 200  # double precision case on windows
+    assert norm < tol * 200
 
     norm = np.linalg.norm(svc.support_vectors - expected_support_vectors)
     assert norm < tol
@@ -84,8 +86,13 @@ def test_svc_functionality(numpy_precision, numpy_order):
     score = svc.score(X_test, y_test)
     assert score == expected_score
 
-    norm = np.linalg.norm(svc.decision_function(X_test) - expected_decision)
+    norm = np.linalg.norm(svc.decision_function(
+        X_test) - expected_decision_ovr)
     assert norm < tol
+
+    norm = np.linalg.norm(svc.decision_function(
+        X_test, 'ovo') - expected_decision_ovo)
+    assert norm < tol * 10
 
     assert svc.n_classes == 3
 
@@ -133,7 +140,7 @@ def test_svr_functionality(numpy_precision, numpy_order):
     assert not np.any(svr.support_vectors_idx - expected_support_idx)
 
     norm = np.linalg.norm(svr.dual_coef - expected_dual_coef)
-    assert norm < tol * 10  # double precision case
+    assert norm < tol * 10
 
     norm = np.linalg.norm(svr.support_vectors - expected_support_vectors)
     assert norm < tol
@@ -178,7 +185,8 @@ def test_nusvc_functionality(numpy_precision, numpy_order):
     expected_support_vectors = np.array([[1.24, 0.91], [0.65, -0.75]])
     expected_predict = np.array([0, 1])
     expected_score = 0.5
-    expected_decision = np.array([-3.642897716170645, 0.4697240910420319])
+    expected_decision_ovr = np.array([-3.642897716170645, 0.4697240910420319])
+    expected_decision_ovo = np.array([-3.642897716170645, 0.4697240910420319])
 
     tol = np.sqrt(np.finfo(numpy_precision).eps)
 
@@ -190,7 +198,7 @@ def test_nusvc_functionality(numpy_precision, numpy_order):
     assert not np.any(nusvc.support_vectors_idx - expected_support_idx)
 
     norm = np.linalg.norm(nusvc.dual_coef - expected_dual_coef)
-    assert norm < tol * 200  # double precision case
+    assert norm < tol * 200
 
     norm = np.linalg.norm(nusvc.support_vectors - expected_support_vectors)
     assert norm < tol
@@ -201,8 +209,13 @@ def test_nusvc_functionality(numpy_precision, numpy_order):
     score = nusvc.score(X_test, y_test)
     assert score == expected_score
 
-    norm = np.linalg.norm(nusvc.decision_function(X_test) - expected_decision)
-    assert norm < tol * 100  # double precision case
+    norm = np.linalg.norm(nusvc.decision_function(
+        X_test) - expected_decision_ovr)
+    assert norm < tol * 100
+
+    norm = np.linalg.norm(nusvc.decision_function(
+        X_test, 'ovo') - expected_decision_ovo)
+    assert norm < tol * 100
 
     assert nusvc.n_classes == 2
 
@@ -293,7 +306,9 @@ def test_svm_error_exits(numpy_precision, svm_model):
         model.fit(x, y)
     if svm_model in [SVC, NuSVC]:
         with pytest.raises(ValueError):
-            model = svm_model(decision_function_shape="ooo")
+            model = svm_model()
+            model.fit(x, y)
+            model.decision_function(x, shape="ooo")
     if svm_model in [NuSVC, NuSVR]:
         with pytest.raises(RuntimeError):
             model = svm_model(nu=1.1)

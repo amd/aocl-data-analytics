@@ -52,6 +52,8 @@ template <typename T> struct KernelFunctionParamType {
     da_int kernel_size = 0;
     da_int kernel_itself_size = 0;
 
+    std::string test_name;
+
     T gamma;
     da_int degree;
     T coef0;
@@ -81,6 +83,7 @@ template <typename T> struct KernelFunctionParamType {
 template <typename T> void GetTallData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 6 by 5 and Y is 2 by 5
     KernelFunctionParamType<T> param;
+    param.test_name = "Tall matrix";
     param.m = 6;
     param.n = 2;
     param.p = 5;
@@ -191,6 +194,7 @@ template <typename T> void GetTallData(std::vector<KernelFunctionParamType<T>> &
 template <typename T> void GetFatData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 4 by 5 and Y is 5 by 5
     KernelFunctionParamType<T> param;
+    param.test_name = "Fat matrix";
     param.m = 4;
     param.n = 5;
     param.p = 5;
@@ -296,6 +300,7 @@ template <typename T>
 void GetSquareData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 3 by 3 and Y is 2 by 3
     KernelFunctionParamType<T> param;
+    param.test_name = "Square matrix";
     param.m = 3;
     param.n = 2;
     param.p = 3;
@@ -377,6 +382,7 @@ void GetSquareData(std::vector<KernelFunctionParamType<T>> &params) {
 template <typename T> void Get1by1Data(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 1 by 1 and Y is 2 by 1
     KernelFunctionParamType<T> param;
+    param.test_name = "1 by 1 data";
     param.m = 1;
     param.n = 2;
     param.p = 1;
@@ -442,6 +448,7 @@ template <typename T>
 void GetSingleRowData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 1 by 3 and Y is 1 by 3
     KernelFunctionParamType<T> param;
+    param.test_name = "Single row data";
     param.m = 1;
     param.n = 1;
     param.p = 3;
@@ -509,6 +516,7 @@ template <typename T>
 void GetSingleColData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 3 by 1 and Y is 2 by 1
     KernelFunctionParamType<T> param;
+    param.test_name = "Single column data";
     param.m = 3;
     param.n = 2;
     param.p = 1;
@@ -589,6 +597,7 @@ template <typename T>
 void GetSubarrayData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 3 by 2 and Y is 2 by 2
     KernelFunctionParamType<T> param;
+    param.test_name = "Subarray data";
     param.m = 3;
     param.n = 2;
     param.p = 2;
@@ -675,6 +684,7 @@ template <typename T>
 void GetSubarrayRowMajorData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 3 by 2 and Y is 2 by 2
     KernelFunctionParamType<T> param;
+    param.test_name = "Subarray row major data";
     param.m = 3;
     param.n = 2;
     param.p = 2;
@@ -762,6 +772,7 @@ template <typename T>
 void GetRowMajorData(std::vector<KernelFunctionParamType<T>> &params) {
     // X is 6 by 5 and Y is 2 by 5 (same dataset as in tall matrix test, just row major)
     KernelFunctionParamType<T> param;
+    param.test_name = "Row major data";
     param.m = 6;
     param.n = 2;
     param.p = 5;
@@ -890,8 +901,14 @@ TYPED_TEST(KernelFunctionTest, KernelFunctionFunctionality) {
 
     std::vector<KernelFunctionParamType<TypeParam>> params;
     GetKernelData(params);
+    da_int count = 0;
 
     for (auto &param : params) {
+        count++;
+
+        std::cout << "Functionality test " << std::to_string(count) << ": "
+                  << param.test_name << std::endl;
+
         std::vector<TypeParam> kernel_with_y(param.kernel_size);
         std::vector<TypeParam> kernel_with_itself(param.kernel_itself_size);
         TypeParam *dummy = nullptr;

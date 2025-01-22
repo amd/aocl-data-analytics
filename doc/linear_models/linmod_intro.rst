@@ -407,7 +407,7 @@ Examples
    .. tab-item:: C
       :sync: C
 
-      The showcased examples sources and more, can be found in the ``examples`` folder of your installation.
+      The example sources can be found in the ``examples`` folder of your installation.
 
       .. collapse:: Linear Model Example
 

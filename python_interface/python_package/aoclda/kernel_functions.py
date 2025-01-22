@@ -27,18 +27,21 @@
 """
 aoclda.kernel_functions module
 """
+import numpy as np
 
 from ._aoclda.kernel_functions import (
-    pybind_rbf_kernel_float, pybind_rbf_kernel_double, pybind_linear_kernel,
-    pybind_polynomial_kernel_float, pybind_polynomial_kernel_double,
-    pybind_sigmoid_kernel_float, pybind_sigmoid_kernel_double)
+    pybind_rbf_kernel, pybind_linear_kernel,
+    pybind_polynomial_kernel, pybind_sigmoid_kernel)
 
 
 def rbf_kernel(X, Y=None, gamma=1.0):
     """
     Compute the RBF (Radial Basis Function) kernel matrix.
 
-    If Y is not provided, the RBF kernel is computed between the rows of X with itself,
+    .. math::
+        K(x, y) = \\exp(-\\gamma ||x - y||^2)
+
+    If Y is not provided, the RBF kernel is computed between the rows of X,
     resulting in a matrix of shape (n_samples_X, n_samples_X). Otherwise, it computes
     the RBF kernel between X and Y, with shape (n_samples_X, n_samples_Y).
 
@@ -52,15 +55,20 @@ def rbf_kernel(X, Y=None, gamma=1.0):
         or (n_samples_X, n_samples_Y) otherwise.
     """
     if X.dtype == "float32":
-        return pybind_rbf_kernel_float(X, Y, gamma)
-    return pybind_rbf_kernel_double(X, Y, gamma)
+        gamma = np.float32(gamma)
+    else:
+        gamma = np.float64(gamma)
+    return pybind_rbf_kernel(X, Y, gamma)
 
 
 def linear_kernel(X, Y=None):
     """
     Compute the linear kernel matrix.
 
-    If Y is not provided, the linear kernel is computed between the rows of X with itself,
+    .. math::
+        K(x, y) = x * y
+
+    If Y is not provided, the linear kernel is computed between the rows of X,
     resulting in a matrix of shape (n_samples_X, n_samples_X). Otherwise, it computes
     the linear kernel between X and Y, with shape (n_samples_X, n_samples_Y).
 
@@ -79,7 +87,10 @@ def polynomial_kernel(X, Y=None, degree=3, gamma=1.0, coef0=1.0):
     """
     Compute the polynomial kernel matrix.
 
-    If Y is not provided, the polynomial kernel is computed between the rows of X with itself,
+    .. math::
+        K(x, y) = (\\gamma x * y + c)^{d}
+
+    If Y is not provided, the polynomial kernel is computed between the rows of X,
     resulting in a matrix of shape (n_samples_X, n_samples_X). Otherwise, it computes
     the polynomial kernel between X and Y, with shape (n_samples_X, n_samples_Y).
 
@@ -91,19 +102,26 @@ def polynomial_kernel(X, Y=None, degree=3, gamma=1.0, coef0=1.0):
         coef0 (float, optional): The independent term in the polynomial kernel.
 
     Returns:
-        numpy.ndarray: The polynomial kernel matrix of shape (n_samples_X, n_samples_X) if Y is None,
-        or (n_samples_X, n_samples_Y) otherwise.
+        numpy.ndarray: The polynomial kernel matrix of shape (n_samples_X, n_samples_X)
+        if Y is None, or (n_samples_X, n_samples_Y) otherwise.
     """
     if X.dtype == "float32":
-        return pybind_polynomial_kernel_float(X, Y, degree, gamma, coef0)
-    return pybind_polynomial_kernel_double(X, Y, degree, gamma, coef0)
+        gamma = np.float32(gamma)
+        coef0 = np.float32(coef0)
+    else:
+        gamma = np.float64(gamma)
+        coef0 = np.float64(coef0)
+    return pybind_polynomial_kernel(X, Y, degree, gamma, coef0)
 
 
 def sigmoid_kernel(X, Y=None, gamma=1.0, coef0=1.0):
     """
     Compute the sigmoid kernel matrix.
 
-    If Y is not provided, the sigmoid kernel is computed between the rows of X with itself,
+    .. math::
+        K(x, y) = \\tanh(\\gamma x * y + c)
+
+    If Y is not provided, the sigmoid kernel is computed between the rows of X,
     resulting in a matrix of shape (n_samples_X, n_samples_X). Otherwise, it computes
     the sigmoid kernel between X and Y, with shape (n_samples_X, n_samples_Y).
 
@@ -118,5 +136,9 @@ def sigmoid_kernel(X, Y=None, gamma=1.0, coef0=1.0):
         or (n_samples_X, n_samples_Y) otherwise.
     """
     if X.dtype == "float32":
-        return pybind_sigmoid_kernel_float(X, Y, gamma, coef0)
-    return pybind_sigmoid_kernel_double(X, Y, gamma, coef0)
+        gamma = np.float32(gamma)
+        coef0 = np.float32(coef0)
+    else:
+        gamma = np.float64(gamma)
+        coef0 = np.float64(coef0)
+    return pybind_sigmoid_kernel(X, Y, gamma, coef0)

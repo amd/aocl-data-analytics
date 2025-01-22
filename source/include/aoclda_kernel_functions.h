@@ -25,8 +25,8 @@
  *
  */
 
-#ifndef AOCLDA_KERNEL_FUNCTION
-#define AOCLDA_KERNEL_FUNCTION
+#ifndef AOCLDA_KERNEL_FUNCTIONS
+#define AOCLDA_KERNEL_FUNCTIONS
 
 #include "aoclda_error.h"
 #include "aoclda_types.h"
@@ -38,12 +38,14 @@
 
 /** \{
  * @brief Compute the RBF (Radial Basis Function) kernel matrix for the matrices \p X and, optionally, \p Y.
- * @rst
- * The last suffix of the function name marks the floating point precision on which the handle operates (see :ref:`precision section <da_real_prec>`).
- * @endrst
  *
  * This function computes the RBF kernel between the matrix \p X (size \p m @f$\times@f$ \p k) and \p Y (size \p n @f$\times@f$ \p k) if provided.
- * If \p Y is null, it computes the kernel of \p X with itself (@f$XX^T@f$). The results are stored in \p D.
+ * If \p Y is null, the kernel is computed between the rows of \p X, (@f$XX^T@f$). The results are stored in \p D.
+ *
+ * The RBF kernel is given by:
+ * @f[
+ * K(x, y) = \exp(-\gamma \|\mathbf{x} - \mathbf{y}\|^2).
+ * @f]
  *
  * @param[in] order @ref da_order enum specifying column-major or row-major layout.
  * @param[in] m the number of rows of matrix X. Constraint: @p m @f$\ge@f$ 1.
@@ -75,12 +77,14 @@ da_status da_rbf_kernel_s(da_order order, da_int m, da_int n, da_int k, const fl
 
 /** \{
  * @brief Compute the linear kernel matrix for the matrices \p X and, optionally, \p Y.
- * @rst
- * The last suffix of the function name marks the floating point precision on which the handle operates (see :ref:`precision section <da_real_prec>`).
- * @endrst
  *
  * This function computes the linear kernel between the rows of \p X (size \p m @f$\times@f$ \p k) and \p Y (size \p n @f$\times@f$ \p k) if provided.
- * If \p Y is null, it computes the kernel of \p X with itself. The results are stored in \p D.
+ * If \p Y is null, the kernel is computed between the rows of \p X, (@f$XX^T@f$). The results are stored in \p D.
+ * 
+ * The linear kernel is given by:
+ * @f[
+ * K(x, y) = x \cdot y.
+ * @f]
  *
  * @param[in] order @ref da_order enum specifying column-major or row-major layout.
  * @param[in] m the number of rows of matrix X. Constraint: @p m @f$\ge@f$ 1.
@@ -110,12 +114,14 @@ da_status da_linear_kernel_s(da_order order, da_int m, da_int n, da_int k, const
 
 /** \{
  * @brief Compute the polynomial kernel matrix for the matrices \p X and, optionally, \p Y.
- * @rst
- * The last suffix of the function name marks the floating point precision on which the handle operates (see :ref:`precision section <da_real_prec>`).
- * @endrst
  *
  * This function computes the polynomial kernel between the rows of \p X (size \p m @f$\times@f$ \p k) and \p Y (size \p n @f$\times@f$ \p k) if provided.
- * If \p Y is null, it computes the kernel of \p X with itself. The results are stored in \p D.
+ * If \p Y is null, the kernel is computed between the rows of \p X, (@f$XX^T@f$). The results are stored in \p D.
+ * 
+ * The polynomial kernel is given by:
+ * @f[
+ * K(x, y) = (\gamma x \cdot y + c)^d.
+ * @f]
  *
  * @param[in] order @ref da_order enum specifying column-major or row-major layout.
  * @param[in] m the number of rows of matrix X. Constraint: @p m @f$\ge@f$ 1.
@@ -151,13 +157,15 @@ da_status da_polynomial_kernel_s(da_order order, da_int m, da_int n, da_int k,
 
 /** \{
  * @brief Compute the sigmoid kernel matrix for the matrices \p X and, optionally, \p Y.
- * @rst
- * The last suffix of the function name marks the floating point precision on which the handle operates (see :ref:`precision section <da_real_prec>`).
- * @endrst
  *
  * This function computes the sigmoid kernel between the rows of \p X (size \p m @f$\times@f$ \p k) and \p Y (size \p n @f$\times@f$ \p k) if provided.
- * If \p Y is null, it computes the kernel of \p X with itself. The results are stored in \p D.
+ * If \p Y is null, the kernel is computed between the rows of \p X, (@f$XX^T@f$). The results are stored in \p D.
  *
+ * The sigmoid kernel is given by:
+ * @f[
+ * K(x, y) = \tanh(\gamma x \cdot y + c).
+ * @f]
+ * 
  * @param[in] order @ref da_order enum specifying column-major or row-major layout.
  * @param[in] m the number of rows of matrix X. Constraint: @p m @f$\ge@f$ 1.
  * @param[in] n the number of rows of matrix Y. Constraint: @p n @f$\ge@f$ 1.

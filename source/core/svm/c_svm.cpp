@@ -54,16 +54,44 @@ template <typename T> bool is_lower(T &alpha, const T &y, T &C) {
     return ((alpha < C && y < 0) || (alpha > 0 && y > 0));
 };
 
+/*
+ * C-SVM handle class that contains members that
+ * are common for all SVM models that are C problem.
+ *
+ * This handle is inherited by SVC and SVR.
+ * 
+ * The inheritance scheme is as follows:
+ * 
+ *                       BASE_SVM
+ *                         /   \
+ *                        /     \ 
+ *                   C-SVM       Nu-SVM
+ *                  /     \      /     \
+ *                 /       \    /       \
+ *              SVC       SVR Nu-SVC   Nu-SVR
+ */
+
 namespace da_svm {
 
 using namespace da_svm_types;
 
+template <typename T>
+csvm<T>::csvm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train)
+    : base_svm<T>(XUSR, yusr, n, p, ldx_train) {}
 template <typename T> csvm<T>::~csvm(){};
 
-template <typename T> svc<T>::svc() { this->mod = da_svm_model::svc; };
+template <typename T>
+svc<T>::svc(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train)
+    : csvm<T>(XUSR, yusr, n, p, ldx_train) {
+    this->mod = da_svm_model::svc;
+};
 template <typename T> svc<T>::~svc(){};
 
-template <typename T> svr<T>::svr() { this->mod = da_svm_model::svr; };
+template <typename T>
+svr<T>::svr(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train)
+    : csvm<T>(XUSR, yusr, n, p, ldx_train) {
+    this->mod = da_svm_model::svr;
+};
 template <typename T> svr<T>::~svr(){};
 
 template <typename T>
@@ -127,6 +155,7 @@ void csvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
 
 template <typename T>
 void csvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
+                        std::vector<T> &kernel_matrix,
                         std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
                         std::vector<T> &local_alpha, std::vector<T> &gradient,
                         std::vector<T> &local_gradient, std::vector<T> &response,
@@ -135,41 +164,46 @@ void csvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
                         [[maybe_unused]] std::vector<bool> &I_low_n,
                         [[maybe_unused]] std::vector<bool> &I_up_n, T &first_diff,
                         std::vector<T> &alpha_diff, std::optional<T> tol) {
+    // Grab the values of alpha, gradient and response that are in the working set, so that we operate on smaller arrays
     for (da_int iter = 0; iter < ws_size; iter++) {
         local_alpha[iter] = alpha[idx[iter]];
         local_gradient[iter] = gradient[idx[iter]];
         local_response[iter] = response[idx[iter]];
+        // Evaluate which samples from the working set are in I_up and I_low
         I_low_p[iter] = is_lower(local_alpha[iter], local_response[iter], this->C);
         I_up_p[iter] = is_upper(local_alpha[iter], local_response[iter], this->C);
         // This can benefit from kernel matrix being stored in row-major
         for (da_int j = 0; j < ws_size; j++) {
             local_kernel_matrix[j * ws_size + iter] =
-                this->kernel_matrix[j * this->n + (idx[iter] % this->n)];
+                kernel_matrix[j * this->n + (idx[iter] % this->n)];
         }
     }
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
     da_int i, j;
     da_int max_iter_inner = ws_size * 100;
     T min_grad, max_grad, max_fun, delta, diff, epsilon = 1;
-    // alpha_x_diff - value explained in the libsvm paper, potential update value of alpha_x
+    // alpha_?_diff - Update values of alpha (we will pick minimum between alpha_i_diff and alpha_j_diff)
     T alpha_i_diff, alpha_j_diff;
+    // Custom epsilon functionality is purely for the internal testing reasons
     bool is_custom_epsilon = false;
     if (tol.has_value()) {
         epsilon = tol.value();
         is_custom_epsilon = true;
     }
-    da_int iter_smo = 0;
-    for (; iter_smo < max_iter_inner; iter_smo++) {
+    for (da_int iter = 0; iter < max_iter_inner; iter++) {
+        // Find i-th index
         this->wssi(I_up_p, local_gradient, i, min_grad);
+        // Find j-th index based on i, kernel matrix and min_grad
         this->wssj(I_low_p, local_gradient, i, min_grad, j, max_grad, local_kernel_matrix,
                    delta, max_fun);
         diff = max_grad - min_grad;
-        if (iter_smo == 0 && !is_custom_epsilon) {
+        if (iter == 0 && !is_custom_epsilon) {
             first_diff = diff;
             epsilon = std::max(this->tol, T(0.1) * diff);
         }
         if (diff < epsilon)
             break;
+        // Theory behind following formulas are in libsvm paper chapter 6 (page 28)
         alpha_i_diff = local_response[i] > 0 ? this->C - local_alpha[i] : local_alpha[i];
         alpha_j_diff = std::min(
             local_response[j] > 0 ? local_alpha[j] : this->C - local_alpha[j], delta);
@@ -177,13 +211,14 @@ void csvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
         // Update alpha
         local_alpha[i] += delta * local_response[i];
         local_alpha[j] -= delta * local_response[j];
-        // Update I_low and I_up
+
+        // Update I_low and I_up just for i and j
         I_low_p[i] = is_lower(local_alpha[i], local_response[i], this->C);
         I_up_p[i] = is_upper(local_alpha[i], local_response[i], this->C);
         I_low_p[j] = is_lower(local_alpha[j], local_response[j], this->C);
         I_up_p[j] = is_upper(local_alpha[j], local_response[j], this->C);
         // Update gradient (local_kernel_matrix is square at this point so row/column major does not matter here)
-        // Formula: gradient[k] += delta * (Q_ki - Q_kj)
+        // Formula: gradient[k] += delta * (Q_ki - Q_kj) (section 4.1.4 in libsvm paper)
         // We need to obtain two columns from kernel matrix
         T *kernel_matrix_ith = local_kernel_matrix.data() + (i * ws_size);
         T *kernel_matrix_jth = local_kernel_matrix.data() + (j * ws_size);
@@ -202,8 +237,8 @@ void csvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
 }
 
 template <typename T>
-void csvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
-                       std::vector<T> &response, da_int &size, T &bias) {
+da_status csvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
+                            std::vector<T> &response, da_int &size, T &bias) {
     T gradient_sum = 0;
     da_int n_free = 0;
     T min_value = std::numeric_limits<T>::max();
@@ -220,6 +255,7 @@ void csvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
     }
     // If no free vectors then set bias to the middle of the two values, otherwise average of gradients of free vectors
     bias = n_free == 0 ? -(min_value + max_value) / 2 : -gradient_sum / n_free;
+    return da_status_success;
 }
 
 template <typename T>
@@ -250,10 +286,11 @@ da_status svr<T>::initialisation(da_int &size, std::vector<T> &gradient,
 // Find support vectors and their indexes
 template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     n_support = 0;
+    T epsilon = std::numeric_limits<T>::epsilon();
     for (da_int i = 0; i < this->n; i++) {
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (alpha[i] != 0) {
+        if (std::abs(alpha[i]) > epsilon) {
             n_support++;
             alpha[i] *= this->response[i];
             // n_support_per_class will hold n_support of negative class at index 0, and positive at index 1
@@ -268,7 +305,6 @@ template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_
         this->support_indexes_neg.resize(this->n_support_per_class[0]);
         this->support_indexes_pos.resize(this->n_support_per_class[1]);
         this->support_coefficients.resize(n_support);
-        this->support_vectors.resize(n_support * this->p);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
@@ -276,7 +312,7 @@ template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_
     da_int position = 0;
     if (!this->ismulticlass) {
         for (da_int i = 0; i < this->n; i++) {
-            if (alpha[i] != 0) {
+            if (std::abs(alpha[i]) > epsilon) {
                 this->support_indexes[position] = i;
                 this->support_coefficients[position++] = alpha[i];
             }
@@ -284,7 +320,7 @@ template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_
     } else {
         da_int position_pos = 0, position_neg = 0;
         for (da_int i = 0; i < this->n; i++) {
-            if (alpha[i] != 0) {
+            if (std::abs(alpha[i]) > epsilon) {
                 if (this->idx_is_positive[i]) {
                     this->support_indexes_pos[position_pos++] = i;
                 } else {
@@ -295,49 +331,33 @@ template <typename T> da_status svc<T>::set_sv(std::vector<T> &alpha, da_int &n_
             }
         }
     }
-    // Construct a matrix consisting of only support vectors (can be optimised in row major)
-    for (da_int i = 0; i < n_support; i++) {
-        da_int current_idx = this->support_indexes[i];
-        for (da_int j = 0; j < this->p; j++) {
-            this->support_vectors[i + j * n_support] =
-                this->X[current_idx + j * this->ldx_2];
-        }
-    }
     return da_status_success;
 }
 
 // Find support vectors and their indexes
 template <typename T> da_status svr<T>::set_sv(std::vector<T> &alpha, da_int &n_support) {
     n_support = 0;
+    T epsilon = std::numeric_limits<T>::epsilon();
     for (da_int i = 0; i < this->n; i++) {
         alpha[i] = alpha[i] - alpha[i + this->n];
         // There could be a better way to find if alpha is different than 0
         // Possibly one that would look if it is within the tolerance around 0.
-        if (alpha[i] != 0)
+        if (std::abs(alpha[i]) > epsilon)
             n_support++;
     }
     try {
         this->support_indexes.resize(n_support);
         this->support_coefficients.resize(n_support);
-        this->support_vectors.resize(n_support * this->p);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
     da_int position = 0;
     for (da_int i = 0; i < this->n; i++) {
-        if (alpha[i] != 0) {
+        if (std::abs(alpha[i]) > epsilon) {
             this->support_indexes[position] = i;
             this->support_coefficients[position] = alpha[i];
             position++;
-        }
-    }
-    // Construct a matrix consisting of only support vectors (can be optimised in row major)
-    for (da_int i = 0; i < n_support; i++) {
-        da_int current_idx = this->support_indexes[i];
-        for (da_int j = 0; j < this->p; j++) {
-            this->support_vectors[i + j * n_support] =
-                this->X[current_idx + j * this->ldx_2];
         }
     }
     return da_status_success;

@@ -47,11 +47,6 @@ Basic Statistics APIs
 
    .. tab-item:: C
 
-      .. doxygentypedef:: da_axis
-      .. doxygenenum:: da_axis_
-      .. doxygentypedef:: da_quantile_type
-      .. doxygenenum:: da_quantile_type_
-
       .. _da_mean:
 
       .. doxygenfunction:: da_mean_s
@@ -123,3 +118,8 @@ Basic Statistics APIs
       .. doxygenfunction:: da_correlation_matrix_s
          :outline:
       .. doxygenfunction:: da_correlation_matrix_d
+
+      .. doxygentypedef:: da_axis
+      .. doxygenenum:: da_axis_
+      .. doxygentypedef:: da_quantile_type
+      .. doxygenenum:: da_quantile_type_

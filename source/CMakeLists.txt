@@ -43,7 +43,7 @@ function(aoclda_add_dependencies OBJ_NAME)
             core/nlls
             core/nearest_neighbors
             core/svm
-            core/kernel_function
+            core/kernel_functions
             ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
             ${CMAKE_SOURCE_DIR}/external/RALFit
             ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
@@ -87,7 +87,7 @@ set(DA_HANDLE_PUBLIC core/utilities/da_handle.cpp
                      core/utilities/da_handle_public.cpp)
 set(DA_CSV_PUBLIC core/csv/tokenizer.c core/csv/read_csv_public.cpp)
 set(DA_SVM_PUBLIC core/svm/svm_public.cpp)
-set(DA_KERNEL_FUNCTIONS_PUBLIC core/kernel_function/kernel_function_public.cpp)
+set(DA_KERNEL_FUNCTIONS_PUBLIC core/kernel_functions/kernel_functions_public.cpp)
 
 # Internal APIs require multi-compilation for different zen architectures
 set(DA_BASIC_STATISTICS_INTERNAL
@@ -112,7 +112,7 @@ set(DA_LINMOD_INTERNAL
     core/linear_model/linmod_cholesky.cpp core/linear_model/linmod_qr.cpp
     core/linear_model/linmod_svd.cpp core/linear_model/linmod_nln_optim.cpp)
 set(DA_BASIC_HANDLE_INTERNAL core/utilities/basic_handle.cpp)
-set(DA_KERNEL_FUNCTIONS_INTERNAL core/kernel_function/kernel_functions.cpp)
+set(DA_KERNEL_FUNCTIONS_INTERNAL core/kernel_functions/kernel_functions.cpp)
 set(DA_METRICS_INTERNAL core/metrics/pairwise_distances.cpp
                         core/metrics/euclidean_distance.cpp)
 
@@ -240,6 +240,9 @@ aoclda_add_dependencies(da_core)
 # List of targets that should use -O2 for release/benchmark builds
 set(USE_O2 "")
 
+# List of targets that should use vectorised math for release/benchmark builds
+set(USE_VEC_MATH ${DA_SVM})
+
 # By default release builds have -O3, here we add -O2 which will override it for
 # the source files in the USE_O2 list, since it will appear after the -O3
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL
@@ -247,6 +250,10 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL
   foreach(SOURCE ${DA_CORE_GENERIC} ${DA_CORE_DYNAMIC_DISPATCH})
     if(SOURCE IN_LIST USE_O2)
       set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS "-O2")
+    endif()
+    # Add flag to enable vectorised math given that amdlibm has been linked
+    if(UNIX AND SOURCE IN_LIST USE_VEC_MATH)
+      set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS "-fveclib=AMDLIBM")
     endif()
   endforeach()
 endif()
@@ -261,6 +268,11 @@ endif()
 
 target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS}
                                       ${FORTRAN_RUNTIME})
+
+# If we use AOCC then link libm library
+if(UNIX AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_link_libraries(aocl-da PRIVATE amdlibm)
+endif()
 
 target_link_directories(aocl-da PRIVATE ${IFORT_LIBS})
 target_link_directories(aocl-da PRIVATE ${FLANG_LIBS})
