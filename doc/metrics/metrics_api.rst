@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -23,14 +23,14 @@
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
 
-Distance Metrics APIs
+Distance Metric APIs
 *********************
 
 .. tab-set::
 
     .. tab-item:: Python
 
-        .. autofunction:: aoclda.metrics.pairwise_distances(X, Y=None, metric="euclidean", force_all_finite="allow_infinite")
+        .. autofunction:: aoclda.metrics.pairwise_distances(X, Y=None, metric="euclidean", p=2.0, force_all_finite="allow_infinite")
 
     .. tab-item:: C
 

@@ -51,9 +51,13 @@ template <typename T> class knn : public basic_handle<T> {
     da_int algo = da_brute_force;
     // Metric to be used for the distance computation
     da_int metric = da_euclidean;
-    // Internal metric to be used for the distance computation.
-    // We want to avoid squaring the distance unless it's necessary.
-    da_int internal_metric = da_sqeuclidean;
+    // Internal metric to be used for the distance computation
+    // We want to avoid squaring the distance unless it's necessary
+    da_metric internal_metric = da_sqeuclidean;
+    // Denote if squaring of the internal metric is required
+    bool get_squares = false;
+    // Minkowski parameter used for the minkowski distance conputation
+    T p = 2.0;
     // Weight function used to compute the k-nearest neighbors
     da_int weights = da_knn_uniform;
     // User's data

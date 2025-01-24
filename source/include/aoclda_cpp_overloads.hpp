@@ -613,22 +613,18 @@ inline da_status da_nlls_fit(da_handle handle, da_int n_coefs, float *coefs,
 }
 
 /* Pairwise distances overloaded functions */
-inline da_status
-da_pairwise_distances(da_order order, da_int m, da_int n, da_int k, const double *X,
-                      da_int ldx, const double *Y, da_int ldy, double *D, da_int ldd,
-                      da_metric metric = da_euclidean,
-                      da_data_types force_all_finite = da_allow_infinite) {
-    return da_pairwise_distances_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
-                                   force_all_finite);
+inline da_status da_pairwise_distances(da_order order, da_int m, da_int n, da_int k,
+                                       const double *X, da_int ldx, const double *Y,
+                                       da_int ldy, double *D, da_int ldd, double p,
+                                       da_metric metric = da_euclidean) {
+    return da_pairwise_distances_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, p, metric);
 }
 
-inline da_status
-da_pairwise_distances(da_order order, da_int m, da_int n, da_int k, const float *X,
-                      da_int ldx, const float *Y, da_int ldy, float *D, da_int ldd,
-                      da_metric metric = da_euclidean,
-                      da_data_types force_all_finite = da_allow_infinite) {
-    return da_pairwise_distances_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
-                                   force_all_finite);
+inline da_status da_pairwise_distances(da_order order, da_int m, da_int n, da_int k,
+                                       const float *X, da_int ldx, const float *Y,
+                                       da_int ldy, float *D, da_int ldd, float p,
+                                       da_metric metric = da_euclidean) {
+    return da_pairwise_distances_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, p, metric);
 }
 
 /* k-NN for classification functions */

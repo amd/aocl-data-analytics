@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -95,7 +95,7 @@ def test_knn_error_exits(numpy_precision):
     with pytest.raises(RuntimeError):
         knn = knn_classifier(weights = "ones")
     with pytest.raises(RuntimeError):
-        knn = knn_classifier(metric = "manhattan")
+        knn = knn_classifier(metric = "nonexistent")
     with pytest.raises(RuntimeError):
         knn = knn_classifier(algorithm = "kdtree")
     y_train = np.array([[1,2,3]], dtype=numpy_precision)

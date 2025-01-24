@@ -40,6 +40,7 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
                                       da_errors::da_error_t &err) {
     using namespace da_options;
     da_int imax = std::numeric_limits<da_int>::max();
+    T fpmax = std::numeric_limits<T>::max();
     try {
         // Integer options
         std::shared_ptr<OptionNumeric<da_int>> oi;
@@ -48,6 +49,15 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
             "Number of neighbors considered for k-nearest neighbors.", 1,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
         opts.register_opt(oi);
+        // fp options
+        std::shared_ptr<OptionNumeric<T>> ofp;
+        ofp = std::make_shared<OptionNumeric<T>>(
+            OptionNumeric<T>("minkowski parameter",
+                             "Minkowski parameter for metric used for the computation of "
+                             "k-nearest neighbors.",
+                             0.0, da_options::lbound_t::greaterthan, fpmax,
+                             da_options::ubound_t::p_inf, 2.0));
+        opts.register_opt(ofp);
         // String options
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
@@ -56,10 +66,14 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
         opts.register_opt(os);
         os = std::make_shared<OptionString>(
             OptionString("metric", "Metric used to compute the pairwise distance matrix.",
-                         {
-                             {"euclidean", da_euclidean},
-                             {"sqeuclidean", da_sqeuclidean},
-                         },
+                         {{"euclidean", da_euclidean},
+                          {"l2", da_l2},
+                          {"sqeuclidean", da_sqeuclidean},
+                          {"manhattan", da_manhattan},
+                          {"l1", da_l1},
+                          {"cityblock", da_cityblock},
+                          {"cosine", da_cosine},
+                          {"minkowski", da_minkowski}},
                          "euclidean"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(

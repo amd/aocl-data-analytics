@@ -394,9 +394,9 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("algorithm") = "brute", py::arg("metric") = "euclidean",
              py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &knn_classifier::fit<float>, "Fit the knn classifier", "X"_a,
-             "y"_a)
+             "y"_a, py::arg("p") = (float)2.0)
         .def("pybind_fit", &knn_classifier::fit<double>, "Fit the knn classifier", "X"_a,
-             "y"_a)
+             "y"_a, py::arg("p") = (double)2.0)
         .def("pybind_kneighbors_indices", &knn_classifier::kneighbors_indices<float>,
              "Compute the indices of the k-nearest neighbors", "X"_a,
              py::arg("n_neighbors") = (da_int)0)
@@ -428,11 +428,10 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_pairwise = m.def_submodule("metrics", "Distance Metrics.");
     m_pairwise.def("pybind_pairwise_distances", &py_da_pairwise_distances<float>, "X"_a,
                    "Y"_a = py::none(), "metric"_a = "euclidean",
-                   "force_all_finite"_a = "allow_infinite");
+                   py::arg("p") = (float)2.0);
     m_pairwise.def("pybind_pairwise_distances", &py_da_pairwise_distances<double>, "X"_a,
                    "Y"_a = py::none(), "metric"_a = "euclidean",
-                   "force_all_finite"_a = "allow_infinite");
-
+                   py::arg("p") = (double)2.0);
     /**********************************/
     /*         Kernel Functions       */
     /**********************************/

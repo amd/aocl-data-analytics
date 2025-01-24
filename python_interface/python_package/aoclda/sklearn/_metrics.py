@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -26,25 +26,27 @@
 """
 Patching scikit-learn metrics: pairwise_distances
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
+# pylint: disable = too-many-positional-arguments, invalid-name, unused-argument, too-many-arguments
 
 import warnings
-from sklearn.metrics.pairwise import pairwise_distances as pairwise_distances_sklearn
 from aoclda.metrics import pairwise_distances as pairwise_distances_da
 
-def pairwise_distances(X, Y=None, metric='euclidean', n_jobs=None, force_all_finite=True, **kwds):
+def pairwise_distances(X, Y=None, metric='euclidean', p=2.0, n_jobs=None,
+    force_all_finite=True, **kwds):
     """
     Overwrite sklearn.metrics.pairwise_distances to call AOCL-DA library
     """
 
     # Check for unsupported attributes
-    if force_all_finite is not True:
-        raise ValueError("force_all_finite must be False")
-    force_all_finite_da = "allow_infinite"
+    if force_all_finite is not False:
+        warnings.warn(
+            "The parameter force_all_finite is not supported and has been ignored.\
+            No checks are performed on input data.",
+            category=RuntimeWarning)
 
     if n_jobs is not None:
         warnings.warn(
             "The parameter n_jobs is not supported and has been ignored.",
             category=RuntimeWarning)
 
-    return pairwise_distances_da(X, Y, metric, force_all_finite_da)
+    return pairwise_distances_da(X=X, Y=Y, metric=metric, p=p)

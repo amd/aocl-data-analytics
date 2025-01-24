@@ -268,7 +268,7 @@ da_status euclidean(da_order order, da_int m, da_int n, da_int k, const T *X, da
     } catch (std::bad_alloc const &) {
         return da_status_memory_error;
     }
-    if (Y) {
+    if (Y != nullptr) {
         try {
             y_work.resize(n);
         } catch (std::bad_alloc const &) {

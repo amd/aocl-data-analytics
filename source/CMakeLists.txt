@@ -114,7 +114,10 @@ set(DA_LINMOD_INTERNAL
 set(DA_BASIC_HANDLE_INTERNAL core/utilities/basic_handle.cpp)
 set(DA_KERNEL_FUNCTIONS_INTERNAL core/kernel_functions/kernel_functions.cpp)
 set(DA_METRICS_INTERNAL core/metrics/pairwise_distances.cpp
-                        core/metrics/euclidean_distance.cpp)
+                        core/metrics/euclidean_distance.cpp
+                        core/metrics/cosine_distance.cpp
+                        core/metrics/manhattan_distance.cpp
+                        core/metrics/minkowski_distance.cpp)
 
 set(DA_CORE_PUBLIC
     ${DA_LINMOD_PUBLIC}

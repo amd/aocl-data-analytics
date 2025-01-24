@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -42,10 +42,14 @@ extern "C" {
  * \brief Defines the metric used when calculating the pairwise distances.
  **/
 enum da_metric_ {
-    da_euclidean,   ///< Use euclidean distance.
-    da_sqeuclidean, ///< Use squared euclidean distance.
-    da_minkowski,   ///< Use Minkowski distance (used internally only).
-    da_manhattan    ///< Use Manhattan distance (used internally only).
+    da_euclidean,                ///< Use euclidean distance.
+    da_l2 = da_euclidean,        ///< Use l2 distance.
+    da_sqeuclidean,              ///< Use squared euclidean distance.
+    da_minkowski,                ///< Use Minkowski distance.
+    da_manhattan,                ///< Use Manhattan distance.
+    da_l1 = da_manhattan,        ///< Use l1 distance.
+    da_cityblock = da_manhattan, ///< Use cityblock distance.
+    da_cosine,                   ///< Use Cosine distance.
 };
 
 /** @brief Alias for the \ref da_metric_ enum. */
@@ -76,8 +80,9 @@ typedef enum da_data_types_ da_data_types;
  * \param[in] ldy the leading dimension of the matrix \p Y. Constraint: \p ldy @f$\ge@f$ \p n if \p order = \p column_major, or \p ldy @f$\ge@f$ \p k if \p order = \p row_major.
  * \param[out] D if Y is nullptr, the \p m @f$\times @f$ \p m distance matrix, and the \p m @f$\times @f$ \p n distance matrix, otherwise.
  * \param[in] ldd the leading dimension of the matrix D. Constraint: \p ldd @f$\ge@f$ \p m, if \p Y is nullptr or \p order = \p column_major, and \p ldd @f$\ge@f$ \p n, otherwise.
+ * \param[in] p the order of the Minkowski metric used to compute the distance matrix. For p = 1.0, this defaults to Manhattan metric and for p = 2.0 this defaults to Euclidean metric.
+            \p p is only used for Minkowski distance and will be ignored otherwise.
  * \param[in] metric enum that specifies the metric to use to compute the distance matrix. The default value is \ref da_euclidean.
- * \param[in] force_all_finite enum that specifies whether to raise an error on infinite or NaN values.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx, \p ldy or \p ldd was violated.
@@ -88,13 +93,12 @@ typedef enum da_data_types_ da_data_types;
  */
 da_status da_pairwise_distances_d(da_order order, da_int m, da_int n, da_int k,
                                   const double *X, da_int ldx, const double *Y,
-                                  da_int ldy, double *D, da_int ldd, da_metric metric,
-                                  da_data_types force_all_finite);
+                                  da_int ldy, double *D, da_int ldd, double p,
+                                  da_metric metric);
 
 da_status da_pairwise_distances_s(da_order order, da_int m, da_int n, da_int k,
                                   const float *X, da_int ldx, const float *Y, da_int ldy,
-                                  float *D, da_int ldd, da_metric metric,
-                                  da_data_types force_all_finite);
+                                  float *D, da_int ldd, float p, da_metric metric);
 /** \} */
 
 #ifdef __cplusplus

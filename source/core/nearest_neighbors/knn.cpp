@@ -103,11 +103,17 @@ template <typename T> da_status knn<T>::set_params() {
     opt_pass &= this->opts.get("algorithm", opt_val, algo) == da_status_success;
     opt_pass &= this->opts.get("metric", opt_val, metric) == da_status_success;
     opt_pass &= this->opts.get("weights", opt_val, weights) == da_status_success;
+    opt_pass &= this->opts.get("minkowski parameter", p) == da_status_success;
+
     if (!opt_pass)
         return da_error_bypass(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                                "Unexpected error while reading the optional parameters.");
-    if (metric == da_euclidean || metric == da_sqeuclidean)
+    internal_metric = da_metric(metric);
+
+    if (metric == da_euclidean) {
+        this->get_squares = true;
         internal_metric = da_sqeuclidean;
+    }
     this->is_up_to_date = true;
     return da_status_success;
 }
@@ -175,7 +181,7 @@ inline void smaller_values_and_indices(da_int n, T *D, da_int k, da_int *k_ind, 
 template <typename T>
 inline void sorted_n_dist_n_ind(da_int n, T *k_dist, da_int *k_ind, T *n_dist,
                                 da_int *n_ind, da_int *perm_vector, bool return_distance,
-                                da_int internal_metric, da_int metric) {
+                                bool get_squares) {
     // We sort with respect to partial distances and then we use the sorted array to reorder the array of indices.
     std::iota(perm_vector, perm_vector + n, 0);
 
@@ -186,7 +192,7 @@ inline void sorted_n_dist_n_ind(da_int n, T *k_dist, da_int *k_ind, T *n_dist,
         n_ind[i] = k_ind[perm_vector[i]];
 
     if (return_distance) {
-        if ((internal_metric == da_sqeuclidean) && (metric != da_sqeuclidean)) {
+        if (get_squares) {
             for (da_int i = 0; i < n; i++)
                 n_dist[i] = std::sqrt(k_dist[perm_vector[i]]);
         } else {
@@ -206,29 +212,23 @@ da_status knn<T>::kneighbors_kernel(da_int xtrain_block_size, da_int n_blocks_tr
     da_status status = da_status_success;
     // Set blocking of X_train depending on the block size
     constexpr bool block_xtrain = XTRAIN_BLOCK != 1;
-    // ToDo: Make this generic for any distance.
-    // Call function that computes the squared euclidean distance
-    // Add error checking.
     if constexpr (block_xtrain) {
-        // Compute values for the blocks of X_train
-        //da_int xtrain_block_size = std::min(XTRAIN_BLOCK, n_samples);
-        //da_int n_blocks_train, block_rem_train;
-        //da_utils::blocking_scheme(n_samples, xtrain_block_size, n_blocks_train,
-        //                          block_rem_train);
         da_int xtrain_subblock = xtrain_block_size;
         for (da_int iblock = 0; iblock < n_blocks_train; iblock++) {
             if (iblock == n_blocks_train - 1 && block_rem_train > 0)
                 xtrain_subblock = block_rem_train;
 
-            status = da_metrics::pairwise_distances::euclidean(
+            status = da_metrics::pairwise_distances::pairwise_distance_kernel(
                 column_major, xtrain_subblock, n_queries, n_features,
                 X_train + iblock * xtrain_block_size, ldx_train, X_test, ldx_test,
-                D + iblock * xtrain_block_size, n_samples, true);
+                D + iblock * xtrain_block_size, n_samples, this->p,
+                this->internal_metric);
         }
     } else {
-        status = da_metrics::pairwise_distances::euclidean(
+        status = da_metrics::pairwise_distances::pairwise_distance_kernel(
             column_major, this->n_samples, n_queries, n_features, this->X_train,
-            this->ldx_train, X_test, ldx_test, D, this->n_samples, true);
+            this->ldx_train, X_test, ldx_test, D, this->n_samples, this->p,
+            this->internal_metric);
     }
     if (status != da_status_success) {
         return status;
@@ -252,7 +252,7 @@ da_status knn<T>::kneighbors_kernel(da_int xtrain_block_size, da_int n_blocks_tr
         sorted_n_dist_n_ind(n_neigh, k_dist + k * this->n_samples,
                             k_ind.data() + k * n_neigh, n_dist + k * n_neigh,
                             n_ind + k * n_neigh, perm_vector.data(), return_distance,
-                            this->internal_metric, this->metric);
+                            this->get_squares);
     }
 
     return status;
@@ -268,7 +268,7 @@ da_status knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
                                            bool return_distance) {
     std::vector<T> D;
     da_int xtest_block_size = std::min(XTEST_BLOCK, n_queries);
-    da_int n_blocks_test, block_rem_test;
+    da_int n_blocks_test = 0, block_rem_test = 0;
     da_utils::blocking_scheme(n_queries, xtest_block_size, n_blocks_test, block_rem_test);
     da_int n_threads = da_utils::get_n_threads_loop(std::max(n_blocks_test, (da_int)1));
     try {
@@ -279,7 +279,7 @@ da_status knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
     }
     da_int threading_error = 0;
     da_int xtrain_block_size = std::min(XTRAIN_BLOCK, n_samples);
-    da_int n_blocks_train, block_rem_train;
+    da_int n_blocks_train = 0, block_rem_train = 0;
     da_utils::blocking_scheme(n_samples, xtrain_block_size, n_blocks_train,
                               block_rem_train);
     da_status private_status = da_status_success;
@@ -377,9 +377,9 @@ da_status knn<T>::kneighbors(da_int n_queries, da_int n_features, const T *X_tes
         return da_error_bypass(this->err, da_status_no_data,
                                "No data has been passed to the handle. Please call "
                                "da_knn_set_data_s or da_knn_set_data_d.");
-    const T *X_test_temp;
-    T *utility_ptr1;
-    da_int ldx_test_temp;
+    const T *X_test_temp = nullptr;
+    T *utility_ptr1 = nullptr;
+    da_int ldx_test_temp = ldx_test;
 
     if (!is_up_to_date)
         status = knn<T>::set_params();

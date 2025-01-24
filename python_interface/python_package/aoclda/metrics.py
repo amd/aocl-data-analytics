@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -22,14 +22,15 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = missing-module-docstring, unused-import
+# pylint: disable = import-error, invalid-name, missing-module-docstring, unused-import
 """
 aoclda.metrics module
 """
 
+import numpy as np
 from ._aoclda.metrics import (pybind_pairwise_distances)
 
-def pairwise_distances(X, Y=None, metric="euclidean", force_all_finite="allow_infinite"):
+def pairwise_distances(X, Y=None, metric="euclidean", p=2.0):
     """
     Pairwise distance metrics.
 
@@ -41,14 +42,21 @@ def pairwise_distances(X, Y=None, metric="euclidean", force_all_finite="allow_in
             matrix needs to be computed. Its shape is (n_samples_Y, n_features).
 
         metric (str, optional): The type of metric used to compute the distance matrix. It can take
-            the values 'euclidean' or 'sqeuclidean'. Default: 'euclidean'.
+            the values 'euclidean', 'l2', 'sqeuclidean', 'manhattan', 'l1', 'cityblock', 'cosine',
+            or 'minkowski'. Default: 'euclidean'.
 
-        force_all_finite (str, optional): Denotes whether infinite values are allowed in input data.
-            Placeholder for adding options in the future.
+        p (float, optional): The power parameter used for the Minkowski metric. For p = 1.0, 
+            this defaults to 'manhattan' metric and for p = 2.0 this defaults to 'euclidean' metric.
+            p is only used for Miknowski distance and will be ignored otherwise. Will return an 
+            error when p is not positive. Default p = 2.0.
 
     Returns:
         numpy.ndarray with shape (n_samples_X, n_samples_Y) if Y is provided, or shape
         (n_samples_X, n_samples_X), if Y is None and the distance matrix for the rows
         of X is required.
     """
-    return pybind_pairwise_distances(X, Y, metric, force_all_finite)
+    if X.dtype == "float32":
+        p = np.float32(p)
+    else:
+        p = np.float64(p)
+    return pybind_pairwise_distances(X, Y, metric, p)

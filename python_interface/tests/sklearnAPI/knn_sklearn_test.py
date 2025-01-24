@@ -27,17 +27,18 @@
 k-NN classification tests, check output of skpatch versus sklearn
 """
 
-# pylint: disable = import-outside-toplevel, reimported, no-member, no-value-for-parameter
+# pylint: disable = import-outside-toplevel, reimported, no-member, no-value-for-parameter, too-many-positional-arguments
 
 import numpy as np
 import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
-from sklearn.datasets import make_classification, make_regression, make_blobs
+from sklearn.datasets import make_classification, make_regression
 from sklearn.model_selection import train_test_split
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
 @pytest.mark.parametrize("weights", ['uniform',  'distance'])
-@pytest.mark.parametrize("metric", ['euclidean',  'sqeuclidean'])
+@pytest.mark.parametrize("metric", ['euclidean', 'l2', 'sqeuclidean', 'manhattan',
+                         'l1', 'cityblock', 'cosine', 'minkowski'])
 @pytest.mark.parametrize("n_neigh_constructor", [3, 5])
 @pytest.mark.parametrize("n_neigh_kneighbors", [3])
 
@@ -46,30 +47,38 @@ def test_knn_classifier(precision, weights, metric, n_neigh_constructor, n_neigh
     Solve a small problem
     """
     # Define data arrays
-    x_train = np.array([[-1, -1, 2],
-                        [-2, -1, 3],
-                        [-3, -2, -1],
-                        [1, 3, 1],
-                        [2, 5, 1],
-                        [3, -1, 2]], dtype=precision)
+    x_train = np.array([[-1, 3, 2],
+                        [-2, -1, 4],
+                        [-3, 2, -3],
+                        [2, 5, -2],
+                        [2, 5, -3],
+                        [3, -1, 4]], dtype=precision)
 
     y_train = np.array([1, 2, 0, 1, 2, 2], dtype=precision)
 
-    x_test = np.array([[-2, 2, 3],
-                       [-1, -2, -1],
-                       [2, 1, -3]], dtype=precision)
+    x_test = np.array([[-2, 5, 3],
+                       [-1, -2, 4],
+                       [4, 1, -3]], dtype=precision)
 
     tol = np.sqrt(np.finfo(precision).eps)
 
+    p = 3.2
     # patch and import scikit-learn
     skpatch()
     from sklearn import neighbors
     with pytest.warns(RuntimeWarning):
-        knn_da = neighbors.KNeighborsClassifier(weights=weights,
+        if metric=="minkowski":
+            knn_da = neighbors.KNeighborsClassifier(weights=weights,
+                                                n_neighbors=n_neigh_constructor,
+                                                metric=metric,
+                                                p=p)
+        else:
+            knn_da = neighbors.KNeighborsClassifier(weights=weights,
                                                 n_neighbors=n_neigh_constructor,
                                                 metric=metric)
     knn_da.fit(x_train, y_train)
-    da_dist, da_ind = knn_da.kneighbors(x_test, n_neighbors=n_neigh_kneighbors, return_distance=True)
+    da_dist, da_ind = knn_da.kneighbors(x_test, n_neighbors=n_neigh_kneighbors,
+                                        return_distance=True)
     da_predict_proba = knn_da.predict_proba(x_test)
     da_y_test = knn_da.predict(x_test)
     da_params = knn_da.get_params()
@@ -78,9 +87,16 @@ def test_knn_classifier(precision, weights, metric, n_neigh_constructor, n_neigh
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn import neighbors
-    knn_sk = neighbors.KNeighborsClassifier(weights=weights, n_neighbors=n_neigh_constructor, metric=metric)
+    if metric=="minkowski":
+        knn_sk = neighbors.KNeighborsClassifier(weights=weights, n_neighbors=n_neigh_constructor,
+                                                p=p, metric=metric)
+    else:
+        knn_sk = neighbors.KNeighborsClassifier(weights=weights, n_neighbors=n_neigh_constructor,
+                                                metric=metric)
+
     knn_sk.fit(x_train, y_train)
-    sk_dist, sk_ind = knn_sk.kneighbors(x_test, n_neighbors=n_neigh_kneighbors, return_distance=True)
+    sk_dist, sk_ind = knn_sk.kneighbors(x_test, n_neighbors=n_neigh_kneighbors,
+                                        return_distance=True)
     sk_predict_proba = knn_sk.predict_proba(x_test)
     sk_y_test = knn_sk.predict(x_test)
     sk_params = knn_sk.get_params()
@@ -126,7 +142,7 @@ def test_knn_errors():
             knn = neighbors.KNeighborsClassifier(weights = "ones")
     with pytest.raises(ValueError):
         with pytest.warns(RuntimeWarning):
-            knn = neighbors.KNeighborsClassifier(metric = "manhattan")
+            knn = neighbors.KNeighborsClassifier(metric = "nonexistent")
 
     x_train = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.float64)
     y_train = np.array([[1, 2, 3]], dtype=np.float64)
@@ -151,11 +167,13 @@ def test_knn_errors():
 @pytest.mark.parametrize("n_classes", [5])
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
 @pytest.mark.parametrize("weights", ['uniform',  'distance'])
-@pytest.mark.parametrize("metric", ['euclidean',  'sqeuclidean'])
+@pytest.mark.parametrize("metric", ['euclidean'])
 @pytest.mark.parametrize("n_neigh_constructor", [3, 5])
 @pytest.mark.parametrize("n_neigh_kneighbors", [5])
 
-def test_knn_classifier_large(n_samples, n_features, n_classes, precision, weights, metric, n_neigh_constructor, n_neigh_kneighbors):
+def test_knn_classifier_large(n_samples, n_features, n_classes, precision,
+                              weights, metric, n_neigh_constructor,
+                              n_neigh_kneighbors):
     """
     Solve a large problem
     """
@@ -167,7 +185,10 @@ def test_knn_classifier_large(n_samples, n_features, n_classes, precision, weigh
                                 n_classes=n_classes,
                                 random_state=42)
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.5, train_size=0.5, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(x, y,
+                                                        test_size=0.5,
+                                                        train_size=0.5,
+                                                        random_state=42)
 
     # Cast to fortran array as needed
     x_train = np.asfortranarray(x_train, dtype=precision)
@@ -183,7 +204,8 @@ def test_knn_classifier_large(n_samples, n_features, n_classes, precision, weigh
                                                 n_neighbors=n_neigh_constructor,
                                                 metric=metric)
     knn_da.fit(x_train, y_train)
-    da_dist, da_ind = knn_da.kneighbors(x_test, n_neighbors=n_neigh_kneighbors, return_distance=True)
+    da_dist, da_ind = knn_da.kneighbors(x_test, n_neighbors=n_neigh_kneighbors,
+                                        return_distance=True)
     da_predict_proba = knn_da.predict_proba(x_test)
     da_y_test = knn_da.predict(x_test)
     da_params = knn_da.get_params()
@@ -192,9 +214,12 @@ def test_knn_classifier_large(n_samples, n_features, n_classes, precision, weigh
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn import neighbors
-    knn_sk = neighbors.KNeighborsClassifier(weights=weights, n_neighbors=n_neigh_constructor, metric=metric)
+    knn_sk = neighbors.KNeighborsClassifier(weights=weights,
+                                            n_neighbors=n_neigh_constructor,
+                                            metric=metric)
     knn_sk.fit(x_train, y_train)
-    sk_dist, sk_ind = knn_sk.kneighbors(x_test, n_neighbors=n_neigh_kneighbors, return_distance=True)
+    sk_dist, sk_ind = knn_sk.kneighbors(x_test, n_neighbors=n_neigh_kneighbors,
+                                        return_distance=True)
     sk_predict_proba = knn_sk.predict_proba(x_test)
     sk_y_test = knn_sk.predict(x_test)
     sk_params = knn_sk.get_params()
@@ -223,7 +248,6 @@ def test_knn_classifier_large(n_samples, n_features, n_classes, precision, weigh
     print("Parameters")
     print("     aoclda: \n", da_params)
     print("    sklearn: \n", sk_params)
-
 
 
 if __name__ == "__main__":
