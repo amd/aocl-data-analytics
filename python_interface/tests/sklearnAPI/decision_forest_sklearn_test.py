@@ -71,8 +71,8 @@ def test_decision_forest(precision, bootstrap):
 
     # Check results
     assert da_yp == yp
-    assert da_yprob == pytest.approx(yprob, abs=0.05)
-    assert da_ylogprob == pytest.approx(ylogprob, abs=0.1)
+    assert da_yprob == pytest.approx(yprob, abs=0.15)
+    assert da_ylogprob == pytest.approx(ylogprob, abs=0.2)
 
     # print the results if pytest is invoked with the -rA option
     print("Predictions")

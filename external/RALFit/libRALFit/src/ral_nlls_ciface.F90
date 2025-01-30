@@ -1,11 +1,14 @@
 ! Copyright (c) 2015, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
 ! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-module ral_nlls_ciface
 
-  use ral_nlls_types
+#include "preprocessor.FPP"
+
+module MODULE_PREC(ral_nlls_ciface)
+
   use iso_c_binding
-  use ral_nlls_double, only:                       &
+  use MODULE_PREC(ral_nlls_types)
+  use MODULE_PREC(ral_nlls), only:                 &
        f_nlls_options      => nlls_options,        &
        f_nlls_inform       => nlls_inform,         &
        f_nlls_workspace    => nlls_workspace,      &
@@ -132,7 +135,7 @@ module ral_nlls_ciface
   abstract interface
      integer(ral_c_int) function c_eval_r_type(n, m, params, x, r) bind(c)
        use, intrinsic :: iso_c_binding
-       use :: ral_nlls_types
+       use :: MODULE_PREC(ral_nlls_types)
        implicit none
        integer(ral_c_int), value :: n, m
        type(C_PTR), value :: params
@@ -144,7 +147,7 @@ module ral_nlls_ciface
   abstract interface
      integer(ral_c_int) function c_eval_j_type(n, m, params, x, j) bind(c)
        use, intrinsic :: iso_c_binding
-       use :: ral_nlls_types
+       use :: MODULE_PREC(ral_nlls_types)
        implicit none
        integer(ral_c_int), value :: n,m
        type(C_PTR), value :: params
@@ -156,7 +159,7 @@ module ral_nlls_ciface
   abstract interface
      integer(ral_c_int) function c_eval_hf_type(n, m, params, x, f, hf) bind(c)
        use, intrinsic :: iso_c_binding
-       use :: ral_nlls_types
+       use :: MODULE_PREC(ral_nlls_types)
        implicit none
        integer(ral_c_int), value :: n,m
        type(C_PTR), value :: params
@@ -169,7 +172,7 @@ module ral_nlls_ciface
   abstract interface
      integer(ral_c_int) function c_eval_hp_type(n, m, x, y, hp, params) bind(c)
        use, intrinsic :: iso_c_binding
-       use :: ral_nlls_types
+       use :: MODULE_PREC(ral_nlls_types)
        implicit none
        integer(ral_c_int) :: n,m
        real(ral_c_real), dimension(*), intent(in)  :: x
@@ -330,8 +333,8 @@ contains
   subroutine c_eval_r(evalrstatus, n, m, x, f, fparams)
     integer, intent(in) :: n, m
     integer, intent(out) :: evalrstatus
-    double precision, dimension(*), intent(in) :: x
-    double precision, dimension(*), intent(out) :: f
+    real(Kind=wp), dimension(*), intent(in) :: x
+    real(Kind=wp), dimension(*), intent(out) :: f
     class(f_params_base_type), intent(inout) :: fparams
 
     select type(fparams)
@@ -344,8 +347,8 @@ contains
   subroutine c_eval_j(evaljstatus, n, m, x, j, fparams)
     integer, intent(in) :: n, m
     integer, intent(out) :: evaljstatus
-    double precision, dimension(*), intent(in) :: x
-    double precision, dimension(*), intent(out) :: j
+    real(Kind=wp), dimension(*), intent(in) :: x
+    real(Kind=wp), dimension(*), intent(out) :: j
     class(f_params_base_type), intent(inout) :: fparams
 
     select type(fparams)
@@ -358,9 +361,9 @@ contains
   subroutine c_eval_hf(evalhstatus, n, m, x, f, hf, fparams)
     integer, intent(in) :: n, m
     integer, intent(out) :: evalhstatus
-    double precision, dimension(*), intent(in) :: x
-    double precision, dimension(*), intent(in) :: f
-    double precision, dimension(*), intent(out) :: hf
+    real(Kind=wp), dimension(*), intent(in) :: x
+    real(Kind=wp), dimension(*), intent(in) :: f
+    real(Kind=wp), dimension(*), intent(out) :: hf
     class(f_params_base_type), intent(inout) :: fparams
 
     select type(fparams)
@@ -373,9 +376,9 @@ contains
   subroutine c_eval_hp(evalhpstatus, n, m, x, y, hp, fparams)
     integer, intent(in) :: n, m
     integer, intent(out) :: evalhpstatus
-    double precision, dimension(*), intent(in) :: x
-    double precision, dimension(*), intent(in) :: y
-    double precision, dimension(*), intent(out) :: hp
+    real(Kind=wp), dimension(*), intent(in) :: x
+    real(Kind=wp), dimension(*), intent(in) :: y
+    real(Kind=wp), dimension(*), intent(out) :: hp
     class(f_params_base_type), intent(inout) :: fparams
 
     select type(fparams)
@@ -385,34 +388,32 @@ contains
 
   end subroutine c_eval_hp
 
-  integer(ral_c_int) function c_eval_j_dummy(n, m, params, x, j) bind(c)
-       use, intrinsic :: iso_c_binding
+  integer(ral_c_int) function IFACE_PREC(c_eval_j_dummy)(n, m, params, x, j) bind(c)
        implicit none
        integer(ral_c_int), value :: n,m
        type(C_PTR), value :: params
-       real(c_double), dimension(*), intent(in) :: x
-       real(c_double), dimension(*), intent(out) :: j
+       real(ral_c_real), dimension(*), intent(in) :: x
+       real(ral_c_real), dimension(*), intent(out) :: j
 
        continue
-       c_eval_j_dummy = -45544554 ! Magic number to request FD
-  end function c_eval_j_dummy
+       IFACE_PREC(c_eval_j_dummy) = -45544554 ! Magic number to request FD
+  end function IFACE_PREC(c_eval_j_dummy)
 
-  integer(ral_c_int) function c_eval_hf_dummy(n, m, params, x, f, hf) bind(c)
-       use, intrinsic :: iso_c_binding
+  integer(ral_c_int) function IFACE_PREC(c_eval_hf_dummy)(n, m, params, x, f, hf) bind(c)
        implicit none
        integer(ral_c_int), value :: n,m
        type(C_PTR), value :: params
-       real(c_double), dimension(*), intent(in) :: x
-       real(c_double), dimension(*), intent(in) :: f
-       real(c_double), dimension(*), intent(out) :: hf
+       real(ral_c_real), dimension(*), intent(in) :: x
+       real(ral_c_real), dimension(*), intent(in) :: f
+       real(ral_c_real), dimension(*), intent(out) :: hf
        continue
-       c_eval_hf_dummy =  -1023
-  end function c_eval_hf_dummy
+       IFACE_PREC(c_eval_hf_dummy) =  -1023
+  end function IFACE_PREC(c_eval_hf_dummy)
 
-end module ral_nlls_ciface
+end module MODULE_PREC(ral_nlls_ciface)
 
-subroutine ral_nlls_default_options_d(coptions) bind(C)
-  use ral_nlls_ciface
+subroutine IFACE_PREC(ral_nlls_default_options)(coptions) bind(C)
+  use MODULE_PREC(ral_nlls_ciface)
   implicit none
 
   type(nlls_options), intent(out) :: coptions
@@ -500,12 +501,12 @@ subroutine ral_nlls_default_options_d(coptions) bind(C)
   coptions%check_derivatives = foptions%check_derivatives
   coptions%derivative_test_tol = foptions%derivative_test_tol
 
-end subroutine ral_nlls_default_options_d
+end subroutine IFACE_PREC(ral_nlls_default_options)
 
-subroutine nlls_solve_d(n, m, cx, r, j, hf,  params, coptions, cinform, &
+subroutine IFACE_PREC(nlls_solve)(n, m, cx, r, j, hf,  params, coptions, cinform, &
      cweights, hp, clower_bounds, cupper_bounds) bind(C)
-  use ral_nlls_ciface
-  use ral_nlls_double, only: ral_nlls_eval_j_dummy, ral_nlls_eval_hf_dummy
+  use MODULE_PREC(ral_nlls_ciface)
+  use MODULE_PREC(ral_nlls), only: ral_nlls_eval_j_dummy, ral_nlls_eval_hf_dummy
   implicit none
 
   integer( ral_c_int ) , INTENT( IN ), value :: n, m
@@ -541,13 +542,13 @@ subroutine nlls_solve_d(n, m, cx, r, j, hf,  params, coptions, cinform, &
   if (c_associated(j)) then
     call c_f_procpointer(j, fparams%j)
   else
-    fparams%j => c_eval_j_dummy
+    fparams%j => IFACE_PREC(c_eval_j_dummy)
   end if
 
   if (c_associated(hf)) then
     call c_f_procpointer(hf, fparams%hf)
   else
-    fparams%hf => c_eval_hf_dummy
+    fparams%hf => IFACE_PREC(c_eval_hf_dummy)
   endif
 
   fparams%params = params
@@ -646,10 +647,10 @@ subroutine nlls_solve_d(n, m, cx, r, j, hf,  params, coptions, cinform, &
   ! Copy data out
    call copy_info_out(finform, cinform)
 
-end subroutine nlls_solve_d
+end subroutine IFACE_PREC(nlls_solve)
 
-subroutine ral_nlls_init_workspace_d(cw, ciw) bind(C)
-   use ral_nlls_ciface
+subroutine IFACE_PREC(ral_nlls_init_workspace)(cw, ciw) bind(C)
+   use MODULE_PREC(ral_nlls_ciface)
    implicit none
 
    type(c_ptr) :: cw, ciw
@@ -665,10 +666,10 @@ subroutine ral_nlls_init_workspace_d(cw, ciw) bind(C)
 
    cw = c_loc(fw)
    ciw = c_loc(fiw)
-end subroutine ral_nlls_init_workspace_d
+end subroutine IFACE_PREC(ral_nlls_init_workspace)
 
-subroutine ral_nlls_free_workspace_d(cw) bind(C)
-   use ral_nlls_ciface
+subroutine IFACE_PREC(ral_nlls_free_workspace)(cw) bind(C)
+   use MODULE_PREC(ral_nlls_ciface)
    implicit none
 
    type(c_ptr) :: cw
@@ -680,11 +681,11 @@ subroutine ral_nlls_free_workspace_d(cw) bind(C)
    call c_f_pointer(cw, fw)
    deallocate(fw)
    cw = C_NULL_PTR
-end subroutine ral_nlls_free_workspace_d
+end subroutine IFACE_PREC(ral_nlls_free_workspace)
 
-subroutine ral_nlls_iterate_d(n, m, cx, cw, r, j, hf, params, coptions, &
+subroutine IFACE_PREC(ral_nlls_iterate)(n, m, cx, cw, r, j, hf, params, coptions, &
       cinform, cweights, hp, clower_bounds, cupper_bounds) bind(C)
-  use ral_nlls_ciface
+  use MODULE_PREC(ral_nlls_ciface)
   implicit none
 
   integer( ral_c_int) , INTENT( IN ), value :: n, m
@@ -747,4 +748,4 @@ subroutine ral_nlls_iterate_d(n, m, cx, cw, r, j, hf, params, coptions, &
   ! Copy data out
   call copy_info_out(finform, cinform)
 
-end subroutine ral_nlls_iterate_d
+end subroutine IFACE_PREC(ral_nlls_iterate)

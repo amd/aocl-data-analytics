@@ -5,10 +5,15 @@
 ! examples/Fortran/LanczosFD.f90
 
 module lanczos_module_fd
-   use ral_nlls_double, only : params_base_type
+
+#if SINGLE_PRECISION
+   use ral_nlls_single
+#else
+   use ral_nlls_double
+#endif
+
    implicit none
 
-   integer, parameter, public :: wp = kind(0d0)
    real(wp), parameter :: tol = 5.0e-2_wp
 
    type, extends(params_base_type) :: params_type
@@ -19,6 +24,7 @@ module lanczos_module_fd
 contains
 
    subroutine eval_r(status, n, m, x, r, params)
+      implicit none
       ! r_i = y_i - x_1 e^(-x_2 t_i) - x_3 e^(-x_4 t_i) - x_5 e^(-x_6 t_i)
       integer, intent(out) :: status
       integer, intent(in) :: n
@@ -45,8 +51,6 @@ end module lanczos_module_fd
 
 program lanczos_fd
 
-   use ral_nlls_double, only: nlls_options, nlls_inform, ral_nlls_eval_j_dummy,&
-      ral_nlls_eval_hf_dummy, nlls_solve
    use lanczos_module_fd
 
    implicit none
@@ -135,7 +139,14 @@ program lanczos_fd
    options%reg_order = -1.0
    options%inner_method = 2
    options%maxit = 1000
-   options%fd_step = 5.0e-3
+
+   if (wp == lp) then
+      ! Start solver closer to the expected solution when using low precision
+      x(1:6) = (/ 8.0E-2, 0.95, 0.84, 2.9, 1.5, 4.9 /)
+      options%fd_step = 1.0e-3
+   else
+      options%fd_step = 5.0e-3
+   end if
 
 
    call cpu_time(tic)

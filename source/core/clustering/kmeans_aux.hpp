@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,6 @@ template <typename T> void da_kmeans<T>::init_elkan() {
 template <typename T> void da_kmeans<T>::init_elkan_bounds() {
 
     compute_centre_half_distances();
-    //double t0 = omp_get_wtime();
     da_int label;
     da_int tmp_int;
     T smallest_dist, dist, tmp;

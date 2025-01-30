@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@ extern "C" {
 #include "aoclda_basic_statistics.h"
 #include "aoclda_csv.h"
 #include "aoclda_datastore.h"
+#include "aoclda_dbscan.h"
 #include "aoclda_decision_forest.h"
 #include "aoclda_error.h"
 #include "aoclda_handle.h"

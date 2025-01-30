@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -107,12 +107,13 @@ da_status da_kmeans_set_init_centres_s(da_handle handle, const float *C, da_int 
 
  *
  * \post
+ * \parblock
  * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enums for floating-point output:
  * - \p da_kmeans_cluster_centres - return an array of size \p n_clusters @f$\times@f$ \p n_features containing the coordinates of the cluster centres, in the same storage format as the input data.
  * - \p da_rinfo - return an array of size 5 containing \p n_samples, \p n_features, \p n_clusters, \p n_iter (the number of iterations performed) and \p inertia (the sum of the squared distance of each sample to its closest cluster centre).
- *
  * In addition \ref da_handle_get_result_int can be queried with the following enum:
  * - \p da_kmeans_labels - return an array of size \p n_samples containing the label (i.e. which cluster it is in) of each sample point.
+ * \endparblock
  */
 da_status da_kmeans_compute_d(da_handle handle);
 
@@ -138,7 +139,6 @@ da_status da_kmeans_compute_s(da_handle handle);
  * - \ref da_status_no_data - the <i>k</i>-means clusters have not been computed prior to this function call.
  * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
  * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx or \p ldx_transform was violated.
-
  *
  */
 da_status da_kmeans_transform_d(da_handle handle, da_int m_samples, da_int m_features,

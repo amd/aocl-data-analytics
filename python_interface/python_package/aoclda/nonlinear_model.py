@@ -23,7 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable=import-error, invalid-name, too-many-arguments, missing-module-docstring,too-many-locals
+# pylint: disable=import-error,invalid-name,too-many-arguments,
+# pylint: disable=missing-module-docstring,too-many-locals, anomalous-backslash-in-string
 from inspect import signature
 from ._aoclda.nlls import pybind_nlls
 
@@ -179,20 +180,24 @@ class nlls():
                 self.precision = "single"
                 self.nlls_single = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
                                                lower_bounds=lower_bounds, upper_bounds=upper_bounds,
-                                               order=order, prec="single", model=model, method=method,
-                                               glob_strategy=glob_strategy, reg_power=reg_power,
+                                               order=order, prec="single", model=model,
+                                               method=method, glob_strategy=glob_strategy,
+                                               reg_power=reg_power,
                                                check_derivatives=check_derivatives, verbose=verbose,
                                                check_data=check_data)
                 self.nlls = self.nlls_single
-            else:
+            elif weights.dtype == "float64":
                 self.precision = "double"
                 self.nlls_double = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
                                                lower_bounds=lower_bounds, upper_bounds=upper_bounds,
-                                               order=order, prec="double", model=model, method=method,
-                                               glob_strategy=glob_strategy, reg_power=reg_power,
+                                               order=order, prec="double", model=model,
+                                               method=method, glob_strategy=glob_strategy,
+                                               reg_power=reg_power,
                                                check_derivatives=check_derivatives, verbose=verbose,
                                                check_data=check_data)
                 self.nlls = self.nlls_double
+            else:
+                raise ValueError(f"Data type {weights.dtype} not supported.")
 
     def fit(self, x, fun, jac=None, hes=None, hep=None, data=None, ftol=1.0e-8, abs_ftol=1.0e-8,
             gtol=1.0e-8, abs_gtol=1.0e-5, xtol=2.22e-16, reg_term=0, maxit=100,
@@ -344,10 +349,12 @@ class nlls():
                 self.precision = "single"
                 self.nlls_double = None
                 self.nlls = self.nlls_single
-            else:
+            elif x.dtype == "float64":
                 self.precision = "double"
                 self.nlls_single = None
                 self.nlls = self.nlls_double
+            else:
+                raise ValueError(f"Data type {x.dtype} not supported.")
 
         # inspect some parameter before entering c++
         self.__cb_inspect(fun, 3)

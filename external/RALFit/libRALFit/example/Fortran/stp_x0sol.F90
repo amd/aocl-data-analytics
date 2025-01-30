@@ -1,13 +1,20 @@
-! Copyright (c) 2017, The Science and Technology Facilities Council (STFC)
-! All rights reserved.
 ! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+! Copyright (c) 2019, The Numerical Algorithms Group Ltd (NAG)
+! All rights reserved.
+! Copyright (c) 2019, The Science and Technology Facilities Council (STFC)
+! All rights reserved.
 ! examples/Fortran/Lanczos.f90
+! STP to test that initial point is solution.
 
-module lanczos_module
-  use ral_nlls_double, only : params_base_type
+module stp_x0sol_module
+
+#if SINGLE_PRECISION
+   use ral_nlls_single
+#else
+   use ral_nlls_double
+#endif
+
   implicit none
-
-  integer, parameter :: wp = kind(0d0)
 
   type, extends(params_base_type) :: params_type
      real(wp), dimension(:), allocatable :: t ! The m data points t_i
@@ -17,6 +24,7 @@ module lanczos_module
 contains
 
   subroutine eval_r(status, n, m, x, r, params)
+    implicit none
     ! r_i = y_i - x_1 e^(-x_2 t_i) - x_3 e^(-x_4 t_i) - x_5 e^(-x_6 t_i)
     integer, intent(out) :: status
     integer, intent(in) :: n
@@ -31,7 +39,7 @@ contains
        r(1:m) = params%y(:) &
             - x(1)*exp(-x(2)*params%t(:)) &
             - x(3)*exp(-x(4)*params%t(:)) &
-            - x(5)*exp(-x(n)*params%t(:))
+            - x(5)*exp(-x(6)*params%t(:))
     end select
 
     status = 0 ! success
@@ -39,6 +47,7 @@ contains
   end subroutine eval_r
 
   subroutine eval_J(status, n, m, x, J, params)
+    implicit none
     integer, intent(out) :: status
     integer, intent(in) :: n
     integer, intent(in) :: m
@@ -53,7 +62,7 @@ contains
          J(2*m+1:3*m) = -exp(-x(4)*params%t(1:m))                     ! J_i3
          J(3*m+1:4*m) = +params%t(1:m) * x(3) * exp(-x(4)*params%t(1:m))! J_i4
          J(4*m+1:5*m) = -exp(-x(6)*params%t(1:m))                     ! J_i5
-         J(5*m+1:6*m) = +params%t(1:m) * x(5) * exp(-x(n)*params%t(1:m))! J_i6
+         J(5*m+1:6*m) = +params%t(1:m) * x(5) * exp(-x(6)*params%t(1:m))! J_i6
     end select
 
 
@@ -61,6 +70,7 @@ contains
   end subroutine eval_J
 
   subroutine eval_HF(status, n, m, x, r, HF, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -87,6 +97,7 @@ contains
     end subroutine eval_HF
 
     subroutine eval_HP(status, n, m, x, y, HP, params)
+      implicit none
       integer, intent(out) :: status
       integer, intent(in) :: n
       integer, intent(in) :: m
@@ -96,19 +107,19 @@ contains
       class(params_base_type), intent(inout) :: params
 
       integer :: i
-      status = 0
+
       HP(1:n*m) = 0.0
       select type(params)
       type is (params_type)
          do i = 1, m
-            HP((i-1)*n + 1) = params%t(i) * exp(-x(2)*params%t(i)) * y(2)
-            HP((i-1)*n + 2) = params%t(i) * exp(-x(2)*params%t(i)) * y(1) - &
+            HP((n-1)*i + 1) = params%t(i) * exp(-x(2)*params%t(i)) * y(2)
+            HP((n-1)*i + 2) = params%t(i) * exp(-x(2)*params%t(i)) * y(1) - &
                  (params%t(i)**2) * x(1) * exp(-x(2)*params%t(i)) * y(2)
-            HP((i-1)*n + 3) = params%t(i) * exp(-x(4)*params%t(i)) * y(4)
-            HP((i-1)*n + 4) = params%t(i) * exp(-x(4)*params%t(i)) * y(3) - &
+            HP((n-1)*i + 3) = params%t(i) * exp(-x(4)*params%t(i)) * y(4)
+            HP((n-1)*i + 4) = params%t(i) * exp(-x(4)*params%t(i)) * y(3) - &
                  (params%t(i)**2) * x(3) * exp(-x(4)*params%t(i)) * y(4)
-            HP((i-1)*n + 5) = params%t(i) * exp(-x(6)*params%t(i)) * y(6)
-            HP((i-1)*n + 6) = params%t(i) * exp(-x(6)*params%t(i)) * y(5) - &
+            HP((n-1)*i + 5) = params%t(i) * exp(-x(6)*params%t(i)) * y(6)
+            HP((n-1)*i + 6) = params%t(i) * exp(-x(6)*params%t(i)) * y(5) - &
                  (params%t(i)**2) * x(5) * exp(-x(6)*params%t(i)) * y(6)
          end do
       end select
@@ -117,13 +128,12 @@ contains
     end subroutine eval_HP
 
 
-end module lanczos_module
+end module stp_x0sol_module
 
 
-program lanczos
+program stp_x0sol
 
-  use ral_nlls_double
-  use lanczos_module
+  use stp_x0sol_module
 
   implicit none
 
@@ -134,7 +144,9 @@ program lanczos
   real(wp), allocatable :: x(:)
   type(params_type) :: params
   real(wp) :: tic, toc
-
+  logical :: ok
+  continue
+  ok = .False.
   ! data to be fitted
   m = 24
   allocate(params%t(m), params%y(m))
@@ -191,10 +203,10 @@ program lanczos
   ! call fitting routine
   n = 6
   allocate(x(n))
-  x = (/ 1.2, 0.3, 5.6, 5.5, 6.5, 7.6 /) ! SP 1
+  x=(/ 8.6810580646277377E-02_wp, 0.9549498952571175_wp, 0.8439878897334759_wp,&
+       2.9515524061595775_wp, 1.5825943863392782_wp, 4.9863401266962830_wp /)
 
-  options%print_level = 4
-  options%check_derivatives = 2
+  options%print_level = 1
   options%exact_second_derivatives = .true.
   options%model = 4
   options%nlls_method = 3
@@ -204,15 +216,20 @@ program lanczos
   options%regularization_power = 2.0
   options%reg_order = -1.0
   options%inner_method = 2
-  options%maxit = 1000
+  options%maxit = 10
+
+  if (wp == lp) then
+    ! Relax tolerance when using low precision
+    options%stop_g_absolute = 5.0e-3_wp
+  end if
 
   call cpu_time(tic)
-  call nlls_solve(n,m,x,eval_r, eval_J, eval_HF, params, options, inform, eval_HP=eval_HP)
-  if(inform%status.ne.0) then
-     print *, "ral_nlls() returned with error flag ", inform%status
-     stop
-  endif
+  call nlls_solve(n,m,x,eval_r, eval_J, eval_HF, params, options, inform)!, eval_HP=eval_HP)
   call cpu_time(toc)
+  if(inform%status.ne.0) then
+     print *, "nlls_solve returned with error flag: ", inform%status
+     goto 100
+  endif
 
   ! Print result
   print *, "Found a local optimum at x = ", x
@@ -221,8 +238,12 @@ program lanczos
   print *, "     ", inform%g_eval, " gradient evaluations"
   print *, "     ", inform%h_eval, " hessian evaluations"
   print *, "     ", toc-tic, " seconds"
+  ok = inform%iter == 0 .And. inform%f_eval == 1 .And. inform%g_eval == 1
 
-  if (allocated(x)) deallocate(x)
-  if (allocated(params%t)) deallocate(params%t)
-  if (allocated(params%y)) deallocate(params%y)
-end program lanczos
+100 Continue
+
+  If (Allocated(params%t)) Deallocate(params%t)
+  If (Allocated(params%y)) Deallocate(params%y)
+
+  Stop merge(0, 7, ok)
+end program stp_x0sol

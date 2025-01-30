@@ -166,7 +166,8 @@ template <typename T> struct safe_tol {
 enum lbound_t { m_inf = 0, greaterthan, greaterequal };
 enum ubound_t { p_inf = 0, lessthan, lessequal };
 enum setby_t { def = 0, user = 1, solver = 2 };
-const string option_tl[6] = {"?", "integer", "real", "real", "string", "boolean"};
+const string option_tl[6] = {"?",      "integer", "real (float)", "real (double)",
+                             "string", "boolean"};
 // clang-format off
 enum option_t { opt_undefined = 0, opt_int = 1, opt_float = 2, opt_double = 3, opt_string = 4, opt_bool = 5 };
 template <typename T> struct get_type    { };

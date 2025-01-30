@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -22,7 +22,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 
 project(AOCL-DA VERSION 5.0.1)
 
@@ -67,13 +67,7 @@ option(BUILD_EXAMPLES "Build the example programs" ON)
 option(BUILD_GTEST "Build Gtest unit-tests" ON)
 option(COVERAGE "Builds coverage of Gtests and examples (Debug/GCC)" OFF)
 option(BUILD_ILP64 "ILP64 Support" OFF)
-# Windows options only
-if(WIN32)
-  # Setting path to OpenMP runtime.
-  set(OpenMP_libomp_LIBRARY
-      "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/Llvm/x64/lib/libomp.lib"
-      CACHE STRING "openmp library path")
-else() # Linux options only
+if(NOT WIN32) # Linux options only
   option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
   option(MEMSAN "Enable MEMory SANitizer tool (GNU/Linux)" OFF)
   option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
@@ -83,6 +77,7 @@ option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
+option(USE_LIBMEM "Link with AOCL LibMem" OFF)
 option(ARCH "-march or /arch flag ()")
 option(BUILD_PYTHON "Python bindings" OFF)
 # Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
@@ -124,6 +119,9 @@ if(USE_EXISTING_DA)
       ""
       CACHE STRING "Path to existing DA library")
 endif()
+set(LIBMEM_LIB
+    ""
+    CACHE STRING "Path to LIBMEM library")
 
 if(BUILD_SMP OR UNIX)
   # Even serial builds need an OpenMP runtime to enable correct LAPACK linking
@@ -134,6 +132,15 @@ if(BUILD_SMP OR UNIX)
   endif()
 endif()
 
+# With MSVC suppress some unnecessary warnings and ensure we are linking to
+# sufficiently recent OpenMP
+if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4305")
+  if(BUILD_SMP)
+    set(CMAKE_CXX_FLAGS
+        "${CMAKE_CXX_FLAGS} /openmp:llvm /openmp:experimental /wd4005")
+  endif()
+endif()
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
 # from Windows
 if(ASAN AND NOT UNIX)
@@ -158,6 +165,11 @@ if(COVERAGE
         OR NOT UNIX))
   message(WARNING "Coverage is only supported for  GNU/Linux GCC Debug build")
   set(COVERAGE OFF)
+endif()
+
+if(USE_LIBMEM AND NOT UNIX)
+  message(WARNING "LibMem is only supported on Linux")
+  set(USE_LIBMEM OFF)
 endif()
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
@@ -210,7 +222,7 @@ if(WIN32)
   # them automatically with _s versions
   add_compile_definitions(
     _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
-    _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1
+    _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1 _CRT_SECURE_NO_WARNINGS=1
     _SILENCE_CXX20_CISO646_REMOVED_WARNING=1)
 
   # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime
@@ -278,14 +290,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
     set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};-DNDEBUG")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
+    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
   else()
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX2")
     set(COMPILER_FLAGS_RELEASE
         "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;/fp:fast")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
+    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc;-Wno-nan-infinity-disabled")
   endif()
-  set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
 
   if(USE_AVX512 AND (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang"))
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX512")
@@ -304,7 +317,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
   set(COMPILER_FLAGS_COMMON
-      "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion>;"
+      "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion:-Wno-nan-infinity-disabled>;"
   )
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     set(COMPILER_FLAGS_COMMON
@@ -484,6 +497,7 @@ endif()
 message(
   NOTICE
   "Vectorization reports     VECTORIZATION_REPORTS: ${VECTORIZATION_REPORTS}")
+message(NOTICE "Building with LibMeM      USE_LIBMEM...........: ${USE_LIBMEM}")
 
 message(NOTICE "\nTARGETS")
 message(NOTICE
@@ -502,3 +516,4 @@ message(NOTICE "Boost include path    Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")
 if(USE_EXISTING_DA)
   message(NOTICE "Existing AOCL-DA DA=${DA}")
 endif()
+message(NOTICE "AOCL-LibMem      LIBMEM=${LIBMEM}")

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -89,4 +89,10 @@ da_status da_knn_classes<double>(da_handle handle, da_int *n_classes, da_int *cl
 template <>
 da_status da_knn_classes<float>(da_handle handle, da_int *n_classes, da_int *classes) {
     return da_knn_classes_s(handle, n_classes, classes);
+}
+template <> da_status da_dbscan_compute<double>(da_handle handle) {
+    return da_dbscan_compute_d(handle);
+}
+template <> da_status da_dbscan_compute<float>(da_handle handle) {
+    return da_dbscan_compute_s(handle);
 }

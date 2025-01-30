@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -81,6 +81,9 @@ function(linalg_libs)
       # Only used if we are building Python with an existing DA build
       set(DA_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
     endif()
+    if(LIBMEM_LIB STREQUAL "")
+      set(LIBMEM_LIB_DIR ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+    endif()
   endif()
 
   # Set names of the libraries we search for
@@ -130,6 +133,7 @@ function(linalg_libs)
     set(UTILS_CPUID_NAME "au_cpuid")
     set(DA_NAME "aocl-da") # Only used if we are building Python with an
                            # existing DA build
+    set(LIBMEM_NAME "aocl-libmem")
   endif()
 
   if(BLAS_LIB STREQUAL "")
@@ -200,6 +204,19 @@ function(linalg_libs)
     endif()
   endif()
 
+  if(USE_LIBMEM)
+    if(LIBMEM_LIB STREQUAL "")
+      find_library(
+        LIBMEM name ${LIBMEM_NAME}
+        PATHS ${LIBMEM_LIB_DIR} REQUIRED
+        NO_DEFAULT_PATH)
+    else()
+      set(LIBMEM
+          ${LIBMEM_LIB}
+          PARENT_SCOPE)
+    endif()
+  endif()
+
   include_directories(${LAPACK_INCLUDE_DIR})
   include_directories(${BLAS_INCLUDE_DIR})
   include_directories(${SPARSE_INCLUDE_DIR})
@@ -222,5 +239,6 @@ set(SPARSE)
 set(UTILS)
 set(UTILS_CPUID)
 set(DA)
+set(LIBMEM)
 
 linalg_libs()

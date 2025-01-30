@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -33,11 +33,9 @@ import pytest
 from aoclda.clustering import kmeans
 
 
-@pytest.mark.parametrize("da_precision, numpy_precision", [
-    ("double", np.float64), ("single", np.float32),
-])
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_kmeans_functionality(da_precision, numpy_precision, numpy_order):
+def test_kmeans_functionality(numpy_precision, numpy_order):
     """
     Test the functionality of the Python wrapper
     """

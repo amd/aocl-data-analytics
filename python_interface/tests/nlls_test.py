@@ -299,6 +299,24 @@ def test_warning():
         ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
                 abs_gtol=1e-7, gtol=1.e-9, maxit=1)
 
+def test_unsupported_type():
+    tol = 1e-7
+    n_coef = 2
+    n_res = 5
+    xexp = np.array([2.54104549, 0.25950481])
+    x = np.array([2.5, 0.25], np.float16)
+    w = 0.12 * np.array([1, 1, 1, 1, 1], np.float16)
+    blx = np.array([0.0,  0.0], np.float16)
+    bux = np.array([5.0,  3.0], np.float16)
+    # Test .nlls(...) with unsupported type
+    with pytest.raises(ValueError):
+        ndf = nlls(n_coef, n_res, weights=w,
+               lower_bounds=blx, upper_bounds=bux)
+    # Test .fit(...) with unsupported type
+    ndf = nlls(n_coef, n_res)
+    with pytest.raises(ValueError):
+        ndf.fit(x, exp_r)
+
 def test_nan():
     abs_gtol = 1e-7
     gtol = 1.e-9

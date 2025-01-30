@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -416,6 +416,19 @@ inline da_status da_kmeans_predict(da_handle handle, da_int k_samples, da_int k_
                                    const float *Y, da_int ldy, da_int *Y_labels) {
     return da_kmeans_predict_s(handle, k_samples, k_features, Y, ldy, Y_labels);
 }
+
+/* DBSCAN overloaded functions */
+inline da_status da_dbscan_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                    const double *A, da_int lda) {
+    return da_dbscan_set_data_d(handle, n_samples, n_features, A, lda);
+}
+
+inline da_status da_dbscan_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                    const float *A, da_int lda) {
+    return da_dbscan_set_data_s(handle, n_samples, n_features, A, lda);
+}
+
+template <class T> da_status da_dbscan_compute(da_handle handle);
 
 /* Decision Forest overloaded functions */
 /* Decision tree */

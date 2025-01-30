@@ -23,6 +23,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 # pylint: disable = invalid-name, import-error, unused-argument, missing-function-docstring, unused-variable
+# pylint: disable = too-many-locals
 
 """
 Nonlinear data fitting example Python script
@@ -63,7 +64,7 @@ def hes(x, r, Hr, data) -> int:
     return 0
 
 
-def nlls_example():
+def nlls_example(dt = np.float64):
     """
     Nonlinear data fitting of a convolution model, the solution
     provides the isolated parameters for the model:
@@ -74,28 +75,45 @@ def nlls_example():
     t = np.array([1.0, 2.0, 4.0,  5.0,  8.0])
     y = np.array([3.0, 4.0, 6.0, 11.0, 20.0])
 
+    # Set correct tolerances base on data precision
+    if dt == np.float64:
+        fd_ttol = 1.1e-4
+        fd_step = 1.0e-5
+        abs_gtol = 1e-7
+        gtol = 1.e-9
+        tol = 1.e-5
+    elif dt == np.float32:
+        fd_ttol = 1.1e-3
+        fd_step = 1.0e-4
+        abs_gtol = 1e-5
+        gtol = 1.e-6
+        tol = 1.e-4
+    else:
+        raise RuntimeError("Unsupported data type")
+
     n_coef = 2
     n_res = 5
-    xexp = np.array([2.54104549, 0.25950481], dtype=np.float64)
-    x = np.array([2.5, 0.25], dtype=np.float64)
-    w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=np.float64)
-    blx = np.array([0.0,  0.0], dtype=np.float64)
-    bux = np.array([5.0,  3.0], dtype=np.float64)
+    xexp = np.array([2.54104549, 0.25950481], dtype=dt)
+    x = np.array([2.5, 0.25], dtype=dt)
+    w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=dt)
+    blx = np.array([0.0,  0.0], dtype=dt)
+    bux = np.array([5.0,  3.0], dtype=dt)
     ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
                check_derivatives='yes', verbose=3)
-    ndf.fit(x, res, jac, hes, data=(t, y), abs_gtol=1e-7, gtol=1.e-9,
-            fd_ttol=1.1e-4, maxit=20)
+    ndf.fit(x, res, jac, hes, data=(t, y), abs_gtol=abs_gtol, gtol=gtol,
+            fd_ttol=fd_ttol, fd_step=fd_step, maxit=20)
 
     print(f"Solution found in {ndf.n_iter} iterations")
     print(f"Residual norm at solution: {ndf.metrics['obj']:.4f}")
     print("Solution:")
     for i in range(2):
-        ok = np.abs(x[i]-xexp[i]) <= 1.e-5
+        ok = np.abs(x[i]-xexp[i]) <= tol
         print(f"x[{i}]={x[i]:.5f} expected: ({xexp[i]:.5f}) OK? {ok}")
 
 if __name__ == "__main__":
     try:
-        nlls_example()
+        nlls_example(np.float32)
+        nlls_example(np.float64)
     except RuntimeError:
         print("Something unexpected happened while running the example.")
         sys.exit(1)
