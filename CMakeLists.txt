@@ -366,6 +366,14 @@ if(COVERAGE)
   include(Coverage)
 endif()
 
+if((NOT WIN32) AND (NOT CMAKE_BUILD_TYPE MATCHES DEBUG))
+  # Avoid absolute file paths getting printed when using strings utility in
+  # linux
+  add_compile_options(
+    $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.>
+  )
+endif()
+
 add_compile_options(
   "${COMPILER_FLAGS_COMMON};$<$<COMPILE_LANGUAGE:CXX>:${COMPILER_FLAGS_CXX}>")
 add_compile_options("$<$<CONFIG:Release>:${COMPILER_FLAGS_RELEASE}>")
