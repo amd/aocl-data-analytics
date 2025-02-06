@@ -26,7 +26,6 @@
  */
 
 #include "aoclda.h"
-#include "basic_statistics.hpp"
 #include "macros.h"
 
 namespace ARCH {

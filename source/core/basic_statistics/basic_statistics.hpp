@@ -100,6 +100,8 @@ da_status five_point_summary(da_order order, da_axis axis_in, da_int n_in, da_in
                              const T *x, da_int ldx, T *minimum, T *lower_hinge,
                              T *median, T *upper_hinge, T *maximum);
 
+template <typename T> bool is_zero(T *arr, da_int len);
+
 template <typename T>
 da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in, T *x,
                       da_int ldx, da_int dof, da_int mode, T *shift, T *scale);

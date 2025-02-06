@@ -24,13 +24,21 @@
 #include "context.hpp"
 #include <cstdlib>
 
+#if !defined(_WIN32)
+// On Windows we use Meyers' singleton class rather than mutex-based singleton as it interacts better with Python
 context *context::global_obj = nullptr;
 std::mutex context::global_lock;
+#endif
 
 // Function that returns the aoclsparse global context
 context *context::get_context() {
+#if defined(_WIN32)
+    static context global_obj;
+    return &global_obj;
+#else
     std::lock_guard<std::mutex> lock(global_lock);
     if (nullptr == global_obj)
         global_obj = new context();
     return global_obj;
+#endif
 }

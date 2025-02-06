@@ -93,8 +93,11 @@ template <typename T> T env_get_var(const char *env, const T fallback) {
 /* Singleton class containing details of the system for dynamic dispatch */
 class context {
   private:
+#if !defined(_WIN32)
+    // On Windows we use Meyers' singleton class rather than mutex-based singleton as it interacts better with Python
     static context *global_obj;
     static std::mutex global_lock;
+#endif
 
     dispatch_architecture local_arch = generic;
 
