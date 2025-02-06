@@ -240,8 +240,9 @@ template <typename T> da_status kmeans<T>::compute() {
     this->opts.get("seed", seed);
 
     // Remove the constraint on n_clusters, in case the user re-uses the handle with different data
+    da_int n_clusters_temp = n_clusters;
     reregister_kmeans_option<T>(this->opts, std::numeric_limits<da_int>::max());
-    this->opts.set("n_clusters", n_samples);
+    this->opts.set("n_clusters", n_clusters_temp);
 
     // Check for conflicting options
     if (n_init > 1 && init_method == supplied) {
