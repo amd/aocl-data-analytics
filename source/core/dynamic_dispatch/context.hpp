@@ -170,6 +170,10 @@ class context {
         this->cpuflags[static_cast<int>(context_isa_t::AVX512_VPOPCNTDQ)] =
             Cpu.hasFlag(Au::ECpuidFlag::avx512_vpopcntdq);
 
+        bool has_avx512 = this->cpuflags[static_cast<int>(context_isa_t::AVX512F)] &&
+                          this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
+                          this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)];
+
         switch (uarch) {
         case Au::EUarch::Zen:
         case Au::EUarch::ZenPlus:
@@ -189,12 +193,14 @@ class context {
             break;
         default:
             // Check to see if it is a new Zen model
-            if (Cpu.isAMD()) // Assume new model
-            {
-                local_arch = zen_new; // Fall-back to latest known model
+            if (Cpu.isAMD()) {
+                if (has_avx512) {
+                    local_arch = zen_new; // Assume new model
+                } else {
+                    local_arch = zen3; // Fall-back to latest known avx2 model
+                }
             } else {
-                local_arch =
-                    generic; // Generic code path still uses AVX2 to give performance on non-AMD machines
+                local_arch = generic; // Assume avx2 for non-AMD
             }
         }
 
@@ -204,10 +210,7 @@ class context {
         } else if (max_target_arch == generic) {
             // generic catches native/non-dynamic builds using the generic namespace
             arch = generic;
-        } else if (this->cpuflags[static_cast<int>(context_isa_t::AVX512F)] &&
-                   this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
-                   this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)] &&
-                   max_target_arch >= zen4) {
+        } else if (has_avx512 && max_target_arch >= zen4) {
             // local arch seems to have AVX512* but is newer than the
             // library build, set to a AVX512 variant build
             arch = max_target_arch;
