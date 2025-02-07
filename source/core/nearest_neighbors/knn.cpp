@@ -177,7 +177,7 @@ inline void smaller_values_and_indices(da_int n, T *D, da_int k, da_int *k_ind, 
 }
 
 // Given a vector k_ind of length n, and a vector that holds the corresponding indices, return into two arrays n_dist and n_ind
-// the sorted distances of D and the sorted indices, respectivelly.
+// the sorted distances of D and the sorted indices, respectively.
 template <typename T>
 inline void sorted_n_dist_n_ind(da_int n, T *k_dist, da_int *k_ind, T *n_dist,
                                 da_int *n_ind, da_int *perm_vector, bool return_distance,
