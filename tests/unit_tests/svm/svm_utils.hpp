@@ -48,7 +48,7 @@ template <typename T> struct test_is_upper_lower_type {
 
 template <typename T> struct test_working_set_selection_type {
     std::vector<T> alpha, gradient, response;
-    da_int i = 0, j, i_expected = 0, j_expected = 0;
+    da_int i = 0, j = 0, i_expected = 0, j_expected = 0;
     std::vector<da_int> idx;
     std::vector<bool> I_up, I_low;
     T tau = 1e-6;
@@ -67,8 +67,8 @@ template <typename T> struct test_ldx_type {
     std::vector<T> y_test;
     da_svm_model model = svm_undefined;
     std::string kernel;
-    da_int ldx_train, ldx_test, ldx_train_row, ldx_test_row, lddecision_values = 1,
-                                                             lddecision_values_row = 1;
+    da_int ldx_train = 0, ldx_test = 0, ldx_train_row = 0, ldx_test_row = 0,
+           lddecision_values = 1, lddecision_values_row = 1;
     da_int n_samples_test = 0, n_samples_train = 0, n_feat = 0, n_class = 1;
     // Arrays to check
     std::vector<T> decision_values, decision_values_row, y_pred;

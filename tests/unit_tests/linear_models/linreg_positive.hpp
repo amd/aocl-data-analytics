@@ -188,6 +188,8 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
             << "Checking coefficients (solution)";
         free(coef_exp);
     } else if (check_coeff) {
+        da_datastore_destroy(&csv_store);
+        da_handle_destroy(&linmod_handle);
         FAIL() << "Check of coefficients was requested but the solution file "
                << coef_fname << " could not be opened.";
     }
@@ -254,6 +256,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         sol_exp = nullptr;
         da_datastore_destroy(&sol_store);
     } else if (check_predict) {
+        da_handle_destroy(&linmod_handle);
         FAIL() << "Check of predictions was requested but the data file "
                << solution_fname << " could not be opened.";
     }
@@ -327,6 +330,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         b = nullptr;
 
     } else if (check_predict) {
+        da_handle_destroy(&linmod_handle);
         FAIL() << "Check of predictions was requested but the data file " << predict_fname
                << " could not be opened.";
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -646,8 +646,8 @@ TEST(PCATest, IncorrectHandlePrecision) {
     EXPECT_EQ(da_handle_init_d(&handle_d, da_handle_pca), da_status_success);
     EXPECT_EQ(da_handle_init_s(&handle_s, da_handle_pca), da_status_success);
 
-    double Ad;
-    float As;
+    double Ad = 1.0;
+    float As = 1.0f;
 
     EXPECT_EQ(da_pca_set_data_d(handle_s, 1, 1, &Ad, 1), da_status_wrong_type);
     EXPECT_EQ(da_pca_set_data_s(handle_d, 1, 1, &As, 1), da_status_wrong_type);
