@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2024 Advanced Micro Devices, Inc.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,9 @@
 #define KMEANS_LOOP_UNROLLS_HPP
 
 #include "da_cblas.hh"
+#include "macros.h"
+
+namespace ARCH {
 
 namespace da_kmeans {
 
@@ -34,10 +37,9 @@ depends on the machine and the number of clusters. */
 
 /* Within Elkan iteration update a block of the lower and upper bound matrices*/
 template <typename T>
-void da_kmeans<T>::elkan_iteration_update_block_no_unroll(da_int block_size, T *l_bound,
-                                                          da_int ldl_bound, T *u_bound,
-                                                          T *centre_shift,
-                                                          da_int *labels) {
+void kmeans<T>::elkan_iteration_update_block_no_unroll(da_int block_size, T *l_bound,
+                                                       da_int ldl_bound, T *u_bound,
+                                                       T *centre_shift, da_int *labels) {
 
     da_int index = 0;
     for (da_int i = 0; i < block_size; i++) {
@@ -56,10 +58,9 @@ void da_kmeans<T>::elkan_iteration_update_block_no_unroll(da_int block_size, T *
 // LCOV_EXCL_START
 
 template <typename T>
-void da_kmeans<T>::elkan_iteration_update_block_unroll_4(da_int block_size, T *l_bound,
-                                                         da_int ldl_bound, T *u_bound,
-                                                         T *centre_shift,
-                                                         da_int *labels) {
+void kmeans<T>::elkan_iteration_update_block_unroll_4(da_int block_size, T *l_bound,
+                                                      da_int ldl_bound, T *u_bound,
+                                                      T *centre_shift, da_int *labels) {
 
 #pragma omp simd
     for (da_int i = 0; i < block_size; i++) {
@@ -95,10 +96,9 @@ void da_kmeans<T>::elkan_iteration_update_block_unroll_4(da_int block_size, T *l
 }
 
 template <typename T>
-void da_kmeans<T>::elkan_iteration_update_block_unroll_8(da_int block_size, T *l_bound,
-                                                         da_int ldl_bound, T *u_bound,
-                                                         T *centre_shift,
-                                                         da_int *labels) {
+void kmeans<T>::elkan_iteration_update_block_unroll_8(da_int block_size, T *l_bound,
+                                                      da_int ldl_bound, T *u_bound,
+                                                      T *centre_shift, da_int *labels) {
 
 #pragma omp simd
     for (da_int i = 0; i < block_size; i++) {
@@ -156,10 +156,12 @@ void da_kmeans<T>::elkan_iteration_update_block_unroll_8(da_int block_size, T *l
 // LCOV_EXCL_START
 
 template <typename T>
-void da_kmeans<T>::lloyd_iteration_block_no_unroll(
-    bool update_centres, da_int block_size, const T *data, da_int lddata,
-    T *cluster_centres, T *new_cluster_centres, T *centre_norms, da_int *cluster_count,
-    da_int *labels, T *work, da_int ldwork) {
+void kmeans<T>::lloyd_iteration_block_no_unroll(bool update_centres, da_int block_size,
+                                                const T *data, da_int lddata,
+                                                T *cluster_centres,
+                                                T *new_cluster_centres, T *centre_norms,
+                                                da_int *cluster_count, da_int *labels,
+                                                T *work, da_int ldwork) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
@@ -205,12 +207,11 @@ void da_kmeans<T>::lloyd_iteration_block_no_unroll(
 // LCOV_EXCL_START
 
 template <typename T>
-void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int block_size,
-                                                  const T *data, da_int lddata,
-                                                  T *cluster_centres,
-                                                  T *new_cluster_centres, T *centre_norms,
-                                                  da_int *cluster_count, da_int *labels,
-                                                  T *work, da_int ldwork) {
+void kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int block_size,
+                                               const T *data, da_int lddata,
+                                               T *cluster_centres, T *new_cluster_centres,
+                                               T *centre_norms, da_int *cluster_count,
+                                               da_int *labels, T *work, da_int ldwork) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
@@ -268,12 +269,11 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_2(bool update_centres, da_int bl
 }
 
 template <typename T>
-void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int block_size,
-                                                  const T *data, da_int lddata,
-                                                  T *cluster_centres,
-                                                  T *new_cluster_centres, T *centre_norms,
-                                                  da_int *cluster_count, da_int *labels,
-                                                  T *work, da_int ldwork) {
+void kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int block_size,
+                                               const T *data, da_int lddata,
+                                               T *cluster_centres, T *new_cluster_centres,
+                                               T *centre_norms, da_int *cluster_count,
+                                               da_int *labels, T *work, da_int ldwork) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
@@ -349,10 +349,12 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4(bool update_centres, da_int bl
 }
 
 template <typename T>
-void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
-    bool update_centres, da_int block_size, const T *data, da_int lddata,
-    T *cluster_centres, T *new_cluster_centres, T *centre_norms, da_int *cluster_count,
-    da_int *labels, T *work, da_int ldwork) {
+void kmeans<T>::lloyd_iteration_block_unroll_4_T(bool update_centres, da_int block_size,
+                                                 const T *data, da_int lddata,
+                                                 T *cluster_centres,
+                                                 T *new_cluster_centres, T *centre_norms,
+                                                 da_int *cluster_count, da_int *labels,
+                                                 T *work, da_int ldwork) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
@@ -429,12 +431,11 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_4_T(
 }
 
 template <typename T>
-void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int block_size,
-                                                  const T *data, da_int lddata,
-                                                  T *cluster_centres,
-                                                  T *new_cluster_centres, T *centre_norms,
-                                                  da_int *cluster_count, da_int *labels,
-                                                  T *work, da_int ldwork) {
+void kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int block_size,
+                                               const T *data, da_int lddata,
+                                               T *cluster_centres, T *new_cluster_centres,
+                                               T *centre_norms, da_int *cluster_count,
+                                               da_int *labels, T *work, da_int ldwork) {
 
     // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
     // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
@@ -543,5 +544,7 @@ void da_kmeans<T>::lloyd_iteration_block_unroll_8(bool update_centres, da_int bl
 // LCOV_EXCL_STOP
 
 } // namespace da_kmeans
+
+} // namespace ARCH
 
 #endif // KMEANS_LOOP_UNROLLS_HPP

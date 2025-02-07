@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,23 +21,19 @@
  *
  * ************************************************************************ */
 
-#ifndef OPTIMIZATION_OPTIONS_HPP
-#define OPTIMIZATION_OPTIONS_HPP
-
 #include "da_error.hpp"
+#include "macros.h"
 #include "optim_types.hpp"
 #include "options.hpp"
 #include <limits>
 
-namespace da_optimization_options {
-enum regularization { quadratic = 2, cubic = 3 };
-} // namespace da_optimization_options
+namespace ARCH {
 
 template <class T>
 inline da_status register_optimization_options(da_errors::da_error_t &err,
                                                da_options::OptionRegistry &opts) {
     using namespace da_options;
-    using namespace da_optimization_options;
+    using namespace da_optim_types;
 
     const T rmax = std::numeric_limits<T>::max();
 
@@ -255,11 +251,11 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
 
         os = std::make_shared<OptionString>(
             OptionString("optim method", "Select optimization solver to use.",
-                         {{"lbfgsb", da_optim::solvers::solver_lbfgsb},
-                          {"lbfgs", da_optim::solvers::solver_lbfgsb},
-                          {"bfgs", da_optim::solvers::solver_lbfgsb},
-                          {"coord", da_optim::solvers::solver_coord},
-                          {"ralfit", da_optim::solvers::solver_ralfit}},
+                         {{"lbfgsb", da_optim_types::solvers::solver_lbfgsb},
+                          {"lbfgs", da_optim_types::solvers::solver_lbfgsb},
+                          {"bfgs", da_optim_types::solvers::solver_lbfgsb},
+                          {"coord", da_optim_types::solvers::solver_coord},
+                          {"ralfit", da_optim_types::solvers::solver_ralfit}},
                          "lbfgsb"));
         opts.register_opt(os);
 
@@ -308,4 +304,4 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
     return da_status_success;
 }
 
-#endif //OPTIMIZATION_OPTIONS_HPP
+} // namespace ARCH

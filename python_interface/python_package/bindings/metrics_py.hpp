@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -42,8 +42,7 @@ namespace py = pybind11;
 
 template <typename T>
 py::array_t<T> py_da_pairwise_distances(py::array_t<T> X, std::optional<py::array_t<T>> Y,
-                                        std::string metric = "euclidean",
-                                        std::string force_all_finite = "allow_infinite") {
+                                        std::string metric = "euclidean", T p = 2.0) {
     da_status status;
 
     da_int m, n, k_x, k_y, ldx, ldy, ldd;
@@ -76,19 +75,26 @@ py::array_t<T> py_da_pairwise_distances(py::array_t<T> X, std::optional<py::arra
     da_metric metric_enum;
     if (metric == "euclidean") {
         metric_enum = da_euclidean;
+    } else if (metric == "l2") {
+        metric_enum = da_l2;
     } else if (metric == "sqeuclidean") {
         metric_enum = da_sqeuclidean;
+    } else if (metric == "manhattan") {
+        metric_enum = da_manhattan;
+    } else if (metric == "l1") {
+        metric_enum = da_l1;
+    } else if (metric == "cityblock") {
+        metric_enum = da_cityblock;
+    } else if (metric == "cosine") {
+        metric_enum = da_cosine;
+    } else if (metric == "minkowski") {
+        metric_enum = da_minkowski;
     } else {
         throw std::invalid_argument("Given metric does not exist. Available choices are: "
-                                    "'euclidean', 'sqeuclidean'.");
+                                    "'euclidean', 'l2', 'sqeuclidean', 'manhattan', "
+                                    "'l1', 'cityblock', 'cosine', 'minkowski'.");
     }
-    da_data_types force_all_finite_enum;
-    if (force_all_finite == "allow_infinite") {
-        force_all_finite_enum = da_allow_infinite;
-    } else {
-        throw std::invalid_argument("Given force_all_finite option does not exist. "
-                                    "Available choice is: 'allow_infinite'.");
-    }
+
     // Create the output distance matrix as a numpy array
 
     size_t shape[2]{(size_t)m, (size_t)ncols};
@@ -106,13 +112,12 @@ py::array_t<T> py_da_pairwise_distances(py::array_t<T> X, std::optional<py::arra
     auto D = py::array_t<T>(shape, strides);
 
     if (Y.has_value()) {
-        status = da_pairwise_distances(order_X, m, n, k_x, X.data(), ldx,
-                                       Y->mutable_data(), ldy, D.mutable_data(), ldd,
-                                       metric_enum, force_all_finite_enum);
+        status =
+            da_pairwise_distances(order_X, m, n, k_x, X.data(), ldx, Y->mutable_data(),
+                                  ldy, D.mutable_data(), ldd, p, metric_enum);
     } else {
         status = da_pairwise_distances(order_X, m, n, k_x, X.data(), ldx, dummy, n,
-                                       D.mutable_data(), ldd, metric_enum,
-                                       force_all_finite_enum);
+                                       D.mutable_data(), ldd, p, metric_enum);
     }
     status_to_exception(status);
 

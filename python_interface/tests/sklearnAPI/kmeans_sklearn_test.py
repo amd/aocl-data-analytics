@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -135,7 +135,10 @@ def test_double_solve(precision):
     from sklearn.cluster import KMeans
     kmeans_da = KMeans(n_clusters=2)
     kmeans_da = kmeans_da.fit(a)
+    inertia_pre = kmeans_da.inertia_
     kmeans_da = kmeans_da.fit(a)
+    inertia_post = kmeans_da.inertia_
+    assert not np.any(inertia_pre - inertia_post)
 
 
 def test_kmeans_errors():

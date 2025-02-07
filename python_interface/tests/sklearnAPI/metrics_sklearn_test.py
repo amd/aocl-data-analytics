@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,52 +27,71 @@
 Metrics tests, check output of skpatch versus sklearn
 """
 
-# pylint: disable = import-outside-toplevel, reimported, no-member
+# pylint: disable = import-outside-toplevel, reimported, no-member, invalid-name
 
 import numpy as np
 import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
 
 @pytest.mark.parametrize("precision", [np.float64,  np.float32])
-@pytest.mark.parametrize("metric", ["euclidean", "sqeuclidean"])
-def test_metrics(precision, metric):
+@pytest.mark.parametrize("metric", ['euclidean', 'l2', 'sqeuclidean', 'manhattan',
+                         'l1', 'cityblock', 'cosine', 'minkowski'])
+@pytest.mark.parametrize("numpy_order", ['C', 'F'])
+def test_metrics(precision, metric, numpy_order):
     """
     Basic euclidean distance computation
     """
-    X = np.array([[1., 2.],
-                  [3., 4.],
-                  [5., 6.]], dtype=precision)
+    X = np.array([[-1, -1, 2],
+                  [-2, -1, 3],
+                  [-3, -2, -1],
+                  [1, 3, 1],
+                  [2, 5, 1],
+                  [3, -1, 2]], dtype=precision, order=numpy_order)
 
-    Y = np.array([[7., 8. ],
-                  [9., 10.],
-                  [11., 12.],
-                  [13., 14.]], dtype=precision)
+    Y = np.array([[-2, 2, 3],
+                  [-1, -2, -1],
+                  [2, 1, -3]], dtype=precision, order=numpy_order)
 
-    tol = np.finfo(precision).eps
+    if metric=='cosine':
+        tol = 80*np.finfo(precision).eps
+    else:
+        tol = np.finfo(precision).eps
 
     #patch and import scikit-learn
     skpatch()
     from sklearn.metrics.pairwise import pairwise_distances
-    da_euclidean_distance_XY = pairwise_distances(X, Y, metric=metric)
-    da_euclidean_distance_XX = pairwise_distances(X, metric=metric)
-
+    with pytest.warns(RuntimeWarning):
+        if metric=='minkowski':
+            p = 5.5
+            da_distance_XY = pairwise_distances(X, Y, metric=metric, p=p)
+            da_distance_XX = pairwise_distances(X, metric=metric, p=p)
+        else:
+            da_distance_XY = pairwise_distances(X, Y, metric=metric)
+            da_distance_XX = pairwise_distances(X, metric=metric)
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn.metrics.pairwise import pairwise_distances
-    sk_euclidean_distance_XY = pairwise_distances(X, Y, metric=metric)
-    sk_euclidean_distance_XX = pairwise_distances(X, metric=metric)
-
-    # Check results
-    assert da_euclidean_distance_XY == pytest.approx(sk_euclidean_distance_XY, tol)
-    assert da_euclidean_distance_XX == pytest.approx(sk_euclidean_distance_XX, tol)
+    if metric=='minkowski':
+        p = 5.5
+        sk_distance_XY = pairwise_distances(X, Y, metric=metric, p=p)
+        sk_distance_XX = pairwise_distances(X, metric=metric, p=p)
+    else:
+        sk_distance_XY = pairwise_distances(X, Y, metric=metric)
+        sk_distance_XX = pairwise_distances(X, metric=metric)
 
     # print the results if pytest is invoked with the -rA option
-    print("\nEuclidean pairwise distances of X and Y")
-    print("     aocl: \n", da_euclidean_distance_XY)
-    print("\n  sklearn: \n", sk_euclidean_distance_XY)
-    print("\nEuclidean pairwise distances of rows of X")
-    print("     aocl: \n", da_euclidean_distance_XX)
-    print("\n  sklearn: \n", sk_euclidean_distance_XX)
+    print("\n" + metric + " pairwise distances of X and Y")
+    print("     aocl: \n", da_distance_XY)
+    print("\n  sklearn: \n", sk_distance_XY)
+    print("\n" + metric + " pairwise distances of rows of X")
+    print("     aocl: \n", da_distance_XX)
+    print("\n  sklearn: \n", sk_distance_XX)
+
+    # Check results
+    assert da_distance_XY == pytest.approx(sk_distance_XY, tol)
+    assert da_distance_XX == pytest.approx(sk_distance_XX, tol)
+
+
 
 def test_metrics_errors():
     '''
@@ -84,13 +103,12 @@ def test_metrics_errors():
     #patch and import scikit-learn
     skpatch()
     from sklearn.metrics.pairwise import pairwise_distances
-    with pytest.raises(ValueError):
-        euclidean_distance_XX = pairwise_distances(X, Y=None, metric="nonexistent")
 
-    with pytest.raises(ValueError):
-        euclidean_distance_XX = pairwise_distances(X, Y=None, force_all_finite="nonexistent")
+    with pytest.warns(RuntimeWarning):
+        with pytest.raises(ValueError):
+            euclidean_distance_XX = pairwise_distances(X, Y=None, metric="nonexistent")
 
-    with pytest.raises(ValueError):
-        euclidean_distance_XX = pairwise_distances(X, Y)
+        with pytest.raises(ValueError):
+            euclidean_distance_XX = pairwise_distances(X, Y)
 
     undo_skpatch()

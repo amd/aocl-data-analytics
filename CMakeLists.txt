@@ -78,7 +78,11 @@ option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
 option(USE_LIBMEM "Link with AOCL LibMem" OFF)
-option(ARCH "-march or /arch flag ()")
+set(ARCH "native" CACHE STRING "Architecture(s) to build: dynamic, native, znver2, znver3, ... (default: native)")
+set(ARCH_LIST "dynamic" "native" "znver2" "znver3" "znver4" "znver5")
+if(NOT ARCH IN_LIST ARCH_LIST)
+    message(FATAL_ERROR "Invalid ARCH value: \"${ARCH}\"\n" "Valid values are: ${ARCH_LIST}")
+endif()
 option(BUILD_PYTHON "Python bindings" OFF)
 # Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
 set(CMAKE_AOCL_ROOT
@@ -96,6 +100,9 @@ set(LAPACK_INCLUDE_DIR
 set(SPARSE_INCLUDE_DIR
     ""
     CACHE STRING "Path to SPARSE include directory")
+set(UTILS_INCLUDE_DIR
+    ""
+    CACHE STRING "Path to UTILS include directory")
 set(BLAS_LIB
     ""
     CACHE STRING "Path to BLAS library")
@@ -292,20 +299,13 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
     set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
   else()
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX2")
     set(COMPILER_FLAGS_RELEASE
         "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;/fp:fast")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
-    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc;-Wno-nan-infinity-disabled")
-  endif()
-
-  if(USE_AVX512 AND (NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang"))
-    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};/arch:AVX512")
-  endif()
-
-  if(ARCH)
-    set(ARCH_FLAG "/arch:${ARCH}")
+    set(COMPILER_FLAGS_CXX
+        "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc;-Wno-nan-infinity-disabled;-Wno-macro-redefined"
+    )
   endif()
 
   if(VECTORIZATION_REPORTS)
@@ -316,31 +316,21 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
-  set(COMPILER_FLAGS_COMMON
-      "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;$<$<COMPILE_LANGUAGE:CXX>:-Wno-sign-conversion:-Wno-nan-infinity-disabled>;"
+  set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;")
+  set(COMPILER_FLAGS_CXX
+      "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled;-Wno-macro-redefined;-Wno-sign-conversion;"
   )
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-    set(COMPILER_FLAGS_COMMON
-        "${COMPILER_FLAGS_COMMON};-mtune=native;-mavx2;-mfma;")
+    set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-mavx2;-mfma;")
   endif()
 
   # Release flags
   set(COMPILER_FLAGS_RELEASE
       "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;")
-
   if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
   else()
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0;-gdwarf-5;-g3;")
-  endif()
-
-  if(USE_AVX512)
-    set(COMPILER_FLAGS_COMMON
-        "${COMPILER_FLAGS_COMMON};-mavx512f;-mavx512dq;-mavx512vl")
-  endif()
-
-  if(ARCH)
-    set(ARCH_FLAG "-march=${ARCH}")
   endif()
 
   if(VECTORIZATION_REPORTS)
@@ -355,8 +345,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   endif()
 endif()
 
-set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};${ARCH_FLAG}")
-
 # Add convenience cleaning add "add_dependencies(cleanall ...) to all custom
 # cleans, e.g. clean-doc and clean-coverage is a dependency of cleanall Note:
 # this needs to be before any `add_dependencies`
@@ -370,6 +358,14 @@ endif()
 if(COVERAGE)
   # Include coverage flags and targets
   include(Coverage)
+endif()
+
+if((NOT WIN32) AND (NOT CMAKE_BUILD_TYPE MATCHES DEBUG))
+  # Avoid absolute file paths getting printed when using strings utility in
+  # linux
+  add_compile_options(
+    $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fmacro-prefix-map=${CMAKE_SOURCE_DIR}=.>
+  )
 endif()
 
 add_compile_options(
@@ -397,11 +393,12 @@ if(NOT USE_EXISTING_DA)
   add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
 
   # add Boost for Boost.Sort functionality (assume Boost is installed on system)
-  SET(BOOST_MIN_VERSION "1.66.0")
+  set(BOOST_MIN_VERSION "1.66.0")
   find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
 
   # Compile data analytics core library
   add_subdirectory(source)
+
 
   # Put all custom configuration BEFORE including "CTest"
   if(VALGRIND)
@@ -468,7 +465,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
 endif()
 
 message(NOTICE "\nOPTIONS")
-message(NOTICE "Architecture flag         ARCH_FLAG............: ${ARCH_FLAG}")
+message(NOTICE "Requested architecture(s) ARCH.................: ${ARCH} (${BUILD_ARCHS})")
 message(NOTICE "Building with ASan        ASAN.................: ${ASAN}")
 message(NOTICE "Building docs             BUILD_DOC............: ${BUILD_DOC}")
 if(INTERNAL_DOC)
@@ -511,6 +508,9 @@ message(NOTICE "LAPACK           LAPACK=${LAPACK}")
 message(NOTICE "AOCL-Sparse      SPARSE=${SPARSE}")
 message(NOTICE "AOCL-Utils       UTILS=${UTILS}")
 message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")
+message(STATUS "LAPACK_INCLUDE_DIR    ${LAPACK_INCLUDE_DIR}")
+message(STATUS "BLAS_INCLUDE_DIR      ${BLAS_INCLUDE_DIR}")
+message(STATUS "UTILS_INCLUDE_DIR     ${UTILS_INCLUDE_DIR}")
 
 message(NOTICE "Boost include path    Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")
 if(USE_EXISTING_DA)

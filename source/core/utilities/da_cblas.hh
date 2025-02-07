@@ -1,5 +1,5 @@
 /******************************************************************************
-* Copyright (c) 2024 - present Advanced Micro Devices, Inc. All rights reserved.
+* Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 *
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to deal
@@ -37,6 +37,10 @@ void simatcopy_(char *trans, da_int *m, da_int *n, const float *alpha, float *A,
                 da_int *lda_in, da_int *lda_out);
 void dimatcopy_(char *trans, da_int *m, da_int *n, const double *alpha, double *A,
                 da_int *lda_in, da_int *lda_out);
+void somatcopy_(char *trans, da_int *m, da_int *n, const float *alpha, const float *A,
+                da_int *lda_in, float *B, da_int *ldb_out);
+void domatcopy_(char *trans, da_int *m, da_int *n, const double *alpha, const double *A,
+                da_int *lda_in, double *B, da_int *ldb_out);
 }
 
 #include <complex>
@@ -50,10 +54,14 @@ template <typename... Types>
 using real_type = typename real_type_traits<Types...>::real_t;
 
 // For one type
-template <typename T> struct real_type_traits<T> { using real_t = T; };
+template <typename T> struct real_type_traits<T> {
+    using real_t = T;
+};
 
 // For one complex type, strip complex
-template <typename T> struct real_type_traits<std::complex<T>> { using real_t = T; };
+template <typename T> struct real_type_traits<std::complex<T>> {
+    using real_t = T;
+};
 
 // =============================================================================
 // Level 1 BLAS
@@ -983,6 +991,16 @@ inline void imatcopy(char trans, da_int m, da_int n, float alpha, float *A, da_i
 inline void imatcopy(char trans, da_int m, da_int n, double alpha, double *A,
                      da_int lda_in, da_int lda_out) {
     dimatcopy_(&trans, &m, &n, (const double *)&alpha, A, &lda_in, &lda_out);
+}
+
+inline void omatcopy(char trans, da_int m, da_int n, float alpha, const float *A,
+                     da_int lda_in, float *B, da_int ldb_out) {
+    somatcopy_(&trans, &m, &n, (const float *)&alpha, A, &lda_in, B, &ldb_out);
+}
+
+inline void omatcopy(char trans, da_int m, da_int n, double alpha, const double *A,
+                     da_int lda_in, double *B, da_int ldb_out) {
+    domatcopy_(&trans, &m, &n, (const double *)&alpha, A, &lda_in, B, &ldb_out);
 }
 
 } // namespace da_blas

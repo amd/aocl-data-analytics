@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -133,9 +133,9 @@ TYPED_TEST(dectree_public_test, get_results) {
 
     // change an option and check that results are no longer available
     EXPECT_EQ(da_options_set(tree_handle, "seed", (da_int)43), da_status_success);
-    EXPECT_EQ(
-        da_handle_get_result(tree_handle, da_result::da_linmod_coef, &dim, rinfo.data()),
-        da_status_unknown_query);
+    dim = 7;
+    EXPECT_EQ(da_handle_get_result(tree_handle, da_result::da_rinfo, &dim, rinfo.data()),
+              da_status_unknown_query);
     da_handle_destroy(&tree_handle);
 }
 
@@ -197,7 +197,7 @@ TYPED_TEST(dectree_public_test, invalid_input) {
               da_status_invalid_pointer);
     EXPECT_EQ(da_tree_predict(tree_handle, n_samples, n_features, X.data(), n_samples,
                               y_invalid),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(
         da_tree_predict(nullptr, n_samples, n_features, X.data(), n_samples, y.data()),
         da_status_handle_not_initialized);
@@ -221,7 +221,7 @@ TYPED_TEST(dectree_public_test, invalid_input) {
               da_status_invalid_pointer);
     EXPECT_EQ(da_tree_score(tree_handle, n_samples, n_features, X.data(), n_samples,
                             y.data(), nullptr),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_tree_score(nullptr, n_samples, n_features, X.data(), n_samples, y.data(),
                             &accuracy),
               da_status_handle_not_initialized);

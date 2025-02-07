@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,18 +25,18 @@
  *
  */
 
-#ifndef DRIVERS_HPP
-#define DRIVERS_HPP
-
 #include "aoclda_error.h"
-#include "callbacks.hpp"
+#include "coord.hpp"
 #include "da_error.hpp"
 #include "lbfgsb.hpp"
+#include "macros.h"
 #include "options.hpp"
 #include <cmath>
 #include <iostream>
 #include <limits>
 #include <vector>
+
+namespace ARCH {
 
 // L-BFGS-B Reverse Communication <overloaded>
 inline void lbfgsb_rcomm(da_int *n, da_int *m, double *x, double *l, double *u,
@@ -423,4 +423,4 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
     return da_status_success;
 }
 
-#endif
+} // namespace ARCH

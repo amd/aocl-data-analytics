@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +28,11 @@
 #define KMEANS_ELKAN_BLOCK_SIZE da_int(512)
 #define KMEANS_MACQUEEN_BLOCK_SIZE da_int(128)
 
-namespace da_kmeans {
+namespace da_kmeans_types {
 
 enum kmeans_method { lloyd = 0, elkan, hartigan_wong, macqueen };
 enum kmeans_init { random_samples = 0, kmeanspp, supplied, random_partitions };
 
-} // namespace da_kmeans
+} // namespace da_kmeans_types
 
 #endif // KMEANS_TYPES_HPP

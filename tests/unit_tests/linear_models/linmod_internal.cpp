@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,20 +30,22 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+using namespace TEST_ARCH;
+
 TEST(linmod_internal, methodType) {
     using namespace da_linmod;
 
-    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative((linmod_method)0));
-    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(linmod_method::undefined));
-    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(linmod_method::cholesky));
+    EXPECT_FALSE(linmod_method_type::is_iterative((linmod_method)0));
+    EXPECT_FALSE(linmod_method_type::is_iterative(linmod_method::undefined));
+    EXPECT_FALSE(linmod_method_type::is_iterative(linmod_method::cholesky));
     da_int mid{linmod_method::cholesky};
-    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(linmod_method(mid)));
+    EXPECT_FALSE(linmod_method_type::is_iterative(linmod_method(mid)));
     linmod_method id{linmod_method::svd};
-    EXPECT_FALSE(da_linmod::linmod_method_type::is_iterative(id));
+    EXPECT_FALSE(linmod_method_type::is_iterative(id));
 
-    EXPECT_TRUE(da_linmod::linmod_method_type::is_iterative(linmod_method::lbfgsb));
+    EXPECT_TRUE(linmod_method_type::is_iterative(linmod_method::lbfgsb));
     mid = linmod_method::coord;
-    EXPECT_TRUE(da_linmod::linmod_method_type::is_iterative(linmod_method(mid)));
+    EXPECT_TRUE(linmod_method_type::is_iterative(linmod_method(mid)));
     id = linmod_method::cg;
-    EXPECT_TRUE(da_linmod::linmod_method_type::is_iterative(id));
+    EXPECT_TRUE(linmod_method_type::is_iterative(id));
 }

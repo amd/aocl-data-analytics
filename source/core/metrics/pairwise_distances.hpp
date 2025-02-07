@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,58 +25,51 @@
  *
  */
 
-#pragma once
-
 #include "aoclda.h"
 #include "aoclda_metrics.h"
-#include "euclidean_distance.hpp"
+#include "macros.h"
+
+namespace ARCH {
+
+template <typename T>
+void euclidean_distance(da_order order, da_int m, da_int n, da_int k, const T *X,
+                        da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T *X_norms,
+                        da_int compute_X_norms, T *Y_norms, da_int compute_Y_norms,
+                        bool square, bool X_is_Y);
+
+namespace da_metrics {
+namespace pairwise_distances {
 
 // Create a high level template function that can be used for both single and double precision.
-// Check if metric is valid and direct accordingly, otherwise throw an error.
-// Check value of force_all_finite and direct accordingly, otherwise throw an error.
 template <typename T>
 da_status pairwise_distance_kernel(da_order order, da_int m, da_int n, da_int k,
                                    const T *X, da_int ldx, const T *Y, da_int ldy, T *D,
-                                   da_int ldd, da_metric metric,
-                                   da_data_types force_all_finite) {
-    da_status status = da_status_success;
-    if (m < 1 || k < 1) {
-        return da_status_invalid_array_dimension;
-    }
-    if (order == column_major && ldx < m)
-        return da_status_invalid_leading_dimension;
-    if (order == row_major && ldx < k)
-        return da_status_invalid_leading_dimension;
-    if (X == nullptr || D == nullptr)
-        return da_status_invalid_pointer;
-    // Check if Y is nullptr to continue with appropriate check of the leading dimension.
-    if (Y != nullptr) {
-        if (n < 1) {
-            return da_status_invalid_array_dimension;
-        }
-        if (order == column_major) {
-            if (ldy < n || ldd < m)
-                return da_status_invalid_leading_dimension;
-        } else {
-            if (ldy < k || ldd < n)
-                return da_status_invalid_leading_dimension;
-        }
-    } else {
-        if (ldd < m)
-            return da_status_invalid_leading_dimension;
-    }
-    // Currently no checks for NaNs/Infs are implemented.
-    if (force_all_finite != da_allow_infinite)
-        return da_status_not_implemented;
+                                   da_int ldd, T p, da_metric metric);
 
-    if (metric == da_euclidean)
-        return da_metrics::pairwise_distances::euclidean(order, m, n, k, X, ldx, Y, ldy,
-                                                         D, ldd, false);
-    if (metric == da_sqeuclidean)
-        return da_metrics::pairwise_distances::euclidean(order, m, n, k, X, ldx, Y, ldy,
-                                                         D, ldd, true);
-    else
-        return da_status_not_implemented;
+// Create a high level template function that can be used for both single and double precision.
+// Check if metric is valid and direct accordingly, otherwise throw an error.
+template <typename T>
+da_status pairwise_distance_error_check_kernel(da_order order, da_int m, da_int n,
+                                               da_int k, const T *X, da_int ldx,
+                                               const T *Y, da_int ldy, T *D, da_int ldd,
+                                               T p, da_metric metric);
 
-    return status;
-}
+template <typename T>
+da_status cosine(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
+                 const T *Y, da_int ldy, T *D, da_int ldd);
+
+template <typename T>
+da_status euclidean(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
+                    const T *Y, da_int ldy, T *D, da_int ldd, bool square_distances);
+
+template <typename T>
+da_status manhattan(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
+                    const T *Y, da_int ldy, T *D, da_int ldd);
+
+template <typename T>
+da_status minkowski(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
+                    const T *Y, da_int ldy, T *D, da_int ldd, T p);
+
+} // namespace pairwise_distances
+} // namespace da_metrics
+} // namespace ARCH

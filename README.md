@@ -57,7 +57,7 @@ Building on Linux
 
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
 
-   * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4
+   * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4. <arch> must be a single word from "znver1", "znver2", "znver3", "znver4", ..., "native" or "dynamic". Setting `-DARCH=dynamic` will build the library using dynamic dispatch. Leaving it blank will create a native build.
 
    * `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats)
 
@@ -87,13 +87,13 @@ Building on MS Windows
 ----------------------
 
 1. You will need either:
-   * a Visual Studio installation and compatible Fortran compiler (this will allow you to build with cl or with the MSVC compatibility layer for clang (clang-cl)).
+   * a Visual Studio installation and compatible Fortran compiler (this will allow you to build with the MSVC compatibility layer for clang (clang-cl)).
    * GCC and gfortran compilers, which are available via MinGW and MSYS2.
 
-2. Make sure you have set the `AOCL_ROOT` environment variable to your AOCL installation directory (e.g. `C:\Users\username\AOCL-4.0`), and update your `PATH` to take in the relevant BLAS and LAPACK libraries e.g.
+2. Make sure you have set the `AOCL_ROOT` environment variable to your AOCL installation directory (e.g. `C:\Users\username\AOCL-5.0`), and update your `PATH` to take in the relevant BLAS and LAPACK libraries e.g.
 `set PATH=C:\path\to\AOCL\amd-blis\lib\LP64;C:\path\to\AOCL\amd-libflame\lib\LP64;C:\path\to\AOCL\amd-sparse\lib\LP64\shared;%PATH%`.
 
-3. Configure cmake with any of the following options:
+3. Configure cmake using e.g. `cmake -T ClangCL -DCMAKE_Fortran_COMPILER=ifort`, with any of the following options:
 
    * `-DBUILD_ILP64=On` for 64-bit integer build
 
@@ -103,7 +103,7 @@ Building on MS Windows
 
    * `-DBUILD_SHARED_LIBS=On` for a shared library build (`Off` by default)
 
-   * `-DARCH=<arch>` to set the `/arch:<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. AVX512
+   * `-DARCH=<arch>` to set the `-march=<arch>` flag, where `<arch>` specifies the architecture to build for, e.g. znver4. <arch> must be a single word from "znver1", "znver2", "znver3", "znver4", ..., "native" or "dynamic". Setting `-DARCH=dynamic` will build the library using dynamic dispatch.
 
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 
@@ -123,7 +123,7 @@ Building the Python interfaces
 ------------------------------
 
 To build the Python interfaces, use `-DBUILD_PYTHON=On` (note that this will only work with shared library builds).
-You will need PyBind11, which can be installed using `pip install pybind11`.
+You will need to install the required Python packages listed in the `requirements.txt` file inside of `python_interface` directory.
 On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the location of you pybind11 installation, e.g.  `C:\path\to\your\python-environment\site-packages\pybind11\share\cmake\pybind11`
 By default, cmake will compile the bindings but will not install them.
 If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.

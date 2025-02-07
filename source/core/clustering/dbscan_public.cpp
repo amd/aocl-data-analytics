@@ -21,9 +21,13 @@
  *
  * ************************************************************************ */
 
+#include "dbscan_public.hpp"
 #include "aoclda.h"
 #include "da_handle.hpp"
-#include "dbscan.hpp"
+#include "dynamic_dispatch.hpp"
+#include "macros.h"
+
+using namespace dbscan_public;
 
 da_status da_dbscan_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
                                const double *A, da_int lda) {
@@ -34,14 +38,8 @@ da_status da_dbscan_set_data_d(da_handle handle, da_int n_samples, da_int n_feat
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_dbscan::da_dbscan<double> *dbscan =
-        dynamic_cast<da_dbscan::da_dbscan<double> *>(handle->alg_handle_d);
-    if (dbscan == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_dbscan or "
-                        "handle is invalid.");
-
-    return dbscan->set_data(n_samples, n_features, A, lda);
+    DISPATCHER(handle->err, return (dbscan_set_data<da_dbscan::dbscan<double>, double>(
+                                handle, n_samples, n_features, A, lda)));
 }
 
 da_status da_dbscan_set_data_s(da_handle handle, da_int n_samples, da_int n_features,
@@ -53,14 +51,8 @@ da_status da_dbscan_set_data_s(da_handle handle, da_int n_samples, da_int n_feat
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    da_dbscan::da_dbscan<float> *dbscan =
-        dynamic_cast<da_dbscan::da_dbscan<float> *>(handle->alg_handle_s);
-    if (dbscan == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_dbscan or "
-                        "handle is invalid.");
-
-    return dbscan->set_data(n_samples, n_features, A, lda);
+    DISPATCHER(handle->err, return (dbscan_set_data<da_dbscan::dbscan<float>, float>(
+                                handle, n_samples, n_features, A, lda)));
 }
 
 da_status da_dbscan_compute_d(da_handle handle) {
@@ -68,17 +60,11 @@ da_status da_dbscan_compute_d(da_handle handle) {
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
     if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    da_dbscan::da_dbscan<double> *dbscan =
-        dynamic_cast<da_dbscan::da_dbscan<double> *>(handle->alg_handle_d);
-    if (dbscan == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_dbscan or "
-                        "handle is invalid.");
-
-    return dbscan->compute();
+        return da_error(handle->err, da_status_wrong_type,
+                        "The handle was initialized with a different precision type "
+                        "than double.");
+    DISPATCHER(handle->err,
+               return (dbscan_compute<da_dbscan::dbscan<double>, double>(handle)));
 }
 
 da_status da_dbscan_compute_s(da_handle handle) {
@@ -86,15 +72,9 @@ da_status da_dbscan_compute_s(da_handle handle) {
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
     if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    da_dbscan::da_dbscan<float> *dbscan =
-        dynamic_cast<da_dbscan::da_dbscan<float> *>(handle->alg_handle_s);
-    if (dbscan == nullptr)
-        return da_error(handle->err, da_status_invalid_handle_type,
-                        "handle was not initialized with handle_type=da_handle_dbscan or "
-                        "handle is invalid.");
-
-    return dbscan->compute();
+        return da_error(handle->err, da_status_wrong_type,
+                        "The handle was initialized with a different precision type "
+                        "than single.");
+    DISPATCHER(handle->err,
+               return (dbscan_compute<da_dbscan::dbscan<float>, float>(handle)));
 }

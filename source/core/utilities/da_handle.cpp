@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -58,4 +58,11 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
         break;
     }
     return da_status_success;
+}
+
+template <> basic_handle<double> *_da_handle::get_alg_handle<double>() {
+    return alg_handle_d;
+}
+template <> basic_handle<float> *_da_handle::get_alg_handle<float>() {
+    return alg_handle_s;
 }

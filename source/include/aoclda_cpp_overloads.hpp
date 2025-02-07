@@ -613,22 +613,18 @@ inline da_status da_nlls_fit(da_handle handle, da_int n_coefs, float *coefs,
 }
 
 /* Pairwise distances overloaded functions */
-inline da_status
-da_pairwise_distances(da_order order, da_int m, da_int n, da_int k, const double *X,
-                      da_int ldx, const double *Y, da_int ldy, double *D, da_int ldd,
-                      da_metric metric = da_euclidean,
-                      da_data_types force_all_finite = da_allow_infinite) {
-    return da_pairwise_distances_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
-                                   force_all_finite);
+inline da_status da_pairwise_distances(da_order order, da_int m, da_int n, da_int k,
+                                       const double *X, da_int ldx, const double *Y,
+                                       da_int ldy, double *D, da_int ldd, double p,
+                                       da_metric metric = da_euclidean) {
+    return da_pairwise_distances_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, p, metric);
 }
 
-inline da_status
-da_pairwise_distances(da_order order, da_int m, da_int n, da_int k, const float *X,
-                      da_int ldx, const float *Y, da_int ldy, float *D, da_int ldd,
-                      da_metric metric = da_euclidean,
-                      da_data_types force_all_finite = da_allow_infinite) {
-    return da_pairwise_distances_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, metric,
-                                   force_all_finite);
+inline da_status da_pairwise_distances(da_order order, da_int m, da_int n, da_int k,
+                                       const float *X, da_int ldx, const float *Y,
+                                       da_int ldy, float *D, da_int ldd, float p,
+                                       da_metric metric = da_euclidean) {
+    return da_pairwise_distances_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, p, metric);
 }
 
 /* k-NN for classification functions */
@@ -710,6 +706,111 @@ inline da_status da_switch_order_in_place(da_order order_X_in, da_int n_rows,
                                           da_int n_cols, double *X, da_int ldx_in,
                                           da_int ldx_out) {
     return da_switch_order_in_place_d(order_X_in, n_rows, n_cols, X, ldx_in, ldx_out);
+}
+
+/* Kernel functions */
+inline da_status da_rbf_kernel(da_order order, da_int m, da_int n, da_int k,
+                               const double *X, da_int ldx, const double *Y, da_int ldy,
+                               double *D, da_int ldd, double gamma) {
+    return da_rbf_kernel_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma);
+}
+
+inline da_status da_rbf_kernel(da_order order, da_int m, da_int n, da_int k,
+                               const float *X, da_int ldx, const float *Y, da_int ldy,
+                               float *D, da_int ldd, float gamma) {
+    return da_rbf_kernel_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma);
+}
+inline da_status da_linear_kernel(da_order order, da_int m, da_int n, da_int k,
+                                  const double *X, da_int ldx, const double *Y,
+                                  da_int ldy, double *D, da_int ldd) {
+    return da_linear_kernel_d(order, m, n, k, X, ldx, Y, ldy, D, ldd);
+}
+
+inline da_status da_linear_kernel(da_order order, da_int m, da_int n, da_int k,
+                                  const float *X, da_int ldx, const float *Y, da_int ldy,
+                                  float *D, da_int ldd) {
+    return da_linear_kernel_s(order, m, n, k, X, ldx, Y, ldy, D, ldd);
+}
+inline da_status da_polynomial_kernel(da_order order, da_int m, da_int n, da_int k,
+                                      const double *X, da_int ldx, const double *Y,
+                                      da_int ldy, double *D, da_int ldd, double gamma,
+                                      da_int degree, double coef0) {
+    return da_polynomial_kernel_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, degree,
+                                  coef0);
+}
+inline da_status da_polynomial_kernel(da_order order, da_int m, da_int n, da_int k,
+                                      const float *X, da_int ldx, const float *Y,
+                                      da_int ldy, float *D, da_int ldd, float gamma,
+                                      da_int degree, float coef0) {
+    return da_polynomial_kernel_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, degree,
+                                  coef0);
+}
+inline da_status da_sigmoid_kernel(da_order order, da_int m, da_int n, da_int k,
+                                   const double *X, da_int ldx, const double *Y,
+                                   da_int ldy, double *D, da_int ldd, double gamma,
+                                   double coef0) {
+    return da_sigmoid_kernel_d(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, coef0);
+}
+inline da_status da_sigmoid_kernel(da_order order, da_int m, da_int n, da_int k,
+                                   const float *X, da_int ldx, const float *Y, da_int ldy,
+                                   float *D, da_int ldd, float gamma, float coef0) {
+    return da_sigmoid_kernel_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, coef0);
+}
+
+/* SVM functions */
+template <class T> da_status da_svm_select_model(da_handle handle, da_svm_model mod);
+
+inline da_status da_svm_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                 const double *X, da_int ldx, const double *y) {
+    return da_svm_set_data_d(handle, n_samples, n_features, X, ldx, y);
+}
+
+inline da_status da_svm_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                 const float *X, da_int ldx, const float *y) {
+    return da_svm_set_data_s(handle, n_samples, n_features, X, ldx, y);
+}
+template <class T> da_status da_svm_compute(da_handle handle);
+
+inline da_status da_svm_predict(da_handle handle, da_int n_samples, da_int n_features,
+                                const double *X_test, da_int ldx_test,
+                                double *predictions) {
+    return da_svm_predict_d(handle, n_samples, n_features, X_test, ldx_test, predictions);
+}
+
+inline da_status da_svm_predict(da_handle handle, da_int n_samples, da_int n_features,
+                                const float *X_test, da_int ldx_test,
+                                float *predictions) {
+    return da_svm_predict_s(handle, n_samples, n_features, X_test, ldx_test, predictions);
+}
+
+inline da_status da_svm_decision_function(da_handle handle, da_int n_samples,
+                                          da_int n_features, const double *X_test,
+                                          da_int ldx_test,
+                                          da_svm_decision_function_shape shape,
+                                          double *decision_values, da_int ldd) {
+    return da_svm_decision_function_d(handle, n_samples, n_features, X_test, ldx_test,
+                                      shape, decision_values, ldd);
+}
+
+inline da_status da_svm_decision_function(da_handle handle, da_int n_samples,
+                                          da_int n_features, const float *X_test,
+                                          da_int ldx_test,
+                                          da_svm_decision_function_shape shape,
+                                          float *decision_values, da_int ldd) {
+    return da_svm_decision_function_s(handle, n_samples, n_features, X_test, ldx_test,
+                                      shape, decision_values, ldd);
+}
+
+inline da_status da_svm_score(da_handle handle, da_int n_samples, da_int n_features,
+                              const double *X_test, da_int ldx_test, const double *y_test,
+                              double *score) {
+    return da_svm_score_d(handle, n_samples, n_features, X_test, ldx_test, y_test, score);
+}
+
+inline da_status da_svm_score(da_handle handle, da_int n_samples, da_int n_features,
+                              const float *X_test, da_int ldx_test, const float *y_test,
+                              float *score) {
+    return da_svm_score_s(handle, n_samples, n_features, X_test, ldx_test, y_test, score);
 }
 
 #endif // AOCLDA_CPP_OVERLOADS
