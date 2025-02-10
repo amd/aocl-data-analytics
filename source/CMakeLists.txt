@@ -244,7 +244,7 @@ aoclda_add_dependencies(da_core)
 set(USE_O2 "")
 
 # List of targets that should use vectorised math for release/benchmark builds
-set(USE_VEC_MATH ${DA_SVM})
+set(USE_VEC_MATH ${DA_KERNEL_FUNCTIONS_INTERNAL})
 
 # By default release builds have -O3, here we add -O2 which will override it for
 # the source files in the USE_O2 list, since it will appear after the -O3
