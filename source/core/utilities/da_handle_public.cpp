@@ -90,14 +90,6 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
-        case da_handle_dbscan:
-            (*handle)->alg_handle_d = new da_dbscan::da_dbscan<double>(*(*handle)->err);
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_d = nullptr;
-                return status;
-            }
-            break;
         case da_handle_decision_tree:
             DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
                                            new da_decision_forest::decision_tree<double>(
@@ -212,14 +204,7 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
-        case da_handle_dbscan:
-            (*handle)->alg_handle_s = new da_dbscan::da_dbscan<float>(*(*handle)->err);
-            status = (*handle)->err->get_status();
-            if (status != da_status_success) {
-                (*handle)->alg_handle_s = nullptr;
-                return status;
-            }
-            break;
+
         case da_handle_decision_tree:
             DISPATCHER((*handle)->err,
                        (*handle)->alg_handle_s =
