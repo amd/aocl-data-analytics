@@ -24,6 +24,7 @@
 #undef max
 #include "aoclda.h"
 #include "da_cblas.hh"
+#include "da_std.hpp"
 #include "linear_model.hpp"
 #include "linmod_types.hpp"
 #include "macros.h"
@@ -184,7 +185,7 @@ da_int objfun_logistic_rsc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
     // Store in lincomb[:,k] the Beta_k^T * x for the nsamples samples in the input matrix
     // Store in maxexp the max of lincomb for each sample
     *f = 0;
-    std::fill(maxexp.begin(), maxexp.end(), 0.);
+    da_std::fill(maxexp.begin(), maxexp.end(), 0.);
     for (da_int k = 0; k < nclass - 1; k++) {
         da_int idx = k * nsamples;
         eval_feature_matrix(nmod, &x[k * nmod], nsamples, data->X,
@@ -233,7 +234,7 @@ da_int objgrd_logistic_rsc(da_int n, T *x, T *grad, void *udata,
     if (xnew) {
         // Store in lincomb[:,k] the Beta_k^T * x for the nsamples samples in the input matrix
         // Store in maxexp the max of lincomb for each sample
-        std::fill(maxexp.begin(), maxexp.end(), 0.);
+        da_std::fill(maxexp.begin(), maxexp.end(), 0.);
         for (da_int k = 0; k < nclass - 1; k++) {
             da_int idx = k * nsamples;
             eval_feature_matrix(nmod, &x[k * nmod], nsamples, data->X,
@@ -248,7 +249,7 @@ da_int objgrd_logistic_rsc(da_int n, T *x, T *grad, void *udata,
 
     // compute for all samples i and all variables j with k being the class of sample i:
     // A_ij * (indicator(i, k) - prob(x_i=k|Beta))
-    std::fill(grad, grad + n, 0);
+    da_std::fill(grad, grad + n, 0);
     for (da_int i = 0; i < nsamples; i++) {
         T lnsumexp = exp(-maxexp[i]);
         for (da_int k = 0; k < nclass - 1; k++) {
@@ -336,7 +337,7 @@ da_int objgrd_logistic_two_class(da_int n, T *x, T *grad, void *udata,
 
     // Compute for all samples i and all variables j with k being the class of sample i:
     // A_ij^T * (sigma(Beta*x)-y_i)
-    std::fill(grad, grad + n, 0);
+    da_std::fill(grad, grad + n, 0);
     sum_of_gradients = 0;
 
     // Trick to avoid overflow uses fact that:
@@ -384,15 +385,15 @@ da_int objfun_logistic_ssc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
     // Store in lincomb[:,k] the Beta_k^T * x for the nsamples samples in the input matrix
     // Store in maxexp the max of lincomb for each sample
     *f = 0;
-    std::fill(maxexp.begin(), maxexp.end(), 0.);
-    std::fill(sumexp.begin(), sumexp.end(), 0.);
+    da_std::fill(maxexp.begin(), maxexp.end(), 0.);
+    da_std::fill(sumexp.begin(), sumexp.end(), 0.);
     if (data->intercept) {
         for (da_int k = 0; k < nclass; k++) {
-            std::fill(lincomb.begin() + k * nsamples,
-                      lincomb.begin() + (k + 1) * nsamples, x[n - (nclass - k)]);
+            da_std::fill(lincomb.begin() + k * nsamples,
+                         lincomb.begin() + (k + 1) * nsamples, x[n - (nclass - k)]);
         }
     } else {
-        std::fill(lincomb.begin(), lincomb.end(), 0.);
+        da_std::fill(lincomb.begin(), lincomb.end(), 0.);
     }
 
     // Calculate licomb as X * Beta + Beta_0
@@ -441,14 +442,14 @@ da_int objgrd_logistic_ssc(da_int n, T *x, T *grad, void *udata,
     da_int nfeat = data->nfeat;
 
     if (xnew) {
-        std::fill(maxexp.begin(), maxexp.end(), 0.);
+        da_std::fill(maxexp.begin(), maxexp.end(), 0.);
         if (data->intercept) {
             for (da_int k = 0; k < nclass; k++) {
-                std::fill(lincomb.begin() + k * nsamples,
-                          lincomb.begin() + (k + 1) * nsamples, x[n - (nclass - k)]);
+                da_std::fill(lincomb.begin() + k * nsamples,
+                             lincomb.begin() + (k + 1) * nsamples, x[n - (nclass - k)]);
             }
         } else {
-            std::fill(lincomb.begin(), lincomb.end(), 0.);
+            da_std::fill(lincomb.begin(), lincomb.end(), 0.);
         }
         // Calculate licomb as X * Beta + Beta_0
         da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, nsamples, nclass,
@@ -471,7 +472,7 @@ da_int objgrd_logistic_ssc(da_int n, T *x, T *grad, void *udata,
 
     // Compute for all samples i and all variables j with k being the class of sample i:
     // A_ij * (prob(x_i=k|Beta) - indicator(i, k))
-    std::fill(grad, grad + n, 0);
+    da_std::fill(grad, grad + n, 0);
     for (da_int i = 0; i < nsamples; i++) {
         for (da_int k = 0; k < nclass; k++) {
             gradients_p[k * nsamples + i] =

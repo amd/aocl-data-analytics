@@ -70,11 +70,12 @@ template <typename T> void Get1by1BaseData(DBSCANParamType<T> &param) {
     param.A = convert_vector<double, T>(A);
     param.lda = 1;
     param.min_samples = 1;
-    std::vector<double> expected_rinfo_double{1, 1, 1, 0.5, 1, 30, 2, 0, 0};
+    std::vector<double> expected_rinfo_double{1, 1, 1, 0.5, 1, 30, 2, 1, 1};
+    param.expected_core_sample_indices = std::vector<da_int>{0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo_double);
-    param.expected_labels = std::vector<da_int>{-1};
-    param.expected_n_core_samples = 0;
-    param.expected_n_clusters = 0;
+    param.expected_labels = std::vector<da_int>{0};
+    param.expected_n_core_samples = 1;
+    param.expected_n_clusters = 1;
 }
 
 template <typename T> void GetZeroBaseData(DBSCANParamType<T> &param) {

@@ -28,6 +28,7 @@
 #include "aoclda.h"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_std.hpp"
 #include "decision_forest.hpp"
 #include "decision_tree_options.hpp"
 #include "decision_tree_types.hpp"
@@ -273,7 +274,7 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
         return da_error_bypass(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                                "Memory allocation error");
     }
-    std::iota(features_idx.begin(), features_idx.end(), 0);
+    da_std::iota(features_idx.begin(), features_idx.end(), 0);
 
     return da_status_success;
 }
@@ -281,7 +282,7 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
 template <class T>
 void decision_tree<T>::count_class_occurences(std::vector<da_int> &class_occ,
                                               da_int start_idx, da_int end_idx) {
-    std::fill(class_occ.begin(), class_occ.end(), 0);
+    da_std::fill(class_occ.begin(), class_occ.end(), 0);
     for (da_int i = start_idx; i <= end_idx; i++) {
         da_int idx = samples_idx[i];
         da_int c = y[idx];
@@ -450,7 +451,7 @@ void decision_tree<T>::find_best_split(node<T> &current_node, T feat_thresh,
     // Initialize the split, all nodes to the right child.
     // count_class, samples_idx and feature_values are required to be up to date
     std::copy(count_classes.begin(), count_classes.end(), count_right_classes.begin());
-    std::fill(count_left_classes.begin(), count_left_classes.end(), 0);
+    da_std::fill(count_left_classes.begin(), count_left_classes.end(), 0);
     T right_score = current_node.score, left_score = 0.0;
     da_int ns_left = 0;
     da_int ns_right = current_node.n_samples;
@@ -573,7 +574,7 @@ template <typename T> da_status decision_tree<T>::fit() {
 
     if (!bootstrap) {
         // Take all the samples
-        std::iota(samples_idx.begin(), samples_idx.end(), 0);
+        da_std::iota(samples_idx.begin(), samples_idx.end(), 0);
     } else {
         if (samples_subset == nullptr) {
             // Fill the index vector with a random selection with replacement

@@ -29,6 +29,7 @@
 #include "aoclda_types.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "pairwise_distances.hpp"
 
 namespace ARCH {
@@ -53,7 +54,7 @@ da_status minkowski(da_order order, da_int m, da_int n, da_int k, const T *X, da
         // Go through the columns of D
         for (da_int j = 0; j < n; j++) {
             // Fill the column Dj with zeros
-            std::fill(D + j * ldd, D + j * ldd + m, 0.0);
+            da_std::fill(D + j * ldd, D + j * ldd + m, 0.0);
             // Go through the rows of X (also updating the rows of D)
             for (da_int i = 0; i < m; i++) {
                 // Go through the columns of both X and Y
@@ -69,7 +70,7 @@ da_status minkowski(da_order order, da_int m, da_int n, da_int k, const T *X, da
         // Go through the rows of D
         for (da_int i = 0; i < m; i++) {
             // Fill the row Di with zeros
-            std::fill(D + i * ldd, D + i * ldd + n, 0.0);
+            da_std::fill(D + i * ldd, D + i * ldd + n, 0.0);
             // Go through the columns of X (also updating the columns of D)
             for (da_int j = 0; j < n; j++) {
                 // Go through the columns of both X and Y

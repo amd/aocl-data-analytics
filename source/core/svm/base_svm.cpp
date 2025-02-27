@@ -33,6 +33,7 @@
 #include "aoclda.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "kernel_functions.hpp"
 #include "macros.h"
 #include "options.hpp"
@@ -92,7 +93,7 @@ static void polynomial_wrapper(da_order order, da_int m, da_int n, da_int k, con
  * This handle is inherited by all specialized svm handles.
  *
  * The inheritance scheme is as follows:
- * 
+ *
  *                       BASE_SVM
  *                         /   \
  *                        /     \
@@ -182,7 +183,7 @@ template <typename T> da_status base_svm<T>::compute() {
         // This is because if compute() is called many times one after another, it causes problems in
         // nu variant because in nusvm::initialisation() gradient is not explicitly set to 0, but relies on 0 initialisation here
         // (can be modified if it's unusual design)
-        std::fill(gradient.begin(), gradient.end(), T(0));
+        da_std::fill(gradient.begin(), gradient.end(), T(0));
         response.resize(actual_size);
         alpha.resize(actual_size);
         local_alpha.resize(ws_size);
@@ -207,7 +208,7 @@ template <typename T> da_status base_svm<T>::compute() {
     for (; iter < max_iter; iter++) {
 
         ////////// Outer WSS
-        std::fill(ws_indicator.begin(), ws_indicator.end(), false);
+        da_std::fill(ws_indicator.begin(), ws_indicator.end(), false);
         if (iter == 0) {
             n_selected = 0;
             outer_wss(actual_size, ws_indexes, ws_indicator, n_selected);

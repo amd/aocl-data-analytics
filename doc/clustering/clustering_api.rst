@@ -77,7 +77,7 @@ DBSCAN
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.clustering.DBSCAN(eps=0.5, min_samples=5, metric='euclidean', algorithm='brute', leaf_size=30, p=None, precision='double', check_data=false)
+      .. autoclass:: aoclda.clustering.DBSCAN(min_samples=5, metric='euclidean', algorithm='brute', leaf_size=30, eps=0.5, power=2.0, check_data=false)
          :members:
 
    .. tab-item:: C

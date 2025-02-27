@@ -31,6 +31,7 @@
 #include "basic_statistics.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "lapack_templates.hpp"
 #include "linmod_options.hpp"
 #include "linmod_types.hpp"
@@ -542,14 +543,15 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, const T
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
         }
-        std::fill(predictions, predictions + nsamples, T(0));
+        da_std::fill(predictions, predictions + nsamples, T(0));
         if (nclass == 2) {
             eval_feature_matrix(nmod, this->coef.data(), nsamples, X_temp, scores.data(),
                                 this->intercept, false);
             for (da_int i = 0; i < nsamples; i++)
                 scores[i] > 0 ? predictions[i] = 1 : predictions[i] = 0;
         } else if (logistic_constraint_model == logistic_constraint::rsc) {
-            std::fill(log_proba.begin() + nsamples * (nclass - 1), log_proba.end(), T(1));
+            da_std::fill(log_proba.begin() + nsamples * (nclass - 1), log_proba.end(),
+                         T(1));
             for (da_int k = 0; k < nclass - 1; k++) {
                 da_blas::cblas_gemv(CblasColMajor, CblasNoTrans, nsamples, nfeat, alpha,
                                     X_temp, nsamples, &coef[k * nmod], 1, beta,
@@ -582,9 +584,9 @@ da_status linear_model<T>::evaluate_model(da_int nfeat, da_int nsamples, const T
             // Add the intercept at this stage so that no need to loop later
             if (intercept) {
                 for (da_int k = 0; k < nclass; k++) {
-                    std::fill(scores.begin() + k * nsamples,
-                              scores.begin() + (k + 1) * nsamples,
-                              coef[ncoef - (nclass - k)]);
+                    da_std::fill(scores.begin() + k * nsamples,
+                                 scores.begin() + (k + 1) * nsamples,
+                                 coef[ncoef - (nclass - k)]);
                 }
             }
             // Compute raw prediction = X*beta^T+intercept

@@ -33,6 +33,7 @@
 #include "aoclda.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "macros.h"
 #include "svm.hpp"
 #include <algorithm>
@@ -59,12 +60,12 @@ template <typename T> bool is_lower(T &alpha, const T &y, T &C) {
  * are common for all SVM models that are C problem.
  *
  * This handle is inherited by SVC and SVR.
- * 
+ *
  * The inheritance scheme is as follows:
- * 
+ *
  *                       BASE_SVM
  *                         /   \
- *                        /     \ 
+ *                        /     \
  *                   C-SVM       Nu-SVM
  *                  /     \      /     \
  *                 /       \    /       \
@@ -100,7 +101,7 @@ void csvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
     da_int pos_left = 0, pos_right = size - 1;
     da_int current_index;
     // Fill index_aux with numbers from 0, 1, ..., n
-    std::iota(this->index_aux.begin(), this->index_aux.end(), 0);
+    da_std::iota(this->index_aux.begin(), this->index_aux.end(), 0);
     // Perform argsort
     std::stable_sort(
         this->index_aux.begin(), this->index_aux.end(),

@@ -95,7 +95,7 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                'KMeans': {'pack': clustering_sklearn,
                           'sk_sym': getattr(clustering_sklearn, "KMeans"),
                           'da_sym': kmeans_da},
-                'DBSCAN': {'pack': clustering_sklearn,
+               'DBSCAN': {'pack': clustering_sklearn,
                           'sk_sym': getattr(clustering_sklearn, "DBSCAN"),
                           'da_sym': DBSCAN_da},
                'DecisionTreeClassifier': {'pack': decision_tree_sklearn,
@@ -126,7 +126,7 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
 
 # List of symbols where AMD is chosen over Intel
 AMD_vs_INTEL = ['KMeans', 'LinearRegression', 'KNeighborsClassifier',
-                'Ridge', 'PCA', 'DecisionTreeClassifier']
+                'Ridge', 'PCA', 'DecisionTreeClassifier', 'DBSCAN']
 
 
 def skpatch(*args, print_patched=True):

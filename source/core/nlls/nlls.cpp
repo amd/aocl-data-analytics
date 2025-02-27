@@ -28,6 +28,7 @@
 #include "nlls.hpp"
 #include "aoclda.h"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "macros.h"
 #include "options.hpp"
 #include <cstring>
@@ -112,7 +113,7 @@ template <typename T> da_status nlls<T>::fit(da_int n_coef, T *coef, void *udata
 
     if (n_coef == 0)
         // Initial guess is zeros...
-        std::fill(this->coef.begin(), this->coef.end(), T(0));
+        da_std::fill(this->coef.begin(), this->coef.end(), T(0));
     else {
         status = this->check_1D_array(n_coef, coef, "n_coef", "coef", 0);
         if (status != da_status_success)

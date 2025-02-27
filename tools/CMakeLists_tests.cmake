@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -26,7 +26,6 @@ cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
 project(aocl-da_tests LANGUAGES C CXX)
 
-
 # get gtest from repo
 include(FetchContent)
 FetchContent_Declare(
@@ -43,11 +42,15 @@ FetchContent_MakeAvailable(googletest)
 include(GoogleTest)
 include(CTest)
 
+find_package(OpenMP REQUIRED)
+
 # options
 option(BUILD_ILP64 "ILP64 support" OFF)
 option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
 
-set(COMPILER_FLAGS "" CACHE STRING "Set compiler flags manually.")
+set(COMPILER_FLAGS
+    ""
+    CACHE STRING "Set compiler flags manually.")
 add_compile_options("${COMPILER_FLAGS}")
 
 if(ASAN)
@@ -56,17 +59,31 @@ if(ASAN)
 endif()
 
 # Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
-set(CMAKE_AOCL_ROOT $ENV{AOCL_ROOT} CACHE STRING "AOCL_ROOT directory to be used to find AOCL BLAS/LAPACK/SPARSE/UTILS libraries")
+set(CMAKE_AOCL_ROOT
+    $ENV{AOCL_ROOT}
+    CACHE
+      STRING
+      "AOCL_ROOT directory to be used to find AOCL BLAS/LAPACK/SPARSE/UTILS libraries"
+)
 if(CMAKE_AOCL_ROOT STREQUAL "")
-  message(FATAL_ERROR "CMAKE_AOCL_ROOT is empty. Either set environment variable AOCL_ROOT or set -DCMAKE_AOCL_ROOT=<path_to_AOCL_libs>.")
+  message(
+    FATAL_ERROR
+      "CMAKE_AOCL_ROOT is empty. Either set environment variable AOCL_ROOT or set -DCMAKE_AOCL_ROOT=<path_to_AOCL_libs>."
+  )
 endif()
 
 # Set path to the test suite
-set(DA_SOURCE_PATH "" CACHE STRING "Path to DA unit tests")
+set(DA_SOURCE_PATH
+    ""
+    CACHE STRING "Path to DA unit tests")
 if(DA_SOURCE_PATH STREQUAL "")
-    message(FATAL_ERROR "The path to the test suite needs to be set with DA_SOURCE_PATH.")
+  message(
+    FATAL_ERROR
+      "The path to the test suite needs to be set with DA_SOURCE_PATH.")
 endif()
-set(DA_LIB_PATH "$ENV{AOCL_ROOT}" CACHE STRING "PAth to the DA lib")
+set(DA_LIB_PATH
+    "$ENV{AOCL_ROOT}"
+    CACHE STRING "PAth to the DA lib")
 
 if(BUILD_ILP64)
   set(INT_LIB "ILP64")
@@ -89,27 +106,27 @@ find_path(
 
 # Other AOCL dependencies
 if(WIN32)
-    set(CMAKE_FIND_LIBRARY_PREFIXES "")
-    set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
-    set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
-    set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
-    set(UTILS_NAME "libaoclutils")
-    set(SPARSE_NAME "aoclsparse")
+  set(CMAKE_FIND_LIBRARY_PREFIXES "")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
+  set(BLAS_NAME "AOCL-LibBlis-Win-MT-dll")
+  set(LAPACK_NAME "AOCL-LibFlame-Win-MT-dll")
+  set(UTILS_NAME "libaoclutils")
+  set(SPARSE_NAME "aoclsparse")
 
-    set(BLAS_PATH "${CMAKE_AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
-    set(LAPACK_PATH "${CMAKE_AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
-    set(UTILS_PATH "${CMAKE_AOCL_ROOT}/amd-utils/lib")
-    set(SPARSE_PATH "${CMAKE_AOCL_ROOT}/amd-sparse/lib/${INT_LIB}/shared")
+  set(BLAS_PATH "${CMAKE_AOCL_ROOT}/amd-blis/lib/${INT_LIB}")
+  set(LAPACK_PATH "${CMAKE_AOCL_ROOT}/amd-libflame/lib/${INT_LIB}")
+  set(UTILS_PATH "${CMAKE_AOCL_ROOT}/amd-utils/lib")
+  set(SPARSE_PATH "${CMAKE_AOCL_ROOT}/amd-sparse/lib/${INT_LIB}/shared")
 else() # Linux
-    set(BLAS_NAME "blis-mt")
-    set(LAPACK_NAME "flame")
-    set(UTILS_NAME "aoclutils")
-    set(SPARSE_NAME "aoclsparse")
+  set(BLAS_NAME "blis-mt")
+  set(LAPACK_NAME "flame")
+  set(UTILS_NAME "aoclutils")
+  set(SPARSE_NAME "aoclsparse")
 
-    set(BLAS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
-    set(LAPACK_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
-    set(SPARSE_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
-    set(UTILS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+  set(BLAS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+  set(LAPACK_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+  set(SPARSE_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
+  set(UTILS_PATH ${CMAKE_AOCL_ROOT}/lib_${INT_LIB})
 endif()
 
 find_library(
@@ -139,7 +156,6 @@ if(NOT WIN32)
   endif()
 endif()
 
-
 file(GLOB_RECURSE DA_TEST ${DA_SOURCE_PATH}/tests/unit_tests/*/*_public.c*)
 set(TEST_DATA_PATH "${DA_SOURCE_PATH}/tests/data/")
 message("Targets")
@@ -152,14 +168,26 @@ foreach(test_source ${DA_TEST})
     list(APPEND test_source ${utils_source})
   endif()
   # Exclude cmake produced source files
-  if (${test_target} MATCHES ".*CMake.*")
+  if(${test_target} MATCHES ".*CMake.*")
     continue()
   endif()
   add_executable(${test_target} ${test_source})
-  target_include_directories(${test_target} PRIVATE ${DA_INCLUDE_DIR} ${test_path})
-  target_link_libraries(${test_target} PRIVATE ${AOCL_DA} ${SPARSE} ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME} gtest_main gmock_main)
-  target_compile_definitions(${test_target} PRIVATE ${AOCLDA_ILP64} DATA_DIR="${TEST_DATA_PATH}")
-  if (${test_target} MATCHES ".*_nog.*")
+  target_include_directories(${test_target} PRIVATE ${DA_INCLUDE_DIR}
+                                                    ${test_path})
+  target_link_libraries(
+    ${test_target}
+    PRIVATE ${AOCL_DA}
+            ${SPARSE}
+            ${LAPACK}
+            ${BLAS}
+            ${UTILS}
+            ${FORTRAN_RUNTIME}
+            gtest_main
+            gmock_main
+            OpenMP::OpenMP_CXX)
+  target_compile_definitions(
+    ${test_target} PRIVATE ${AOCLDA_ILP64} DATA_DIR="${TEST_DATA_PATH}")
+  if(${test_target} MATCHES ".*_nog.*")
     add_test(${test_target} ${test_target})
   else()
     gtest_discover_tests(${test_target})

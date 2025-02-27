@@ -27,6 +27,7 @@
 
 #include "aoclda.h"
 #include "basic_statistics.hpp"
+#include "da_std.hpp"
 #include "macros.h"
 #include <algorithm>
 #include <cmath>
@@ -152,7 +153,7 @@ da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
                 scale[i] = std::sqrt(scale[i]);
             }
         }
-        std::fill(amean, amean + length, 0.0);
+        da_std::fill(amean, amean + length, 0.0);
         internal_shift = &amean;
 
     } else if (scale_is_null) {
@@ -171,7 +172,7 @@ da_status standardize(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
                 return status;
             }
         }
-        std::fill(var, var + length, 1.0);
+        da_std::fill(var, var + length, 1.0);
         internal_scale = &var;
     } else {
         // Shift and scale are both to be used, but one of both might contain only zeros

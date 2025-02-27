@@ -27,6 +27,7 @@
 aoclda.factorization module
 """
 
+import numpy as np
 from ._aoclda.clustering import pybind_kmeans, pybind_DBSCAN
 
 
@@ -261,8 +262,13 @@ class DBSCAN():
         """
 
         if A.dtype == "float32":
+            self.eps=np.float32(self.eps)
+            self.power=np.float32(self.power)
             self.DBSCAN = self.DBSCAN_single
             self.DBSCAN_double = None
+        else:
+            self.eps=np.float64(self.eps)
+            self.power=np.float64(self.power)
 
         self.DBSCAN.pybind_fit(A, self.eps, self.power)
         return self

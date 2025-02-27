@@ -30,6 +30,7 @@
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_std.hpp"
 #include "knn_options.hpp"
 #include "macros.h"
 #include "pairwise_distances.hpp"
@@ -156,7 +157,7 @@ inline void smaller_values_and_indices(da_int n, T *D, da_int k, da_int *k_ind, 
                                        da_int init_index, bool init = true) {
     // Initialize the first k values of k_ind with init_index, init_index+1, ..., init_index+k-1
     if (init)
-        std::iota(k_ind, k_ind + k, init_index);
+        da_std::iota(k_ind, k_ind + k, init_index);
     // Find the index of the maximum element and the corresponding maximum value.
     da_int max_index = da_blas::cblas_iamax(k, k_dist, 1);
     T max_val = k_dist[max_index];
@@ -183,7 +184,7 @@ inline void sorted_n_dist_n_ind(da_int n, T *k_dist, da_int *k_ind, T *n_dist,
                                 da_int *n_ind, da_int *perm_vector, bool return_distance,
                                 bool get_squares) {
     // We sort with respect to partial distances and then we use the sorted array to reorder the array of indices.
-    std::iota(perm_vector, perm_vector + n, 0);
+    da_std::iota(perm_vector, perm_vector + n, 0);
 
     std::stable_sort(perm_vector, perm_vector + n,
                      [&](da_int i, da_int j) { return k_dist[i] < k_dist[j]; });

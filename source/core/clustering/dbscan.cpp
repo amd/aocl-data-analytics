@@ -30,6 +30,7 @@
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_std.hpp"
 #include "da_vector.hpp"
 #include "dbscan_options.hpp"
 #include "dbscan_types.hpp"
@@ -288,8 +289,11 @@ template <typename T> da_status dbscan<T>::compute() {
 template <typename T> da_status dbscan<T>::dbscan_clusters() {
     da_status status = da_status_success;
 
-    if (algorithm == brute_serial) {
-        std::fill(labels.begin(), labels.end(), UNVISITED);
+    // Work with min_samples - 1 since we are not counting points as being in their own neighbourhood
+    da_int min_samples_m1 = min_samples - 1;
+
+    if (algorithm == brute_serial || omp_get_max_threads() == 1) {
+        da_std::fill(labels.begin(), labels.end(), UNVISITED);
 
         // Serial loop for computing DBSCAN clusters
         for (da_int i = 0; i < n_samples; i++) {
@@ -301,7 +305,7 @@ template <typename T> da_status dbscan<T>::dbscan_clusters() {
                     continue;
 
                 // Find the neighbors of the current sample
-                if ((da_int)neighbors[i].size() < min_samples) {
+                if ((da_int)neighbors[i].size() < min_samples_m1) {
                     //Epsilon neighborhood is too small to form a cluster; label as noise
                     labels[i] = NOISE;
                 } else {
@@ -327,7 +331,7 @@ template <typename T> da_status dbscan<T>::dbscan_clusters() {
 
                         labels[neigh] = n_clusters;
 
-                        if ((da_int)neighbors[neigh].size() >= min_samples) {
+                        if ((da_int)neighbors[neigh].size() >= min_samples_m1) {
                             // This point is also a core sample point so mark it as such and add its neighbors to the search vector
                             search_indices.append(neighbors[neigh]);
                             core_sample_indices.push_back(neigh);
@@ -353,7 +357,7 @@ template <typename T> da_status dbscan<T>::dbscan_clusters() {
 
 #pragma omp parallel default(none)                                                       \
     shared(labels, neighbors, n_clusters, n_core_samples, core_sample_indices,           \
-               min_samples, n_samples, status, label_map)
+               min_samples_m1, n_samples, status, label_map)
         {
             bool local_failure = false;
 
@@ -364,7 +368,7 @@ template <typename T> da_status dbscan<T>::dbscan_clusters() {
 #pragma omp for schedule(dynamic, 32) reduction(merge_unordered_maps_red : label_map)    \
     nowait
                 for (da_int i = 0; i < n_samples; i++) {
-                    if ((da_int)neighbors[i].size() >= min_samples) {
+                    if ((da_int)neighbors[i].size() >= min_samples_m1) {
                         // This is a core point
                         da_int tmp_label_i;
 #pragma omp atomic read

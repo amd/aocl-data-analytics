@@ -26,6 +26,7 @@
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_std.hpp"
 #include "hartigan_wong.hpp"
 #include "kmeans_loop_unrolls.hpp"
 #include "kmeans_options.hpp"
@@ -315,7 +316,7 @@ template <typename T> da_status kmeans<T>::compute() {
     }
 
     // Ensure the extra padding in workc1 (for vectorization) won't interfere with any computation
-    std::fill(workc1.end() - 8, workc1.end(), std::numeric_limits<T>::infinity());
+    da_std::fill(workc1.end() - 8, workc1.end(), std::numeric_limits<T>::infinity());
 
     // Based on what algorithms we are using, allocate the remaining memory
     try {
@@ -877,8 +878,8 @@ template <typename T> void kmeans<T>::compute_centre_half_distances() {
                              workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0,
                              false, true);
     // For each centre, compute the half distance to next closest centre and store in workc1
-    std::fill(workc1.begin(), workc1.begin() + n_clusters,
-              std::numeric_limits<T>::infinity());
+    da_std::fill(workc1.begin(), workc1.begin() + n_clusters,
+                 std::numeric_limits<T>::infinity());
 
     for (da_int j = 0; j < n_clusters; j++) {
         for (da_int i = 0; i < j; i++) {
@@ -1336,11 +1337,11 @@ template <typename T> da_int kmeans<T>::convergence_test() {
 
 /* Initialize the centres, if needed, for the start of k-means computation*/
 template <typename T> void kmeans<T>::initialize_centres() {
-    std::fill(previous_cluster_centres->begin(), previous_cluster_centres->end(), 0.0);
+    da_std::fill(previous_cluster_centres->begin(), previous_cluster_centres->end(), 0.0);
     switch (init_method) {
     case random_samples: {
         // Select randomly (without replacement) from the data points
-        std::iota(work_int2.begin(), work_int2.end(), 0);
+        da_std::iota(work_int2.begin(), work_int2.end(), 0);
         std::sample(work_int2.begin(), work_int2.end(), std::begin(work_int1), n_clusters,
                     mt_gen);
         for (da_int j = 0; j < n_clusters; j++) {

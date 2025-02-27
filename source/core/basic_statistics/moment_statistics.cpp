@@ -27,6 +27,7 @@
 
 #include "aoclda.h"
 #include "basic_statistics.hpp"
+#include "da_std.hpp"
 #include "macros.h"
 #include <algorithm>
 #include <cmath>
@@ -72,7 +73,7 @@ da_status mean(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const 
 
     switch (axis) {
     case da_axis_row:
-        std::fill(amean, amean + n, 0.0);
+        da_std::fill(amean, amean + n, 0.0);
 
         for (da_int i = 0; i < p; i++) {
             for (da_int j = 0; j < n; j++) {
@@ -132,7 +133,7 @@ da_status geometric_mean(da_order order, da_axis axis_in, da_int n_in, da_int p_
 
     switch (axis) {
     case da_axis_row:
-        std::fill(gmean, gmean + n, 0.0);
+        da_std::fill(gmean, gmean + n, 0.0);
         ;
 
         for (da_int i = 0; i < p; i++) {
@@ -206,7 +207,7 @@ da_status harmonic_mean(da_order order, da_axis axis_in, da_int n_in, da_int p_i
     // Note: harmonic mean is defined for zero entries, but we need to guard against exceptions nonetheless
     switch (axis) {
     case da_axis_row:
-        std::fill(hmean, hmean + n, 0.0);
+        da_std::fill(hmean, hmean + n, 0.0);
 
         for (da_int i = 0; i < p; i++) {
             for (da_int j = 0; j < n; j++) {
@@ -269,7 +270,7 @@ da_status variance(da_order order, da_axis axis_in, da_int n_in, da_int p_in, co
     // There is potential vectorization of the loops in the mean and variance computations here
     switch (axis) {
     case da_axis_row:
-        std::fill(var, var + n, 0.0);
+        da_std::fill(var, var + n, 0.0);
 
         for (da_int i = 0; i < p; i++) {
             for (da_int j = 0; j < n; j++) {
@@ -356,8 +357,8 @@ da_status skewness(da_order order, da_axis axis_in, da_int n_in, da_int p_in, co
 
     switch (axis) {
     case da_axis_row: {
-        std::fill(var, var + n, 0.0);
-        std::fill(skew, skew + n, 0.0);
+        da_std::fill(var, var + n, 0.0);
+        da_std::fill(skew, skew + n, 0.0);
 
         for (da_int i = 0; i < p; i++) {
             T tmp, tmp2;
@@ -441,8 +442,8 @@ da_status kurtosis(da_order order, da_axis axis_in, da_int n_in, da_int p_in, co
 
     switch (axis) {
     case da_axis_row:
-        std::fill(var, var + n, 0.0);
-        std::fill(kurt, kurt + n, 0.0);
+        da_std::fill(var, var + n, 0.0);
+        da_std::fill(kurt, kurt + n, 0.0);
 
         for (da_int i = 0; i < p; i++) {
             T tmp, tmp2;
@@ -523,7 +524,7 @@ da_status moment(da_order order, da_axis axis_in, da_int n_in, da_int p_in, cons
 
     switch (axis) {
     case da_axis_row:
-        std::fill(mom, mom + n, 0.0);
+        da_std::fill(mom, mom + n, 0.0);
 
         for (da_int i = 0; i < p; i++) {
             for (da_int j = 0; j < n; j++) {

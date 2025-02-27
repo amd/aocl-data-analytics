@@ -29,6 +29,7 @@
 #include "aoclda.h"
 #include "basic_statistics.hpp"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "macros.h"
 #include "options.hpp"
 #include "svm_options.hpp"
@@ -397,7 +398,7 @@ template <typename T> da_status svm<T>::compute() {
     }
 
     // Necessary to reset some variables to ensure svm being called multiple times on the same handle works
-    std::fill(is_sv.begin(), is_sv.end(), false);
+    da_std::fill(is_sv.begin(), is_sv.end(), false);
     n_sv = 0;
     try {
         n_sv_per_class.resize(n_class);
@@ -405,7 +406,7 @@ template <typename T> da_status svm<T>::compute() {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
-    std::fill(n_sv_per_class.begin(), n_sv_per_class.end(), 0);
+    da_std::fill(n_sv_per_class.begin(), n_sv_per_class.end(), 0);
 
     // Get the options set by user
     T C, epsilon, nu, tolerance, coef0, tau;
