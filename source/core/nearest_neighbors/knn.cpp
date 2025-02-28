@@ -294,7 +294,7 @@ da_status knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
         da_int task_thread = (da_int)omp_get_thread_num();
         da_int D_index = task_thread * this->n_samples * xtest_block_size;
         da_int xtest_subblock = xtest_block_size;
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(static)
         for (da_int jblock = 0; jblock < n_blocks_test; jblock++) {
             if (jblock == n_blocks_test - 1 && block_rem_test > 0)
                 xtest_subblock = block_rem_test;
