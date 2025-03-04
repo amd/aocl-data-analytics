@@ -36,6 +36,9 @@ class linmod():
     """
     Linear models.
 
+    Note that linear models currently do not accept array slices (e.g. ``X[0:2, 0:3]``) as input.
+    Please use copies (e.g. ``X[0:2, 0:3].copy()``) instead.
+
     Args:
 
         mod (str): Which linear model to compute.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -63,16 +63,23 @@ void get_size(da_order &order, py::array_t<T> &X, da_int &m, da_int &n, da_int &
     } else {
         m = X.shape()[0], n = X.shape()[1];
 
-        auto X_buffer = X.request();
-        bool X_c_style = (X_buffer.strides[X_buffer.ndim - 1] == sizeof(T));
-        if (X_c_style) {
-            // X is C-style array
-            ldx = n;
-            order = row_major;
-        } else {
-            // X is F-style array
+        if (m == 1) {
+            // Special case for single row which is both C and Fortran contiguous
             ldx = m;
             order = column_major;
+        } else {
+
+            auto X_buffer = X.request();
+            bool X_c_style = (X_buffer.strides[X_buffer.ndim - 1] == sizeof(T));
+            if (X_c_style) {
+                // X is C-style array
+                ldx = X.strides()[0] / sizeof(T);
+                order = row_major;
+            } else {
+                // X is F-style array
+                ldx = X.strides()[1] / sizeof(T);
+                order = column_major;
+            }
         }
     }
 }
@@ -149,11 +156,11 @@ class pyda_handle {
         numpy_order X_order;
         if (X_c_style) {
             // X is C-style array
-            ldx = n_cols;
+            ldx = X.strides()[0] / sizeof(T);
             X_order = c_contiguous;
         } else {
             // X is F-style array
-            ldx = n_rows;
+            ldx = X.strides()[1] / sizeof(T);
             X_order = f_contiguous;
         }
 
@@ -171,6 +178,42 @@ class pyda_handle {
         return;
     }
 };
+
+/*
+ * Helper function to copy a numpy array, taking care that the array may be a slice and therefore might not be contiguous
+ */
+template <typename T> py::array_t<T> copy_numpy_array(py::array_t<T> &X) {
+
+    da_int m, n, ldx;
+    da_order order;
+
+    // Query X for its size and ordering
+    get_size(order, X, m, n, ldx);
+
+    // Create the output array as a numpy array with contiguous data
+    size_t shape[2]{(size_t)m, (size_t)n};
+    size_t strides[2];
+    if (order == column_major) {
+        strides[0] = sizeof(T);
+        strides[1] = sizeof(T) * m;
+    } else {
+        strides[0] = sizeof(T) * n;
+        strides[1] = sizeof(T);
+    }
+
+    py::array_t<T> copy_X(shape, strides);
+
+    // Determine the size of each contiguous block to copy
+    size_t block_size = (order == column_major) ? m : n;
+    size_t n_blocks = (order == column_major) ? n : m;
+
+    for (size_t i = 0; i < n_blocks; i++) {
+        memcpy(copy_X.mutable_data() + i * block_size, X.mutable_data() + i * ldx,
+               block_size * sizeof(T));
+    }
+
+    return copy_X;
+}
 
 void status_to_exception(da_status status);
 

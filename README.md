@@ -128,3 +128,19 @@ On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the loca
 By default, cmake will compile the bindings but will not install them.
 If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.
 When using the bindings on Windows, the Intel Fortran runtime must be available. This can be done by setting the environment variable `INTEL_FCOMPILER`.
+
+Building the documentation on Linux
+-----------------------------------
+
+The documentation is based on Doxygen, Sphinx, Breathe and the underlying requirements of
+Python3 packages (and its dependencies) listed under `doc/requirements.txt` and a modern LaTeX distribution with at least the
+packages:
+`amsmath`, `array`, `courier`, `doxygen`, `etoc`,
+`fancyhdr`, `fixltx2e`, `fontenc`, `geometry`,
+`graphicx`, `helvet`, `hyperref`, `ifthen`,
+`ifxetex`, `inputenc`, `natbib`, `newunicodechar`,
+`sectsty`, `textcomp`, `tocloft`, and `wasysym`.
+
+To build the documentation, the Python interfaces must be enabled and built (`-DBUILD_PYTHON=On`) as well as the
+unit-tests (`–DBUILD_GTEST=On`). Set the option `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats).
+

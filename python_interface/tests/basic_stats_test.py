@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -130,6 +130,7 @@ def test_general_functions_functionality1D(get_data1D, da_func, other_func,
     # Compute mean
     da_result = da_func(X, axis=da_axis)
     da_result2 = da_func(X2D, axis=da_axis)
+
     # check expected results
     ex_result = other_func(X, axis=np_axis)
 
