@@ -292,7 +292,7 @@ template <typename T> da_status dbscan<T>::dbscan_clusters() {
     // Work with min_samples - 1 since we are not counting points as being in their own neighbourhood
     da_int min_samples_m1 = min_samples - 1;
 
-    if (algorithm == brute_serial || omp_get_max_threads() == 1) {
+    if (algorithm == brute_serial || omp_get_max_threads() <= 32) {
         da_std::fill(labels.begin(), labels.end(), UNVISITED);
 
         // Serial loop for computing DBSCAN clusters

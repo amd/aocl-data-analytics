@@ -246,6 +246,16 @@ set(USE_O2 "")
 # List of targets that should use vectorised math for release/benchmark builds
 set(USE_VEC_MATH ${DA_KERNEL_FUNCTIONS_INTERNAL})
 
+# Check if AOCC compiler is used on Linux
+set(IS_AOCC_LINUX -1)
+if(UNIX AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  execute_process(COMMAND ${CMAKE_C_COMPILER} --version OUTPUT_VARIABLE clang_full_version_string)
+  # Check if we are using AOCC
+  # If AOCC is part of the clang version string then IS_AOCC_LINUX returns the position of the "AOCC" string
+  # If it is not found then IS_AOCC_LINUX returns -1
+  string(FIND ${clang_full_version_string} "AOCC" IS_AOCC_LINUX)
+endif()
+
 # By default release builds have -O3, here we add -O2 which will override it for
 # the source files in the USE_O2 list, since it will appear after the -O3
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL
@@ -255,8 +265,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL
       set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS "-O2")
     endif()
     # Add flag to enable vectorised math given that amdlibm has been linked
-    if(UNIX AND SOURCE IN_LIST USE_VEC_MATH)
-      set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS "-fveclib=AMDLIBM")
+    if(IS_AOCC_LINUX GREATER -1 AND SOURCE IN_LIST USE_VEC_MATH)
+        set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS "-fveclib=AMDLIBM")
     endif()
   endforeach()
 endif()
@@ -273,7 +283,7 @@ target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS}
                                       ${FORTRAN_RUNTIME})
 
 # If we use AOCC then link libm library
-if(UNIX AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(IS_AOCC_LINUX GREATER -1)
   target_link_libraries(aocl-da PRIVATE amdlibm)
 endif()
 

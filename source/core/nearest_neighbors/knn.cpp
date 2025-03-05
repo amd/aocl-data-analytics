@@ -268,6 +268,7 @@ da_status knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
                                            da_int *n_ind, T *n_dist, da_int n_neigh,
                                            bool return_distance) {
     std::vector<T> D;
+    const da_int n_samples_local = this->n_samples; // Cache n_samples locally
     da_int xtest_block_size = std::min(XTEST_BLOCK, n_queries);
     da_int n_blocks_test = 0, block_rem_test = 0;
     da_utils::blocking_scheme(n_queries, xtest_block_size, n_blocks_test, block_rem_test);
@@ -288,16 +289,16 @@ da_status knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
 #pragma omp parallel default(none)                                                       \
     shared(xtest_block_size, n_blocks_test, block_rem_test, n_features, X_test,          \
                n_queries, n_ind, n_dist, n_neigh, ldx_test, return_distance, D,          \
-               threading_error, xtrain_block_size, n_blocks_train,                       \
-               block_rem_train) private(private_status) num_threads(n_threads)
+               threading_error, xtrain_block_size, n_blocks_train, block_rem_train,      \
+               n_samples_local) private(private_status) num_threads(n_threads)
     {
-        da_int task_thread = (da_int)omp_get_thread_num();
-        da_int D_index = task_thread * this->n_samples * xtest_block_size;
-        da_int xtest_subblock = xtest_block_size;
-#pragma omp for schedule(static)
+#pragma omp for schedule(dynamic)
         for (da_int jblock = 0; jblock < n_blocks_test; jblock++) {
-            if (jblock == n_blocks_test - 1 && block_rem_test > 0)
-                xtest_subblock = block_rem_test;
+            da_int task_thread = (da_int)omp_get_thread_num();
+            da_int D_index = task_thread * n_samples_local * xtest_block_size;
+            da_int xtest_subblock = (jblock == n_blocks_test - 1 && block_rem_test > 0)
+                                        ? block_rem_test
+                                        : xtest_block_size;
             // If the remaining numbers of queries is ge than the block size
             // the size of the submatrix we are computing is xtest_block_size
             private_status = kneighbors_kernel<XTRAIN_BLOCK>(
