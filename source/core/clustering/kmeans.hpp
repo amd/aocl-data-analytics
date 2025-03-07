@@ -259,6 +259,8 @@ template <typename T> class kmeans : public basic_handle<T> {
 
     da_status predict(da_int k_samples, da_int k_features, const T *Y, da_int ldy,
                       da_int *Y_labels);
+
+    void refresh();
 };
 
 } // namespace da_kmeans

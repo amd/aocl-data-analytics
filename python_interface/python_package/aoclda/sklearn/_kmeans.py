@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -86,9 +86,14 @@ class kmeans(kmeans_sklearn):
                                     max_iter=self.max_iter, seed=self.seed, C=init,
                                     algorithm=algorithm_internal, tol=self.tol)
         elif n_init == "auto":
-            self.kmeans = kmeans_da(n_clusters, initialization_method=self.init, n_init=10,
-                                    max_iter=self.max_iter, seed=self.seed, tol=self.tol,
-                                    algorithm=algorithm_internal)
+            if init == "k-means++":
+                n_init_internal = 1
+            else:
+                n_init_internal = 10
+
+            self.kmeans = kmeans_da(n_clusters, initialization_method=self.init,
+                                    n_init=n_init_internal, max_iter=self.max_iter, seed=self.seed,
+                                    tol=self.tol, algorithm=algorithm_internal)
         else:
             self.kmeans = kmeans_da(n_clusters, initialization_method=self.init,
                                     n_init=self.n_init, max_iter=self.max_iter, tol=self.tol,

@@ -142,12 +142,30 @@ da_status kmeans<T>::get_result(da_result query, da_int *dim, da_int *result) {
     return da_status_success;
 };
 
+template <typename T> void kmeans<T>::refresh() {
+
+    // Reset some internal class variables to their defaults
+    best_n_iter = 0;
+    current_n_iter = 0;
+    warn_maxit_reached = false;
+    converged = 0;
+    normc = 0.0;
+    max_block_size = 0;
+    n_blocks = 0;
+    block_rem = 0;
+    ldworkcs1 = 0;
+    best_inertia = 0.0;
+    current_inertia = 0.0;
+}
+
 /* Store details about user's data matrix in preparation for k-means computation */
 template <typename T>
 da_status kmeans<T>::set_data(da_int n_samples, da_int n_features, const T *A_in,
                               da_int lda_in) {
 
     // Guard against errors due to multiple calls using the same class instantiation
+    this->refresh();
+
     if (A_temp) {
         delete[] (A_temp);
         A_temp = nullptr;
@@ -307,8 +325,8 @@ template <typename T> da_status kmeans<T>::compute() {
         current_labels->resize(n_samples, 0);
         previous_labels->resize(n_samples, 0);
         if (n_init > 1) {
-            best_cluster_centres->resize(n_clusters * n_features);
-            best_labels->resize(n_samples);
+            best_cluster_centres->resize(n_clusters * n_features, 0.0);
+            best_labels->resize(n_samples, 0);
         }
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
@@ -1391,6 +1409,7 @@ template <typename T> void kmeans<T>::initialize_centres() {
 template <typename T> void kmeans<T>::kmeans_plusplus() {
 
     // Compute squared norms of the data points and store in works1
+    da_std::fill(works1.begin(), works1.end(), (T)0.0);
     for (da_int j = 0; j < n_features; j++) {
         for (da_int i = 0; i < n_samples; i++) {
             works1[i] += A[j * lda + i] * A[j * lda + i];
