@@ -43,32 +43,42 @@ Clustering APIs
       .. _da_kmeans_set_data:
 
       .. doxygenfunction:: da_kmeans_set_data_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_kmeans_set_data_d
+         :project: da
 
       .. _da_kmeans_set_init_centres:
 
       .. doxygenfunction:: da_kmeans_set_init_centres_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_kmeans_set_init_centres_d
+         :project: da
 
       .. _da_kmeans_compute:
 
       .. doxygenfunction:: da_kmeans_compute_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_kmeans_compute_d
+         :project: da
 
       .. _da_kmeans_transform:
 
       .. doxygenfunction:: da_kmeans_transform_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_kmeans_transform_d
+         :project: da
 
       .. _da_kmeans_predict:
 
       .. doxygenfunction:: da_kmeans_predict_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_kmeans_predict_d
+         :project: da
 
 DBSCAN
 ========================================
@@ -85,11 +95,15 @@ DBSCAN
       .. _da_dbscan_set_data:
 
       .. doxygenfunction:: da_dbscan_set_data_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_dbscan_set_data_d
+         :project: da
 
       .. _da_dbscan_compute:
 
       .. doxygenfunction:: da_dbscan_compute_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_dbscan_compute_d
+         :project: da

@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -41,51 +41,68 @@ Nonlinear Data Fitting APIs
       .. _da_nlls_callbacks:
 
       .. doxygentypedef:: da_resfun_t_s
-        :outline:
+         :project: da
+         :outline:
       .. doxygentypedef:: da_resfun_t_d
+         :project: da
 
       .. _da_nlls_callbacks_j:
 
       .. doxygentypedef:: da_resgrd_t_s
-        :outline:
+         :project: da
+         :outline:
       .. doxygentypedef:: da_resgrd_t_d
+         :project: da
 
       .. _da_nlls_callbacks_hf:
 
       .. doxygentypedef:: da_reshes_t_s
-        :outline:
+         :project: da
+         :outline:
       .. doxygentypedef:: da_reshes_t_d
+         :project: da
 
       .. _da_nlls_callbacks_hp:
 
       .. doxygentypedef:: da_reshp_t_s
-        :outline:
+         :project: da
+         :outline:
       .. doxygentypedef:: da_reshp_t_d
+         :project: da
 
       .. _da_nlls_define_residuals:
 
       .. doxygenfunction:: da_nlls_define_residuals_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_nlls_define_residuals_d
+         :project: da
 
       .. _da_nlls_define_weights:
 
       .. doxygenfunction:: da_nlls_define_weights_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_nlls_define_weights_d
+         :project: da
 
       .. _da_nlls_define_bounds:
 
       .. doxygenfunction:: da_nlls_define_bounds_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_nlls_define_bounds_d
+         :project: da
 
       .. _da_nlls_fit:
 
       .. doxygenfunction:: da_nlls_fit_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_nlls_fit_d
+         :project: da
 
       .. _da_optim_info_t:
 
       .. doxygenenum:: da_optim_info_t_
+         :project: da

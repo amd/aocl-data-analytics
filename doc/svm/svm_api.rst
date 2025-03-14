@@ -50,41 +50,57 @@ Support Vector Machine APIs
       .. _da_svm_select_model:
 
       .. doxygenfunction:: da_svm_select_model_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_svm_select_model_d
+         :project: da
 
       .. _da_svm_set_data:
 
       .. doxygenfunction:: da_svm_set_data_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_svm_set_data_d
+         :project: da
 
       .. _da_svm_compute:
 
       .. doxygenfunction:: da_svm_compute_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_svm_compute_d
+         :project: da
 
       .. _da_svm_predict:
 
       .. doxygenfunction:: da_svm_predict_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_svm_predict_d
+         :project: da
 
       .. _da_svm_decision_function:
 
       .. doxygenfunction:: da_svm_decision_function_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_svm_decision_function_d
+         :project: da
 
       .. _da_svm_score:
 
       .. doxygenfunction:: da_svm_score_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_svm_score_d
+         :project: da
 
       .. doxygentypedef:: da_svm_model
+         :project: da
       .. doxygenenum:: da_svm_model_
+         :project: da
 
       .. doxygentypedef:: da_svm_decision_function_shape
+         :project: da
       .. doxygenenum:: da_svm_decision_function_shape_
+         :project: da

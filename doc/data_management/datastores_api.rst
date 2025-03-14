@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@ Datastores
 ----------
 
 .. doxygentypedef:: da_datastore
+   :project: da
 
 .. _api_init:
 
@@ -41,7 +42,9 @@ Initialize and destroy datastores
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_datastore_init
+   :project: da
 .. doxygenfunction:: da_datastore_destroy
+   :project: da
 
 
 .. _api_load_data:
@@ -49,32 +52,44 @@ Initialize and destroy datastores
 Load data into a datastore
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfunction:: da_data_load_from_csv
+   :project: da
 .. doxygenfunction:: da_data_hconcat
+   :project: da
 
 
 .. _da_data_load_row:
 
 .. doxygenfunction:: da_data_load_row_int
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_row_str
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_row_real_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_row_real_d
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_row_uint8
+   :project: da
 
 .. _da_data_load_col:
 
 .. doxygenfunction:: da_data_load_col_int
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_col_str
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_col_real_d
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_col_real_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_load_col_uint8
+   :project: da
 
 
 .. _api_data_selection:
@@ -83,11 +98,17 @@ Data selection
 ^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_select_columns
+   :project: da
 .. doxygenfunction:: da_data_select_rows
+   :project: da
 .. doxygenfunction:: da_data_select_slice
+   :project: da
 .. doxygenfunction:: da_data_select_non_missing
+   :project: da
 .. doxygenfunction:: da_data_select_remove_columns
+   :project: da
 .. doxygenfunction:: da_data_select_remove_rows
+   :project: da
 
 .. _api_data_extraction:
 
@@ -97,24 +118,33 @@ Data extraction
 .. _da_data_extract_selection:
 
 .. doxygenfunction:: da_data_extract_selection_int
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_extract_selection_real_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_extract_selection_real_d
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_extract_selection_uint8
+   :project: da
 
 .. _da_data_extract_column:
 
 .. doxygenfunction:: da_data_extract_column_int
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_extract_column_real_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_extract_column_real_d
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_extract_column_uint8
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_extract_column_str
+   :project: da
 
 .. _api_column_header:
 
@@ -122,8 +152,11 @@ Column headers
 ^^^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_label_column
+   :project: da
 .. doxygenfunction:: da_data_get_col_idx
+   :project: da
 .. doxygenfunction:: da_data_get_col_label
+   :project: da
 
 
 .. _api_data_edition:
@@ -132,27 +165,37 @@ Data editing
 ^^^^^^^^^^^^
 
 .. doxygenfunction:: da_data_get_n_rows
+   :project: da
 .. doxygenfunction:: da_data_get_n_cols
+   :project: da
 
 .. _da_data_get_element:
 
 .. doxygenfunction:: da_data_get_element_int
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_get_element_real_d
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_get_element_real_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_get_element_uint8
+   :project: da
 
 .. _da_data_set_element:
 
 .. doxygenfunction:: da_data_set_element_int
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_set_element_real_d
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_set_element_real_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_data_set_element_uint8
+   :project: da
 
 .. _api_data_miscellaneous:
 
@@ -164,4 +207,6 @@ The :cpp:type:`da_datastore` functionality also includes
 :ref:`error handling <datastore_error_api>` capabilities.
 
 .. doxygentypedef:: da_order
+   :project: da
 .. doxygenenum:: da_order_
+   :project: da

@@ -37,10 +37,16 @@ Distance Metric APIs
         .. _da_pairwise_distances:
 
         .. doxygenfunction:: da_pairwise_distances_s
+            :project: da
             :outline:
         .. doxygenfunction:: da_pairwise_distances_d
+           :project: da
 
         .. doxygentypedef:: da_metric
+           :project: da
         .. doxygenenum:: da_metric_
+           :project: da
         .. doxygentypedef:: da_data_types
+           :project: da
         .. doxygenenum:: da_data_types_
+           :project: da

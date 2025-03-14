@@ -111,7 +111,7 @@ template <typename T> da_status knn<T>::set_params() {
                                "Unexpected error while reading the optional parameters.");
     internal_metric = da_metric(metric);
 
-    if (metric == da_euclidean) {
+    if (metric == da_euclidean || (metric == da_minkowski && p == T(2.0))) {
         this->get_squares = true;
         internal_metric = da_sqeuclidean;
     }
@@ -285,27 +285,30 @@ da_status knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
     da_utils::blocking_scheme(n_samples, xtrain_block_size, n_blocks_train,
                               block_rem_train);
     da_status private_status = da_status_success;
+    da_int xtest_subblock = xtest_block_size;
+    da_int samplex_x_xtest_block = this->n_samples * xtest_block_size;
+    da_int xtest_block_x_n_neigh = xtest_block_size * n_neigh;
     // Iterate through the number of blocks
+    if (block_rem_test > 0)
+        n_blocks_test = n_blocks_test - 1;
 #pragma omp parallel default(none)                                                       \
     shared(xtest_block_size, n_blocks_test, block_rem_test, n_features, X_test,          \
                n_queries, n_ind, n_dist, n_neigh, ldx_test, return_distance, D,          \
                threading_error, xtrain_block_size, n_blocks_train, block_rem_train,      \
-               n_samples_local) private(private_status) num_threads(n_threads)
+               xtest_subblock, samplex_x_xtest_block,                                    \
+               xtest_block_x_n_neigh) private(private_status) num_threads(n_threads)
     {
 #pragma omp for schedule(dynamic)
         for (da_int jblock = 0; jblock < n_blocks_test; jblock++) {
             da_int task_thread = (da_int)omp_get_thread_num();
-            da_int D_index = task_thread * n_samples_local * xtest_block_size;
-            da_int xtest_subblock = (jblock == n_blocks_test - 1 && block_rem_test > 0)
-                                        ? block_rem_test
-                                        : xtest_block_size;
+            da_int D_index = task_thread * samplex_x_xtest_block;
             // If the remaining numbers of queries is ge than the block size
             // the size of the submatrix we are computing is xtest_block_size
             private_status = kneighbors_kernel<XTRAIN_BLOCK>(
                 xtrain_block_size, n_blocks_train, block_rem_train, xtest_subblock,
                 n_features, X_test + jblock * xtest_block_size, ldx_test, &D[D_index],
-                n_ind + jblock * xtest_block_size * n_neigh,
-                n_dist + jblock * xtest_block_size * n_neigh, n_neigh, return_distance);
+                n_ind + jblock * xtest_block_x_n_neigh,
+                n_dist + jblock * xtest_block_x_n_neigh, n_neigh, return_distance);
             if (private_status != da_status_success)
 #pragma omp atomic write
                 threading_error = 1;
@@ -313,7 +316,15 @@ da_status knn<T>::kneighbors_blocked_Xtest(da_int n_queries, da_int n_features,
     }
     if (threading_error == 1)
         return da_status_memory_error;
-
+    // Do the remainder
+    if (block_rem_test > 0)
+        private_status = kneighbors_kernel<XTRAIN_BLOCK>(
+            xtrain_block_size, n_blocks_train, block_rem_train, block_rem_test,
+            n_features, X_test + n_blocks_test * xtest_block_size, ldx_test, D.data(),
+            n_ind + n_blocks_test * xtest_block_x_n_neigh,
+            n_dist + n_blocks_test * xtest_block_x_n_neigh, n_neigh, return_distance);
+    if (private_status != da_status_success)
+        return da_status_memory_error;
     return da_status_success;
 }
 

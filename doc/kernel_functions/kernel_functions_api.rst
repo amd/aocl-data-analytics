@@ -42,24 +42,32 @@ Kernel Functions APIs
       .. _da_rbf_kernel:
 
       .. doxygenfunction:: da_rbf_kernel_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_rbf_kernel_d
+         :project: da
 
       .. da_linear_kernel:
 
       .. doxygenfunction:: da_linear_kernel_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_linear_kernel_d
+         :project: da
 
       .. _da_polynomial_kernel:
 
       .. doxygenfunction:: da_polynomial_kernel_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_polynomial_kernel_d
+         :project: da
 
       .. _da_sigmoid_kernel:
 
       .. doxygenfunction:: da_sigmoid_kernel_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_sigmoid_kernel_d
+         :project: da
 

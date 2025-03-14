@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -31,13 +31,18 @@ Result Extraction APIs
 .. _da_handle_get_result:
 
 .. doxygenfunction:: da_handle_get_result_int
+   :project: da
    :outline:
 .. doxygenfunction:: da_handle_get_result_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_handle_get_result_d
+   :project: da
 
 ``da_result`` enums
 -------------------
 
 .. doxygentypedef:: da_result
+   :project: da
 .. doxygenenum:: da_result_
+   :project: da

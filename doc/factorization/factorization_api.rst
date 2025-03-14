@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -42,23 +42,31 @@ Principal component analysis and the SVD
       .. _da_pca_set_data:
 
       .. doxygenfunction:: da_pca_set_data_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_pca_set_data_d
+         :project: da
 
       .. _da_pca_compute:
 
       .. doxygenfunction:: da_pca_compute_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_pca_compute_d
+         :project: da
 
       .. _da_pca_transform:
 
       .. doxygenfunction:: da_pca_transform_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_pca_transform_d
+         :project: da
 
       .. _da_pca_inverse_transform:
 
       .. doxygenfunction:: da_pca_inverse_transform_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_pca_inverse_transform_d
+         :project: da

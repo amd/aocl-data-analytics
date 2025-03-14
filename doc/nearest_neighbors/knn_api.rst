@@ -42,29 +42,39 @@
       .. _da_knn_set_training_data:
 
       .. doxygenfunction:: da_knn_set_training_data_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_knn_set_training_data_d
+         :project: da
 
       .. _da_knn_kneighbors:
 
       .. doxygenfunction:: da_knn_kneighbors_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_knn_kneighbors_d
+         :project: da
 
       .. _da_knn_classes:
 
       .. doxygenfunction:: da_knn_classes_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_knn_classes_d
+         :project: da
 
       .. _da_knn_predict_proba:
 
       .. doxygenfunction:: da_knn_predict_proba_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_knn_predict_proba_d
+         :project: da
 
       .. _da_knn_predict:
 
       .. doxygenfunction:: da_knn_predict_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_knn_predict_d
+         :project: da
