@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -177,7 +177,7 @@ TEST(linmod, invalidInput) {
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, nullptr, pred),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, X, nullptr),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 0, n, X, pred),
               da_status_invalid_array_dimension);
     float Xs[2] = {1., 2.};
@@ -187,7 +187,7 @@ TEST(linmod, invalidInput) {
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, nullptr, preds),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, Xs, nullptr),
-              da_status_invalid_input);
+              da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 0, n, Xs, preds),
               da_status_invalid_array_dimension);
 
@@ -312,14 +312,6 @@ TEST(linmod, incompatibleOptions) {
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "svd"), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
     EXPECT_EQ(da_options_set_string(handle_d, "optim method", "qr"), da_status_success);
-    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
-
-    // Coord without scaling
-    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "none"), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "coord"),
-              da_status_success);
-    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
-    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "centering"), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_incompatible_options);
 
     // QR solver with regularization
@@ -538,6 +530,8 @@ TEST(linmod, ReturnLastSol) {
     EXPECT_EQ(da_options_set_int(handle_d, "optim iteration limit", 2),
               da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "print level", 0), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle_d, "scaling", "scale only"),
+              da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
     EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
     EXPECT_EQ(da_linmod_fit<double>(handle_d), da_status_success);

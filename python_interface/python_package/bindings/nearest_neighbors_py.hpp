@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -73,7 +73,7 @@ class knn_classifier : public pyda_handle {
     }
     ~knn_classifier() { da_handle_destroy(&handle); }
 
-    template <typename T> void fit(py::array_t<T> X, py::array y) {
+    template <typename T> void fit(py::array_t<T> X, py::array y, T p) {
         da_status status;
 
         da_int n_samples, n_features, ldx;
@@ -88,6 +88,10 @@ class knn_classifier : public pyda_handle {
         } else {
             status = da_options_set(handle, "storage order", "column-major");
         }
+        exception_check(status);
+
+        status = da_options_set(handle, "minkowski parameter", T(p));
+        exception_check(status);
 
         status = da_knn_set_training_data(handle, n_samples, n_features, X.data(), ldx,
                                           y_internal.data());

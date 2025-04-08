@@ -86,6 +86,8 @@ Library Reference Documentation
    trees_forests/df_intro
    metrics/metrics_intro
    nearest_neighbors/knn_intro
+   kernel_functions/kernel_functions_intro
+   svm/svm_intro
 
 .. toctree::
     :maxdepth: 1

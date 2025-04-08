@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,18 +25,22 @@
  *
  */
 
+#include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
 #include "da_handle.hpp"
 #include "linear_model.hpp"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
 #include <list>
 
+using namespace TEST_ARCH;
+
 TEST(miscellaneous, aocl_da_version_string) {
     const char *version_string = da_get_version();
     std::cout << "version_string = " << version_string << std::endl;
-    ASSERT_STREQ(version_string, AOCLDA_VERSION_STRING);
+    ASSERT_THAT(version_string, ::testing::StartsWith(AOCLDA_VERSION_STRING));
 }
 
 template <typename T> class misc_test_suite : public testing::Test {

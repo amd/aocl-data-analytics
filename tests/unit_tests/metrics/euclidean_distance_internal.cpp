@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
 
 #include "../utest_utils.hpp"
 #include "aoclda.h"
-#include "euclidean_distance.hpp"
+#include "pairwise_distances.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
@@ -432,10 +432,11 @@ TYPED_TEST(EDTest, Euclidean_Distance) {
             std::vector<TypeParam> X_norms(test.X_norms);
             std::vector<TypeParam> Y_norms(test.Y_norms);
 
-            euclidean_distance(test.order, test.m, test.n, test.k, test.X.data(),
-                               test.ldx, test.Y.data(), test.ldy, D.data(), test.ldd,
-                               X_norms.data(), param.compute_X_norms, Y_norms.data(),
-                               param.compute_Y_norms, param.square, param.X_is_Y);
+            TEST_ARCH::euclidean_distance(
+                test.order, test.m, test.n, test.k, test.X.data(), test.ldx,
+                test.Y.data(), test.ldy, D.data(), test.ldd, X_norms.data(),
+                param.compute_X_norms, Y_norms.data(), param.compute_Y_norms,
+                param.square, param.X_is_Y);
 
             check_answer(test, param, D.data(), X_norms.data(), Y_norms.data());
         }

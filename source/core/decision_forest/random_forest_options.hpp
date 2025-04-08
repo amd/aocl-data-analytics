@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,17 +25,17 @@
  *
  */
 
-#ifndef FOREST_OPTIONS_HPP
-#define FOREST_OPTIONS_HPP
-
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "decision_tree_types.hpp"
+#include "macros.h"
 #include "options.hpp"
-#include "random_forest.hpp"
 
-namespace da_random_forest {
-using namespace da_decision_tree;
+namespace ARCH {
+
+namespace da_decision_forest {
+
+using namespace da_decision_tree_types;
 
 template <class T>
 inline da_status register_forest_options(da_options::OptionRegistry &opts,
@@ -160,5 +160,6 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts,
 
     return status;
 }
-} // namespace da_random_forest
-#endif
+} // namespace da_decision_forest
+
+} // namespace ARCH

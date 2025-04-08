@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -356,16 +356,7 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
 
     get_size_and_axis(axis, order, axis_enum, X, standardize_sz, m, n, ldx);
 
-    // Create parameters for potential copy_X of original numpy array
-    size_t shape[2]{(size_t)m, (size_t)n};
-    size_t strides[2];
-    if (order == column_major) {
-        strides[0] = sizeof(T);
-        strides[1] = sizeof(T) * m;
-    } else {
-        strides[0] = sizeof(T) * n;
-        strides[1] = sizeof(T);
-    }
+    da_int ldx_copy = (order == column_major) ? m : n;
     T *dummy = nullptr;
 
     if (shift.has_value() && scale.has_value()) {
@@ -382,11 +373,10 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
                 status_to_exception(status);
                 return X;
             } else {
-                py::array_t<T> copy_X(shape, strides);
-                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
-                status =
-                    da_standardize(order, axis_enum, m, n, copy_X.mutable_data(), ldx,
-                                   dof, 1, shift->mutable_data(), scale->mutable_data());
+                py::array_t<T> copy_X = copy_numpy_array(X);
+                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
+                                        ldx_copy, dof, 1, shift->mutable_data(),
+                                        scale->mutable_data());
                 status_to_exception(status);
                 return copy_X;
             }
@@ -398,11 +388,10 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
                 status_to_exception(status);
                 return X;
             } else {
-                py::array_t<T> copy_X(shape, strides);
-                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
-                status =
-                    da_standardize(order, axis_enum, m, n, copy_X.mutable_data(), ldx,
-                                   dof, 0, shift->mutable_data(), scale->mutable_data());
+                py::array_t<T> copy_X = copy_numpy_array(X);
+                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
+                                        ldx_copy, dof, 0, shift->mutable_data(),
+                                        scale->mutable_data());
                 status_to_exception(status);
                 return copy_X;
             }
@@ -419,10 +408,9 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
                 status_to_exception(status);
                 return X;
             } else {
-                py::array_t<T> copy_X(shape, strides);
-                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                py::array_t<T> copy_X = copy_numpy_array(X);
                 status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx, dof, 1, shift->mutable_data(), dummy);
+                                        ldx_copy, dof, 1, shift->mutable_data(), dummy);
                 status_to_exception(status);
                 return copy_X;
             }
@@ -433,10 +421,9 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
                 status_to_exception(status);
                 return X;
             } else {
-                py::array_t<T> copy_X(shape, strides);
-                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                py::array_t<T> copy_X = copy_numpy_array(X);
                 status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx, dof, 0, shift->mutable_data(), dummy);
+                                        ldx_copy, dof, 0, shift->mutable_data(), dummy);
                 status_to_exception(status);
                 return copy_X;
             }
@@ -453,10 +440,9 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
                 status_to_exception(status);
                 return X;
             } else {
-                py::array_t<T> copy_X(shape, strides);
-                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                py::array_t<T> copy_X = copy_numpy_array(X);
                 status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx, dof, 1, dummy, scale->mutable_data());
+                                        ldx_copy, dof, 1, dummy, scale->mutable_data());
                 status_to_exception(status);
                 return copy_X;
             }
@@ -467,10 +453,9 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
                 status_to_exception(status);
                 return X;
             } else {
-                py::array_t<T> copy_X(shape, strides);
-                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                py::array_t<T> copy_X = copy_numpy_array(X);
                 status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx, dof, 0, dummy, scale->mutable_data());
+                                        ldx_copy, dof, 0, dummy, scale->mutable_data());
                 status_to_exception(status);
                 return copy_X;
             }
@@ -486,10 +471,9 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
                 status_to_exception(status);
                 return X;
             } else {
-                py::array_t<T> copy_X(shape, strides);
-                memcpy(copy_X.mutable_data(), X.mutable_data(), sizeof(T) * X.size());
+                py::array_t<T> copy_X = copy_numpy_array(X);
                 status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx, dof, 0, dummy, dummy);
+                                        ldx_copy, dof, 0, dummy, dummy);
                 status_to_exception(status);
                 return copy_X;
             }

@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -50,38 +50,50 @@ Decision trees
       .. _da_tree_set_training_data:
 
       .. doxygenfunction:: da_tree_set_training_data_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_tree_set_training_data_d
+         :project: da
 
       .. _da_tree_fit:
 
       .. doxygenfunction:: da_tree_fit_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_tree_fit_d
+         :project: da
 
       .. _da_tree_predict:
 
       .. doxygenfunction:: da_tree_predict_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_tree_predict_d
+         :project: da
 
       .. _da_tree_predict_proba:
 
       .. doxygenfunction:: da_tree_predict_proba_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_tree_predict_proba_d
+         :project: da
 
       .. _da_tree_predict_log_proba:
 
       .. doxygenfunction:: da_tree_predict_log_proba_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_tree_predict_log_proba_d
+         :project: da
 
       .. _da_tree_score:
 
       .. doxygenfunction:: da_tree_score_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_tree_score_d
+         :project: da
 
 
 .. _da_decision_forests_apis:
@@ -103,35 +115,47 @@ Decision forests
       .. _da_forest_set_training_data:
 
       .. doxygenfunction:: da_forest_set_training_data_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_forest_set_training_data_d
+         :project: da
 
       .. _da_forest_fit:
 
       .. doxygenfunction:: da_forest_fit_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_forest_fit_d
+         :project: da
 
       .. _da_forest_predict:
 
       .. doxygenfunction:: da_forest_predict_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_forest_predict_d
+         :project: da
 
       .. _da_forest_predict_proba:
 
       .. doxygenfunction:: da_forest_predict_proba_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_forest_predict_proba_d
+         :project: da
 
       .. _da_forest_predict_log_proba:
 
       .. doxygenfunction:: da_forest_predict_log_proba_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_forest_predict_log_proba_d
+         :project: da
 
       .. _da_forest_score:
 
       .. doxygenfunction:: da_forest_score_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_forest_score_d
+         :project: da

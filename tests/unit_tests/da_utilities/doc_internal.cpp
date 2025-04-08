@@ -47,14 +47,15 @@ namespace {
 // Handle type and descriptive names
 // Add new ones here
 const static std::map<da_handle_type, std::string> htypes{
-    {da_handle_pca, "principal component analysis"},
-    {da_handle_linmod, "linear models"},
-    {da_handle_kmeans, "k-means clustering"},
+    {da_handle_pca, "Principal Component Analysis"},
+    {da_handle_linmod, "Linear Models"},
+    {da_handle_kmeans, "k-means Clustering"},
     {da_handle_dbscan, "DBSCAN clustering"},
-    {da_handle_decision_tree, "decision trees"},
-    {da_handle_decision_forest, "decision forests"},
-    {da_handle_knn, "k-nearest neighbors"},
-    {da_handle_nlls, "nonlinear least squares"},
+    {da_handle_decision_tree, "Decision Trees"},
+    {da_handle_decision_forest, "Decision Forests"},
+    {da_handle_knn, "k-Nearest Neighbors"},
+    {da_handle_nlls, "Nonlinear Least Squares"},
+    {da_handle_svm, "Support Vector Machines"},
 };
 
 void options_print(da_handle_type htype) {
@@ -117,7 +118,7 @@ TEST(DocOptions, RST_handle) {
         std::cout << "\n" << htype.second << std::endl;
         std::cout << "==============================================\n" << std::endl;
         options_print_rst(htype.first,
-                          ":strong:`Table of options for " + htype.second + ".`");
+                          ":strong:`Table of Options for " + htype.second + ".`");
         std::cout << std::endl;
     }
 }

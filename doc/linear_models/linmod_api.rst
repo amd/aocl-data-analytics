@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -37,36 +37,47 @@ Linear Model APIs
 
    .. tab-item:: C
 
-      .. doxygentypedef:: linmod_model
-      .. doxygenenum:: linmod_model_
-
       .. _da_linmod_select_model:
 
       .. doxygenfunction:: da_linmod_select_model_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_linmod_select_model_d
+         :project: da
 
       .. _da_linmod_define_features:
 
       .. doxygenfunction:: da_linmod_define_features_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_linmod_define_features_d
+         :project: da
 
       .. _da_linmod_fit:
 
       .. doxygenfunction:: da_linmod_fit_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_linmod_fit_d
+         :project: da
 
       .. _da_linmod_fit_start:
 
       .. doxygenfunction:: da_linmod_fit_start_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_linmod_fit_start_d
+         :project: da
 
       .. _da_linmod_evaluate_model:
 
       .. doxygenfunction:: da_linmod_evaluate_model_s
+         :project: da
          :outline:
       .. doxygenfunction:: da_linmod_evaluate_model_d
+         :project: da
 
+      .. doxygentypedef:: linmod_model
+         :project: da
+      .. doxygenenum:: linmod_model_
+         :project: da

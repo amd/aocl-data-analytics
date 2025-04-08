@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -22,7 +22,10 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = missing-module-docstring
+# pylint: disable = missing-module-docstring,missing-function-docstring,invalid-name
+"""
+Linear models Python test script
+"""
 
 import numpy as np
 import pytest
@@ -90,11 +93,6 @@ def test_linear_regression_error_exits(numpy_precision, numpy_order):
     # solving ridge with qr
     with pytest.raises(RuntimeError):
         lmod = linmod("mse", solver='qr', reg_alpha=0, reg_lambda=1)
-        lmod.fit(X, y)
-
-    # coordinate descent without scaling
-    with pytest.raises(RuntimeError):
-        lmod = linmod("mse", solver='coord', scaling='none')
         lmod.fit(X, y)
 
     # NaN checking

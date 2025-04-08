@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,9 +25,12 @@
  *
  */
 
+#include "random_forest_public.hpp"
 #include "aoclda.h"
 #include "da_handle.hpp"
-#include "random_forest.hpp"
+#include "macros.h"
+
+using namespace random_forest_public;
 
 da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
                                         da_int n_features, da_int n_class,
@@ -39,15 +42,10 @@ da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<double> *forest =
-        dynamic_cast<da_random_forest::random_forest<double> *>(handle->alg_handle_d);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-
-    return forest->set_training_data(n_samples, n_features, X, ldx, y, n_class);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_set_data<da_decision_forest::random_forest<double>, double>(
+            handle, n_samples, n_features, n_class, X, ldx, y)));
 }
 
 da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
@@ -60,15 +58,10 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<float> *forest =
-        dynamic_cast<da_random_forest::random_forest<float> *>(handle->alg_handle_s);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-
-    return forest->set_training_data(n_samples, n_features, X, ldx, y, n_class);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_set_data<da_decision_forest::random_forest<float>, float>(
+            handle, n_samples, n_features, n_class, X, ldx, y)));
 }
 
 da_status da_forest_fit_d(da_handle handle) {
@@ -80,14 +73,10 @@ da_status da_forest_fit_d(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<double> *forest =
-        dynamic_cast<da_random_forest::random_forest<double> *>(handle->alg_handle_d);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->fit();
+    DISPATCHER(
+        handle->err,
+        return (random_forest_fit<da_decision_forest::random_forest<double>, double>(
+            handle)));
 }
 da_status da_forest_fit_s(da_handle handle) {
     if (!handle)
@@ -98,14 +87,9 @@ da_status da_forest_fit_s(da_handle handle) {
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<float> *forest =
-        dynamic_cast<da_random_forest::random_forest<float> *>(handle->alg_handle_s);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->fit();
+    DISPATCHER(handle->err,
+               return (random_forest_fit<da_decision_forest::random_forest<float>, float>(
+                   handle)));
 }
 
 da_status da_forest_predict_d(da_handle handle, da_int n_samples, da_int n_features,
@@ -117,15 +101,12 @@ da_status da_forest_predict_d(da_handle handle, da_int n_samples, da_int n_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<double> *forest =
-        dynamic_cast<da_random_forest::random_forest<double> *>(handle->alg_handle_d);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->predict(n_samples, n_features, X_test, ldx_test, y_pred);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_predict<da_decision_forest::random_forest<double>, double>(
+            handle, n_samples, n_features, X_test, ldx_test, y_pred)));
 }
+
 da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_features,
                               const float *X_test, da_int ldx_test, da_int *y_pred) {
     if (!handle)
@@ -135,14 +116,10 @@ da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_featu
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<float> *forest =
-        dynamic_cast<da_random_forest::random_forest<float> *>(handle->alg_handle_s);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->predict(n_samples, n_features, X_test, ldx_test, y_pred);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_predict<da_decision_forest::random_forest<float>, float>(
+            handle, n_samples, n_features, X_test, ldx_test, y_pred)));
 }
 
 da_status da_forest_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
@@ -155,15 +132,11 @@ da_status da_forest_predict_proba_d(da_handle handle, da_int n_samples, da_int n
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<double> *forest =
-        dynamic_cast<da_random_forest::random_forest<double> *>(handle->alg_handle_d);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->predict_proba(n_samples, n_features, X_test, ldx_test, y_pred, n_class,
-                                 ldy);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_predict_proba<da_decision_forest::random_forest<double>,
+                                            double>(handle, n_samples, n_features, X_test,
+                                                    ldx_test, y_pred, n_class, ldy)));
 }
 da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
                                     const float *X_test, da_int ldx_test, float *y_pred,
@@ -175,15 +148,11 @@ da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<float> *forest =
-        dynamic_cast<da_random_forest::random_forest<float> *>(handle->alg_handle_s);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->predict_proba(n_samples, n_features, X_test, ldx_test, y_pred, n_class,
-                                 ldy);
+    DISPATCHER(
+        handle->err,
+        return (
+            random_forest_predict_proba<da_decision_forest::random_forest<float>, float>(
+                handle, n_samples, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
 }
 
 da_status da_forest_predict_log_proba_d(da_handle handle, da_int n_obs, da_int n_features,
@@ -196,15 +165,11 @@ da_status da_forest_predict_log_proba_d(da_handle handle, da_int n_obs, da_int n
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
-    da_random_forest::random_forest<double> *forest =
-        dynamic_cast<da_random_forest::random_forest<double> *>(handle->alg_handle_d);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->predict_log_proba(n_obs, n_features, X_test, ldx_test, y_pred, n_class,
-                                     ldy);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_predict_log_proba<da_decision_forest::random_forest<double>,
+                                                double>(handle, n_obs, n_features, X_test,
+                                                        ldx_test, y_pred, n_class, ldy)));
 }
 
 da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_obs, da_int n_features,
@@ -217,15 +182,11 @@ da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_obs, da_int n
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    da_random_forest::random_forest<float> *forest =
-        dynamic_cast<da_random_forest::random_forest<float> *>(handle->alg_handle_s);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-    return forest->predict_log_proba(n_obs, n_features, X_test, ldx_test, y_pred, n_class,
-                                     ldy);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_predict_log_proba<da_decision_forest::random_forest<float>,
+                                                float>(handle, n_obs, n_features, X_test,
+                                                       ldx_test, y_pred, n_class, ldy)));
 }
 
 da_status da_forest_score_d(da_handle handle, da_int n_samples, da_int n_features,
@@ -238,15 +199,10 @@ da_status da_forest_score_d(da_handle handle, da_int n_samples, da_int n_feature
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    da_random_forest::random_forest<double> *forest =
-        dynamic_cast<da_random_forest::random_forest<double> *>(handle->alg_handle_d);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-
-    return forest->score(n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_score<da_decision_forest::random_forest<double>, double>(
+            handle, n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy)));
 }
 
 da_status da_forest_score_s(da_handle handle, da_int n_samples, da_int n_features,
@@ -259,13 +215,8 @@ da_status da_forest_score_s(da_handle handle, da_int n_samples, da_int n_feature
         return da_error(
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
-    da_random_forest::random_forest<float> *forest =
-        dynamic_cast<da_random_forest::random_forest<float> *>(handle->alg_handle_s);
-    if (forest == nullptr)
-        return da_error(
-            handle->err, da_status_invalid_handle_type,
-            "handle was not initialized with handle_type=da_handle_decision_forest or "
-            "handle is invalid.");
-
-    return forest->score(n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy);
+    DISPATCHER(
+        handle->err,
+        return (random_forest_score<da_decision_forest::random_forest<float>, float>(
+            handle, n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy)));
 }

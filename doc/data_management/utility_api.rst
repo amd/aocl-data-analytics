@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -32,15 +32,22 @@ Utility APIs
 The following functions are provided for your convenience.
 
 .. doxygenfunction:: da_delete_string_array
+   :project: da
 
 .. doxygenfunction:: da_check_data_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_check_data_d
+   :project: da
 
 .. doxygenfunction:: da_switch_order_copy_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_switch_order_copy_d
+   :project: da
 
 .. doxygenfunction:: da_switch_order_in_place_s
+   :project: da
    :outline:
 .. doxygenfunction:: da_switch_order_in_place_d
+   :project: da

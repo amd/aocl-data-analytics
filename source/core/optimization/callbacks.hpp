@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -25,11 +25,10 @@
  *
  */
 
-#ifndef CALLBACKS_HPP
-#define CALLBACKS_HPP
-#include "aoclda.h"
-#include <cmath>
+#include "macros.h"
 #include <functional>
+
+namespace ARCH {
 
 /* Generic function pointers to user callbacks for
  * optimization function / gradient and monitoring
@@ -91,11 +90,26 @@ template <typename T> struct meta_stepcb {
 };
 template <typename T> using stepfun_t = typename meta_stepcb<T>::type;
 
+/** function declaration meta_stepchkcb
+ *  -----------------------------------
+ * Input: n>0, x[n] iterate vector,
+ *        usrdata: pointer to user data, and
+ * Output: *optim: optimality measure (dual gap, etc...)
+ * Must return 0 on successful eval and nonzero to indicate that function could
+ * not be evaluated, some solvers don't have recovery capability.
+ */
+template <typename T> struct meta_stepchkcb {
+    static_assert(std::is_floating_point<T>::value,
+                  "Step function arguments must be floating point");
+    using type = std::function<da_int(da_int n, T *x, void *usrdata, T *optim)>;
+};
+template <typename T> using stepchk_t = typename meta_stepchkcb<T>::type;
+
 /** User monitoring call-back declaration meta_moncb
  *  ------------------------------------------------
  * Input: n>0, x[n] iterate vector
  *        val = f(x), info[100] information vector
- * Must return 0 to indicate that the solver should continue; 
+ * Must return 0 to indicate that the solver should continue;
  * otherwise, by returning non-zero, it
  * requests to interrupt the process and exit.
  */
@@ -141,4 +155,4 @@ template <typename T> struct meta_reshpcb {
 };
 template <typename T> using reshp_t = typename meta_reshpcb<T>::type;
 
-#endif
+} // namespace ARCH

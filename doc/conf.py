@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -45,7 +45,6 @@ extensions = ['sphinxcontrib.bibtex', 'breathe', 'sphinx.ext.napoleon',
               'sphinx.ext.autodoc', 'sphinx_collapse', 'sphinx_design']
 bibtex_bibfiles = ['refs.bib']
 bibtex_reference_style = 'author_year'
-breathe_default_project = 'aocl-da'
 
 # -- Option for generating output conditional on cmake INTERNAL_DOC variable -
 exclude_patterns = ['**/doc/trees_forests/df_intro.rst']

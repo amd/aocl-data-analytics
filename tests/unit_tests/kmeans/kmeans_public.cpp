@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -248,6 +248,10 @@ TYPED_TEST(KMeansTest, MultipleCalls) {
         if (count == 1) {
             // Triggers the code path where the user re-uses a handle, meaning an illegal value of n_clusters hasn't been caught
             EXPECT_EQ(da_options_set_int(handle, "n_clusters", 56), da_status_success);
+            if (param.initialization_method == "supplied") {
+                EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
+                          da_status_success);
+            }
             EXPECT_EQ(da_kmeans_compute<TypeParam>(handle),
                       da_status_incompatible_options);
         }

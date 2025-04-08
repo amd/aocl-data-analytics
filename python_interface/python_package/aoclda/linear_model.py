@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -35,6 +35,9 @@ from ._aoclda.linear_model import pybind_linmod
 class linmod():
     """
     Linear models.
+
+    Note that linear models currently do not accept array slices (e.g. ``X[0:2, 0:3]``) as input.
+    Please use copies (e.g. ``X[0:2, 0:3].copy()``) instead.
 
     Args:
 
@@ -157,6 +160,9 @@ class linmod():
                 self.x0 = np.float64(self.x0)
             if self.progress_factor is not None:
                 self.progress_factor = np.float64(self.progress_factor)
+
+        if y.dtype.kind in np.typecodes["AllInteger"]:
+            y = y.astype(X.dtype, copy=False)
 
         self.linmod.pybind_fit(X, y, x0=self.x0, progress_factor=self.progress_factor,
                         reg_lambda=self.reg_lambda, reg_alpha=self.reg_alpha, tol=self.tol)

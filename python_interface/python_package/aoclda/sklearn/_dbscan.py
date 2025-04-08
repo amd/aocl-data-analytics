@@ -39,7 +39,7 @@ class DBSCAN(DBSCAN_sklearn):
     """
 
     def __init__(self, eps=0.5, *, min_samples=5, metric='euclidean', metric_params=None,
-                 algorithm='auto', leaf_size=30, p=2.0, n_jobs=None):
+                 algorithm='auto', leaf_size=30, p=None, n_jobs=None):
 
         # Supported attributes
         self.eps = eps
@@ -47,7 +47,11 @@ class DBSCAN(DBSCAN_sklearn):
         self.algorithm = algorithm
         self.metric = metric
         self.leaf_size = leaf_size
-        self.p = p
+        if p is None:
+            self.p = 2
+        else:
+            self.p = p
+
 
         # Not supported yet
         self.metric_params = metric_params

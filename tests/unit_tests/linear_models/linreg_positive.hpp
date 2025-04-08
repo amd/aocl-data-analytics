@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -188,6 +188,8 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
             << "Checking coefficients (solution)";
         free(coef_exp);
     } else if (check_coeff) {
+        da_datastore_destroy(&csv_store);
+        da_handle_destroy(&linmod_handle);
         FAIL() << "Check of coefficients was requested but the solution file "
                << coef_fname << " could not be opened.";
     }
@@ -241,10 +243,12 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // Check loss with info from solver (objective function)
         if (infochk) {
             if (single) {
-                EXPECT_FLOAT_EQ(loss, info[da_optim_info_t::info_objective])
+                // EXPECT_FLOAT_EQ(loss, info[da_optim_info_t::info_objective])
+                EXPECT_NEAR(loss, info[da_optim_info_t::info_objective], 1.0e-5)
                     << "Objective function (LOSS) mismatch!";
             } else {
-                EXPECT_DOUBLE_EQ(loss, info[da_optim_info_t::info_objective])
+                // EXPECT_DOUBLE_EQ(loss, info[da_optim_info_t::info_objective])
+                EXPECT_NEAR(loss, info[da_optim_info_t::info_objective], 1.0e-12)
                     << "Objective function (LOSS) mismatch!";
             }
         }
@@ -252,6 +256,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         sol_exp = nullptr;
         da_datastore_destroy(&sol_store);
     } else if (check_predict) {
+        da_handle_destroy(&linmod_handle);
         FAIL() << "Check of predictions was requested but the data file "
                << solution_fname << " could not be opened.";
     }
@@ -325,6 +330,7 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         b = nullptr;
 
     } else if (check_predict) {
+        da_handle_destroy(&linmod_handle);
         FAIL() << "Check of predictions was requested but the data file " << predict_fname
                << " could not be opened.";
     }

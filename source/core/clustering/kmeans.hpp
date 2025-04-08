@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,39 +21,28 @@
  *
  * ************************************************************************ */
 
-#ifndef KMEANS_HPP
-#define KMEANS_HPP
-
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
 
 #include "aoclda.h"
 #include "basic_handle.hpp"
-#include "da_cblas.hh"
 #include "da_error.hpp"
-#include "da_omp.hpp"
-#include "da_utils.hpp"
-#include "euclidean_distance.hpp"
-#include "kmeans_options.hpp"
 #include "kmeans_types.hpp"
-#include "lapack_templates.hpp"
-#include <iostream>
+#include "macros.h"
 #include <random>
 #include <string>
 
+namespace ARCH {
+
 namespace da_kmeans {
 
+using namespace da_kmeans_types;
+
 /* k-means class */
-template <typename T> class da_kmeans : public basic_handle<T> {
+template <typename T> class kmeans : public basic_handle<T> {
   public:
-    ~da_kmeans() {
-        // Destructor needs to handle arrays that were allocated due to row major storage of input data
-        if (C_temp)
-            delete[] (C_temp);
-        if (A_temp)
-            delete[] (A_temp);
-    }
+    ~kmeans();
 
   private:
     // n x p (samples x features)
@@ -207,18 +196,18 @@ template <typename T> class da_kmeans : public basic_handle<T> {
 
     // Function pointers which will be set when the algorithm has been chosen
 
-    void (da_kmeans<T>::*single_iteration)(bool, da_int);
+    void (kmeans<T>::*single_iteration)(bool, da_int);
 
-    void (da_kmeans<T>::*initialize_algorithm)();
+    void (kmeans<T>::*initialize_algorithm)();
 
-    void (da_kmeans<T>::*lloyd_iteration_block)(bool, da_int, const T *, da_int, T *, T *,
-                                                T *, da_int *, da_int *, T *, da_int);
+    void (kmeans<T>::*lloyd_iteration_block)(bool, da_int, const T *, da_int, T *, T *,
+                                             T *, da_int *, da_int *, T *, da_int);
 
-    void (da_kmeans<T>::*predict_block)(bool, da_int, const T *, da_int, T *, T *, T *,
-                                        da_int *, da_int *, T *, da_int);
+    void (kmeans<T>::*predict_block)(bool, da_int, const T *, da_int, T *, T *, T *,
+                                     da_int *, da_int *, T *, da_int);
 
-    void (da_kmeans<T>::*elkan_iteration_update_block)(da_int, T *, da_int, T *, T *,
-                                                       da_int *);
+    void (kmeans<T>::*elkan_iteration_update_block)(da_int, T *, da_int, T *, T *,
+                                                    da_int *);
 
     // MacQueen algorithm functions
 
@@ -251,516 +240,29 @@ template <typename T> class da_kmeans : public basic_handle<T> {
     void perform_hartigan_wong();
 
   public:
-    da_kmeans(da_errors::da_error_t &err) : basic_handle<T>(err) {
-        // Initialize the options registry
-        // Any error is stored err->status[.] and this needs to be checked
-        // by the caller.
-        register_kmeans_options<T>(this->opts, *this->err);
-    };
+    kmeans(da_errors::da_error_t &err);
 
-    da_status get_result(da_result query, da_int *dim, T *result) {
-        // Don't return anything if k-means has not been computed
-        if (!iscomputed) {
-            return da_warn(this->err, da_status_no_data,
-                           "k-means clustering has not yet been computed. Please call "
-                           "da_kmeans_compute_s "
-                           "or da_kmeans_compute_d before extracting results.");
-        }
+    da_status get_result(da_result query, da_int *dim, T *result);
 
-        da_int rinfo_size = 5;
-
-        switch (query) {
-        case da_result::da_rinfo:
-            if (*dim < rinfo_size) {
-                *dim = rinfo_size;
-                return da_warn(this->err, da_status_invalid_array_dimension,
-                               "The array is too small. Please provide an array of at "
-                               "least size: " +
-                                   std::to_string(rinfo_size) + ".");
-            }
-            result[0] = (T)n_samples;
-            result[1] = (T)n_features;
-            result[2] = (T)n_clusters;
-            result[3] = (T)best_n_iter;
-            result[4] = best_inertia;
-            break;
-        case da_result::da_kmeans_cluster_centres:
-            if (*dim < n_clusters * n_features) {
-                *dim = n_clusters * n_features;
-                return da_warn(this->err, da_status_invalid_array_dimension,
-                               "The array is too small. Please provide an array of at "
-                               "least size: " +
-                                   std::to_string(n_clusters * n_features) + ".");
-            }
-            this->copy_2D_results_array(n_clusters, n_features,
-                                        (*best_cluster_centres).data(), n_clusters,
-                                        result);
-            break;
-        default:
-            return da_warn(this->err, da_status_unknown_query,
-                           "The requested result could not be found.");
-        }
-        return da_status_success;
-    };
-
-    da_status get_result(da_result query, da_int *dim, da_int *result) {
-        // Don't return anything if k-means has not been computed
-        if (!iscomputed) {
-            return da_warn(this->err, da_status_no_data,
-                           "k-means clustering has not yet been computed. Please call "
-                           "da_kmeans_compute_s "
-                           "or da_kmeans_compute_d before extracting results.");
-        }
-
-        switch (query) {
-        case da_result::da_kmeans_labels:
-            if (*dim < n_samples) {
-                *dim = n_samples;
-                return da_warn(this->err, da_status_invalid_array_dimension,
-                               "The array is too small. Please provide an array of at "
-                               "least size: " +
-                                   std::to_string(n_samples) + ".");
-            }
-            for (da_int i = 0; i < n_samples; i++)
-                result[i] = (*best_labels)[i];
-            break;
-        default:
-            return da_warn(this->err, da_status_unknown_query,
-                           "The requested result could not be found.");
-        }
-
-        return da_status_success;
-    };
+    da_status get_result(da_result query, da_int *dim, da_int *result);
 
     /* Store details about user's data matrix in preparation for k-means computation */
-    da_status set_data(da_int n_samples, da_int n_features, const T *A_in,
-                       da_int lda_in) {
+    da_status set_data(da_int n_samples, da_int n_features, const T *A_in, da_int lda_in);
 
-        // Guard against errors due to multiple calls using the same class instantiation
-        if (A_temp) {
-            delete[] (A_temp);
-            A_temp = nullptr;
-        }
-
-        da_status status =
-            this->store_2D_array(n_samples, n_features, A_in, lda_in, &A_temp, &A, lda,
-                                 "n_samples", "n_features", "A", "lda");
-        if (status != da_status_success)
-            return status;
-
-        // Store dimensions of A
-        this->n_samples = n_samples;
-        this->n_features = n_features;
-
-        // Record that initialization is complete but computation has not yet been performed
-        initdone = true;
-        iscomputed = false;
-
-        // Now that we have a data matrix we can re-register the n_clusters option with new constraints
-        da_int temp_clusters;
-        this->opts.get("n_clusters", temp_clusters);
-
-        reregister_kmeans_option<T>(this->opts, n_samples);
-
-        this->opts.set("n_clusters", std::min(temp_clusters, n_samples));
-
-        if (temp_clusters > n_samples)
-            return da_warn(this->err, da_status_incompatible_options,
-                           "The requested number of clusters has been decreased from " +
-                               std::to_string(temp_clusters) + " to " +
-                               std::to_string(n_samples) +
-                               " due to the size of the data array.");
-
-        return da_status_success;
-    }
-
-    da_status set_init_centres(const T *C_in, da_int ldc_in) {
-
-        if (initdone == false)
-            return da_error(this->err, da_status_no_data,
-                            "No data has been passed to the handle. Please call "
-                            "da_kmeans_set_data_s or da_kmeans_set_data_d.");
-
-        // Guard against errors due to multiple calls using the same class instantiation
-        if (C_temp) {
-            delete[] (C_temp);
-            C_temp = nullptr;
-        }
-
-        // Check for illegal arguments
-        this->opts.get("n_clusters", n_clusters);
-
-        da_status status =
-            this->store_2D_array(n_clusters, n_features, C_in, ldc_in, &C_temp, &C, ldc,
-                                 "n_clusters", "n_features", "C", "ldc");
-        if (status != da_status_success)
-            return status;
-
-        // Record that centres have been set
-        centres_supplied = true;
-
-        return da_status_success;
-    }
+    da_status set_init_centres(const T *C_in, da_int ldc_in);
 
     /* Compute the k-means clusters */
-    da_status compute() {
-
-        da_status status = da_status_success;
-        if (initdone == false)
-            return da_error(this->err, da_status_no_data,
-                            "No data has been passed to the handle. Please call "
-                            "da_kmeans_set_data_s or da_kmeans_set_data_d.");
-
-        // Read in options and store in class
-        this->opts.get("n_clusters", n_clusters);
-
-        std::string opt_method;
-        this->opts.get("initialization method", opt_method, init_method);
-
-        std::string opt_alg;
-        this->opts.get("algorithm", opt_alg, algorithm);
-
-        this->opts.get("n_init", n_init);
-
-        this->opts.get("max_iter", max_iter);
-
-        this->opts.get("convergence tolerance", tol);
-
-        this->opts.get("seed", seed);
-
-        // Remove the constraint on n_clusters, in case the user re-uses the handle with different data
-        reregister_kmeans_option<T>(this->opts, std::numeric_limits<da_int>::max());
-        this->opts.set("n_clusters", n_samples);
-
-        // Check for conflicting options
-        if (n_init > 1 && init_method == supplied) {
-            std::string buff =
-                "n_init was set to " + std::to_string(n_init) +
-                " but the initialization method was set to 'supplied'. The "
-                "k-means algorithm will only be run once.";
-            n_init = 1;
-            da_warn(this->err, da_status_incompatible_options, buff);
-        }
-
-        if (algorithm == hartigan_wong && (n_clusters == 1 || n_clusters >= n_samples)) {
-            return da_error(this->err, da_status_incompatible_options,
-                            "The Hartigan-Wong algorithm requires 1 < k < n_samples.");
-        }
-
-        // This can only be triggered if the user re-uses the handle, otherwise the option handling should catch it
-        if (n_clusters > n_samples) {
-            return da_error(this->err, da_status_incompatible_options,
-                            "n_clusters = " + std::to_string(n_clusters) +
-                                ", and n_samples = " + std::to_string(n_samples) +
-                                ". Constraint: n_clusters <= n_samples.");
-        }
-
-        if (init_method == supplied && centres_supplied == false) {
-            return da_error(
-                this->err, da_status_no_data,
-                "The initialization method was set to 'supplied' but no initial "
-                "centres have been provided.");
-        }
-
-        switch (algorithm) {
-        case lloyd:
-            max_block_size = KMEANS_LLOYD_BLOCK_SIZE;
-            initialize_algorithm = &da_kmeans<T>::init_lloyd;
-            break;
-        case elkan:
-            max_block_size = KMEANS_ELKAN_BLOCK_SIZE;
-            initialize_algorithm = &da_kmeans<T>::init_elkan;
-            break;
-        case macqueen:
-            max_block_size = KMEANS_MACQUEEN_BLOCK_SIZE;
-            initialize_algorithm = &da_kmeans<T>::init_macqueen;
-            break;
-        default:
-            max_block_size = n_samples;
-            break;
-        }
-        max_block_size = std::min(max_block_size, n_samples);
-
-        da_int n_threads = omp_get_max_threads();
-
-        // Initialize some arrays
-        try {
-            current_cluster_centres->resize(n_clusters * n_features, 0.0);
-            previous_cluster_centres->resize(n_clusters * n_features, 0.0);
-            thread_cluster_centres.resize(n_clusters * n_features * n_threads, 0.0);
-            cluster_count.resize(n_clusters, 0);
-            work_int1.resize(n_clusters * n_threads, 0);
-            work_int2.resize(n_samples, 0);
-            // Extra bit on workc1 just to enable some padding to be done if loop unrolling occurs
-            workc1.resize(n_clusters + 8, 0.0);
-            current_labels->resize(n_samples, 0);
-            previous_labels->resize(n_samples, 0);
-            if (n_init > 1) {
-                best_cluster_centres->resize(n_clusters * n_features);
-                best_labels->resize(n_samples);
-            }
-        } catch (std::bad_alloc const &) {
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation failed.");
-        }
-
-        // Ensure the extra padding in workc1 (for vectorization) won't interfere with any computation
-        std::fill(workc1.end() - 8, workc1.end(), std::numeric_limits<T>::infinity());
-
-        // Based on what algorithms we are using, allocate the remaining memory
-        try {
-
-            switch (algorithm) {
-            case elkan:
-                workcc1.resize(n_clusters * n_clusters, 0.0);
-                workcs1.resize(n_samples * (n_clusters + 8), 0.0);
-                works1.resize(n_samples, 0.0);
-                break;
-            case macqueen:
-                workcs1.resize(max_block_size * n_clusters, 0.0);
-                workc2.resize(n_clusters, 0.0);
-                break;
-            case lloyd:
-                workcs1.resize(max_block_size * (n_clusters + 8) * n_threads, 0.0);
-                works1.resize(n_samples, 0.0);
-                break;
-            case hartigan_wong:
-                works1.resize(n_samples, 0.0);
-                workc2.resize(n_clusters, 0.0);
-                workc3.resize(n_clusters, 0.0);
-                work_int3.resize(n_clusters, 0);
-                work_int4.resize(n_clusters, 0);
-                break;
-            }
-
-            if (init_method == kmeanspp) {
-                works1.resize(n_samples, 0.0);
-                works2.resize(n_samples, 0.0);
-                works3.resize(n_samples, 0.0);
-                works4.resize(n_samples, 0.0);
-                works5.resize(n_samples, 0.0);
-            }
-
-        } catch (std::bad_alloc const &) {
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation failed.");
-        }
-
-        if (centres_supplied && init_method == supplied) {
-            // Copy the initial centres matrix into internal matrix buffer
-            for (da_int j = 0; j < n_features; j++) {
-                for (da_int i = 0; i < n_clusters; i++) {
-                    (*current_cluster_centres)[i + j * n_clusters] = C[i + ldc * j];
-                }
-            }
-        }
-
-        // If needed, initialize random number generation
-        da_kmeans<T>::initialize_rng();
-
-        // Set the initial best_inertia over all the runs to something large
-        best_inertia = std::numeric_limits<T>::infinity();
-
-        // Run k-means algorithm n_init times and select the run with the lowest inertia
-        for (da_int run = 0; run < n_init; run++) {
-
-            // Initialize the centres if needed
-            da_kmeans<T>::initialize_centres();
-
-            // Perform k-means using current_inertia, current_cluster_centres and current_labels
-            da_kmeans<T>::perform_kmeans();
-
-            // Check if it's the best run yet
-            if (current_inertia < best_inertia) {
-                best_inertia = current_inertia;
-                best_n_iter = current_n_iter;
-                // If this run hit the maximum number of iterations, a warning is required
-                warn_maxit_reached = (converged == 0) ? true : false;
-                std::swap(best_cluster_centres, current_cluster_centres);
-                std::swap(best_labels, current_labels);
-            }
-        }
-
-        // Compute the squared norms of the cluster centres in preparation for the predict phase of the algorithm; store in workc1
-        for (da_int i = 0; i < n_clusters; i++) {
-            workc1[i] = (T)0.0;
-        }
-
-        T tmp;
-        for (da_int j = 0; j < n_features; j++) {
-            for (da_int i = 0; i < n_clusters; i++) {
-                tmp = (*best_cluster_centres)[i + j * n_clusters];
-                workc1[i] += tmp * tmp;
-            }
-        }
-
-        iscomputed = true;
-
-        if (warn_maxit_reached)
-            return da_warn(this->err, da_status_maxit,
-                           "The maximum number of iterations was reached.");
-
-        return status;
-    }
+    da_status compute();
 
     da_status transform(da_int m_samples, da_int m_features, const T *X, da_int ldx,
-                        T *X_transform, da_int ldx_transform) {
-
-        if (!iscomputed) {
-            return da_warn(
-                this->err, da_status_no_data,
-                "The k-means has not been computed. Please call da_kmeans_compute_s or "
-                "da_kmeans_compute_d.");
-        }
-
-        if (m_features != n_features)
-            return da_error(this->err, da_status_invalid_input,
-                            "The function was called with m_features = " +
-                                std::to_string(m_features) +
-                                " but the k-means has been computed with " +
-                                std::to_string(n_features) + " features.");
-
-        const T *X_temp;
-        T *utility_ptr1;
-        T *utility_ptr2;
-        da_int ldx_temp;
-        T *X_transform_temp;
-        da_int ldx_transform_temp;
-
-        da_status status =
-            this->store_2D_array(m_samples, m_features, X, ldx, &utility_ptr1, &X_temp,
-                                 ldx_temp, "m_samples", "m_features", "X", "ldx");
-        if (status != da_status_success)
-            return status;
-
-        status = this->store_2D_array(
-            m_samples, n_clusters, X_transform, ldx_transform, &utility_ptr2,
-            const_cast<const T **>(&X_transform_temp), ldx_transform_temp, "m_samples",
-            "n_clusters", "X_transform", "ldx_transform", 1);
-        if (status != da_status_success)
-            return status;
-
-        std::vector<T> x_work;
-
-        try {
-            x_work.resize(m_samples);
-        } catch (std::bad_alloc const &) {
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation failed.");
-        }
-
-        // Compute m_samples x n_clusters matrix of distances to cluster centres
-        euclidean_distance(column_major, m_samples, n_clusters, n_features, X_temp,
-                           ldx_temp, (*best_cluster_centres).data(), n_clusters,
-                           X_transform_temp, ldx_transform_temp, x_work.data(), 2,
-                           workc1.data(), 1, false, false);
-
-        if (this->order == row_major) {
-
-            da_utils::copy_transpose_2D_array_column_to_row_major(
-                m_samples, n_clusters, X_transform_temp, ldx_transform_temp, X_transform,
-                ldx_transform);
-
-            delete[] (utility_ptr1);
-            delete[] (utility_ptr2);
-        }
-
-        return da_status_success;
-    }
+                        T *X_transform, da_int ldx_transform);
 
     da_status predict(da_int k_samples, da_int k_features, const T *Y, da_int ldy,
-                      da_int *Y_labels) {
+                      da_int *Y_labels);
 
-        if (!iscomputed) {
-            return da_warn(
-                this->err, da_status_no_data,
-                "The k-means has not been computed. Please call da_kmeans_compute_s or "
-                "da_kmeans_compute_d.");
-        }
-
-        const T *Y_temp;
-        T *utility_ptr;
-        da_int ldy_temp;
-
-        da_status status =
-            this->store_2D_array(k_samples, k_features, Y, ldy, &utility_ptr, &Y_temp,
-                                 ldy_temp, "k_samples", "k_features", "Y", "ldy");
-        if (status != da_status_success)
-            return status;
-
-        // Check for illegal output arguments
-        if (Y_labels == nullptr)
-            return da_error(this->err, da_status_invalid_pointer,
-                            "The array Y_labels is null.");
-
-        // Compute nearest cluster centre for each sample in Y; essentially a single blocked step of the Lloyd iteration.
-        std::vector<T> y_work;
-
-        max_block_size = std::min(KMEANS_LLOYD_BLOCK_SIZE, k_samples);
-
-        da_utils::blocking_scheme(k_samples, max_block_size, n_blocks, block_rem);
-
-        da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
-
-        da_int ldy_work;
-
-        try {
-            y_work.resize(max_block_size * (n_clusters + 8) * n_threads);
-        } catch (std::bad_alloc const &) {
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation failed.");
-        }
-
-        if (n_clusters < 4) {
-            ldy_work = n_clusters + 8;
-            predict_block = &da_kmeans<T>::lloyd_iteration_block_no_unroll;
-        } else if (n_clusters < 6) {
-            ldy_work = max_block_size;
-            predict_block = &da_kmeans<T>::lloyd_iteration_block_unroll_4_T;
-        } else if (n_clusters < 16) {
-            predict_block = &da_kmeans<T>::lloyd_iteration_block_unroll_4;
-            ldy_work = n_clusters + 8;
-        } else {
-            predict_block = &da_kmeans<T>::lloyd_iteration_block_unroll_8;
-            ldy_work = n_clusters + 8;
-        }
-
-        T *dummy = nullptr;
-        da_int *dummy_int = nullptr;
-        da_int block_index;
-        da_int block_size = max_block_size;
-
-#pragma omp parallel firstprivate(block_size) private(block_index)                       \
-    shared(n_blocks, block_rem, k_samples, max_block_size, Y_temp, ldy_temp,             \
-               best_cluster_centres, dummy, workc1, dummy_int, Y_labels, y_work,         \
-               ldy_work) default(none) num_threads(n_threads)
-        {
-            da_int y_work_index =
-                ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + 8);
-#pragma omp for schedule(dynamic)
-            for (da_int i = 0; i < n_blocks; i++) {
-                if (i == n_blocks - 1 && block_rem > 0) {
-                    block_index = k_samples - block_rem;
-                    block_size = block_rem;
-                } else {
-                    block_index = i * max_block_size;
-                }
-                (this->*predict_block)(false, block_size, &Y_temp[block_index], ldy_temp,
-                                       (*best_cluster_centres).data(), dummy,
-                                       workc1.data(), dummy_int, &Y_labels[block_index],
-                                       &y_work[y_work_index], ldy_work);
-            }
-        }
-
-        if (this->order == row_major)
-            delete[] (utility_ptr);
-
-        return da_status_success;
-    }
+    void refresh();
 };
 
 } // namespace da_kmeans
 
-#include "kmeans_aux.hpp"
-
-#endif // KMEANS_HPP
+} // namespace ARCH

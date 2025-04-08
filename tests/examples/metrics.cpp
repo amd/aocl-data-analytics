@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -56,10 +56,11 @@ int main() {
     // Array used to store the distance matrix
     double D[6];
 
+    // Mikowski parameter. Will not be used for any other metric.
+    double p = 2.0;
     // Compute the euclidean distance matrix
-    pass = pass &&
-           (da_pairwise_distances_d(column_major, m, n, k, X, m, Y, n, D, m, da_euclidean,
-                                    da_allow_infinite) == da_status_success);
+    pass = pass && (da_pairwise_distances_d(column_major, m, n, k, X, m, Y, n, D, m, p,
+                                            da_minkowski) == da_status_success);
 
     // Check status and print
     if (pass) {

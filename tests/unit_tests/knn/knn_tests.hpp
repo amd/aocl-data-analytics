@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -34,7 +34,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-static std::list<std::string> MetricType = {"euclidean", "sqeuclidean"};
+static std::list<std::string> MetricType = {"euclidean", "sqeuclidean", "l2"};
 static std::list<std::string> AlgoType = {"brute"};
 static std::list<std::string> WeightsType = {"uniform", "distance"};
 static std::list<da_int> NumNeighConstructor = {3, 5};
@@ -79,7 +79,8 @@ template <typename T> struct KNNParamType {
 };
 
 template <typename T> void get_expected_kind_k_dist(KNNParamType<T> &param) {
-    if ((param.metric == "euclidean") || (param.metric == "sqeuclidean")) {
+    if ((param.metric == "euclidean") || (param.metric == "sqeuclidean") ||
+        (param.metric == "l2")) {
         if (param.n_neigh_kneighbors == 3) {
             std::vector<da_int> kind{1, 2, 3, 0, 0, 5, 3, 1, 4};
             param.expected_kind = convert_vector<da_int, da_int>(kind);
@@ -131,7 +132,7 @@ template <typename T> void get_proba(KNNParamType<T> &param) {
             std::vector<T> proba{0.2, 0.2, 0.2, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4};
             param.expected_proba = convert_vector<T, T>(proba);
         } else if (param.weights == "distance") {
-            if (param.metric == "euclidean") {
+            if ((param.metric == "euclidean") || (param.metric == "l2")) {
                 std::vector<T> proba{
                     0.1379511568268668, 0.3515868265794006, 0.1798440493222374,
                     0.4507346784224799, 0.3447698547319956, 0.4217676420329797,
@@ -159,7 +160,7 @@ template <typename T> void get_proba(KNNParamType<T> &param) {
                                  0.6666666666666666};
             param.expected_proba = convert_vector<T, T>(proba);
         } else if (param.weights == "distance") {
-            if (param.metric == "euclidean") {
+            if ((param.metric == "euclidean") || (param.metric == "l2")) {
                 std::vector<T> proba{0.,
                                      0.47531678671182,
                                      0.,

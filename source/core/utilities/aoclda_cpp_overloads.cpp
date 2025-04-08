@@ -96,3 +96,17 @@ template <> da_status da_dbscan_compute<double>(da_handle handle) {
 template <> da_status da_dbscan_compute<float>(da_handle handle) {
     return da_dbscan_compute_s(handle);
 }
+
+template <> da_status da_svm_select_model<double>(da_handle handle, da_svm_model mod) {
+    return da_svm_select_model_d(handle, mod);
+}
+template <> da_status da_svm_select_model<float>(da_handle handle, da_svm_model mod) {
+    return da_svm_select_model_s(handle, mod);
+}
+
+template <> da_status da_svm_compute<double>(da_handle handle) {
+    return da_svm_compute_d(handle);
+}
+template <> da_status da_svm_compute<float>(da_handle handle) {
+    return da_svm_compute_s(handle);
+}

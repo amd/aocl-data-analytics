@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -404,8 +404,10 @@ typedef enum da_optim_info_t_ {
     info_nevalh = 9,         ///< number of Hessian callback evaluations
     info_nevalhp = 10,       ///< number of Hessian-vector callback evaluations
     info_scl_grad_norm = 11, ///< scaled gradient norm of objective
-    info_nevalfd = 12, ///< number of objective function callback evaluations used for
-                       ///< approximating the derivatives or due to derivative checker
+    info_nevalfd = 12,  ///< number of objective function callback evaluations used for
+                        ///< approximating the derivatives or due to derivative checker
+    info_optim = 13,    ///< optimality measure (only coordinate descent solver)
+    info_optimcnt = 14, ///< number of optimality checks (only coordinate descent solver)
 
     info_number ///< for internal use
 } da_optim_info_t;
