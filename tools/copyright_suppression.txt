@@ -37,3 +37,4 @@ source/core/csv/char_to_num.hpp
 'python_interface/requirements\.txt'
 'python_interface/.pylintrc'
 'License'
+'Notices'
