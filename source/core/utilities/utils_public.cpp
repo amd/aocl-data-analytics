@@ -128,6 +128,75 @@ da_status da_get_arch_info(da_int *len = nullptr, char *arch = nullptr,
     return da_status_success;
 }
 
+da_status da_get_shuffled_indices_int(da_int m, da_int seed, da_int train_size,
+                                      da_int test_size, da_int fp_precision,
+                                      const da_int *classes, da_int *shuffle_array) {
+    DISPATCHER(nosave_utils, return (da_utils::get_shuffled_indices(
+                                 m, seed, train_size, test_size, fp_precision, classes,
+                                 shuffle_array)));
+}
+
+da_status da_get_shuffled_indices_s(da_int m, da_int seed, da_int train_size,
+                                    da_int test_size, da_int fp_precision,
+                                    const float *classes, da_int *shuffle_array) {
+    DISPATCHER(nosave_utils, return (da_utils::get_shuffled_indices(
+                                 m, seed, train_size, test_size, fp_precision, classes,
+                                 shuffle_array)));
+}
+
+da_status da_get_shuffled_indices_d(da_int m, da_int seed, da_int train_size,
+                                    da_int test_size, da_int fp_precision,
+                                    const double *classes, da_int *shuffle_array) {
+    DISPATCHER(nosave_utils, return (da_utils::get_shuffled_indices(
+                                 m, seed, train_size, test_size, fp_precision, classes,
+                                 shuffle_array)));
+}
+
+da_status da_train_test_split_int(da_order order, da_int m, da_int n, const da_int *X,
+                                  da_int ldx, da_int train_size, da_int test_size,
+                                  const da_int *shuffle_array, da_int *X_train,
+                                  da_int ldx_train, da_int *X_test, da_int ldx_test) {
+    DISPATCHER(nosave_utils, return (da_utils::train_test_split(
+                                 order, m, n, X, ldx, train_size, test_size,
+                                 shuffle_array, X_train, ldx_train, X_test, ldx_test)));
+}
+
+da_status da_train_test_split_s(da_order order, da_int m, da_int n, const float *X,
+                                da_int ldx, da_int train_size, da_int test_size,
+                                const da_int *shuffle_array, float *X_train,
+                                da_int ldx_train, float *X_test, da_int ldx_test) {
+    DISPATCHER(nosave_utils, return (da_utils::train_test_split(
+                                 order, m, n, X, ldx, train_size, test_size,
+                                 shuffle_array, X_train, ldx_train, X_test, ldx_test)));
+}
+
+da_status da_train_test_split_d(da_order order, da_int m, da_int n, const double *X,
+                                da_int ldx, da_int train_size, da_int test_size,
+                                const da_int *shuffle_array, double *X_train,
+                                da_int ldx_train, double *X_test, da_int ldx_test) {
+    DISPATCHER(nosave_utils, return (da_utils::train_test_split(
+                                 order, m, n, X, ldx, train_size, test_size,
+                                 shuffle_array, X_train, ldx_train, X_test, ldx_test)));
+}
+
+da_status da_get_int_info(size_t *len, char *int_type) {
+    if (len == nullptr || int_type == nullptr)
+        return da_status_invalid_input;
+    if (*len < 3) {
+        *len = 3;
+        return da_status_invalid_array_dimension;
+    }
+    std::string s = "?";
+    if (std::is_same<da_int, int32_t>::value)
+        s = "32";
+    else if (std::is_same<da_int, int64_t>::value)
+        s = "64";
+    std::copy(s.begin(), s.end(), int_type);
+    int_type[s.size()] = '\0';
+
+    return da_status_success;
+}
+
 da_status da_debug_set(const char *key, const char *value) {
     // assumes strings are null-terminated
     if (!key || !value) {
@@ -137,12 +206,12 @@ da_status da_debug_set(const char *key, const char *value) {
         std::string lkey{key};
         std::string lvalue{value};
         // convert to lower case
-        da_options::OptionUtils::prep_str(lkey);
-        da_options::OptionUtils::prep_str(lvalue);
+        da_options::OptionUtils::prep_str(lkey); // non-performance critical
         // don't allow empty key...
         if (lkey.empty()) {
             return da_status_invalid_input;
         }
+        da_options::OptionUtils::prep_str(lvalue); // non-performance critical
         context::get_context()->set_hidden_setting(lkey, lvalue);
     } catch (const std::exception &) {
         return da_status_operation_failed;
@@ -151,14 +220,15 @@ da_status da_debug_set(const char *key, const char *value) {
 }
 
 da_status da_debug_get(const char *key, da_int lvalue, char *value) {
+    auto &settings = context::get_context()->get_hidden_settings();
     if (!key || !value) {
         // print all the dictionary
-        if (context::get_context()->hidden_settings.empty()) {
+        if (settings.empty()) {
             std::cout << "\nNo context settings registered.\n" << std::endl;
             return da_status_success;
         }
         std::cout << "\nBegin Context Settings" << '\n';
-        for (const auto &n : context::get_context()->hidden_settings) {
+        for (const auto &n : settings) {
             std::cout << "    " << std::left << std::setw(30) << n.first << " : "
                       << n.second << '\n';
         }
@@ -170,13 +240,13 @@ da_status da_debug_get(const char *key, da_int lvalue, char *value) {
     }
     std::string lkey{key};
     // convert to lower case
-    da_options::OptionUtils::prep_str(lkey);
-    auto it = context::get_context()->hidden_settings.find(lkey);
-    if (it == context::get_context()->hidden_settings.end()) {
+    da_options::OptionUtils::prep_str(lkey); // non-performance critical
+    auto it = settings.find(lkey);
+    if (it == settings.end()) {
         // don't touch value, just return error
         return da_status_option_not_found;
     }
-    std::string ans = context::get_context()->hidden_settings[lkey];
+    std::string ans = settings[lkey];
     size_t len = std::min(static_cast<size_t>(lvalue - 1), ans.size());
     std::copy(ans.begin(), ans.begin() + len, value);
     value[len] = '\0'; // null-terminate

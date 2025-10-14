@@ -29,33 +29,90 @@
 #include "aoclda_types.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_std.hpp"
 #include "pairwise_distances.hpp"
+#include "partitioning_infrastructure.hpp"
 
 namespace ARCH {
 namespace da_metrics {
-namespace pairwise {
+namespace pairwise_distances {
+
+// Functor for cosine distance calculation (packed version)
+template <typename T, da_int MR, da_int NR> struct CosineKernelFunctor_packed {
+    inline void operator()(da_int m, da_int n, da_int k, const T *Atilde, const T *Btilde,
+                           T *C, da_int ldc, T *C_temp) const {
+
+        // Call microkernel if we have a full block
+        if ((m == MR) && (n == NR)) {
+#if defined(__AVX512F__)
+            avx512::cosine_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C, ldc);
+#elif defined(__AVX2__)
+            avx2::cosine_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C, ldc);
+#endif
+        } else { //Call simple kernel if we have a partial block
+            for (da_int j = 0; j < n; j++)
+                for (da_int i = 0; i < m; i++)
+                    ctemp_matrix(i, j) = c_matrix(i, j);
+
+#if defined(__AVX512F__)
+            avx512::cosine_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C_temp, MR);
+#elif defined(__AVX2__)
+            avx2::cosine_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C_temp, MR);
+#endif
+
+            for (da_int j = 0; j < n; j++)
+                for (da_int i = 0; i < m; i++)
+                    c_matrix(i, j) = ctemp_matrix(i, j);
+        }
+    }
+};
+
+// Functor for Cosine distance calculation
+template <typename T> struct CosinePostOp {
+    std::vector<T> normX;
+    std::vector<T> normY;
+    bool X_is_Y = false;
+    CosinePostOp(std::vector<T> &&normX, std::vector<T> &&normY, bool X_is_Y)
+        : normX(std::move(normX)), normY(std::move(normY)), X_is_Y(X_is_Y) {}
+    inline void operator()(da_int m, da_int n, T *C, da_int ldc) const {
+        if (!X_is_Y) {
+            for (da_int j = 0; j < n; j++) {
+                for (da_int i = 0; i < m; i++) {
+                    C[i + j * ldc] = 1.0 - C[i + j * ldc] / (normX[i] * normY[j]);
+                }
+            }
+        } else {
+            for (da_int j = 0; j < n; j++) {
+                for (da_int i = 0; i < m; i++) {
+                    C[i + j * ldc] = 1.0 - C[i + j * ldc] / (normX[i] * normY[j]);
+                }
+                C[j + j * ldc] = 0.0;
+            }
+        }
+    }
+};
 
 template <typename T>
 da_status cosine(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
-                 const T *Y, da_int ldy, T *D, da_int ldd, bool compute_distance) {
-    da_status status = da_status_success;
-    const T *Y_new = Y;
-    const T eps = std::numeric_limits<T>::epsilon();
-    T normX, normY;
+                 const T *Y, da_int ldy, T *D, da_int ldd) {
+
+    bool X_is_Y = false;
     // We want to compute the distance of X to itself
     // The sizes are copies so it's safe to update them
-    if (Y == nullptr) {
+    const T *Y_new = Y;
+    if (!Y) {
         n = m;
         ldy = ldx;
         Y_new = X;
+        X_is_Y = true;
     }
-
-    T *D_new = D;
-    da_int ldd_new = ldd;
-    const T *X_new = X;
-    // Create temporary vectors X_row and Y_row
-    std::vector<T> X_row, Y_row, D_row;
+    // Compute the norms for all rows of X and Y
+    std::vector<T> normsX(m);
+    std::vector<T> normsY(n);
+    const T eps = std::numeric_limits<T>::epsilon();
+    // Open scope so that memory gets deallocated before calling the computational kernel
     if (order == column_major) {
+        std::vector<T> X_row, Y_row, D_row;
         try {
             X_row.resize(m * k);
             Y_row.resize(n * k);
@@ -64,77 +121,63 @@ da_status cosine(da_order order, da_int m, da_int n, da_int k, const T *X, da_in
             return da_status_memory_error;
         }
         // Transpose X and Y so that the data is stored in row major order
-        da_blas::omatcopy('T', m, k, 1.0, X_new, ldx, X_row.data(), k);
+        da_blas::omatcopy('T', m, k, 1.0, X, ldx, X_row.data(), k);
         da_blas::omatcopy('T', n, k, 1.0, Y_new, ldy, Y_row.data(), k);
-        D_new = D_row.data();
-        X_new = X_row.data();
-        Y_new = Y_row.data();
-        ldx = k;
-        ldy = k;
-        ldd_new = n;
-    }
-
-    if (Y != nullptr) {
-        // Go through the rows of D
+        // Now that everything is in row major order, compute the norms
         for (da_int i = 0; i < m; i++) {
-            // Go through the columns of X (also updating the columns of D)
-            for (da_int j = 0; j < n; j++) {
-                D_new[i * ldd_new + j] =
-                    da_blas::cblas_dot(k, X_new + i * ldx, 1, Y_new + j * ldy, 1);
-                // Only compute the norms if Dij is nonzero
-                if (std::abs(D_new[i * ldd_new + j]) > eps) {
-                    normX = da_blas::cblas_nrm2(k, X_new + i * ldx, 1);
-                    normY = da_blas::cblas_nrm2(k, Y_new + j * ldy, 1);
-                } else {
-                    normX = 1.0;
-                    normY = 1.0;
-                }
-                D_new[i * ldd_new + j] = D_new[i * ldd_new + j] / (normX * normY);
-                if (compute_distance)
-                    D_new[i * ldd_new + j] = 1.0 - D_new[i * ldd_new + j];
+            normsX[i] = da_blas::cblas_nrm2(k, X_row.data() + i * k, 1);
+            if (normsX[i] <= eps) {
+                normsX[i] = 1.0;
+            }
+        }
+        for (da_int j = 0; j < n; j++) {
+            normsY[j] = da_blas::cblas_nrm2(k, Y_row.data() + j * k, 1);
+            if (normsY[j] <= eps) {
+                normsY[j] = 1.0;
             }
         }
     } else {
-        // Go through the rows of D
         for (da_int i = 0; i < m; i++) {
-            // Go through the columns of X (also updating the columns of D)
-            // For the case where X==Y, the matrix is symmetric so we only need to iterate through half the columns
-            for (da_int j = i + 1; j < n; j++) {
-                D_new[i * ldd_new + j] =
-                    da_blas::cblas_dot(k, X_new + i * ldx, 1, Y_new + j * ldy, 1);
-                // Only compute the norms if Dij is nonzero
-                if (std::abs(D_new[i * ldd_new + j]) > eps) {
-                    normX = da_blas::cblas_nrm2(k, X_new + i * ldx, 1);
-                    normY = da_blas::cblas_nrm2(k, Y_new + j * ldy, 1);
-                } else {
-                    normX = 1.0;
-                    normY = 1.0;
-                }
-                D_new[i * ldd_new + j] = D_new[i * ldd_new + j] / (normX * normY);
-                if (compute_distance)
-                    D_new[i * ldd_new + j] = 1.0 - D_new[i * ldd_new + j];
-                // Update the corresponding element in the lower triangular part
-                D_new[j * ldd_new + i] = D_new[i * ldd_new + j];
+            normsX[i] = da_blas::cblas_nrm2(k, X + i * ldx, 1);
+            if (normsX[i] <= eps) {
+                normsX[i] = 1.0;
             }
-            D[i * ldd_new + i] = 0.0;
+        }
+        for (da_int j = 0; j < n; j++) {
+            normsY[j] = da_blas::cblas_nrm2(k, Y_new + j * ldy, 1);
+            if (normsY[j] <= eps) {
+                normsY[j] = 1.0;
+            }
         }
     }
-    if (order == column_major) {
+
+    constexpr da_int MR = BlockSizes<T>::MR;
+    constexpr da_int NR = BlockSizes<T>::NR;
+    constexpr da_int MC = BlockSizes<T>::MC;
+    constexpr da_int NC = BlockSizes<T>::NC;
+    constexpr da_int KC = BlockSizes<T>::KC;
+
+    CosineKernelFunctor_packed<T, MR, NR> kernel_op;
+
+    // Constructor moves normsX and normsY into the functor
+    CosinePostOp<T> post_op(std::move(normsX), std::move(normsY), X_is_Y);
+    if (order == row_major) {
+        // Create temporary vectors X_col and Y_col
+        std::vector<T> X_col(m * k), Y_col(n * k), D_col(m * n);
+        // Transpose X_col and Y_col so that now the data of X and Y are
+        // stored in column major order
+        da_blas::omatcopy('T', k, m, 1.0, X, ldx, X_col.data(), m);
+        da_blas::omatcopy('T', k, n, 1.0, Y_new, ldy, Y_col.data(), n);
+        LoopFive_packed<T, MR, NR, MC, NC, KC>(m, n, k, X_col.data(), m, Y_col.data(), n,
+                                               D_col.data(), m, kernel_op, post_op);
         // Transpose D to return data in column major order
-        da_blas::omatcopy('T', n, m, 1.0, D_new, ldd_new, D, ldd);
+        da_blas::omatcopy('T', m, n, 1.0, D_col.data(), m, D, ldd);
+    } else {
+        LoopFive_packed<T, MR, NR, MC, NC, KC>(m, n, k, X, ldx, Y_new, ldy, D, ldd,
+                                               kernel_op, post_op);
     }
 
-    return status;
-}
-
-} // namespace pairwise
-
-namespace pairwise_distances {
-
-template <typename T>
-da_status cosine(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
-                 const T *Y, da_int ldy, T *D, da_int ldd) {
-    return da_metrics::pairwise::cosine(order, m, n, k, X, ldx, Y, ldy, D, ldd, true);
+    return da_status_success;
 }
 
 template da_status cosine<float>(da_order order, da_int m, da_int n, da_int k,
@@ -144,7 +187,6 @@ template da_status cosine<float>(da_order order, da_int m, da_int n, da_int k,
 template da_status cosine<double>(da_order order, da_int m, da_int n, da_int k,
                                   const double *X, da_int ldx, const double *Y,
                                   da_int ldy, double *D, da_int ldd);
-
 } // namespace pairwise_distances
 } // namespace da_metrics
 } // namespace ARCH

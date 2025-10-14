@@ -51,14 +51,11 @@ TEST(linmod_internal, methodType) {
 }
 
 TEST(linmod_internal, eval_feature_matrix) {
-    // FIXME add row-major tests
     using namespace da_linmod;
 
     const double NA = std::numeric_limits<double>::quiet_NaN();
     const da_int n = 2;
     const da_int m = 5;
-    std::vector<double> X({9, 1, 7, 4, 11, NA, NA, 5, 17, 9, 21, 3, NA, NA});
-    da_int ldX{7};
     std::vector<double> x({3, 5});
     std::vector<double> xt({2, 1, 8, 3, 4});
     std::vector<double> v(m);
@@ -68,40 +65,52 @@ TEST(linmod_internal, eval_feature_matrix) {
     double alpha = 2.0;
     double beta = -3.0;
 
-    // v = alpha * [X] * x + beta * v
-    bool intercept = false;
-    bool trans = false;
-    v.assign({1, 3, 2, 7, 4});
-    v_exp.assign({101, 167, 126, 213, 84});
-    eval_feature_matrix(n, x.data(), m, X.data(), ldX, v.data(), intercept, trans, alpha,
-                        beta);
-    EXPECT_ARR_EQ(m, v, v_exp, 1, 1, 0, 0);
+    // Store X in both formats column, then row-major
+    std::vector<std::vector<double>> XX(
+        {{9, 1, 7, 4, 11, NA, NA, 5, 17, 9, 21, 3, NA, NA},
+         {9, 5, NA, 1, 17, NA, 7, 9, NA, 4, 21, NA, 11, 3, NA}});
+    std::vector<da_order> orders({column_major, row_major});
+    std::vector<da_int> lds({5 + 2, 2 + 1});
 
-    // v = alpha * [X]^T x + beta * v
-    intercept = false;
-    trans = true;
-    vt.assign({1, 3});
-    vt_exp.assign({259, 339});
-    eval_feature_matrix(n, xt.data(), m, X.data(), ldX, vt.data(), intercept, trans,
-                        alpha, beta);
-    EXPECT_ARR_EQ(n, vt, vt_exp, 1, 1, 0, 0);
+    for (auto order : orders) {
+        auto X = XX[order == column_major ? 0 : 1];
+        auto ldX = lds[order == column_major ? 0 : 1];
 
-    // v = alpha * [X, 1^T] * x + beta * v
-    intercept = true;
-    trans = false;
-    x.assign({3, 5, 2}); // add itercept coefficient
-    v.assign({1, 3, 2, 7, 4});
-    v_exp.assign({105, 171, 130, 217, 88});
-    eval_feature_matrix(n + 1, x.data(), m, X.data(), ldX, v.data(), intercept, trans,
-                        alpha, beta);
-    EXPECT_ARR_EQ(m, v, v_exp, 1, 1, 0, 0);
+        // v = alpha * [X] * x + beta * v
+        bool intercept = false;
+        bool trans = false;
+        v.assign({1, 3, 2, 7, 4});
+        v_exp.assign({101, 167, 126, 213, 84});
+        eval_feature_matrix(order, n, x.data(), m, X.data(), ldX, v.data(), intercept,
+                            trans, alpha, beta);
+        EXPECT_ARR_EQ(m, v, v_exp, 1, 1, 0, 0);
 
-    // v = alpha * [X, 1^T]^T x + beta * v
-    intercept = true;
-    trans = true;
-    vt.assign({7, 3, 11});
-    vt_exp.assign({241, 339, 3});
-    eval_feature_matrix(n + 1, xt.data(), m, X.data(), ldX, vt.data(), intercept, trans,
-                        alpha, beta);
-    EXPECT_ARR_EQ(n + 1, vt, vt_exp, 1, 1, 0, 0);
+        // v = alpha * [X]^T x + beta * v
+        intercept = false;
+        trans = true;
+        vt.assign({1, 3});
+        vt_exp.assign({259, 339});
+        eval_feature_matrix(order, n, xt.data(), m, X.data(), ldX, vt.data(), intercept,
+                            trans, alpha, beta);
+        EXPECT_ARR_EQ(n, vt, vt_exp, 1, 1, 0, 0);
+
+        // v = alpha * [X, 1^T] * x + beta * v
+        intercept = true;
+        trans = false;
+        x.assign({3, 5, 2}); // add itercept coefficient
+        v.assign({1, 3, 2, 7, 4});
+        v_exp.assign({105, 171, 130, 217, 88});
+        eval_feature_matrix(order, n + 1, x.data(), m, X.data(), ldX, v.data(), intercept,
+                            trans, alpha, beta);
+        EXPECT_ARR_EQ(m, v, v_exp, 1, 1, 0, 0);
+
+        // v = alpha * [X, 1^T]^T x + beta * v
+        intercept = true;
+        trans = true;
+        vt.assign({7, 3, 11});
+        vt_exp.assign({241, 339, 3});
+        eval_feature_matrix(order, n + 1, xt.data(), m, X.data(), ldX, vt.data(),
+                            intercept, trans, alpha, beta);
+        EXPECT_ARR_EQ(n + 1, vt, vt_exp, 1, 1, 0, 0);
+    }
 }

@@ -23,22 +23,25 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable=import-error,invalid-name,too-many-arguments,
-# pylint: disable=missing-module-docstring,too-many-locals, anomalous-backslash-in-string
+# pylint: disable=import-error,invalid-name,too-many-arguments
+# pylint: disable=missing-module-docstring,too-many-locals,anomalous-backslash-in-string
+# pylint: disable=too-many-positional-arguments,too-many-instance-attributes
+
 from inspect import signature
+import numpy as np
 from ._aoclda.nlls import pybind_nlls
 from ._internal_utils import check_convert_data
 
 
 class nlls():
-    r"""
+    """
     Nonlinear data fitting.
 
     This class defines a model and solves the problem
 
     .. math::
-         \underset{\text{subject to} x \in R^{n_{coef}}}{\text{minimize}}
-         F(x) = \frac{1}{2} \sum_{i=0}^{n_{res-1}} r_i(x)^2_W + \frac{\sigma}{p} ||x||_2^p
+         \\underset{\\text{subject to} x \\in R^{n_{coef}}}{\\text{minimize}}
+         F(x) = \\frac{1}{2} \\sum_{i=0}^{n_{res-1}} r_i(x)^2_W + \\frac{\\sigma}{p} ||x||_2^p
 
     where
 
@@ -46,7 +49,7 @@ class nlls():
 
     - :math:`r_i(x)` is the :math:`n_{res}`-vector of model residuals evaluated at :math:`x`,
 
-    - :math:`\sigma > 0`, and :math:`p=2,3` are the regularization hyperparameters, and
+    - :math:`\\sigma > 0`, and :math:`p=2,3` are the regularization hyperparameters, and
 
     - :math:`W` is a vector of the diagonal elements of the weight norm matrix.
 
@@ -56,8 +59,9 @@ class nlls():
 
         n_res (int): Number of residuals in the model. Must be positive.
 
-        weights (array-like, optional): Vector containing the values of the diagonal weight matrix ``W``.
-            It is expected that the values are all non-negative and normalized. Default = ``None``.
+        weights (array-like, optional): Vector containing the values of the diagonal weight
+            matrix ``W``. It is expected that the values are all non-negative and normalized.
+            Default = ``None``.
 
         lower_bounds (array-like, optional): Vector of lower bounds of the coefficient vector.
             Default = ``None``.
@@ -156,60 +160,64 @@ class nlls():
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
-    def __init__(self, n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None,
-                 order='c', model='hybrid', method='galahad', glob_strategy='tr',
-                 reg_power='quadratic', check_derivatives='no', verbose=0, check_data=False):
+    def __init__(
+            self,
+            n_coef,
+            n_res,
+            weights=None,
+            lower_bounds=None,
+            upper_bounds=None,
+            order='c',
+            model='hybrid',
+            method='galahad',
+            glob_strategy='tr',
+            reg_power='quadratic',
+            check_derivatives='no',
+            verbose=0,
+            check_data=False):
+        self.order = order
+        self.dtype = 'float'
+        self.weights = None
+        self.lower_bounds = None
+        self.upper_bounds = None
         if lower_bounds is not None:
-            lower_bounds = check_convert_data(lower_bounds)
+            self.lower_bounds, _, self.dtype = check_convert_data(
+                lower_bounds, order=self.order.capitalize(), dtype=self.dtype, force_dtype=True)
         if upper_bounds is not None:
-            upper_bounds = check_convert_data(upper_bounds)
+            self.upper_bounds, _, self.dtype = check_convert_data(
+                upper_bounds, order=self.order.capitalize(), dtype=self.dtype, force_dtype=True)
         if weights is not None:
-            weights = check_convert_data(weights)
-        
-        self.precision = "unknown"
-        self.nlls_double = None
-        self.nlls_single = None
-        if weights is None:
-            self.nlls_double = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
-                                           lower_bounds=lower_bounds, upper_bounds=upper_bounds,
-                                           order=order, prec="double", model=model, method=method,
-                                           glob_strategy=glob_strategy, reg_power=reg_power,
-                                           check_derivatives=check_derivatives, verbose=verbose,
-                                           check_data=check_data)
-            self.nlls_single = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
-                                           lower_bounds=lower_bounds, upper_bounds=upper_bounds,
-                                           order=order, prec="single", model=model, method=method,
-                                           glob_strategy=glob_strategy, reg_power=reg_power,
-                                           check_derivatives=check_derivatives, verbose=verbose,
-                                           check_data=check_data)
-            self.nlls = self.nlls_double
-        else:
-            if weights.dtype == "float32":
-                self.precision = "single"
-                self.nlls_single = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
-                                               lower_bounds=lower_bounds, upper_bounds=upper_bounds,
-                                               order=order, prec="single", model=model,
-                                               method=method, glob_strategy=glob_strategy,
-                                               reg_power=reg_power,
-                                               check_derivatives=check_derivatives, verbose=verbose,
-                                               check_data=check_data)
-                self.nlls = self.nlls_single
-            elif weights.dtype == "float64":
-                self.precision = "double"
-                self.nlls_double = pybind_nlls(n_coef=n_coef, n_res=n_res, weights=weights,
-                                               lower_bounds=lower_bounds, upper_bounds=upper_bounds,
-                                               order=order, prec="double", model=model,
-                                               method=method, glob_strategy=glob_strategy,
-                                               reg_power=reg_power,
-                                               check_derivatives=check_derivatives, verbose=verbose,
-                                               check_data=check_data)
-                self.nlls = self.nlls_double
-            else:
-                raise ValueError(f"Data type {weights.dtype} not supported.")
+            self.weights, _, self.dtype = check_convert_data(
+                weights, order=self.order.capitalize(), dtype=self.dtype, force_dtype=True)
 
-    def fit(self, x, fun, jac=None, hes=None, hep=None, data=None, ftol=1.0e-8, abs_ftol=1.0e-8,
-            gtol=1.0e-8, abs_gtol=1.0e-5, xtol=2.22e-16, reg_term=0, maxit=100,
-            fd_step=1.0e-7, fd_ttol=1.0e-4):
+        self.nlls = None
+        self.n_coef = n_coef
+        self.n_res = n_res
+        self.model = model
+        self.method = method
+        self.glob_strategy = glob_strategy
+        self.reg_power = reg_power
+        self.check_derivatives = check_derivatives
+        self.verbose = verbose
+        self.check_data = check_data
+
+    def fit(
+            self,
+            x,
+            fun,
+            jac=None,
+            hes=None,
+            hep=None,
+            data=None,
+            ftol=1.0e-8,
+            abs_ftol=1.0e-8,
+            gtol=1.0e-8,
+            abs_gtol=1.0e-5,
+            xtol=2.22e-16,
+            reg_term=0,
+            maxit=100,
+            fd_step=1.0e-7,
+            fd_ttol=1.0e-4):
         """
         Fit data to a nonlinear model using regularized least-squares.
 
@@ -261,7 +269,7 @@ class nlls():
                         return 0;
 
             hes (method, optional): function that calculates the ``n_coef`` by
-                ``n_coef`` symmetric residual Hessian matrix: :math:`H = \sum_i r_i H_i`.
+                ``n_coef`` symmetric residual Hessian matrix: :math:`H = \\sum_i r_i H_i`.
                 This function has the interface
 
                 :code:`def hes(x, r, h, data) -> int:`
@@ -351,19 +359,46 @@ class nlls():
         Returns:
             self (object): Returns the fitted model, instance itself.
         """
-        x = check_convert_data(x)
+        x, _, self.dtype = check_convert_data(
+            x, order=self.order.capitalize(), dtype=self.dtype, force_dtype=True)
 
-        if self.precision == "unknown":
-            if x.dtype == "float32":
-                self.precision = "single"
-                self.nlls_double = None
-                self.nlls = self.nlls_single
-            elif x.dtype == "float64":
-                self.precision = "double"
-                self.nlls_single = None
-                self.nlls = self.nlls_double
-            else:
-                raise ValueError(f"Data type {x.dtype} not supported.")
+        if self.dtype == 'float32':
+            prec = 'single'
+            ftol = np.float32(ftol)
+            abs_ftol = np.float32(abs_ftol)
+            gtol = np.float32(gtol)
+            abs_gtol = np.float32(abs_gtol)
+            xtol = np.float32(xtol)
+            reg_term = np.float32(reg_term)
+            fd_step = np.float32(fd_step)
+            fd_ttol = np.float32(fd_ttol)
+        else:
+            prec = 'double'
+            ftol = np.float64(ftol)
+            abs_ftol = np.float64(abs_ftol)
+            gtol = np.float64(gtol)
+            abs_gtol = np.float64(abs_gtol)
+            xtol = np.float64(xtol)
+            reg_term = np.float64(reg_term)
+            fd_step = np.float64(fd_step)
+            fd_ttol = np.float64(fd_ttol)
+
+        if self.nlls is None:
+            self.nlls = pybind_nlls(
+                n_coef=self.n_coef,
+                n_res=self.n_res,
+                weights=self.weights,
+                lower_bounds=self.lower_bounds,
+                upper_bounds=self.upper_bounds,
+                order=self.order,
+                prec=prec,
+                model=self.model,
+                method=self.method,
+                glob_strategy=self.glob_strategy,
+                reg_power=self.reg_power,
+                check_derivatives=self.check_derivatives,
+                verbose=self.verbose,
+                check_data=self.check_data)
 
         # inspect some parameter before entering c++
         self.__cb_inspect(fun, 3)
@@ -373,15 +408,23 @@ class nlls():
             self.__cb_inspect(hes, 4)
         if hep is not None:
             self.__cb_inspect(hep, 4)
-        # Separate calls, pybind is calling the wrong specialization
-        if self.precision == "double":
-            self.nlls.fit_d(x=x, fun=fun, jac=jac, hes=hes, hep=hep, data=data, ftol=ftol,
-                            abs_ftol=abs_ftol, gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
-                            reg_term=reg_term, maxit=maxit, fd_step=fd_step, fd_ttol=fd_ttol)
-        else:
-            self.nlls.fit_s(x=x, fun=fun, jac=jac, hes=hes, hep=hep, data=data, ftol=ftol,
-                            abs_ftol=abs_ftol, gtol=gtol, abs_gtol=abs_gtol, xtol=xtol,
-                            reg_term=reg_term, maxit=maxit, fd_step=fd_step, fd_ttol=fd_ttol)
+
+        self.nlls.pybind_fit(
+            x=x,
+            fun=fun,
+            jac=jac,
+            hes=hes,
+            hep=hep,
+            data=data,
+            ftol=ftol,
+            abs_ftol=abs_ftol,
+            gtol=gtol,
+            abs_gtol=abs_gtol,
+            xtol=xtol,
+            reg_term=reg_term,
+            maxit=maxit,
+            fd_step=fd_step,
+            fd_ttol=fd_ttol)
         return self
 
     @property
@@ -423,6 +466,6 @@ class nlls():
                       if param.kind == param.POSITIONAL_OR_KEYWORD)
         if pos_cnt < narg:
             raise ValueError(f"Function {f} has {pos_cnt} positional arguments " +
-                             "but must have at least {narg}.")
+                             f"but must have at least {narg}.")
         if sig.return_annotation is not int:
             raise ValueError(f"Function {f} must return an integer.")

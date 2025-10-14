@@ -26,9 +26,11 @@
 
 namespace da_nn_types {
 
-enum nn_algorithm { brute = 0, kd_tree, automatic };
+enum nn_algorithm { brute = 0, kd_tree, ball_tree, automatic };
 
 enum nn_weights { uniform = 0, distance };
+
+enum nn_check_region { pt_outside_eps = 0, pt_within_eps, region_within_eps };
 
 } // namespace da_nn_types
 

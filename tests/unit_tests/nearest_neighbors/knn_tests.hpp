@@ -34,9 +34,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-static std::list<std::string> MetricType = {"euclidean", "sqeuclidean", "l2",
-                                            "minkowski"};
-static std::list<std::string> AlgoType = {"brute", "kd tree", "auto"};
+static std::list<std::string> MetricType = {
+    "euclidean", "sqeuclidean", "l2", "minkowski", "euclidean_gemm", "sqeuclidean_gemm"};
+static std::list<std::string> AlgoType = {"brute", "kd tree", "ball tree", "auto"};
 static std::list<std::string> WeightsType = {"uniform", "distance"};
 static std::list<da_int> NumNeighConstructor = {3, 5};
 static std::list<da_int> NumNeighKNeighAPI = {3, 4};
@@ -50,7 +50,8 @@ template <typename T> struct KNNParamType {
     da_int n_features = 1;
     std::vector<T> X_train;
     da_int ldx_train = 1;
-    std::vector<da_int> y_train;
+    std::vector<da_int> y_train_class;
+    std::vector<T> y_train_regression;
 
     da_int n_queries = 1;
     std::vector<T> X_test;
@@ -72,6 +73,7 @@ template <typename T> struct KNNParamType {
     std::vector<da_int> expected_kind;
     std::vector<T> expected_proba;
     std::vector<da_int> expected_labels;
+    std::vector<T> expected_targets;
 
     // Set constructor to initialize data in test bodies as simply as possible.
     KNNParamType(){};
@@ -83,7 +85,8 @@ template <typename T> struct KNNParamType {
 
 template <typename T> void get_expected_kind_k_dist(KNNParamType<T> &param) {
     if ((param.metric == "euclidean") || (param.metric == "sqeuclidean") ||
-        (param.metric == "l2") || (param.metric == "minkowski")) {
+        (param.metric == "l2") || (param.metric == "minkowski") ||
+        (param.metric == "euclidean_gemm") || (param.metric == "sqeuclidean_gemm")) {
         if (param.n_neigh_kneighbors == 3) {
             std::vector<da_int> kind{1, 2, 3, 0, 0, 5, 3, 1, 4};
             param.expected_kind = convert_vector<da_int, da_int>(kind);
@@ -96,7 +99,7 @@ template <typename T> void get_expected_kind_k_dist(KNNParamType<T> &param) {
                                  3.7416573867739413,
                                  4.242640687119285,
                                  5.656854249492381};
-            if (param.metric == "sqeuclidean") {
+            if ((param.metric == "sqeuclidean") || (param.metric == "sqeuclidean_gemm")) {
                 for (auto &kd : kdist)
                     kd = kd * kd;
             }
@@ -116,7 +119,7 @@ template <typename T> void get_expected_kind_k_dist(KNNParamType<T> &param) {
                                  5.385164807134504,
                                  5.0990195135927845,
                                  6.164414002968976};
-            if (param.metric == "sqeuclidean") {
+            if ((param.metric == "sqeuclidean") || (param.metric == "sqeuclidean_gemm")) {
                 for (auto &kd : kdist)
                     kd = kd * kd;
             }
@@ -136,13 +139,14 @@ template <typename T> void get_proba(KNNParamType<T> &param) {
             param.expected_proba = convert_vector<T, T>(proba);
         } else if (param.weights == "distance") {
             if ((param.metric == "euclidean") || (param.metric == "l2") ||
-                (param.metric == "minkowski")) {
+                (param.metric == "minkowski") || (param.metric == "euclidean_gemm")) {
                 std::vector<T> proba{
                     0.1379511568268668, 0.3515868265794006, 0.1798440493222374,
                     0.4507346784224799, 0.3447698547319956, 0.4217676420329797,
                     0.4113141647506533, 0.3036433186886039, 0.3983883086447829};
                 param.expected_proba = convert_vector<T, T>(proba);
-            } else if (param.metric == "sqeuclidean") {
+            } else if ((param.metric == "sqeuclidean") ||
+                       (param.metric == "sqeuclidean_gemm")) {
                 std::vector<T> proba{
                     0.0895917616770872, 0.5270701941190925, 0.1596502898413,
                     0.4799558661272527, 0.2747153739044967, 0.4485412905065095,
@@ -165,7 +169,7 @@ template <typename T> void get_proba(KNNParamType<T> &param) {
             param.expected_proba = convert_vector<T, T>(proba);
         } else if (param.weights == "distance") {
             if ((param.metric == "euclidean") || (param.metric == "l2") ||
-                (param.metric == "minkowski")) {
+                (param.metric == "minkowski") || (param.metric == "euclidean_gemm")) {
                 std::vector<T> proba{0.,
                                      0.47531678671182,
                                      0.,
@@ -176,7 +180,8 @@ template <typename T> void get_proba(KNNParamType<T> &param) {
                                      0.2240664820638185,
                                      0.6221785161284746};
                 param.expected_proba = convert_vector<T, T>(proba);
-            } else if (param.metric == "sqeuclidean") {
+            } else if ((param.metric == "sqeuclidean") ||
+                       (param.metric == "sqeuclidean_gemm")) {
                 std::vector<T> proba{0.,
                                      0.6164383561643836,
                                      0.,
@@ -219,6 +224,63 @@ template <typename T> void get_labels(KNNParamType<T> &param) {
     }
 }
 
+template <typename T> void get_targets(KNNParamType<T> &param) {
+    if ((param.metric == "sqeuclidean") || (param.metric == "sqeuclidean_gemm")) {
+        if (param.n_neigh_knn == 5) {
+            if (param.weights == "uniform") {
+                std::vector<T> expected_targets{1.6, 2.08, 2.2};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else if (param.weights == "distance") {
+                std::vector<T> expected_targets{1.6673041559396837, 1.3229994266524698,
+                                                2.190592036491495};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else
+                throw std::runtime_error("Weights must be uniform or distance");
+        } else if (param.n_neigh_knn == 3) {
+            if (param.weights == "uniform") {
+                std::vector<T> expected_targets{1.5666666666666667, 1.4000000000000001,
+                                                3.0};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else if (param.weights == "distance") {
+                std::vector<T> expected_targets{1.6538258575197888, 0.9794520547945206,
+                                                2.749071618037135};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else
+                throw std::runtime_error("Weights must be uniform or distance");
+        } else {
+            throw std::runtime_error("n_neigh_knn must be 5 or 3");
+        }
+    } else if ((param.metric == "euclidean") || (param.metric == "l2") ||
+               (param.metric == "minkowski") || (param.metric == "euclidean_gemm")) {
+        if (param.n_neigh_knn == 5) {
+            if (param.weights == "uniform") {
+                std::vector<T> expected_targets{1.6, 2.08, 2.2};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else if (param.weights == "distance") {
+                std::vector<T> expected_targets{1.6323653119203947, 1.7134711834322838,
+                                                2.202877674352422};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else
+                throw std::runtime_error("Weights must be uniform or distance");
+        } else if (param.n_neigh_knn == 3) {
+            if (param.weights == "uniform") {
+                std::vector<T> expected_targets{1.5666666666666667, 1.4000000000000001,
+                                                3.0};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else if (param.weights == "distance") {
+                std::vector<T> expected_targets{1.6105221794760263, 1.1815297507328528,
+                                                2.8785808475618806};
+                param.expected_targets = convert_vector<T, T>(expected_targets);
+            } else
+                throw std::runtime_error("Weights must be uniform or distance");
+        } else {
+            throw std::runtime_error("n_neigh_knn must be 5 or 3");
+        }
+    } else {
+        throw std::runtime_error("metric must be euclidean or sqeuclidean");
+    }
+}
+
 template <typename T> void GetExampleData(std::vector<KNNParamType<T>> &params) {
     // Test with example data for all different parameter combinations.
     // Iterate through metrics, algorithms, and weights.
@@ -227,37 +289,45 @@ template <typename T> void GetExampleData(std::vector<KNNParamType<T>> &params) 
             for (auto const &w : WeightsType) {
                 for (auto const &nc : NumNeighConstructor) {
                     for (auto const &nk : NumNeighKNeighAPI) {
-                        if (a == "kd tree") {
-                            // If the algorithm is k-d tree, test for multiple leaf sizes.
-                            for (auto const &ls : leaf_size) {
+                        if (a == "kd tree" || a == "ball tree") {
+                            if ((m != "sqeuclidean") && (m != "sqeuclidean_gemm")) {
+                                // If the algorithm is tree, test for multiple leaf sizes.
+                                for (auto const &ls : leaf_size) {
 
-                                KNNParamType<T> test(nc, nk, m, a, w, ls);
-                                test.n_features = 3;
-                                test.n_samples = 6;
-                                test.n_queries = 3;
-                                test.ldx_train = test.n_samples;
-                                test.ldx_test = test.n_queries;
-                                std::vector<T> X_train{-1., -2., -3., 1., 2., 3.,
-                                                       -1., -1., -2., 3., 5., -1.,
-                                                       2.,  3.,  -1., 1., 1., 2.};
-                                std::vector<da_int> y_train{1, 2, 0, 1, 2, 2};
-                                test.X_train = convert_vector<T, T>(X_train);
-                                test.y_train = convert_vector<da_int, da_int>(y_train);
+                                    KNNParamType<T> test(nc, nk, m, a, w, ls);
+                                    test.n_features = 3;
+                                    test.n_samples = 6;
+                                    test.n_queries = 3;
+                                    test.ldx_train = test.n_samples;
+                                    test.ldx_test = test.n_queries;
+                                    std::vector<T> X_train{-1., -2., -3., 1., 2., 3.,
+                                                           -1., -1., -2., 3., 5., -1.,
+                                                           2.,  3.,  -1., 1., 1., 2.};
+                                    std::vector<da_int> y_train_class{1, 2, 0, 1, 2, 2};
+                                    std::vector<T> y_train_regression{1.5, 2.2, 0.5,
+                                                                      1,   2.8, 5.2};
+                                    test.X_train = convert_vector<T, T>(X_train);
+                                    test.y_train_class =
+                                        convert_vector<da_int, da_int>(y_train_class);
+                                    test.y_train_regression =
+                                        convert_vector<T, T>(y_train_regression);
 
-                                std::vector<T> X_test{-2., -1., 2.,  2., -2.,
-                                                      1.,  3.,  -1., -3.};
-                                test.X_test = convert_vector<T, T>(X_test);
+                                    std::vector<T> X_test{-2., -1., 2.,  2., -2.,
+                                                          1.,  3.,  -1., -3.};
+                                    test.X_test = convert_vector<T, T>(X_test);
 
-                                get_expected_kind_k_dist(test);
-                                get_proba(test);
-                                get_labels(test);
-                                test.name = "metric=" + m + ", algo=" + a +
-                                            ", weights=" + w +
-                                            ", nc=" + std::to_string(nc) +
-                                            ", nk=" + std::to_string(nk) +
-                                            ", leaf_size=" + std::to_string(ls);
+                                    get_expected_kind_k_dist(test);
+                                    get_proba(test);
+                                    get_labels(test);
+                                    get_targets(test);
+                                    test.name = "metric=" + m + ", algo=" + a +
+                                                ", weights=" + w +
+                                                ", nc=" + std::to_string(nc) +
+                                                ", nk=" + std::to_string(nk) +
+                                                ", leaf_size=" + std::to_string(ls);
 
-                                params.push_back(test);
+                                    params.push_back(test);
+                                }
                             }
                         } else {
                             KNNParamType<T> test(nc, nk, m, a, w);
@@ -269,9 +339,13 @@ template <typename T> void GetExampleData(std::vector<KNNParamType<T>> &params) 
                             std::vector<T> X_train{-1., -2., -3., 1., 2., 3.,
                                                    -1., -1., -2., 3., 5., -1.,
                                                    2.,  3.,  -1., 1., 1., 2.};
-                            std::vector<da_int> y_train{1, 2, 0, 1, 2, 2};
+                            std::vector<da_int> y_train_class{1, 2, 0, 1, 2, 2};
+                            std::vector<T> y_train_regression{1.5, 2.2, 0.5, 1, 2.8, 5.2};
                             test.X_train = convert_vector<T, T>(X_train);
-                            test.y_train = convert_vector<da_int, da_int>(y_train);
+                            test.y_train_class =
+                                convert_vector<da_int, da_int>(y_train_class);
+                            test.y_train_regression =
+                                convert_vector<T, T>(y_train_regression);
 
                             std::vector<T> X_test{-2., -1., 2.,  2., -2.,
                                                   1.,  3.,  -1., -3.};
@@ -280,6 +354,7 @@ template <typename T> void GetExampleData(std::vector<KNNParamType<T>> &params) 
                             get_expected_kind_k_dist(test);
                             get_proba(test);
                             get_labels(test);
+                            get_targets(test);
                             test.name = "metric=" + m + ", algo=" + a + ", weights=" + w +
                                         ", nc=" + std::to_string(nc) +
                                         ", nk=" + std::to_string(nk);
@@ -304,9 +379,11 @@ template <typename T> void GetRowMajorData(std::vector<KNNParamType<T>> &params)
     test.ldx_test = test.n_queries;
     std::vector<T> X_train{-1., -2., -3., 1., 2., 3.,  -1., -1., -2.,
                            3.,  5.,  -1., 2., 3., -1., 1.,  1.,  2.};
-    std::vector<da_int> y_train{1, 2, 0, 1, 2, 2};
+    std::vector<da_int> y_train_class{1, 2, 0, 1, 2, 2};
+    std::vector<T> y_train_regression{1.5, 2.2, 0.5, 1, 2.8, 5.2};
     test.X_train = convert_vector<T, T>(X_train);
-    test.y_train = convert_vector<da_int, da_int>(y_train);
+    test.y_train_class = convert_vector<da_int, da_int>(y_train_class);
+    test.y_train_regression = convert_vector<T, T>(y_train_regression);
 
     std::vector<T> X_test{-2., -1., 2., 2., -2., 1., 3., -1., -3.};
     test.X_test = convert_vector<T, T>(X_test);
@@ -314,6 +391,7 @@ template <typename T> void GetRowMajorData(std::vector<KNNParamType<T>> &params)
     get_expected_kind_k_dist(test);
     get_proba(test);
     get_labels(test);
+    get_targets(test);
 
     // Now convert everything to row major order
     test.order = "row-major";

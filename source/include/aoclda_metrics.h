@@ -50,6 +50,8 @@ enum da_metric_ {
     da_l1 = da_manhattan,        ///< Use l1 distance.
     da_cityblock = da_manhattan, ///< Use cityblock distance.
     da_cosine,                   ///< Use Cosine distance.
+    da_euclidean_gemm,           ///< Use gemm-based euclidean distance.
+    da_sqeuclidean_gemm,         ///< Use gemm-based squared euclidean distance.
 };
 
 /** @brief Alias for the \ref da_metric_ enum. */

@@ -79,7 +79,7 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
  * Pass pointers to a data matrix @p X containing @p n_samples observations (rows) over @p n_features features (columns)
  * and a response vector @p y of size @p n_samples.
  *
- * Only the pointers to @p X and @p y are stored; no internal copy is made.
+ * Only the pointers to @p X and @p y are stored; an internal copy may be made depending on the model, solver and scaling method selected.
  *
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples the number of observations (rows) of the data matrix @p X. Constraint: @p n_samples @f$\ge@f$ 1.

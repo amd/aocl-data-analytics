@@ -121,10 +121,12 @@ Options
 
          "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`."
          "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`."
+         "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`"
          "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`"
          "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, or `syevd`."
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "whiten", "integer", ":math:`i=0`", "Whether or not we whiten when transforming the data.", ":math:`0 \le i \le 1`"
 
       If the `pca method` option is set to `svd` then no standardization is performed. This option should be used if the input data is already standardized or if an explicit singular value decomposition is required.
       Note, however, that if the columns of the data matrix are not mean-centered, then the computed **variance** and **total_variance** will be meaningless.
@@ -141,6 +143,8 @@ Options
       If `svd solver` is set to `auto`, then DGESDD or SGESDD will be used unless internal heuristics determine that the eigendecomposition may be used.
 
       If `store U` is set to 1, then the matrix :math:`U` from the SVD will be stored and used to ensure deterministic results in the signs of the principal components. Note that there may be a small performance penalty in setting this option and it cannot be used if `svd solver` is set to `syevd`.
+
+      If `whiten` is set to 1, then the data is whitened upon transformation. This divides each principal component by its corresponding singular value and multiplies the component by a dimensional factor so the transformed data, specifically that data used to fit the PCA, has a unit diagonal covariance matrix.
 
 Examples
 ========
@@ -179,7 +183,7 @@ Principal component analysis and the SVD
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.factorization.PCA(n_components=1, bias='unbiased', method='covariance', solver='auto', store_U=False, check_data=false)
+      .. autoclass:: aoclda.factorization.PCA(n_components=1, bias='unbiased', method='covariance', solver='auto', store_U=False,  whiten=False, check_data=False)
          :members:
 
    .. tab-item:: C

@@ -44,9 +44,10 @@ else()
     DESTINATION python_package
     PATTERN "nlls_*.py" EXCLUDE)
 endif()
-install(FILES python_package/setup.py python_package/pyproject.toml
-              ${CMAKE_SOURCE_DIR}/Notices ${CMAKE_SOURCE_DIR}/License
+install(FILES python_package/setup.py python_package/pyproject.toml python_package/README.rst
         DESTINATION python_package)
+install(FILES ${CMAKE_SOURCE_DIR}/Notices ${CMAKE_SOURCE_DIR}/License
+        DESTINATION python_package/aoclda)
 
 if(NOT USE_EXISTING_DA)
   # Install aocl-da libraries in a temporary folder

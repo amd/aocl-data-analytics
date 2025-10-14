@@ -28,7 +28,7 @@
 ******************************
 
 This chapter contains functions for computing the *k*-nearest neighbors of a test data set and a training data set.
-Nearest neighbors functionality provided in this chapter can be used for classification.
+Nearest neighbors functionality provided in this chapter can be used for classification or regression.
 
 .. _knn_intro:
 
@@ -36,9 +36,11 @@ The *k*-nearest neighbors algorithm is a supervised learning method used for cla
 For each point :math:`x_i` of a test data set :math:`X_{test}`, this algorithm computes the :math:`k` points of a given training set :math:`X_{train}`
 which are the most similar to :math:`x_i`.
 
-In addition, when a vector :math:`y_{train}` with the associated labels for each data point in :math:`X_{train}` is provided, this algorithm
+For classification problems, when a vector :math:`y_{train}` with the associated labels for each data point in :math:`X_{train}` is provided, this algorithm
 computes the predicted labels of the test data :math:`X_{test}`. A query point :math:`x_i` of :math:`X_{test}` is labeled using the majority vote of the neighbors.
 In case of a tie, the first class label is returned by convention.
+
+For regression problems, the predicted target value of a query point :math:`x_i` is computed as the mean of the target values of the :math:`k` nearest neighbors.
 
 Outputs from *k*-nearest neighbors
 ----------------------------------
@@ -49,7 +51,8 @@ The following results can be computed with this algorithm:
 - **number of classes** - the number of available class labels. Used to allocate memory for the probability prediction.
 - **class labels** - the available class labels, sorted in ascending order.
 - **probability estimates** - the probability that data points are labeled according to the available classes.
-- **predicted labels** - the predicted label for each of the queries in :math:`X_{test}`.
+- **predicted labels** - the predicted label for each of the queries in :math:`X_{test}` in classification problems.
+- **predicted target values** - the predicted target value for each of the queries in :math:`X_{test}` in regression problems.
 
 Typical workflow for *k*-NN
 ---------------------------
@@ -61,22 +64,37 @@ The standard way of computing the *k*-nearest neighbors using AOCL-DA is as foll
    .. tab-item:: Python
       :sync: Python
 
+      For classification:
       1. Initialize a :func:`aoclda.nearest_neighbors.knn_classifier` object with options set in the class constructor.
       2. Fit the *k*-NN for your training data set using :func:`aoclda.nearest_neighbors.knn_classifier.fit`.
       3. Compute the indices of the nearest neighbors and optionally the corresponding distances using :func:`aoclda.nearest_neighbors.knn_classifier.kneighbors`.
       4. If only the labels of the test data are required, use :func:`aoclda.nearest_neighbors.knn_classifier.predict`. Note that a previous call to :func:`aoclda.nearest_neighbors.knn_classifier.kneighbors` is not required.
       5. If the probability estimates for each label are required, use :func:`aoclda.nearest_neighbors.knn_classifier.predict_proba`. Note that a previous call to :func:`aoclda.nearest_neighbors.knn_classifier.kneighbors` is not required.
 
+      For regression:
+      1. Initialize a :func:`aoclda.nearest_neighbors.knn_regressor` object with options set in the class constructor.
+      2. Fit the *k*-NN for your training data set using :func:`aoclda.nearest_neighbors.knn_regressor.fit`.
+      3. Compute the indices of the nearest neighbors and optionally the corresponding distances using :func:`aoclda.nearest_neighbors.knn_regressor.kneighbors`.
+      4. If only the target values of the test data are required, use :func:`aoclda.nearest_neighbors.knn_regressor.predict`. Note that a previous call to :func:`aoclda.nearest_neighbors.knn_regressor.kneighbors` is not required.
+
 
    .. tab-item:: C
       :sync: C
 
+      For classification:
       1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_knn``.
-      2. Pass data to the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
+      2. Pass data to the handle using :ref:`da_knn_classifier_set_training_data_? <da_knn_classifier_set_training_data>`.
       3. Set the number of neighbors required and the metric or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <knn_options>`).
-      4. Compute the indices to the nearest neighbors and optionally the corresponding distances using :ref:`da_knn_kneighbors_? <da_knn_kneighbors>`.
-      5. If only the labels of the test data are required, use :ref:`da_knn_predict_? <da_knn_predict>`.
-      6. If the probability estimates for each label are required, use :ref:`da_knn_predict_proba_? <da_knn_predict_proba>`. To allocate the appropriate memory space for the predicted probabilities, use :ref:`da_knn_classes_? <da_knn_classes>`.
+      4. Compute the indices of the nearest neighbors and optionally the corresponding distances using :ref:`da_knn_kneighbors_? <da_knn_kneighbors>`.
+      5. If only the labels of the test data are required, use :ref:`da_knn_classifier_predict_? <da_knn_classifier_predict>`.
+      6. If the probability estimates for each label are required, use :ref:`da_knn_classifier_predict_proba_? <da_knn_classifier_predict_proba>`. To allocate the appropriate memory space for the predicted probabilities, use :ref:`da_knn_classes_? <da_knn_classes>`.
+
+      For regression:
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_knn``.
+      2. Pass data to the handle using :ref:`da_knn_regressor_set_training_data_? <da_knn_regressor_set_training_data>`.
+      3. Set the number of neighbors required and the metric or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <knn_options>`).
+      4. Compute the indices of the nearest neighbors and optionally the corresponding distances using :ref:`da_knn_kneighbors_? <da_knn_kneighbors>`.
+      5. If only the target values of the test data are required, use :ref:`da_knn_regressor_predict_? <da_knn_regressor_predict>`.
 
 .. _knn_options:
 
@@ -88,7 +106,7 @@ Options
    .. tab-item:: Python
       :sync: Python
 
-      The available Python options are detailed in the :func:`aoclda.nearest_neighbors.knn_classifier` class constructor.
+      The available Python options are detailed in the :func:`aoclda.nearest_neighbors.knn_classifier` and :func:`aoclda.nearest_neighbors.knn_regressor` class constructors.
 
    .. tab-item:: C
       :sync: C
@@ -102,8 +120,8 @@ Options
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
          "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
-         "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`."
-         "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `brute`, or `kd tree`."
+         "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`."
+         "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
          "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of k-nearest neighbors.", ":math:`0 < r`"
          "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
@@ -119,20 +137,32 @@ Examples
 
       The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
 
-      .. collapse:: k-NN Example
+      .. collapse:: k-NN  Classification Example
 
-          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/knn_ex.py
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/knn_classification_ex.py
+              :language: Python
+              :linenos:
+
+      .. collapse:: k-NN  Regression Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/knn_regression_ex.py
               :language: Python
               :linenos:
 
    .. tab-item:: C
       :sync: C
 
-      The code below can be found in ``knn.cpp`` in the ``examples`` folder of your installation.
+      The code below can be found in ``knn_classification.cpp`` and ``knn_regression.cpp`` in the ``examples`` folder of your installation.
 
-      .. collapse:: k-NN Example
+      .. collapse:: k-NN Classification Example
 
-          .. literalinclude:: ../../tests/examples/knn.cpp
+          .. literalinclude:: ../../tests/examples/knn_classification.cpp
+              :language: C++
+              :linenos:
+
+      .. collapse:: k-NN Regression Example
+
+          .. literalinclude:: ../../tests/examples/knn_regression.cpp
               :language: C++
               :linenos:
 
@@ -150,14 +180,25 @@ Examples
       .. autoclass:: aoclda.nearest_neighbors.knn_classifier(n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean', p=2.0, check_data=false)
          :members:
 
+      .. autoclass:: aoclda.nearest_neighbors.knn_regressor(n_neighbors=5, weights='uniform', algorithm='brute', metric='euclidean', p=2.0, check_data=false)
+         :members:
+
    .. tab-item:: C
 
-      .. _da_knn_set_training_data:
+      .. _da_knn_classifier_set_training_data:
 
-      .. doxygenfunction:: da_knn_set_training_data_s
+      .. doxygenfunction:: da_knn_classifier_set_training_data_s
          :project: da
          :outline:
-      .. doxygenfunction:: da_knn_set_training_data_d
+      .. doxygenfunction:: da_knn_classifier_set_training_data_d
+         :project: da
+
+      .. _da_knn_regressor_set_training_data:
+
+      .. doxygenfunction:: da_knn_regressor_set_training_data_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_knn_regressor_set_training_data_d
          :project: da
 
       .. _da_knn_kneighbors:
@@ -176,18 +217,26 @@ Examples
       .. doxygenfunction:: da_knn_classes_d
          :project: da
 
-      .. _da_knn_predict_proba:
+      .. _da_knn_classifier_predict_proba:
 
-      .. doxygenfunction:: da_knn_predict_proba_s
+      .. doxygenfunction:: da_knn_classifier_predict_proba_s
          :project: da
          :outline:
-      .. doxygenfunction:: da_knn_predict_proba_d
+      .. doxygenfunction:: da_knn_classifier_predict_proba_d
          :project: da
 
-      .. _da_knn_predict:
+      .. _da_knn_classifier_predict:
 
-      .. doxygenfunction:: da_knn_predict_s
+      .. doxygenfunction:: da_knn_classifier_predict_s
          :project: da
          :outline:
-      .. doxygenfunction:: da_knn_predict_d
+      .. doxygenfunction:: da_knn_classifier_predict_d
+         :project: da
+
+      .. _da_knn_regressor_predict:
+
+      .. doxygenfunction:: da_knn_regressor_predict_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_knn_regressor_predict_d
          :project: da

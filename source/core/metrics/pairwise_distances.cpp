@@ -42,10 +42,10 @@ da_status pairwise_distance_kernel(da_order order, da_int m, da_int n, da_int k,
     switch (metric) {
     case da_euclidean:
         return da_metrics::pairwise_distances::euclidean(order, m, n, k, X, ldx, Y, ldy,
-                                                         D, ldd, false);
+                                                         D, ldd);
     case da_sqeuclidean:
-        return da_metrics::pairwise_distances::euclidean(order, m, n, k, X, ldx, Y, ldy,
-                                                         D, ldd, true);
+        return da_metrics::pairwise_distances::sqeuclidean(order, m, n, k, X, ldx, Y, ldy,
+                                                           D, ldd);
     case da_manhattan:
         return da_metrics::pairwise_distances::manhattan(order, m, n, k, X, ldx, Y, ldy,
                                                          D, ldd);
@@ -55,15 +55,21 @@ da_status pairwise_distance_kernel(da_order order, da_int m, da_int n, da_int k,
     case da_minkowski:
         if (p == 2.0)
             return da_metrics::pairwise_distances::euclidean(order, m, n, k, X, ldx, Y,
-                                                             ldy, D, ldd, false);
+                                                             ldy, D, ldd);
         else if (p == 1.0)
             return da_metrics::pairwise_distances::manhattan(order, m, n, k, X, ldx, Y,
                                                              ldy, D, ldd);
         else
             return da_metrics::pairwise_distances::minkowski(order, m, n, k, X, ldx, Y,
                                                              ldy, D, ldd, p);
+    case da_euclidean_gemm:
+        return da_metrics::pairwise_distances::euclidean_gemm(order, m, n, k, X, ldx, Y,
+                                                              ldy, D, ldd, false);
+    case da_sqeuclidean_gemm:
+        return da_metrics::pairwise_distances::euclidean_gemm(order, m, n, k, X, ldx, Y,
+                                                              ldy, D, ldd, true);
     default:
-        return da_status_not_implemented;
+        return da_status_not_implemented; // LCOV_EXCL_LINE
     }
 }
 

@@ -57,9 +57,7 @@ else()
   add_definitions(-DAOCLDA_ILP64)
 endif()
 # Create the pybind11 modules
-pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp
-                    bindings/tools_py.cpp
-                    bindings/utilities_py.cpp)
+pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp)
 # Do not add any new directories here. This is to keep the python wrapper
 # separate from the main library
 target_include_directories(_aoclda PRIVATE ${CMAKE_SOURCE_DIR}/source/include)

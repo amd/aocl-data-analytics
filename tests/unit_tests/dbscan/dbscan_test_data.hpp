@@ -281,6 +281,9 @@ template <typename T> void Get30by3Data(std::vector<DBSCANParamType<T>> &params)
     param.algorithm = "auto";
     param.test_name = "30 by 3 data matrix with automatic algorithm selection";
     params.push_back(param);
+    param.algorithm = "ball tree";
+    param.test_name = "30 by 3 data matrix with ball tree";
+    params.push_back(param);
 }
 
 template <typename T> void Get30by1Data(std::vector<DBSCANParamType<T>> &params) {
@@ -299,14 +302,18 @@ template <typename T> void Get30by1Data(std::vector<DBSCANParamType<T>> &params)
     param.expected_rinfo[6] = 2.0000001;
     param.test_name = "30 by 1 data matrix with Minkowski distance and p near 2";
     params.push_back(param);
+    param.metric = "euclidean";
+    param.algorithm = "kd tree";
+    param.test_name = "30 by 1 data matrix with k-d tree DBSCAN and Euclidean distance";
+    params.push_back(param);
+    param.algorithm = "ball tree";
+    param.test_name = "30 by 1 data matrix with ball tree DBSCAN and Euclidean distance";
+    params.push_back(param);
     param.metric = "sqeuclidean";
+    param.algorithm = "brute";
     param.test_name = "30 by 1 data matrix with squared Euclidean distance";
     param.eps = 0.25;
     param.expected_rinfo[3] = 0.25;
-    params.push_back(param);
-    param.algorithm = "kd tree";
-    param.test_name =
-        "30 by 1 data matrix with k-d tree DBSCAN and squared Euclidean distance";
     params.push_back(param);
 }
 

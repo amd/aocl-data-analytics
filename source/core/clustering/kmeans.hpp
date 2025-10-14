@@ -21,13 +21,10 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include "basic_handle.hpp"
 #include "da_error.hpp"
+#include "da_kernel_utils.hpp"
 #include "kmeans_types.hpp"
 #include "macros.h"
 #include <functional>
@@ -241,26 +238,26 @@ template <typename T> class kmeans : public basic_handle<T> {
 
 // Declare the kernel functions for the various SIMD implementations and a generic function for
 // choosing the SIMD size and associated padding requirement
-template <class T, kmeans_kernel U>
+template <class T, vectorization_type U>
 void lloyd_iteration_kernel(bool update_centres, da_int block_size, T *centre_norms,
                             da_int *cluster_count, da_int *labels, T *work, da_int ldwork,
                             da_int n_clusters);
 
-template <class T, kmeans_kernel U>
+template <class T, vectorization_type U>
 void elkan_iteration_kernel(da_int block_size, T *l_bound, da_int ldl_bound, T *u_bound,
                             T *centre_shift, da_int *labels, da_int n_clusters);
 
-template <class T, kmeans_kernel U>
+template <class T, vectorization_type U>
 T elkan_reduction_kernel(da_int m, const T *x, da_int incx, T *y, da_int incy);
 
 template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
-                            da_kmeans_types::kmeans_kernel &kernel_type);
+                            vectorization_type &kernel_type);
 
 template <class T>
 void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
-                            da_kmeans_types::kmeans_kernel &update_kernel_type,
-                            da_kmeans_types::kmeans_kernel &redeuce_kernel_type);
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &redeuce_kernel_type);
 
 } // namespace da_kmeans
 

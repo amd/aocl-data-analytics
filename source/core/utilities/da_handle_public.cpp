@@ -209,7 +209,6 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
-
         case da_handle_decision_tree:
             DISPATCHER((*handle)->err,
                        (*handle)->alg_handle_s =

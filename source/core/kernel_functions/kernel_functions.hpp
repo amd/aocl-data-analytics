@@ -28,10 +28,14 @@
 #include "aoclda.h"
 #include "aoclda_types.h"
 #include "da_error.hpp"
+#include "da_kernel_utils.hpp"
+#include "kernel_functions_types.hpp"
 #include "macros.h"
 #include <vector>
 
 namespace ARCH {
+
+namespace da_kernel_functions {
 
 /*
 Auxiliary function to check dimensions of given parameters (taken from pairwise_distances.hpp)
@@ -80,8 +84,9 @@ Given an m by k matrix X and an n by k matrix Y (both column major), computes th
 */
 template <typename T>
 void rbf_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *X,
-                         T *X_norms, da_int ldx, const T *Y, T *Y_norms, da_int ldy, T *D,
-                         da_int ldd, T gamma, bool X_is_Y);
+                         T *X_norms, da_int compute_X_norms, da_int ldx, const T *Y,
+                         T *Y_norms, da_int compute_Y_norms, da_int ldy, T *D, da_int ldd,
+                         T gamma, bool X_is_Y, da_int vectorisation);
 /*
 Linear kernel
 */
@@ -95,14 +100,15 @@ Polynomial kernel
 template <typename T>
 void polynomial_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *X,
                                 da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
-                                T gamma, da_int degree, T coef0, bool X_is_Y);
+                                T gamma, da_int degree, T coef0, bool X_is_Y,
+                                da_int vectorisation);
 /*
 Sigmoid kernel
 */
 template <typename T>
 void sigmoid_kernel_internal(da_order order, da_int m, da_int n, da_int k, const T *X,
                              da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
-                             T gamma, T coef0, bool X_is_Y);
+                             T gamma, T coef0, bool X_is_Y, da_int vectorisation);
 /*
 Helper function to transpose upper trainagular matrix to a symmetric
 */
@@ -116,5 +122,24 @@ template <typename T>
 inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *X,
                          da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma,
                          bool X_is_Y);
+
+// Declare the kernel functions for the various SIMD implementations and a generic function for
+// choosing the SIMD size and associated padding requirement
+template <class T, vectorization_type U>
+void exp_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T multiplier);
+template <class T, vectorization_type U>
+void pow_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T coef0,
+                da_int degree);
+template <class T, vectorization_type U>
+void tanh_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T coef0);
+
+template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type);
+
+// Exposed here for internal unit test, to correctly dispatch vectorisation
+template <typename T> using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
+template <typename T>
+exp_kernel_func_t<T> select_exp_kernel_function(vectorization_type vec_enum);
+
+} // namespace da_kernel_functions
 
 } // namespace ARCH

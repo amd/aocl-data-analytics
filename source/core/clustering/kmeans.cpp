@@ -40,10 +40,6 @@
 #include <string>
 #include <type_traits>
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 namespace ARCH {
 
 namespace da_kmeans {
@@ -114,7 +110,7 @@ da_status kmeans<T>::get_result(da_result query, da_int *dim, T *result) {
 
 template <typename T>
 da_status kmeans<T>::get_result(da_result query, da_int *dim, da_int *result) {
-    // Don't return anything if k-means has not been computed
+    // Don't return anything if k-means clustering has not been computed
     if (!iscomputed) {
         return da_warn(this->err, da_status_no_data,
                        "k-means clustering has not yet been computed. Please call "
@@ -144,7 +140,7 @@ da_status kmeans<T>::get_result(da_result query, da_int *dim, da_int *result) {
 
 template <typename T> void kmeans<T>::refresh() {
 
-    // Reset some internal class variables to their defaults
+    // Reset internal class variables to their defaults
     best_n_iter = 0;
     current_n_iter = 0;
     warn_maxit_reached = false;
@@ -496,10 +492,10 @@ da_status kmeans<T>::transform(da_int m_samples, da_int m_features, const T *X,
     }
 
     // Compute m_samples x n_clusters matrix of distances to cluster centres
-    ARCH::euclidean_distance(column_major, m_samples, n_clusters, n_features, X_temp,
-                             ldx_temp, (*best_cluster_centres).data(), n_clusters,
-                             X_transform_temp, ldx_transform_temp, x_work.data(), 2,
-                             workc1.data(), 1, false, false);
+    ARCH::euclidean_gemm_distance(column_major, m_samples, n_clusters, n_features, X_temp,
+                                  ldx_temp, (*best_cluster_centres).data(), n_clusters,
+                                  X_transform_temp, ldx_transform_temp, x_work.data(), 2,
+                                  workc1.data(), 1, false, false);
 
     if (this->order == row_major) {
 
@@ -519,28 +515,28 @@ void kmeans<T>::assign_lloyd_kernel(
     std::function<void(bool, da_int, T *, da_int *, da_int *, T *, da_int, da_int)>
         &kernel,
     da_int &padding, da_int n_clusters) {
-    kmeans_kernel vec_type;
+    vectorization_type vec_type;
     select_simd_size_lloyd<T>(n_clusters, padding, vec_type);
     // Add telemetry
     context_set_hidden_settings("kmeans.setup"s,
                                 "kernel=lloyd,kernel.type="s + std::to_string(vec_type) +
                                     ",kernel.padding="s + std::to_string(padding));
     switch (vec_type) {
-    case kmeans_kernel::avx:
-        kernel = lloyd_iteration_kernel<T, kmeans_kernel::avx>;
+    case vectorization_type::avx:
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx>;
         break;
-    case kmeans_kernel::avx2:
-        kernel = lloyd_iteration_kernel<T, kmeans_kernel::avx2>;
+    case vectorization_type::avx2:
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx2>;
         break;
-    case kmeans_kernel::avx512:
+    case vectorization_type::avx512:
 #ifdef __AVX512F__
-        kernel = lloyd_iteration_kernel<T, kmeans_kernel::avx512>;
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx512>;
 #else
-        kernel = lloyd_iteration_kernel<T, kmeans_kernel::avx2>;
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx2>;
 #endif
         break;
     default:
-        kernel = lloyd_iteration_kernel<T, kmeans_kernel::scalar>;
+        kernel = lloyd_iteration_kernel<T, vectorization_type::scalar>;
         break;
     }
 }
@@ -550,7 +546,7 @@ void kmeans<T>::assign_elkan_kernels(
     std::function<void(da_int, T *, da_int, T *, T *, da_int *, da_int)> &update_kernel,
     std::function<T(da_int, const T *, da_int, T *, da_int)> &reduce_kernel,
     da_int &padding, da_int n_clusters, da_int n_features) {
-    kmeans_kernel update_vec_type, reduce_vec_type;
+    vectorization_type update_vec_type, reduce_vec_type;
 
     // The update kernel is more complicated to assign as it depends on the number of clusters
     select_simd_size_elkan<T>(n_clusters, n_features, padding, update_vec_type,
@@ -558,44 +554,42 @@ void kmeans<T>::assign_elkan_kernels(
     // Add telemetry
     context_set_hidden_settings(
         "kmeans.setup"s,
-        "kernel=elkan,kernel.update_kernel_type="s + std::to_string(update_vec_type) +
-            ",kernel.reduce_kernel_type="s + std::to_string(reduce_vec_type) +
+        "kernel=elkan,kernel.update_kernel.type="s + std::to_string(update_vec_type) +
+            ",kernel.reduce_kernel.type="s + std::to_string(reduce_vec_type) +
             ",kernel.padding="s + std::to_string(padding));
     switch (update_vec_type) {
-    case kmeans_kernel::avx:
-        update_kernel = elkan_iteration_kernel<T, kmeans_kernel::avx>;
+    case vectorization_type::avx:
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx>;
         break;
-    case kmeans_kernel::avx2:
-        update_kernel = elkan_iteration_kernel<T, kmeans_kernel::avx2>;
+    case vectorization_type::avx2:
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx2>;
         break;
-    case kmeans_kernel::avx512:
+    case vectorization_type::avx512:
 #ifdef __AVX512F__
-        update_kernel = elkan_iteration_kernel<T, kmeans_kernel::avx512>;
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx512>;
 #else
-        update_kernel = elkan_iteration_kernel<T, kmeans_kernel::avx2>;
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx2>;
 #endif
         break;
     default:
-        update_kernel = elkan_iteration_kernel<T, kmeans_kernel::scalar>;
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::scalar>;
         break;
     }
 
     switch (reduce_vec_type) {
-    case kmeans_kernel::avx:
-        reduce_kernel = elkan_reduction_kernel<T, kmeans_kernel::avx>;
+    case vectorization_type::avx:
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::avx>;
         break;
-    case kmeans_kernel::avx2:
-        reduce_kernel = elkan_reduction_kernel<T, kmeans_kernel::avx2>;
-        break;
-    case kmeans_kernel::avx512:
+    case vectorization_type::avx512:
 #ifdef __AVX512F__
-        reduce_kernel = elkan_reduction_kernel<T, kmeans_kernel::avx512>;
-#else
-        reduce_kernel = elkan_reduction_kernel<T, kmeans_kernel::avx2>;
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::avx512>;
+        break;
 #endif
+    case vectorization_type::avx2:
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::avx2>;
         break;
     default:
-        reduce_kernel = elkan_reduction_kernel<T, kmeans_kernel::scalar>;
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::scalar>;
         break;
     }
 }
@@ -976,10 +970,10 @@ void kmeans<T>::elkan_iteration_assign_block(
 template <typename T> void kmeans<T>::compute_centre_half_distances() {
     T *dummy = nullptr;
 
-    ARCH::euclidean_distance(column_major, n_clusters, n_clusters, n_features,
-                             (*current_cluster_centres).data(), n_clusters, dummy, 0,
-                             workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0,
-                             false, true);
+    ARCH::euclidean_gemm_distance(column_major, n_clusters, n_clusters, n_features,
+                                  (*current_cluster_centres).data(), n_clusters, dummy, 0,
+                                  workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0,
+                                  false, true);
     // For each centre, compute the half distance to next closest centre and store in workc1
     da_std::fill(workc1.begin(), workc1.begin() + n_clusters,
                  std::numeric_limits<T>::infinity());
@@ -1285,10 +1279,10 @@ void kmeans<T>::macqueen_iteration(bool update_centres,
 
         T *dummy = nullptr;
         T tmp;
-        ARCH::euclidean_distance(column_major, 1, n_clusters, n_features, &A[i], lda,
-                                 (*current_cluster_centres).data(), n_clusters,
-                                 workc2.data(), 1, dummy, 0, workc1.data(), 1, true,
-                                 false);
+        ARCH::euclidean_gemm_distance(column_major, 1, n_clusters, n_features, &A[i], lda,
+                                      (*current_cluster_centres).data(), n_clusters,
+                                      workc2.data(), 1, dummy, 0, workc1.data(), 1, true,
+                                      false);
 
         T smallest_dist = workc2[0];
         da_int closest_centre = 0;
@@ -1545,9 +1539,9 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
     }
 
     T dummy = (T)0.0;
-    ARCH::euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
-                             (*current_cluster_centres).data(), n_clusters, works3.data(),
-                             n_samples, works1.data(), 1, &dummy, 2, true, false);
+    ARCH::euclidean_gemm_distance(
+        column_major, n_samples, 1, n_features, A, lda, (*current_cluster_centres).data(),
+        n_clusters, works3.data(), n_samples, works1.data(), 1, &dummy, 2, true, false);
 
     // Numerical errors could cause one of the distances to be slightly negative, leading to undefined behaviour in std::discrete_distribution
     works3[random_int] = (T)0.0;
@@ -1603,10 +1597,10 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
                 da_int current_candidate = work_int2[trials];
 
                 // Compute the distance from each point to the candidate centre and store in works4
-                ARCH::euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
-                                         &A[current_candidate], lda, works4.data(),
-                                         n_samples, works1.data(), 1,
-                                         &works1[current_candidate], 1, true, false);
+                ARCH::euclidean_gemm_distance(column_major, n_samples, 1, n_features, A,
+                                              lda, &A[current_candidate], lda,
+                                              works4.data(), n_samples, works1.data(), 1,
+                                              &works1[current_candidate], 1, true, false);
                 // Get minimum squared distance of each sample point to potential centre
                 current_cost = 0;
                 for (da_int j = 0; j < n_samples; j++) {

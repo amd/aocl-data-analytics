@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@ template <typename T> struct test_data_type {
     std::vector<da_int> y_train;
     std::vector<T> X_test;
     std::vector<da_int> y_test;
+    std::vector<da_int> categorical_feat;
     da_int n_samples_train, n_feat, ldx_train, ldx_test;
     da_int n_samples_test;
 };
@@ -72,6 +73,21 @@ template <typename T> void set_test_data_8x2_unique(test_data_type<T> &data) {
     data.ldx_test = 4;
 }
 
+template <typename T> void set_test_data_6x2_categorical(test_data_type<T> &data) {
+
+    //  2 columns: contain values in [0,1] and [0,1,2] respectively
+    data.X_train = {(T)1., (T)1., (T)1., (T)0., (T)0., (T)0.,
+                    (T)0., (T)1., (T)2., (T)0., (T)1., (T)2.};
+    data.y_train = {0, 1, 1, 0, 0, 1};
+    data.X_test = {(T)0., (T)1., (T)1., (T)2.};
+    data.y_test = {0, 1};
+    data.n_samples_train = 6, data.n_feat = 2;
+    data.n_samples_test = 2;
+    data.ldx_train = 6;
+    data.ldx_test = 2;
+    data.categorical_feat = {2, 3};
+}
+
 template <typename T> void set_test_data_8x2_ldx(test_data_type<T> &data) {
 
     // idea is that y = 0 if x1 < 0.5 and x2 < 0.5, otherwise y = 1
@@ -100,6 +116,24 @@ template <typename T> void set_test_data_8x2_nonunique(test_data_type<T> &data) 
                    (T)0.25, (T)0.75, (T)0.25, (T)0.75};
     data.y_test = {0, 1, 1, 1};
     data.n_samples_train = 12, data.n_feat = 2;
+    data.n_samples_test = 4;
+    data.ldx_train = 12;
+    data.ldx_test = 4;
+}
+
+template <typename T>
+void set_test_data_8x2_nonunique_const_feat(test_data_type<T> &data) {
+    // y = 0 if x1 < 0.5 and x3 < 0.5, otherwise y = 1
+    // x2 is constant and should not affect training
+    // training data values are not unique
+    data.X_train = {0.1, 0.4, 0.4, 0.6, 0.6, 0.9, 0.9, 0.1, 0.6, 0.1, 0.8,  0.2,
+                    1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,  1.0,
+                    0.7, 0.3, 0.7, 0.3, 0.7, 0.3, 0.7, 0.3, 0.4, 0.1, 0.45, 0.45};
+    data.y_train = {1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0};
+    data.X_test = {(T)0.25, (T)0.25, (T)0.75, (T)0.75, (T)0.5,  (T)0.5,
+                   (T)0.5,  (T)0.5,  (T)0.25, (T)0.75, (T)0.25, (T)0.75};
+    data.y_test = {0, 1, 1, 1};
+    data.n_samples_train = 12, data.n_feat = 3;
     data.n_samples_test = 4;
     data.ldx_train = 12;
     data.ldx_test = 4;

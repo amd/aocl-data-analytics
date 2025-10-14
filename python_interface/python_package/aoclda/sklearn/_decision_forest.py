@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,9 +27,13 @@
 """
 Patching scikit-learn tree: RandomForestClassifier
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, super-init-not-called, too-many-instance-attributes, too-many-arguments, too-many-locals
+# pylint: disable = missing-function-docstring, too-many-ancestors,
+# super-init-not-called, too-many-instance-attributes, too-many-arguments,
+# too-many-locals, super-init-not-called, too-many-locals, too-many-boolean-expressions,
+#
 
 import warnings
+import numpy as np
 from aoclda.decision_forest import decision_forest as decision_forest_da
 from sklearn.ensemble import RandomForestClassifier as RandomForestClassifier_sklearn
 
@@ -61,6 +65,8 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
         ccp_alpha=0.0,
         max_samples=None,
         monotonic_cst=None,
+        histogram=True,
+        maximum_bins=256
     ):
         self.n_estimators = n_estimators
         self.criterion = criterion
@@ -82,6 +88,8 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
         self.max_samples = max_samples
         self.monotonic_cst = monotonic_cst
         self.precision = "double"
+        self.histogram = histogram
+        self.maximum_bins = maximum_bins
 
         self.n_trees = n_estimators
         self.n_obs_per_tree = max_samples
@@ -110,7 +118,7 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
 
         if (min_samples_leaf != 1 or
             min_weight_fraction_leaf != 0.0 or
-            max_leaf_nodes != None or
+            max_leaf_nodes is not None or
             oob_score is not False or
             (n_jobs is not None and n_jobs != -1) or
             verbose != 0 or
@@ -126,12 +134,46 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
         # new internal attributes
         self.aocl = True
 
-        self.decision_forest = decision_forest_da(seed=seed,
-                                                  criterion=score_criteria,
-                                                  n_trees=self.n_trees,
-                                                  max_depth=depth,
-                                                  min_samples_split=min_samples_split,
-                                                  bootstrap=bootstrap)
+        # Set faeture selection options
+        self.da_max_features = 0
+        self.da_feature_prop = 0.1
+        self.features_selection = "all"
+        if isinstance(self.max_features, int):
+            self.da_max_features = self.max_features
+            self.features_selection = "custom"
+        elif isinstance(self.max_features, float):
+            self.features_selection = "proportion"
+            self.da_feature_prop = self.max_features
+        elif isinstance(self.max_features, str):
+            self.features_selection = self.max_features
+
+        # Set samples selection options
+        self.da_samples_factor = 1.0
+        self.update_samples_factor = False
+        if isinstance(self.max_samples, int):
+            self.update_samples_factor = True
+        elif isinstance(self.max_samples, float):
+            self.da_samples_factor = self.max_samples
+
+        self.decision_forest = decision_forest_da(
+            n_trees=self.n_estimators,
+            criterion=score_criteria,
+            seed=seed,
+            max_depth=depth,
+            min_samples_split=min_samples_split,
+            bootstrap=bootstrap,
+            features_selection=self.features_selection,
+            max_features=self.da_max_features,
+            proportion_features=self.da_feature_prop,
+            samples_factor=self.da_samples_factor,
+            min_impurity_decrease=min_impurity_decrease,
+            min_split_score=1.0e-05,
+            feat_thresh=1.0e-06,
+            histogram=histogram,
+            maximum_bins=maximum_bins,
+            block_size=256,
+            category_split_strategy="ordered",
+            check_data=False)
 
     def fit(self, X, y, sample_weight=None):
 
@@ -140,35 +182,16 @@ class RandomForestClassifier(RandomForestClassifier_sklearn):
                 "The parameters sample_weight"
                 "is not supported and has been ignored.", category=RuntimeWarning)
 
-        n_features = X.shape[1]
-        if isinstance(self.max_features, int):
-            self.da_max_features = self.max_features
-            self.features_selection = "custom"
-        elif isinstance(self.max_features, float):
-            self.da_max_features = int(n_features * self.max_features)
-            self.features_selection = "custom"
-        elif self.max_features is None:
-            self.da_max_features = n_features
-            self.features_selection = "custom"
-        else:
-            self.da_max_features = 0
-
         n_samples = X.shape[0]
-        if isinstance(self.max_samples, int):
-            import numpy as np
+        if self.update_samples_factor:
             if X.dtype == "float32":
-                da_samples_factor = np.float32(
+                self.da_samples_factor = np.float32(
                     self.max_samples) / np.float32(n_samples)
             if X.dtype == "float64":
-                da_samples_factor = np.float64(
+                self.da_samples_factor = np.float64(
                     self.max_samples) / np.float64(n_samples)
-        elif self.max_samples is None:
-            da_samples_factor = 0.8
-        else:
-            da_samples_factor = self.max_samples
+            self.decision_forest.samples_factor = self.da_samples_factor
 
-        self.decision_forest.features_selection = self.features_selection
-        self.decision_forest.max_features = self.da_max_features
         self.decision_forest.fit(X, y)
 
         return self

@@ -51,12 +51,14 @@ The distance matrix :math:`D`, between two matrices :math:`X` and :math:`Y`, is 
 
 where :math:`i=1,\dots,m` and  :math:`j=1,\dots,n`. :math:`X_i` and :math:`Y_j` denote the :math:`i`-th and :math:`j`-th rows of :math:`X` and :math:`Y`, respectively.
 
-In AOCL-DA, we compute the Euclidean distances using the equivalent formula
+**Euclidean distance using matrix-matrix multiplication**
+
+The Euclidean distances can be computed using the equivalent formula
 
 .. math::
     D_{ij} = \sqrt{X_i^\mathrm{T}X_i + Y_j^\mathrm{T}Y_j - 2X_i^\mathrm{T}Y_j}.
 
-The term :math:`X_i^\mathrm{T}Y_j` can be computed for all :math:`i,j` using highly optimized `gemm` operations, which yields better performance.
+The term :math:`X_i^\mathrm{T}Y_j` can be computed for all :math:`i,j` using highly optimized `gemm` operations.
 
 **l2 distance**
 

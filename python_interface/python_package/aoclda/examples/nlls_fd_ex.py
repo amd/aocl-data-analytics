@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -22,7 +22,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = invalid-name, import-error, unused-argument, missing-function-docstring, unused-variable
+# pylint: disable = invalid-name, import-error, unused-argument,
+# missing-function-docstring, unused-variable
 
 """
 Nonlinear data fitting example Python script
@@ -39,11 +40,12 @@ n_res = 64
 
 
 def lognormal(d, a, b, Al):
-    return Al/(d*b*np.sqrt(2*math.pi))*np.exp(-((np.log(d)-a)**2)/(2*b**2))
+    return Al / (d * b * np.sqrt(2 * math.pi)) * \
+        np.exp(-((np.log(d) - a)**2) / (2 * b**2))
 
 
 def gaussian(d, mu, sigma, Ag):
-    return Ag*np.exp(-0.5*((d-mu)/sigma)**2)/(sigma*np.sqrt(2*math.pi))
+    return Ag * np.exp(-0.5 * ((d - mu) / sigma)**2) / (sigma * np.sqrt(2 * math.pi))
 
 
 def res(x, residuals, data=None) -> int:
@@ -69,7 +71,7 @@ def nlls_fd_example():
     using finite-differences
     """
     # Observations / data
-    diameter = range(1, n_res+1)
+    diameter = range(1, n_res + 1)
     density = [
         0.0722713864, 0.0575221239, 0.0604719764, 0.0405604720, 0.0317109145,
         0.0309734513, 0.0258112094, 0.0228613569, 0.0213864307, 0.0213864307,
@@ -104,7 +106,7 @@ def nlls_fd_example():
     print(f"Residual norm at solution: {ndf.metrics['obj']:.4e}")
     print("Solution:")
     for i in range(n_coef):
-        ok = np.abs(x[i]-xexp[i]) <= 1.e-2
+        ok = np.abs(x[i] - xexp[i]) <= 1.e-2
         print(f"x[{i}]={x[i]:.3f} expected: ({xexp[i]:.3f}) OK? {ok}")
 
 

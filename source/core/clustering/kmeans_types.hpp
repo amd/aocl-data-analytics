@@ -32,7 +32,6 @@ namespace da_kmeans_types {
 
 enum kmeans_method { lloyd = 0, elkan, hartigan_wong, macqueen };
 enum kmeans_init { random_samples = 0, kmeanspp, supplied, random_partitions };
-enum kmeans_kernel { scalar = 0, avx = 2, avx2 = 5, avx512 = 11 };
 
 } // namespace da_kmeans_types
 

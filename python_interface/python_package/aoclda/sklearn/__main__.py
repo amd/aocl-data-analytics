@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 import sys
 from aoclda.sklearn import skpatch
 
+
 def main():
     '''
     Load the scikit-learn patch then execute the user's script
@@ -44,8 +45,12 @@ def main():
     parser.add_argument("name", help="Your Python script or module name")
     parser.add_argument("args", nargs=argparse.REMAINDER,
                         help="Command line arguments for your Python script")
-    parser.add_argument("--print-patch", default=True, dest="print_patched",
-                        help="Print welcome message", action=argparse.BooleanOptionalAction)
+    parser.add_argument(
+        "--print-patch",
+        default=True,
+        dest="print_patched",
+        help="Print welcome message",
+        action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
 
@@ -58,6 +63,7 @@ def main():
         runpy.run_module(args.name, run_name="__main__")
     else:
         runpy.run_path(args.name, run_name="__main__")
+
 
 if __name__ == "__main__":
     sys.exit(main())

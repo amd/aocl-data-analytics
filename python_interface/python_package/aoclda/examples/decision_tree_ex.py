@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@ import sys
 from aoclda.decision_tree import decision_tree
 import numpy as np
 
+
 def decision_tree_example():
     """
     Decision tree classification
@@ -49,6 +50,7 @@ def decision_tree_example():
 
     score = tree.score(X_test, y_test)
     print(f"score: {score:.3f}")
+
 
 if __name__ == "__main__":
     try:

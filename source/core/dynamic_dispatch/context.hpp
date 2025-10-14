@@ -24,10 +24,6 @@
 #ifndef context_HPP
 #define context_HPP
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "Au/Cpuid/X86Cpu.hh"
 #include "aoclda_types.h"
 #include "macros.h"
@@ -94,12 +90,6 @@ template <typename T> T env_get_var(const char *env, const T fallback) {
 /* Singleton class containing details of the system for dynamic dispatch */
 class context {
   private:
-#if !defined(_WIN32)
-    // On Windows we use Meyers' singleton class rather than mutex-based singleton as it interacts better with Python
-    static context *global_obj;
-    static std::mutex global_lock;
-#endif
-
     dispatch_architecture local_arch = generic;
 
     // Set max_target_arch to the maximum Zen generation that was compiled, set by the ZNVER_MAX compile option
@@ -174,9 +164,9 @@ class context {
         this->cpuflags[static_cast<int>(context_isa_t::AVX512_VPOPCNTDQ)] =
             Cpu.hasFlag(Au::ECpuidFlag::avx512_vpopcntdq);
 
-        bool has_avx512 = this->cpuflags[static_cast<int>(context_isa_t::AVX512F)] &&
-                          this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
-                          this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)];
+        has_avx512 = this->cpuflags[static_cast<int>(context_isa_t::AVX512F)] &&
+                     this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
+                     this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)];
 
         switch (uarch) {
         case Au::EUarch::Zen:
@@ -203,9 +193,14 @@ class context {
                 } else {
                     local_arch = zen3; // Fall-back to latest known avx2 model
                 }
-            } else {
+            } else if (Cpu.isIntel()) {
+                // zen flags should work for Intel machines
+                if (has_avx512)
+                    local_arch = zen4;
+                else
+                    local_arch = zen3;
+            } else
                 local_arch = generic; // Assume avx2 for non-AMD
-            }
         }
 
         if (local_arch <= max_target_arch) {
@@ -225,13 +220,15 @@ class context {
         check_env(); // update arch if AOCL_DA_ARCH is set
     }
 
-  protected:
-    // Ensure direct calls to destructor are avoided with delete
+  public:
+    // Note: Ensure direct calls to destructor are avoided with delete
     ~context() {}
 
-  public:
     // Delete the copy constructor of the context class to ensure it's a singleton
     context(context &t) = delete;
+
+    // shortcut to check if the architecture supports AVX512
+    bool has_avx512 = false;
 
     dispatch_architecture arch = generic;
 
@@ -259,5 +256,8 @@ class context {
             // silently ignore...
         }
     }
+
+    // access hidden settings
+    static std::unordered_map<std::string, std::string> &get_hidden_settings();
 };
 #endif //context_HPP

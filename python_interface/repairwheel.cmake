@@ -84,10 +84,12 @@ foreach(file ${wheel_files})
           --exclude "libpthread.so.*" --exclude "libm.so.*"
         RESULT_VARIABLE fallback_result)
       if(NOT fallback_result EQUAL 0)
-        message(FATAL_ERROR "Failed to repair the Python wheel.")
+        message(
+          STATUS
+            "Failed to repair the Python wheel. For local use, add ${CMAKE_INSTALL_PREFIX}/python_package to PYTHONPATH."
+        )
       endif()
-      # If the fallback repair is successful, we will remove the original
-      # unrepaired wheel
+      # Remove the original unrepaired wheel
       file(REMOVE ${file})
     endif()
 

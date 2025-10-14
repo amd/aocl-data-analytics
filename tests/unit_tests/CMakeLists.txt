@@ -45,9 +45,12 @@ endif()
 
 include(GoogleTest)
 include_directories(
-  ${CMAKE_SOURCE_DIR}/source/include ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
+  ${CMAKE_SOURCE_DIR}/source/include
+  ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
+  ${CMAKE_SOURCE_DIR}/external/kernel-templates
   ${CMAKE_SOURCE_DIR}/external/RALFit
-  ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include ${Boost_INCLUDE_DIRS})
+  ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
+  ${Boost_INCLUDE_DIRS})
 
 set(INTERNAL_INC_DIRS
     ${CMAKE_SOURCE_DIR}/source/core/csv
@@ -65,6 +68,7 @@ set(INTERNAL_INC_DIRS
     ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
     ${CMAKE_SOURCE_DIR}/source/core/dynamic_dispatch
     ${CMAKE_SOURCE_DIR}/source/core/kernel_functions
+    ${CMAKE_SOURCE_DIR}/source/core/train_test_split
     ${CMAKE_SOURCE_DIR}/source/core/svm)
 
 set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
@@ -74,6 +78,14 @@ set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 # ##############################################################################
 add_executable(basic_stats_public basic_statistics/basic_stats_public.cpp)
 target_link_libraries(basic_stats_public PRIVATE ${BLAS})
+
+# ##############################################################################
+# ########## Train Test Split #############
+# ##############################################################################
+add_executable(train_test_split_public train_test_split/train_test_split_public.cpp)
+target_link_libraries(train_test_split_public PRIVATE ${BLAS})
+add_executable(shuffle_indices_public train_test_split/shuffle_indices_public.cpp)
+target_link_libraries(shuffle_indices_public PRIVATE ${BLAS})
 
 # ##############################################################################
 # ############ Metrics ###############
@@ -143,12 +155,19 @@ add_executable(utilities_public da_utilities/utilities_public.cpp)
 target_link_libraries(utilities_public PRIVATE aocl-da)
 
 add_executable(utilities_internal da_utilities/utilities_internal.cpp)
+target_compile_definitions(utilities_internal PRIVATE INT_LIB="${INT_LIB}")
 target_link_libraries(utilities_internal PRIVATE aocl-da)
 
 add_executable(printf_debug_internal da_utilities/printf_debug_internal.cpp)
 target_link_libraries(printf_debug_internal PRIVATE aocl-da)
 
 add_executable(da_vector_internal da_utilities/da_vector_internal.cpp)
+
+add_executable(da_cache_internal da_utilities/da_cache_internal.cpp)
+target_link_libraries(da_cache_internal PRIVATE aocl-da)
+
+add_executable(da_syrk_internal da_utilities/da_syrk_internal.cpp)
+target_link_libraries(da_syrk_internal PRIVATE aocl-da ${BLAS})
 
 # C compatibility test - compile with C compiler and link with C++ compiler
 set_source_files_properties(da_utilities/c_compatibility_nog_public.c
@@ -207,7 +226,7 @@ add_executable(interval_set_internal data_management/interval_set_internal.cpp)
 # ##############################################################################
 add_executable(knn_public nearest_neighbors/knn_public.cpp)
 target_link_libraries(knn_public PRIVATE aocl-da ${BLAS})
-add_executable(kdtree_internal nearest_neighbors/kdtree_internal.cpp)
+add_executable(trees_internal nearest_neighbors/trees_internal.cpp)
 add_executable(radius_neighbors_internal
                nearest_neighbors/radius_neighbors_internal.cpp)
 add_executable(k_neighbors_internal nearest_neighbors/k_neighbors_internal.cpp)
@@ -218,6 +237,8 @@ target_link_libraries(radius_neighbors_internal PRIVATE ${BLAS})
 # ##############################################################################
 add_executable(kernel_functions_public
                kernel_functions/kernel_functions_public.cpp)
+
+add_executable(kernel_functions_internal kernel_functions/kernel_functions_internal.cpp)
 
 # ##############################################################################
 # ############## SVM #################
@@ -243,18 +264,23 @@ set(GTEST_INTERNAL
     coord_internal
     nlls_internal
     svm_internal
+    kernel_functions_internal
     miscellaneous_internal
     da_vector_internal
+    da_cache_internal
     radius_neighbors_internal
     k_neighbors_internal
-    kdtree_internal
-    utilities_internal)
+    trees_internal
+    utilities_internal
+    da_syrk_internal)
 set(INDEP_INTERNAL printf_debug_internal lbfgsb_rc_internal
                    lbfgsb_fcomm_internal)
 set(INTERNAL_UTESTS ${GTEST_INTERNAL} ${INDEP_INTERNAL})
 
 set(GTEST_PUBLIC
     basic_stats_public
+    train_test_split_public
+    shuffle_indices_public
     metrics_public
     csv_public
     linmod_public
@@ -312,9 +338,6 @@ endforeach()
 
 foreach(target ${UTESTS})
   target_link_libraries(${target} PRIVATE aocl-da gtest_main gmock_main)
-  if(BUILD_SMP OR UNIX)
-    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
-  endif()
   target_link_directories(${target} PRIVATE ${IFORT_LIBS})
   target_link_directories(${target} PRIVATE ${FLANG_LIBS})
   target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
@@ -322,6 +345,9 @@ foreach(target ${UTESTS})
   # empty string. This is what AOCL-DA users will need to do explicitly to get
   # the correct symbols, otherwise they will get linking errors or aborts.
   target_compile_definitions(${target} PRIVATE ${AOCLDA_ILP64})
+  if (NOT BUILD_SHARED_LIBS)
+    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
+  endif()
 endforeach()
 
 if(WIN32 AND BUILD_SHARED_LIBS)

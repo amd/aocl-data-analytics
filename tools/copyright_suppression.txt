@@ -38,6 +38,7 @@ source/core/csv/char_to_num.hpp
 'external/RALFit/LICEN.*'
 'python_interface/requirements\.txt'
 'python_interface/.pylintrc'
+'python_interface/.pep8'
 'License'
 'Notices'
 '\./github/.*'

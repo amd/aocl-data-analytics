@@ -32,14 +32,14 @@
 AOCL-Data Analytics
 ********************
 
-The AOCL Data Analytics Library (AOCL-DA) is a software library providing optimized building blocks for data analysis.
+The AOCL Data Analytics Library (AOCL-DA) is a software library providing optimized building blocks for data analysis and classical machine learning applications.
 It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
 It is designed with a focus on usability, reliability and performance.
 
 AOCL-DA is written with both C-compatible and Python interfaces to make it as seamless as possible to integrate with the library from
 whichever programming language you are using. Both sets of interfaces call the same underlying optimized code base.
 
-This documentation is available online in the form of web pages, or as a pdf file. It consists of three main sections:
+This documentation is available online in the form of web pages. It consists of three main sections:
 
 * **AOCL-DA for Python**: contains instructions for calling and using the Python APIs.
 * **AOCL-DA for C**: contains instructions for calling and using the C APIs.

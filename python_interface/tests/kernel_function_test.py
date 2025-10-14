@@ -33,6 +33,102 @@ import pytest
 from aoclda.kernel_functions import rbf_kernel, linear_kernel, polynomial_kernel, sigmoid_kernel
 
 
+@pytest.mark.parametrize(
+    "numpy_precision",
+    [np.float16, np.float32, np.float64, np.int16, np.int32, np.int64, 'object'])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_kernels_all_dtypes(numpy_precision, numpy_order):
+    """
+    Test it runs when supported/unsupported C-interface type is provided.
+    """
+
+    X = np.array([[10.2, 10.6],
+                  [11.7, 11.3]], dtype=numpy_precision, order=numpy_order)
+
+    Y = np.array([[10.1, 10.1],
+                  [11.1, 11.1]], dtype=numpy_precision, order=numpy_order)
+
+    kernel_XY = rbf_kernel(X, Y, gamma=1)
+    kernel_XX = rbf_kernel(X, gamma=1)
+
+    kernel_XY = linear_kernel(X, Y)
+    kernel_XX = linear_kernel(X)
+
+    kernel_XY = sigmoid_kernel(
+        X, Y, gamma=0.01, coef0=0.01)
+    kernel_XX = sigmoid_kernel(X, gamma=0.01, coef0=0.01)
+
+    kernel_XY = polynomial_kernel(
+        X, Y, gamma=0.25, degree=2, coef0=0.1)
+    kernel_XX = polynomial_kernel(
+        X, gamma=0.25, degree=2, coef0=0.1)
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float32])
+@pytest.mark.parametrize("numpy_orders",
+                         [("C", "F"), ("F", "C")])
+def test_kernel_multiple_orders(numpy_precision, numpy_orders):
+    """
+    Test it runs when arrays of multiple orders are provided.
+    """
+
+    X = np.array([[10.2, 10.6],
+                  [11.7, 11.3]], dtype=numpy_precision, order=numpy_orders[0])
+
+    Y = np.array([[10.1, 10.1],
+                  [11.1, 11.1]], dtype=numpy_precision, order=numpy_orders[1])
+
+    with pytest.warns(UserWarning):
+        kernel_XY = rbf_kernel(X, Y, gamma=1)
+    kernel_XX = rbf_kernel(X, gamma=1)
+
+    with pytest.warns(UserWarning):
+        kernel_XY = linear_kernel(X, Y)
+    kernel_XX = linear_kernel(X)
+
+    with pytest.warns(UserWarning):
+        kernel_XY = sigmoid_kernel(
+            X, Y, gamma=0.01, coef0=0.01)
+    kernel_XX = sigmoid_kernel(X, gamma=0.01, coef0=0.01)
+
+    with pytest.warns(UserWarning):
+        kernel_XY = polynomial_kernel(
+            X, Y, gamma=0.25, degree=2, coef0=0.1)
+    kernel_XX = polynomial_kernel(
+        X, gamma=0.25, degree=2, coef0=0.1)
+
+
+@pytest.mark.parametrize(
+    "numpy_precisions", [('float32', 'float64'),
+                         ('float64', 'float32')])
+@pytest.mark.parametrize("numpy_order", ["C"])
+def test_kernel_multiple_dtypes(numpy_precisions, numpy_order):
+    """
+    Test it runs when arrays of multiple dtypes are provided.
+    """
+
+    X = np.array([[10.2, 10.6],
+                  [11.7, 11.3]], dtype=numpy_precisions[0], order=numpy_order)
+
+    Y = np.array([[10.1, 10.1],
+                  [11.1, 11.1]], dtype=numpy_precisions[1], order=numpy_order)
+
+    kernel_XY = rbf_kernel(X, Y, gamma=1)
+    kernel_XX = rbf_kernel(X, gamma=1)
+
+    kernel_XY = linear_kernel(X, Y)
+    kernel_XX = linear_kernel(X)
+
+    kernel_XY = sigmoid_kernel(
+        X, Y, gamma=0.01, coef0=0.01)
+    kernel_XX = sigmoid_kernel(X, gamma=0.01, coef0=0.01)
+
+    kernel_XY = polynomial_kernel(
+        X, Y, gamma=0.25, degree=2, coef0=0.1)
+    kernel_XX = polynomial_kernel(
+        X, gamma=0.25, degree=2, coef0=0.1)
+
+
 @pytest.mark.parametrize("numpy_precision", [
     np.float64, np.float32
 ])
@@ -114,10 +210,14 @@ def test_sigmoid_functionality(numpy_precision, numpy_order):
     Y = np.array([[7., 8.],
                   [9., 10.]], dtype=numpy_precision, order=numpy_order)
 
-    expected_XY = np.array([[0.23549574953849797, 0.2913126124515909], [
-                           0.49298796667532435, 0.5915193954318164], [0.6858090622290945, 0.7856638590269437]])
-    expected_XX = np.array([[0.0599281035291435, 0.11942729853438588, 0.1780808681173302], [
-                           0.11942729853438588, 0.25429553262639115, 0.3799489622552249], [0.1780808681173302, 0.3799489622552249, 0.5511280285381469]])
+    expected_XY = np.array(
+        [[0.23549574953849797, 0.2913126124515909],
+         [0.49298796667532435, 0.5915193954318164],
+         [0.6858090622290945, 0.7856638590269437]])
+    expected_XX = np.array(
+        [[0.0599281035291435, 0.11942729853438588, 0.1780808681173302],
+         [0.11942729853438588, 0.25429553262639115, 0.3799489622552249],
+         [0.1780808681173302, 0.3799489622552249, 0.5511280285381469]])
 
     kernel_XY = sigmoid_kernel(
         X, Y, gamma=0.01, coef0=0.01)
@@ -150,8 +250,10 @@ def test_polynomial_functionality(numpy_precision, numpy_order):
 
     expected_XY = np.array([[34.2225, 54.0225], [
                            178.2225, 283.9225], [434.7225, 694.3225]])
-    expected_XX = np.array([[1.8225, 8.1225, 18.9225], [
-                           8.1225, 40.3225, 97.0225], [18.9225, 97.0225, 235.6225]])
+    expected_XX = np.array(
+        [[1.8225, 8.1225, 18.9225],
+         [8.1225, 40.3225, 97.0225],
+         [18.9225, 97.0225, 235.6225]])
 
     kernel_XY = polynomial_kernel(
         X, Y, gamma=0.25, degree=2, coef0=0.1)

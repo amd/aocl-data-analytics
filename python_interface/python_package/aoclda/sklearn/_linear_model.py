@@ -25,7 +25,8 @@
 """
 Patching scikit-learn linear models: LinearRegression, Ridge, Lasso, ElasticNet, LogisticRegression
 """
-# pylint: disable = super-init-not-called, too-many-ancestors, missing-function-docstring, useless-return
+# pylint: disable = super-init-not-called, too-many-ancestors,
+# missing-function-docstring, useless-return
 
 import warnings
 import numpy as np
@@ -180,8 +181,14 @@ class Ridge(Ridge_sklearn):
             raise ValueError(
                 "Constraints on the coefficients are not supported")
 
-        self.lmod = linmod_da("mse", solver=self.solver, intercept=self.fit_intercept, reg_lambda=self.alpha,
-                              reg_alpha=0.0, tol=self.tol, max_iter=self.max_iter)
+        self.lmod = linmod_da(
+            "mse",
+            solver=self.solver,
+            intercept=self.fit_intercept,
+            reg_lambda=self.alpha,
+            reg_alpha=0.0,
+            tol=self.tol,
+            max_iter=self.max_iter)
 
     def fit(self, X, y, sample_weight=None):
         if sample_weight is not None:
@@ -293,8 +300,14 @@ class Lasso(Lasso_sklearn):
         # New attributes used internally
         self.aocl = True
 
-        self.lmod = linmod_da("mse", intercept=self.fit_intercept,
-                              max_iter=self.max_iter, reg_lambda=self.alpha, reg_alpha=1.0, warm_start=self.warm_start, tol=self.tol)
+        self.lmod = linmod_da(
+            "mse",
+            intercept=self.fit_intercept,
+            max_iter=self.max_iter,
+            reg_lambda=self.alpha,
+            reg_alpha=1.0,
+            warm_start=self.warm_start,
+            tol=self.tol)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
@@ -418,8 +431,14 @@ class ElasticNet(ElasticNet_sklearn):
         # New attributes used internally
         self.aocl = True
 
-        self.lmod = linmod_da("mse", intercept=self.fit_intercept, max_iter=self.max_iter,
-                              reg_lambda=self.alpha, reg_alpha=self.l1_ratio, warm_start=self.warm_start, tol=self.tol)
+        self.lmod = linmod_da(
+            "mse",
+            intercept=self.fit_intercept,
+            max_iter=self.max_iter,
+            reg_lambda=self.alpha,
+            reg_alpha=self.l1_ratio,
+            warm_start=self.warm_start,
+            tol=self.tol)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
@@ -592,15 +611,22 @@ class LogisticRegression(LogisticRegression_sklearn):
         self.progress_factor = progress_factor
         self.constraint = constraint
         if self.penalty == 'l2':
-            self.reg_lambda = 1/self.C
+            self.reg_lambda = 1 / self.C
         elif self.penalty is None:
             self.reg_lambda = 0
         self.n_class = None
 
         # Initialize aoclda object
-        self.lmod = linmod_da("logistic", intercept=self.fit_intercept, max_iter=self.max_iter,
-                              constraint=self.constraint, reg_alpha=self.l1_ratio, reg_lambda=self.reg_lambda,
-                              warm_start=self.warm_start, tol=self.tol, progress_factor=self.progress_factor)
+        self.lmod = linmod_da(
+            "logistic",
+            intercept=self.fit_intercept,
+            max_iter=self.max_iter,
+            constraint=self.constraint,
+            reg_alpha=self.l1_ratio,
+            reg_lambda=self.reg_lambda,
+            warm_start=self.warm_start,
+            tol=self.tol,
+            progress_factor=self.progress_factor)
 
     def fit(self, X, y, sample_weight=None, check_input=True):
         if sample_weight is not None:
@@ -663,7 +689,7 @@ class LogisticRegression(LogisticRegression_sklearn):
             return coef[:, -1]
         else:
             if self.constraint == 'rsc':
-                return np.zeros(self.n_class-1)
+                return np.zeros(self.n_class - 1)
             else:
                 return np.zeros(self.n_class)
 

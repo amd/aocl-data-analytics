@@ -31,8 +31,9 @@ Patching scikit-learn metrics: pairwise_distances
 import warnings
 from aoclda.metrics import pairwise_distances as pairwise_distances_da
 
+
 def pairwise_distances(X, Y=None, metric='euclidean', p=2.0, n_jobs=None,
-    force_all_finite=True, **kwds):
+                       force_all_finite=True, **kwds):
     """
     Overwrite sklearn.metrics.pairwise_distances to call AOCL-DA library
     """

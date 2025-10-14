@@ -33,6 +33,7 @@ import numpy as np
 import pytest
 from aoclda.sklearn import skpatch
 
+
 def test_dbscan_errors():
     '''
     Check we can catch errors in the sklearn dbscan patch
@@ -45,7 +46,7 @@ def test_dbscan_errors():
     with pytest.warns(RuntimeWarning):
         db = DBSCAN(n_jobs=10)
 
-    db = DBSCAN(p = 2.0, algorithm="kd_tree")
+    db = DBSCAN(p=2.0, algorithm="kd_tree")
     db.fit(a)
 
     # Test unsupported functions
@@ -63,6 +64,7 @@ def test_dbscan_errors():
         db.set_fit_request()
 
     assert db.feature_names_in_ is None
+
 
 if __name__ == "__main__":
     test_dbscan_errors()

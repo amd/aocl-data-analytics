@@ -1,0 +1,74 @@
+sifdecoder -A pc64.lnx.gfo -st   RAT43.SIF
+
+ Problem name: RAT43
+
+ Double precision version will be formed
+
+ 
+ There are 15 nonlinear equality constraints
+ 
+ There are 4 free variables
+ 
+ 
+ File successfully decoded
+ CUTEST: tools (double precision version) compiled successfully
+ Compiling ral_nlls_dummy 		[ OK ]
+ Compiling ral_nlls_main  		[ OK ]
+ CUTEst: ral_nlls (double precision version) compiled successfully
+ summary_file = TESTSPEC.out                  
+ iter_summary_file = TESTSPEC_iter.out             
+ control%print_level =            1
+ control%maxit =         1000
+ control%scale =            1
+ control%more_sorensen_maxits =          500
+ control%output_progress_vectors =  T
+          44 TESTSPEC.out                  
+          45 TESTSPEC_iter.out             
+ calling the minimizer...
+ sending to nlls_solve
+iter    2nd order?  Delta         rho           0.5||f||^2    ||J'f||       ||J'f||/||f||
+   0                1.0000E+02   -1.0000E+00    1.5332E+06    5.9100E+05    3.3751E+02
+   1    Y           2.0003E+02    9.5716E-01    1.2631E+06    3.8527E+05    2.4240E+02
+   2    Y           4.0007E+02    9.5357E-01    8.8370E+05    1.4756E+05    1.1099E+02
+   3    Y           8.0028E+02    9.6974E-01    4.3755E+05    1.1133E+04    1.1900E+01
+   4    Y           8.0028E+02    6.4003E-01    1.9301E+05    9.9466E+05    1.6009E+03
+   5    Y           8.0028E+02    7.6371E-01    3.5368E+04    2.1453E+05    8.0662E+02
+   6    Y           8.0028E+02    3.3236E-02    3.3230E+04    4.3599E+05    1.6912E+03
+   7    Y           8.0028E+02    6.1937E-01    8.8445E+03    2.1801E+05    1.6392E+03
+   8    Y           4.0014E+02   -2.4273E+15  unsuccessful step
+   8    Y           2.0007E+02   -9.9489E-01  unsuccessful step
+   8    Y           2.0007E+02    5.0308E-01    6.0699E+03    1.0363E+05    9.4057E+02
+   9    Y           3.2263E+02    9.0710E-01    5.0860E+03    6.3066E+03    6.2530E+01
+  10    Y           3.2263E+02    5.7533E-01    4.8857E+03    3.9272E+04    3.9729E+02
+  11    Y           3.6556E+02    1.3022E+00    4.6662E+03    1.2806E+04    1.3256E+02
+  12    Y           6.0522E+02    1.0972E+00    4.5315E+03    2.3426E+04    2.4607E+02
+  13    Y           2.5866E+02    1.2425E+00    4.4360E+03    5.4215E+03    5.7559E+01
+  14    Y           3.5985E+02    1.1440E+00    4.4010E+03    5.8956E+03    6.2841E+01
+  15    Y           1.1660E+02    1.1251E+00    4.3936E+03    7.4546E+02    7.9524E+00
+  16    Y           4.4675E+01    1.0387E+00    4.3932E+03    8.4012E+01    8.9626E-01
+  17    Y           2.3759E+00    1.0029E+00    4.3932E+03    2.7395E-01    2.9226E-03
+  18    Y           1.2935E-02    9.9971E-01    4.3932E+03    7.2871E-06    7.7741E-08
+status = 0       iter = 18
+
+ The variables:
+     i name          value
+     1 B1          6.9964D+02
+     2 B2          5.2771D+00
+     3 B3          7.5963D-01
+     4 B4          1.2792D+00
+
+************************ CUTEst statistics ************************
+
+ Package used            :  RAL_NLLS 
+ Problem                 :  RAT43     
+ # variables             =  4
+ # residuals             =  15
+ Final f                 =  4.3932025E+03
+ # residual evaluations  =  21
+ # Jacobian evaluations  =  19
+ # Hessian evaluations   =  19
+ Set up time             =  .00 seconds
+ Solve time              =  .08 seconds
+
+******************************************************************
+

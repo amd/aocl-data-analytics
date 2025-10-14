@@ -23,7 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable = import-error, anomalous-backslash-in-string, invalid-name, too-many-arguments
+# pylint: disable = import-error, anomalous-backslash-in-string,
+# invalid-name, too-many-arguments
 """
 aoclda.kernel_functions module
 """
@@ -55,11 +56,11 @@ def rbf_kernel(X, Y=None, gamma=1.0):
         numpy.ndarray: The RBF kernel matrix of shape (n_samples_X, n_samples_X) if Y is None,
         or (n_samples_X, n_samples_Y) otherwise.
     """
-    X = check_convert_data(X)
+    X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if Y is not None:
-        Y = check_convert_data(Y)
-    
-    if X.dtype == "float32":
+        Y, _, _ = check_convert_data(Y, order=order, dtype=dtype, force_dtype=True)
+
+    if dtype == "float32":
         gamma = np.float32(gamma)
     else:
         gamma = np.float64(gamma)
@@ -85,10 +86,10 @@ def linear_kernel(X, Y=None):
         numpy.ndarray: The linear kernel matrix of shape (n_samples_X, n_samples_X) if Y is None,
         or (n_samples_X, n_samples_Y) otherwise.
     """
-    X = check_convert_data(X)
+    X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if Y is not None:
-        Y = check_convert_data(Y)
-    
+        Y, _, _ = check_convert_data(Y, order=order, dtype=dtype, force_dtype=True)
+
     return pybind_linear_kernel(X, Y)
 
 
@@ -114,11 +115,11 @@ def polynomial_kernel(X, Y=None, degree=3, gamma=1.0, coef0=1.0):
         numpy.ndarray: The polynomial kernel matrix of shape (n_samples_X, n_samples_X)
         if Y is None, or (n_samples_X, n_samples_Y) otherwise.
     """
-    X = check_convert_data(X)
+    X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if Y is not None:
-        Y = check_convert_data(Y)
-    
-    if X.dtype == "float32":
+        Y, _, _ = check_convert_data(Y, order=order, dtype=dtype, force_dtype=True)
+
+    if dtype == "float32":
         gamma = np.float32(gamma)
         coef0 = np.float32(coef0)
     else:
@@ -148,11 +149,11 @@ def sigmoid_kernel(X, Y=None, gamma=1.0, coef0=1.0):
         numpy.ndarray: The sigmoid kernel matrix of shape (n_samples_X, n_samples_X) if Y is None,
         or (n_samples_X, n_samples_Y) otherwise.
     """
-    X = check_convert_data(X)
+    X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if Y is not None:
-        Y = check_convert_data(Y)
-    
-    if X.dtype == "float32":
+        Y, _, _ = check_convert_data(Y, order=order, dtype=dtype, force_dtype=True)
+
+    if dtype == "float32":
         gamma = np.float32(gamma)
         coef0 = np.float32(coef0)
     else:

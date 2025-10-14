@@ -34,7 +34,10 @@
 // tests for each metric type. This is only used when we have a different implementation
 // to compare against.
 static std::list<std::tuple<std::string, da_metric>> MetricType = {
-    {"da_euclidean", da_euclidean}, {"da_sqeuclidean", da_sqeuclidean}};
+    {"da_euclidean", da_euclidean},
+    {"da_sqeuclidean", da_sqeuclidean},
+    {"da_euclidean_gemm", da_euclidean_gemm},
+    {"da_sqeuclidean_gemm", da_sqeuclidean_gemm}};
 
 // Add all available distance metrics in a list so that we can run all
 // tests for each metric type. This is only used when we have a different implementation
@@ -47,7 +50,9 @@ static std::list<std::tuple<std::string, da_metric>> MetricExactResultsType = {
     {"da_l1", da_l1},
     {"da_cityblock", da_cityblock},
     {"da_cosine", da_cosine},
-    {"da_minkowski", da_minkowski}};
+    {"da_minkowski", da_minkowski},
+    {"da_euclidean_gemm", da_euclidean_gemm},
+    {"da_sqeuclidean_gemm", da_sqeuclidean_gemm}};
 
 template <typename T> class PairwiseDistanceTest : public testing::Test {
   public:
@@ -128,7 +133,9 @@ std::vector<T> reference_distance(PairwiseDistanceParamType<T> &data) {
             for (auto ii = 0; ii < data.n; ii++) {
                 for (auto j = 0; j < data.k; j++) {
                     if ((data.metric == da_euclidean) ||
-                        (data.metric == da_sqeuclidean)) {
+                        (data.metric == da_sqeuclidean) ||
+                        (data.metric == da_euclidean_gemm) ||
+                        (data.metric == da_sqeuclidean_gemm)) {
                         D[i + ii * data.ldd] +=
                             (data.X[i + j * data.ldx] - data.Y[ii + j * data.ldy]) *
                             (data.X[i + j * data.ldx] - data.Y[ii + j * data.ldy]);
@@ -136,7 +143,7 @@ std::vector<T> reference_distance(PairwiseDistanceParamType<T> &data) {
                         throw std::runtime_error("Error in metric_public.cpp");
                     }
                 }
-                if (data.metric == da_euclidean)
+                if (data.metric == da_euclidean || data.metric == da_euclidean_gemm)
                     D[i + ii * data.ldd] = std::sqrt(D[i + ii * data.ldd]);
             }
         }
@@ -146,7 +153,9 @@ std::vector<T> reference_distance(PairwiseDistanceParamType<T> &data) {
             for (auto ii = 0; ii < data.m; ii++) {
                 for (auto j = 0; j < data.k; j++) {
                     if ((data.metric == da_euclidean) ||
-                        (data.metric == da_sqeuclidean)) {
+                        (data.metric == da_sqeuclidean) ||
+                        (data.metric == da_euclidean_gemm) ||
+                        (data.metric == da_sqeuclidean_gemm)) {
                         D[i + ii * data.ldd] +=
                             (data.X[i + j * data.ldx] - data.X[ii + j * data.ldx]) *
                             (data.X[i + j * data.ldx] - data.X[ii + j * data.ldx]);
@@ -154,7 +163,7 @@ std::vector<T> reference_distance(PairwiseDistanceParamType<T> &data) {
                         throw std::runtime_error("Error in metric_public.cpp");
                     }
                 }
-                if (data.metric == da_euclidean)
+                if (data.metric == da_euclidean || data.metric == da_euclidean_gemm)
                     D[i + ii * data.ldd] = std::sqrt(D[i + ii * data.ldd]);
             }
         }
@@ -302,7 +311,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY) {
                ", ldy=" + std::to_string(ldy_r) + ", ldd=" + std::to_string(ldd_r) +
                ", metric=" + std::get<0>(metric) + ", order=row_major";
         if ((std::get<1>(metric) == da_sqeuclidean) || (std::get<1>(metric) == da_l2) ||
-            (std::get<1>(metric) == da_euclidean)) {
+            (std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm) ||
+            (std::get<1>(metric) == da_sqeuclidean_gemm)) {
             D_exp_row = {61., 38., 11., 4., 17., 14.};
         } else if ((std::get<1>(metric) == da_manhattan) ||
                    (std::get<1>(metric) == da_l1) ||
@@ -318,7 +329,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY) {
             throw std::runtime_error("Error in metric_public.cpp");
         }
 
-        if ((std::get<1>(metric) == da_euclidean)) {
+        if ((std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm)) {
             for (auto &d : D_exp_row)
                 d = std::sqrt(d);
         }
@@ -364,7 +376,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX) {
                ", ldx=" + std::to_string(ldx_r) + ", ldd=" + std::to_string(ldd_r) +
                ", metric=" + std::get<0>(metric) + ", order=row_major";
         if ((std::get<1>(metric) == da_sqeuclidean) ||
-            (std::get<1>(metric) == da_euclidean)) {
+            (std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm) ||
+            (std::get<1>(metric) == da_sqeuclidean_gemm)) {
             D_exp_row = {0.,   62., 100., 61., 62., 0.,  6.,  29.,
                          100., 6.,  0.,   29., 61., 29., 29., 0.};
         } else if ((std::get<1>(metric) == da_manhattan)) {
@@ -408,7 +422,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX) {
             throw std::runtime_error("Error in metric_public.cpp");
         }
 
-        if ((std::get<1>(metric) == da_euclidean)) {
+        if ((std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm)) {
             for (auto &d : D_exp_row)
                 d = std::sqrt(d);
         }
@@ -459,7 +474,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY_ld) {
                ", ldy=" + std::to_string(ldy_r) + ", ldd=" + std::to_string(ldd_r) +
                ", metric=" + std::get<0>(metric) + ", order=row_major";
         if ((std::get<1>(metric) == da_sqeuclidean) || (std::get<1>(metric) == da_l2) ||
-            (std::get<1>(metric) == da_euclidean)) {
+            (std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm) ||
+            (std::get<1>(metric) == da_sqeuclidean_gemm)) {
             D_exp_row = {61., 38., 0., 0., 0., 11., 4., 0., 0., 0., 17., 14., 0., 0., 0.};
         } else if ((std::get<1>(metric) == da_manhattan) ||
                    (std::get<1>(metric) == da_l1) ||
@@ -489,7 +506,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XY_ld) {
             throw std::runtime_error("Error in metric_public.cpp");
         }
 
-        if ((std::get<1>(metric) == da_euclidean)) {
+        if ((std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm)) {
             for (auto &d : D_exp_row)
                 d = std::sqrt(d);
         }
@@ -541,7 +559,9 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX_ld) {
                ", ldx=" + std::to_string(ldx_r) + ", ldd=" + std::to_string(ldd_r) +
                ", metric=" + std::get<0>(metric) + ", order=row_major";
         if ((std::get<1>(metric) == da_sqeuclidean) ||
-            (std::get<1>(metric) == da_euclidean)) {
+            (std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm) ||
+            (std::get<1>(metric) == da_sqeuclidean_gemm)) {
             D_exp_row = {0.,  62., 100., 61., 0.,   0., 0., 62., 0., 6.,
                          29., 0.,  0.,   0.,  100., 6., 0., 29., 0., 0.,
                          0.,  61., 29.,  29., 0.,   0., 0., 0.};
@@ -610,7 +630,8 @@ TYPED_TEST(PairwiseDistanceTest, FixedData_XX_ld) {
             throw std::runtime_error("Error in metric_public.cpp");
         }
 
-        if ((std::get<1>(metric) == da_euclidean)) {
+        if ((std::get<1>(metric) == da_euclidean) ||
+            (std::get<1>(metric) == da_euclidean_gemm)) {
             for (auto &d : D_exp_row)
                 d = std::sqrt(d);
         }

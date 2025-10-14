@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -55,10 +55,12 @@ def metrics_example():
     print(f"\nEuclidean pairwise distances of rows of X:\n {euclidean_distance_xx}")
 
     squared_euclidean_distance_xy = pairwise_distances(X, Y, metric='sqeuclidean')
-    print(f"\nSquared euclidean pairwise distances of X and Y:\n {squared_euclidean_distance_xy}")
+    print(
+        f"\nSquared euclidean pairwise distances of X and Y:\n {squared_euclidean_distance_xy}")
 
     squared_euclidean_distance_xx = pairwise_distances(X, metric='sqeuclidean')
-    print(f"\nSquared euclidean pairwise distances of rows of X:\n {squared_euclidean_distance_xx}")
+    print(
+        f"\nSquared euclidean pairwise distances of rows of X:\n {squared_euclidean_distance_xx}")
 
     print("\nMetrics calculations successful")
     print("---------------------------")

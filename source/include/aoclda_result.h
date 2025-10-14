@@ -78,6 +78,8 @@ enum da_result_ {
     da_svm_n_iterations, ///< Number of iterations. In this context it counts the number of SMO subproblems solved, for each classifier.
     da_svm_support_vectors, ///< Support vectors
     da_svm_bias,            ///< Constant in decision function
+    da_svm_probaA, ///< Array of parameters A for each binary classifier when probability estimates are enabled.
+    da_svm_probaB, ///< Array of parameters B for each binary classifier when probability estimates are enabled.
     da_svm_dual_coef, ///< Weights assigned to each support vector, reflecting their importance in defining the optimal decision boundary.
     // ...
 };

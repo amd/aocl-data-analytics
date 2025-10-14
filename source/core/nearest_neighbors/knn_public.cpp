@@ -32,9 +32,9 @@
 
 using namespace knn_public;
 
-da_status da_knn_set_training_data_d(da_handle handle, da_int n_samples,
-                                     da_int n_features, const double *X_train,
-                                     da_int ldx_train, const da_int *y_train) {
+da_status da_knn_classifier_set_training_data_d(da_handle handle, da_int n_samples,
+                                                da_int n_features, const double *X_train,
+                                                da_int ldx_train, const da_int *y_train) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -43,13 +43,13 @@ da_status da_knn_set_training_data_d(da_handle handle, da_int n_samples,
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
     DISPATCHER(handle->err,
-               return (knn_set_data<da_knn::knn<double>, double>(
+               return (knn_classifier_set_data<da_knn::knn<double>, double>(
                    handle, n_samples, n_features, X_train, ldx_train, y_train)));
 }
 
-da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
-                                     da_int n_features, const float *X_train,
-                                     da_int ldx_train, const da_int *y_train) {
+da_status da_knn_classifier_set_training_data_s(da_handle handle, da_int n_samples,
+                                                da_int n_features, const float *X_train,
+                                                da_int ldx_train, const da_int *y_train) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -58,7 +58,37 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
     DISPATCHER(handle->err,
-               return (knn_set_data<da_knn::knn<float>, float>(
+               return (knn_classifier_set_data<da_knn::knn<float>, float>(
+                   handle, n_samples, n_features, X_train, ldx_train, y_train)));
+}
+
+da_status da_knn_regressor_set_training_data_d(da_handle handle, da_int n_samples,
+                                               da_int n_features, const double *X_train,
+                                               da_int ldx_train, const double *y_train) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+    if (handle->precision != da_double)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
+    DISPATCHER(handle->err,
+               return (knn_regressor_set_data<da_knn::knn<double>, double>(
+                   handle, n_samples, n_features, X_train, ldx_train, y_train)));
+}
+
+da_status da_knn_regressor_set_training_data_s(da_handle handle, da_int n_samples,
+                                               da_int n_features, const float *X_train,
+                                               da_int ldx_train, const float *y_train) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+    if (handle->precision != da_single)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
+    DISPATCHER(handle->err,
+               return (knn_regressor_set_data<da_knn::knn<float>, float>(
                    handle, n_samples, n_features, X_train, ldx_train, y_train)));
 }
 
@@ -116,34 +146,9 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
                                 handle, n_classes, classes)));
 }
 
-da_status da_knn_predict_proba_d(da_handle handle, da_int n_queries, da_int n_features,
-                                 const double *X_test, da_int ldx_test, double *proba) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (knn_predict_proba<da_knn::knn<double>, double>(
-                                handle, n_queries, n_features, X_test, ldx_test, proba)));
-}
-
-da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_features,
-                                 const float *X_test, da_int ldx_test, float *proba) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (knn_predict_proba<da_knn::knn<float>, float>(
-                                handle, n_queries, n_features, X_test, ldx_test, proba)));
-}
-
-da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features,
-                           const double *X_test, da_int ldx_test, da_int *y_test) {
+da_status da_knn_classifier_predict_proba_d(da_handle handle, da_int n_queries,
+                                            da_int n_features, const double *X_test,
+                                            da_int ldx_test, double *proba) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -152,12 +157,43 @@ da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than double.");
     DISPATCHER(handle->err,
-               return (knn_predict<da_knn::knn<double>, double>(
+               return (knn_classifier_predict_proba<da_knn::knn<double>, double>(
+                   handle, n_queries, n_features, X_test, ldx_test, proba)));
+}
+
+da_status da_knn_classifier_predict_proba_s(da_handle handle, da_int n_queries,
+                                            da_int n_features, const float *X_test,
+                                            da_int ldx_test, float *proba) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+    if (handle->precision != da_single)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
+    DISPATCHER(handle->err,
+               return (knn_classifier_predict_proba<da_knn::knn<float>, float>(
+                   handle, n_queries, n_features, X_test, ldx_test, proba)));
+}
+
+da_status da_knn_classifier_predict_d(da_handle handle, da_int n_queries,
+                                      da_int n_features, const double *X_test,
+                                      da_int ldx_test, da_int *y_test) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+    if (handle->precision != da_double)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
+    DISPATCHER(handle->err,
+               return (knn_classifier_predict<da_knn::knn<double>, double>(
                    handle, n_queries, n_features, X_test, ldx_test, y_test)));
 }
 
-da_status da_knn_predict_s(da_handle handle, da_int n_queries, da_int n_features,
-                           const float *X_test, da_int ldx_test, da_int *y_test) {
+da_status da_knn_classifier_predict_s(da_handle handle, da_int n_queries,
+                                      da_int n_features, const float *X_test,
+                                      da_int ldx_test, da_int *y_test) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -166,6 +202,36 @@ da_status da_knn_predict_s(da_handle handle, da_int n_queries, da_int n_features
             handle->err, da_status_wrong_type,
             "The handle was initialized with a different precision type than single.");
     DISPATCHER(handle->err,
-               return (knn_predict<da_knn::knn<float>, float>(
+               return (knn_classifier_predict<da_knn::knn<float>, float>(
+                   handle, n_queries, n_features, X_test, ldx_test, y_test)));
+}
+
+da_status da_knn_regressor_predict_d(da_handle handle, da_int n_queries,
+                                     da_int n_features, const double *X_test,
+                                     da_int ldx_test, double *y_test) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+    if (handle->precision != da_double)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than double.");
+    DISPATCHER(handle->err,
+               return (knn_regressor_predict<da_knn::knn<double>, double>(
+                   handle, n_queries, n_features, X_test, ldx_test, y_test)));
+}
+
+da_status da_knn_regressor_predict_s(da_handle handle, da_int n_queries,
+                                     da_int n_features, const float *X_test,
+                                     da_int ldx_test, float *y_test) {
+    if (!handle)
+        return da_status_handle_not_initialized;
+    handle->clear(); // Clean up handle logs
+    if (handle->precision != da_single)
+        return da_error(
+            handle->err, da_status_wrong_type,
+            "The handle was initialized with a different precision type than single.");
+    DISPATCHER(handle->err,
+               return (knn_regressor_predict<da_knn::knn<float>, float>(
                    handle, n_queries, n_features, X_test, ldx_test, y_test)));
 }

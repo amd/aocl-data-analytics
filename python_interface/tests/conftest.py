@@ -25,10 +25,11 @@
 
 import pytest
 
+
 def pytest_addoption(parser):
-    parser.addoption(
-        "--no_fortran", action="store_true", default=False, help="Only run tests that do not require Fortran runtimes"
-    )
+    parser.addoption("--no_fortran", action="store_true", default=False,
+                     help="Only run tests that do not require Fortran runtimes")
+
 
 def pytest_configure(config):
     config.no_fortran = config.getoption("--no_fortran")

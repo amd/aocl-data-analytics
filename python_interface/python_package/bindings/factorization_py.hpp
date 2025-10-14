@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -43,7 +43,8 @@ class pca : public pyda_handle {
   public:
     pca(da_int n_components = 1, std::string bias = "unbiased",
         std::string method = "covariance", std::string solver = "gesdd",
-        bool store_U = false, std::string prec = "double", bool check_data = false) {
+        bool store_U = false, std::string prec = "double", bool whiten = false,
+        bool check_data = false) {
         if (prec == "double")
             da_handle_init<double>(&handle, da_handle_pca);
         else if (prec == "single") {
@@ -53,19 +54,23 @@ class pca : public pyda_handle {
         da_status status;
         status = da_options_set_int(handle, "n_components", n_components);
         exception_check(status);
-        status = da_options_set_string(handle, "PCA method", method.c_str());
+        status = da_options_set_string(handle, "pca method", method.c_str());
         exception_check(status);
         status = da_options_set_string(handle, "degrees of freedom", bias.c_str());
         exception_check(status);
         status = da_options_set_string(handle, "svd solver", solver.c_str());
         exception_check(status);
         if (store_U == true) {
-            status = da_options_set_int(handle, "store U", 1);
+            status = da_options_set_int(handle, "store u", 1);
             exception_check(status);
         }
         if (check_data == true) {
             std::string yes_str = "yes";
             status = da_options_set(handle, "check data", yes_str.data());
+            exception_check(status);
+        }
+        if (whiten == true) {
+            status = da_options_set_int(handle, "whiten", 1);
             exception_check(status);
         }
     }

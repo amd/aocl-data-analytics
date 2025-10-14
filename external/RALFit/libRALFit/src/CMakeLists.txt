@@ -1,6 +1,6 @@
-# Copyright (c) 2016, The Science and Technology Facilities Council (STFC) All
-# rights reserved. Copyright (C) 2024 Advanced Micro Devices, Inc. All rights
-# reserved.
+# Copyright (c) 2016, The Science and Technology Facilities Council (STFC)
+# All rights reserved.
+# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 
 # Adapted to build dual precision objects for AOCL-DA
 
@@ -18,10 +18,11 @@ set(source_files
     ral_nlls_ciface.F90
     CACHE INTERNAL "source_files" FORCE)
 
-# Suppress warnings
+# Suppress warnings ############
 if(NOT WIN32)
   include(${CMAKE_SOURCE_DIR}/cmake/Suppressions_external.cmake)
 endif()
+# End Supress warnings #########
 
 # Generate target name based on filename (remove file extension and convert to
 # uppercase)
@@ -72,8 +73,30 @@ function(generate_ral_nlls_modules precision obj_list)
     "NAG_EXPORT_MOD_${precision}" "RAL_NLLS_WORKSPACES_${precision}")
   add_dependencies("RAL_NLLS_${precision}" "RAL_NLLS_INTERNAL_${precision}")
   add_dependencies("RAL_NLLS_CIFACE_${precision}" "RAL_NLLS_${precision}")
+
+  # Replicate tree to be compatible with Ninja
+  target_link_libraries("RAL_NLLS_DTRS_${precision}" "RAL_NLLS_TYPES_${precision}"
+                        "RAL_NLLS_SYMBOLS_${precision}")
+  target_link_libraries("RAL_NLLS_WORKSPACES_${precision}"
+                        "RAL_NLLS_DTRS_${precision}")
+  target_link_libraries("NAG_EXPORT_MOD_${precision}"
+                        "RAL_NLLS_WORKSPACES_${precision}")
+  target_link_libraries("RAL_NLLS_PRINTING_${precision}"
+                        "RAL_NLLS_WORKSPACES_${precision}")
+  target_link_libraries("RAL_NLLS_BOUNDS_${precision}"
+                        "RAL_NLLS_WORKSPACES_${precision}")
+  target_link_libraries(
+    "RAL_NLLS_FD_${precision}" "RAL_NLLS_WORKSPACES_${precision}"
+    "RAL_NLLS_PRINTING_${precision}")
+  target_link_libraries(
+    "RAL_NLLS_INTERNAL_${precision}" "RAL_NLLS_PRINTING_${precision}"
+    "RAL_NLLS_BOUNDS_${precision}" "RAL_NLLS_FD_${precision}"
+    "NAG_EXPORT_MOD_${precision}" "RAL_NLLS_WORKSPACES_${precision}")
+  target_link_libraries("RAL_NLLS_${precision}" "RAL_NLLS_INTERNAL_${precision}")
+  target_link_libraries("RAL_NLLS_CIFACE_${precision}" "RAL_NLLS_${precision}")
 endfunction()
 
+# Post ################
 set(nlls_obj_list "")
 # Generate single-precision library
 generate_ral_nlls_modules("single" obj_list)
@@ -81,6 +104,5 @@ list(APPEND nlls_obj_list ${obj_list})
 # Generate double-precision library
 generate_ral_nlls_modules("double" obj_list)
 list(APPEND nlls_obj_list ${obj_list})
-set(nlls_obj_list
-    ${nlls_obj_list}
-    PARENT_SCOPE)
+set(nlls_obj_list ${nlls_obj_list} PARENT_SCOPE)
+# End Post ################

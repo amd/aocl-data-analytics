@@ -69,7 +69,11 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
             "algorithm", "Algorithm used to compute the k-nearest neighbors.",
-            {{"auto", automatic}, {"brute", brute}, {"kd tree", kd_tree}}, "auto"));
+            {{"auto", automatic},
+             {"brute", brute},
+             {"kd tree", kd_tree},
+             {"ball tree", ball_tree}},
+            "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(
             OptionString("metric", "Metric used to compute the pairwise distance matrix.",
@@ -80,7 +84,9 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
                           {"l1", da_l1},
                           {"cityblock", da_cityblock},
                           {"cosine", da_cosine},
-                          {"minkowski", da_minkowski}},
+                          {"minkowski", da_minkowski},
+                          {"sqeuclidean_gemm", da_sqeuclidean_gemm},
+                          {"euclidean_gemm", da_euclidean_gemm}},
                          "euclidean"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(

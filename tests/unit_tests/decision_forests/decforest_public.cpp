@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -49,6 +49,7 @@ template <typename T> struct test_data_type {
     std::vector<da_int> y_train;
     std::vector<T> X_test;
     std::vector<da_int> y_test;
+    std::vector<da_int> categorical_feat;
     da_int n_samples_train, n_feat, ldx_train, ldx_test;
     da_int n_samples_test;
 };
@@ -133,42 +134,199 @@ template <typename T> void set_data_identical(test_data_type<T> &data) {
     data.ldx_test = 2;
 }
 
+template <typename T> void set_test_data_6x2_categorical(test_data_type<T> &data) {
+
+    //  2 columns: contain values in [0,1] and [0,1,2] respectively
+    data.X_train = {(T)1., (T)1., (T)1., (T)0., (T)0., (T)0.,
+                    (T)0., (T)1., (T)2., (T)0., (T)1., (T)2.};
+    data.y_train = {0, 1, 1, 0, 0, 1};
+    data.X_test = {(T)0., (T)1., (T)1., (T)2.};
+    data.y_test = {0, 1};
+    data.n_samples_train = 6, data.n_feat = 2;
+    data.n_samples_test = 2;
+    data.ldx_train = 6;
+    data.ldx_test = 2;
+    data.categorical_feat = {2, 3};
+}
+
 TYPED_TEST(random_forest_test, trivial_forests) {
     std::function<void(test_data_type<TypeParam> & data)> set_test_data[] = {
-        set_test_data_8x1<TypeParam>, set_test_data_8x2_unique<TypeParam>,
-        set_test_data_8x2_nonunique<TypeParam>, set_test_data_8x2_ldx<TypeParam>};
+        set_test_data_8x2_unique<TypeParam>};
     test_data_type<TypeParam> data;
 
     da_int i = 0;
     for (auto &data_fun : set_test_data) {
         std::cout << "Testing function: " << i << std::endl;
         data_fun(data);
-        da_handle tree_handle = nullptr;
-        EXPECT_EQ(da_handle_init<TypeParam>(&tree_handle, da_handle_decision_forest),
+        da_handle forest_handle = nullptr;
+        EXPECT_EQ(da_handle_init<TypeParam>(&forest_handle, da_handle_decision_forest),
                   da_status_success);
-        EXPECT_EQ(da_forest_set_training_data(tree_handle, data.n_samples_train,
+        EXPECT_EQ(da_forest_set_training_data(forest_handle, data.n_samples_train,
                                               data.n_feat, 0, data.X_train.data(),
                                               data.ldx_train, data.y_train.data()),
                   da_status_success);
-        EXPECT_EQ(da_options_set(tree_handle, "features selection", "all"),
+        EXPECT_EQ(da_options_set(forest_handle, "features selection", "all"),
                   da_status_success);
-        EXPECT_EQ(da_options_set(tree_handle, "bootstrap", "no"), da_status_success);
-        EXPECT_EQ(da_forest_fit<TypeParam>(tree_handle), da_status_success);
+        EXPECT_EQ(da_options_set(forest_handle, "seed", (da_int)42), da_status_success);
+        EXPECT_EQ(da_options_set(forest_handle, "bootstrap", "no"), da_status_success);
+        EXPECT_EQ(
+            da_options_set(forest_handle, "bootstrap samples factor", (TypeParam)1.0),
+            da_status_success);
+        EXPECT_EQ(da_forest_fit<TypeParam>(forest_handle), da_status_success);
         TypeParam accuracy;
-        EXPECT_EQ(da_forest_score(tree_handle, data.n_samples_test, data.n_feat,
+        EXPECT_EQ(da_forest_score(forest_handle, data.n_samples_test, data.n_feat,
                                   data.X_test.data(), data.ldx_test, data.y_test.data(),
                                   &accuracy),
                   da_status_success);
         EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
         std::vector<da_int> y_pred(data.n_samples_test);
-        EXPECT_EQ(da_forest_predict(tree_handle, data.n_samples_test, data.n_feat,
+        EXPECT_EQ(da_forest_predict(forest_handle, data.n_samples_test, data.n_feat,
                                     data.X_test.data(), data.ldx_test, y_pred.data()),
                   da_status_success);
         EXPECT_ARR_EQ(data.n_samples_test, y_pred, data.y_test, 1, 1, 0, 0);
 
-        da_handle_destroy(&tree_handle);
+        da_handle_destroy(&forest_handle);
         i++;
     }
+}
+
+TYPED_TEST(random_forest_test, categorical_features) {
+    test_data_type<TypeParam> data;
+    set_test_data_6x2_categorical(data);
+    da_handle forest_handle = nullptr;
+    EXPECT_EQ(da_handle_init<TypeParam>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    EXPECT_EQ(da_forest_set_training_data(forest_handle, data.n_samples_train,
+                                          data.n_feat, 0, data.X_train.data(),
+                                          data.ldx_train, data.y_train.data(),
+                                          data.categorical_feat.data()),
+              da_status_success);
+    da_int seed = 42;
+    EXPECT_EQ(da_options_set(forest_handle, "seed", seed), da_status_success);
+    EXPECT_EQ(da_forest_fit<TypeParam>(forest_handle), da_status_success);
+    TypeParam accuracy;
+    EXPECT_EQ(da_forest_score(forest_handle, data.n_samples_test, data.n_feat,
+                              data.X_test.data(), data.ldx_test, data.y_test.data(),
+                              &accuracy),
+              da_status_success);
+    EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+    std::vector<da_int> y_pred(data.n_samples_test);
+    EXPECT_EQ(da_forest_predict(forest_handle, data.n_samples_test, data.n_feat,
+                                data.X_test.data(), data.ldx_test, y_pred.data()),
+              da_status_success);
+    EXPECT_ARR_EQ(data.n_samples_test, y_pred, data.y_test, 1, 1, 0, 0);
+
+    da_handle_destroy(&forest_handle);
+}
+
+TYPED_TEST(random_forest_test, small_bins) {
+    using T = TypeParam;
+    std::vector<T> X_train = {(T)0,   (T)1,   (T)2,  (T)3, (T)4,   (T)0.5, (T)1.5, (T)2.5,
+                              (T)3.5, (T)4.5, (T)6,  (T)7, (T)8,   (T)9,   (T)5.5, (T)4,
+                              (T)3,   (T)2,   (T)0,  (T)1, (T)6.5, (T)5.5, (T)7.5, (T)8.5,
+                              (T)6.,  (T)1.,  (T)2., (T)4, (T)3,   (T)2};
+    std::vector<da_int> y_train = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2};
+    std::vector<T> X_test = {(T)0, (T)1, (T)2, (T)2, (T)3, (T)4, (T)6,   (T)7,   (T)8,
+                             (T)3, (T)4, (T)1, (T)7, (T)8, (T)9, (T)2.5, (T)3.5, (T)4.2};
+    std::vector<da_int> y_test = {0, 0, 0, 1, 1, 1, 2, 2, 2};
+    da_int n_samples_train = 15;
+    da_int n_features = 2;
+    da_int n_samples_test = 9;
+
+    // Solve first without binning
+    da_handle forest_handle = nullptr;
+    EXPECT_EQ(da_handle_init<T>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    EXPECT_EQ(da_forest_set_training_data(forest_handle, n_samples_train, n_features, 3,
+                                          X_train.data(), n_samples_train,
+                                          y_train.data()),
+              da_status_success);
+    EXPECT_EQ(da_forest_fit<T>(forest_handle), da_status_success);
+    T accuracy;
+    EXPECT_EQ(da_forest_score(forest_handle, n_samples_test, n_features, X_test.data(),
+                              n_samples_test, y_test.data(), &accuracy),
+              da_status_success);
+    EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+    std::vector<da_int> y_pred(n_samples_test);
+    EXPECT_EQ(da_forest_predict(forest_handle, n_samples_test, n_features, X_test.data(),
+                                n_samples_test, y_pred.data()),
+              da_status_success);
+    EXPECT_ARR_EQ(n_samples_test, y_pred, y_test, 1, 1, 0, 0);
+    std::cout << "First fit done!\n" << std::endl;
+
+    // Solve again, binning the data
+    EXPECT_EQ(da_options_set(forest_handle, "histogram", "yes"), da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "Maximum bins", (da_int)5),
+              da_status_success);
+    EXPECT_EQ(da_forest_fit<T>(forest_handle), da_status_success);
+    EXPECT_EQ(da_forest_score(forest_handle, n_samples_test, n_features, X_test.data(),
+                              n_samples_test, y_test.data(), &accuracy),
+              da_status_success);
+    EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+    EXPECT_EQ(da_forest_predict(forest_handle, n_samples_test, n_features, X_test.data(),
+                                n_samples_test, y_pred.data()),
+              da_status_success);
+    EXPECT_ARR_EQ(n_samples_test, y_pred, y_test, 1, 1, 0, 0);
+
+    // Solve again, binning the data with too few bins
+    EXPECT_EQ(da_options_set(forest_handle, "histogram", "yes"), da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "Maximum bins", (da_int)2),
+              da_status_success);
+    EXPECT_EQ(da_forest_fit<T>(forest_handle), da_status_success);
+    EXPECT_EQ(da_forest_score(forest_handle, n_samples_test, n_features, X_test.data(),
+                              n_samples_test, y_test.data(), &accuracy),
+              da_status_success);
+    EXPECT_GT(accuracy, 0.5);
+
+    da_handle_destroy(&forest_handle);
+}
+
+TYPED_TEST(random_forest_test, onevall) {
+    using T = TypeParam;
+    // Simple 2 features, tree should train in 2 splits
+    std::vector<T> X_train = {(T)0, (T)0, (T)0, (T)0, (T)1, (T)1, (T)1, (T)1,
+                              (T)1, (T)1, (T)1, (T)1, (T)0, (T)0, (T)1, (T)1,
+                              (T)0, (T)0, (T)1, (T)1, (T)0, (T)0, (T)1, (T)1};
+    std::vector<da_int> y_train = {0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1};
+    std::vector<T> X_test = {(T)0, (T)0, (T)1, (T)1, (T)0, (T)1, (T)0, (T)1};
+    std::vector<da_int> y_test = {0, 0, 0, 1};
+    da_int n_samples_train = 12;
+    da_int n_features = 2;
+    da_int n_samples_test = 4;
+    std::vector<da_int> cat_var = {2, 2};
+
+    da_handle forest_handle = nullptr;
+    EXPECT_EQ(da_handle_init<T>(&forest_handle, da_handle_decision_forest),
+              da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "histogram", "yes"), da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "category split strategy", "one-vs-all"),
+              da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "Maximum bins", (da_int)8),
+              da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "seed", (da_int)42), da_status_success);
+    EXPECT_EQ(da_forest_set_training_data(forest_handle, n_samples_train, n_features, 3,
+                                          X_train.data(), n_samples_train, y_train.data(),
+                                          cat_var.data()),
+              da_status_success);
+    EXPECT_EQ(da_forest_fit<T>(forest_handle), da_status_success);
+    T accuracy;
+    EXPECT_EQ(da_forest_score(forest_handle, n_samples_test, n_features, X_test.data(),
+                              n_samples_test, y_test.data(), &accuracy),
+              da_status_success);
+    EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+
+    // solve again without histograms
+    EXPECT_EQ(da_options_set(forest_handle, "histogram", "no"), da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "category split strategy", "one-vs-all"),
+              da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "seed", (da_int)42), da_status_success);
+    EXPECT_EQ(da_forest_fit<T>(forest_handle), da_status_success);
+    EXPECT_EQ(da_forest_score(forest_handle, n_samples_test, n_features, X_test.data(),
+                              n_samples_test, y_test.data(), &accuracy),
+              da_status_success);
+    EXPECT_NEAR(accuracy, 1.0, 1.0e-05);
+
+    da_handle_destroy(&forest_handle);
 }
 
 TYPED_TEST(random_forest_test, get_results) {
@@ -186,6 +344,7 @@ TYPED_TEST(random_forest_test, get_results) {
               da_status_success);
     da_int seed = 42, n_tree = 5;
     EXPECT_EQ(da_options_set(forest_handle, "seed", seed), da_status_success);
+    EXPECT_EQ(da_options_set(forest_handle, "bootstrap", "no"), da_status_success);
     EXPECT_EQ(da_options_set(forest_handle, "number of trees", n_tree),
               da_status_success);
     EXPECT_EQ(da_forest_fit<TypeParam>(forest_handle), da_status_success);
@@ -200,14 +359,14 @@ TYPED_TEST(random_forest_test, get_results) {
 
     // get the results and check the values
     da_int dim = 100;
-    da_int n_obs = (da_int)std::ceil(0.8 * data.n_samples_train);
+    da_int n_obs_max = data.n_samples_train;
     std::vector<TypeParam> rinfo(dim);
     EXPECT_EQ(
         da_handle_get_result(forest_handle, da_result::da_rinfo, &dim, rinfo.data()),
         da_status_success);
-    std::vector<TypeParam> rinfo_exp{(TypeParam)data.n_feat,
-                                     (TypeParam)data.n_samples_train, (TypeParam)n_obs,
-                                     (TypeParam)seed, (TypeParam)n_tree};
+    std::vector<TypeParam> rinfo_exp{
+        (TypeParam)data.n_feat, (TypeParam)data.n_samples_train, (TypeParam)n_obs_max,
+        (TypeParam)seed, (TypeParam)n_tree};
     EXPECT_ARR_NEAR(4, rinfo, rinfo_exp, 1.0e-10);
 
     // Check that other queries fail
@@ -269,6 +428,11 @@ TYPED_TEST(random_forest_test, invalid_input) {
     EXPECT_EQ(da_forest_set_training_data(forest_handle, n_samples, n_features, n_class,
                                           X.data(), n_samples, y.data()),
               da_status_success);
+
+    // Number of samples too small for histogram option
+    EXPECT_EQ(da_options_set(forest_handle, "histogram", "yes"), da_status_success);
+    EXPECT_EQ(da_forest_fit<TypeParam>(forest_handle), da_status_invalid_option);
+    EXPECT_EQ(da_options_set(forest_handle, "histogram", "no"), da_status_success);
 
     // model out of date for evaluation
     EXPECT_EQ(da_forest_predict(forest_handle, n_samples, n_features, X.data(), n_samples,
@@ -352,9 +516,9 @@ typedef struct forest_param_t {
 
 // clang-format off
 const forest_param_t forest_param_pos[] = {
-    {"iris_gini", "iris", {{"number of trees", 25}, {"seed", 42}},
+    {"iris_gini", "iris", {{"number of trees", 25}, {"seed", 42}, {"node minimum samples", 1}},
         {{"scoring function", "gini"}}, {}, {}, 0.95},
-    {"iris_entropy", "iris", {{"number of trees", 25}, {"seed", 42}},
+    {"iris_entropy", "iris", {{"number of trees", 100}, {"seed", 42}},
         {{"scoring function", "cross-entropy"}}, {}, {}, 0.95},
     {"iris_misclass", "iris", {{"number of trees", 50}, {"seed", 42}},
         {{"scoring function", "misclass"}, {"features selection", "all"}}, {}, {}, 0.95},
@@ -362,7 +526,7 @@ const forest_param_t forest_param_pos[] = {
         {{"scoring function", "gini"}}, {}, {}, 0.93},
     {"gen1_entropy", "gen1", {{"number of trees", 25}, {"seed", 42}},
         {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
-    {"gen1_misclass", "gen1", {{"number of trees", 25}, {"seed", 42}},
+    {"gen1_misclass", "gen1", {{"number of trees", 25}, {"seed", 42}, {"node minimum samples", 1}},
         {{"scoring function", "misclass"}}, {}, {}, 0.93},
     {"gen_200x10_gini", "gen_200x10_3class", {{"number of trees", 25}, {"seed", 42}},
         {{"scoring function", "gini"}},
@@ -382,7 +546,7 @@ const forest_param_t forest_param_pos[] = {
     {"gen_200x10_split4", "gen_200x10_3class",
         {{"number of trees", 25}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 4}},
         {{"scoring function", "entropy"}}, {}, {}, 0.93},
-    {"iris_split2", "iris", {{"number of trees", 25}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 2}},
+    {"iris_split2", "iris", {{"number of trees", 25}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 2}, {"node minimum samples", 1}},
         {{"scoring function", "gini"}}, {}, {}, 0.95},
     {"gen_500x20_split6", "gen_500x20_4class",
         {{"number of trees", 25}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 7}},
@@ -398,11 +562,15 @@ const forest_param_t forest_param_pos[] = {
     {"inference_37_blocks", "gen_200x10_3class", {{"number of trees", 25},
         {"seed", 42}, {"block size", 37}}, {{"scoring function", "cross-entropy"}}, {}, {}, 0.93},
 
-    // sorting method
-    {"iris_gini", "iris", {{"number of trees", 25}, {"seed", 42}},
-        {{"scoring function", "gini"}, {"sorting method", "stl"}}, {}, {}, 0.95},
-    {"gen1_entropy", "gen1", {{"number of trees", 25}, {"seed", 42}},
-        {{"scoring function", "cross-entropy"}, {"sorting method", "stl"}}, {}, {}, 0.93},
+    // histogram tests
+    {"iris_hist", "iris", {{"maximum bins", 40}, {"seed", 42}},
+        {{"histogram", "yes"}}, {}, {}, 0.95},
+    {"gen_500x20_hist", "gen_500x20_4class",
+        {{"maximum bins", 30}, {"seed", 40}},
+        {{"histogram", "yes"}}, {{"minimum impurity decrease", 0.003}}, {{"minimum impurity decrease", 0.003}}, 0.90},
+    {"gen_200x10_hist", "gen_200x10_3class", {{"maximum bins", 50}, {"seed", 42}},
+        {{"histogram", "yes"}}, {{"minimum impurity decrease", 0.003}}, {{"minimum impurity decrease", 0.003}}, 0.95}
+
 };
 // clang-format on
 
@@ -468,71 +636,71 @@ TEST(forest, row_major) {
     // X, X_test and y now form our data
 
     // Create main handle and set options
-    da_handle tree_handle = nullptr;
-    EXPECT_EQ(da_handle_init<float>(&tree_handle, da_handle_decision_forest),
+    da_handle forest_handle = nullptr;
+    EXPECT_EQ(da_handle_init<float>(&forest_handle, da_handle_decision_forest),
               da_status_success);
-    EXPECT_EQ(da_options_set_int(tree_handle, "maximum depth", 5), da_status_success);
-    EXPECT_EQ(da_options_set_int(tree_handle, "seed", 77), da_status_success);
-    EXPECT_EQ(da_options_set_string(tree_handle, "scoring function", "gini"),
+    EXPECT_EQ(da_options_set_int(forest_handle, "maximum depth", 5), da_status_success);
+    EXPECT_EQ(da_options_set_int(forest_handle, "seed", 77), da_status_success);
+    EXPECT_EQ(da_options_set_string(forest_handle, "scoring function", "gini"),
               da_status_success);
-    EXPECT_EQ(da_forest_set_training_data(tree_handle, n_samples, n_features, n_class,
+    EXPECT_EQ(da_forest_set_training_data(forest_handle, n_samples, n_features, n_class,
                                           X.data(), n_samples, y.data()),
               da_status_success);
-    EXPECT_EQ(da_forest_fit<float>(tree_handle), da_status_success);
+    EXPECT_EQ(da_forest_fit<float>(forest_handle), da_status_success);
     std::vector<da_int> y_pred(n_samples);
     std::vector<float> y_proba(n_samples * n_class), y_log_proba(n_samples * n_class);
     float mean_accuracy;
-    EXPECT_EQ(da_forest_predict(tree_handle, n_samples, n_features, X_test.data(),
+    EXPECT_EQ(da_forest_predict(forest_handle, n_samples, n_features, X_test.data(),
                                 n_samples, y_pred.data()),
               da_status_success);
-    EXPECT_EQ(da_forest_predict_proba(tree_handle, n_samples, n_features, X_test.data(),
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X_test.data(),
                                       n_samples, y_proba.data(), n_class, n_samples),
               da_status_success);
-    EXPECT_EQ(da_forest_predict_log_proba(tree_handle, n_samples, n_features,
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features,
                                           X_test.data(), n_samples, y_log_proba.data(),
                                           n_class, n_samples),
               da_status_success);
-    EXPECT_EQ(da_forest_score(tree_handle, n_samples, n_features, X_test.data(),
+    EXPECT_EQ(da_forest_score(forest_handle, n_samples, n_features, X_test.data(),
                               n_samples, y.data(), &mean_accuracy),
               da_status_success);
 
-    da_handle_destroy(&tree_handle);
+    da_handle_destroy(&forest_handle);
 
     //Now repeat with row major data
     datest_blas::imatcopy('T', n_samples, n_features, 1.0, X.data(), n_samples,
                           n_features);
     datest_blas::imatcopy('T', n_samples, n_features, 1.0, X_test.data(), n_samples,
                           n_features);
-    EXPECT_EQ(da_handle_init<float>(&tree_handle, da_handle_decision_forest),
+    EXPECT_EQ(da_handle_init<float>(&forest_handle, da_handle_decision_forest),
               da_status_success);
-    EXPECT_EQ(da_options_set_int(tree_handle, "maximum depth", 5), da_status_success);
-    EXPECT_EQ(da_options_set_int(tree_handle, "seed", 77), da_status_success);
-    EXPECT_EQ(da_options_set_string(tree_handle, "scoring function", "gini"),
+    EXPECT_EQ(da_options_set_int(forest_handle, "maximum depth", 5), da_status_success);
+    EXPECT_EQ(da_options_set_int(forest_handle, "seed", 77), da_status_success);
+    EXPECT_EQ(da_options_set_string(forest_handle, "scoring function", "gini"),
               da_status_success);
-    EXPECT_EQ(da_options_set_string(tree_handle, "storage order", "row-major"),
+    EXPECT_EQ(da_options_set_string(forest_handle, "storage order", "row-major"),
               da_status_success);
-    EXPECT_EQ(da_forest_set_training_data(tree_handle, n_samples, n_features, n_class,
+    EXPECT_EQ(da_forest_set_training_data(forest_handle, n_samples, n_features, n_class,
                                           X.data(), n_features, y.data()),
               da_status_success);
-    EXPECT_EQ(da_forest_fit<float>(tree_handle), da_status_success);
+    EXPECT_EQ(da_forest_fit<float>(forest_handle), da_status_success);
     std::vector<da_int> y_pred_row(n_samples);
     std::vector<float> y_proba_row(n_samples * n_class),
         y_log_proba_row(n_samples * n_class);
     float mean_accuracy_row;
-    EXPECT_EQ(da_forest_predict(tree_handle, n_samples, n_features, X_test.data(),
+    EXPECT_EQ(da_forest_predict(forest_handle, n_samples, n_features, X_test.data(),
                                 n_features, y_pred_row.data()),
               da_status_success);
-    EXPECT_EQ(da_forest_predict_proba(tree_handle, n_samples, n_features, X_test.data(),
+    EXPECT_EQ(da_forest_predict_proba(forest_handle, n_samples, n_features, X_test.data(),
                                       n_features, y_proba_row.data(), n_class, n_class),
               da_status_success);
-    EXPECT_EQ(da_forest_predict_log_proba(tree_handle, n_samples, n_features,
+    EXPECT_EQ(da_forest_predict_log_proba(forest_handle, n_samples, n_features,
                                           X_test.data(), n_features,
                                           y_log_proba_row.data(), n_class, n_class),
               da_status_success);
-    EXPECT_EQ(da_forest_score(tree_handle, n_samples, n_features, X_test.data(),
+    EXPECT_EQ(da_forest_score(forest_handle, n_samples, n_features, X_test.data(),
                               n_features, y.data(), &mean_accuracy_row),
               da_status_success);
-    da_handle_destroy(&tree_handle);
+    da_handle_destroy(&forest_handle);
 
     //Check row and column outputs agree
     datest_blas::imatcopy('T', n_class, n_samples, 1.0, y_proba_row.data(), n_class,

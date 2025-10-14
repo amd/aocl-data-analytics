@@ -21,12 +21,9 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "dbscan.hpp"
 #include "aoclda.h"
+#include "context.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
@@ -35,6 +32,7 @@
 #include "dbscan_options.hpp"
 #include "lapack_templates.hpp"
 #include "macros.h"
+#include "miscellaneous.hpp"
 #include "nn_types.hpp"
 #include "pairwise_distances.hpp"
 #include "radius_neighbors.hpp"
@@ -54,6 +52,7 @@ namespace ARCH {
 namespace da_dbscan {
 
 using namespace da_nn_types;
+using namespace std::literals::string_literals;
 
 /* Utility function to add a rule in an unordered map. Recursively searches for rules with the same
    key and updates them accordingly. */
@@ -266,14 +265,14 @@ template <typename T> da_status dbscan<T>::compute() {
     metric_internal = da_metric(metric);
 
     // Check for incompatible options
-    if (algorithm == kd_tree) {
-        if (metric == da_cosine) {
-            return da_error(
-                this->err, da_status_incompatible_options,
-                "The k-d tree algorithm is not compatible with the cosine metric.");
+    if (algorithm == kd_tree || algorithm == ball_tree) {
+        if (metric == da_cosine || metric == da_sqeuclidean) {
+            return da_error(this->err, da_status_incompatible_options,
+                            "Tree algorithms are not compatible with the cosine or "
+                            "squared Euclidean distances.");
         } else if (metric == da_minkowski && p < (T)1.0) {
             return da_error(this->err, da_status_incompatible_options,
-                            "The k-d tree algorithm is not compatible with the Minkowski "
+                            "Tree algorithms are not compatible with the Minkowski "
                             "metric when p < 1.");
         }
     }
@@ -296,7 +295,11 @@ template <typename T> da_status dbscan<T>::compute() {
             n_samples, n_features, A, lda, eps, metric_internal, p, neighbors, this->err);
 
     } else if (alg_internal == kd_tree) {
-        status = da_radius_neighbors::radius_neighbors_kdtree(
+        status = da_radius_neighbors::radius_neighbors_kd_tree(
+            n_samples, n_features, A, lda, eps, metric_internal, p, leaf_size, neighbors,
+            this->err);
+    } else if (alg_internal == ball_tree) {
+        status = da_radius_neighbors::radius_neighbors_ball_tree(
             n_samples, n_features, A, lda, eps, metric_internal, p, leaf_size, neighbors,
             this->err);
     }
@@ -319,6 +322,9 @@ template <typename T> da_status dbscan<T>::compute() {
 template <typename T> da_status dbscan<T>::dbscan_clusters_parallel() {
 
     da_status status = da_status_success;
+
+    // Add telemetry to the context class
+    context_set_hidden_settings("dbscan.setup"s, "clustering=parallel"s);
 
     std::unordered_map<da_int, da_int> label_map;
 
@@ -413,6 +419,8 @@ template <typename T> da_status dbscan<T>::dbscan_clusters_parallel() {
 /* Compute the DBSCAN clusters using serial method */
 template <typename T> da_status dbscan<T>::dbscan_clusters_serial() {
 
+    // Add telemetry to the context class
+    context_set_hidden_settings("dbscan.setup"s, "clustering=serial"s);
     da_status status = da_status_success;
 
     da_std::fill(labels.begin(), labels.end(), UNVISITED);
@@ -478,14 +486,26 @@ template <typename T> da_status dbscan<T>::dbscan_clusters() {
     // Work with min_samples - 1 since we are not counting points as being in their own neighbourhood
     min_samples_m1 = min_samples - 1;
 
-    // We only want to use the parallel method if we have more than 32 threads available, since otherwise the serial method is faster
-
-    if (omp_get_max_threads() > 32) {
-        status = dbscan_clusters_parallel();
+    // Check to see if there is an override in the context class
+    const char cluster_methods[]{"dbscan.cluster_methods"};
+    if (context::get_context()->hidden_settings.find(cluster_methods) !=
+        context::get_context()->hidden_settings.end()) {
+        std::string cluster_method =
+            context::get_context()->hidden_settings[cluster_methods];
+        if (cluster_method == "parallel"s) {
+            status = dbscan_clusters_parallel();
+        } else {
+            status = dbscan_clusters_serial();
+        }
     } else {
-        status = dbscan_clusters_serial();
+        // If no override is found, we will use the parallel method if we have more than 32 threads available
+        // Otherwise we will use the serial method
+        if (omp_get_max_threads() > 32) {
+            status = dbscan_clusters_parallel();
+        } else {
+            status = dbscan_clusters_serial();
+        }
     }
-
     // If clustering failed (only possible if memory runs out) return immediately
     if (status != da_status_success)
         return status; // LCOV_EXCL_LINE

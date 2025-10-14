@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -54,7 +54,7 @@ OptionString opt_string("string option", "Preloaded Categorical String Option",
                         {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes");
 // String option with free-form value
 OptionString opt_ff_string("free-form string option", "Preloaded Free-Form String Option",
-                           {}, "any");
+                           {}, "any", true);
 std::shared_ptr<OptionString> oS;
 
 da_status preload(OptionRegistry &r) {
@@ -95,18 +95,19 @@ da_status preload(OptionRegistry &r) {
 TEST(OpOptionInternal, OpClsCommon) {
     EXPECT_THROW(OptionNumeric<da_int> opt_i("", "Preloaded Integer Option", 0,
                                              da_options::lbound_t::greaterequal, 10,
-                                             da_options::ubound_t::lessequal, 10),
+                                             da_options::ubound_t::lessequal, 10, "",
+                                             true),
                  std::invalid_argument);
     OptionNumeric<da_int> opt_i(" IntegeR    OptiOn    ", "Preloaded Integer Option", 0,
                                 da_options::lbound_t::greaterequal, 10,
-                                da_options::ubound_t::lessequal, 10);
+                                da_options::ubound_t::lessequal, 10, "", true);
     EXPECT_STRCASEEQ((opt_i.get_name()).c_str(), "integer option");
     EXPECT_EQ(opt_i.get_option_t(), da_options::option_t::opt_int);
     EXPECT_THROW(OptionString opt_s("      ", "Preloaded String Option",
-                                    {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes"),
+                                    {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes", true),
                  std::invalid_argument);
     OptionString opt_s("  str   OPT  ", "Preloaded String Option",
-                       {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes");
+                       {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes", true);
     EXPECT_STRCASEEQ(opt_s.get_name().c_str(), "str opt");
     EXPECT_EQ(opt_s.get_option_t(), da_options::option_t::opt_string);
 };
@@ -115,7 +116,7 @@ template <typename T> void OpClsNumeric(void) {
     std::string const descr("Preloaded Option");
     OptionNumeric<T> opt(" Placeholder    OptiOn    ", descr, 0,
                          da_options::lbound_t::greaterequal, 10,
-                         da_options::ubound_t::lessequal, 10);
+                         da_options::ubound_t::lessequal, 10, "", true);
     // Call to cover pretty printing
     [[maybe_unused]] string pretty;
     pretty = opt.print_details(true) + opt.print_details(false, true) +
@@ -155,57 +156,57 @@ template <typename T> void OpClsNumeric(void) {
     // lower > upper
     EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 10,
                                       da_options::lbound_t::greaterequal, 1,
-                                      da_options::ubound_t::lessequal, 1),
+                                      da_options::ubound_t::lessequal, 1, "", true),
                  std::invalid_argument);
     if (has_nan) {
         // lower = nan
         EXPECT_THROW(OptionNumeric<T> opt("Opt", descr,
                                           std::numeric_limits<T>::quiet_NaN(),
                                           da_options::lbound_t::greaterequal, 10,
-                                          da_options::ubound_t::lessequal, 5),
+                                          da_options::ubound_t::lessequal, 5, "", true),
                      std::invalid_argument);
         // upper = nan
         EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, -1,
                                           da_options::lbound_t::greaterequal,
                                           std::numeric_limits<T>::quiet_NaN(),
-                                          da_options::ubound_t::lessequal, 5),
+                                          da_options::ubound_t::lessequal, 5, "", true),
                      std::invalid_argument);
         // default = nan
         EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, -9,
                                           da_options::lbound_t::greaterequal, 10,
                                           da_options::ubound_t::lessequal,
-                                          std::numeric_limits<T>::quiet_NaN()),
+                                          std::numeric_limits<T>::quiet_NaN(), "", true),
                      std::invalid_argument);
     }
     // default out of range l == u
     EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 2, da_options::lbound_t::greaterthan,
-                                      2, da_options::ubound_t::lessequal, -11),
+                                      2, da_options::ubound_t::lessequal, -11, "", true),
                  std::invalid_argument);
     // default out of range l <= x <= u < d
     EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
-                                      10, da_options::ubound_t::lessequal, 11),
+                                      10, da_options::ubound_t::lessequal, 11, "", true),
                  std::invalid_argument);
     // default out of range l <= x < u = d
-    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
+    EXPECT_THROW(OptionNumeric<T> opt("opt", descr, 0, da_options::lbound_t::greaterequal,
                                       10, da_options::ubound_t::lessthan, 10),
                  std::invalid_argument);
     // default out of range d < l <= x <= u
-    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterequal,
+    EXPECT_THROW(OptionNumeric<T> opt("opt", descr, 0, da_options::lbound_t::greaterequal,
                                       10, da_options::ubound_t::lessequal, -11),
                  std::invalid_argument);
     // default out of range d = l <= x < u
-    EXPECT_THROW(OptionNumeric<T> opt("Opt", descr, 0, da_options::lbound_t::greaterthan,
+    EXPECT_THROW(OptionNumeric<T> opt("opt", descr, 0, da_options::lbound_t::greaterthan,
                                       10, da_options::ubound_t::lessthan, 0),
                  std::invalid_argument);
     {
-        OptionNumeric<T> pretty_print("Opt", descr, 0, da_options::lbound_t::greaterthan,
+        OptionNumeric<T> pretty_print("opt", descr, 0, da_options::lbound_t::greaterthan,
                                       10, da_options::ubound_t::lessthan, 5);
         pretty = pretty_print.print_details();
         pretty = pretty_print.print_details(false, true);
         pretty = pretty_print.print_details(false, false);
     }
     {
-        OptionNumeric<T> pretty_print("Opt", descr, 0, da_options::lbound_t::m_inf, 10,
+        OptionNumeric<T> pretty_print("opt", descr, 0, da_options::lbound_t::m_inf, 10,
                                       da_options::ubound_t::p_inf, 0);
         pretty = pretty_print.print_details();
         pretty = pretty_print.print_details(false, true);
@@ -216,7 +217,7 @@ template <typename T> void OpClsNumeric(void) {
 // Bool specialization
 template <> void OpClsNumeric<bool>(void) {
     std::string const descr("Preloaded Option");
-    OptionNumeric<bool> opt(" Placeholder    OptiOn    ", descr, true);
+    OptionNumeric<bool> opt(" Placeholder    OptiOn    ", descr, true, true);
     // Call to cover pretty printing
     [[maybe_unused]] string pretty;
     pretty = opt.print_details(true) + opt.print_details(false, true) +
@@ -252,7 +253,7 @@ template <> void OpClsNumeric<bool>(void) {
     EXPECT_EQ(prn, " placeholder option = true\n"s);
 
     {
-        OptionNumeric<bool> pretty_print("Opt", descr, true);
+        OptionNumeric<bool> pretty_print("opt", descr, true);
         pretty = pretty_print.print_details(true);
         pretty = pretty_print.print_details(false, true);
         pretty = pretty_print.print_details(false, false);
@@ -278,7 +279,8 @@ TEST(OpOptionInternal, OpClsStringAll) {
     // Free-form String Option
     ::opt_ff_string.get(val);
     EXPECT_EQ(val, "any");
-    EXPECT_THROW(::opt_ff_string.get(val, id), std::runtime_error);
+    ::opt_ff_string.get(val, id);
+    EXPECT_EQ(id, -1);
     EXPECT_EQ(::opt_ff_string.set("New Free-Form Value", da_options::setby_t::solver),
               da_status_success);
     ::opt_ff_string.get(val);
@@ -315,24 +317,24 @@ TEST(OpOptionInternal, OpClsStringAll) {
     EXPECT_NO_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                             {{"yes", 1}, {"yes", 0}, {"yes", 5}}, "yes"));
     EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
-                                         {{"yes", 1}, {"No", 0}}, "           "),
+                                         {{"yes", 1}, {"No", 0}}, "           ", true),
                  std::invalid_argument);
     EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
-                                         {{"yes", 1}, {"   No  ", 0}}, "no"),
+                                         {{"yes", 1}, {"   No  ", 0}}, "no", true),
                  std::invalid_argument);
     EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
-                                         {{"", 1}}, "yes"),
+                                         {{"", 1}}, "yes", true),
                  std::invalid_argument);
     EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
-                                         {{"yes", 1}, {"", 2}}, "yes"),
-                 std::invalid_argument);
-    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
-                                         {{"yes", 1}, {"no", 0}, {"maybe", 2}},
-                                         "   yes   "),
+                                         {{"yes", 1}, {"", 2}}, "yes", true),
                  std::invalid_argument);
     EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
                                          {{"yes", 1}, {"no", 0}, {"maybe", 2}},
-                                         "invalid"),
+                                         "   yes   ", true),
+                 std::invalid_argument);
+    EXPECT_THROW(OptionString opt_string("string option", "Preloaded String Option",
+                                         {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "invalid",
+                                         true),
                  std::invalid_argument);
     EXPECT_EQ(::opt_string.set("invalid"), da_status_option_invalid_value);
 }

@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -43,6 +43,7 @@ class linmod : public pyda_handle {
     bool intercept, warm_start;
     linmod_model mod_enum;
     std::string logreg_constraint_str, solver_str;
+    bool fitted = false;
 
   public:
     linmod(std::string mod, std::optional<da_int> max_iter, bool intercept = false,
@@ -103,15 +104,17 @@ class linmod : public pyda_handle {
         std::vector<T> warm_coefficients;
 
         get_numpy_array_properties(X, n_samples, n_feat, ldx);
-        da_int n_iter, nrow_prev, ncol_prev, n_samples_prev, n_feat_prev, n_class_prev;
-        bool well_determined_prev;
-        T loss, time, nrm_gradient_loss;
-        status = get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time, &n_samples_prev,
-                           &n_feat_prev, &n_class_prev, &nrow_prev, &ncol_prev,
-                           &well_determined_prev);
-        bool fitted = status == da_status_success ? true : false;
 
-        if (fitted && warm_start) {
+        if (this->fitted && warm_start) {
+            da_int n_iter, nrow_prev, ncol_prev, n_samples_prev, n_feat_prev,
+                n_class_prev;
+            bool well_determined_prev;
+            T loss, time, nrm_gradient_loss;
+            status = get_rinfo(&loss, &nrm_gradient_loss, &n_iter, &time, &n_samples_prev,
+                               &n_feat_prev, &n_class_prev, &nrow_prev, &ncol_prev,
+                               &well_determined_prev);
+            exception_check(status);
+
             da_int n_class =
                 (da_int)(std::round(*std::max_element(y.data(), y.data() + n_samples)) +
                          1);
@@ -179,7 +182,7 @@ class linmod : public pyda_handle {
             da_int ncoef = x0->shape()[0];
             status = da_linmod_fit_start<T>(handle, ncoef, x0->data());
         } else {
-            if (fitted && warm_start) {
+            if (this->fitted && warm_start) {
                 status = da_linmod_fit_start<T>(handle, dim, warm_coefficients.data());
             } else {
                 if (precision == da_double)
@@ -188,6 +191,8 @@ class linmod : public pyda_handle {
                     status = da_linmod_fit<float>(handle);
             }
         }
+
+        this->fitted = status == da_status_success ? true : false;
 
         exception_check(status);
     }

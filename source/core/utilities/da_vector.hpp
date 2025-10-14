@@ -33,6 +33,15 @@
 
 #define INIT_CAPACITY 64
 
+#if defined(__GNUC__) && !defined(__clang__)
+#define DO_PRAGMA(x) _Pragma(#x)
+#else
+#define DO_PRAGMA(x)
+#endif
+
+DO_PRAGMA(GCC diagnostic push)
+DO_PRAGMA(GCC diagnostic ignored "-Wstringop-overflow")
+
 namespace da_vector {
 
 /*
@@ -139,5 +148,7 @@ template <typename T> class da_vector {
 };
 
 } // namespace da_vector
+
+DO_PRAGMA(GCC diagnostic pop)
 
 #endif

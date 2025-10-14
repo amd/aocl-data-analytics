@@ -38,6 +38,8 @@ endif()
 
 add_executable(basic_statistics basic_statistics.cpp)
 
+add_executable(train_test_split train_test_split.cpp)
+
 add_executable(linear_model linear_model.cpp)
 
 add_executable(linmod_diabetes linmod_diabetes.cpp)
@@ -73,7 +75,9 @@ target_link_libraries(dbscan PRIVATE aocl-da)
 
 add_executable(metrics metrics.cpp)
 
-add_executable(knn knn.cpp)
+add_executable(knn_classification knn_classification.cpp)
+
+add_executable(knn_regression knn_regression.cpp)
 
 add_executable(kernel_functions kernel_functions.cpp)
 
@@ -85,6 +89,7 @@ set(EXAMPLE_EXES
     linear_model
     linmod_diabetes
     basic_statistics
+    train_test_split
     pca
     pca_cancer
     kmeans
@@ -93,7 +98,8 @@ set(EXAMPLE_EXES
     decision_tree
     random_forest
     metrics
-    knn
+    knn_classification
+    knn_regression
     svc
     nusvr
     kernel_functions)
@@ -104,9 +110,6 @@ endif()
 
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)
-  if(BUILD_SMP OR UNIX)
-    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
-  endif()
   # Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an
   # empty string. This is what AOCL-DA users will need to do explicitly to get
   # the correct symbols, otherwise they will get linking errors or aborts.
@@ -114,6 +117,9 @@ foreach(target ${EXAMPLE_EXES})
   target_link_directories(${target} PRIVATE ${IFORT_LIBS})
   target_link_directories(${target} PRIVATE ${FLANG_LIBS})
   target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
+  if (NOT BUILD_SHARED_LIBS)
+    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
+  endif()
 endforeach()
 
 # For Windows shared library builds, copying the relevant DLLs into the examples

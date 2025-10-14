@@ -23,10 +23,10 @@
 
 #include "radius_neighbors.hpp"
 #include "aoclda.h"
+#include "binary_tree.hpp"
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_vector.hpp"
-#include "kdtree.hpp"
 #include "macros.h"
 #include "pairwise_distances.hpp"
 #include <vector>
@@ -134,7 +134,7 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
 
                             // Compute the distance matrix
                             if (metric_internal == da_sqeuclidean) {
-                                ARCH::euclidean_distance(
+                                ARCH::euclidean_gemm_distance(
                                     da_order::column_major, block_size_dim1,
                                     block_size_dim2, n_features, &A[A_index_block_i], lda,
                                     &A[A_index_block_j], lda, &D[D_index], ldd,
@@ -211,16 +211,40 @@ Compute the radius neighbors: for each sample point, the indices of the samples 
 radius are returned. The k-d tree method is used.
 */
 template <typename T>
-da_status radius_neighbors_kdtree(da_int n_samples, da_int n_features, const T *A,
-                                  da_int lda, T eps, da_metric metric, T p,
-                                  da_int leaf_size,
-                                  std::vector<da_vector::da_vector<da_int>> &neighbors,
-                                  da_errors::da_error_t *err) {
+da_status radius_neighbors_kd_tree(da_int n_samples, da_int n_features, const T *A,
+                                   da_int lda, T eps, da_metric metric, T p,
+                                   da_int leaf_size,
+                                   std::vector<da_vector::da_vector<da_int>> &neighbors,
+                                   da_errors::da_error_t *err) {
     try {
         // Form a k-d tree from the dataset
-        auto tree = ARCH::da_kdtree::kdtree<T>(n_samples, n_features, A, lda, leaf_size);
-        return tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps, metric, p,
-                                     neighbors, err);
+        auto tree = ARCH::da_binary_tree::kd_tree<T>(n_samples, n_features, A, lda,
+                                                     leaf_size, metric, p);
+        return tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps, neighbors,
+                                     err);
+
+    } catch (std::bad_alloc const &) {
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    }
+}
+
+/*
+Compute the radius neighbors: for each sample point, the indices of the samples within a given
+radius are returned. The ball tree method is used.
+*/
+template <typename T>
+da_status radius_neighbors_ball_tree(da_int n_samples, da_int n_features, const T *A,
+                                     da_int lda, T eps, da_metric metric, T p,
+                                     da_int leaf_size,
+                                     std::vector<da_vector::da_vector<da_int>> &neighbors,
+                                     da_errors::da_error_t *err) {
+    try {
+        // Form a ball tree from the dataset
+        auto tree = ARCH::da_binary_tree::ball_tree<T>(n_samples, n_features, A, lda,
+                                                       leaf_size, metric, p);
+        return tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps, neighbors,
+                                     err);
 
     } catch (std::bad_alloc const &) {
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
@@ -239,11 +263,20 @@ radius_neighbors_brute<float>(da_int n_samples, da_int n_features, const float *
                               std::vector<da_vector::da_vector<da_int>> &neighbors,
                               da_errors::da_error_t *err);
 
-template da_status radius_neighbors_kdtree<double>(
+template da_status radius_neighbors_kd_tree<double>(
     da_int n_samples, da_int n_features, const double *A, da_int lda, double eps,
     da_metric metric, double p, da_int leaf_size,
     std::vector<da_vector::da_vector<da_int>> &neighbors, da_errors::da_error_t *err);
-template da_status radius_neighbors_kdtree<float>(
+template da_status radius_neighbors_kd_tree<float>(
+    da_int n_samples, da_int n_features, const float *A, da_int lda, float eps,
+    da_metric metric, float p, da_int leaf_size,
+    std::vector<da_vector::da_vector<da_int>> &neighbors, da_errors::da_error_t *err);
+
+template da_status radius_neighbors_ball_tree<double>(
+    da_int n_samples, da_int n_features, const double *A, da_int lda, double eps,
+    da_metric metric, double p, da_int leaf_size,
+    std::vector<da_vector::da_vector<da_int>> &neighbors, da_errors::da_error_t *err);
+template da_status radius_neighbors_ball_tree<float>(
     da_int n_samples, da_int n_features, const float *A, da_int lda, float eps,
     da_metric metric, float p, da_int leaf_size,
     std::vector<da_vector::da_vector<da_int>> &neighbors, da_errors::da_error_t *err);

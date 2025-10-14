@@ -23,7 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable = missing-module-docstring, missing-class-docstring, attribute-defined-outside-init
+# pylint: disable = missing-module-docstring, missing-class-docstring,
+# attribute-defined-outside-init
 
 import os
 from setuptools import setup, find_packages
@@ -31,6 +32,7 @@ from wheel.bdist_wheel import bdist_wheel
 from packaging.tags import sys_tags
 
 # Create a specific bdist_wheel to signal to setup.py that the wheel is not pure python
+
 
 class spec_bdist_wheel(bdist_wheel):
     def get_tag(self):
@@ -48,6 +50,7 @@ class spec_bdist_wheel(bdist_wheel):
 
         return python_tag, abi_tag, platform_tag
 
+
 # List of all dependent libraries that were copied in the python_package install
 lib_extensions = ['.so', '.dll', '.lib', '.pyd']
 dep_libs = []
@@ -59,5 +62,5 @@ setup(
     cmdclass={'bdist_wheel': spec_bdist_wheel},
     packages=find_packages(),
     include_package_data=True,
-    package_data={'aoclda': dep_libs},
+    package_data={'aoclda': dep_libs + ['License', 'Notices']},
 )

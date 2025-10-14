@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -142,12 +142,6 @@ class kmeans : public pyda_handle {
         da_status status;
         da_int k_samples, k_features, ldy;
         get_numpy_array_properties(Y, k_samples, k_features, ldy);
-
-        T result[5];
-        da_int dim = 5;
-
-        status = da_handle_get_result(handle, da_rinfo, &dim, result);
-        exception_check(status);
 
         // define the output vector
         size_t shape[1]{(size_t)k_samples};

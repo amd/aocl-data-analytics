@@ -427,6 +427,7 @@ da_status da_standardize_s(da_order order, da_axis axis, da_int n_rows, da_int n
  * - \p dof > 0 - the degrees of freedom will be set to the specified value.
  * \param[out] cov the array which will hold the \p n_cols @f$\times @f$ \p n_cols covariance matrix. The matrix will be returned with the same storage order as the input data.
  * \param[in] ldcov the leading dimension of the covariance matrix. Constraint: \p ldcov @f$>@f$ \p n_cols.
+ * \param[in] assume_centered if equal to 1, assumes the input matrix \p X is already mean-centered and skips the centering step for computational efficiency. If equal to 0, centers the data by subtracting column means. Accepted values: 0 and 1.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - one of the constraints on \p ldx or \p ldcov was violated.
@@ -436,10 +437,10 @@ da_status da_standardize_s(da_order order, da_axis axis, da_int n_rows, da_int n
  */
 da_status da_covariance_matrix_d(da_order order, da_int n_rows, da_int n_cols,
                                  const double *X, da_int ldx, da_int dof, double *cov,
-                                 da_int ldcov);
+                                 da_int ldcov, da_int assume_centered);
 da_status da_covariance_matrix_s(da_order order, da_int n_rows, da_int n_cols,
                                  const float *X, da_int ldx, da_int dof, float *cov,
-                                 da_int ldcov);
+                                 da_int ldcov, da_int assume_centered);
 /** \} */
 
 /** \{

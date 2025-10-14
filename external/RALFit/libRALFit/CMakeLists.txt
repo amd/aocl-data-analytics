@@ -2,9 +2,18 @@
 # All rights reserved.
 # Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
 # CMake project file for libral_nlls
-cmake_minimum_required (VERSION 3.20)
+cmake_minimum_required (VERSION 3.25)
 
 project (RALFit LANGUAGES Fortran C)
+
+# Request to run pre-processor
+set(CMAKE_Fortran_PREPROCESS ON)
+
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to 'Release' as none was specified.")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "" "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
 
 # Option to compile our own LAPACK
 option(CompileMiniLAPACK "Compile our own LAPACK (discouraged)" Off)
@@ -15,6 +24,9 @@ option(SINGLE_PRECISION "Build library in single precion (default off)" Off)
 
 # Option to supress some compiler warning in debug mode
 option(SUPPRESS_INTERNAL_FIXMES "Suppress compiler warnings of known issues" Off)
+
+# Option to build the Python interface of RALFit
+option(BUILD_PYTHON "Build RalNLLS Python wheel (default On)" On)
 
 if (SINGLE_PRECISION)
     message(STATUS "Floating point precision type: SINGLE")
@@ -28,6 +40,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/modules)
 
 set(CMAKE_EXE_LINKER_FLAGS "-Wl,-export-dynamic")
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS On)
+
 # Support for CMAKE_BUILD_TYPE={Debug,Release,Profile}
 if(CMAKE_BUILD_TYPE MATCHES Debug)
   message("WARNING: Debug version - not to be used in production code.")
@@ -35,7 +49,6 @@ if(CMAKE_BUILD_TYPE MATCHES Debug)
   set(CompileMiniLAPACK On)
   # set the test coverage switch
   set(TestCoverage On)
-  set(CMAKE_EXPORT_COMPILE_COMMANDS On)
   # set( CMAKE_VERBOSE_MAKEFILE on ) # Caller can set this
 elseif(CMAKE_BUILD_TYPE MATCHES Profile)
   message("WARNING: Profile version - not to be used in production code.")
@@ -83,14 +96,19 @@ if(CompileMiniLAPACK)
 endif()
 
 # Python interface
-find_package (PythonInterp)
+if (BUILD_PYTHON)
+  find_package (PythonInterp)
+endif()
 
 if (PYTHONINTERP_FOUND)
-   message( STATUS "looking for file in ${CMAKE_CURRENT_SOURCE_DIR}")
+   message( STATUS "looking for files in ${CMAKE_CURRENT_SOURCE_DIR}")
+   set(PYPROJ_IN "${CMAKE_CURRENT_SOURCE_DIR}/pyproject.toml.in")
+   set(PYPROJ    "${CMAKE_CURRENT_BINARY_DIR}/pyproject.toml")
    set(SETUP_PY_IN "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in")
    set(SETUP_PY    "${CMAKE_CURRENT_BINARY_DIR}/setup.py")
    set(OUTPUT   "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp")
 
+   configure_file(${PYPROJ_IN} ${PYPROJ})
    configure_file(${SETUP_PY_IN} ${SETUP_PY})
 
    execute_process (
@@ -98,20 +116,18 @@ if (PYTHONINTERP_FOUND)
      OUTPUT_VARIABLE outVar
      )
    message( STATUS ${outVar} )
-
-   add_custom_command(OUTPUT ${OUTPUT}
-   		      COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} build
-		      COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT})
-
-
    message( STATUS "python found -- writing to ${CMAKE_CURRENT_BINARY_DIR}")
+   message( STATUS "To install the python library, run: ${PYTHON_EXECUTABLE} -m pip install .")
+   add_custom_command(OUTPUT ${OUTPUT}
+                     COMMAND ${PYTHON_EXECUTABLE} -m pip install .
+                     COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT})
+   install(CODE "execute_process(
+           COMMAND ${PYTHON_EXECUTABLE} -m pip install .
+           )"
+          )
 
    add_custom_target(target ALL DEPENDS ${OUTPUT} ral_nlls)
 
-   install(CODE "execute_process(
-   	    COMMAND ${PYTHON_EXECUTABLE} ${SETUP_PY} install --user
-	    )"
-	   )
 endif()
 
 # Main libral_nlls library

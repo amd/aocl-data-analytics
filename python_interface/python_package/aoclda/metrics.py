@@ -45,11 +45,11 @@ def pairwise_distances(X, Y=None, metric="euclidean", p=2.0):
 
         metric (str, optional): The type of metric used to compute the distance matrix. It can take
             the values 'euclidean', 'l2', 'sqeuclidean', 'manhattan', 'l1', 'cityblock', 'cosine',
-            or 'minkowski'. Default: 'euclidean'.
+            'minkowski', 'euclidean_gemm', or 'sqeuclidean_gemm'. Default: 'euclidean'.
 
-        p (float, optional): The power parameter used for the Minkowski metric. For p = 1.0, 
+        p (float, optional): The power parameter used for the Minkowski metric. For p = 1.0,
             this defaults to 'manhattan' metric and for p = 2.0 this defaults to 'euclidean' metric.
-            p is only used for Miknowski distance and will be ignored otherwise. Will return an 
+            p is only used for Miknowski distance and will be ignored otherwise. Will return an
             error when p is not positive. Default p = 2.0.
 
     Returns:
@@ -57,10 +57,10 @@ def pairwise_distances(X, Y=None, metric="euclidean", p=2.0):
         (n_samples_X, n_samples_X), if Y is None and the distance matrix for the rows
         of X is required.
     """
-    X = check_convert_data(X)
+    X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if Y is not None:
-        Y = check_convert_data(Y)
-    if X.dtype == "float32":
+        Y, _, _ = check_convert_data(Y, order=order, dtype=dtype, force_dtype=True)
+    if dtype == "float32":
         p = np.float32(p)
     else:
         p = np.float64(p)

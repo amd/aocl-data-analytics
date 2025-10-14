@@ -206,14 +206,14 @@ Options
 
          "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used.", ":math:`0 \le r`"
          "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`."
-         "algorithm", "string", ":math:`s=` `auto`", "Choice of algorithm.", ":math:`s=` `auto`, `brute`, or `kd tree`."
-         "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`"
+         "algorithm", "string", ":math:`s=` `auto`", "Choice of algorithm.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
+         "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree or ball tree.", ":math:`1 \le i`"
          "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`"
          "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`"
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
-Note that currently the ball tree algorithm is not supported. k-d trees are likely to be fastest for lower dimensional datasets, but cannot not be used with the cosine distance or with the Minkowski distance with power less than 1.0.
+Note that k-d trees are likely to be fastest for lower dimensional datasets, and ball trees may be preferred when data is not aligned along the coordinate axes, but trees cannot not be used with the cosine distance, the squared Euclidean distance, or the Minkowski distance with power less than 1.0.
 
 Examples (clustering)
 ========================

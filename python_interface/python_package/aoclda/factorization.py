@@ -30,6 +30,7 @@ aoclda.factorization module
 from ._aoclda.factorization import pybind_PCA
 from ._internal_utils import check_convert_data
 
+
 class PCA():
     """
     Principal component analysis (PCA).
@@ -71,13 +72,42 @@ class PCA():
 
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
 
+        whiten (bool, optional): Whether to whiten the data upon transformation.
+            This divides each principal component by its corresponding singular value and
+            multiplies the component by a dimensional factor so the transformed data, specifically
+            that data used to fit the PCA, has a unit diagonal covariance matrix. Default = False.
     """
 
-    def __init__(self, n_components=1, bias='unbiased', method='covariance', solver='auto',
-                 store_U=False, check_data=False):
-        self.pca_double = pybind_PCA(n_components, bias, method, solver, store_U, 'double', check_data)
-        self.pca_single = pybind_PCA(n_components, bias, method, solver, store_U, 'single', check_data)
+    def __init__(
+            self,
+            n_components=1,
+            bias='unbiased',
+            method='covariance',
+            solver='auto',
+            store_U=False,
+            whiten=False,
+            check_data=False):
+        self.pca_double = pybind_PCA(
+            n_components,
+            bias,
+            method,
+            solver,
+            store_U,
+            'double',
+            whiten,
+            check_data)
+        self.pca_single = pybind_PCA(
+            n_components,
+            bias,
+            method,
+            solver,
+            store_U,
+            'single',
+            whiten,
+            check_data)
         self.pca = self.pca_double
+        self.order = 'A'
+        self.dtype = 'float'
 
     @property
     def principal_components(self):
@@ -90,7 +120,7 @@ class PCA():
     @property
     def scores(self):
         """numpy.ndarray of shape (n_samples, n_components): The principal component scores,
-            :math:`U\Sigma`."""
+            :math:`U\\Sigma`."""
         return self.pca.get_scores()
 
     @property
@@ -111,7 +141,7 @@ class PCA():
 
     @property
     def sigma(self):
-        """numpy.ndarray of shape (n_components,): The diagonal values of :math:`\Sigma` from the
+        """numpy.ndarray of shape (n_components,): The diagonal values of :math:`\\Sigma` from the
             SVD."""
         return self.pca.get_sigma()
 
@@ -159,9 +189,11 @@ class PCA():
         Returns:
             self (object): Returns the instance itself.
         """
-        A = check_convert_data(A)
-        
-        if A.dtype == "float32":
+        A, self.order, self.dtype = check_convert_data(
+            A, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+
+        if self.dtype == "float32":
             self.pca = self.pca_single
             self.pca_double = None
 
@@ -185,7 +217,9 @@ class PCA():
         Returns:
             numpy.ndarray of shape (m_samples, n_components): The transformed matrix.
         """
-        X = check_convert_data(X)
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True
+        )
         return self.pca.pybind_transform(X)
 
     def inverse_transform(self, Y):
@@ -205,5 +239,7 @@ class PCA():
         Returns:
             numpy.ndarray of shape (k_samples, n_features): The transformed matrix.
         """
-        Y = check_convert_data(Y)
+        Y, _, _ = check_convert_data(
+            Y, order=self.order, dtype=self.dtype, force_dtype=True
+        )
         return self.pca.pybind_inverse_transform(Y)

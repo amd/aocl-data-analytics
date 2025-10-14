@@ -42,11 +42,18 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
                                  da_errors::da_error_t *err);
 
 template <typename T>
-da_status radius_neighbors_kdtree(da_int n_samples, da_int n_features, const T *A,
-                                  da_int lda, T eps, da_metric metric, T p,
-                                  da_int leaf_size,
-                                  std::vector<da_vector::da_vector<da_int>> &neighbors,
-                                  da_errors::da_error_t *err);
+da_status radius_neighbors_kd_tree(da_int n_samples, da_int n_features, const T *A,
+                                   da_int lda, T eps, da_metric metric, T p,
+                                   da_int leaf_size,
+                                   std::vector<da_vector::da_vector<da_int>> &neighbors,
+                                   da_errors::da_error_t *err);
+
+template <typename T>
+da_status radius_neighbors_ball_tree(da_int n_samples, da_int n_features, const T *A,
+                                     da_int lda, T eps, da_metric metric, T p,
+                                     da_int leaf_size,
+                                     std::vector<da_vector::da_vector<da_int>> &neighbors,
+                                     da_errors::da_error_t *err);
 
 } // namespace da_radius_neighbors
 

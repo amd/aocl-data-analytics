@@ -27,11 +27,13 @@
 """
 Patching scikit-learn clustering: DBSCAN
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, no-member
+# pylint: disable = missing-function-docstring, too-many-ancestors,
+# useless-return, super-init-not-called, no-member
 
 import warnings
 from sklearn.cluster import DBSCAN as DBSCAN_sklearn
 from aoclda.clustering import DBSCAN as DBSCAN_da
+
 
 class DBSCAN(DBSCAN_sklearn):
     """
@@ -72,8 +74,7 @@ class DBSCAN(DBSCAN_sklearn):
         self.DBSCAN.fit(X)
         return self
 
-
-    def fit_predict(self,  X, y=None, sample_weight=None):
+    def fit_predict(self, X, y=None, sample_weight=None):
         self.DBSCAN.fit(X)
         return self.DBSCAN.labels
 

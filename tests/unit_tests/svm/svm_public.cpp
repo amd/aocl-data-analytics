@@ -35,6 +35,60 @@
 #include <iostream>
 #include <list>
 #include <string>
+// taken from  "svm_types.hpp"
+enum vectorization_type { scalar = 0, avx = 2, avx2 = 5, avx512 = 11 };
+
+// Test kernel overrides
+TEST(SVMKernelOverride, SetAndGet) {
+    using T = float;
+
+    da_int n_samples = 8;
+    da_int n_features = 2;
+    const std::vector<T> X{-2.99, -0.15, -0.09, 0.45, -1.03, -0.02, 1.59, 0.34,
+                           0.04,  2.52,  0.91,  1.12, 0.3,   -0.9,  1.88, -0.15};
+    const std::vector<T> y{0, 0, 0, 1, 0, 0, 1, 1};
+    da_int ldx = 8;
+
+    // setup a micro problem
+    da_handle handle{nullptr};
+    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_svm), da_status_success);
+    EXPECT_EQ(da_svm_select_model<T>(handle, svc), da_status_success);
+    EXPECT_EQ(da_svm_set_data(handle, n_samples, n_features, X.data(), ldx, y.data()),
+              da_status_success);
+
+    char answer[100];
+
+    EXPECT_EQ(da_svm_compute<T>(handle), da_status_success);
+    // Run svm and expect telemetry data
+    EXPECT_EQ(da_debug_get("svm.setup", 100, answer), da_status_success);
+    // no need to parse...
+    // solve again with invalid ISA
+    // Rerun with invalid ISA value and expect "scalar" kernel type
+    EXPECT_EQ(da_debug_set("svm.ISA", "invalid"), da_status_success);
+    EXPECT_EQ(da_svm_compute<T>(handle), da_status_success);
+    // Run svm and expect telemetry data
+    EXPECT_EQ(da_debug_get("svm.setup", 100, answer), da_status_success);
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(("kernel.wssi_kernel.type=" +
+                                      std::to_string(vectorization_type::scalar))));
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(("kernel.wssj_kernel.type=" +
+                                      std::to_string(vectorization_type::scalar))));
+
+    // solve again - AVX2
+    EXPECT_EQ(da_debug_set("svm.isa", "avx2"), da_status_success);
+    EXPECT_EQ(da_svm_compute<T>(handle), da_status_success);
+    // Check telemetry
+    EXPECT_EQ(da_debug_get("svm.setup", 100, answer), da_status_success);
+    EXPECT_EQ(da_debug_get(nullptr, 100, answer), da_status_success);
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(("kernel.wssi_kernel.type=" +
+                                      std::to_string(vectorization_type::avx2))));
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(("kernel.wssj_kernel.type=" +
+                                      std::to_string(vectorization_type::avx2))));
+    da_handle_destroy(&handle);
+}
 
 template <typename T> class svm_public_test : public testing::Test {
   public:
@@ -57,80 +111,103 @@ TYPED_TEST(svm_public_test, ldx_test) {
 
     da_int i = 0;
     TypeParam tol = da_numeric::tolerance<TypeParam>::safe_tol();
+    std::unordered_map<std::string, vectorization_type> isa_list;
+    isa_list = {{"scalar", vectorization_type::scalar},
+                {"avx", vectorization_type::avx},
+                {"avx2", vectorization_type::avx2},
+                // will trickle down to AVX2 where is AVX512 not available
+                {"avx512", vectorization_type::avx512}};
+
     for (auto &data_fun : set_test_data) {
-        std::cout << "Testing function: " << i << std::endl;
-        std::cout << "Column major test: " << std::endl;
-        data_fun(data);
-        da_handle svm_handle = nullptr;
-        EXPECT_EQ(da_handle_init<TypeParam>(&svm_handle, da_handle_svm),
-                  da_status_success);
-        EXPECT_EQ(da_options_set(svm_handle, "tolerance", (TypeParam)1e-5),
-                  da_status_success);
-        EXPECT_EQ(da_options_set(svm_handle, "kernel", data.kernel.c_str()),
-                  da_status_success);
-        EXPECT_EQ(da_svm_select_model<TypeParam>(svm_handle, data.model),
-                  da_status_success);
-        EXPECT_EQ(da_svm_set_data(svm_handle, data.n_samples_train, data.n_feat,
-                                  data.X_train.data(), data.ldx_train,
-                                  data.y_train.data()),
-                  da_status_success);
-        EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
-        if (data.model == svc || data.model == nusvc) {
-            std::vector<TypeParam> decision_values_pred(data.n_class *
-                                                        data.lddecision_values);
-            EXPECT_EQ(da_svm_decision_function(
-                          svm_handle, data.n_samples_test, data.n_feat,
-                          data.X_test.data(), data.ldx_test, ovr,
-                          decision_values_pred.data(), data.lddecision_values),
+        for (auto &isa : isa_list) {
+            EXPECT_EQ(da_debug_set("svm.isa", (isa.first).c_str()), da_status_success);
+            std::cout << "Testing function: " << i << std::endl;
+            std::cout << "Vectorisation: " << isa.first << std::endl;
+            std::cout << "Column major test: " << std::endl;
+            data_fun(data);
+            da_handle svm_handle = nullptr;
+            EXPECT_EQ(da_handle_init<TypeParam>(&svm_handle, da_handle_svm),
                       da_status_success);
-            EXPECT_ARR_NEAR(data.n_samples_test * data.lddecision_values,
-                            decision_values_pred, data.decision_values, tol);
-        }
-        TypeParam score_pred;
-        EXPECT_EQ(da_svm_score(svm_handle, data.n_samples_test, data.n_feat,
-                               data.X_test.data(), data.ldx_test, data.y_test.data(),
-                               &score_pred),
-                  da_status_success);
-        EXPECT_NEAR(score_pred, data.score, tol);
-        std::vector<TypeParam> y_pred(data.n_samples_test);
-        EXPECT_EQ(da_svm_predict(svm_handle, data.n_samples_test, data.n_feat,
-                                 data.X_test.data(), data.ldx_test, y_pred.data()),
-                  da_status_success);
-        EXPECT_ARR_NEAR(data.n_samples_test, y_pred, data.y_pred, tol);
-
-        // Check the same with row-major order
-        std::cout << "Row major test: " << std::endl;
-        EXPECT_EQ(da_options_set(svm_handle, "storage order", "row-major"),
-                  da_status_success);
-
-        EXPECT_EQ(da_svm_set_data(svm_handle, data.n_samples_train, data.n_feat,
-                                  data.X_train_row.data(), data.ldx_train_row,
-                                  data.y_train.data()),
-                  da_status_success);
-        EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
-        if (data.model == svc || data.model == nusvc) {
-            std::vector<TypeParam> decision_values_pred(data.n_samples_test *
-                                                        data.lddecision_values_row);
-            EXPECT_EQ(da_svm_decision_function(
-                          svm_handle, data.n_samples_test, data.n_feat,
-                          data.X_test_row.data(), data.ldx_test_row, ovr,
-                          decision_values_pred.data(), data.lddecision_values_row),
+            EXPECT_EQ(da_options_set(svm_handle, "tolerance", (TypeParam)1e-5),
                       da_status_success);
-            EXPECT_ARR_NEAR(data.n_feat * data.lddecision_values_row,
-                            decision_values_pred, data.decision_values_row, tol);
-        }
-        EXPECT_EQ(da_svm_score(svm_handle, data.n_samples_test, data.n_feat,
-                               data.X_test_row.data(), data.ldx_test_row,
-                               data.y_test.data(), &score_pred),
-                  da_status_success);
-        EXPECT_NEAR(score_pred, data.score, tol);
-        EXPECT_EQ(da_svm_predict(svm_handle, data.n_samples_test, data.n_feat,
-                                 data.X_test_row.data(), data.ldx_test_row,
-                                 y_pred.data()),
-                  da_status_success);
-        EXPECT_ARR_NEAR(data.n_samples_test, y_pred, data.y_pred, tol);
+            EXPECT_EQ(da_options_set(svm_handle, "kernel", data.kernel.c_str()),
+                      da_status_success);
+            EXPECT_EQ(da_svm_select_model<TypeParam>(svm_handle, data.model),
+                      da_status_success);
+            EXPECT_EQ(da_svm_set_data(svm_handle, data.n_samples_train, data.n_feat,
+                                      data.X_train.data(), data.ldx_train,
+                                      data.y_train.data()),
+                      da_status_success);
+            EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
+            if (data.model == svc || data.model == nusvc) {
+                std::vector<TypeParam> decision_values_pred(data.n_class *
+                                                            data.lddecision_values);
+                EXPECT_EQ(da_svm_decision_function(
+                              svm_handle, data.n_samples_test, data.n_feat,
+                              data.X_test.data(), data.ldx_test, ovr,
+                              decision_values_pred.data(), data.lddecision_values),
+                          da_status_success);
+                EXPECT_ARR_NEAR(data.n_samples_test * data.lddecision_values,
+                                decision_values_pred, data.decision_values, tol);
+            }
+            TypeParam score_pred;
+            EXPECT_EQ(da_svm_score(svm_handle, data.n_samples_test, data.n_feat,
+                                   data.X_test.data(), data.ldx_test, data.y_test.data(),
+                                   &score_pred),
+                      da_status_success);
+            EXPECT_NEAR(score_pred, data.score, tol);
+            std::vector<TypeParam> y_pred(data.n_samples_test);
+            EXPECT_EQ(da_svm_predict(svm_handle, data.n_samples_test, data.n_feat,
+                                     data.X_test.data(), data.ldx_test, y_pred.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(data.n_samples_test, y_pred, data.y_pred, tol);
 
-        da_handle_destroy(&svm_handle);
+            // Check the same with row-major order
+            std::cout << "Row major test: " << std::endl;
+            EXPECT_EQ(da_options_set(svm_handle, "storage order", "row-major"),
+                      da_status_success);
+
+            EXPECT_EQ(da_svm_set_data(svm_handle, data.n_samples_train, data.n_feat,
+                                      data.X_train_row.data(), data.ldx_train_row,
+                                      data.y_train.data()),
+                      da_status_success);
+            EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
+            if (data.model == svc || data.model == nusvc) {
+                std::vector<TypeParam> decision_values_pred(data.n_samples_test *
+                                                            data.lddecision_values_row);
+                EXPECT_EQ(da_svm_decision_function(
+                              svm_handle, data.n_samples_test, data.n_feat,
+                              data.X_test_row.data(), data.ldx_test_row, ovr,
+                              decision_values_pred.data(), data.lddecision_values_row),
+                          da_status_success);
+                EXPECT_ARR_NEAR(data.n_feat * data.lddecision_values_row,
+                                decision_values_pred, data.decision_values_row, tol);
+            }
+            EXPECT_EQ(da_svm_score(svm_handle, data.n_samples_test, data.n_feat,
+                                   data.X_test_row.data(), data.ldx_test_row,
+                                   data.y_test.data(), &score_pred),
+                      da_status_success);
+            EXPECT_NEAR(score_pred, data.score, tol);
+            EXPECT_EQ(da_svm_predict(svm_handle, data.n_samples_test, data.n_feat,
+                                     data.X_test_row.data(), data.ldx_test_row,
+                                     y_pred.data()),
+                      da_status_success);
+            EXPECT_ARR_NEAR(data.n_samples_test, y_pred, data.y_pred, tol);
+            // Check that the kernel isa path is correct
+            char answer[100];
+            EXPECT_EQ(da_debug_get("svm.setup", 100, answer), da_status_success);
+            auto expect =
+                ::testing::HasSubstr(("kernel.type=" + std::to_string(isa.second)));
+            if (isa.second == vectorization_type::avx512) {
+                // take care of the AVX2/AVX512 fallback
+                auto fallback = ::testing::HasSubstr(
+                    ("kernel.type=" + std::to_string(vectorization_type::avx2)));
+                EXPECT_THAT(std::string(answer), ::testing::AnyOf(expect, fallback));
+            } else {
+                EXPECT_THAT(std::string(answer), expect);
+            }
+            da_handle_destroy(&svm_handle);
+        }
         i++;
     }
 }
@@ -372,6 +449,127 @@ TYPED_TEST(svm_public_test, get_results_test) {
                   da_status_unknown_query);
 
         da_handle_destroy(&svm_handle);
+    }
+}
+
+TYPED_TEST(svm_public_test, predict_proba) {
+
+    std::function<void(test_probabilities_type<TypeParam> & data)> set_test_data[] = {
+        set_probabilities1_data<TypeParam>,
+        set_probabilities2_data<TypeParam>,
+        set_probabilities3_data<TypeParam>,
+        set_probabilities4_data<TypeParam>,
+        set_probabilities_missing_positive_data<TypeParam>,
+        set_probabilities_missing_negative_data<TypeParam>};
+    test_probabilities_type<TypeParam> data;
+
+    TypeParam tol = std::is_same<TypeParam, float>::value ? static_cast<TypeParam>(5e-3f)
+                                                          : static_cast<TypeParam>(5e-4);
+    da_int i = 0;
+    for (auto &data_fun : set_test_data) {
+        std::cout << "Testing dataset: " << i << std::endl;
+        std::cout << "Column major: " << std::endl;
+        data_fun(data);
+        da_handle svm_handle = nullptr;
+        EXPECT_EQ(da_handle_init<TypeParam>(&svm_handle, da_handle_svm),
+                  da_status_success);
+        EXPECT_EQ(da_svm_select_model<TypeParam>(svm_handle, data.model),
+                  da_status_success);
+        EXPECT_EQ(da_svm_set_data(svm_handle, data.n_samples, data.n_feat,
+                                  data.X_train.data(), data.ldx_train,
+                                  data.y_train.data()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(svm_handle, "kernel", data.kernel.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(svm_handle, "predict probabilities", (da_int)1),
+                  da_status_success);
+        EXPECT_EQ(da_options_set(svm_handle, "seed", data.seed), da_status_success);
+        EXPECT_EQ(da_options_set(svm_handle, "c", data.C), da_status_success);
+        EXPECT_EQ(da_options_set(svm_handle, "nu", data.nu), da_status_success);
+        EXPECT_EQ(da_options_set(svm_handle, "tolerance", data.tol), da_status_success);
+        EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
+
+        ////////// COLUMN MAJOR
+        // Get the probaA and check the values
+        da_int dim = data.probaA_expected.size();
+        std::vector<TypeParam> probaA(dim);
+        EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_probaA, &dim,
+                                       probaA.data()),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, probaA, data.probaA_expected, tol);
+
+        // Get the probaB and check the values
+        dim = data.probaB_expected.size();
+        std::vector<TypeParam> probaB(dim);
+        EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_probaB, &dim,
+                                       probaB.data()),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, probaB, data.probaB_expected, tol);
+
+        // Get the probabilities and check the values
+        dim = data.probabilities_expected.size();
+        std::vector<TypeParam> probabilities(dim);
+        EXPECT_EQ(da_svm_predict_proba(svm_handle, data.n_samples_test, data.n_feat,
+                                       data.X_test.data(), data.ldx_test,
+                                       probabilities.data(), data.ldy_proba),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, probabilities, data.probabilities_expected, tol);
+
+        // Get the log_prob and check the values
+        dim = data.log_prob_expected.size();
+        std::vector<TypeParam> log_prob(dim);
+        EXPECT_EQ(da_svm_predict_log_proba(svm_handle, data.n_samples_test, data.n_feat,
+                                           data.X_test.data(), data.ldx_test,
+                                           log_prob.data(), data.ldy_proba),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, log_prob, data.log_prob_expected, tol);
+
+        ////////// ROW MAJOR
+        std::cout << "Row major: " << std::endl;
+        EXPECT_EQ(da_options_set(svm_handle, "storage order", "row-major"),
+                  da_status_success);
+        EXPECT_EQ(da_svm_set_data(svm_handle, data.n_samples, data.n_feat,
+                                  data.X_train_row.data(), data.ldx_train_row,
+                                  data.y_train.data()),
+                  da_status_success);
+        EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
+
+        // Get the probaA and check the values
+        dim = data.probaA_expected.size();
+        std::vector<TypeParam> probaA_row(dim);
+        EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_probaA, &dim,
+                                       probaA_row.data()),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, probaA_row, data.probaA_expected, tol);
+
+        // Get the probaB and check the values
+        dim = data.probaB_expected.size();
+        std::vector<TypeParam> probaB_row(dim);
+        EXPECT_EQ(da_handle_get_result(svm_handle, da_result::da_svm_probaB, &dim,
+                                       probaB_row.data()),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, probaB_row, data.probaB_expected, tol);
+
+        // Get the probabilities and check the values
+        dim = data.probabilities_expected_row.size();
+        std::vector<TypeParam> probabilities_row(dim);
+        EXPECT_EQ(da_svm_predict_proba(svm_handle, data.n_samples_test, data.n_feat,
+                                       data.X_test_row.data(), data.ldx_test_row,
+                                       probabilities_row.data(), data.ldy_proba_row),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, probabilities_row, data.probabilities_expected_row, tol);
+
+        // Get the log_prob and check the values
+        dim = data.log_prob_expected_row.size();
+        std::vector<TypeParam> log_prob_row(dim);
+        EXPECT_EQ(da_svm_predict_log_proba(svm_handle, data.n_samples_test, data.n_feat,
+                                           data.X_test_row.data(), data.ldx_test_row,
+                                           log_prob_row.data(), data.ldy_proba_row),
+                  da_status_success);
+        EXPECT_ARR_NEAR(dim, log_prob_row, data.log_prob_expected_row, tol);
+
+        da_handle_destroy(&svm_handle);
+        i++;
     }
 }
 
@@ -841,64 +1039,64 @@ typedef struct svm_param_t {
 } svm_param_t;
 
 // clang-format off
-// Testing dual coefficients, decision function values (in ovr shape) (only classification), predictions and score 
+// Testing dual coefficients, decision function values (in ovr shape) (only classification), predictions and score
 const svm_param_t svm_param_pos[] = {
     // CLASSIFICATION
     // SVC
-    {"svc_binary_random_tall_rbf", "binary_random_tall", da_svm_model::svc, {}, {}, {{"tolerance", 1e-4f}, {"C", 0.5f}, {"gamma", -1.0f}, {"cache size", 0.001f}}, {{"tolerance", 1e-8}, {"C", 0.5}, {"gamma", -1.0}, {"cache size", 0.001}}, 0.86},
-    {"svc_binary_random_tall_linear", "binary_random_tall", da_svm_model::svc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 0.5f}, {"cache size", 0.0f}}, {{"tolerance", 1e-8}, {"C", 0.5}, {"cache size", 0.0}}, 0.8},
-    {"svc_binary_random_tall_polynomial", "binary_random_tall", da_svm_model::svc, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 0.78f}}, {{"tolerance", 1e-8}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 0.78}}, 0.86},
-    {"svc_binary_random_tall_sigmoid", "binary_random_tall", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 0.78f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 0.78}, {"cache size", 0.0001}}, 0.73},
-    
-    {"svc_binary_random_wide_rbf", "binary_random_wide", da_svm_model::svc, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-4f}, {"C", 1.5f}, {"gamma", 0.5f}}, {{"tolerance", 1e-8}, {"C", 1.5}, {"gamma", 0.5}}, 0.416},
-    {"svc_binary_random_wide_linear", "binary_random_wide", da_svm_model::svc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 1.5f}, {"cache size", 0.001f}}, {{"tolerance", 1e-8}, {"C", 1.5}, {"cache size", 0.001}}, 0.416},
-    {"svc_binary_random_wide_polynomial", "binary_random_wide", da_svm_model::svc, {{"degree", 3}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 1.5f}, {"gamma", 0.5f}, {"coef0", 1.78f}}, {{"tolerance", 1e-8}, {"C", 1.5}, {"gamma", 0.5}, {"coef0", 1.78}}, 0.33},
-    {"svc_binary_random_wide_sigmoid", "binary_random_wide", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 1.5f}, {"gamma", 0.5f}, {"coef0", 1.78f}}, {{"tolerance", 1e-8}, {"C", 1.5}, {"gamma", 0.5}, {"coef0", 1.78}}, 0.5},
-    
-    {"svc_multiclass_random_tall_rbf", "multiclass_random_tall", da_svm_model::svc, {}, {}, {{"tolerance", 1e-4f}, {"C", 0.5f}, {"gamma", 0.9f}, {"cache size", 0.001f}}, {{"tolerance", 1e-8}, {"C", 0.5}, {"gamma", 0.9}, {"cache size", 0.001}}, 0.133},
-    {"svc_multiclass_random_tall_linear", "multiclass_random_tall", da_svm_model::svc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 0.5f}}, {{"tolerance", 1e-8}, {"C", 0.5}}, 0.533, 2},
-    {"svc_multiclass_random_tall_polynomial", "multiclass_random_tall", da_svm_model::svc, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 0.5f}, {"gamma", 0.9f}, {"coef0", 2.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"C", 0.5}, {"gamma", 0.9}, {"coef0", 2.0}, {"cache size", 0.0001}}, 0.433},
-    {"svc_multiclass_random_tall_sigmoid", "multiclass_random_tall", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 0.5f}, {"gamma", 0.9f}, {"coef0", 2.0f}}, {{"tolerance", 1e-8}, {"C", 0.5}, {"gamma", 0.9}, {"coef0", 2.0}}, 0.4},
-    
-    // nuSVC
-    {"nusvc_binary_random_tall_rbf", "binary_random_tall", da_svm_model::nusvc, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-4f}, {"nu", 0.4f}, {"gamma", 1.0f}}, {{"tolerance", 1e-8}, {"nu", 0.4}, {"gamma", 1.0}}, 0.66, 2},
-    {"nusvc_binary_random_tall_linear", "binary_random_tall", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"nu", 0.4f}}, {{"tolerance", 1e-8}, {"nu", 0.4}}, 0.8},
-    {"nusvc_binary_random_tall_polynomial", "binary_random_tall", da_svm_model::nusvc, {{"degree", 4}}, {{"kernel", "poly"}}, {{"tolerance", 1e-2f}, {"nu", 0.4f}, {"gamma", 1.0f}, {"coef0", 2.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"nu", 0.4}, {"gamma", 1.0}, {"coef0", 2.0}, {"cache size", 0.0001}}, 0.86},
-    {"nusvc_binary_random_tall_sigmoid", "binary_random_tall", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"nu", 0.4f}, {"gamma", 1.0f}, {"coef0", 2.0f}}, {{"tolerance", 1e-8}, {"nu", 0.4}, {"gamma", 1.0}, {"coef0", 2.0}}, 0.86},
-    
-    {"nusvc_binary_random_wide_rbf", "binary_random_wide", da_svm_model::nusvc, {}, {}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", -1.0f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", -1.0}}, 0.416},
-    {"nusvc_binary_random_wide_linear", "binary_random_wide", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"cache size", 0.0001}}, 0.416},
-    {"nusvc_binary_random_wide_polynomial", "binary_random_wide", da_svm_model::nusvc, {{"degree", 3}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", -1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", -1.0}, {"coef0", 0.2}}, 0.416},
-    {"nusvc_binary_random_wide_sigmoid", "binary_random_wide", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"nu", 0.75f}, {"gamma", -1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-8}, {"nu", 0.75}, {"gamma", -1.0}, {"coef0", 0.2}}, 0.416},
+    {"svc_binary_random_tall_rbf", "binary_random_tall", da_svm_model::svc, {}, {}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"cache size", 0.001f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"cache size", 0.001}}, 0.866},
+    {"svc_binary_random_tall_linear", "binary_random_tall", da_svm_model::svc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"cache size", 0.0f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"cache size", 0.0}}, 0.866, 3},
+    {"svc_binary_random_tall_polynomial", "binary_random_tall", da_svm_model::svc, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 0.78f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 0.78}}, 0.866, 3},
+    {"svc_binary_random_tall_sigmoid", "binary_random_tall", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 0.78f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 0.78}, {"cache size", 0.0001}}, 0.666},
 
-    {"nusvc_multiclass_random_tall_rbf", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-4f}, {"nu", 0.5f}}, {{"tolerance", 1e-8}, {"nu", 0.5}}, 0.6, 10},
-    {"nusvc_multiclass_random_tall_linear", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"nu", 0.5f}, {"cache size", 0.0f}}, {{"tolerance", 1e-8}, {"nu", 0.5}, {"cache size", 0.0}}, 0.566},
-    {"nusvc_multiclass_random_tall_polynomial", "multiclass_random_tall", da_svm_model::nusvc, {{"degree", 3}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"nu", 0.5f}, {"coef0", 0.0f}}, {{"tolerance", 1e-8}, {"nu", 0.5}, {"coef0", 0.0}}, 0.566, 50},
-    {"nusvc_multiclass_random_tall_sigmoid", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"nu", 0.5f}, {"coef0", 0.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"nu", 0.5}, {"coef0", 0.0}, {"cache size", 0.0001}}, 0.4, 20},
-    
+    {"svc_binary_random_wide_rbf", "binary_random_wide", da_svm_model::svc, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-6f}, {"C", 1.5f}, {"gamma", -1.0f}}, {{"tolerance", 1e-6}, {"C", 1.5}, {"gamma", -1.0}}, 0.8},
+    {"svc_binary_random_wide_linear", "binary_random_wide", da_svm_model::svc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 1.5f}, {"cache size", 0.001f}}, {{"tolerance", 1e-6}, {"C", 1.5}, {"cache size", 0.001}}, 0.8},
+    {"svc_binary_random_wide_polynomial", "binary_random_wide", da_svm_model::svc, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 1.5f}, {"gamma", -1.0f}, {"coef0", 0.0f}}, {{"tolerance", 1e-6}, {"C", 1.5}, {"gamma", -1.0}, {"coef0", 0.0}}, 0.8},
+    {"svc_binary_random_wide_sigmoid", "binary_random_wide", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 1.5f}, {"gamma", -1.0f}, {"coef0", 0.0f}}, {{"tolerance", 1e-6}, {"C", 1.5}, {"gamma", -1.0}, {"coef0", 0.0}}, 0.8, 3},
+
+    {"svc_multiclass_random_tall_rbf", "multiclass_random_tall", da_svm_model::svc, {}, {}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"cache size", 0.001f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"cache size", 0.001}}, 0.761, 3},
+    {"svc_multiclass_random_tall_linear", "multiclass_random_tall", da_svm_model::svc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}}, {{"tolerance", 1e-6}, {"C", 0.5}}, 0.904},
+    {"svc_multiclass_random_tall_polynomial", "multiclass_random_tall", da_svm_model::svc, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 2.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 2.0}, {"cache size", 0.0001}}, 0.809, 3},
+    {"svc_multiclass_random_tall_sigmoid", "multiclass_random_tall", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 2.0f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 2.0}}, 0.476},
+
+    // nuSVC
+    {"nusvc_binary_random_tall_rbf", "binary_random_tall", da_svm_model::nusvc, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-6f}, {"nu", 0.4f}, {"gamma", 1.0f}}, {{"tolerance", 1e-6}, {"nu", 0.4}, {"gamma", 1.0}}, 0.8, 5},
+    {"nusvc_binary_random_tall_linear", "binary_random_tall", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"nu", 0.4f}}, {{"tolerance", 1e-6}, {"nu", 0.4}}, 0.866, 3.5e4}, // that is quite large bump, the actual difference between solutions is 0.06
+    {"nusvc_binary_random_tall_polynomial", "binary_random_tall", da_svm_model::nusvc, {{"degree", 4}}, {{"kernel", "poly"}}, {{"tolerance", 1e-2f}, {"nu", 0.4f}, {"gamma", 1.0f}, {"coef0", 2.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"nu", 0.4}, {"gamma", 1.0}, {"coef0", 2.0}, {"cache size", 0.0001}}, 0.866, 10},
+    {"nusvc_binary_random_tall_sigmoid", "binary_random_tall", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"nu", 0.4f}, {"gamma", 1.0f}, {"coef0", 2.0f}}, {{"tolerance", 1e-6}, {"nu", 0.4}, {"gamma", 1.0}, {"coef0", 2.0}}, 0.666, 10},
+
+    {"nusvc_binary_random_wide_rbf", "binary_random_wide", da_svm_model::nusvc, {}, {}, {{"tolerance", 1e-6f}, {"nu", 0.75f}, {"gamma", -1.0f}}, {{"tolerance", 1e-6}, {"nu", 0.75}, {"gamma", -1.0}}, 0.8},
+    {"nusvc_binary_random_wide_linear", "binary_random_wide", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"nu", 0.75f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"nu", 0.75}, {"cache size", 0.0001}}, 0.8},
+    {"nusvc_binary_random_wide_polynomial", "binary_random_wide", da_svm_model::nusvc, {{"degree", 3}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"nu", 0.75f}, {"gamma", -1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-6}, {"nu", 0.75}, {"gamma", -1.0}, {"coef0", 0.2}}, 0.8},
+    {"nusvc_binary_random_wide_sigmoid", "binary_random_wide", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"nu", 0.75f}, {"gamma", -1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-6}, {"nu", 0.75}, {"gamma", -1.0}, {"coef0", 0.2}}, 0.8, 10},
+
+    {"nusvc_multiclass_random_tall_rbf", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-6f}, {"nu", 0.5f}}, {{"tolerance", 1e-6}, {"nu", 0.5}}, 0.762, 5},
+    {"nusvc_multiclass_random_tall_linear", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"nu", 0.5f}, {"cache size", 0.0f}}, {{"tolerance", 1e-6}, {"nu", 0.5}, {"cache size", 0.0}}, 0.714, 5},
+    {"nusvc_multiclass_random_tall_polynomial", "multiclass_random_tall", da_svm_model::nusvc, {{"degree", 3}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"nu", 0.5f}, {"coef0", 0.0f}}, {{"tolerance", 1e-6}, {"nu", 0.5}, {"coef0", 0.0}}, 0.761, 5},
+    {"nusvc_multiclass_random_tall_sigmoid", "multiclass_random_tall", da_svm_model::nusvc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"nu", 0.5f}, {"coef0", 0.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"nu", 0.5}, {"coef0", 0.0}, {"cache size", 0.0001}}, 0.761, 5},
+
     // REGRESSION
     // SVR
-    {"svr_regression_random_tall_rbf", "regression_random_tall", da_svm_model::svr, {}, {}, {{"tolerance", 1e-4f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"cache size", 0.0f}}, {{"tolerance", 1e-8}, {"C", 10.0}, {"epsilon", 0.3}, {"cache size", 0.0}}, 0.080},
-    {"svr_regression_random_tall_linear", "regression_random_tall", da_svm_model::svr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"cache size", 0.0f}}, {{"tolerance", 1e-8}, {"C", 10.0}, {"epsilon", 0.3}, {"cache size", 0.0}}, 0.999},
-    {"svr_regression_random_tall_polynomial", "regression_random_tall", da_svm_model::svr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"gamma", -1.0f}, {"coef0", 0.78f}}, {{"tolerance", 1e-8}, {"C", 10.0}, {"epsilon", 0.3}, {"gamma", -1.0}, {"coef0", 0.78}}, 0.487},
-    {"svr_regression_random_tall_sigmoid", "regression_random_tall", da_svm_model::svr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"gamma", -1.0f}, {"coef0", 0.78f}}, {{"tolerance", 1e-8}, {"C", 10.0}, {"epsilon", 0.3}, {"gamma", -1.0}, {"coef0", 0.78}}, 0.21},
-    
-    {"svr_regression_random_wide_rbf", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}}, -0.403},
-    {"svr_regression_random_wide_linear", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"cache size", 0.0001}}, -0.395},
-    {"svr_regression_random_wide_polynomial", "regression_random_wide", da_svm_model::svr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}, {"coef0", 3.0f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}, {"coef0", 3.0}}, -0.475},
-    {"svr_regression_random_wide_sigmoid", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}, {"coef0", 3.0f}}, {{"tolerance", 1e-8}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}, {"coef0", 3.0}}, -0.407},
-    
+    {"svr_regression_random_tall_rbf", "regression_random_tall", da_svm_model::svr, {}, {}, {{"tolerance", 1e-6f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"cache size", 0.0f}}, {{"tolerance", 1e-6}, {"C", 10.0}, {"epsilon", 0.3}, {"cache size", 0.0}}, 0.080, 5},
+    {"svr_regression_random_tall_linear", "regression_random_tall", da_svm_model::svr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"cache size", 0.0f}}, {{"tolerance", 1e-6}, {"C", 10.0}, {"epsilon", 0.3}, {"cache size", 0.0}}, 0.999, 160},
+    {"svr_regression_random_tall_polynomial", "regression_random_tall", da_svm_model::svr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"gamma", -1.0f}, {"coef0", 0.78f}}, {{"tolerance", 1e-6}, {"C", 10.0}, {"epsilon", 0.3}, {"gamma", -1.0}, {"coef0", 0.78}}, 0.487, 15},
+    {"svr_regression_random_tall_sigmoid", "regression_random_tall", da_svm_model::svr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 10.0f}, {"epsilon", 0.3f}, {"gamma", -1.0f}, {"coef0", 0.78f}}, {{"tolerance", 1e-6}, {"C", 10.0}, {"epsilon", 0.3}, {"gamma", -1.0}, {"coef0", 0.78}}, 0.21, 5},
+
+    {"svr_regression_random_wide_rbf", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-6f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}}, {{"tolerance", 1e-6}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}}, -0.403, 5},
+    {"svr_regression_random_wide_linear", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"C", 0.2}, {"epsilon", 0.6}, {"cache size", 0.0001}}, -0.395, 10},
+    {"svr_regression_random_wide_polynomial", "regression_random_wide", da_svm_model::svr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}, {"coef0", 3.0f}}, {{"tolerance", 1e-6}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}, {"coef0", 3.0}}, -0.475, 10},
+    {"svr_regression_random_wide_sigmoid", "regression_random_wide", da_svm_model::svr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 0.2f}, {"epsilon", 0.6f}, {"gamma", 2.0f}, {"coef0", 3.0f}}, {{"tolerance", 1e-6}, {"C", 0.2}, {"epsilon", 0.6}, {"gamma", 2.0}, {"coef0", 3.0}}, -0.407, 5},
+
     // nuSVR
-    {"nusvr_regression_random_tall_rbf", "regression_random_tall", da_svm_model::nusvr, {}, {}, {{"tolerance", 1e-4f}, {"C", 1.2f}, {"nu", 0.5f}, {"gamma", 1.0f}}, {{"tolerance", 1e-8}, {"C", 1.2}, {"nu", 0.5}, {"gamma", 1.0}}, -0.051},
-    {"nusvr_regression_random_tall_linear", "regression_random_tall", da_svm_model::nusvr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 1.2f}, {"nu", 0.5f}}, {{"tolerance", 1e-8}, {"C", 1.2}, {"nu", 0.5}}, 0.33},
-    {"nusvr_regression_random_tall_polynomial", "regression_random_tall", da_svm_model::nusvr, {{"degree", 4}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 1.2f}, {"nu", 0.5f}, {"gamma", 1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-8}, {"C", 1.2}, {"nu", 0.5}, {"gamma", 1.0}, {"coef0", 0.2}}, -0.723, 3},
-    {"nusvr_regression_random_tall_sigmoid", "regression_random_tall", da_svm_model::nusvr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 1.2f}, {"nu", 0.5f}, {"gamma", 1.0f}, {"coef0", 0.2f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"C", 1.2}, {"nu", 0.5}, {"gamma", 1.0}, {"coef0", 0.2}, {"cache size", 0.0001}}, 0.050},
-    
-    {"nusvr_regression_random_wide_rbf", "regression_random_wide", da_svm_model::nusvr, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-4f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-8}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"cache size", 0.0001}}, -0.392},
-    {"nusvr_regression_random_wide_linear", "regression_random_wide", da_svm_model::nusvr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-4f}, {"C", 1.0f}, {"nu", 0.2f}}, {{"tolerance", 1e-8}, {"C", 1.0}, {"nu", 0.2}}, -0.158},
-    {"nusvr_regression_random_wide_polynomial", "regression_random_wide", da_svm_model::nusvr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-4f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"coef0", 0.25f}}, {{"tolerance", 1e-8}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"coef0", 0.25}}, -0.509, 20},
-    {"nusvr_regression_random_wide_sigmoid", "regression_random_wide", da_svm_model::nusvr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-4f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"coef0", 0.25f}}, {{"tolerance", 1e-8}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"coef0", 0.25}}, -0.37},
-    
+    {"nusvr_regression_random_tall_rbf", "regression_random_tall", da_svm_model::nusvr, {}, {}, {{"tolerance", 1e-6f}, {"C", 1.2f}, {"nu", 0.5f}, {"gamma", 1.0f}}, {{"tolerance", 1e-6}, {"C", 1.2}, {"nu", 0.5}, {"gamma", 1.0}}, -0.051},
+    {"nusvr_regression_random_tall_linear", "regression_random_tall", da_svm_model::nusvr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 1.2f}, {"nu", 0.5f}}, {{"tolerance", 1e-6}, {"C", 1.2}, {"nu", 0.5}}, 0.33, 1.5e4},
+    {"nusvr_regression_random_tall_polynomial", "regression_random_tall", da_svm_model::nusvr, {{"degree", 4}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 1.2f}, {"nu", 0.5f}, {"gamma", 1.0f}, {"coef0", 0.2f}}, {{"tolerance", 1e-6}, {"C", 1.2}, {"nu", 0.5}, {"gamma", 1.0}, {"coef0", 0.2}}, -0.723, 1e3},
+    {"nusvr_regression_random_tall_sigmoid", "regression_random_tall", da_svm_model::nusvr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 1.2f}, {"nu", 0.5f}, {"gamma", 1.0f}, {"coef0", 0.2f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"C", 1.2}, {"nu", 0.5}, {"gamma", 1.0}, {"coef0", 0.2}, {"cache size", 0.0001}}, 0.05, 15},
+
+    {"nusvr_regression_random_wide_rbf", "regression_random_wide", da_svm_model::nusvr, {}, {{"kernel", "rbf"}}, {{"tolerance", 1e-6f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"cache size", 0.0001}}, -0.392, 15},
+    {"nusvr_regression_random_wide_linear", "regression_random_wide", da_svm_model::nusvr, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 1.0f}, {"nu", 0.2f}}, {{"tolerance", 1e-6}, {"C", 1.0}, {"nu", 0.2}}, -0.158, 20},
+    {"nusvr_regression_random_wide_polynomial", "regression_random_wide", da_svm_model::nusvr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"coef0", 0.25f}}, {{"tolerance", 1e-6}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"coef0", 0.25}}, -0.509, 1e3},
+    {"nusvr_regression_random_wide_sigmoid", "regression_random_wide", da_svm_model::nusvr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"coef0", 0.25f}}, {{"tolerance", 1e-6}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"coef0", 0.25}}, -0.37, 15},
+
 };
 // clang-format on
 

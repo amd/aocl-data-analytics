@@ -27,7 +27,8 @@
 """
 Patching scikit learn svm: SVC, SVR, nuSVC, nuSVR
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
+# pylint: disable = missing-function-docstring, too-many-ancestors,
+# useless-return, super-init-not-called
 
 import warnings
 import numpy as np
@@ -51,9 +52,24 @@ class SVC(SVC_sklearn):
     Overwrite sklearn SVC to call DA library
     """
 
-    def __init__(self, C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=False,
-                 probability=False, tol=0.001, cache_size=200.0, class_weight=None, verbose=False,
-                 max_iter=-1, decision_function_shape='ovr', break_ties=False, random_state=None):
+    def __init__(
+            self,
+            C=1.0,
+            kernel='rbf',
+            degree=3,
+            gamma='scale',
+            coef0=0.0,
+            shrinking=False,
+            probability=False,
+            tol=0.001,
+            cache_size=200.0,
+            class_weight=None,
+            verbose=False,
+            max_iter=-1,
+            decision_function_shape='ovr',
+            break_ties=False,
+            random_state=None,
+            max_ws_size=-1):
         # Supported attributes
         self.C = C
         self.kernel = kernel
@@ -64,29 +80,27 @@ class SVC(SVC_sklearn):
         self.max_iter = max_iter
         self.decision_function_shape = decision_function_shape
         self.cache_size = cache_size
+        self.probability = probability
+        self.random_state = random_state
 
         # Check for unsupported attributes
         self.shrinking = shrinking
-        self.probability = probability
         self.class_weight = class_weight
         self.verbose = verbose
         self.break_ties = break_ties
-        self.random_state = random_state
 
         if kernel == 'precomputed':
             raise RuntimeError("Precomputed kernel is not supported")
 
         if shrinking is not False:
             warnings.warn(
-                "shrinking is not supported and has been ignored.", category=RuntimeWarning)
-
-        if probability is not False:
-            warnings.warn(
-                "probability is not supported and has been ignored.", category=RuntimeWarning)
+                "shrinking is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         if class_weight is not None:
             warnings.warn(
-                "class_weight is not supported and has been ignored.", category=RuntimeWarning)
+                "class_weight is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         if verbose is not False:
             warnings.warn(
@@ -94,18 +108,30 @@ class SVC(SVC_sklearn):
 
         if break_ties is not False:
             warnings.warn(
-                "break_ties is not supported and has been ignored.", category=RuntimeWarning)
-
-        if random_state is not None:
-            warnings.warn(
-                "random_state is not supported and has been ignored.", category=RuntimeWarning)
+                "break_ties is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         # new internal attributes
         self.aocl = True
+        self.max_ws_size = max_ws_size
+        self.seed = self.random_state
+
+        if self.random_state is None:
+            self.seed = -1
 
         # Translate options to aocl-da ones
-        self.svc = SVC_da(C=self.C, kernel=self.kernel, degree=self.degree, gamma=self.gamma,
-                          coef0=self.coef0, tol=self.tol, cache_size=self.cache_size, max_iter=self.max_iter)
+        self.svc = SVC_da(
+            C=self.C,
+            kernel=self.kernel,
+            degree=self.degree,
+            gamma=self.gamma,
+            coef0=self.coef0,
+            probability=self.probability,
+            tol=self.tol,
+            random_state=self.seed,
+            cache_size=self.cache_size,
+            max_iter=self.max_iter,
+            max_ws_size=self.max_ws_size)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -149,10 +175,10 @@ class SVC(SVC_sklearn):
         return params
 
     def predict_log_proba(self, X):
-        raise RuntimeError("This feature is not implemented")
+        return self.svc.predict_log_proba(X)
 
     def predict_proba(self, X):
-        raise RuntimeError("This feature is not implemented")
+        return self.svc.predict_proba(X)
 
     def set_fit_request(self, *args):
         raise RuntimeError("This feature is not implemented")
@@ -218,13 +244,11 @@ class SVC(SVC_sklearn):
 
     @property
     def probA_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.svc.probA
 
     @property
     def probB_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.svc.probB
 
     @property
     def shape_fit_(self):
@@ -237,8 +261,20 @@ class SVR(SVR_sklearn):
     Overwrite sklearn SVR to call DA library
     """
 
-    def __init__(self, kernel='rbf', degree=3, gamma='scale', coef0=0.0, tol=0.001, C=1.0,
-                 epsilon=0.1, shrinking=False, cache_size=200.0, verbose=False, max_iter=-1):
+    def __init__(
+            self,
+            kernel='rbf',
+            degree=3,
+            gamma='scale',
+            coef0=0.0,
+            tol=0.001,
+            C=1.0,
+            epsilon=0.1,
+            shrinking=False,
+            cache_size=200.0,
+            verbose=False,
+            max_iter=-1,
+            max_ws_size=-1):
         # Supported attributes
         self.epsilon = epsilon
         self.C = C
@@ -259,7 +295,8 @@ class SVR(SVR_sklearn):
 
         if shrinking is not False:
             warnings.warn(
-                "shrinking is not supported and has been ignored.", category=RuntimeWarning)
+                "shrinking is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         if verbose is not False:
             warnings.warn(
@@ -267,10 +304,20 @@ class SVR(SVR_sklearn):
 
         # new internal attributes
         self.aocl = True
+        self.max_ws_size = max_ws_size
 
         # Translate options to aocl-da ones
-        self.svr = SVR_da(C=self.C, epsilon=self.epsilon, kernel=self.kernel, degree=self.degree,
-                          gamma=self.gamma, coef0=self.coef0, tol=self.tol, cache_size = self.cache_size, max_iter=self.max_iter)
+        self.svr = SVR_da(
+            C=self.C,
+            epsilon=self.epsilon,
+            kernel=self.kernel,
+            degree=self.degree,
+            gamma=self.gamma,
+            coef0=self.coef0,
+            tol=self.tol,
+            cache_size=self.cache_size,
+            max_iter=self.max_iter,
+            max_ws_size=self.max_ws_size)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -369,9 +416,24 @@ class NuSVC(NuSVC_sklearn):
     Overwrite sklearn NuSVC to call DA library
     """
 
-    def __init__(self, nu=0.5, kernel='rbf', degree=3, gamma='scale', coef0=0.0, shrinking=False,
-                 probability=False, tol=0.001, cache_size=200.0, class_weight=None, verbose=False,
-                 max_iter=-1, decision_function_shape='ovr', break_ties=False, random_state=None):
+    def __init__(
+            self,
+            nu=0.5,
+            kernel='rbf',
+            degree=3,
+            gamma='scale',
+            coef0=0.0,
+            shrinking=False,
+            probability=False,
+            tol=0.001,
+            cache_size=200.0,
+            class_weight=None,
+            verbose=False,
+            max_iter=-1,
+            decision_function_shape='ovr',
+            break_ties=False,
+            random_state=None,
+            max_ws_size=-1):
         # Supported attributes
         self.nu = nu
         self.kernel = kernel
@@ -382,29 +444,27 @@ class NuSVC(NuSVC_sklearn):
         self.max_iter = max_iter
         self.decision_function_shape = decision_function_shape
         self.cache_size = cache_size
+        self.probability = probability
+        self.random_state = random_state
 
         # Check for unsupported attributes
         self.shrinking = shrinking
-        self.probability = probability
         self.class_weight = class_weight
         self.verbose = verbose
         self.break_ties = break_ties
-        self.random_state = random_state
 
         if kernel == 'precomputed':
             raise RuntimeError("Precomputed kernel is not supported")
 
         if shrinking is not False:
             warnings.warn(
-                "shrinking is not supported and has been ignored.", category=RuntimeWarning)
-
-        if probability is not False:
-            warnings.warn(
-                "probability is not supported and has been ignored.", category=RuntimeWarning)
+                "shrinking is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         if class_weight is not None:
             warnings.warn(
-                "class_weight is not supported and has been ignored.", category=RuntimeWarning)
+                "class_weight is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         if verbose is not False:
             warnings.warn(
@@ -412,18 +472,30 @@ class NuSVC(NuSVC_sklearn):
 
         if break_ties is not False:
             warnings.warn(
-                "break_ties is not supported and has been ignored.", category=RuntimeWarning)
-
-        if random_state is not None:
-            warnings.warn(
-                "random_state is not supported and has been ignored.", category=RuntimeWarning)
+                "break_ties is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         # new internal attributes
         self.aocl = True
+        self.max_ws_size = max_ws_size
+        self.seed = self.random_state
+
+        if self.random_state is None:
+            self.seed = -1
 
         # Translate options to aocl-da ones
-        self.nusvc = NuSVC_da(nu=self.nu, kernel=self.kernel, degree=self.degree, gamma=self.gamma,
-                              coef0=self.coef0, tol=self.tol, cache_size=self.cache_size, max_iter=self.max_iter)
+        self.nusvc = NuSVC_da(
+            nu=self.nu,
+            kernel=self.kernel,
+            degree=self.degree,
+            gamma=self.gamma,
+            coef0=self.coef0,
+            probability=self.probability,
+            tol=self.tol,
+            cache_size=self.cache_size,
+            max_iter=self.max_iter,
+            random_state=self.seed,
+            max_ws_size=self.max_ws_size)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -467,10 +539,10 @@ class NuSVC(NuSVC_sklearn):
         return params
 
     def predict_log_proba(self, X):
-        raise RuntimeError("This feature is not implemented")
+        return self.nusvc.predict_log_proba(X)
 
     def predict_proba(self, X):
-        raise RuntimeError("This feature is not implemented")
+        return self.nusvc.predict_proba(X)
 
     def set_fit_request(self, *args):
         raise RuntimeError("This feature is not implemented")
@@ -536,13 +608,11 @@ class NuSVC(NuSVC_sklearn):
 
     @property
     def probA_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.nusvc.probA
 
     @property
     def probB_(self):
-        print("This attribute is not implemented")
-        return None
+        return self.nusvc.probB
 
     @property
     def shape_fit_(self):
@@ -555,8 +625,20 @@ class NuSVR(NuSVR_sklearn):
     Overwrite sklearn NuSVR to call DA library
     """
 
-    def __init__(self, nu=0.5, C=1.0, kernel='rbf', degree=3, gamma='scale', coef0=0.0,
-                 shrinking=False, tol=0.001, cache_size=200.0, verbose=False, max_iter=-1):
+    def __init__(
+            self,
+            nu=0.5,
+            C=1.0,
+            kernel='rbf',
+            degree=3,
+            gamma='scale',
+            coef0=0.0,
+            shrinking=False,
+            tol=0.001,
+            cache_size=200.0,
+            verbose=False,
+            max_iter=-1,
+            max_ws_size=-1):
         # Supported attributes
         self.nu = nu
         self.C = C
@@ -577,7 +659,8 @@ class NuSVR(NuSVR_sklearn):
 
         if shrinking is not False:
             warnings.warn(
-                "shrinking is not supported and has been ignored.", category=RuntimeWarning)
+                "shrinking is not supported and has been ignored.",
+                category=RuntimeWarning)
 
         if verbose is not False:
             warnings.warn(
@@ -585,10 +668,20 @@ class NuSVR(NuSVR_sklearn):
 
         # new internal attributes
         self.aocl = True
+        self.max_ws_size = max_ws_size
 
         # Translate options to aocl-da ones
-        self.nusvr = NuSVR_da(nu=self.nu, C=self.C, kernel=self.kernel, degree=self.degree,
-                              gamma=self.gamma, coef0=self.coef0, tol=self.tol, cache_size=self.cache_size, max_iter=self.max_iter)
+        self.nusvr = NuSVR_da(
+            nu=self.nu,
+            C=self.C,
+            kernel=self.kernel,
+            degree=self.degree,
+            gamma=self.gamma,
+            coef0=self.coef0,
+            tol=self.tol,
+            cache_size=self.cache_size,
+            max_iter=self.max_iter,
+            max_ws_size=self.max_ws_size)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):

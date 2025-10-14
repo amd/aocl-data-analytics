@@ -1,7 +1,7 @@
 AOCL Data Analytics Library
 ===========================
 
-The AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing
+The AOCL Data Analytics Library (AOCL-DA) provides
 optimized building blocks for data analysis and machine learning. It is written with a `C`-compatible
 interface to make it as seamless as possible to integrate with the library from
 whichever programming language you are using. For further details on the library
@@ -16,6 +16,8 @@ The intended workflow for using the library is as follows:
  - data processing (e.g. principal component analysis, linear model fitting, etc.)
 
 C++ example programs can be found in the `examples` folder of your installation.
+
+Full API documentation is available at https://docs.amd.com/r/en-US/68552-AOCL-api-guide/AOCL-Data-Analytics
 
 AOCL-DA is developed and maintained by [AMD](https://www.amd.com/). For support or queries, you can email us on
 [toolchainsupport@amd.com](toolchainsupport@amd.com).
@@ -160,7 +162,7 @@ To configure only, from the source directory, you can use:
 ```
 cmake --preset linux-gcc-mt-lp64-static-release-dynamic
 ```
-For example, this will configure CMake for Linux platform so that CMake uses GCC to build a multi-threaded (mt) LP64 Release library with dynamic dispatch. 
+For example, this will configure CMake for Linux platform so that CMake uses GCC to build a multi-threaded (mt) LP64 Release library with dynamic dispatch.
 This command will generate a build directory with the corresponding naming convention "build-linux-gcc-mt-lp64-static-dynamic-release".
 One can simply `cd build-linux-gcc-mt-lp64-static-dynamic-release` and continue the usual process of building, installing and so on.
 

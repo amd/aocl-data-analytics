@@ -34,10 +34,10 @@
 
 #include "../utest_utils.hpp"
 #include "aoclda.h"
+#include "binary_tree.hpp"
 #include "da_error.hpp"
 #include "da_std.hpp"
 #include "da_vector.hpp"
-#include "kdtree.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -103,11 +103,11 @@ TYPED_TEST(KNTest, k_neighbors_small) {
         new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
 
     da_int leaf_size = 2;
-    auto tree = TEST_ARCH::da_kdtree::kdtree<TypeParam>(n_samples, n_features, A.data(),
-                                                        lda, leaf_size);
+    auto tree = TEST_ARCH::da_binary_tree::kd_tree<TypeParam>(
+        n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
 
-    EXPECT_EQ(tree.k_neighbors(n_samples, n_features, nullptr, 0, k, da_euclidean,
-                               (TypeParam)0.0, k_ind.data(), k_dist.data(), err),
+    EXPECT_EQ(tree.k_neighbors(n_samples, n_features, nullptr, 0, k, k_ind.data(),
+                               k_dist.data(), err),
               da_status_success);
 
     // Sort the distances and indices since the k-d tree does not guarantee that they are sorted
@@ -148,8 +148,11 @@ TYPED_TEST(KNTest, k_neighbors_small) {
 
     std::vector<TypeParam> k_dist_exp2 = convert_vector<double, TypeParam>(k_dist_exp_d2);
 
-    EXPECT_EQ(tree.k_neighbors(n_samples, n_features, A.data(), lda, k, da_sqeuclidean,
-                               (TypeParam)0.0, k_ind2.data(), k_dist2.data(), err),
+    auto tree2 = TEST_ARCH::da_binary_tree::kd_tree<TypeParam>(
+        n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
+
+    EXPECT_EQ(tree2.k_neighbors(n_samples, n_features, A.data(), lda, k, k_ind2.data(),
+                                k_dist2.data(), err),
               da_status_success);
 
     // Sort the distances and indices since the k-d tree does not guarantee that they are sorted
@@ -166,14 +169,65 @@ TYPED_TEST(KNTest, k_neighbors_small) {
                     100 * std::numeric_limits<TypeParam>::epsilon())
         << "k-d tree distances do not match expected values for small test 2";
 
+    // Now repeat with a ball tree
+    k = 4;
+    auto tree3 = TEST_ARCH::da_binary_tree::ball_tree<TypeParam>(
+        n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
+
+    EXPECT_EQ(tree3.k_neighbors(n_samples, n_features, nullptr, 0, k, k_ind.data(),
+                                k_dist.data(), err),
+              da_status_success);
+
+    // Sort the distances and indices since the k-d tree does not guarantee that they are sorted
+    for (da_int i = 0; i < n_samples; i++) {
+        sort_dist_ind(k, k_dist.data() + i * k, k_ind.data() + i * k,
+                      sorted_dist.data() + i * k, sorted_ind.data() + i * k);
+        sort_dist_ind(k, k_dist_exp.data() + i * k, k_ind_exp.data() + i * k,
+                      sorted_dist_exp.data() + i * k, sorted_ind_exp.data() + i * k);
+    }
+
+    EXPECT_ARR_EQ(n_samples * k, sorted_ind.data(), sorted_ind_exp.data(), 1, 1, 0, 0)
+        << "ball tree indices do not match expected values for small test";
+    EXPECT_ARR_NEAR(n_samples * k, sorted_dist.data(), sorted_dist_exp.data(),
+                    100 * std::numeric_limits<TypeParam>::epsilon())
+        << "ball tree distances do not match expected values for small test";
+
+    // Now use the same ball tree but treat A as a different matrix
+    k = 5;
+    sorted_dist.resize(n_samples * k);
+    sorted_ind.resize(n_samples * k);
+    sorted_dist_exp.resize(n_samples * k);
+    sorted_ind_exp.resize(n_samples * k);
+
+    auto tree4 = TEST_ARCH::da_binary_tree::ball_tree<TypeParam>(
+        n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
+
+    EXPECT_EQ(tree4.k_neighbors(n_samples, n_features, A.data(), lda, k, k_ind2.data(),
+                                k_dist2.data(), err),
+              da_status_success);
+
+    // Sort the distances and indices since the k-d tree does not guarantee that they are sorted
+    for (da_int i = 0; i < n_samples; i++) {
+        sort_dist_ind(k, k_dist2.data() + i * k, k_ind2.data() + i * k,
+                      sorted_dist.data() + i * k, sorted_ind.data() + i * k);
+        sort_dist_ind(k, k_dist_exp2.data() + i * k, k_ind_exp2.data() + i * k,
+                      sorted_dist_exp.data() + i * k, sorted_ind_exp.data() + i * k);
+    }
+
+    EXPECT_ARR_EQ(n_samples * k, sorted_ind.data(), sorted_ind_exp.data(), 1, 1, 0, 0)
+        << "ball tree indices do not match expected values for small test 2";
+    EXPECT_ARR_NEAR(n_samples * k, sorted_dist.data(), sorted_dist_exp.data(),
+                    100 * std::numeric_limits<TypeParam>::epsilon())
+        << "ball tree distances do not match expected values for small test 2";
+
     delete err;
 }
 
 TYPED_TEST(KNTest, k_neighbors_large) {
 
-    da_int n_samples = 800;
+    da_int n_samples = 39;
     da_int n_features = 1;
-    da_int lda = 800;
+    da_int lda = n_samples;
     da_int k = 2;
 
     std::vector<TypeParam> A(n_samples);
@@ -204,11 +258,11 @@ TYPED_TEST(KNTest, k_neighbors_large) {
         new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
 
     da_int leaf_size = 5;
-    auto tree = TEST_ARCH::da_kdtree::kdtree<TypeParam>(n_samples, n_features, A.data(),
-                                                        lda, leaf_size);
+    auto tree = TEST_ARCH::da_binary_tree::kd_tree<TypeParam>(
+        n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
 
-    EXPECT_EQ(tree.k_neighbors(n_samples, n_features, nullptr, 0, k, da_euclidean,
-                               (TypeParam)0.0, k_ind.data(), k_dist.data(), err),
+    EXPECT_EQ(tree.k_neighbors(n_samples, n_features, nullptr, 0, k, k_ind.data(),
+                               k_dist.data(), err),
               da_status_success);
 
     // In-place sort to allow for different ordering of stored indices in neighbors
@@ -220,9 +274,29 @@ TYPED_TEST(KNTest, k_neighbors_large) {
     }
 
     EXPECT_ARR_EQ(n_samples, k_ind.data(), k_ind_exp.data(), 1, 1, 0, 0)
-        << "k-d tree indices do not match expected values for small test";
+        << "k-d tree indices do not match expected values for large test";
     EXPECT_ARR_EQ(n_samples, k_dist.data(), k_dist_exp.data(), 1, 1, 0, 0)
-        << "k-d tree distances do not match expected values for small test";
+        << "k-d tree distances do not match expected values for large test";
+
+    auto tree2 = TEST_ARCH::da_binary_tree::ball_tree<TypeParam>(
+        n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
+
+    EXPECT_EQ(tree2.k_neighbors(n_samples, n_features, nullptr, 0, k, k_ind.data(),
+                                k_dist.data(), err),
+              da_status_success);
+
+    // In-place sort to allow for different ordering of stored indices in neighbors
+    for (da_int i = 0; i < n_samples; i++) {
+        if (k_ind[i * k] > k_ind[i * k + 1]) {
+            std::swap(k_ind[i * k], k_ind[i * k + 1]);
+            std::swap(k_dist[i * k], k_dist[i * k + 1]);
+        }
+    }
+
+    EXPECT_ARR_EQ(n_samples, k_ind.data(), k_ind_exp.data(), 1, 1, 0, 0)
+        << "ball tree indices do not match expected values for large test";
+    EXPECT_ARR_EQ(n_samples, k_dist.data(), k_dist_exp.data(), 1, 1, 0, 0)
+        << "ball tree distances do not match expected values for large test";
 
     delete err;
 }

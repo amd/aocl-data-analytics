@@ -35,50 +35,52 @@ da_errors::error_bypass_t *nosave_kernel(nullptr);
 da_status da_rbf_kernel_d(da_order order, da_int m, da_int n, da_int k, const double *X,
                           da_int ldx, const double *Y, da_int ldy, double *D, da_int ldd,
                           double gamma) {
-    DISPATCHER(nosave_kernel,
-               return (rbf_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma)));
+    DISPATCHER(nosave_kernel, return (da_kernel_functions::rbf_kernel(
+                                  order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma)));
 }
 da_status da_rbf_kernel_s(da_order order, da_int m, da_int n, da_int k, const float *X,
                           da_int ldx, const float *Y, da_int ldy, float *D, da_int ldd,
                           float gamma) {
-    DISPATCHER(nosave_kernel,
-               return (rbf_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma)));
+    DISPATCHER(nosave_kernel, return (da_kernel_functions::rbf_kernel(
+                                  order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma)));
 }
 da_status da_linear_kernel_d(da_order order, da_int m, da_int n, da_int k,
                              const double *X, da_int ldx, const double *Y, da_int ldy,
                              double *D, da_int ldd) {
-    DISPATCHER(nosave_kernel,
-               return (linear_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd)));
+    DISPATCHER(nosave_kernel, return (da_kernel_functions::linear_kernel(
+                                  order, m, n, k, X, ldx, Y, ldy, D, ldd)));
 }
 da_status da_linear_kernel_s(da_order order, da_int m, da_int n, da_int k, const float *X,
                              da_int ldx, const float *Y, da_int ldy, float *D,
                              da_int ldd) {
-    DISPATCHER(nosave_kernel,
-               return (linear_kernel(order, m, n, k, X, ldx, Y, ldy, D, ldd)));
+    DISPATCHER(nosave_kernel, return (da_kernel_functions::linear_kernel(
+                                  order, m, n, k, X, ldx, Y, ldy, D, ldd)));
 }
 da_status da_polynomial_kernel_d(da_order order, da_int m, da_int n, da_int k,
                                  const double *X, da_int ldx, const double *Y, da_int ldy,
                                  double *D, da_int ldd, double gamma, da_int degree,
                                  double coef0) {
-    DISPATCHER(nosave_kernel, return (polynomial_kernel(order, m, n, k, X, ldx, Y, ldy, D,
-                                                        ldd, gamma, degree, coef0)));
+    DISPATCHER(nosave_kernel,
+               return (da_kernel_functions::polynomial_kernel(
+                   order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, degree, coef0)));
 }
 da_status da_polynomial_kernel_s(da_order order, da_int m, da_int n, da_int k,
                                  const float *X, da_int ldx, const float *Y, da_int ldy,
                                  float *D, da_int ldd, float gamma, da_int degree,
                                  float coef0) {
-    DISPATCHER(nosave_kernel, return (polynomial_kernel(order, m, n, k, X, ldx, Y, ldy, D,
-                                                        ldd, gamma, degree, coef0)));
+    DISPATCHER(nosave_kernel,
+               return (da_kernel_functions::polynomial_kernel(
+                   order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, degree, coef0)));
 }
 da_status da_sigmoid_kernel_d(da_order order, da_int m, da_int n, da_int k,
                               const double *X, da_int ldx, const double *Y, da_int ldy,
                               double *D, da_int ldd, double gamma, double coef0) {
-    DISPATCHER(nosave_kernel, return (sigmoid_kernel(order, m, n, k, X, ldx, Y, ldy, D,
-                                                     ldd, gamma, coef0)));
+    DISPATCHER(nosave_kernel, return (da_kernel_functions::sigmoid_kernel(
+                                  order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, coef0)));
 }
 da_status da_sigmoid_kernel_s(da_order order, da_int m, da_int n, da_int k,
                               const float *X, da_int ldx, const float *Y, da_int ldy,
                               float *D, da_int ldd, float gamma, float coef0) {
-    DISPATCHER(nosave_kernel, return (sigmoid_kernel(order, m, n, k, X, ldx, Y, ldy, D,
-                                                     ldd, gamma, coef0)));
+    DISPATCHER(nosave_kernel, return (da_kernel_functions::sigmoid_kernel(
+                                  order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, coef0)));
 }

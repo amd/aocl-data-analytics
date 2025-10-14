@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024 - 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -58,6 +58,21 @@ enum da_order_ {
 
 /** @brief Alias for the \ref da_order_ enum. */
 typedef enum da_order_ da_order;
+
+enum da_transpose_ {
+    da_no_trans = 0,
+    da_trans,
+    da_conj_trans,
+};
+
+typedef enum da_transpose_ da_transpose;
+
+enum da_uplo_ {
+    da_upper = 0,
+    da_lower,
+};
+
+typedef enum da_uplo_ da_uplo;
 
 /**
  * \def Build library for 64 bit integers

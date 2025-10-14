@@ -30,6 +30,8 @@
 #include <immintrin.h>
 #include <stdint.h>
 
+enum vectorization_type { scalar = 0, avx = 2, avx2 = 5, avx512 = 11 };
+
 /*****************************
   * Internal types
   *****************************/

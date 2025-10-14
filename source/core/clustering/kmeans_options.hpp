@@ -21,10 +21,6 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "kmeans_types.hpp"

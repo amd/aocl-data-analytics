@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -89,10 +89,15 @@ py::array_t<T> py_da_pairwise_distances(py::array_t<T> X, std::optional<py::arra
         metric_enum = da_cosine;
     } else if (metric == "minkowski") {
         metric_enum = da_minkowski;
+    } else if (metric == "euclidean_gemm") {
+        metric_enum = da_euclidean_gemm;
+    } else if (metric == "sqeuclidean_gemm") {
+        metric_enum = da_sqeuclidean_gemm;
     } else {
         throw std::invalid_argument("Given metric does not exist. Available choices are: "
                                     "'euclidean', 'l2', 'sqeuclidean', 'manhattan', "
-                                    "'l1', 'cityblock', 'cosine', 'minkowski'.");
+                                    "'l1', 'cityblock', 'cosine', 'minkowski', "
+                                    "'euclidean_gemm', 'sqeuclidean_gemm.");
     }
 
     // Create the output distance matrix as a numpy array

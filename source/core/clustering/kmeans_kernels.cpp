@@ -25,12 +25,85 @@
 #include "da_kernel_utils.hpp"
 #include "immintrin.h"
 #include "kmeans.hpp"
+#include "kt.hpp"
 #include "macros.h"
+#include <cassert>
 namespace ARCH {
 
 namespace da_kmeans {
 
+using namespace kernel_templates;
+
 /* These functions contain performance-critical loops which must vectorize for performance. */
+
+// KT variants of elkan_reduce_kernel
+template <bsz SZ, typename T>
+inline __attribute__((__always_inline__)) T
+elkan_reduction_kt(da_int m, const T *x, da_int incx, T *y,
+                   da_int incy) { // why isnt' y also const * T ?? FIXME also add noexcept
+    using SUF = T;
+    avxvector_t<SZ, SUF> vsum{kt_setzero_p<SZ, SUF>()};
+
+    const da_int simd_length{tsz_v<SZ, SUF>}; // type pack size given vector length
+    const da_int simd_loop_size{m - m % simd_length};
+    const da_int prefetch_condition{simd_loop_size - simd_length};
+
+    da_int indx[simd_length]; // vector containing all the increments
+    da_int indy[simd_length]; // vector containing all the increments
+    for (da_int i = 0; i < simd_length; ++i) {
+        indx[i] = incx * i;
+        indy[i] = incy * i;
+    }
+
+    const da_int simd_incx{incx * simd_length};
+    const da_int simd_incy{incy * simd_length};
+
+    for (da_int k = 0; k < simd_loop_size; k += simd_length) {
+
+        da_int kincx = k * incx;
+        da_int kincy = k * incy;
+        const T *x_ptr = &x[kincx];
+        const T *y_ptr = &y[kincy];
+
+        if (k < prefetch_condition) {
+            da_int x_ptr_index = simd_incx;
+            da_int y_ptr_index = simd_incy;
+            // Prefetch the elements for the next iteration to help with cache misses
+            for (da_int j = 0; j < simd_length; j++) {
+                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
+                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
+                x_ptr_index += incx;
+                y_ptr_index += incy;
+            }
+        }
+        // load elements with incx stride
+        avxvector_t<SZ, SUF> vx = kt_set_p<SZ, SUF>(x_ptr, indx);
+        // load elements with incy stride
+        avxvector_t<SZ, SUF> vy = kt_set_p<SZ, SUF>(y_ptr, indy);
+        avxvector_t<SZ, SUF> diff{kt_sub_p<SZ, SUF>(vx, vy)};
+        vsum = kt_fmadd_p<SZ, SUF>(diff, diff, vsum);
+    }
+
+    // hsum of vsum
+    T sum{kt_hsum_p<SZ, SUF>(vsum)};
+    // Handle the remainder
+    for (da_int k = simd_loop_size; k < m; k++) {
+        T tmp = x[k * incx] - y[k * incy];
+        sum += tmp * tmp;
+    }
+
+    return sum;
+}
+
+#define ELKAN_REDUCTION_KT_INSTANTIATE(SZ, SUF)                                          \
+    template SUF elkan_reduction_kt<SZ, SUF>(da_int m, const SUF *x, da_int incx,        \
+                                             SUF *y, da_int incy);
+
+DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b128)
+DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b256)
+#ifdef __AVX512F__
+DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b512)
+#endif
 
 /* Reduction part of the elkan iteration, on a pair of scattered vectors */
 template <typename T>
@@ -45,375 +118,66 @@ T elkan_reduction_kernel_scalar(da_int m, const T *x, da_int incx, T *y, da_int 
 }
 
 template <>
-float elkan_reduction_kernel<float, kmeans_kernel::scalar>(da_int m, const float *x,
-                                                           da_int incx, float *y,
-                                                           da_int incy) {
+float elkan_reduction_kernel<float, vectorization_type::scalar>(da_int m, const float *x,
+                                                                da_int incx, float *y,
+                                                                da_int incy) {
     return elkan_reduction_kernel_scalar(m, x, incx, y, incy);
 }
 
 template <>
-double elkan_reduction_kernel<double, kmeans_kernel::scalar>(da_int m, const double *x,
-                                                             da_int incx, double *y,
+double elkan_reduction_kernel<double, vectorization_type::scalar>(da_int m,
+                                                                  const double *x,
+                                                                  da_int incx, double *y,
+                                                                  da_int incy) {
+    return elkan_reduction_kernel_scalar(m, x, incx, y, incy);
+}
+
+template <>
+float elkan_reduction_kernel<float, vectorization_type::avx>(da_int m, const float *x,
+                                                             da_int incx, float *y,
                                                              da_int incy) {
-    return elkan_reduction_kernel_scalar(m, x, incx, y, incy);
-}
 
-// LCOV_EXCL_START
-template <>
-float elkan_reduction_kernel<float, kmeans_kernel::avx>(da_int m, const float *x,
-                                                        da_int incx, float *y,
-                                                        da_int incy) {
-
-    v4sf_t v_sum;
-
-    v_sum.v = _mm_setzero_ps();
-
-    da_int simd_length = 4;
-    da_int simd_loop_size = m - m % simd_length;
-    da_int prefetch_condition = simd_loop_size - simd_length;
-
-    da_int incx2 = incx * 2;
-    da_int incy2 = incy * 2;
-    da_int incx3 = incx * 3;
-    da_int incy3 = incy * 3;
-
-    da_int simd_incx = incx * simd_length;
-    da_int simd_incy = incy * simd_length;
-
-    for (da_int k = 0; k < simd_loop_size; k += simd_length) {
-
-        da_int kincy = k * incy;
-        da_int kincx = k * incx;
-        const float *x_ptr = &x[kincx];
-        const float *y_ptr = &y[kincy];
-
-        if (k < prefetch_condition) {
-            da_int x_ptr_index = simd_incx;
-            da_int y_ptr_index = simd_incy;
-            // Prefetch the elements for the next iteration to help with cache misses
-            for (da_int j = 0; j < simd_length; j++) {
-                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
-                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
-                x_ptr_index += incx;
-                y_ptr_index += incy;
-            }
-        }
-        __m128 v_x = _mm_set_ps(x_ptr[incx3], x_ptr[incx2], x_ptr[incx], x_ptr[0]);
-        __m128 v_y = _mm_set_ps(y_ptr[incy3], y_ptr[incy2], y_ptr[incy], y_ptr[0]);
-
-        __m128 v_diff = _mm_sub_ps(v_x, v_y);
-        v_sum.v = _mm_fmadd_ps(v_diff, v_diff, v_sum.v);
-    }
-    // Handle the remainder
-    float sum = 0.0f;
-    for (da_int k = simd_loop_size; k < m; k++) {
-        float tmp = x[k * incx] - y[k * incy];
-        sum += tmp * tmp;
-    }
-
-    return sum + v_sum.f[0] + v_sum.f[1] + v_sum.f[2] + v_sum.f[3];
+    return elkan_reduction_kt<bsz::b128, float>(m, x, incx, y, incy);
 }
 
 template <>
-double elkan_reduction_kernel<double, kmeans_kernel::avx>(da_int m, const double *x,
-                                                          da_int incx, double *y,
-                                                          da_int incy) {
-
-    v2df_t v_sum;
-
-    v_sum.v = _mm_setzero_pd();
-
-    da_int simd_length = 2;
-    da_int simd_loop_size = m - m % simd_length;
-    da_int prefetch_condition = simd_loop_size - simd_length;
-
-    da_int simd_incx = incx * simd_length;
-    da_int simd_incy = incy * simd_length;
-
-    for (da_int k = 0; k < simd_loop_size; k += simd_length) {
-
-        da_int kincy = k * incy;
-        da_int kincx = k * incx;
-        const double *x_ptr = &x[kincx];
-        const double *y_ptr = &y[kincy];
-
-        if (k < prefetch_condition) {
-            da_int x_ptr_index = simd_incx;
-            da_int y_ptr_index = simd_incy;
-            // Prefetch the elements for the next iteration to help with cache misses
-            for (da_int j = 0; j < simd_length; j++) {
-                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
-                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
-                x_ptr_index += incx;
-                y_ptr_index += incy;
-            }
-        }
-
-        __m128d v_x = _mm_set_pd(x_ptr[incx], x_ptr[0]);
-        __m128d v_y = _mm_set_pd(y_ptr[incy], y_ptr[0]);
-
-        __m128d v_diff = _mm_sub_pd(v_x, v_y);
-        v_sum.v = _mm_fmadd_pd(v_diff, v_diff, v_sum.v);
-    }
-
-    // Handle the remainder
-    double sum = 0.0;
-    for (da_int k = simd_loop_size; k < m; k++) {
-        float tmp = x[k * incx] - y[k * incy];
-        sum += tmp * tmp;
-    }
-
-    return sum + v_sum.d[0] + v_sum.d[1];
+double elkan_reduction_kernel<double, vectorization_type::avx>(da_int m, const double *x,
+                                                               da_int incx, double *y,
+                                                               da_int incy) {
+    return elkan_reduction_kt<bsz::b128, double>(m, x, incx, y, incy);
 }
 
 template <>
-float elkan_reduction_kernel<float, kmeans_kernel::avx2>(da_int m, const float *x,
-                                                         da_int incx, float *y,
-                                                         da_int incy) {
-
-    v8sf_t v_sum;
-
-    v_sum.v = _mm256_setzero_ps();
-    da_int simd_length = 8;
-    da_int simd_loop_size = m - m % simd_length;
-    da_int prefetch_condition = simd_loop_size - simd_length;
-
-    da_int incx2 = incx * 2, incx3 = incx * 3, incx4 = incx * 4, incx5 = incx * 5,
-           incx6 = incx * 6, incx7 = incx * 7, incy2 = incy * 2, incy3 = incy * 3,
-           incy4 = incy * 4, incy5 = incy * 5, incy6 = incy * 6, incy7 = incy * 7;
-
-    da_int simd_incx = incx * simd_length;
-    da_int simd_incy = incy * simd_length;
-
-    for (da_int k = 0; k < simd_loop_size; k += simd_length) {
-
-        da_int kincy = k * incy;
-        da_int kincx = k * incx;
-        const float *x_ptr = &x[kincx];
-        const float *y_ptr = &y[kincy];
-
-        if (k < prefetch_condition) {
-            da_int x_ptr_index = simd_incx;
-            da_int y_ptr_index = simd_incy;
-            // Prefetch the elements for the next iteration to help with cache misses
-            for (da_int j = 0; j < simd_length; j++) {
-                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
-                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
-                x_ptr_index += incx;
-                y_ptr_index += incy;
-            }
-        }
-
-        __m256 v_x = _mm256_set_ps(x_ptr[incx7], x_ptr[incx6], x_ptr[incx5], x_ptr[incx4],
-                                   x_ptr[incx3], x_ptr[incx2], x_ptr[incx], x_ptr[0]);
-        __m256 v_y = _mm256_set_ps(y_ptr[incy7], y_ptr[incy6], y_ptr[incy5], y_ptr[incy4],
-                                   y_ptr[incy3], y_ptr[incy2], y_ptr[incy], y_ptr[0]);
-
-        __m256 v_diff = _mm256_sub_ps(v_x, v_y);
-        v_sum.v = _mm256_fmadd_ps(v_diff, v_diff, v_sum.v);
-    }
-
-    // Handle the remainder
-    float sum = 0.0f;
-    for (da_int k = simd_loop_size; k < m; k++) {
-        float tmp = x[k * incx] - y[k * incy];
-        sum += tmp * tmp;
-    }
-
-    return sum + v_sum.f[0] + v_sum.f[1] + v_sum.f[2] + v_sum.f[3] + v_sum.f[4] +
-           v_sum.f[5] + v_sum.f[6] + v_sum.f[7];
+float elkan_reduction_kernel<float, vectorization_type::avx2>(da_int m, const float *x,
+                                                              da_int incx, float *y,
+                                                              da_int incy) {
+    return elkan_reduction_kt<bsz::b256, float>(m, x, incx, y, incy);
 }
 
 template <>
-double elkan_reduction_kernel<double, kmeans_kernel::avx2>(da_int m, const double *x,
-                                                           da_int incx, double *y,
-                                                           da_int incy) {
+double elkan_reduction_kernel<double, vectorization_type::avx2>(da_int m, const double *x,
+                                                                da_int incx, double *y,
+                                                                da_int incy) {
 
-    v4df_t v_sum;
-
-    v_sum.v = _mm256_setzero_pd();
-    da_int simd_length = 4;
-    da_int simd_loop_size = m - m % simd_length;
-    da_int prefetch_condition = simd_loop_size - simd_length;
-
-    da_int incx2 = incx * 2;
-    da_int incy2 = incy * 2;
-    da_int incx3 = incx * 3;
-    da_int incy3 = incy * 3;
-
-    da_int simd_incx = incx * simd_length;
-    da_int simd_incy = incy * simd_length;
-
-    for (da_int k = 0; k < simd_loop_size; k += simd_length) {
-
-        da_int kincy = k * incy;
-        da_int kincx = k * incx;
-        const double *x_ptr = &x[kincx];
-        const double *y_ptr = &y[kincy];
-
-        if (k < prefetch_condition) {
-            da_int x_ptr_index = simd_incx;
-            da_int y_ptr_index = simd_incy;
-            // Prefetch the elements for the next iteration to help with cache misses
-            for (da_int j = 0; j < simd_length; j++) {
-                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
-                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
-                x_ptr_index += incx;
-                y_ptr_index += incy;
-            }
-        }
-
-        __m256d v_x = _mm256_set_pd(x_ptr[incx3], x_ptr[incx2], x_ptr[incx], x_ptr[0]);
-        __m256d v_y = _mm256_set_pd(y_ptr[incy3], y_ptr[incy2], y_ptr[incy], y_ptr[0]);
-
-        __m256d v_diff = _mm256_sub_pd(v_x, v_y);
-        v_sum.v = _mm256_fmadd_pd(v_diff, v_diff, v_sum.v);
-    }
-
-    // Handle the remainder
-    double sum = 0.0;
-    for (da_int k = simd_loop_size; k < m; k++) {
-        double tmp = x[k * incx] - y[k * incy];
-        sum += tmp * tmp;
-    }
-
-    return sum + v_sum.d[0] + v_sum.d[1] + v_sum.d[2] + v_sum.d[3];
+    return elkan_reduction_kt<bsz::b256, double>(m, x, incx, y, incy);
 }
 
 #if defined(__AVX512F__)
-
 template <>
-double elkan_reduction_kernel<double, kmeans_kernel::avx512>(da_int m, const double *x,
-                                                             da_int incx, double *y,
-                                                             da_int incy) {
-
-    v8df_t v_sum;
-
-    v_sum.v = _mm512_setzero_pd();
-    da_int simd_length = 8;
-    da_int simd_loop_size = m - m % simd_length;
-    da_int prefetch_condition = simd_loop_size - simd_length;
-
-    da_int incx2 = incx * 2, incx3 = incx * 3, incx4 = incx * 4, incx5 = incx * 5,
-           incx6 = incx * 6, incx7 = incx * 7, incy2 = incy * 2, incy3 = incy * 3,
-           incy4 = incy * 4, incy5 = incy * 5, incy6 = incy * 6, incy7 = incy * 7;
-
-    da_int simd_incx = incx * simd_length;
-    da_int simd_incy = incy * simd_length;
-
-    for (da_int k = 0; k < simd_loop_size; k += simd_length) {
-
-        da_int kincy = k * incy;
-        da_int kincx = k * incx;
-        const double *x_ptr = &x[kincx];
-        const double *y_ptr = &y[kincy];
-
-        if (k < prefetch_condition) {
-            da_int x_ptr_index = simd_incx;
-            da_int y_ptr_index = simd_incy;
-            // Prefetch the elements for the next iteration to help with cache misses
-            for (da_int j = 0; j < simd_length; j++) {
-                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
-                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
-                x_ptr_index += incx;
-                y_ptr_index += incy;
-            }
-        }
-
-        __m512d v_x =
-            _mm512_set_pd(x_ptr[incx7], x_ptr[incx6], x_ptr[incx5], x_ptr[incx4],
-                          x_ptr[incx3], x_ptr[incx2], x_ptr[incx], x_ptr[0]);
-        __m512d v_y =
-            _mm512_set_pd(y_ptr[incy7], y_ptr[incy6], y_ptr[incy5], y_ptr[incy4],
-                          y_ptr[incy3], y_ptr[incy2], y_ptr[incy], y_ptr[0]);
-
-        __m512d v_diff = _mm512_sub_pd(v_x, v_y);
-        v_sum.v = _mm512_fmadd_pd(v_diff, v_diff, v_sum.v);
-    }
-
-    // Handle the remainder
-    double sum = 0.0f;
-    for (da_int k = simd_loop_size; k < m; k++) {
-        double tmp = x[k * incx] - y[k * incy];
-        sum += tmp * tmp;
-    }
-
-    return sum + v_sum.d[0] + v_sum.d[1] + v_sum.d[2] + v_sum.d[3] + v_sum.d[4] +
-           v_sum.d[5] + v_sum.d[6] + v_sum.d[7];
+double elkan_reduction_kernel<double, vectorization_type::avx512>(da_int m,
+                                                                  const double *x,
+                                                                  da_int incx, double *y,
+                                                                  da_int incy) {
+    return elkan_reduction_kt<bsz::b256, double>(m, x, incx, y, incy);
 }
 
 template <>
-float elkan_reduction_kernel<float, kmeans_kernel::avx512>(da_int m, const float *x,
-                                                           da_int incx, float *y,
-                                                           da_int incy) {
-
-    v16sf_t v_sum;
-
-    v_sum.v = _mm512_setzero_ps();
-    da_int simd_length = 16;
-    da_int simd_loop_size = m - m % simd_length;
-    da_int prefetch_condition = simd_loop_size - simd_length;
-
-    da_int incx2 = incx * 2, incy2 = incy * 2, incx3 = incx * 3, incy3 = incy * 3,
-           incx4 = incx * 4, incy4 = incy * 4, incx5 = incx * 5, incy5 = incy * 5,
-           incx6 = incx * 6, incy6 = incy * 6, incx7 = incx * 7, incy7 = incy * 7,
-           incx8 = incx * 8, incy8 = incy * 8, incx9 = incx * 9, incy9 = incy * 9,
-           incx10 = incx * 10, incy10 = incy * 10, incx11 = incx * 11, incy11 = incy * 11,
-           incx12 = incx * 12, incy12 = incy * 12, incx13 = incx * 13, incy13 = incy * 13,
-           incx14 = incx * 14, incy14 = incy * 14, incx15 = incx * 15, incy15 = incy * 15;
-
-    da_int simd_incx = incx * simd_length;
-    da_int simd_incy = incy * simd_length;
-
-    for (da_int k = 0; k < simd_loop_size; k += simd_length) {
-
-        da_int kincy = k * incy;
-        da_int kincx = k * incx;
-        const float *x_ptr = &x[kincx];
-        const float *y_ptr = &y[kincy];
-
-        if (k < prefetch_condition) {
-            da_int x_ptr_index = simd_incx;
-            da_int y_ptr_index = simd_incy;
-            // Prefetch the elements for the next iteration to help with cache misses
-            for (da_int j = 0; j < simd_length; j++) {
-                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
-                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
-                x_ptr_index += incx;
-                y_ptr_index += incy;
-            }
-        }
-
-        __m512 v_x =
-            _mm512_set_ps(x_ptr[incx15], x_ptr[incx14], x_ptr[incx13], x_ptr[incx12],
-                          x_ptr[incx11], x_ptr[incx10], x_ptr[incx9], x_ptr[incx8],
-                          x_ptr[incx7], x_ptr[incx6], x_ptr[incx5], x_ptr[incx4],
-                          x_ptr[incx3], x_ptr[incx2], x_ptr[incx], x_ptr[0]);
-        __m512 v_y =
-            _mm512_set_ps(y_ptr[incy15], y_ptr[incy14], y_ptr[incy13], y_ptr[incy12],
-                          y_ptr[incy11], y_ptr[incy10], y_ptr[incy9], y_ptr[incy8],
-                          y_ptr[incy7], y_ptr[incy6], y_ptr[incy5], y_ptr[incy4],
-                          y_ptr[incy3], y_ptr[incy2], y_ptr[incy], y_ptr[0]);
-
-        __m512 v_diff = _mm512_sub_ps(v_x, v_y);
-        v_sum.v = _mm512_fmadd_ps(v_diff, v_diff, v_sum.v);
-    }
-
-    // Handle the remainder
-    double sum = 0.0f;
-    for (da_int k = simd_loop_size; k < m; k++) {
-        float tmp = x[k * incx] - y[k * incy];
-        sum += tmp * tmp;
-    }
-
-    return sum + v_sum.f[0] + v_sum.f[1] + v_sum.f[2] + v_sum.f[3] + v_sum.f[4] +
-           v_sum.f[5] + v_sum.f[6] + v_sum.f[7] + v_sum.f[8] + v_sum.f[9] + v_sum.f[10] +
-           v_sum.f[11] + v_sum.f[12] + v_sum.f[13] + v_sum.f[14] + v_sum.f[15];
+float elkan_reduction_kernel<float, vectorization_type::avx512>(da_int m, const float *x,
+                                                                da_int incx, float *y,
+                                                                da_int incy) {
+    return elkan_reduction_kt<bsz::b256, float>(m, x, incx, y, incy);
 }
-
 #endif
-
-// LCOV_EXCL_STOP
 
 /* Within Elkan iteration update a block of the lower and upper bound matrices*/
 template <class T>
@@ -436,7 +200,7 @@ void elkan_iteration_kernel_scalar(da_int block_size, T *l_bound, da_int ldl_bou
 }
 
 template <>
-void elkan_iteration_kernel<double, kmeans_kernel::scalar>(
+void elkan_iteration_kernel<double, vectorization_type::scalar>(
     da_int block_size, double *l_bound, da_int ldl_bound, double *u_bound,
     double *centre_shift, da_int *labels, da_int n_clusters) {
 
@@ -445,7 +209,7 @@ void elkan_iteration_kernel<double, kmeans_kernel::scalar>(
 }
 
 template <>
-void elkan_iteration_kernel<float, kmeans_kernel::scalar>(
+void elkan_iteration_kernel<float, vectorization_type::scalar>(
     da_int block_size, float *l_bound, da_int ldl_bound, float *u_bound,
     float *centre_shift, da_int *labels, da_int n_clusters) {
 
@@ -453,240 +217,119 @@ void elkan_iteration_kernel<float, kmeans_kernel::scalar>(
                                   labels, n_clusters);
 }
 
+// KT variants of elkan_reduction_kernel
+template <bsz SZ, typename SUF>
+inline __attribute__((__always_inline__)) void
+elkan_iteration_kt(da_int block_size, SUF *l_bound, da_int ldl_bound, SUF *u_bound,
+                   SUF *centre_shift, da_int *labels, da_int n_clusters) {
+    const avxvector_t<SZ, SUF> v0{kt_setzero_p<SZ, SUF>()};
+    const da_int simd_length{tsz_v<SZ, SUF>};
+
+    for (da_int i = 0; i < block_size; i++) {
+        da_int col_index = i * ldl_bound;
+
+        for (da_int j = 0; j < n_clusters; j += simd_length) {
+            da_int index = col_index + j;
+            avxvector_t<SZ, SUF> v_lb = kt_loadu_p<SZ>(&l_bound[index]);
+            avxvector_t<SZ, SUF> vc_shift = kt_loadu_p<SZ>(&centre_shift[j]);
+            v_lb = kt_sub_p<SZ, SUF>(v_lb, vc_shift);
+            v_lb = kt_max_p<SZ, SUF>(v_lb, v0);
+            kt_storeu_p<SZ>(&l_bound[index], v_lb);
+        }
+    }
+
+    const da_int simd_loop_size = block_size - block_size % simd_length;
+
+    for (da_int i = 0; i < simd_loop_size; i += simd_length) {
+        avxvector_t<SZ, SUF> vc_shift = kt_set_p<SZ>(centre_shift, &labels[i]);
+        avxvector_t<SZ, SUF> v_ub = kt_loadu_p<SZ>(&u_bound[i]);
+        v_ub = kt_add_p<SZ, SUF>(v_ub, vc_shift);
+        kt_storeu_p<SZ>(&u_bound[i], v_ub);
+    }
+
+    // Handle the remainder
+    for (da_int i = simd_loop_size; i < block_size; i++) {
+        u_bound[i] += centre_shift[labels[i]];
+    }
+}
+// instantiate
+template void elkan_iteration_kt<bsz::b128, double>(da_int block_size, double *l_bound,
+                                                    da_int ldl_bound, double *u_bound,
+                                                    double *centre_shift, da_int *labels,
+                                                    da_int n_clusters);
+template void elkan_iteration_kt<bsz::b128, float>(da_int block_size, float *l_bound,
+                                                   da_int ldl_bound, float *u_bound,
+                                                   float *centre_shift, da_int *labels,
+                                                   da_int n_clusters);
+template void elkan_iteration_kt<bsz::b256, double>(da_int block_size, double *l_bound,
+                                                    da_int ldl_bound, double *u_bound,
+                                                    double *centre_shift, da_int *labels,
+                                                    da_int n_clusters);
+template void elkan_iteration_kt<bsz::b256, float>(da_int block_size, float *l_bound,
+                                                   da_int ldl_bound, float *u_bound,
+                                                   float *centre_shift, da_int *labels,
+                                                   da_int n_clusters);
+#ifdef __AVX512F__
+template void elkan_iteration_kt<bsz::b512, double>(da_int block_size, double *l_bound,
+                                                    da_int ldl_bound, double *u_bound,
+                                                    double *centre_shift, da_int *labels,
+                                                    da_int n_clusters);
+template void elkan_iteration_kt<bsz::b512, float>(da_int block_size, float *l_bound,
+                                                   da_int ldl_bound, float *u_bound,
+                                                   float *centre_shift, da_int *labels,
+                                                   da_int n_clusters);
+#endif
+
 template <>
-void elkan_iteration_kernel<double, kmeans_kernel::avx>(
+void elkan_iteration_kernel<float, vectorization_type::avx>(
+    da_int block_size, float *l_bound, da_int ldl_bound, float *u_bound,
+    float *centre_shift, da_int *labels, da_int n_clusters) {
+    elkan_iteration_kt<bsz::b128, float>(block_size, l_bound, ldl_bound, u_bound,
+                                         centre_shift, labels, n_clusters);
+}
+
+template <>
+void elkan_iteration_kernel<double, vectorization_type::avx>(
     da_int block_size, double *l_bound, da_int ldl_bound, double *u_bound,
     double *centre_shift, da_int *labels, da_int n_clusters) {
-    __m128d v_zero = _mm_setzero_pd();
-    for (da_int i = 0; i < block_size; i++) {
-        da_int col_index = i * ldl_bound;
-
-        for (da_int j = 0; j < n_clusters; j += 2) {
-            da_int index = col_index + j;
-            __m128d v_l_bound = _mm_loadu_pd(&l_bound[index]);
-            __m128d v_centre_shift = _mm_loadu_pd(&centre_shift[j]);
-            v_l_bound = _mm_sub_pd(v_l_bound, v_centre_shift);
-            v_l_bound = _mm_max_pd(v_l_bound, v_zero);
-            _mm_storeu_pd(&l_bound[index], v_l_bound);
-        }
-    }
-
-    da_int simd_length = 2;
-    da_int simd_loop_size = block_size - block_size % simd_length;
-
-    for (da_int i = 0; i < simd_loop_size; i += simd_length) {
-        __m128d v_centre_shift =
-            _mm_set_pd(centre_shift[labels[i + 1]], centre_shift[labels[i]]);
-        __m128d v_u_bound = _mm_loadu_pd(&u_bound[i]);
-        v_u_bound = _mm_add_pd(v_u_bound, v_centre_shift);
-        _mm_storeu_pd(&u_bound[i], v_u_bound);
-    }
-
-    // Handle the remainder
-    for (da_int i = simd_loop_size; i < block_size; i++) {
-        u_bound[i] += centre_shift[labels[i]];
-    }
+    elkan_iteration_kt<bsz::b128, double>(block_size, l_bound, ldl_bound, u_bound,
+                                          centre_shift, labels, n_clusters);
 }
 
 template <>
-void elkan_iteration_kernel<float, kmeans_kernel::avx>(da_int block_size, float *l_bound,
-                                                       da_int ldl_bound, float *u_bound,
-                                                       float *centre_shift,
-                                                       da_int *labels,
-                                                       da_int n_clusters) {
-
-    __m128 v_zero = _mm_setzero_ps();
-    for (da_int i = 0; i < block_size; i++) {
-        da_int col_index = i * ldl_bound;
-
-        for (da_int j = 0; j < n_clusters; j += 4) {
-            da_int index = col_index + j;
-            __m128 v_l_bound = _mm_loadu_ps(&l_bound[index]);
-            __m128 v_centre_shift = _mm_loadu_ps(&centre_shift[j]);
-            v_l_bound = _mm_sub_ps(v_l_bound, v_centre_shift);
-            v_l_bound = _mm_max_ps(v_l_bound, v_zero);
-            _mm_storeu_ps(&l_bound[index], v_l_bound);
-        }
-    }
-
-    da_int simd_length = 4;
-    da_int simd_loop_size = block_size - block_size % simd_length;
-
-    for (da_int i = 0; i < simd_loop_size; i += simd_length) {
-        __m128 v_centre_shift =
-            _mm_set_ps(centre_shift[labels[i + 3]], centre_shift[labels[i + 2]],
-                       centre_shift[labels[i + 1]], centre_shift[labels[i]]);
-        __m128 v_u_bound = _mm_loadu_ps(&u_bound[i]);
-        v_u_bound = _mm_add_ps(v_u_bound, v_centre_shift);
-        _mm_storeu_ps(&u_bound[i], v_u_bound);
-    }
-
-    // Handle the remainder
-    for (da_int i = simd_loop_size; i < block_size; i++) {
-        u_bound[i] += centre_shift[labels[i]];
-    }
-}
-
-template <>
-void elkan_iteration_kernel<double, kmeans_kernel::avx2>(
+void elkan_iteration_kernel<double, vectorization_type::avx2>(
     da_int block_size, double *l_bound, da_int ldl_bound, double *u_bound,
     double *centre_shift, da_int *labels, da_int n_clusters) {
-    __m256d v_zero = _mm256_setzero_pd();
-    for (da_int i = 0; i < block_size; i++) {
-        da_int col_index = i * ldl_bound;
-
-        for (da_int j = 0; j < n_clusters; j += 4) {
-            da_int index = col_index + j;
-            __m256d v_l_bound = _mm256_loadu_pd(&l_bound[index]);
-            __m256d v_centre_shift = _mm256_loadu_pd(&centre_shift[j]);
-            v_l_bound = _mm256_sub_pd(v_l_bound, v_centre_shift);
-            v_l_bound = _mm256_max_pd(v_l_bound, v_zero);
-            _mm256_storeu_pd(&l_bound[index], v_l_bound);
-        }
-    }
-
-    da_int simd_length = 4;
-    da_int simd_loop_size = block_size - block_size % simd_length;
-
-    for (da_int i = 0; i < simd_loop_size; i += simd_length) {
-        __m256d v_centre_shift =
-            _mm256_set_pd(centre_shift[labels[i + 3]], centre_shift[labels[i + 2]],
-                          centre_shift[labels[i + 1]], centre_shift[labels[i]]);
-        __m256d v_u_bound = _mm256_loadu_pd(&u_bound[i]);
-        v_u_bound = _mm256_add_pd(v_u_bound, v_centre_shift);
-        _mm256_storeu_pd(&u_bound[i], v_u_bound);
-    }
-
-    // Handle the remainder
-    for (da_int i = simd_loop_size; i < block_size; i++) {
-        u_bound[i] += centre_shift[labels[i]];
-    }
+    elkan_iteration_kt<bsz::b256, double>(block_size, l_bound, ldl_bound, u_bound,
+                                          centre_shift, labels, n_clusters);
 }
 
 template <>
-void elkan_iteration_kernel<float, kmeans_kernel::avx2>(da_int block_size, float *l_bound,
-                                                        da_int ldl_bound, float *u_bound,
-                                                        float *centre_shift,
-                                                        da_int *labels,
-                                                        da_int n_clusters) {
-    __m256 v_zero = _mm256_setzero_ps();
-    for (da_int i = 0; i < block_size; i++) {
-        da_int col_index = i * ldl_bound;
-
-        for (da_int j = 0; j < n_clusters; j += 8) {
-            da_int index = col_index + j;
-            __m256 v_l_bound = _mm256_loadu_ps(&l_bound[index]);
-            __m256 v_centre_shift = _mm256_loadu_ps(&centre_shift[j]);
-            v_l_bound = _mm256_sub_ps(v_l_bound, v_centre_shift);
-            v_l_bound = _mm256_max_ps(v_l_bound, v_zero);
-            _mm256_storeu_ps(&l_bound[index], v_l_bound);
-        }
-    }
-
-    da_int simd_length = 8;
-    da_int simd_loop_size = block_size - block_size % simd_length;
-
-    for (da_int i = 0; i < simd_loop_size; i += simd_length) {
-        __m256 v_centre_shift =
-            _mm256_set_ps(centre_shift[labels[i + 7]], centre_shift[labels[i + 6]],
-                          centre_shift[labels[i + 5]], centre_shift[labels[i + 4]],
-                          centre_shift[labels[i + 3]], centre_shift[labels[i + 2]],
-                          centre_shift[labels[i + 1]], centre_shift[labels[i]]);
-        __m256 v_u_bound = _mm256_loadu_ps(&u_bound[i]);
-        v_u_bound = _mm256_add_ps(v_u_bound, v_centre_shift);
-        _mm256_storeu_ps(&u_bound[i], v_u_bound);
-    }
-    // Handle the remainder
-    for (da_int i = simd_loop_size; i < block_size; i++) {
-        u_bound[i] += centre_shift[labels[i]];
-    }
+void elkan_iteration_kernel<float, vectorization_type::avx2>(
+    da_int block_size, float *l_bound, da_int ldl_bound, float *u_bound,
+    float *centre_shift, da_int *labels, da_int n_clusters) {
+    elkan_iteration_kt<bsz::b256, float>(block_size, l_bound, ldl_bound, u_bound,
+                                         centre_shift, labels, n_clusters);
 }
-
-// LCOV_EXCL_START
 
 #ifdef __AVX512F__
 template <>
-void elkan_iteration_kernel<double, kmeans_kernel::avx512>(
-    da_int block_size, double *l_bound, da_int ldl_bound, double *u_bound,
-    double *centre_shift, da_int *labels, da_int n_clusters) {
-
-    __m512d v_zero = _mm512_setzero_pd();
-    for (da_int i = 0; i < block_size; i++) {
-        da_int col_index = i * ldl_bound;
-
-        for (da_int j = 0; j < n_clusters; j += 8) {
-            da_int index = col_index + j;
-            __m512d v_l_bound = _mm512_loadu_pd(&l_bound[index]);
-            __m512d v_centre_shift = _mm512_loadu_pd(&centre_shift[j]);
-            v_l_bound = _mm512_sub_pd(v_l_bound, v_centre_shift);
-            v_l_bound = _mm512_max_pd(v_l_bound, v_zero);
-            _mm512_storeu_pd(&l_bound[index], v_l_bound);
-        }
-    }
-
-    da_int simd_length = 8;
-    da_int simd_loop_size = block_size - block_size % simd_length;
-
-    for (da_int i = 0; i < simd_loop_size; i += simd_length) {
-        __m512d v_centre_shift =
-            _mm512_set_pd(centre_shift[labels[i + 7]], centre_shift[labels[i + 6]],
-                          centre_shift[labels[i + 5]], centre_shift[labels[i + 4]],
-                          centre_shift[labels[i + 3]], centre_shift[labels[i + 2]],
-                          centre_shift[labels[i + 1]], centre_shift[labels[i]]);
-        __m512d v_u_bound = _mm512_loadu_pd(&u_bound[i]);
-        v_u_bound = _mm512_add_pd(v_u_bound, v_centre_shift);
-        _mm512_storeu_pd(&u_bound[i], v_u_bound);
-    }
-
-    // Handle the remainder
-    for (da_int i = simd_loop_size; i < block_size; i++) {
-        u_bound[i] += centre_shift[labels[i]];
-    }
+void elkan_iteration_kernel<float, vectorization_type::avx512>(
+    da_int block_size, float *l_bound, da_int ldl_bound, float *u_bound,
+    float *centre_shift, da_int *labels, da_int n_clusters) {
+    elkan_iteration_kt<bsz::b512, float>(block_size, l_bound, ldl_bound, u_bound,
+                                         centre_shift, labels, n_clusters);
 }
 
 template <>
-void elkan_iteration_kernel<float, kmeans_kernel::avx512>(
-    da_int block_size, float *l_bound, da_int ldl_bound, float *u_bound,
-    float *centre_shift, da_int *labels, da_int n_clusters) {
-    __m512 v_zero = _mm512_setzero_ps();
-    for (da_int i = 0; i < block_size; i++) {
-        da_int col_index = i * ldl_bound;
+void elkan_iteration_kernel<double, vectorization_type::avx512>(
+    da_int block_size, double *l_bound, da_int ldl_bound, double *u_bound,
+    double *centre_shift, da_int *labels, da_int n_clusters) {
 
-        for (da_int j = 0; j < n_clusters; j += 16) {
-            da_int index = col_index + j;
-            __m512 v_l_bound = _mm512_loadu_ps(&l_bound[index]);
-            __m512 v_centre_shift = _mm512_loadu_ps(&centre_shift[j]);
-            v_l_bound = _mm512_sub_ps(v_l_bound, v_centre_shift);
-            v_l_bound = _mm512_max_ps(v_l_bound, v_zero);
-            _mm512_storeu_ps(&l_bound[index], v_l_bound);
-        }
-    }
-
-    da_int simd_length = 16;
-    da_int simd_loop_size = block_size - block_size % simd_length;
-
-    for (da_int i = 0; i < simd_loop_size; i += simd_length) {
-        __m512 v_centre_shift =
-            _mm512_set_ps(centre_shift[labels[i + 15]], centre_shift[labels[i + 14]],
-                          centre_shift[labels[i + 13]], centre_shift[labels[i + 12]],
-                          centre_shift[labels[i + 11]], centre_shift[labels[i + 10]],
-                          centre_shift[labels[i + 9]], centre_shift[labels[i + 8]],
-                          centre_shift[labels[i + 7]], centre_shift[labels[i + 6]],
-                          centre_shift[labels[i + 5]], centre_shift[labels[i + 4]],
-                          centre_shift[labels[i + 3]], centre_shift[labels[i + 2]],
-                          centre_shift[labels[i + 1]], centre_shift[labels[i]]);
-        __m512 v_u_bound = _mm512_loadu_ps(&u_bound[i]);
-        v_u_bound = _mm512_add_ps(v_u_bound, v_centre_shift);
-        _mm512_storeu_ps(&u_bound[i], v_u_bound);
-    }
-    // Handle the remainder
-    for (da_int i = simd_loop_size; i < block_size; i++) {
-        u_bound[i] += centre_shift[labels[i]];
-    }
+    elkan_iteration_kt<bsz::b512, double>(block_size, l_bound, ldl_bound, u_bound,
+                                          centre_shift, labels, n_clusters);
 }
 #endif
-
-// LCOV_EXCL_STOP
 
 template <class T>
 void lloyd_iteration_kernel_scalar(bool update_centres, da_int block_size,
@@ -697,7 +340,6 @@ void lloyd_iteration_kernel_scalar(bool update_centres, da_int block_size,
 
     // Go through each sample in work and find argmin
 
-#pragma omp simd
     for (da_int i = 0; i < block_size; i++) {
         da_int ind = i * ldwork;
         T smallest_dist = work[ind] + tmp2;
@@ -717,7 +359,7 @@ void lloyd_iteration_kernel_scalar(bool update_centres, da_int block_size,
 }
 
 template <>
-void lloyd_iteration_kernel<double, kmeans_kernel::scalar>(
+void lloyd_iteration_kernel<double, vectorization_type::scalar>(
     bool update_centres, da_int block_size, double *centre_norms, da_int *cluster_count,
     da_int *labels, double *work, da_int ldwork, da_int n_clusters) {
 
@@ -726,7 +368,7 @@ void lloyd_iteration_kernel<double, kmeans_kernel::scalar>(
 }
 
 template <>
-void lloyd_iteration_kernel<float, kmeans_kernel::scalar>(
+void lloyd_iteration_kernel<float, vectorization_type::scalar>(
     bool update_centres, da_int block_size, float *centre_norms, da_int *cluster_count,
     da_int *labels, float *work, da_int ldwork, da_int n_clusters) {
 
@@ -735,7 +377,7 @@ void lloyd_iteration_kernel<float, kmeans_kernel::scalar>(
 }
 
 template <>
-void lloyd_iteration_kernel<double, kmeans_kernel::avx>(
+void lloyd_iteration_kernel<double, vectorization_type::avx>(
     bool update_centres, da_int block_size, double *centre_norms, da_int *cluster_count,
     da_int *labels, double *work, da_int ldwork, da_int n_clusters) {
 
@@ -776,7 +418,7 @@ void lloyd_iteration_kernel<double, kmeans_kernel::avx>(
 }
 
 template <>
-void lloyd_iteration_kernel<float, kmeans_kernel::avx>(
+void lloyd_iteration_kernel<float, vectorization_type::avx>(
     bool update_centres, da_int block_size, float *centre_norms, da_int *cluster_count,
     da_int *labels, float *work, da_int ldwork, da_int n_clusters) {
 
@@ -871,7 +513,7 @@ void lloyd_iteration_kernel<float, kmeans_kernel::avx>(
 }
 
 template <>
-void lloyd_iteration_kernel<double, kmeans_kernel::avx2>(
+void lloyd_iteration_kernel<double, vectorization_type::avx2>(
     bool update_centres, da_int block_size, double *centre_norms, da_int *cluster_count,
     da_int *labels, double *work, da_int ldwork, da_int n_clusters) {
 
@@ -919,7 +561,7 @@ void lloyd_iteration_kernel<double, kmeans_kernel::avx2>(
 }
 
 template <>
-void lloyd_iteration_kernel<float, kmeans_kernel::avx2>(
+void lloyd_iteration_kernel<float, vectorization_type::avx2>(
     bool update_centres, da_int block_size, float *centre_norms, da_int *cluster_count,
     da_int *labels, float *work, da_int ldwork, da_int n_clusters) {
 
@@ -1020,7 +662,7 @@ void lloyd_iteration_kernel<float, kmeans_kernel::avx2>(
 
 #ifdef __AVX512F__
 template <>
-void lloyd_iteration_kernel<float, kmeans_kernel::avx512>(
+void lloyd_iteration_kernel<float, vectorization_type::avx512>(
     bool update_centres, da_int block_size, float *centre_norms, da_int *cluster_count,
     da_int *labels, float *work, da_int ldwork, da_int n_clusters) {
 
@@ -1118,7 +760,7 @@ void lloyd_iteration_kernel<float, kmeans_kernel::avx512>(
 }
 
 template <>
-void lloyd_iteration_kernel<double, kmeans_kernel::avx512>(
+void lloyd_iteration_kernel<double, vectorization_type::avx512>(
     bool update_centres, da_int block_size, double *centre_norms, da_int *cluster_count,
     da_int *labels, double *work, da_int ldwork, da_int n_clusters) {
 

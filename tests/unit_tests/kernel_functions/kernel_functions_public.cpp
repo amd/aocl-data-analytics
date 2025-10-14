@@ -34,6 +34,9 @@
 #include <limits>
 #include <list>
 
+// taken from  "da_kernel_utils.hpp"
+enum vectorization_type { scalar = 0, avx = 2, avx2 = 5, avx512 = 11 };
+
 template <typename T> class KernelFunctionTest : public testing::Test {
   public:
     using List = std::list<T>;
@@ -902,76 +905,98 @@ TYPED_TEST(KernelFunctionTest, KernelFunctionFunctionality) {
     std::vector<KernelFunctionParamType<TypeParam>> params;
     GetKernelData(params);
     da_int count = 0;
-
+    std::unordered_map<std::string, vectorization_type> isa_list;
+    isa_list = {{"scalar", vectorization_type::scalar},
+                {"avx", vectorization_type::avx},
+                {"avx2", vectorization_type::avx2},
+                // will trickle down to AVX2 where is AVX512 not available
+                {"avx512", vectorization_type::avx512}};
     for (auto &param : params) {
-        count++;
+        for (auto &isa : isa_list) {
+            EXPECT_EQ(da_debug_set("kf.isa", (isa.first).c_str()), da_status_success);
+            std::cout << "Functionality test " << std::to_string(count) << ": "
+                      << param.test_name << std::endl;
+            std::cout << "Vectorisation: " << isa.first << std::endl;
 
-        std::cout << "Functionality test " << std::to_string(count) << ": "
-                  << param.test_name << std::endl;
-
-        std::vector<TypeParam> kernel_with_y(param.kernel_size);
-        std::vector<TypeParam> kernel_with_itself(param.kernel_itself_size);
-        TypeParam *dummy = nullptr;
-        // RBF (first between X and Y, then between X and itself)
-        EXPECT_EQ(da_rbf_kernel(param.order, param.m, param.n, param.p, param.x.data(),
-                                param.ldx, param.y.data(), param.ldy,
-                                kernel_with_y.data(), param.ldd, param.gamma),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_size, param.rbf_kernel_expected.data(),
-                        kernel_with_y.data(), param.epsilon);
-        EXPECT_EQ(da_rbf_kernel(param.order, param.m, param.n, param.p, param.x.data(),
-                                param.ldx, dummy, param.ldy, kernel_with_itself.data(),
-                                param.ldd_itself, param.gamma),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_itself_size,
-                        param.rbf_kernel_with_itself_expected.data(),
-                        kernel_with_itself.data(), param.epsilon);
-        // Linear (first between X and Y, then between X and itself)
-        EXPECT_EQ(da_linear_kernel(param.order, param.m, param.n, param.p, param.x.data(),
-                                   param.ldx, param.y.data(), param.ldy,
-                                   kernel_with_y.data(), param.ldd),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_size, param.linear_kernel_expected.data(),
-                        kernel_with_y.data(), param.epsilon);
-        EXPECT_EQ(da_linear_kernel(param.order, param.m, param.n, param.p, param.x.data(),
-                                   param.ldx, dummy, param.ldy, kernel_with_itself.data(),
-                                   param.ldd_itself),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_itself_size,
-                        param.linear_kernel_with_itself_expected.data(),
-                        kernel_with_itself.data(), param.epsilon);
-        // Polynomial (first between X and Y, then between X and itself)
-        EXPECT_EQ(da_polynomial_kernel(param.order, param.m, param.n, param.p,
-                                       param.x.data(), param.ldx, param.y.data(),
-                                       param.ldy, kernel_with_y.data(), param.ldd,
-                                       param.gamma, param.degree, param.coef0),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_size, param.polynomial_kernel_expected.data(),
-                        kernel_with_y.data(), param.epsilon_polynomial);
-        EXPECT_EQ(da_polynomial_kernel(param.order, param.m, param.n, param.p,
-                                       param.x.data(), param.ldx, dummy, param.ldy,
-                                       kernel_with_itself.data(), param.ldd_itself,
-                                       param.gamma, param.degree, param.coef0),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_itself_size,
-                        param.polynomial_kernel_with_itself_expected.data(),
-                        kernel_with_itself.data(), param.epsilon_polynomial);
-        // Sigmoid (first between X and Y, then between X and itself)
-        EXPECT_EQ(da_sigmoid_kernel(param.order, param.m, param.n, param.p,
+            std::vector<TypeParam> kernel_with_y(param.kernel_size);
+            std::vector<TypeParam> kernel_with_itself(param.kernel_itself_size);
+            TypeParam *dummy = nullptr;
+            // RBF (first between X and Y, then between X and itself)
+            EXPECT_EQ(da_rbf_kernel(param.order, param.m, param.n, param.p,
                                     param.x.data(), param.ldx, param.y.data(), param.ldy,
-                                    kernel_with_y.data(), param.ldd, param.gamma,
-                                    param.coef0),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_size, param.sigmoid_kernel_expected.data(),
-                        kernel_with_y.data(), param.epsilon);
-        EXPECT_EQ(da_sigmoid_kernel(param.order, param.m, param.n, param.p,
+                                    kernel_with_y.data(), param.ldd, param.gamma),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_size, param.rbf_kernel_expected.data(),
+                            kernel_with_y.data(), param.epsilon);
+            EXPECT_EQ(da_rbf_kernel(param.order, param.m, param.n, param.p,
                                     param.x.data(), param.ldx, dummy, param.ldy,
                                     kernel_with_itself.data(), param.ldd_itself,
-                                    param.gamma, param.coef0),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.kernel_itself_size,
-                        param.sigmoid_kernel_with_itself_expected.data(),
-                        kernel_with_itself.data(), param.epsilon);
+                                    param.gamma),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_itself_size,
+                            param.rbf_kernel_with_itself_expected.data(),
+                            kernel_with_itself.data(), param.epsilon);
+            // Linear (first between X and Y, then between X and itself)
+            EXPECT_EQ(da_linear_kernel(param.order, param.m, param.n, param.p,
+                                       param.x.data(), param.ldx, param.y.data(),
+                                       param.ldy, kernel_with_y.data(), param.ldd),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_size, param.linear_kernel_expected.data(),
+                            kernel_with_y.data(), param.epsilon);
+            EXPECT_EQ(da_linear_kernel(param.order, param.m, param.n, param.p,
+                                       param.x.data(), param.ldx, dummy, param.ldy,
+                                       kernel_with_itself.data(), param.ldd_itself),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_itself_size,
+                            param.linear_kernel_with_itself_expected.data(),
+                            kernel_with_itself.data(), param.epsilon);
+            // Polynomial (first between X and Y, then between X and itself)
+            EXPECT_EQ(da_polynomial_kernel(param.order, param.m, param.n, param.p,
+                                           param.x.data(), param.ldx, param.y.data(),
+                                           param.ldy, kernel_with_y.data(), param.ldd,
+                                           param.gamma, param.degree, param.coef0),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_size, param.polynomial_kernel_expected.data(),
+                            kernel_with_y.data(), param.epsilon_polynomial);
+            EXPECT_EQ(da_polynomial_kernel(param.order, param.m, param.n, param.p,
+                                           param.x.data(), param.ldx, dummy, param.ldy,
+                                           kernel_with_itself.data(), param.ldd_itself,
+                                           param.gamma, param.degree, param.coef0),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_itself_size,
+                            param.polynomial_kernel_with_itself_expected.data(),
+                            kernel_with_itself.data(), param.epsilon_polynomial);
+            // Sigmoid (first between X and Y, then between X and itself)
+            EXPECT_EQ(da_sigmoid_kernel(param.order, param.m, param.n, param.p,
+                                        param.x.data(), param.ldx, param.y.data(),
+                                        param.ldy, kernel_with_y.data(), param.ldd,
+                                        param.gamma, param.coef0),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_size, param.sigmoid_kernel_expected.data(),
+                            kernel_with_y.data(), param.epsilon);
+            EXPECT_EQ(da_sigmoid_kernel(param.order, param.m, param.n, param.p,
+                                        param.x.data(), param.ldx, dummy, param.ldy,
+                                        kernel_with_itself.data(), param.ldd_itself,
+                                        param.gamma, param.coef0),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.kernel_itself_size,
+                            param.sigmoid_kernel_with_itself_expected.data(),
+                            kernel_with_itself.data(), param.epsilon);
+            // Check that the kernel isa path is correct
+            char answer[100];
+            EXPECT_EQ(da_debug_get("kf.setup", 100, answer), da_status_success);
+            auto expect =
+                ::testing::HasSubstr(("kernel.type=" + std::to_string(isa.second)));
+            if (isa.second == vectorization_type::avx512) {
+                // take care of the AVX2/AVX512 fallback
+                auto fallback = ::testing::HasSubstr(
+                    ("kernel.type=" + std::to_string(vectorization_type::avx2)));
+                EXPECT_THAT(std::string(answer), ::testing::AnyOf(expect, fallback));
+            } else {
+                EXPECT_THAT(std::string(answer), expect);
+            }
+        }
+        count++;
     }
 }
 

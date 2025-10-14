@@ -23,6 +23,7 @@
 
 #include "aoclda_types.h"
 #include "context.hpp"
+#include "da_kernel_utils.hpp"
 #include "kmeans_types.hpp"
 #include <array>
 #include <type_traits>
@@ -41,7 +42,7 @@ using namespace da_kmeans_types;
 // Define a struct to hold threshold and corresponding kernel type
 struct KernelSelection {
     da_int threshold;
-    kmeans_kernel kernel;
+    vectorization_type kernel;
 };
 
 // Default lookup tables
@@ -126,8 +127,8 @@ constexpr std::array<KernelSelection, 3> elkan_update_double = {{
 
 //Select kernel type based on a lookup table and a parameter
 template <std::size_t N>
-kmeans_kernel lookup_kernel(const std::array<KernelSelection, N> &selections,
-                            da_int param) {
+vectorization_type lookup_kernel_kmeans(const std::array<KernelSelection, N> &selections,
+                                        da_int param) {
     using namespace std::string_literals;
     // Check to see if there is an override
     const char isa[]{"kmeans.isa"};
@@ -135,13 +136,14 @@ kmeans_kernel lookup_kernel(const std::array<KernelSelection, N> &selections,
         context::get_context()->hidden_settings.end()) {
         std::string kernel = context::get_context()->hidden_settings[isa];
         if (kernel == "avx"s) {
-            return kmeans_kernel::avx;
+            return vectorization_type::avx;
         } else if (kernel == "avx2"s) {
-            return kmeans_kernel::avx2;
+            return vectorization_type::avx2;
         } else if (kernel == "avx512"s) {
-            return kmeans_kernel::avx512;
+            return (context::get_context()->has_avx512) ? vectorization_type::avx512
+                                                        : vectorization_type::avx2;
         }
-        return kmeans_kernel::scalar;
+        return vectorization_type::scalar;
     }
 
     // Get best kernel
@@ -155,18 +157,18 @@ kmeans_kernel lookup_kernel(const std::array<KernelSelection, N> &selections,
 }
 
 //Select the amount of padding based on the kernel type and data type
-template <class T> da_int get_padding(kmeans_kernel kernel_type) {
+template <class T> da_int get_padding(vectorization_type kernel_type) {
 
     da_int value;
 
     switch (kernel_type) {
-    case kmeans_kernel::avx:
+    case vectorization_type::avx:
         value = std::is_same<T, float>::value ? 4 : 2;
         break;
-    case kmeans_kernel::avx2:
+    case vectorization_type::avx2:
         value = std::is_same<T, float>::value ? 8 : 4;
         break;
-    case kmeans_kernel::avx512:
+    case vectorization_type::avx512:
         value = std::is_same<T, float>::value ? 16 : 8;
         break;
     default:
@@ -179,12 +181,12 @@ template <class T> da_int get_padding(kmeans_kernel kernel_type) {
 
 template <class T>
 void select_simd_size_default_lloyd(da_int n_clusters, da_int &padding,
-                                    kmeans_kernel &kernel_type) {
+                                    vectorization_type &kernel_type) {
     // Choose kernel type and padding for Lloyd algorithm (default case)
 
     kernel_type = std::is_same<T, float>::value
-                      ? lookup_kernel(da_kmeans::lloyd_float, n_clusters)
-                      : lookup_kernel(da_kmeans::lloyd_double, n_clusters);
+                      ? lookup_kernel_kmeans(da_kmeans::lloyd_float, n_clusters)
+                      : lookup_kernel_kmeans(da_kmeans::lloyd_double, n_clusters);
 
     padding = get_padding<T>(kernel_type);
 }
@@ -192,16 +194,20 @@ void select_simd_size_default_lloyd(da_int n_clusters, da_int &padding,
 template <class T>
 void select_simd_size_default_elkan([[maybe_unused]] da_int n_clusters,
                                     [[maybe_unused]] da_int n_features, da_int &padding,
-                                    kmeans_kernel &update_kernel_type,
-                                    kmeans_kernel &reduce_kernel_type) {
+                                    vectorization_type &update_kernel_type,
+                                    vectorization_type &reduce_kernel_type) {
     // Choose kernel type and padding for Elkan algorithm (default case)
 
     if (std::is_same<T, float>::value) {
-        update_kernel_type = lookup_kernel(da_kmeans::elkan_update_float, n_clusters);
-        reduce_kernel_type = lookup_kernel(da_kmeans::elkan_reduce_float, n_features);
+        update_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_update_float, n_clusters);
+        reduce_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_reduce_float, n_features);
     } else {
-        update_kernel_type = lookup_kernel(da_kmeans::elkan_update_double, n_clusters);
-        reduce_kernel_type = lookup_kernel(da_kmeans::elkan_reduce_double, n_features);
+        update_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_update_double, n_clusters);
+        reduce_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_reduce_double, n_features);
     }
 
     padding = get_padding<T>(update_kernel_type);
@@ -213,15 +219,15 @@ namespace da_dynamic_dispatch_generic {
 namespace da_kmeans {
 template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
-                            kmeans_kernel &kernel_type) {
+                            vectorization_type &kernel_type) {
 
     select_simd_size_default_lloyd<T>(n_clusters, padding, kernel_type);
 }
 
 template <class T>
 void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
-                            kmeans_kernel &update_kernel_type,
-                            kmeans_kernel &reduce_kernel_type) {
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &reduce_kernel_type) {
 
     select_simd_size_default_elkan<T>(n_clusters, n_features, padding, update_kernel_type,
                                       reduce_kernel_type);
@@ -229,17 +235,17 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
 
 // Explicit instantiations
 template void select_simd_size_lloyd<float>(da_int n_clusters, da_int &padding,
-                                            kmeans_kernel &kernel_type);
+                                            vectorization_type &kernel_type);
 template void select_simd_size_lloyd<double>(da_int n_clusters, da_int &padding,
-                                             kmeans_kernel &kernel_type);
+                                             vectorization_type &kernel_type);
 template void select_simd_size_elkan<float>(da_int n_clusters, da_int n_features,
                                             da_int &padding,
-                                            kmeans_kernel &update_kernel_type,
-                                            kmeans_kernel &reduce_kernel_type);
+                                            vectorization_type &update_kernel_type,
+                                            vectorization_type &reduce_kernel_type);
 template void select_simd_size_elkan<double>(da_int n_clusters, da_int n_features,
                                              da_int &padding,
-                                             kmeans_kernel &update_kernel_type,
-                                             kmeans_kernel &reduce_kernel_type);
+                                             vectorization_type &update_kernel_type,
+                                             vectorization_type &reduce_kernel_type);
 
 } // namespace da_kmeans
 } // namespace da_dynamic_dispatch_generic
@@ -248,15 +254,15 @@ namespace da_dynamic_dispatch_zen2 {
 namespace da_kmeans {
 template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
-                            kmeans_kernel &kernel_type) {
+                            vectorization_type &kernel_type) {
 
     select_simd_size_default_lloyd<T>(n_clusters, padding, kernel_type);
 }
 
 template <class T>
 void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
-                            kmeans_kernel &update_kernel_type,
-                            kmeans_kernel &reduce_kernel_type) {
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &reduce_kernel_type) {
 
     select_simd_size_default_elkan<T>(n_clusters, n_features, padding, update_kernel_type,
                                       reduce_kernel_type);
@@ -264,17 +270,17 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
 
 // Explicit instantiations
 template void select_simd_size_lloyd<float>(da_int n_clusters, da_int &padding,
-                                            kmeans_kernel &kernel_type);
+                                            vectorization_type &kernel_type);
 template void select_simd_size_lloyd<double>(da_int n_clusters, da_int &padding,
-                                             kmeans_kernel &kernel_type);
+                                             vectorization_type &kernel_type);
 template void select_simd_size_elkan<float>(da_int n_clusters, da_int n_features,
                                             da_int &padding,
-                                            kmeans_kernel &update_kernel_type,
-                                            kmeans_kernel &reduce_kernel_type);
+                                            vectorization_type &update_kernel_type,
+                                            vectorization_type &reduce_kernel_type);
 template void select_simd_size_elkan<double>(da_int n_clusters, da_int n_features,
                                              da_int &padding,
-                                             kmeans_kernel &update_kernel_type,
-                                             kmeans_kernel &reduce_kernel_type);
+                                             vectorization_type &update_kernel_type,
+                                             vectorization_type &reduce_kernel_type);
 } // namespace da_kmeans
 } // namespace da_dynamic_dispatch_zen2
 
@@ -282,15 +288,15 @@ namespace da_dynamic_dispatch_zen3 {
 namespace da_kmeans {
 template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
-                            kmeans_kernel &kernel_type) {
+                            vectorization_type &kernel_type) {
 
     select_simd_size_default_lloyd<T>(n_clusters, padding, kernel_type);
 }
 
 template <class T>
 void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
-                            kmeans_kernel &update_kernel_type,
-                            kmeans_kernel &reduce_kernel_type) {
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &reduce_kernel_type) {
 
     select_simd_size_default_elkan<T>(n_clusters, n_features, padding, update_kernel_type,
                                       reduce_kernel_type);
@@ -298,17 +304,17 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
 
 // Explicit instantiations
 template void select_simd_size_lloyd<float>(da_int n_clusters, da_int &padding,
-                                            kmeans_kernel &kernel_type);
+                                            vectorization_type &kernel_type);
 template void select_simd_size_lloyd<double>(da_int n_clusters, da_int &padding,
-                                             kmeans_kernel &kernel_type);
+                                             vectorization_type &kernel_type);
 template void select_simd_size_elkan<float>(da_int n_clusters, da_int n_features,
                                             da_int &padding,
-                                            kmeans_kernel &update_kernel_type,
-                                            kmeans_kernel &reduce_kernel_type);
+                                            vectorization_type &update_kernel_type,
+                                            vectorization_type &reduce_kernel_type);
 template void select_simd_size_elkan<double>(da_int n_clusters, da_int n_features,
                                              da_int &padding,
-                                             kmeans_kernel &update_kernel_type,
-                                             kmeans_kernel &reduce_kernel_type);
+                                             vectorization_type &update_kernel_type,
+                                             vectorization_type &reduce_kernel_type);
 } // namespace da_kmeans
 } // namespace da_dynamic_dispatch_zen3
 
@@ -316,15 +322,15 @@ namespace da_dynamic_dispatch_zen4 {
 namespace da_kmeans {
 template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
-                            kmeans_kernel &kernel_type) {
+                            vectorization_type &kernel_type) {
 
     select_simd_size_default_lloyd<T>(n_clusters, padding, kernel_type);
 }
 
 template <class T>
 void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
-                            kmeans_kernel &update_kernel_type,
-                            kmeans_kernel &reduce_kernel_type) {
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &reduce_kernel_type) {
 
     select_simd_size_default_elkan<T>(n_clusters, n_features, padding, update_kernel_type,
                                       reduce_kernel_type);
@@ -332,17 +338,17 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
 
 // Explicit instantiations
 template void select_simd_size_lloyd<float>(da_int n_clusters, da_int &padding,
-                                            kmeans_kernel &kernel_type);
+                                            vectorization_type &kernel_type);
 template void select_simd_size_lloyd<double>(da_int n_clusters, da_int &padding,
-                                             kmeans_kernel &kernel_type);
+                                             vectorization_type &kernel_type);
 template void select_simd_size_elkan<float>(da_int n_clusters, da_int n_features,
                                             da_int &padding,
-                                            kmeans_kernel &update_kernel_type,
-                                            kmeans_kernel &reduce_kernel_type);
+                                            vectorization_type &update_kernel_type,
+                                            vectorization_type &reduce_kernel_type);
 template void select_simd_size_elkan<double>(da_int n_clusters, da_int n_features,
                                              da_int &padding,
-                                             kmeans_kernel &update_kernel_type,
-                                             kmeans_kernel &reduce_kernel_type);
+                                             vectorization_type &update_kernel_type,
+                                             vectorization_type &reduce_kernel_type);
 } // namespace da_kmeans
 } // namespace da_dynamic_dispatch_zen4
 
@@ -350,31 +356,32 @@ namespace da_dynamic_dispatch_zen5 {
 namespace da_kmeans {
 template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
-                            kmeans_kernel &kernel_type) {
+                            vectorization_type &kernel_type) {
 
     kernel_type =
         std::is_same<T, float>::value
-            ? lookup_kernel(da_dynamic_dispatch_zen5::da_kmeans::lloyd_float, n_clusters)
-            : lookup_kernel(da_dynamic_dispatch_zen5::da_kmeans::lloyd_double,
-                            n_clusters);
+            ? lookup_kernel_kmeans(da_dynamic_dispatch_zen5::da_kmeans::lloyd_float,
+                                   n_clusters)
+            : lookup_kernel_kmeans(da_dynamic_dispatch_zen5::da_kmeans::lloyd_double,
+                                   n_clusters);
 
     padding = get_padding<T>(kernel_type);
 }
 
 template <class T>
 void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
-                            kmeans_kernel &update_kernel_type,
-                            kmeans_kernel &reduce_kernel_type) {
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &reduce_kernel_type) {
 
     if (std::is_same<T, float>::value) {
-        update_kernel_type = lookup_kernel(
+        update_kernel_type = lookup_kernel_kmeans(
             da_dynamic_dispatch_zen5::da_kmeans::elkan_update_float, n_clusters);
-        reduce_kernel_type = lookup_kernel(
+        reduce_kernel_type = lookup_kernel_kmeans(
             da_dynamic_dispatch_zen5::da_kmeans::elkan_reduce_float, n_features);
     } else {
-        update_kernel_type = lookup_kernel(
+        update_kernel_type = lookup_kernel_kmeans(
             da_dynamic_dispatch_zen5::da_kmeans::elkan_update_double, n_clusters);
-        reduce_kernel_type = lookup_kernel(
+        reduce_kernel_type = lookup_kernel_kmeans(
             da_dynamic_dispatch_zen5::da_kmeans::elkan_reduce_double, n_features);
     }
 
@@ -383,16 +390,16 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
 
 // Explicit instantiations
 template void select_simd_size_lloyd<float>(da_int n_clusters, da_int &padding,
-                                            kmeans_kernel &kernel_type);
+                                            vectorization_type &kernel_type);
 template void select_simd_size_lloyd<double>(da_int n_clusters, da_int &padding,
-                                             kmeans_kernel &kernel_type);
+                                             vectorization_type &kernel_type);
 template void select_simd_size_elkan<float>(da_int n_clusters, da_int n_features,
                                             da_int &padding,
-                                            kmeans_kernel &update_kernel_type,
-                                            kmeans_kernel &reduce_kernel_type);
+                                            vectorization_type &update_kernel_type,
+                                            vectorization_type &reduce_kernel_type);
 template void select_simd_size_elkan<double>(da_int n_clusters, da_int n_features,
                                              da_int &padding,
-                                             kmeans_kernel &update_kernel_type,
-                                             kmeans_kernel &reduce_kernel_type);
+                                             vectorization_type &update_kernel_type,
+                                             vectorization_type &reduce_kernel_type);
 } // namespace da_kmeans
 } // namespace da_dynamic_dispatch_zen5

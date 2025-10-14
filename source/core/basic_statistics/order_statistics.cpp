@@ -25,11 +25,6 @@
  *
  */
 
-// Deal with some Windows compilation issues regarding max/min macros
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include "basic_statistics.hpp"
 #include "macros.h"

@@ -47,6 +47,8 @@ There are two ways to load data in the library:
 Currently, the only supported format for loading data from hard memory is CSV (comma separated
 values).
 
+The AOCL-DA Data Management additionally provides a :ref:`train test split function <train_test_split_api>` which can be called from both the C and the Python APIs.
+
 
 .. _data_array_intro:
 
@@ -163,6 +165,7 @@ Various options can be set to customize the behavior of the data loading functio
    "storage order", "string", ":math:`s=` `column-major`", "Whether to return data in row- or column-major format.", ":math:`s=` `column-major`, or `row-major`."
    "skip empty lines", "integer", ":math:`i=0`", "Whether or not to ignore empty lines in CSV files (note that caution should be used when using this in conjunction with options such as CSV skip rows since line numbers may no longer correspond to the original line numbers in the CSV file).", ":math:`0 \le i \le 1`"
    "double quote", "integer", ":math:`i=0`", "Whether or not to interpret two consecutive quotechar characters within a field as a single quotechar character.", ":math:`0 \le i \le 1`"
+
 
 Note that, with the exception of the `skip rows` and `storage order` options, only single characters can be used in the string options above.
 
@@ -435,3 +438,76 @@ The following functions are provided for your convenience.
    :outline:
 .. doxygenfunction:: da_switch_order_in_place_d
    :project: da
+
+.. doxygenfunction:: da_get_shuffled_indices_int
+   :project: da
+   :outline:
+.. doxygenfunction:: da_get_shuffled_indices_s
+   :project: da
+   :outline:
+.. doxygenfunction:: da_get_shuffled_indices_d
+   :project: da
+
+.. _train_test_split_api:
+
+Train Test Split
+=================
+
+Split a dataset into training and test sets, which can optionally be shuffled and stratified.
+
+Stratify
+--------
+
+If stratification is enabled, ``train_test_split`` will try to ensure that the relative proportions of classes in the training and test sets is the same as in the original dataset. This is particularly useful for classification tasks where you want to ensure that both sets have a representative distribution of classes.
+
+Examples
+--------
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      The code below is supplied with your installation (see :ref:`Python examples <python_examples>`).
+
+      .. collapse:: train_test_split Example
+
+          .. literalinclude:: ../../python_interface/python_package/aoclda/examples/train_test_split.py
+              :language: Python
+              :linenos:
+
+   .. tab-item:: C
+      :sync: C
+
+      The code below can be found in ``train_test_split.cpp`` in the ``examples`` folder of your installation.
+
+      .. collapse:: train_test_split Example
+
+          .. literalinclude:: ../../tests/examples/train_test_split.cpp
+              :language: C++
+              :linenos:
+
+Train Test Split APIs
+---------------------
+
+.. tab-set::
+
+   .. tab-item:: Python
+      :sync: Python
+
+      .. py:function:: aoclda.utils.train_test_split(*arrays, test_size=None, train_size=None, seed=None, shuffle=True, stratify=None)
+
+   .. tab-item:: C
+      :sync: C
+
+      .. doxygenfunction:: da_train_test_split_int
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_train_test_split_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_train_test_split_d
+         :project: da
+
+
+

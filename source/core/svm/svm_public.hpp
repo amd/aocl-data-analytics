@@ -99,4 +99,28 @@ da_status svm_score(da_handle handle, da_int n_samples, da_int n_features,
 
     return svm->score(n_samples, n_features, X_test, ldx_test, y_test, score);
 }
+template <typename svm_class, typename T>
+da_status svm_predict_proba(da_handle handle, da_int n_samples, da_int n_features,
+                            const T *X_test, da_int ldx_test, T *y_proba, da_int ldy) {
+    svm_class *svm = dynamic_cast<svm_class *>(handle->get_alg_handle<T>());
+    if (svm == nullptr)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_svm or "
+                        "handle is invalid.");
+
+    return svm->predict_proba(n_samples, n_features, X_test, ldx_test, y_proba, ldy);
+}
+template <typename svm_class, typename T>
+da_status svm_predict_log_proba(da_handle handle, da_int n_samples, da_int n_features,
+                                const T *X_test, da_int ldx_test, T *y_log_proba,
+                                da_int ldy) {
+    svm_class *svm = dynamic_cast<svm_class *>(handle->get_alg_handle<T>());
+    if (svm == nullptr)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_svm or "
+                        "handle is invalid.");
+
+    return svm->predict_log_proba(n_samples, n_features, X_test, ldx_test, y_log_proba,
+                                  ldy);
+}
 } // namespace svm_public

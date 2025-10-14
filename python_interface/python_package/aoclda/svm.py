@@ -23,7 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable = import-error, anomalous-backslash-in-string, invalid-name, too-many-arguments
+# pylint: disable = import-error, anomalous-backslash-in-string,
+# invalid-name, too-many-arguments
 """
 aoclda.svm module
 """
@@ -33,6 +34,13 @@ from ._internal_utils import check_convert_data
 
 
 class BaseSVM:
+    """
+    Base class for Support Vector Machine models.
+
+    This class provides common functionality for all SVM variants including
+    data handling, prediction, and property access.
+    """
+
     def __init__(
         self,
         kernel="rbf",
@@ -43,10 +51,13 @@ class BaseSVM:
         cache_size=200.0,
         max_iter=0,
         tau=None,
+        max_ws_size=-1,
         check_data=False,
     ):
         if max_iter == -1:
             max_iter = 0
+        self.order = 'A'
+        self.dtype = 'float'
         self.kernel = kernel
         self.degree = degree
         self.gamma = gamma
@@ -55,27 +66,37 @@ class BaseSVM:
         self.cache_size = cache_size
         self.max_iter = max_iter
         self.tau = tau
+        self.max_ws_size = max_ws_size
         self.check_data = check_data
-        self.precision = "double"  # default precision
         # Objects to bind with C++ backend (assigned by subclasses)
         self._model_double = None
         self._model_single = None
         self._model = None
 
     def fit(self, X, y, **kwargs):
-        X = check_convert_data(X)
-        y = check_convert_data(y)
+        """
+        Fit the SVM model.
+
+        Args:
+            X (array-like): Training data.
+            y (array-like): Target values.
+
+        Returns:
+            self: Fitted estimator.
+        """
+        X, self.order, self.dtype = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        y, self.order, _ = check_convert_data(
+            y, order=self.order, dtype=self.dtype, force_dtype=True)
 
         if kwargs.get("tau") is None:
             del kwargs["tau"]
-        if X.dtype == np.float32:
+        if self.dtype == 'float32':
             self._model = self._model_single
-            self.precision = "single"
             for key in kwargs:
                 kwargs[key] = np.float32(kwargs[key])
         else:
             self._model = self._model_double
-            self.precision = "double"
             for key in kwargs:
                 kwargs[key] = np.float64(kwargs[key])
 
@@ -84,13 +105,39 @@ class BaseSVM:
         return self
 
     def predict(self, X):
-        X = check_convert_data(X)
+        """
+        Predict using the SVM model.
+
+        Args:
+            X (array-like): Input data used to perform the regression/classification.
+
+        Returns:
+            numpy.ndarray: Predicted values.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
         preds = self._model.pybind_predict(X)
         return preds
 
     def score(self, X, y):
-        X = check_convert_data(X)
-        y = check_convert_data(y)
+        """
+        Compute a model performance score.
+
+        The score metric depends on the specific SVM variant:
+        - For classification models (SVC, NuSVC): returns mean accuracy
+        - For regression models (SVR, NuSVR): returns coefficient of determination (R²)
+
+        Args:
+            X (array-like): Test samples of shape (n_samples, n_features).
+            y (array-like): True target values of shape (n_samples,).
+
+        Returns:
+            float: Performance score. Higher values indicate better model performance.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        y, _, _ = check_convert_data(
+            y, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_score(X, y)
 
     @property
@@ -131,7 +178,8 @@ class BaseSVM:
     @property
     def dual_coef(self):
         """
-        numpy.ndarray of shape (n_classes-1, n_support): The dual coefficients of the support vectors.
+        numpy.ndarray of shape (n_classes-1, n_support): The dual coefficients of the support
+        vectors.
         """
         return self._model.get_dual_coef()
 
@@ -163,6 +211,8 @@ class SVC(BaseSVM):
 
     Train a C-Support Vector Classification model.
 
+    Note: probability estimation is expensive as it internally uses 5-fold cross validation.
+
     Args:
         C (float, optional): Regularization parameter. Controls the trade-off between maximizing \
             the margin between classes and minimizing classification errors. A larger \
@@ -173,17 +223,17 @@ class SVC(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
-            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
-            in 'poly' and 'sigmoid' kernel functions. Default=0.0.
-        probability (bool, optional): Currently not supported. Whether to enable \
-            probability estimates. Default=False.
+            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
+            functions <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only \
+            used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
+        probability (bool, optional): Whether to enable probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
         cache_size (float, optional): Size of the kernel cache (in MB). Default=200.0.
         max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
             Default=0.
-
+        random_state (int, optional): Random seed used for probability estimates \
+            Use -1 for non deterministic behavior. Default=0.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
@@ -200,7 +250,9 @@ class SVC(BaseSVM):
         tol=0.001,
         cache_size=200.0,
         max_iter=0,
+        random_state=0,
         tau=None,
+        max_ws_size=-1,
         check_data=False,
     ):
         super().__init__(
@@ -212,13 +264,19 @@ class SVC(BaseSVM):
             cache_size=cache_size,
             max_iter=max_iter,
             tau=tau,
+            max_ws_size=max_ws_size,
             check_data=check_data,
         )
+        self.probability = probability
+        self.random_state = random_state
         # Create backend objects with chosen precision
         self._model_double = pybind_svc(
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            probability=self.probability,
+            seed=self.random_state,
+            max_ws_size=self.max_ws_size,
             precision="double",
             check_data=self.check_data,
         )
@@ -226,13 +284,13 @@ class SVC(BaseSVM):
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            probability=self.probability,
+            seed=self.random_state,
+            max_ws_size=self.max_ws_size,
             precision="single",
             check_data=self.check_data,
         )
         self._model = self._model_double
-        # Not supported yet
-        self.probability = probability
-        # Supported
         self.C = C
 
     def fit(self, X, y):
@@ -241,13 +299,19 @@ class SVC(BaseSVM):
 
         Args:
             X (array-like): Training vectors of shape (n_samples, n_features).
-            y (array-like): Target values of shape (n_samples,). They are expected to range from 0 to \p n_class - 1.
+            y (array-like): Target values of shape (n_samples,). They are expected to range from 0
+              to n_class - 1.
 
         Returns:
             self (object): Returns the instance itself.
         """
-        parameters = {"C": self.C, "gamma": self.gamma,
-                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau, "cache_size": self.cache_size}
+        parameters = {
+            "C": self.C,
+            "gamma": self.gamma,
+            "coef0": self.coef0,
+            "tol": self.tol,
+            "tau": self.tau,
+            "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
         return self
 
@@ -261,12 +325,7 @@ class SVC(BaseSVM):
         Returns:
             numpy.ndarray: Predicted class labels for samples in X.
         """
-        preds = super().predict(X)
-        if self.precision == "double":
-            preds = preds.astype(np.int64)
-        else:
-            preds = preds.astype(np.int32)
-        return preds
+        return super().predict(X)
 
     def decision_function(self, X, shape="ovr"):
         """
@@ -285,7 +344,8 @@ class SVC(BaseSVM):
         Returns:
             numpy.ndarray: Decision function values for each sample.
         """
-        X = check_convert_data(X)
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_decision_function(X, shape)
 
     def score(self, X, y):
@@ -301,12 +361,54 @@ class SVC(BaseSVM):
         """
         return super().score(X, y)
 
+    def predict_proba(self, X):
+        """`
+        Predict class probabilities for samples in X.
+
+        Args:
+            X (array-like): Input data of shape (n_samples, n_features).
+
+        Returns:
+            numpy.ndarray: Array of shape (n_samples, n_classes) with class probability estimates.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        return self._model.pybind_predict_proba(X)
+
+    def predict_log_proba(self, X):
+        """`
+        Predict class log probabilities for samples in X.
+
+        Args:
+            X (array-like): Input data of shape (n_samples, n_features).
+
+        Returns:
+            numpy.ndarray: Array of shape (n_samples, n_classes) with class log probability estimates.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        return self._model.pybind_predict_log_proba(X)
+
     @property
     def n_classes(self):
         """
         int: The number of classes in the classification problem.
         """
         return self._model.get_n_classes()
+
+    @property
+    def probA(self):
+        """
+        numpy.ndarray or float: The probability parameter A of the model, used in probability estimates.
+        """
+        return self._model.get_probA()
+
+    @property
+    def probB(self):
+        """
+        numpy.ndarray or float: The probability parameter B of the model, used in probability estimates.
+        """
+        return self._model.get_probB()
 
 
 class SVR(BaseSVM):
@@ -328,10 +430,10 @@ class SVR(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
-            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
-            in 'poly' and 'sigmoid' kernel functions. Default=0.0.
+            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
+            functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
+            It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
         probability (bool, optional): Currently not supported. Whether to enable \
             probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
@@ -354,6 +456,7 @@ class SVR(BaseSVM):
         tol=0.001,
         cache_size=200.0,
         max_iter=0,
+        max_ws_size=-1,
         tau=None,
         check_data=False,
     ):
@@ -365,6 +468,7 @@ class SVR(BaseSVM):
             tol=tol,
             cache_size=cache_size,
             max_iter=max_iter,
+            max_ws_size=max_ws_size,
             tau=tau,
             check_data=check_data,
         )
@@ -372,6 +476,7 @@ class SVR(BaseSVM):
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            max_ws_size=self.max_ws_size,
             precision="double",
             check_data=self.check_data,
         )
@@ -379,6 +484,7 @@ class SVR(BaseSVM):
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            max_ws_size=self.max_ws_size,
             precision="single",
             check_data=self.check_data,
         )
@@ -398,8 +504,14 @@ class SVR(BaseSVM):
         Returns:
             self (object): Returns the instance itself.
         """
-        parameters = {"C": self.C, "epsilon": self.epsilon, "gamma": self.gamma,
-                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau, "cache_size": self.cache_size}
+        parameters = {
+            "C": self.C,
+            "epsilon": self.epsilon,
+            "gamma": self.gamma,
+            "coef0": self.coef0,
+            "tol": self.tol,
+            "tau": self.tau,
+            "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
         return self
 
@@ -435,6 +547,8 @@ class NuSVC(BaseSVM):
 
     Train a Nu-Support Vector Classification model.
 
+    Note: probability estimation is expensive as it internally uses 5-fold cross validation.
+
     Args:
         nu (float, optional): An upper bound on the fraction of training errors and a lower \
             bound of the fraction of support vectors. Default=0.5.
@@ -443,16 +557,17 @@ class NuSVC(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
-            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
-            in 'poly' and 'sigmoid' kernel functions. Default=0.0.
-        probability (bool, optional): Currently not supported. Whether to enable \
-            probability estimates. Default=False.
+            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
+            functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
+            It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
+        probability (bool, optional): Whether to enable probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
         cache_size (float, optional): Size of the kernel cache (in MB). Default=200.0.
         max_iter (int, optional): Hard limit on iterations within solver, or 0 for no limit. \
             Default=0.
+        random_state (int, optional): Random seed used for probability estimates \
+            Use -1 for non deterministic behavior. Default=0.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
@@ -469,9 +584,13 @@ class NuSVC(BaseSVM):
         tol=0.001,
         cache_size=200.0,
         max_iter=0,
+        random_state=0,
+        max_ws_size=-1,
         tau=None,
         check_data=False,
     ):
+        self.probability = probability
+        self.random_state = random_state
         super().__init__(
             kernel=kernel,
             degree=degree,
@@ -480,6 +599,7 @@ class NuSVC(BaseSVM):
             tol=tol,
             cache_size=cache_size,
             max_iter=max_iter,
+            max_ws_size=max_ws_size,
             tau=tau,
             check_data=check_data,
         )
@@ -487,6 +607,9 @@ class NuSVC(BaseSVM):
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            probability=self.probability,
+            seed=self.random_state,
+            max_ws_size=self.max_ws_size,
             precision="double",
             check_data=self.check_data,
         )
@@ -494,13 +617,13 @@ class NuSVC(BaseSVM):
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            probability=self.probability,
+            seed=self.random_state,
+            max_ws_size=self.max_ws_size,
             precision="single",
             check_data=self.check_data,
         )
         self._model = self._model_double
-        # Not supported yet
-        self.probability = probability
-        # Supported
         self.nu = nu
 
     def fit(self, X, y):
@@ -509,13 +632,19 @@ class NuSVC(BaseSVM):
 
         Args:
             X (array-like): Training vectors of shape (n_samples, n_features).
-            y (array-like): Target values of shape (n_samples,). They are expected to range from 0 to \p n_class - 1.
+            y (array-like): Target values of shape (n_samples,). They are expected to range from 0
+            to n_class - 1.
 
         Returns:
             self (object): Returns the instance itself.
         """
-        parameters = {"nu": self.nu, "gamma": self.gamma,
-                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau, "cache_size": self.cache_size}
+        parameters = {
+            "nu": self.nu,
+            "gamma": self.gamma,
+            "coef0": self.coef0,
+            "tol": self.tol,
+            "tau": self.tau,
+            "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
         return self
 
@@ -529,12 +658,7 @@ class NuSVC(BaseSVM):
         Returns:
             numpy.ndarray: Predicted class labels for samples in X.
         """
-        preds = super().predict(X)
-        if self.precision == "double":
-            preds = preds.astype(np.int64)
-        else:
-            preds = preds.astype(np.int32)
-        return preds
+        return super().predict(X)
 
     def decision_function(self, X, shape="ovr"):
         """
@@ -553,7 +677,8 @@ class NuSVC(BaseSVM):
         Returns:
             numpy.ndarray: Decision function values for each sample.
         """
-        X = check_convert_data(X)
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_decision_function(X, shape)
 
     def score(self, X, y):
@@ -569,12 +694,54 @@ class NuSVC(BaseSVM):
         """
         return super().score(X, y)
 
+    def predict_proba(self, X):
+        """`
+        Predict class probabilities for samples in X.
+
+        Args:
+            X (array-like): Input data of shape (n_samples, n_features).
+
+        Returns:
+            numpy.ndarray: Array of shape (n_samples, n_classes) with class probability estimates.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        return self._model.pybind_predict_proba(X)
+
+    def predict_log_proba(self, X):
+        """`
+        Predict class log probabilities for samples in X.
+
+        Args:
+            X (array-like): Input data of shape (n_samples, n_features).
+
+        Returns:
+            numpy.ndarray: Array of shape (n_samples, n_classes) with class log probability estimates.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        return self._model.pybind_predict_log_proba(X)
+
     @property
     def n_classes(self):
         """
         int: The number of classes in the classification problem.
         """
         return self._model.get_n_classes()
+
+    @property
+    def probA(self):
+        """
+        numpy.ndarray or float: The probability parameter A of the model, used in probability estimates.
+        """
+        return self._model.get_probA()
+
+    @property
+    def probB(self):
+        """
+        numpy.ndarray or float: The probability parameter B of the model, used in probability estimates.
+        """
+        return self._model.get_probB()
 
 
 class NuSVR(BaseSVM):
@@ -595,10 +762,10 @@ class NuSVR(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\_features)`. Default=-1.0.
-        coef0 (float, optional): Independent term in kernel function (check :func:`kernel functions \
-            <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only used \
-            in 'poly' and 'sigmoid' kernel functions. Default=0.0.
+            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+        coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
+            functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
+            It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
         probability (bool, optional): Currently not supported. Whether to enable \
             probability estimates. Default=False.
         tol (float, optional): Tolerance for stopping criterion. Default=0.001.
@@ -621,6 +788,7 @@ class NuSVR(BaseSVM):
         tol=0.001,
         cache_size=200.0,
         max_iter=0,
+        max_ws_size=-1,
         tau=None,
         check_data=False,
     ):
@@ -632,6 +800,7 @@ class NuSVR(BaseSVM):
             tol=tol,
             cache_size=cache_size,
             max_iter=max_iter,
+            max_ws_size=max_ws_size,
             tau=tau,
             check_data=check_data,
         )
@@ -639,6 +808,7 @@ class NuSVR(BaseSVM):
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            max_ws_size=self.max_ws_size,
             precision="double",
             check_data=self.check_data,
         )
@@ -646,6 +816,7 @@ class NuSVR(BaseSVM):
             kernel=self.kernel,
             degree=self.degree,
             max_iter=self.max_iter,
+            max_ws_size=self.max_ws_size,
             precision="single",
             check_data=self.check_data,
         )
@@ -665,8 +836,14 @@ class NuSVR(BaseSVM):
         Returns:
             self (object): Returns the instance itself.
         """
-        parameters = {"C": self.C, "nu": self.nu, "gamma": self.gamma,
-                      "coef0": self.coef0, "tol": self.tol, "tau": self.tau, "cache_size": self.cache_size}
+        parameters = {
+            "C": self.C,
+            "nu": self.nu,
+            "gamma": self.gamma,
+            "coef0": self.coef0,
+            "tol": self.tol,
+            "tau": self.tau,
+            "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
         return self
 

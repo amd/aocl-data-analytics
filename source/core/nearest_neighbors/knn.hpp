@@ -27,8 +27,8 @@
 
 #include "aoclda.h"
 #include "basic_handle.hpp"
+#include "binary_tree.hpp"
 #include "da_error.hpp"
-#include "kdtree.hpp"
 #include "knn_options.hpp"
 #include "macros.h"
 
@@ -42,7 +42,8 @@ template <typename T> class knn : public basic_handle<T> {
     // Set true when initialization is complete by set_params() function
     bool is_up_to_date = false;
     // Set true if training data has been provided via set_training_data()
-    bool istrained = false;
+    bool istrained_classifier = false;
+    bool istrained_regressor = false;
     // Set true if the available classes have been computed via a call to available_classes()
     bool classes_computed = false;
 
@@ -63,15 +64,17 @@ template <typename T> class knn : public basic_handle<T> {
     // Minkowski parameter used for the minkowski distance conputation
     T p = 2.0;
     // Weight function used to compute the k-nearest neighbors
-    da_int weights = da_nn_types::nn_weights::uniform;
+    da_int weights = ::da_nn_types::nn_weights::uniform;
     // User's data
     da_int n_samples = 0, n_features = 0, ldx_train = 0;
     const T *X_train = nullptr /*n_samples-by-n_features*/;
-    const da_int *y_train = nullptr /*n_samples*/;
+    const da_int *y_train_class = nullptr /*n_samples*/;
+    const T *y_train_reg = nullptr /*n_samples*/;
     // Utility pointer to column major allocated copy of user's data
     T *X_train_temp = nullptr;
-    // Internal k-d tree object to be initialized only when that options is requested
-    std::unique_ptr<ARCH::da_kdtree::kdtree<T>> internal_kd_tree = nullptr;
+    // Internal tree objects to be initialized only when that options is requested
+    std::unique_ptr<ARCH::da_binary_tree::kd_tree<T>> internal_kd_tree = nullptr;
+    std::unique_ptr<ARCH::da_binary_tree::ball_tree<T>> internal_ball_tree = nullptr;
 
   public:
     std::vector<da_int> classes;
@@ -90,18 +93,27 @@ template <typename T> class knn : public basic_handle<T> {
     // Chose the appropriate algorithm for kNN if auto is selected
     void set_knn_algorithm();
     // Initialize the k-d tree
-    da_status init_kdtree();
+    da_status init_kd_tree();
+    // Initialize the ball tree
+    da_status init_ball_tree();
     // Check if the options have been updated between calls
     da_status check_options_update();
-    // Set the training data
-    da_status set_training_data(da_int n_samples, da_int n_features, const T *X_train,
-                                da_int ldx_train, const da_int *y_train);
+    // Set the training data for classification
+    da_status set_classifier_training_data(da_int n_samples, da_int n_features,
+                                           const T *X_train, da_int ldx_train,
+                                           const da_int *y_train_class);
+    // Set the training data for regression
+    da_status set_regressor_training_data(da_int n_samples, da_int n_features,
+                                          const T *X_train, da_int ldx_train,
+                                          const T *y_train_reg);
     // Compute the k-nearest neighbors and optionally the corresponding distances
     // Includes the appropriate checks for input arguments
     da_status kneighbors(da_int n_queries, da_int n_features, const T *X_test,
                          da_int ldx_test, da_int *n_ind, T *n_dist, da_int k = 0,
                          bool return_distance = 0);
     // Compute kernel for the k-nearest neighbors and optionally the corresponding distances
+    // so that all neighbours of each observation lies contiguously in memory, same for the distances.
+    // Assumes column-major order.
     da_status kneighbors_compute(da_int n_queries, da_int n_features, const T *X_test,
                                  da_int ldx_test, da_int *n_ind, T *n_dist,
                                  da_int n_neigh, bool return_distance);
@@ -111,16 +123,21 @@ template <typename T> class knn : public basic_handle<T> {
                                              da_int *n_ind, T *n_dist, da_int n_neigh,
                                              bool return_distance);
     // Compute kernel for k-d tree algorithm
-    da_status kneighbors_compute_kdtree(da_int n_queries, da_int n_features,
-                                        const T *X_test, da_int ldx_test, da_int *n_ind,
-                                        T *n_dist, da_int n_neigh, bool return_distance);
-    // Computational kernel that computes kneighbors using blocking on Xtest for overall algorithm.
-    // In addition, it uses blocking for Xtrain only for the distance computation.
-    template <da_int XTRAIN_BLOCK, da_int XTEST_BLOCK>
-    da_status kneighbors_brute_force_Xtest(da_int n_queries, da_int n_features,
+    da_status kneighbors_compute_kd_tree(da_int n_queries, da_int n_features,
+                                         const T *X_test, da_int ldx_test, da_int *n_ind,
+                                         T *n_dist, da_int n_neigh, bool return_distance);
+    // Compute kernel for ball tree algorithm
+    da_status kneighbors_compute_ball_tree(da_int n_queries, da_int n_features,
                                            const T *X_test, da_int ldx_test,
                                            da_int *n_ind, T *n_dist, da_int n_neigh,
                                            bool return_distance);
+    // Computational kernel that computes kneighbors using blocking on Xtest for overall algorithm.
+    // In addition, it uses blocking for Xtrain only for the distance computation.
+    template <da_int XTRAIN_BLOCK, da_int XTEST_BLOCK>
+    inline da_status kneighbors_brute_force_Xtest(da_int n_queries, da_int n_features,
+                                                  const T *X_test, da_int ldx_test,
+                                                  da_int *n_ind, T *n_dist,
+                                                  da_int n_neigh, bool return_distance);
     // Compute the k-nearest neighbors and optionally the corresponding distances
     template <da_int XTRAIN_BLOCK>
     da_status kneighbors_brute_force_Xtest_kernel(
@@ -130,9 +147,17 @@ template <typename T> class knn : public basic_handle<T> {
     // Compute probability estimates for provided test data
     da_status predict_proba(da_int n_queries, da_int n_features, const T *X_test,
                             da_int ldx_test, T *proba);
-    // Predict the labels for provided test data
+    // Compute probability estimates for the provided test data so that the probabilities
+    // for each observation lie contiguously in memory.
+    // Assumes column-major order.
+    da_status predict_proba_compute(da_int n_queries, da_int n_features, const T *X_test,
+                                    da_int ldx_test, T *proba);
+    // Predict the classification labels for provided test data
     da_status predict(da_int n_queries, da_int n_features, const T *X_test,
                       da_int ldx_test, da_int *y_test);
+    // Predict the regression targets for provided test data
+    da_status predict(da_int n_queries, da_int n_features, const T *X_test,
+                      da_int ldx_test, T *y_test);
     // Internal function used to compute the std::vector that holds the available classes
     da_status available_classes();
 

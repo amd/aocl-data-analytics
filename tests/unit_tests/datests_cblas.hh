@@ -24,8 +24,8 @@
  *  cblas.hh defines all the overloaded CPP functions to be invoked from
  *  template da_interfaces
  *  */
-#ifndef DA_CBLAS_HH
-#define DA_CBLAS_HH
+#ifndef DA_TEST_CBLAS_HH
+#define DA_TEST_CBLAS_HH
 
 #include "aoclda.h"
 #include <complex>
@@ -992,4 +992,4 @@ inline void imatcopy(char trans, da_int m, da_int n, double alpha, double *A,
 
 } // namespace datest_blas
 
-#endif //  #ifndef CBLAS_HH
+#endif //  #ifndef DA_TEST_CBLAS_HH

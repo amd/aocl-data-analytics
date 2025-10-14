@@ -23,7 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable = import-error, anomalous-backslash-in-string, invalid-name, too-many-arguments
+# pylint: disable = import-error, anomalous-backslash-in-string,
+# invalid-name, too-many-arguments
 
 """
 aoclda.linear_model module
@@ -45,7 +46,7 @@ class linmod():
 
         mod (str): Which linear model to compute.
 
-            - If ``linmod_model='mse'`` then :math:`\ell_2` norm linear regression is calculated.
+            - If ``linmod_model='mse'`` then :math:`\\ell_2` norm linear regression is calculated.
 
             - If ``linmod_model='logistic'`` then logistic regression is calculated.
 
@@ -97,10 +98,10 @@ class linmod():
             - ``'ssc'`` means the sum of coefficients class-wise for each feature \
                 is 0. It will result in K class coefficients for K class problems.
 
-        reg_lambda (float, optional): :math:`\lambda`, the magnitude of the regularization term.
+        reg_lambda (float, optional): :math:`\\lambda`, the magnitude of the regularization term.
             Default=0.0.
 
-        reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` term in the
+        reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\\ell_1` term in the
             regularization. Default=0.0.
 
         warm_start (bool, optional): Reuse coefficients from the previous run when using the \
@@ -116,15 +117,42 @@ class linmod():
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
-    def __init__(self, mod, intercept=False, solver='auto', scaling='auto', max_iter=None,
-                 constraint='ssc', reg_lambda=0.0, reg_alpha=0.0, warm_start=False, tol=1.0e-4,
-                 progress_factor=None, check_data=False):
-        self.linmod_double = pybind_linmod(mod=mod, max_iter=max_iter, intercept=intercept,
-                                           solver=solver, scaling=scaling, constraint=constraint,
-                                           warm_start=warm_start, precision="double", check_data=check_data)
-        self.linmod_single = pybind_linmod(mod=mod, max_iter=max_iter, intercept=intercept,
-                                           solver=solver, scaling=scaling, constraint=constraint,
-                                           warm_start=warm_start, precision="single", check_data=check_data)
+    def __init__(
+            self,
+            mod,
+            intercept=False,
+            solver='auto',
+            scaling='auto',
+            max_iter=None,
+            constraint='ssc',
+            reg_lambda=0.0,
+            reg_alpha=0.0,
+            warm_start=False,
+            tol=1.0e-4,
+            progress_factor=None,
+            check_data=False):
+        self.linmod_double = pybind_linmod(
+            mod=mod,
+            max_iter=max_iter,
+            intercept=intercept,
+            solver=solver,
+            scaling=scaling,
+            constraint=constraint,
+            warm_start=warm_start,
+            precision="double",
+            check_data=check_data)
+        self.linmod_single = pybind_linmod(
+            mod=mod,
+            max_iter=max_iter,
+            intercept=intercept,
+            solver=solver,
+            scaling=scaling,
+            constraint=constraint,
+            warm_start=warm_start,
+            precision="single",
+            check_data=check_data)
+        self.order = 'A'
+        self.dtype = 'float'
         self.reg_lambda = reg_lambda
         self.reg_alpha = reg_alpha
         self.x0 = None
@@ -146,44 +174,41 @@ class linmod():
                 The required shape depends on the problem that is being solved (look at coef attribute). \
                 If None then x0 is set to a vector of 0. Default=None.
 
-            x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative solvers. \
-                The required shape depends on the problem that is being solved (look at coef attribute). \
-                If None then x0 is set to a vector of 0. Default=None.
-
         Returns:
             self (object): Returns the instance itself.
         """
-        X = check_convert_data(X)
-        y = check_convert_data(y)
+        X, self.order, self.dtype = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        y, _, _ = check_convert_data(
+            y, order=self.order, dtype=self.dtype, force_dtype=True)
         if x0 is not None:
-            x0 = check_convert_data(x0)
-        order = "C" if X.flags.c_contiguous else "F"
-        if X.dtype == 'float32':
+            self.x0, _, _ = check_convert_data(
+                x0, order=self.order, dtype=self.dtype, force_dtype=True)
+            self.x0 = np.ravel(self.x0, order=self.order)
+
+        if self.dtype == 'float32':
             self.linmod = self.linmod_single
             self.linmod_double = None
             self.reg_alpha = np.float32(self.reg_alpha)
             self.reg_lambda = np.float32(self.reg_lambda)
             self.tol = np.float32(self.tol)
-            if x0 is not None:
-                self.x0 = np.float32(x0)
-                self.x0 = np.ravel(self.x0, order=order)
             if self.progress_factor is not None:
                 self.progress_factor = np.float32(self.progress_factor)
         else:
             self.reg_alpha = np.float64(self.reg_alpha)
             self.reg_lambda = np.float64(self.reg_lambda)
             self.tol = np.float64(self.tol)
-            if x0 is not None:
-                self.x0 = np.float64(x0)
-                self.x0 = np.ravel(self.x0, order=order)
             if self.progress_factor is not None:
                 self.progress_factor = np.float64(self.progress_factor)
 
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        self.linmod.pybind_fit(X, y, x0=self.x0, progress_factor=self.progress_factor,
-                               reg_lambda=self.reg_lambda, reg_alpha=self.reg_alpha, tol=self.tol)
+        self.linmod.pybind_fit(
+            X,
+            y,
+            x0=self.x0,
+            progress_factor=self.progress_factor,
+            reg_lambda=self.reg_lambda,
+            reg_alpha=self.reg_alpha,
+            tol=self.tol)
         return self
 
     def predict(self, X):
@@ -198,7 +223,8 @@ class linmod():
             numpy.ndarray of length n_samples: The prediction vector, where n_samples is \
                 the number of rows of ``X``.
         """
-        X = check_convert_data(X)
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self.linmod.pybind_predict(X)
 
     @property

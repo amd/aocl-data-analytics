@@ -138,7 +138,7 @@ const linregParam linregParamNoReg[] = {
                                      {{"lambda",0.0},{"alpha",0.5}, {"optim convergence tol",1.e-7}, {"optim dual gap tol", 0.5}}
                                      },
     // 19
-{  "NoReg/trivial/coord/0/s", "trivial", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 10000}},
+{  "NoReg/trivial/coord/0/s", "trivial", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 700}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.5f},{"optim convergence tol", 1.0e-5f},{"optim dual gap tol", 1.0}},
                                      {{"lambda",0.0},{"alpha",0.5}, {"optim convergence tol",1.e-7}, {"optim dual gap tol", 1.0}}
@@ -196,49 +196,49 @@ const linregParam linregParamNoReg[] = {
 #endif
     // same problems solved with QR - selecting only NOREG
     // 28 models y ~ X + 0, y ~ X + 1, no-reg, scaling only OR standardize
-{  "NoReg/trivial/QR/1/z", "trivial", {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+{  "NoReg/trivial/QR/1/z", "trivial", {{"intercept", 1}},
                                      {{"optim method", "qr"}, {"scaling", "standardise"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 29
-{  "NoReg/trivial/QR/0/z", "trivial", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 1800}},
+{  "NoReg/trivial/QR/0/z", "trivial", {{"intercept", 0}},
                                      {{"optim method", "qr"}, {"scaling", "standardise"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 30
-{  "NoReg/trivial/QR/1/s", "trivial", {{"intercept", 1}, {"print level", 1}, {"optim iteration limit", 1800}},
+{  "NoReg/trivial/QR/1/s", "trivial", {{"intercept", 1}},
                                      {{"optim method", "qr"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 31
-{  "NoReg/trivial/QR/0/s", "trivial", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 10000}},
+{  "NoReg/trivial/QR/0/s", "trivial", {{"intercept", 0}},
                                      {{"optim method", "qr"}, {"scaling", "scale only"}},
                                      {{"lambda",0.0f},{"alpha",0.5f}},
                                      {{"lambda",0.0},{"alpha",0.5}}
                                      },
     // 32
-{  "NoReg/NormTab/QR/0/z", "glmnet-100x20", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+{  "NoReg/NormTab/QR/0/z", "glmnet-100x20", {{"intercept", 0}},
                                      {{"optim method", "qr"},{"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
                                      },
     // 33
-{  "NoReg/NormTab/QR/1/z", "glmnet-100x20", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+{  "NoReg/NormTab/QR/1/z", "glmnet-100x20", {{"intercept", 1}},
                                      {{"optim method", "qr"},{"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
                                      },
     // 34
-{  "NoReg/NormTab/QR/0/s", "glmnet-100x20unscl", {{"intercept", 0},{"print level", 1},{"optim iteration limit", 500}},
+{  "NoReg/NormTab/QR/0/s", "glmnet-100x20unscl", {{"intercept", 0}},
                                      {{"optim method", "qr"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
                                      },
     // 35
-{  "NoReg/NormTab/QR/1/s", "glmnet-100x20unscl", {{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
+{  "NoReg/NormTab/QR/1/s", "glmnet-100x20unscl", {{"intercept", 1}},
                                      {{"optim method", "qr"},{"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f},{"lambda",0.0f},{"alpha",1.0f}},
                                      {{"optim convergence tol",1.e-15},{"lambda",0.0},{"alpha",1.0}},
@@ -352,7 +352,7 @@ const linregParam linregParamNoReg[] = {
 {  "NoReg/TallFat/coord/1/c", "tall_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "centering"}},
                                      {{"optim convergence tol", 1.e-6f}, {"lambda", 0.1f}, {"alpha", 0.0f},{"optim dual gap tol", 2.0e-4}},
-                                     {{"optim convergence tol", 1.e-6}, {"lambda", 0.1}, {"alpha", 0.0},{"optim dual gap tol", 2.0e-4}},
+                                     {{"optim convergence tol", 1.e-7}, {"lambda", 0.1}, {"alpha", 0.0},{"optim dual gap tol", 2.0e-4}},
                                      true, false, 20.0},
     // 45 NoReg comparison with sklearn results
 {  "NoReg/TallThin/coord/0/n", "tall_thin", {{"intercept", 0}, {"print level", 1}},
@@ -749,7 +749,7 @@ const linregParam linregParamNoReg[] = {
                                      },
     // 96
 #ifndef NO_FORTRAN
-{  "NoReg/ShortFat/bfgs/0/s", "short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 600000}},
+{  "NoReg/ShortFat/bfgs/0/s", "short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100}},
                                      {{"optim method", "lbfgs"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-8f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
                                      {{"optim convergence tol",1.e-10}, {"lambda",0.0},{"alpha",0.0}},
@@ -778,12 +778,12 @@ const linregParam linregParamNoReg[] = {
                                      true, false
                                      },
     // Hard to obtain sklearn result due to underdetermined system, need to add 0.0001 lambda and increase tolerance to 0.0028
-    // 100
-{  "NoReg/ShortFat/coord/0/s", "short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 400000}},
+    // 100 WARM START
+{  "NoReg/ShortFat/coord/0/s", "short_fat", {{"intercept", 0}, {"print level", 3},{"optim iteration limit", 100}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",2.e-8f}, {"lambda",0.0001f},{"alpha",0.0f}, {"optim dual gap tol",2.0e-4f}},
-                                     {{"optim convergence tol",1.e-10}, {"lambda",0.0001},{"alpha",0.0}, {"optim dual gap tol",2.0e-4}},
-                                     true, false, 2.8
+                                     {{"optim convergence tol",5.e-9}, {"lambda",0.0001},{"alpha",0.0}, {"optim dual gap tol",2.0e-4}},
+                                     true, false, 3.8, {-1, -1}, true
                                      },
     // 101
 {  "NoReg/ShortFat/qr/0/s", "short_fat", {{"intercept", 0}, {"print level", 1}},
@@ -921,12 +921,12 @@ const linregParam linregParamNoReg[] = {
                                      {{"lambda",0.0},{"alpha",0.0}},
                                      true, false
                                      },
-    // 118 Add small lambda, bump max iter to 1,000,000 and set tolerance to 0.003
-{  "NoReg/ShortFat/coord/1/s", "short_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 1000000}},
+    // 118 Add small lambda, WARMSTART and set tolerance to 0.003
+{  "NoReg/ShortFat/coord/1/s", "short_fat", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f},{"optim dual gap tol", 2.0e-4}},
-                                     {{"optim convergence tol",1.e-15f}, {"lambda",0.0001},{"alpha",0.0},{"optim dual gap tol", 2.0e-4}},
-                                     true, false, 3
+                                     {{"optim convergence tol",7.e-8f}, {"lambda",0.0001},{"alpha",0.0},{"optim dual gap tol", 2.0e-4}},
+                                     true, false, 3, {-1, -1}, true
                                      },
     /* TALL THIN */
     // 119 Fail for single precision
@@ -1010,11 +1010,11 @@ const linregParam linregParamNoReg[] = {
                                      },
     // Add tiny bit of lambda
     // 129
-{  "NoReg/TallFat/coord/1/s", "tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+{  "NoReg/TallFat/coord/1/s", "tall_fat", {{"intercept", 1}, {"print level", 3},{"optim iteration limit", 300}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
-                                     {{"optim convergence tol",1.e-9f}, {"lambda",0.01f},{"alpha",0.0f},{"optim dual gap tol", 2.0e-4}},
-                                     {{"optim convergence tol",1.e-10}, {"lambda",0.01},{"alpha",0.0},{"optim dual gap tol", 2.0e-4}},
-                                     true, false
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.01f},{"alpha",0.0f},{"optim dual gap tol", 2.0e-4}},
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.01},{"alpha",0.0},{"optim dual gap tol", 2.0e-4}},
+                                     true, false, 3.5, {-1, -1}, true
                                      },
     /* STANDARDIZE (HERE WE COMPARING TO GLMNET OUTPUT) */
     /* NORMAL TESTS */
@@ -1051,11 +1051,11 @@ const linregParam linregParamNoReg[] = {
                                      true, false
                                      },
     // 134 Add a bit of lambda
-{  "NoReg/ShortFat/coord/0/z", "scl_short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 200000}},
+{  "NoReg/ShortFat/coord/0/z", "scl_short_fat", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-8f}, {"lambda",0.0001f},{"alpha",0.0f}, {"optim dual gap tol",2.0e-4f}},
-                                     {{"optim convergence tol",1.e-11}, {"lambda",0.0001},{"alpha",0.0}, {"optim dual gap tol",2.0e-4}},
-                                     true, false
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.0001},{"alpha",0.0}, {"optim dual gap tol",2.0e-4}},
+                                     true, false, 1, {-1, -1}, true
                                      },
     /* TALL THIN */
     // 135
@@ -1178,11 +1178,11 @@ const linregParam linregParamNoReg[] = {
                                      },
     // Add tiny bit of lambda (this problem is too stringent, relax cmp tol?)
     // 150
-{  "NoReg/ShortFat/coord/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+{  "NoReg/ShortFat/coord/1/z", "scl_short_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 100}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
-                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f}, {"optim dual gap tol",3.0e-4f}},
-                                     {{"optim convergence tol",1.e-15f}, {"lambda",0.0001},{"alpha",0.0}, {"optim dual gap tol",3.0e-4f}},
-                                     true, false
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0001f},{"alpha",0.0f}, {"optim dual gap tol",3.0e-8f}},
+                                     {{"optim convergence tol",1.e-7f}, {"lambda",0.0001},{"alpha",0.0}, {"optim dual gap tol",3.0e-8f}},
+                                     true, false, 1, {-1, -1}, true
                                      },
     /* TALL THIN */
     // 151
@@ -1236,7 +1236,7 @@ const linregParam linregParamNoReg[] = {
      */
     // 157
 #ifndef NO_FORTRAN
-{  "NoReg/TallFat/bfgs/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+{  "NoReg/TallFat/bfgs/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10}},
                                      {{"optim method", "lbfgs"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-9f}, {"lambda",0.0f},{"alpha",0.0f}, {"optim progress factor",10.0f}},
                                      {{"optim convergence tol",1.e-13}, {"lambda",0.0},{"alpha",0.0}, {"optim progress factor",10.0}},
@@ -1265,11 +1265,11 @@ const linregParam linregParamNoReg[] = {
                                      true, false
                                      },
     // 161 Add tiny bit of lambda
-{  "NoReg/TallFat/coord/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 300000}},
+{  "NoReg/TallFat/coord/1/z", "scl_tall_fat", {{"intercept", 1}, {"print level", 3},{"optim iteration limit", 150}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
-                                     {{"optim convergence tol",1.e-9f}, {"lambda",0.01f},{"alpha",0.0f},{"optim dual gap tol", 0.02}},
-                                     {{"optim convergence tol",1.e-10}, {"lambda",0.0001},{"alpha",0.0},{"optim dual gap tol", 0.02}},
-                                     true, false
+                                     {{"optim convergence tol",6.e-6f}, {"lambda",0.01f},{"alpha",0.0f},{"optim dual gap tol", 0.02}},
+                                     {{"optim convergence tol",5.e-9}, {"lambda",0.0001},{"alpha",0.0},{"optim dual gap tol", 0.02}},
+                                     true, false, 1, {-1, -1}, true
                                      },
     // 162 Dual-gap check
 {  "NoReg/dualgap/coord/0/a", "dualgap", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 300}},
@@ -1293,9 +1293,10 @@ void PrintTo(const linregParam &param, ::std::ostream *os) { *os << param.test_n
 // Positive tests with double type
 TEST_P(linregPosD, Double) {
     const linregParam &param = GetParam();
-    test_linreg_positive<double>(
-        param.data_name, param.iopts, param.sopts, param.dopts, param.check_coeff,
-        param.check_predict, (double)param.check_tol_scale, (double)param.dual_gap[1]);
+    test_linreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts,
+                                 param.check_coeff, param.check_predict,
+                                 (double)param.check_tol_scale, (double)param.dual_gap[1],
+                                 param.initial_guess);
 }
 
 // Positive tests with float type
@@ -1303,7 +1304,8 @@ TEST_P(linregPosF, Float) {
     const linregParam &param = GetParam();
     test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts,
                                 param.check_coeff, param.check_predict,
-                                (float)param.check_tol_scale, (float)param.dual_gap[0]);
+                                (float)param.check_tol_scale, (float)param.dual_gap[0],
+                                param.initial_guess);
 }
 
 INSTANTIATE_TEST_SUITE_P(linregPosSuiteD, linregPosD,

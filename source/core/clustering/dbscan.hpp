@@ -21,10 +21,6 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include "basic_handle.hpp"
 #include "da_error.hpp"

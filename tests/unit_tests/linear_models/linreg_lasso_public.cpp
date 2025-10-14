@@ -210,11 +210,11 @@ const linregParam linregParamLASSO[] = {
     /* NO INTERCEPT */
     /* SHORT FAT */
     // 20
-{  "LASSO/ShortFat/coord/0/s", "short_fatl1", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 100000}},
+{  "LASSO/ShortFat/coord/0/s", "short_fatl1", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 120}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",1.0f},{"optim dual gap tol", 1.0}},
-                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",1.0},{"optim dual gap tol", 1.0}},
-                                     true, false
+                                     {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",1.0},{"optim dual gap tol", 1.0}},
+                                     true, false, 1, {-1, -1}, true
                                      },
     /* TALL THIN */
     // 21
@@ -254,18 +254,18 @@ const linregParam linregParamLASSO[] = {
 {  "LASSO/TallFat/coord/1/s", "tall_fatl1", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",1.0f},{"optim dual gap tol", 3.0e-2}},
-                                     {{"lambda",0.3},{"alpha",1.0},{"optim dual gap tol", 3.0e-2}},
+                                     {{"optim convergence tol",1.e-8}, {"lambda",0.3},{"alpha",1.0},{"optim dual gap tol", 3.0e-2}},
                                      true, false
                                      },
     /* L1 TESTS */
     /* NO INTERCEPT */
     /* SHORT FAT */
     // 26
-{  "LASSO/ShortFat/coord/0/z", "scl_short_fatl1", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 100000}},
+{  "LASSO/ShortFat/coord/0/z", "scl_short_fatl1", {{"intercept", 0}, {"print level", 1}, {"optim iteration limit", 100}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",1.0f}},
-                                     {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",1.0}},
-                                     true, false
+                                     {{"optim convergence tol",1.e-8}, {"lambda",0.3},{"alpha",1.0}},
+                                     true, false, 1, {-1, -1}, true
                                      },
     /* TALL THIN */
     // 27
@@ -312,7 +312,7 @@ const linregParam linregParamLASSO[] = {
 {  "LASSO/signal/coord/1/s", "signal-scikit", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 500}},
                                      {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
                                      {{"optim convergence tol",3.e-7f},{"lambda",0.14f},{"alpha",1.0f},{"optim dual gap tol", 200.0}},
-                                     {{"optim convergence tol",3.e-7},{"lambda",0.14},{"alpha",1.0},{"optim dual gap tol", 200.0}},
+                                     {{"optim convergence tol",1.e-12},{"lambda",0.14},{"alpha",1.0},{"optim dual gap tol", 200.0}},
                                      true, true
                                      },
     // 33 scikit-learn sparse signal example LASSO GLMnet step to match sklearn)
@@ -379,9 +379,10 @@ void PrintTo(const linregParam &param, ::std::ostream *os) { *os << param.test_n
 // Positive tests with double type
 TEST_P(linregPosD, Double) {
     const linregParam &param = GetParam();
-    test_linreg_positive<double>(
-        param.data_name, param.iopts, param.sopts, param.dopts, param.check_coeff,
-        param.check_predict, (double)param.check_tol_scale, (double)param.dual_gap[1]);
+    test_linreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts,
+                                 param.check_coeff, param.check_predict,
+                                 (double)param.check_tol_scale, (double)param.dual_gap[1],
+                                 param.initial_guess);
 }
 
 // Positive tests with float type
@@ -389,7 +390,8 @@ TEST_P(linregPosF, Float) {
     const linregParam &param = GetParam();
     test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts,
                                 param.check_coeff, param.check_predict,
-                                (float)param.check_tol_scale, (float)param.dual_gap[0]);
+                                (float)param.check_tol_scale, (float)param.dual_gap[0],
+                                param.initial_guess);
 }
 
 INSTANTIATE_TEST_SUITE_P(linregPosSuiteD, linregPosD,

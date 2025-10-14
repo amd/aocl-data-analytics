@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -481,7 +481,9 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
     }
 }
 
-template <typename T> py::array_t<T> py_da_covariance(py::array_t<T> X, da_int dof = 0) {
+template <typename T>
+py::array_t<T> py_da_covariance(py::array_t<T> X, da_int dof = 0,
+                                da_int assume_centered = 0) {
     da_status status;
     da_int m, n, ldx;
     da_order order;
@@ -501,7 +503,8 @@ template <typename T> py::array_t<T> py_da_covariance(py::array_t<T> X, da_int d
 
     py::array_t<T> cov(shape, strides);
 
-    status = da_covariance_matrix(order, m, n, X.data(), ldx, dof, cov.mutable_data(), n);
+    status = da_covariance_matrix(order, m, n, X.data(), ldx, dof, cov.mutable_data(), n,
+                                  assume_centered);
 
     status_to_exception(status);
 

@@ -122,6 +122,8 @@ da_status da_svm_set_data_s(da_handle handle, da_int n_samples, da_int n_feature
  * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enum for floating-point output:
  * - \p da_svm_dual_coef - return an array of size \p n_class-1 @f$\times@f$ \p n_support containing the dual coefficients of the support vectors.
  * - \p da_svm_bias - return an array of size \p n_class-1 containing the bias terms.
+ * - \p da_svm_probaA - return an array of size \p n_class-1 containing the parameters A of sigmoid function approximating posterior class probability.
+ * - \p da_svm_probaB - return an array of size \p n_class-1 containing the parameters B of sigmoid function approximating posterior class probability.
  * - \p da_svm_support_vectors - return an array of size \p n_support @f$\times@f$ \p n_features containing the support vectors.
  * - \p da_rinfo - return an array of size 3 containing the values of \p n_samples, \p n_features, \p n_class.
  *
@@ -224,6 +226,68 @@ da_status da_svm_score_d(da_handle handle, da_int n_samples, da_int n_features,
 da_status da_svm_score_s(da_handle handle, da_int n_samples, da_int n_features,
                          const float *X_test, da_int ldx_test, const float *y_test,
                          float *score);
+/** \} */
+
+/** \{
+ * @brief Predict probability estimates using the previously fitted SVM model.
+ *
+ * Computes probability estimates for each sample in the dataset @p X_test using the trained SVM model.
+ * The probability estimates are stored in @p proba, an array of size @p n_samples.
+ *
+ * @param[in,out] handle a @ref da_handle object, with type @ref da_handle_svm and a model already computed via \ref da_svm_compute_s.
+ * @param[in] n_samples the number of observations (rows) in the data matrix @p X_test. Constraint: @p n_samples @f$\ge@f$ 1.
+ * @param[in] n_features the number of features (columns) of the data matrix @p X_test. Constraint: @p n_features must be the same as in \ref da_svm_set_data_s.
+ * @param[in] X_test the @p n_samples @f$\times@f$ @p n_features data matrix. By default, it should be stored in column-major order unless the <em>storage order</em> option is set to <em>row-major</em>.
+ * @param[in] ldx_test the leading dimension of @p X_test. Constraint: @p ldx_test @f$\ge@f$ @p n_samples if @p X_test is stored in column-major order, or @p ldx_test @f$\ge@f$ @p n_features if @p X_test is stored in row-major order.
+ * @param[out] y_proba - array of size at least \p n_samples @f$\times@f$ \p n_class . On output, will contain the predicted class probabilities.
+ * @param[in] ldy leading dimension of \p y_proba. Constraint: \p ldy @f$\ge@f$ \p n_samples if \p X_test is stored in column-major order, or \p ldy @f$\ge@f$ \p n_class if \p X_test is stored in row-major order.
+ * @return @ref da_status. Possible returns:
+ * - @ref da_status_success - operation was successfully completed.
+ * - @ref da_status_wrong_type - floating point precision is incompatible with the handle initialization.
+ * - @ref da_status_invalid_pointer - the handle was not properly initialized with SVM or one of the arrays is null.
+ * - @ref da_status_out_of_date - the model was not computed prior to this function call.
+ * - @ref da_status_invalid_input - one of the arguments or options had an invalid value.
+ * - @ref da_status_invalid_leading_dimension - the constraint on @p ldx_test was violated.
+ */
+da_status da_svm_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
+                                 const double *X_test, da_int ldx_test, double *y_proba,
+                                 da_int ldy);
+
+da_status da_svm_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
+                                 const float *X_test, da_int ldx_test, float *y_proba,
+                                 da_int ldy);
+/** \} */
+
+/** \{
+ * @brief Predict log probability estimates using the previously fitted SVM model.
+ *
+ * Computes log probability estimates for each sample in the dataset @p X_test using the trained SVM model.
+ * The log probability estimates are stored in @p y_log_proba, an array of size @p n_samples @f$\times@f$ @p n_class.
+ * This function returns the natural logarithm of the class probabilities.
+ *
+ * @param[in,out] handle a @ref da_handle object, with type @ref da_handle_svm and a model already computed via \ref da_svm_compute_s "da_svm_compute_?".
+ * @param[in] n_samples the number of observations (rows) in the data matrix @p X_test. Constraint: @p n_samples @f$\ge@f$ 1.
+ * @param[in] n_features the number of features (columns) of the data matrix @p X_test. Constraint: @p n_features must be the same as in \ref da_svm_set_data_s "da_svm_set_data_?".
+ * @param[in] X_test the @p n_samples @f$\times@f$ @p n_features data matrix. By default, it should be stored in column-major order unless the <em>storage order</em> option is set to <em>row-major</em>.
+ * @param[in] ldx_test the leading dimension of @p X_test. Constraint: @p ldx_test @f$\ge@f$ @p n_samples if @p X_test is stored in column-major order, or @p ldx_test @f$\ge@f$ @p n_features if @p X_test is stored in row-major order.
+ * @param[out] y_log_proba array of size at least @p n_samples @f$\times@f$ @p n_class. On output, will contain the predicted log class probabilities.
+ * @param[in] ldy leading dimension of @p y_log_proba. Constraint: @p ldy @f$\ge@f$ @p n_samples if @p y_log_proba is stored in column-major order, or @p ldy @f$\ge@f$ @p n_class if @p y_log_proba is stored in row-major order.
+ * @return @ref da_status. Possible returns:
+ * - @ref da_status_success - operation was successfully completed.
+ * - @ref da_status_wrong_type - floating point precision is incompatible with the handle initialization.
+ * - @ref da_status_invalid_pointer - the handle was not properly initialized with SVM or one of the arrays is null.
+ * - @ref da_status_out_of_date - the model was not computed prior to this function call.
+ * - @ref da_status_invalid_input - one of the arguments or options had an invalid value.
+ * - @ref da_status_invalid_leading_dimension - the constraint on @p ldx_test or @p ldy was violated.
+ */
+
+da_status da_svm_predict_log_proba_d(da_handle handle, da_int n_samples,
+                                     da_int n_features, const double *X_test,
+                                     da_int ldx_test, double *y_log_proba, da_int ldy);
+
+da_status da_svm_predict_log_proba_s(da_handle handle, da_int n_samples,
+                                     da_int n_features, const float *X_test,
+                                     da_int ldx_test, float *y_log_proba, da_int ldy);
 /** \} */
 
 #endif

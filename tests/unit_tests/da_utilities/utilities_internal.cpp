@@ -210,4 +210,32 @@ TEST(UtilitiesTest, ContextHiddenSettings) {
     EXPECT_EQ(da_debug_get("NonExisting!", 100, charans), da_status_option_not_found);
 }
 
+TEST(UtilitiesTest, intInfo) {
+    std::string int_lib = INT_LIB;
+    std::string expected_int_str;
+    if (int_lib == "LP64")
+        expected_int_str = "32";
+    else if (int_lib == "ILP64")
+        expected_int_str = "64";
+    else
+        expected_int_str = "?";
+
+    // Valid call
+    size_t len = 3;
+    char int_type[3];
+    EXPECT_EQ(da_get_int_info(&len, int_type), da_status_success);
+    EXPECT_EQ(expected_int_str, std::string(int_type));
+
+    // wrong length
+    len = 0;
+    EXPECT_EQ(da_get_int_info(&len, int_type), da_status_invalid_array_dimension);
+    // Second call has valid length
+    EXPECT_EQ(da_get_int_info(&len, int_type), da_status_success);
+    EXPECT_EQ(expected_int_str, std::string(int_type));
+
+    // wrong pointer
+    len = 3;
+    EXPECT_EQ(da_get_int_info(&len, nullptr), da_status_invalid_input);
+}
+
 } // namespace

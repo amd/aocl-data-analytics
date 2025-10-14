@@ -62,12 +62,43 @@ extern "C" {
  * - \ref da_status_memory_error - internal memory allocation encountered a problem.
  * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_train was violated.
 */
-da_status da_knn_set_training_data_d(da_handle handle, da_int n_samples,
-                                     da_int n_features, const double *X_train,
-                                     da_int ldx_train, const da_int *y_train);
-da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
-                                     da_int n_features, const float *X_train,
-                                     da_int ldx_train, const da_int *y_train);
+da_status da_knn_classifier_set_training_data_d(da_handle handle, da_int n_samples,
+                                                da_int n_features, const double *X_train,
+                                                da_int ldx_train, const da_int *y_train);
+da_status da_knn_classifier_set_training_data_s(da_handle handle, da_int n_samples,
+                                                da_int n_features, const float *X_train,
+                                                da_int ldx_train, const da_int *y_train);
+/** \} */
+
+/** \{
+ * \brief Pass a data matrix and a label array to the \ref da_handle object
+ * in preparation for computing a <i>k</i>-NN.
+ *
+ * The data itself is not copied; a pointer to the data matrix is stored instead.
+ * @rst
+ * This function must be called after using the option setting APIs to set :ref:`options <knn_options>`, since the options are required in case of a k-d tree algorithm.
+ * @endrst
+
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
+ * \param[in] n_samples number of observations in \p X_train.
+ * \param[in] n_features number of features in \p X_train.
+ * \param[in] X_train array containing \p n_samples  @f$\times@f$ \p n_features data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * \param[in] ldx_train leading dimension of \p X_train. Constraint: \p ldx_train @f$\ge@f$ \p n_samples if \p X_train is stored in column-major order, or \p ldx_train @f$\ge@f$ \p n_features if \p X_train is stored in row-major order.
+ * \param[in] y_train array containing the \p n_samples targets.
+ * \return \ref da_status.  The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
+ * - \ref da_status_invalid_pointer - the @p handle has not been correctly initialized, or \p X_train or \p y_train are invalid.
+ * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_train was violated.
+*/
+da_status da_knn_regressor_set_training_data_d(da_handle handle, da_int n_samples,
+                                               da_int n_features, const double *X_train,
+                                               da_int ldx_train, const double *y_train);
+da_status da_knn_regressor_set_training_data_s(da_handle handle, da_int n_samples,
+                                               da_int n_features, const float *X_train,
+                                               da_int ldx_train, const float *y_train);
 /** \} */
 
 /** \{
@@ -75,12 +106,12 @@ da_status da_knn_set_training_data_s(da_handle handle, da_int n_samples,
  *
  * @rst
  * Compute the *k*-NN of a test data :math:`X_{test}` with respect to the data matrix
- * previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
+ * previously passed into the handle using :ref:`da_knn_classifier_set_training_data_? <da_knn_classifier_set_training_data>`.
  * @endrst
  *
  * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
  * \param[in] n_queries number of observations in \p X_test.
- * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
+ * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_classifier_set_training_data_s "da_knn_classifier_set_training_data_?" or \ref da_knn_regressor_set_training_data_s "da_knn_regressor_set_training_data_?".
  * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in the same storage format used to set the training data.
  * \param[in] ldx_test leading dimension of \p X_test. Constraint: \p ldx_test @f$\ge@f$ \p n_queries if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * \param[out] n_ind array containing the \p n_queries @f$\times@f$ \p k matrix, with the indices of the \p k - nearest neighbors of the test data \p X_test. If \p k @f$\le@f$ 0, the number of neighbors passed during the option setting will be used instead.
@@ -130,12 +161,12 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
  *
  * @rst
  * Compute the probability estimates for the different classes based on the *k*-NN of a test data :math:`X_{test}` with respect to the data matrix
- * data matrix previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
+ * data matrix previously passed into the handle using :ref:`da_knn_classifier_set_training_data_? <da_knn_classifier_set_training_data>`.
  * @endrst
  *
  * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
  * \param[in] n_queries number of observations in \p X_test.
- * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
+ * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_classifier_set_training_data_s "da_knn_classifier_set_training_data_?".
  * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
  * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * \param[out] proba array of size \p n_queries  @f$\times@f$ \p n_classes containing the probability estimates for each of the available classes.
@@ -147,10 +178,12 @@ da_status da_knn_classes_s(da_handle handle, da_int *n_classes, da_int *classes)
  * - \ref da_status_memory_error - internal memory allocation encountered a problem.
  * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
 */
-da_status da_knn_predict_proba_d(da_handle handle, da_int n_queries, da_int n_features,
-                                 const double *X_test, da_int ldx_test, double *proba);
-da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_features,
-                                 const float *X_test, da_int ldx_test, float *proba);
+da_status da_knn_classifier_predict_proba_d(da_handle handle, da_int n_queries,
+                                            da_int n_features, const double *X_test,
+                                            da_int ldx_test, double *proba);
+da_status da_knn_classifier_predict_proba_s(da_handle handle, da_int n_queries,
+                                            da_int n_features, const float *X_test,
+                                            da_int ldx_test, float *proba);
 /** \} */
 
 /** \{
@@ -158,12 +191,12 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
  *
  * @rst
  * Compute the estimated labels based on the *k*-NN of a test data :math:`X_{test}` with respect to the data matrix
- * data matrix previously passed into the handle using :ref:`da_knn_set_training_data_? <da_knn_set_training_data>`.
+ * data matrix previously passed into the handle using :ref:`da_knn_classifier_set_training_data_? <da_knn_classifier_set_training_data>`.
  * @endrst
  *
  * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
  * \param[in] n_queries number of observations in \p X_test.
- * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_set_training_data_s "da_knn_set_training_data_?".
+ * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_classifier_set_training_data_s "da_knn_classifier_set_training_data_?".
  * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
  * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
  * \param[out] y_test array of size \p n_queries containing the estimated label for each query.
@@ -175,10 +208,42 @@ da_status da_knn_predict_proba_s(da_handle handle, da_int n_queries, da_int n_fe
  * - \ref da_status_memory_error - internal memory allocation encountered a problem.
  * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
 */
-da_status da_knn_predict_d(da_handle handle, da_int n_queries, da_int n_features,
-                           const double *X_test, da_int ldx_test, da_int *y_test);
-da_status da_knn_predict_s(da_handle handle, da_int n_queries, da_int n_features,
-                           const float *X_test, da_int ldx_test, da_int *y_test);
+da_status da_knn_classifier_predict_d(da_handle handle, da_int n_queries,
+                                      da_int n_features, const double *X_test,
+                                      da_int ldx_test, da_int *y_test);
+da_status da_knn_classifier_predict_s(da_handle handle, da_int n_queries,
+                                      da_int n_features, const float *X_test,
+                                      da_int ldx_test, da_int *y_test);
+/** \} */
+
+/** \{
+ * \brief Compute estimated target values of a data set using <i>k</i>-Nearest Neighbors
+ *
+ * @rst
+ * Compute the estimated target values based on the *k*-NN of a test data :math:`X_{test}` with respect to the data matrix
+ * data matrix previously passed into the handle using :ref:`da_knn_regressor_set_training_data_? <da_knn_regressor_set_training_data>`.
+ * @endrst
+ *
+ * \param[inout] handle a \ref da_handle object, initialized with type \ref da_handle_knn.
+ * \param[in] n_queries number of observations in \p X_test.
+ * \param[in] n_features number of features in \p X_test. Constraint: \p n_features @f$=@f$ the number of features in the data matrix originally supplied to \ref da_knn_regressor_set_training_data_s "da_knn_regressor_set_training_data_?".
+ * \param[in] X_test array containing \p n_queries  @f$\times@f$ \p n_features data matrix, in the same storage format used to fit the model.
+ * \param[in] ldx_test leading dimension of \p X_test.  Constraint: \p ldx_test @f$\ge@f$ \p n_queries if \p X_test is stored in column-major order, or \p ldx_test @f$\ge@f$ \p n_features if \p X_test is stored in row-major order.
+ * \param[out] y_test array of size \p n_queries containing the estimated target value for each query.
+ * \return \ref da_status.  The function returns:
+ * - \ref da_status_success - the operation was successfully completed.
+ * - \ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
+ * - \ref da_status_invalid_pointer - the @p handle has not been correctly initialized, or \p X_test or \p n_ind or \p n_dist is invalid.
+ * - \ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using \ref da_handle_print_error_message.
+ * - \ref da_status_memory_error - internal memory allocation encountered a problem.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx_test was violated.
+*/
+da_status da_knn_regressor_predict_d(da_handle handle, da_int n_queries,
+                                     da_int n_features, const double *X_test,
+                                     da_int ldx_test, double *y_test);
+da_status da_knn_regressor_predict_s(da_handle handle, da_int n_queries,
+                                     da_int n_features, const float *X_test,
+                                     da_int ldx_test, float *y_test);
 /** \} */
 
 #ifdef __cplusplus

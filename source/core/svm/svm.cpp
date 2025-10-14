@@ -40,6 +40,7 @@
 #include <iostream>
 #include <memory>
 #include <numeric>
+#include <random>
 #include <utility>
 #include <vector>
 
@@ -143,6 +144,48 @@ da_status svm<T>::get_result(da_result query, da_int *dim, T *result) {
         }
         for (da_int i = 0; i < n_classifiers; i++)
             result[i] = bias[i];
+        break;
+    case da_result::da_svm_probaA:
+        if (mod == da_svm_model::svr || mod == da_svm_model::nusvr)
+            return da_error(
+                this->err, da_status_invalid_input,
+                "predict probabilities are only available for classification problems");
+        if (!predict_proba_opt) {
+            return da_error(this->err, da_status_invalid_input,
+                            "predict probabilities must have been set to 1 prior to "
+                            "computing the SVM");
+        }
+        size = n_classifiers;
+        if (*dim < size) {
+            *dim = size;
+            return da_warn(this->err, da_status_invalid_array_dimension,
+                           "The array is too small. Please provide an array of at "
+                           "least size: " +
+                               std::to_string(size) + ".");
+        }
+        for (da_int i = 0; i < n_classifiers; i++)
+            result[i] = probaA[i];
+        break;
+    case da_result::da_svm_probaB:
+        if (mod == da_svm_model::svr || mod == da_svm_model::nusvr)
+            return da_error(
+                this->err, da_status_invalid_input,
+                "predict probabilities are only available for classification problems");
+        if (!predict_proba_opt) {
+            return da_error(this->err, da_status_invalid_input,
+                            "predict probabilities must have been set to 1 prior to "
+                            "computing the SVM");
+        }
+        size = n_classifiers;
+        if (*dim < size) {
+            *dim = size;
+            return da_warn(this->err, da_status_invalid_array_dimension,
+                           "The array is too small. Please provide an array of at "
+                           "least size: " +
+                               std::to_string(size) + ".");
+        }
+        for (da_int i = 0; i < n_classifiers; i++)
+            result[i] = probaB[i];
         break;
     default:
         return da_warn(this->err, da_status_unknown_query,
@@ -279,6 +322,8 @@ da_status svm<T>::set_data(da_int n_samples, da_int n_features, const T *X_in,
         classifiers.resize(n_classifiers);
         class_sizes.resize(n_class);
         bias.resize(n_classifiers);
+        probaA.resize(n_classifiers);
+        probaB.resize(n_classifiers);
         n_iteration.resize(n_classifiers);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
@@ -410,7 +455,7 @@ template <typename T> da_status svm<T>::compute() {
 
     // Get the options set by user
     T C, epsilon, nu, tolerance, coef0, tau, cache_size;
-    da_int degree, max_iter;
+    da_int degree, max_iter, n_fold, max_ws_size;
     this->opts.get("C", C);
     this->opts.get("epsilon", epsilon);
     this->opts.get("nu", nu);
@@ -420,12 +465,18 @@ template <typename T> da_status svm<T>::compute() {
     this->opts.get("max_iter", max_iter);
     this->opts.get("tau", tau);
     this->opts.get("cache size", cache_size);
+    this->opts.get("max_ws_size", max_ws_size);
+    this->opts.get("predict probabilities", predict_proba_opt);
+    this->opts.get("n_folds", n_fold);
+    this->opts.get("seed", seed);
 
-    /* Interpret cache_size from MB to number of columns of kernel matrix it can hold */
-    // Possibility of overflow if cache_size is too big
-    uint64_t cache_size_values = cache_size * 1024 * 1024 / sizeof(T);
-    da_int n_cols_cache = (da_int)std::round(cache_size_values / nrow);
-
+    if (predict_proba_opt) {
+        if (seed == -1) {
+            std::random_device r;
+            seed = std::abs((da_int)r());
+        }
+        mt_gen.seed(seed);
+    }
     // Compute each created classifier in the order 0v1, 0v2, ..., 0v(k-1), 1v2, 1v3, ... etc.
     for (da_int i = 0; i < n_classifiers; i++) {
         classifiers[i]->C = C;
@@ -438,7 +489,12 @@ template <typename T> da_status svm<T>::compute() {
         classifiers[i]->tau = tau;
         classifiers[i]->gamma = gamma_temp;
         classifiers[i]->kernel_function = kernel_enum;
-        classifiers[i]->cache_col_capacity = n_cols_cache;
+        classifiers[i]->cache_size = cache_size;
+        classifiers[i]->max_ws_size = max_ws_size;
+
+        if (predict_proba_opt) {
+            status = compute_probabilities(*classifiers[i], n_fold, probaA[i], probaB[i]);
+        }
 
         status = classifiers[i]->compute();
 
@@ -552,7 +608,7 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
                           T *predictions) {
     if (predictions == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_pointer,
-                               "predictions is not valid pointers.");
+                               "predictions is not a valid pointer.");
     }
 
     const T *X_test_temp;
@@ -631,7 +687,7 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
                                     T *decision_values, da_int ldd) {
     if (decision_values == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_pointer,
-                               "decision_values is not valid pointers.");
+                               "decision_values is not a valid pointer.");
     }
     if (mod == da_svm_model::svr || mod == da_svm_model::nusvr) {
         return da_error_bypass(
@@ -760,7 +816,7 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
                         const T *y_test, T *score) {
     if (score == nullptr) {
         return da_error_bypass(this->err, da_status_invalid_pointer,
-                               "score is not valid pointers.");
+                               "score is not a valid pointer.");
     }
     if (nfeat != ncol) {
         return da_error_bypass(this->err, da_status_invalid_input,
@@ -824,6 +880,441 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
     }
     if (utility_ptr1)
         delete[] (utility_ptr1);
+    return da_status_success;
+}
+
+template <typename T>
+da_status svm<T>::predict_proba(da_int nsamples, da_int nfeat, const T *X_test,
+                                da_int ldx_test, T *y_proba, da_int ldy) {
+    if (y_proba == nullptr) {
+        return da_error_bypass(this->err, da_status_invalid_pointer,
+                               "y_proba is not a valid pointer.");
+    }
+    if (nfeat != ncol) {
+        return da_error_bypass(this->err, da_status_invalid_input,
+                               "n_features = " + std::to_string(nfeat) +
+                                   " doesn't match the expected value " +
+                                   std::to_string(ncol) + ".");
+    }
+    if (!iscomputed)
+        return da_error(this->err, da_status_out_of_date,
+                        "The model has not been trained yet.");
+    if (!predict_proba_opt)
+        return da_error(
+            this->err, da_status_invalid_input,
+            "Predict probabilities option was not set prior to computing SVM.");
+
+    const T *X_test_temp;
+    T *y_proba_temp;
+    T *utility_ptr1 = nullptr;
+    T *utility_ptr2 = nullptr;
+    da_int ldx_test_temp;
+    da_int ldy_temp;
+
+    da_status status = this->store_2D_array(
+        nsamples, nfeat, X_test, ldx_test, &utility_ptr1, &X_test_temp, ldx_test_temp,
+        "n_samples", "n_features", "X_test", "ldx_test");
+    if (status != da_status_success)
+        return status;
+    status = this->store_2D_array(nsamples, n_class, y_proba, ldy, &utility_ptr2,
+                                  const_cast<const T **>(&y_proba_temp), ldy_temp,
+                                  "n_rows", "n_cols", "y_proba", "ldy", 1);
+    if (status != da_status_success)
+        return status;
+    std::vector<T> dec_values;
+    try {
+        dec_values.resize(nsamples * n_classifiers);
+    } catch (std::bad_alloc &) {
+        return da_error(this->err, da_status_memory_error, "Memory allocation error");
+    }
+    // Obtain OVO decision function values
+    for (da_int i = 0; i < n_classifiers; i++) {
+        status =
+            classifiers[i]->decision_function(nsamples, nfeat, X_test_temp, ldx_test_temp,
+                                              dec_values.data() + i * nsamples);
+        if (status != da_status_success)
+            return status;
+    }
+    // To match sklearn convention we need to flip the sign in binary case
+    if (!ismulticlass)
+        for (da_int i = 0; i < nsamples; i++)
+            dec_values[i] = -dec_values[i];
+    // One-vs-One decision values -> pairwise probabilities -> coupled multiclass probabilities
+    const T min_prob = (T)1e-7;
+    for (da_int i = 0; i < nsamples; i++) {
+        // Temporary buffers per each sample
+        std::vector<T> pairwise_prob, Q, Qp;
+        try {
+            pairwise_prob.resize(n_class * n_class);
+            Q.resize(n_class * n_class);
+            Qp.resize(n_class);
+        } catch (std::bad_alloc &) {
+            return da_error(this->err, da_status_memory_error, "Memory allocation error");
+        }
+        // Construct pairwise probabilities matrix
+        da_int k = 0;
+        for (da_int j = 0; j < n_class; j++) {
+            for (da_int l = j + 1; l < n_class; l++) {
+                T fApB = dec_values[i + k * nsamples] * probaA[k] + probaB[k];
+                T proba;
+                if (fApB >= 0)
+                    proba = exp(-fApB) / (1.0 + exp(-fApB));
+                else
+                    proba = 1.0 / (1.0 + exp(fApB));
+                proba = std::min(std::max(proba, min_prob), (T)1.0 - min_prob);
+                pairwise_prob[j * n_class + l] = proba;
+                pairwise_prob[l * n_class + j] = 1.0 - proba;
+                k++;
+            }
+        }
+        // Compute class probabilities from pairwise probabilities
+        // Build Q matrix
+        for (da_int t = 0; t < n_class; t++) {
+            y_proba_temp[i + t * ldy_temp] = (T)1.0 / (T)n_class;
+            Q[t * n_class + t] = 0;
+            for (da_int j = 0; j < t; j++) {
+                Q[t * n_class + t] +=
+                    pairwise_prob[j * n_class + t] * pairwise_prob[j * n_class + t];
+                Q[t * n_class + j] = Q[j * n_class + t];
+            }
+            for (da_int j = t + 1; j < n_class; j++) {
+                Q[t * n_class + t] +=
+                    pairwise_prob[j * n_class + t] * pairwise_prob[j * n_class + t];
+                Q[t * n_class + j] =
+                    -pairwise_prob[j * n_class + t] * pairwise_prob[t * n_class + j];
+            }
+        }
+
+        da_int max_iter = std::max((da_int)100, n_class);
+        T eps = (T)0.005 / (T)n_class;
+        for (da_int iter = 0; iter < max_iter; iter++) {
+            // Compute Qp and pQp
+            T pQp = 0;
+            for (da_int t = 0; t < n_class; t++) {
+                Qp[t] = 0;
+                da_int Q_offset = t * n_class;
+                da_int y_proba_offset = t * ldy_temp;
+                for (da_int j = 0; j < n_class; j++)
+                    Qp[t] += Q[Q_offset + j] * y_proba_temp[i + j * ldy_temp];
+                pQp += y_proba_temp[i + y_proba_offset] * Qp[t];
+            }
+            // Find max error
+            T max_error = 0;
+            for (da_int t = 0; t < n_class; t++) {
+                T error = std::fabs(Qp[t] - pQp);
+                max_error = std::max(max_error, error);
+            }
+            if (max_error < eps)
+                break;
+
+            // Update p
+            for (da_int t = 0; t < n_class; t++) {
+                T Qt = Q[t * n_class + t];
+                if (Qt == 0)
+                    continue;
+                T diff = (-Qp[t] + pQp) / Qt;
+                y_proba_temp[i + t * ldy_temp] += diff;
+                // Safeguard to avoid unreasonable updates
+                // (optional; keeps behavior closer to libsvm if omitted)
+                T denom = (T)1 + diff;
+                if (denom == 0)
+                    continue;
+                pQp = (pQp + diff * (diff * Qt + (T)2 * Qp[t])) / (denom * denom);
+                for (da_int j = 0; j < n_class; j++) {
+                    Qp[j] = (Qp[j] + diff * Q[t * n_class + j]) / denom;
+                    y_proba_temp[i + j * ldy_temp] /= denom;
+                }
+            }
+        }
+    }
+    // For row-major order, we need to transpose the output
+    if (this->order == row_major) {
+        da_utils::copy_transpose_2D_array_column_to_row_major(
+            nsamples, n_class, y_proba_temp, ldy_temp, y_proba, ldy);
+    }
+    if (utility_ptr1)
+        delete[] (utility_ptr1);
+    if (utility_ptr2)
+        delete[] (utility_ptr2);
+    return status;
+}
+
+template <typename T>
+da_status svm<T>::predict_log_proba(da_int nsamples, da_int nfeat, const T *X_test,
+                                    da_int ldx_test, T *y_log_proba, da_int ldy) {
+    da_status status = da_status_success;
+
+    status = predict_proba(nsamples, nfeat, X_test, ldx_test, y_log_proba, ldy);
+    if (status != da_status_success)
+        return status;
+
+    if (this->order == column_major) {
+        for (da_int j = 0; j < n_class; j++) {
+            for (da_int i = 0; i < nsamples; i++) {
+                y_log_proba[ldy * j + i] = log(y_log_proba[ldy * j + i]);
+            }
+        }
+    } else {
+        for (da_int j = 0; j < nsamples; j++) {
+            for (da_int i = 0; i < n_class; i++) {
+                y_log_proba[j * ldy + i] = log(y_log_proba[j * ldy + i]);
+            }
+        }
+    }
+    return status;
+}
+
+// Compute probabilities using cross-validation
+template <typename T>
+da_status svm<T>::compute_probabilities(base_svm<T> &classifier, da_int n_fold, T &probaA,
+                                        T &probaB) {
+    std::vector<T> X_class, y_class;
+    da_int n = classifier.n, p = classifier.p;
+    if (n_fold > n) {
+        return da_error(
+            this->err, da_status_invalid_input,
+            "Number of folds is larger than number of samples in a classifier.");
+    }
+    // Obtain slices from user data, containing relevant classes
+    if (classifier.ismulticlass) {
+        try {
+            X_class.resize(n * p);
+            y_class.resize(n);
+        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        for (da_int i = 0; i < n; i++) {
+            da_int current_idx = classifier.idx_class[i];
+            for (da_int j = 0; j < p; j++) {
+                X_class[i + j * n] = classifier.XUSR[current_idx + j * classifier.ldx];
+            }
+            y_class[i] = classifier.idx_is_positive[i] ? 1.0 : 0.0;
+        }
+    } else {
+        X_class.assign(classifier.XUSR, classifier.XUSR + classifier.ldx * p);
+        y_class.resize(n);
+        // Flip the sign here to match sklearn convention (0.0 is positive class, 1.0 negative)
+        for (da_int i = 0; i < n; i++) {
+            y_class[i] = (classifier.yusr[i] == 1) ? 0 : 1;
+        }
+    }
+    // For multiclass case X_class is column-major dense (no leading dimension needs to be considered)
+    // For binary classification X_class is still column-major only but might be affected by leading dimension (it is raw user pointer)
+    da_int ldx_class = (classifier.ismulticlass) ? n : classifier.ldx;
+    // Create vector of random indices for shuffling
+    std::vector<da_int> rand_indices;
+    std::vector<T> decision_values;
+    try {
+        rand_indices.resize(n);
+        decision_values.resize(n);
+    } catch (std::bad_alloc &) {
+        return da_error(this->err, da_status_memory_error, "Memory allocation error");
+    }
+    da_std::iota(rand_indices.begin(), rand_indices.end(), 0);
+    da_std::shuffle(rand_indices.begin(), rand_indices.end(), mt_gen);
+
+    // Start cross-validation
+    for (da_int i = 0; i < n_fold; i++) {
+        da_int fold_start = i * n / n_fold;
+        da_int fold_end = (i == n_fold - 1) ? n : (i + 1) * n / n_fold;
+
+        std::vector<T> X_train, y_train, X_val, y_val;
+        try {
+            X_train.resize((n - (fold_end - fold_start)) * p);
+            y_train.resize(n - (fold_end - fold_start));
+            X_val.resize((fold_end - fold_start) * p);
+            y_val.resize(fold_end - fold_start);
+        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+
+        // Split data into training and validation sets using random indices (expensive in column major)
+        da_int idx_train = 0, idx_val = 0;
+        for (da_int sample_idx = 0; sample_idx < n; sample_idx++) {
+            da_int j = rand_indices[sample_idx];
+            if (sample_idx >= fold_start && sample_idx < fold_end) {
+                for (da_int k = 0; k < p; k++) {
+                    X_val[idx_val + (fold_end - fold_start) * k] =
+                        X_class[j + k * ldx_class];
+                }
+                y_val[idx_val] = y_class[j];
+                idx_val++;
+            } else {
+                for (da_int k = 0; k < p; k++) {
+                    X_train[idx_train + (n - (fold_end - fold_start)) * k] =
+                        X_class[j + k * ldx_class];
+                }
+                y_train[idx_train] = y_class[j];
+                idx_train++;
+            }
+        }
+
+        // Check for missing classes in the training fold
+        bool missing_positive =
+            std::find(y_train.begin(), y_train.end(), (T)0.0) == y_train.end();
+        bool missing_negative =
+            std::find(y_train.begin(), y_train.end(), (T)1.0) == y_train.end();
+        std::vector<T> fold_decision;
+        try {
+            fold_decision.resize(y_val.size());
+        } catch (std::bad_alloc &) {
+            return da_error(this->err, da_status_memory_error, "Memory allocation error");
+        }
+        if (missing_positive && missing_negative) {
+            // If both classes are missing, assign zero decision value
+            std::fill(fold_decision.begin(), fold_decision.end(), (T)0.0);
+        } else if (missing_positive || missing_negative) {
+            // If one of the classes is missing, assign a default decision value:
+            // positive decision if negatives are missing, negative otherwise.
+            T default_decision = missing_positive ? (T)1.0 : (T)-1.0;
+            std::fill(fold_decision.begin(), fold_decision.end(), default_decision);
+        } else {
+            // Create a fold classifier using the training fold
+            std::unique_ptr<base_svm<T>> fold_classifier;
+            switch (mod) {
+            case da_svm_model::svc:
+                fold_classifier = std::make_unique<svc<T>>(
+                    X_train.data(), y_train.data(), static_cast<da_int>(y_train.size()),
+                    p, static_cast<da_int>(y_train.size()));
+                break;
+            case da_svm_model::nusvc:
+                fold_classifier = std::make_unique<nusvc<T>>(
+                    X_train.data(), y_train.data(), static_cast<da_int>(y_train.size()),
+                    p, static_cast<da_int>(y_train.size()));
+                break;
+            default:
+                return da_error(this->err, da_status_unknown_query,
+                                "Unsupported SVM model.");
+            }
+            fold_classifier->C = classifier.C;
+            fold_classifier->eps = classifier.eps;
+            fold_classifier->nu = classifier.nu;
+            fold_classifier->coef0 = classifier.coef0;
+            fold_classifier->degree = classifier.degree;
+            fold_classifier->tol = classifier.tol;
+            fold_classifier->max_iter = classifier.max_iter;
+            fold_classifier->tau = classifier.tau;
+            fold_classifier->gamma = classifier.gamma;
+            fold_classifier->kernel_function = classifier.kernel_function;
+            fold_classifier->cache_size = classifier.cache_size;
+            fold_classifier->max_ws_size = classifier.max_ws_size;
+
+            da_status fold_status = fold_classifier->compute();
+            if (fold_status != da_status_success)
+                return fold_status;
+            fold_status = fold_classifier->decision_function(
+                static_cast<da_int>(y_val.size()), p, X_val.data(),
+                static_cast<da_int>(y_val.size()), fold_decision.data());
+            if (fold_status != da_status_success)
+                return fold_status;
+        }
+        // Copy the computed decision values for this fold back to the overall array.
+        for (da_int j = 0; j < static_cast<da_int>(y_val.size()); j++) {
+            decision_values[rand_indices[fold_start + j]] = fold_decision[j];
+        }
+    }
+
+    // Improvement of Platt's binary SVM Probablistic Output, from Lin et al.
+    // Adaptation of LibSVM code, following pseudocode from the original paper.
+    // Reference: https://doi.org/10.1007/s10994-007-5018-6
+
+    da_int pos_count = 0, neg_count = 0;
+    for (da_int i = 0; i < n; i++) {
+        if (y_class[i] == 1.0)
+            pos_count++;
+        else
+            neg_count++;
+    }
+
+    // Parameters from the paper
+    da_int maxiter = 100;
+    T minstep = 1e-10, sigma = 1e-12;
+    T eps = 1e-5;
+    T hi_target = (pos_count + 1.0) / (pos_count + 2.0),
+      lo_target = 1.0 / (neg_count + 2.0);
+    probaA = 0.0, probaB = std::log((neg_count + 1.0) / (pos_count + 1.0));
+    T fval = 0.0;
+
+    std::vector<T> t;
+    try {
+        t.resize(n);
+    } catch (std::bad_alloc &) {
+        return da_error(this->err, da_status_memory_error, "Memory allocation error");
+    }
+
+    // Initialize t and fval
+    for (da_int i = 0; i < n; i++) {
+        t[i] = (y_class[i] == 1.0) ? hi_target : lo_target;
+        T fApB = decision_values[i] * probaA + probaB;
+        if (fApB >= 0)
+            fval += t[i] * fApB + std::log(1.0 + std::exp(-fApB));
+        else
+            fval += (t[i] - 1.0) * fApB + std::log(1.0 + std::exp(fApB));
+    }
+    da_int iter = 0;
+    for (; iter < maxiter; iter++) {
+        T h11 = sigma, h22 = sigma, h21 = 0.0, g1 = 0.0, g2 = 0.0;
+        for (da_int i = 0; i < n; i++) {
+            T fApB = decision_values[i] * probaA + probaB;
+            T p, q;
+            if (fApB >= 0) {
+                p = exp(-fApB) / (1.0 + std::exp(-fApB));
+                q = 1.0 / (1.0 + std::exp(-fApB));
+            } else {
+                p = 1.0 / (1.0 + std::exp(fApB));
+                q = exp(fApB) / (1.0 + std::exp(fApB));
+            }
+            T d2 = p * q;
+            h11 += decision_values[i] * decision_values[i] * d2;
+            h22 += d2;
+            h21 += decision_values[i] * d2;
+            T d1 = t[i] - p;
+            g1 += decision_values[i] * d1;
+            g2 += d1;
+        }
+        if (std::abs(g1) < eps && std::abs(g2) < eps)
+            break; // Convergence reached
+        T det = h11 * h22 - h21 * h21;
+        T dA = (h21 * g2 - h22 * g1) / det;
+        T dB = (h21 * g1 - h11 * g2) / det;
+        T gd = g1 * dA + g2 * dB;
+        T stepsize = 1.0;
+        while (stepsize >= minstep) {
+            T newA = probaA + stepsize * dA;
+            T newB = probaB + stepsize * dB;
+            T newfval = 0.0;
+            for (da_int i = 0; i < n; i++) {
+                T fApB = decision_values[i] * newA + newB;
+                if (fApB >= 0)
+                    newfval += t[i] * fApB + std::log(1.0 + std::exp(-fApB));
+                else
+                    newfval += (t[i] - 1.0) * fApB + std::log(1.0 + std::exp(fApB));
+            }
+            if (newfval < fval + 0.0001 * stepsize * gd) {
+                probaA = newA;
+                probaB = newB;
+                fval = newfval;
+                break; // Accept the step
+            } else {
+                stepsize *= 0.5; // Reduce step size
+            }
+        }
+
+        if (stepsize < minstep) {
+            // If stepsize is too small, we stop the optimization
+            return da_warn(
+                this->err, da_status_numerical_difficulties,
+                "Line search had troubles converging during probability estimation.");
+        }
+    }
+    if (iter >= maxiter) {
+        return da_warn(
+            this->err, da_status_maxit,
+            "Maximum number of iterations reached during probability estimation.");
+    }
+
     return da_status_success;
 }
 

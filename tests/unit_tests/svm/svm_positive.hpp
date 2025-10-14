@@ -48,7 +48,8 @@ template <> constexpr const char *type_opt_name<double>() { return "double"; }
 // Helper to define precision to which we expect the results to match
 template <typename T> T expected_precision(T scale = (T)1.0);
 template <> double expected_precision<double>(double scale) {
-    return da_numeric::tolerance<double>::safe_tol() * scale;
+    return da_numeric::tolerance<double>::safe_tol() * scale *
+           1e2; // safe_tol is 2e-8, svm was trained with 1e-6 tolerance
 }
 template <> float expected_precision<float>(float scale) {
     return da_numeric::tolerance<float>::safe_tol() * scale;
@@ -95,7 +96,8 @@ void test_svm_positive(std::string csvname, da_svm_model model,
     kernel_str.resize(lvalue);
     EXPECT_EQ(da_options_get_string(svm_handle, "kernel", kernel_str.data(), &lvalue),
               da_status_success);
-    kernel_str.resize(lvalue - 1);
+    if (lvalue > 0)
+        kernel_str.resize(lvalue - 1);
     ////////////////////////
     // Get the training data
     ////////////////////////

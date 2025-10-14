@@ -253,6 +253,9 @@ if(WIN32)
     _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1 _CRT_SECURE_NO_WARNINGS=1
     _SILENCE_CXX20_CISO646_REMOVED_WARNING=1)
 
+  # Deal with issues concerning min/max macros in Windows STL headers
+  add_compile_definitions(NOMINMAX)
+
   # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime
   # libraries
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
@@ -340,10 +343,13 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
-  set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;")
   set(COMPILER_FLAGS_CXX
-      "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled;-Wno-macro-redefined;-Wno-sign-conversion;"
+      "${COMPILER_FLAGS_CXX};-Wno-macro-redefined;-Wno-sign-conversion;-Wall;-Wextra;"
   )
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION
+                                                VERSION_GREATER_EQUAL "18.0.0")
+    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled")
+  endif()
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-mavx2;-mfma;")
   endif()

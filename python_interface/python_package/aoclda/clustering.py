@@ -69,17 +69,32 @@ class kmeans():
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
 
     """
+
     def __init__(self, n_clusters=1, initialization_method='k-means++', C=None, n_init=10,
                  max_iter=300, seed=-1, algorithm='lloyd', tol=1.0e-4, check_data=False):
 
-        self.kmeans_double = pybind_kmeans(n_clusters, initialization_method, n_init, max_iter,
-                                           seed, algorithm,  'double', check_data)
-        self.kmeans_single = pybind_kmeans(n_clusters, initialization_method, n_init, max_iter,
-                                           seed, algorithm,  'single', check_data)
+        self.kmeans_double = pybind_kmeans(
+            n_clusters,
+            initialization_method,
+            n_init,
+            max_iter,
+            seed,
+            algorithm,
+            'double',
+            check_data)
+        self.kmeans_single = pybind_kmeans(
+            n_clusters,
+            initialization_method,
+            n_init,
+            max_iter,
+            seed,
+            algorithm,
+            'single',
+            check_data)
 
-        if C is not None:
-            C = check_convert_data(C)
-        self.C=C
+        self.dtype = 'float'
+        self.order = 'A'
+        self.C = C
         self.tol = tol
         self.kmeans = self.kmeans_double
 
@@ -135,8 +150,13 @@ class kmeans():
             self (object): Returns the instance itself.
 
         """
-        A = check_convert_data(A)
-        if A.dtype == "float32":
+        A, self.order, self.dtype = check_convert_data(
+            A, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+        if self.C is not None:
+            self.C, _, _ = check_convert_data(
+                self.C, order=self.order, dtype=self.dtype, force_dtype=True)
+        if self.dtype == "float32":
             self.kmeans = self.kmeans_single
             self.kmeans_double = None
 
@@ -159,8 +179,10 @@ class kmeans():
         Returns:
             numpy.ndarray of shape (m_samples, n_clusters): The transformed matrix.
         """
-        X = check_convert_data(X)
-        
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+
         return self.kmeans.pybind_transform(X)
 
     def predict(self, Y):
@@ -178,9 +200,12 @@ class kmeans():
         Returns:
             numpy.ndarray of shape (k_samples, ): The labels.
         """
-        Y = check_convert_data(Y)
-        
+        Y, _, _ = check_convert_data(
+            Y, order=self.order, dtype=self.dtype, force_dtype=True
+        )
+
         return self.kmeans.pybind_predict(Y)
+
 
 class DBSCAN():
     """
@@ -194,13 +219,15 @@ class DBSCAN():
             considered a core point. Default = 5.
 
         metric (str, optional): The distance metric used to compare sample points. Available metrics
-            are 'euclidean', 'l2', 'sqeuclidean' (squared euclidean distances), 'manhattan', 'l1',
+            are 'euclidean', 'l2', 'sqeuclidean' (squared Euclidean distances), 'manhattan', 'l1',
             'cityblock', 'cosine', or 'minkowski'. Default = 'euclidean'.
 
         algorithm (str, optional): The algorithm used to compute the clusters. Available options are
-            'auto', 'brute' and 'kd_tree'. k-d trees are likely to be fastest for lower dimensional
-            datasets, but cannot not be used with the cosine distance or with the Minkowski distance
-            with power less than 1.0. Default = 'brute'.
+            'auto', 'ball_tree', 'brute' and 'kd_tree'. k-d trees are likely to be fastest for lower
+            dimensional datasets, and ball trees may be preferred when data is not aligned along
+            coordinate axes, but trees cannot not be used with the cosine distance, the squared
+            Euclidean distance, or with the Minkowski distance with power less than 1.0.
+            Default = 'auto'.
 
         leaf_size (int, optional): Leaf size for the k-d tree algorithm. Default = 30.
 
@@ -212,18 +239,27 @@ class DBSCAN():
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
 
     """
-    def __init__(self, min_samples=5, metric='euclidean', algorithm='brute', leaf_size=30, eps=0.5,
-                 power=2.0, check_data=False):
 
-        self.DBSCAN_double = pybind_DBSCAN(min_samples, metric, algorithm, leaf_size, 'double',
-                                           check_data)
-        self.DBSCAN_single = pybind_DBSCAN(min_samples, metric, algorithm, leaf_size, 'single',
-                                           check_data)
+    def __init__(
+            self,
+            min_samples=5,
+            metric='euclidean',
+            algorithm='auto',
+            leaf_size=30,
+            eps=0.5,
+            power=2.0,
+            check_data=False):
 
-        self.eps=eps
+        self.DBSCAN_double = pybind_DBSCAN(
+            min_samples, metric, algorithm, leaf_size, 'double', check_data)
+        self.DBSCAN_single = pybind_DBSCAN(
+            min_samples, metric, algorithm, leaf_size, 'single', check_data)
+
+        self.order = 'A'
+        self.dtype = 'float'
+        self.eps = eps
         self.power = power
         self.DBSCAN = self.DBSCAN_double
-
 
     @property
     def labels(self):
@@ -269,16 +305,18 @@ class DBSCAN():
         Returns:
             self (object): Returns the instance itself.
         """
-        A = check_convert_data(A)
+        A, self.order, self.dtype = check_convert_data(
+            A, order=self.order, dtype=self.dtype, force_dtype=True
+        )
 
-        if A.dtype == "float32":
-            self.eps=np.float32(self.eps)
-            self.power=np.float32(self.power)
+        if self.dtype == "float32":
+            self.eps = np.float32(self.eps)
+            self.power = np.float32(self.power)
             self.DBSCAN = self.DBSCAN_single
             self.DBSCAN_double = None
         else:
-            self.eps=np.float64(self.eps)
-            self.power=np.float64(self.power)
+            self.eps = np.float64(self.eps)
+            self.power = np.float64(self.power)
 
         self.DBSCAN.pybind_fit(A, self.eps, self.power)
         return self

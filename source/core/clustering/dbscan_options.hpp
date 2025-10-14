@@ -21,10 +21,6 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "macros.h"
@@ -52,19 +48,28 @@ inline da_status register_dbscan_options(da_options::OptionRegistry &opts,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "leaf size", "Leaf size for k-d tree.", 1, da_options::lbound_t::greaterequal,
-            imax, da_options::ubound_t::p_inf, 30));
+            "leaf size", "Leaf size for k-d tree or ball tree.", 1,
+            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 30));
         opts.register_opt(oi);
         std::shared_ptr<OptionString> os;
-        os = std::make_shared<OptionString>(OptionString(
-            "algorithm", "Choice of algorithm.",
-            {{"brute", brute}, {"kd tree", kd_tree}, {"auto", automatic}}, "auto"));
+        os = std::make_shared<OptionString>(OptionString("algorithm",
+                                                         "Choice of algorithm.",
+                                                         {{"brute", brute},
+                                                          {"kd tree", kd_tree},
+                                                          {"ball tree", ball_tree},
+                                                          {"auto", automatic}},
+                                                         "auto"));
         opts.register_opt(os);
+        // da_euclidean_gemm will call syrk which is optimized for the case where dist(X,X) is required.
+        // Since da_euclidean is optimized for generic dist(X,Y) only, when
+        // "euclidean" is chosen as an option we call the syrk-based implementation through euclidean_gemm.
+        // Once blocked distances are optimized for the cases where dist(X,X) is computed,
+        // we will make available both euclidean_gemm and euclidean options.
         os = std::make_shared<OptionString>(
             OptionString("metric", "Choice of metric used to compute pairwise distances.",
-                         {{"euclidean", da_euclidean},
+                         {{"euclidean", da_euclidean_gemm},
                           {"l2", da_l2},
-                          {"sqeuclidean", da_sqeuclidean},
+                          {"sqeuclidean", da_sqeuclidean_gemm},
                           {"manhattan", da_manhattan},
                           {"l1", da_l1},
                           {"cityblock", da_cityblock},

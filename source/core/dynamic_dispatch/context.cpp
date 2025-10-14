@@ -24,23 +24,15 @@
 #include "context.hpp"
 #include <cstdlib>
 
-#if !defined(_WIN32)
-// On Windows we use Meyers' singleton class rather than a mutex-based singleton as it interacts better with Python
-context *context::global_obj = nullptr;
-std::mutex context::global_lock;
-#endif
-
 thread_local std::unordered_map<std::string, std::string> context::hidden_settings;
 
 // Function that returns the global context
 context *context::get_context() {
-#if defined(_WIN32)
+    // Use Meyer's singleton
     static context global_obj;
     return &global_obj;
-#else
-    std::lock_guard<std::mutex> lock(global_lock);
-    if (nullptr == global_obj)
-        global_obj = new context();
-    return global_obj;
-#endif
+}
+
+std::unordered_map<std::string, std::string> &context::get_hidden_settings() {
+    return hidden_settings;
 }

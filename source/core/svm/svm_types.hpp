@@ -25,18 +25,18 @@
 #define SVM_TYPES_HPP
 #include <functional>
 
-#define SVM_MAX_KERNEL_SIZE da_int(1024)
-#define SVM_MAX_BLOCK_SIZE da_int(258)
+#define SVM_MAX_BLOCK_SIZE da_int(256)
 
 namespace da_svm_types {
 
 enum svm_kernel { rbf = 0, linear, polynomial, sigmoid };
 
 template <typename T> struct meta_kernel_f {
-    using type =
-        std::function<void(da_order order, da_int m, da_int n, da_int k, const T *X,
-                           T *x_norm, da_int ldx, const T *Y, T *y_norm, da_int ldy, T *D,
-                           da_int ldd, T gamma, da_int degree, T coef0, bool X_is_Y)>;
+    using type = std::function<void(
+        da_order order, da_int m, da_int n, da_int k, const T *X, T *x_norm,
+        da_int compute_X_norms, da_int ldx, const T *Y, T *y_norm, da_int compute_Y_norms,
+        da_int ldy, T *D, da_int ldd, T gamma, da_int degree, T coef0, bool X_is_Y,
+        da_int vectorisation)>;
 };
 template <typename T> using kernel_f_type = typename meta_kernel_f<T>::type;
 

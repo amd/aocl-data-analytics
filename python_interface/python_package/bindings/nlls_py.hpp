@@ -1,6 +1,6 @@
 
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -268,21 +268,26 @@ class nlls : public pyda_handle {
          std::string check_derivatives = "no", da_int verbose = (da_int)0,
          bool check_data = false) {
 
+        std::string mesg;
         da_status status{da_status_success};
-        // prep precision string
-        std::string mesg{prec};
-        const std::regex ltrim("^[[:space:]]+");
-        const std::regex rtrim("[[:space:]]+$");
-        const std::regex squeeze("[[:space:]]+");
-        mesg = std::regex_replace(mesg, ltrim, std::string(""));
-        mesg = std::regex_replace(mesg, rtrim, std::string(""));
-        mesg = std::regex_replace(mesg, squeeze, std::string(" "));
-        transform(mesg.begin(), mesg.end(), mesg.begin(), ::tolower);
-        if (mesg == "double"s)
+        if (prec == "double"s)
             precision_nlls = da_double;
-        else if (mesg == "single"s)
+        else if (prec == "single"s)
             precision_nlls = da_single;
-        mesg = "";
+        else {
+            // prep precision string and try again (expensive)
+            mesg = prec;
+            const std::regex trim("[[:space:]]+");
+            mesg = std::regex_replace(mesg, trim, std::string(""));
+            transform(mesg.begin(), mesg.end(), mesg.begin(), ::tolower);
+            if (mesg == "double"s)
+                precision_nlls = da_double;
+            else if (mesg == "single"s)
+                precision_nlls = da_single;
+            // else - leave unchanged
+
+            mesg = "";
+        }
 
         if (precision_nlls == da_double) {
             using T = double;
@@ -578,30 +583,6 @@ class nlls : public pyda_handle {
         status = da_nlls_fit(this->handle, this->n_coef, x.mutable_data(), udata);
 
         exception_check(status);
-    }
-
-    void fit_d(py::array_t<double> x, nlls_cb::py_cb1_t<double> &fun,
-               std::optional<nlls_cb::py_cb1_t<double>> jac,
-               std::optional<nlls_cb::py_cb2_t<double>> hes,
-               std::optional<nlls_cb::py_cb2_t<double>> hp,
-               std::optional<py::object> data, double ftol = 1.0e-8,
-               double abs_ftol = 1.0e-8, double gtol = 1.0e-8, double abs_gtol = 1.0e-5,
-               double xtol = 2.22e-16, double reg_term = 0.0, da_int maxit = da_int(100),
-               double fd_step = 1.0e-7, double fd_ttol = 1.0e-4) {
-        fit<double>(x, fun, jac, hes, hp, data, ftol, abs_ftol, gtol, abs_gtol, xtol,
-                    reg_term, maxit, fd_step, fd_ttol);
-    }
-
-    void fit_s(py::array_t<float> x, nlls_cb::py_cb1_t<float> &fun,
-               std::optional<nlls_cb::py_cb1_t<float>> jac,
-               std::optional<nlls_cb::py_cb2_t<float>> hes,
-               std::optional<nlls_cb::py_cb2_t<float>> hp, std::optional<py::object> data,
-               float ftol = 1.0e-8f, float abs_ftol = 1.0e-8f, float gtol = 1.0e-8f,
-               float abs_gtol = 1.0e-5f, float xtol = 2.22e-16f, float reg_term = 0.0,
-               da_int maxit = da_int(100), float fd_step = 1.0e-7f,
-               float fd_ttol = 1.0e-4f) {
-        fit<float>(x, fun, jac, hes, hp, data, ftol, abs_ftol, gtol, abs_gtol, xtol,
-                   reg_term, maxit, fd_step, fd_ttol);
     }
 
     // Query handle for information

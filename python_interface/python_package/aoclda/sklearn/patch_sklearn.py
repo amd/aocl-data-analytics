@@ -30,14 +30,17 @@ Contains the functions to replace symbols from Scikit-learn by the AOCL-DA patch
 import os
 import warnings
 import contextlib
+import sklearn.covariance as cov_sklearn
 import sklearn.decomposition as decomp_sklearn
 import sklearn.linear_model as linmod_sklearn
 import sklearn.cluster as clustering_sklearn
 import sklearn.tree as decision_tree_sklearn
 import sklearn.ensemble as decision_forest_sklearn
 import sklearn.metrics.pairwise as pairwise_sklearn
-import sklearn.neighbors as knn_sklearn
+import sklearn.model_selection as model_selection_sklearn
+import sklearn.neighbors as nearest_neighbors_sklearn
 import sklearn.svm as svm_sklearn
+from ._empirical_covariance import EmpiricalCovariance as cov_da
 from ._pca import PCA as PCA_da
 from ._kmeans import kmeans as kmeans_da
 from ._dbscan import DBSCAN as DBSCAN_da
@@ -49,7 +52,10 @@ from ._linear_model import LogisticRegression as LogisticRegression_da
 from ._decision_tree import DecisionTreeClassifier as DecisionTreeClassifier_da
 from ._decision_forest import RandomForestClassifier as RandomForestClassifier_da
 from ._metrics import pairwise_distances as pairwise_distances_da
+from ._utils import train_test_split as train_test_split_da
 from ._nearest_neighbors import KNeighborsClassifier as KNeighborsClassifier_da
+from ._nearest_neighbors import KNeighborsRegressor as KNeighborsRegressor_da
+from ._nearest_neighbors import NearestNeighbors as NearestNeighbors_da
 from ._svm import SVC as SVC_da, SVR as SVR_da, NuSVC as NuSVC_da, NuSVR as NuSVR_da
 # Check if we should be using Intel's Scikit-learn extension
 try:
@@ -66,7 +72,8 @@ if USE_INTEL_SKLEARNEX:
         warnings.warn(
             "Intel Extension for scikit-learn not found", category=RuntimeWarning)
 
-# Now on a case-by-case basis, overwrite with AMD symbols where we have performant implementations
+# Now on a case-by-case basis, overwrite with AMD symbols where we have
+# performant implementations
 
 # Global map of the sklearn symbols which have AMD implementations
 # key: class name
@@ -74,7 +81,10 @@ if USE_INTEL_SKLEARNEX:
 #        pack - sklearn subpackage
 #        sk_sym - name of the sklearn symbol to replace
 #        da_sym - equivalent name in the DA sklearn lib
-AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
+AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
+                                       'sk_sym': getattr(cov_sklearn, "EmpiricalCovariance"),
+                                       'da_sym': cov_da},
+               'PCA': {'pack': decomp_sklearn,
                        'sk_sym': getattr(decomp_sklearn, "PCA"),
                        'da_sym': PCA_da},
                'LinearRegression': {'pack': linmod_sklearn,
@@ -107,9 +117,18 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                'pairwise_distances': {'pack': pairwise_sklearn,
                                       'sk_sym': getattr(pairwise_sklearn, "pairwise_distances"),
                                       'da_sym': pairwise_distances_da},
-               'KNeighborsClassifier': {'pack': knn_sklearn,
-                                        'sk_sym': getattr(knn_sklearn, 'KNeighborsClassifier'),
+               'train_test_split': {'pack': model_selection_sklearn,
+                                    'sk_sym': getattr(model_selection_sklearn, "train_test_split"),
+                                    'da_sym': train_test_split_da},
+               'KNeighborsClassifier': {'pack': nearest_neighbors_sklearn,
+                                        'sk_sym': getattr(nearest_neighbors_sklearn, 'KNeighborsClassifier'),
                                         'da_sym': KNeighborsClassifier_da},
+               'KNeighborsRegressor': {'pack': nearest_neighbors_sklearn,
+                                       'sk_sym': getattr(nearest_neighbors_sklearn, 'KNeighborsRegressor'),
+                                       'da_sym': KNeighborsRegressor_da},
+               'NearestNeighbors': {'pack': nearest_neighbors_sklearn,
+                                    'sk_sym': getattr(nearest_neighbors_sklearn, 'NearestNeighbors'),
+                                    'da_sym': NearestNeighbors_da},
                'SVC': {'pack': svm_sklearn,
                        'sk_sym': getattr(svm_sklearn, 'SVC'),
                        'da_sym': SVC_da},
@@ -125,8 +144,18 @@ AMD_SYMBOLS = {'PCA': {'pack': decomp_sklearn,
                }
 
 # List of symbols where AMD is chosen over Intel
-AMD_vs_INTEL = ['KMeans', 'LinearRegression', 'KNeighborsClassifier',
-                'Ridge', 'PCA', 'DecisionTreeClassifier', 'DBSCAN']
+AMD_vs_INTEL = [
+    'EmpiricalCovariance',
+    'KMeans',
+    'LinearRegression',
+    'KNeighborsClassifier',
+    'KNeighborsRegressor',
+    'Ridge',
+    'PCA',
+    'DecisionTreeClassifier',
+    'DBSCAN',
+    'NearestNeighbors',
+    'train_test_split']
 
 
 def skpatch(*args, print_patched=True):
@@ -196,7 +225,8 @@ def undo_skpatch(*args, print_patched=True):
     """
 
     if using_intel:
-        # Unpatch anything that might have been patched with Intel, but suppress printing to screen
+        # Unpatch anything that might have been patched with Intel, but suppress
+        # printing to screen
         with open(os.devnull, 'w', encoding="utf-8") as devnull:
             with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
                 unpatch_sklearn()

@@ -36,24 +36,35 @@ namespace ARCH {
 /* Base class of the callback user data to be passed as void pointers
  * Contain all the basic data to compute */
 template <class T>
-usrdata_base<T>::usrdata_base(const T *X, da_int ldX, const T *y, da_int nsamples,
-                              da_int nfeat, bool intercept, T lambda, T alpha,
-                              const T *xv, da_linmod_types::scaling_t scaling)
-    : nsamples(nsamples), nfeat(nfeat), X(X), ldX(ldX), y(y), intercept(intercept),
-      xv(xv), scaling(scaling) {
+usrdata_base<T>::usrdata_base(da_order order, const T *X, da_int ldX, const T *y,
+                              da_int nsamples, da_int nfeat, bool intercept, T lambda,
+                              T alpha, const T *xv, da_linmod_types::scaling_t scaling)
+    : order(order), nsamples(nsamples), nfeat(nfeat), X(X), ldX(ldX), y(y),
+      intercept(intercept), xv(xv), scaling(scaling) {
     l1reg = lambda * alpha;
     l2reg = lambda * (T(1) - alpha) / T(2);
     positive = false;
+    switch (order) {
+    case da_order::column_major:
+        Xcinc = ldX;
+        Xrinc = 1;
+        break;
+    case da_order::row_major:
+        Xcinc = 1;
+        Xrinc = ldX;
+        break;
+    }
 }
 
 template <class T> usrdata_base<T>::~usrdata_base() {}
 
 /* User data for the nonlinear optimization callbacks of the logistic regression */
 template <class T>
-cb_usrdata_logreg<T>::cb_usrdata_logreg(const T *X, da_int ldX, const T *y,
-                                        da_int nsamples, da_int nfeat, bool intercept,
-                                        T lambda, T alpha, da_int nclass, da_int nparam)
-    : usrdata_base<T>(X, ldX, y, nsamples, nfeat, intercept, lambda, alpha),
+cb_usrdata_logreg<T>::cb_usrdata_logreg(da_order order, const T *X, da_int ldX,
+                                        const T *y, da_int nsamples, da_int nfeat,
+                                        bool intercept, T lambda, T alpha, da_int nclass,
+                                        da_int nparam)
+    : usrdata_base<T>(order, X, ldX, y, nsamples, nfeat, intercept, lambda, alpha),
       nclass(nclass) {
     maxexp.resize(nsamples);
     sumexp.resize(nsamples);
@@ -65,10 +76,10 @@ template <class T> cb_usrdata_logreg<T>::~cb_usrdata_logreg() {}
 
 /* User data for the nonlinear optimization callbacks of the lineqr regression */
 template <class T>
-cb_usrdata_linreg<T>::cb_usrdata_linreg(const T *X, da_int ldX, const T *y,
-                                        da_int nsamples, da_int nfeat, bool intercept,
-                                        T lambda, T alpha)
-    : usrdata_base<T>(X, ldX, y, nsamples, nfeat, intercept, lambda, alpha) {
+cb_usrdata_linreg<T>::cb_usrdata_linreg(da_order order, const T *X, da_int ldX,
+                                        const T *y, da_int nsamples, da_int nfeat,
+                                        bool intercept, T lambda, T alpha)
+    : usrdata_base<T>(order, X, ldX, y, nsamples, nfeat, intercept, lambda, alpha) {
     matvec.resize(nsamples);
 }
 
@@ -76,12 +87,13 @@ template <class T> cb_usrdata_linreg<T>::~cb_usrdata_linreg() {}
 
 /* User data for the coordinate descent step function of the linear regression */
 template <class T>
-stepfun_usrdata_linreg<T>::stepfun_usrdata_linreg(const T *X, da_int ldX, const T *y,
-                                                  da_int nsamples, da_int nfeat,
-                                                  bool intercept, T lambda, T alpha,
-                                                  const T *xv,
+stepfun_usrdata_linreg<T>::stepfun_usrdata_linreg(da_order order, const T *X, da_int ldX,
+                                                  const T *y, da_int nsamples,
+                                                  da_int nfeat, bool intercept, T lambda,
+                                                  T alpha, const T *xv,
                                                   da_linmod_types::scaling_t scaling)
-    : usrdata_base<T>(X, ldX, y, nsamples, nfeat, intercept, lambda, alpha, xv, scaling) {
+    : usrdata_base<T>(order, X, ldX, y, nsamples, nfeat, intercept, lambda, alpha, xv,
+                      scaling) {
     residual.resize(nsamples);
     const da_int nmod = intercept ? nfeat - 1 : nfeat;
     work.resize(nmod); // does not include intercept coefficient
@@ -102,15 +114,14 @@ template <class T> stepfun_usrdata_linreg<T>::~stepfun_usrdata_linreg() {
  * x[m], X[m,n], v[n]
  */
 template <typename T>
-void eval_feature_matrix(da_int n, const T *x, da_int m, const T *X, da_int ldX, T *v,
-                         bool intercept, bool trans, T alpha, T beta) {
+void eval_feature_matrix(da_order order, da_int n, const T *x, da_int m, const T *X,
+                         da_int ldX, T *v, bool intercept, bool trans, T alpha, T beta) {
 
     da_int aux = intercept ? 1 : 0;
-    // For now its always CblasColMajor until store_2D_array is removed
-    // this will have to be switched according to the handle->storage value
     enum CBLAS_TRANSPOSE transpose = trans ? CblasTrans : CblasNoTrans;
-    da_blas::cblas_gemv(CblasColMajor, transpose, m, n - aux, alpha, X, ldX, x, 1, beta,
-                        v, 1);
+    enum CBLAS_ORDER storage =
+        order == da_order::row_major ? CblasRowMajor : CblasColMajor;
+    da_blas::cblas_gemv(storage, transpose, m, n - aux, alpha, X, ldX, x, 1, beta, v, 1);
     if (intercept && !trans) {
         da_blas::cblas_axpy(m, alpha, &x[n - 1], 0, v, 1);
     } else if (intercept && trans) {
@@ -186,7 +197,7 @@ da_int objfun_logistic_rsc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
     da_std::fill(maxexp.begin(), maxexp.end(), 0.);
     for (da_int k = 0; k < nclass - 1; k++) {
         da_int idx = k * nsamples;
-        eval_feature_matrix(nmod, &x[k * nmod], nsamples, data->X, data->ldX,
+        eval_feature_matrix(data->order, nmod, &x[k * nmod], nsamples, data->X, data->ldX,
                             &lincomb_ptr[k * nsamples], data->intercept);
         for (da_int i = 0; i < nsamples; i++) {
             if (maxexp[i] < lincomb[idx])
@@ -235,8 +246,8 @@ da_int objgrd_logistic_rsc(da_int n, T *x, T *grad, void *udata,
         da_std::fill(maxexp.begin(), maxexp.end(), 0.);
         for (da_int k = 0; k < nclass - 1; k++) {
             da_int idx = k * nsamples;
-            eval_feature_matrix(nmod, &x[k * nmod], nsamples, data->X, data->ldX,
-                                &lincomb_ptr[k * nsamples], data->intercept);
+            eval_feature_matrix(data->order, nmod, &x[k * nmod], nsamples, data->X,
+                                data->ldX, &lincomb_ptr[k * nsamples], data->intercept);
             for (da_int i = 0; i < nsamples; i++) {
                 if (maxexp[i] < lincomb[idx])
                     maxexp[i] = lincomb[idx];
@@ -295,7 +306,7 @@ da_int objfun_logistic_two_class([[maybe_unused]] da_int n, T *x, T *f, void *ud
 
     // lincomb is of size nsamples
     // Calculate licomb as X * Beta + Beta_0
-    eval_feature_matrix(nmod, x, nsamples, data->X, data->ldX, lincomb_ptr,
+    eval_feature_matrix(data->order, nmod, x, nsamples, data->X, data->ldX, lincomb_ptr,
                         data->intercept);
 
     // Loss is sum of log(1+exp(lincomb[i])) - y_i*lincomb[i]
@@ -331,8 +342,8 @@ da_int objgrd_logistic_two_class(da_int n, T *x, T *grad, void *udata,
 
     if (xnew) {
         // Calculate licomb as X * Beta + Beta_0
-        eval_feature_matrix(nmod, x, nsamples, data->X, data->ldX, lincomb_ptr,
-                            data->intercept);
+        eval_feature_matrix(data->order, nmod, x, nsamples, data->X, data->ldX,
+                            lincomb_ptr, data->intercept);
     }
 
     // Compute for all samples i and all variables j with k being the class of sample i:
@@ -397,6 +408,7 @@ da_int objfun_logistic_ssc([[maybe_unused]] da_int n, T *x, T *f, void *udata) {
     }
 
     // Calculate licomb as X * Beta + Beta_0
+    // This needs to be replace with a call eval_feature_matrix
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, nsamples, nclass, nfeat,
                         1.0, data->X, data->ldX, x, nclass, 1.0, lincomb_ptr, nsamples);
 
@@ -510,7 +522,8 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *loss, void *udata) {
     T *matvec = data->matvec.data();
 
     // Compute matvec = X*x (+ intercept)
-    eval_feature_matrix(n, x, nsamples, data->X, data->ldX, matvec, data->intercept);
+    eval_feature_matrix(data->order, n, x, nsamples, data->X, data->ldX, matvec,
+                        data->intercept);
 
     // matvec = matvec - y
     T alpha = -1.0;
@@ -552,13 +565,14 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *loss, void *udata) {
  * Assumes that all input is valid
  */
 template <typename T>
-da_int loss_mse(da_int nsamples, da_int nfeat, const T *X, da_int ldX, bool intercept,
-                T l1reg, T l2reg, const T *coef, const T *y, T *loss, T *pred) {
+da_int loss_mse(da_order order, da_int nsamples, da_int nfeat, const T *X, da_int ldX,
+                bool intercept, T l1reg, T l2reg, const T *coef, const T *y, T *loss,
+                T *pred) {
 
     const da_int ncoef = intercept ? nfeat + 1 : nfeat;
 
     // Compute predictions: X*coef (+ intercept)
-    eval_feature_matrix(ncoef, coef, nsamples, X, ldX, pred, intercept);
+    eval_feature_matrix(order, ncoef, coef, nsamples, X, ldX, pred, intercept);
 
     if (y) {
         // Observation vector provided, return also the loss function value
@@ -590,7 +604,8 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
     T *matvec = data->matvec.data();
 
     // matvec = X*x (+ itct)
-    eval_feature_matrix(n, x, nsamples, data->X, data->ldX, matvec, data->intercept);
+    eval_feature_matrix(data->order, n, x, nsamples, data->X, data->ldX, matvec,
+                        data->intercept);
 
     // matvec = matvec - y
     T alpha = -1.0;
@@ -600,10 +615,13 @@ da_int objgrd_mse(da_int n, T *x, T *grad, void *udata, [[maybe_unused]] da_int 
     alpha = T(1) / T(nsamples);
     T beta = 0.0;
     da_int aux = data->intercept ? 1 : 0;
-    da_blas::cblas_gemv(CblasColMajor, CblasTrans, nsamples, n - aux, alpha, data->X,
-                        data->ldX, matvec, 1, beta, grad, 1);
+    enum CBLAS_ORDER storage =
+        data->order == da_order::row_major ? CblasRowMajor : CblasColMajor;
+    da_blas::cblas_gemv(storage, CblasTrans, nsamples, n - aux, alpha, data->X, data->ldX,
+                        matvec, 1, beta, grad, 1);
     if (data->intercept) {
         grad[n - 1] = 0;
+#pragma omp simd
         for (da_int i = 0; i < nsamples; i++)
             grad[n - 1] += alpha * matvec[i];
     }
@@ -658,6 +676,7 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
 
     const da_int nmod = data->intercept ? nfeat - 1 : nfeat;
     const da_int nsamples = data->nsamples;
+    *knew = coef[k]; // Default value, no change
 
     if (f) { // Quick exit, just provide f
         *f = da_blas::cblas_dot(nsamples, data->residual.data(), 1, data->residual.data(),
@@ -670,7 +689,7 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
 
     if (action > 0) {
         // Compute X*coef = *y (takes care of intercept)
-        eval_feature_matrix(nfeat, coef, nsamples, data->X, data->ldX,
+        eval_feature_matrix(data->order, nfeat, coef, nsamples, data->X, data->ldX,
                             data->residual.data(), data->intercept);
 #pragma omp simd
         for (da_int i = 0; i < nsamples; ++i) {
@@ -687,8 +706,8 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
          */
         da_int kold = -(action + 1);
         if (kold < nmod) {
-            da_blas::cblas_axpy(nsamples, -kdiff, &data->X[kold * data->ldX], 1,
-                                data->residual.data(), 1);
+            da_blas::cblas_axpy(nsamples, -kdiff, &data->X[kold * data->Xcinc],
+                                data->Xrinc, data->residual.data(), 1);
         } else {
 #pragma omp simd
             for (da_int i = 0; i < nsamples; ++i) {
@@ -718,7 +737,7 @@ da_int stepfun_linreg_glmnet(da_int nfeat, T *coef, T *knew, da_int k, T *f, voi
 
     if (k < nmod) {
         // handle model coefficients beta1..betaN=coef[0]..coef[nmod-1]
-        gk = da_blas::cblas_dot(nsamples, &data->X[k * data->ldX], 1,
+        gk = da_blas::cblas_dot(nsamples, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
         if (standardized) {
             gk /= T(nsamples);
@@ -764,6 +783,8 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
     const da_int nsamples = data->nsamples;
     const bool positive = data->positive;
 
+    *knew = coef[k]; // Default value, no change
+
     if (f) { // Quick exit, just provide f
         *f = da_blas::cblas_dot(nsamples, data->residual.data(), 1, data->residual.data(),
                                 1);
@@ -775,7 +796,7 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
 
     if (action > 0) {
         // Compute X*coef = *y (takes care of intercept)
-        eval_feature_matrix(nfeat, coef, nsamples, data->X, data->ldX,
+        eval_feature_matrix(data->order, nfeat, coef, nsamples, data->X, data->ldX,
                             data->residual.data(), data->intercept);
 #pragma omp simd
         for (da_int i = 0; i < nsamples; ++i) {
@@ -806,7 +827,8 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
 
     if (coef[k] != T(0)) {
         if (k < nmod) {
-            da_blas::cblas_axpy(nsamples, coef[k], &data->X[k * data->ldX], 1,
+            // <X[:,k], residual[:]>
+            da_blas::cblas_axpy(nsamples, coef[k], &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
         } else { // Intercept
 #pragma omp simd
@@ -818,7 +840,7 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
 
     T gk = T(0);
     if (k < nmod) {
-        gk = da_blas::cblas_dot(nsamples, &data->X[k * data->ldX], 1,
+        gk = da_blas::cblas_dot(nsamples, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
     } else { // Intercept
 #pragma omp simd reduction(+ : gk)
@@ -841,7 +863,7 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
 
     if (betak != T(0)) {
         if (k < nmod) {
-            da_blas::cblas_axpy(nsamples, -betak, &data->X[k * data->ldX], 1,
+            da_blas::cblas_axpy(nsamples, -betak, &data->X[k * data->Xcinc], data->Xrinc,
                                 data->residual.data(), 1);
         } else {
 #pragma omp simd
@@ -858,7 +880,11 @@ da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, vo
     return 0;
 }
 
-/* Dual gap for linear least squares */
+/* Dual gap for linear least squares
+ * Review gap calculation for
+ * the case where linear model MSE without regularization on under-determined problem
+ * e.g. "NoReg/ShortFat/coord/1/z" GAP seems to be off.
+ */
 template <typename T>
 da_int stepchk_linreg_dualgap(da_int nfeat, const T *coef, void *udata, T *gap) {
     stepfun_usrdata_linreg<T> *data = (stepfun_usrdata_linreg<T> *)udata;
@@ -876,8 +902,8 @@ da_int stepchk_linreg_dualgap(da_int nfeat, const T *coef, void *udata, T *gap) 
     data->work.assign(coef, coef + nmod);
 
     // Compute X^T * Residual - l2 * coef
-    eval_feature_matrix(nmod, data->residual.data(), nsamples, data->X, data->ldX,
-                        data->work.data(), false, true, T(1), -l2);
+    eval_feature_matrix(data->order, nmod, data->residual.data(), nsamples, data->X,
+                        data->ldX, data->work.data(), false, true, T(1), -l2);
 
     T dnXtA{0};
     if (positive) {
@@ -930,12 +956,12 @@ template class cb_usrdata_logreg<float>;
 template class stepfun_usrdata_linreg<double>;
 template class stepfun_usrdata_linreg<float>;
 
-template void eval_feature_matrix<double>(da_int n, const double *x, da_int m,
-                                          const double *X, da_int ldX, double *v,
-                                          bool intercept, bool trans = false,
+template void eval_feature_matrix<double>(da_order order, da_int n, const double *x,
+                                          da_int m, const double *X, da_int ldX,
+                                          double *v, bool intercept, bool trans = false,
                                           double alpha = 1.0, double beta = 0.0);
-template void eval_feature_matrix<float>(da_int n, const float *x, da_int m,
-                                         const float *X, da_int ldX, float *v,
+template void eval_feature_matrix<float>(da_order order, da_int n, const float *x,
+                                         da_int m, const float *X, da_int ldX, float *v,
                                          bool intercept, bool trans = false,
                                          float alpha = 1.0, float beta = 0.0);
 template double regfun<double>(da_int n, const double *x, double l1reg, double l2reg);
@@ -970,14 +996,14 @@ template da_int objgrd_mse<double>(da_int n, double *x, double *grad, void *udat
                                    da_int xnew);
 template da_int objgrd_mse<float>(da_int n, float *x, float *grad, void *udata,
                                   da_int xnew);
-template da_int loss_mse<double>(da_int nsamples, da_int nfeat, const double *X,
-                                 da_int ldX, bool intercept, double l1reg, double l2reg,
-                                 const double *coef, const double *y, double *loss,
-                                 double *pred);
-template da_int loss_mse<float>(da_int nsamples, da_int nfeat, const float *X, da_int ldX,
-                                bool intercept, float l1reg, float l2reg,
-                                const float *coef, const float *y, float *loss,
-                                float *pred);
+template da_int loss_mse<double>(da_order order, da_int nsamples, da_int nfeat,
+                                 const double *X, da_int ldX, bool intercept,
+                                 double l1reg, double l2reg, const double *coef,
+                                 const double *y, double *loss, double *pred);
+template da_int loss_mse<float>(da_order order, da_int nsamples, da_int nfeat,
+                                const float *X, da_int ldX, bool intercept, float l1reg,
+                                float l2reg, const float *coef, const float *y,
+                                float *loss, float *pred);
 template da_int stepfun_linreg_glmnet<double>(da_int nfeat, double *coef, double *knew,
                                               da_int k, double *f, void *udata,
                                               da_int action, double kdiff);

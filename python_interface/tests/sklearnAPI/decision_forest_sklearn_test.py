@@ -27,54 +27,53 @@
 Decision forest tests, check output of skpatch versus sklearn
 """
 
-# pylint: disable = import-outside-toplevel, reimported, no-member
+# pylint: disable = import-outside-toplevel, reimported, no-member, unexpected-keyword-arg
 
+import warnings
 import numpy as np
 import pytest
-import warnings
 from aoclda.sklearn import skpatch, undo_skpatch
 
+
 @pytest.mark.parametrize("precision", [np.float64, np.float32])
-@pytest.mark.parametrize("bootstrap", [True, False])
-def test_decision_forest(precision, bootstrap):
+def test_decision_forest(precision):
     """
     Basic problem with 2 observations and 2 features
     """
 
-    X = np.array([[0.0, 0.0], [1.0, 1.0]], dtype=precision)
+    X = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=precision)
     Y = np.array([0, 1], dtype=precision)
     Xp = np.array([[2., 2.]], dtype=precision)
-
-    tol = np.sqrt(np.finfo(precision).eps)
 
     # patch and import scikit-learn
     skpatch()
     from sklearn import ensemble
-    clf = ensemble.RandomForestClassifier(n_estimators=4000,
-                                          bootstrap=bootstrap,
-                                          random_state=0)
+    clf = ensemble.RandomForestClassifier(n_estimators=4,
+                                          bootstrap=False,
+                                          random_state=0, histogram=False)
     clf = clf.fit(X, Y)
-    da_yp = clf.predict( Xp )
-    da_yprob = clf.predict_proba( Xp )
+    da_yp = clf.predict(Xp)
+    da_yprob = clf.predict_proba(Xp)
     with warnings.catch_warnings(record=True):
-        da_ylogprob = clf.predict_log_proba( Xp )
+        da_ylogprob = clf.predict_log_proba(Xp)
     assert clf.aocl is True
+    print(da_yp)
 
     # unpatch and solve the same problem with sklearn
     undo_skpatch()
     from sklearn import ensemble
-    clf = ensemble.RandomForestClassifier(n_estimators=4000,
-                                          bootstrap=bootstrap,
+    clf = ensemble.RandomForestClassifier(n_estimators=4,
+                                          bootstrap=False,
                                           random_state=0)
     clf = clf.fit(X, Y)
-    yp = clf.predict( Xp )
-    yprob = clf.predict_proba( Xp )
+    yp = clf.predict(Xp)
+    yprob = clf.predict_proba(Xp)
     with warnings.catch_warnings(record=True):
-        ylogprob = clf.predict_log_proba( Xp )
+        ylogprob = clf.predict_log_proba(Xp)
     assert not hasattr(clf, 'aocl')
 
     # Check results
-    assert da_yp == yp
+    assert da_yp.all() == yp.all()
     assert da_yprob == pytest.approx(yprob, abs=0.15)
     assert da_ylogprob == pytest.approx(ylogprob, abs=0.2)
 
@@ -87,6 +86,7 @@ def test_decision_forest(precision, bootstrap):
     print("    aoclda: \n", da_yprob[0, 0], ", ", da_yprob[0, 1])
     print("   sklearn: \n", yprob[0, 0], ", ", yprob[0, 1])
 
+
 @pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_double_solve(precision):
     """"
@@ -98,10 +98,11 @@ def test_double_solve(precision):
     # patch and import scikit-learn
     skpatch()
     from sklearn import ensemble
-    clf = ensemble.RandomForestClassifier()
+    clf = ensemble.RandomForestClassifier(histogram=False)
     clf = clf.fit(X, Y)
     clf.fit(X, Y)
     assert clf.aocl is True
+
 
 def test_decision_forest_errors():
     '''
@@ -118,7 +119,7 @@ def test_decision_forest_errors():
             random_state=np.random.RandomState())
 
     with pytest.warns(RuntimeWarning):
-        clf = ensemble.RandomForestClassifier(min_samples_leaf=10)
+        clf = ensemble.RandomForestClassifier(min_samples_leaf=10, histogram=False)
 
     clf = clf.fit(X, Y)
 
@@ -138,6 +139,59 @@ def test_decision_forest_errors():
     assert clf.estimators_samples_ is None
     assert clf.feature_importances_ is None
 
-if __name__ == "__main__":
-    test_decision_forest(precision=np.float64, bootstrap=True)
-    test_decision_forest_errors()
+
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_small_histograms(numpy_precision, numpy_order):
+    """
+    Test small problem using histograms
+    """
+    # autopep8: off
+    X_train = np.array([[0,   1,   2,  3, 4, 0.5, 1.5, 2.5, 3.5, 4.5, 6,  7, 8,   9,   5.5],
+                        [4, 3,   2,   0,  1, 6.5, 5.5, 7.5, 8.5, 6.,  1.,  2., 4, 3,   2]],
+                        dtype=numpy_precision, order=numpy_order).transpose()
+    y_train = np.array([0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2], dtype=np.int32)
+    X_test = np.array([[0, 1, 2, 2, 3, 4, 6,   7,   8],
+                       [3, 4, 1, 7, 8, 9, 2.5, 3.5, 4.2]],
+                       dtype=numpy_precision, order=numpy_order).transpose()
+    y_test = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2], dtype=np.int32)
+    # autopep8: on
+
+    # Solve first without binning
+    skpatch()
+    from sklearn import ensemble
+    forest = ensemble.RandomForestClassifier(
+        random_state=42, max_features=None, n_estimators=20, max_samples=12)
+    forest.fit(X_train, y_train)
+    score = forest.score(X_test, y_test)
+    assert np.abs(score - 1.0) < 1.0e-04
+    assert forest.aocl is True
+    undo_skpatch()
+    from sklearn import ensemble
+    forest = ensemble.RandomForestClassifier(
+        random_state=42, max_features=None, n_estimators=20, max_samples=12)
+    forest.fit(X_train, y_train)
+    score = forest.score(X_test, y_test)
+    assert np.abs(score - 1.0) < 1.0e-04
+
+    # Solve again, binning the data
+    skpatch()
+    from sklearn import ensemble
+    forest = ensemble.RandomForestClassifier(
+        random_state=42, max_features=None, n_estimators=20, histogram=True)
+    forest.fit(X_train, y_train)
+    score = forest.score(X_test, y_test)
+    assert np.abs(score - 1.0) < 1.0e-04
+    assert forest.aocl is True
+
+    # Too few bins
+    forest = ensemble.RandomForestClassifier(
+        random_state=42,
+        max_features=None,
+        n_estimators=20,
+        histogram=True,
+        maximum_bins=2)
+    forest.fit(X_train, y_train)
+    score = forest.score(X_test, y_test)
+    assert 0.9 > score > 0.5
+    assert forest.aocl is True

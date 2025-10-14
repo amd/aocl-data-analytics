@@ -43,15 +43,15 @@
  */
 const linregParam linregParamElNet[] = {
     // 0 Code coverage for printing -> print level = 5
-{  "ElNet/trivial/coord/1/z", "trivialelnet",{{"intercept", 1},{"print level", 5}, {"optim iteration limit", 500}},
+{  "ElNet/trivial/coord/1/z", "trivialelnet",{{"intercept", 1},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
-                                     {{"lambda",5.0f},{"alpha",0.8f}},
-                                     {{"lambda",5.0},{"alpha",0.8}}
+                                     {{"lambda",5.0f},{"alpha",0.8f}, {"optim convergence tol", 1.0e-5f}},
+                                     {{"lambda",5.0},{"alpha",0.8}, {"optim convergence tol", 1.0e-8}}
                                      },
     // 1
 {  "ElNet/trivial/coord/0/z", "trivialelnet",{{"intercept", 0},{"print level", 1}, {"optim iteration limit", 500}},
                                      {{"optim method", "coord"}, {"scaling", "standardize"}},
-                                     {{"lambda",6.0f},{"alpha",0.9f},{"optim convergence tol", 1.0e-5f}, {"optim convergence tol",1.e-7f}},
+                                     {{"lambda",6.0f},{"alpha",0.9f}, {"optim convergence tol",1.e-7f}},
                                      {{"lambda",6.0},{"alpha",0.9}, {"optim convergence tol",1.e-7}},
                                      },
     // 2
@@ -210,7 +210,7 @@ const linregParam linregParamElNet[] = {
     /* NO INTERCEPT */
     /* SHORT FAT */
     // 20
-{  "ElNet/ShortFat/coord/0/s", "short_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/ShortFat/coord/0/s", "short_fatl12", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f},{"optim dual gap tol", 1.0e-1}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 1.0e-1}},
@@ -218,7 +218,7 @@ const linregParam linregParamElNet[] = {
                                      },
     /* TALL THIN */
     // 21
-{  "ElNet/TallThin/coord/0/s", "tall_thinl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/TallThin/coord/0/s", "tall_thinl12", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f},{"optim dual gap tol", 200}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 200}},
@@ -226,7 +226,7 @@ const linregParam linregParamElNet[] = {
                                      },
     /* TALL FAT */
     // 22
-{  "ElNet/TallFat/coord/0/s", "tall_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100000}},
+{  "ElNet/TallFat/coord/0/s", "tall_fatl12", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f},{"optim dual gap tol", 5.0e-3}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 5.0e-3}},
@@ -235,7 +235,7 @@ const linregParam linregParamElNet[] = {
     /* INTERCEPT */
     /* SHORT FAT */
     // 23
-{  "ElNet/ShortFat/coord/1/s", "short_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/ShortFat/coord/1/s", "short_fatl12", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f},{"optim dual gap tol", 0.1}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 0.1}},
@@ -243,7 +243,7 @@ const linregParam linregParamElNet[] = {
                                      },
     /* TALL THIN */
     // 24
-{  "ElNet/TallThin/coord/1/s", "tall_thinl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/TallThin/coord/1/s", "tall_thinl12", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f},{"optim dual gap tol", 150.0}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 150.0}},
@@ -251,7 +251,7 @@ const linregParam linregParamElNet[] = {
                                      },
     /* TALL FAT */
     // 25
-{  "ElNet/TallFat/coord/1/s", "tall_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/TallFat/coord/1/s", "tall_fatl12", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "scale only"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f},{"optim dual gap tol", 1.7e-2}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5},{"optim dual gap tol", 1.7e-2}},
@@ -260,21 +260,21 @@ const linregParam linregParamElNet[] = {
     /* ELASTIC NET TESTS */
     /* NO INTERCEPT */
     // 26 SHORT FAT
-{  "ElNet/ShortFat/coord/0/z", "scl_short_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/ShortFat/coord/0/z", "scl_short_fatl12", {{"intercept", 0}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
     // 27 TALL THIN
-{  "ElNet/TallThin/coord/0/z", "scl_tall_thinl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/TallThin/coord/0/z", "scl_tall_thinl12", {{"intercept", 0}, {"print level", 1},},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-6f}, {"lambda",0.3f},{"alpha",0.5f}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
     // 28 TALL FAT
-{  "ElNet/TallFat/coord/0/z", "scl_tall_fatl12", {{"intercept", 0}, {"print level", 1},{"optim iteration limit", 100000}},
+{  "ElNet/TallFat/coord/0/z", "scl_tall_fatl12", {{"intercept", 0}, {"print level", 1},},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
@@ -282,35 +282,35 @@ const linregParam linregParamElNet[] = {
                                      },
     /* INTERCEPT */
     // 29 SHORT FAT
-{  "ElNet/ShortFat/coord/1/z", "scl_short_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/ShortFat/coord/1/z", "scl_short_fatl12", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
                                      {{"optim convergence tol",1.e-15}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
     // 30 TALL THIN
-{  "ElNet/TallThin/coord/1/z", "scl_tall_thinl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/TallThin/coord/1/z", "scl_tall_thinl12", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
     // 31 TALL FAT
-{  "ElNet/TallFat/coord/1/z", "scl_tall_fatl12", {{"intercept", 1}, {"print level", 1},{"optim iteration limit", 10000}},
+{  "ElNet/TallFat/coord/1/z", "scl_tall_fatl12", {{"intercept", 1}, {"print level", 1}},
                                      {{"optim method", "coord"}, {"scaling", "standardise"}},
                                      {{"optim convergence tol",1.e-7f}, {"lambda",0.3f},{"alpha",0.5f}},
                                      {{"optim convergence tol",1.e-7}, {"lambda",0.3},{"alpha",0.5}},
                                      true, false
                                      },
     // DP scikit-learn sparse signal example ELASTIC-NET (GLMNet regularization path does not match with sklearn)
-    // {"signal/coord/Enet/+1/s", "signal-scikit-enet", {{"debug", 0},{"intercept", 1},{"print level", 1},{"optim iteration limit", 1000}},
+    // {"signal/coord/Enet/+1/s", "signal-scikit-enet", {{"debug", 0},{"intercept", 1},{"print level", 1}},
     //                                  {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
     //                                  {{"optim convergence tol",1.e-8f},{"lambda",0.17f},{"alpha",0.5f},{"optim progress factor", 1.0}},
     //                                  {{"optim convergence tol",1.e-8},{"lambda",0.17},{"alpha",0.5},{"optim progress factor", 1.0}},
     //                                  true, false
     //                                  },
     // DP scikit-learn sparse signal example ELASTIC-NET (GLMNet regularization path does not match with sklearn)
-    // {"signal/coord/Enet/+0/s", "signal-scikit-enet", {{"debug", 0},{"intercept", 0},{"print level", 1},{"optim iteration limit", 1000}},
+    // {"signal/coord/Enet/+0/s", "signal-scikit-enet", {{"debug", 0},{"intercept", 0},{"print level", 1}},
     //                                  {{"optim method", "coord"},{"scaling", "scale only"},{"print options", "yes"}},
     //                                  {{"optim convergence tol",1.e-8f},{"lambda",0.19f},{"alpha",0.63f},{"optim progress factor", 1.0}},
     //                                  {{"optim convergence tol",1.e-8},{"lambda",0.19},{"alpha",0.63},{"optim progress factor", 1.0}},
@@ -359,9 +359,10 @@ void PrintTo(const linregParam &param, ::std::ostream *os) { *os << param.test_n
 // Positive tests with double type
 TEST_P(linregPosD, Double) {
     const linregParam &param = GetParam();
-    test_linreg_positive<double>(
-        param.data_name, param.iopts, param.sopts, param.dopts, param.check_coeff,
-        param.check_predict, (double)param.check_tol_scale, (double)param.dual_gap[1]);
+    test_linreg_positive<double>(param.data_name, param.iopts, param.sopts, param.dopts,
+                                 param.check_coeff, param.check_predict,
+                                 (double)param.check_tol_scale, (double)param.dual_gap[1],
+                                 param.initial_guess);
 }
 
 // Positive tests with float type
@@ -369,7 +370,8 @@ TEST_P(linregPosF, Float) {
     const linregParam &param = GetParam();
     test_linreg_positive<float>(param.data_name, param.iopts, param.sopts, param.fopts,
                                 param.check_coeff, param.check_predict,
-                                (float)param.check_tol_scale, (float)param.dual_gap[0]);
+                                (float)param.check_tol_scale, (float)param.dual_gap[0],
+                                param.initial_guess);
 }
 
 INSTANTIATE_TEST_SUITE_P(linregPosSuiteD, linregPosD,

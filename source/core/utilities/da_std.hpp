@@ -26,6 +26,7 @@
  */
 
 #include "aoclda_types.h"
+#include "boost/random/uniform_int_distribution.hpp"
 #include "macros.h"
 
 /* These functions are AOCL-DA specific implementations of common STL functions. They exist because
@@ -49,6 +50,14 @@ void fill(ForwardIt first, ForwardIt last, const T &value) {
 template <class ForwardIt, class T> void iota(ForwardIt first, ForwardIt last, T value) {
     for (; first != last; ++first, ++value) {
         *first = value;
+    }
+}
+
+template <class RandomAccessIterator, class URNG>
+void shuffle(RandomAccessIterator first, RandomAccessIterator last, URNG &&g) {
+    for (auto i = (last - first) - 1; i > 0; --i) {
+        boost::random::uniform_int_distribution<decltype(i)> d(0, i);
+        std::swap(first[i], first[d(g)]);
     }
 }
 

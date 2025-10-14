@@ -60,40 +60,16 @@ template <typename T> da_options::OptionRegistry &basic_handle<T>::get_opts() {
 
 template <typename T> void basic_handle<T>::refresh() {}
 
-/*
-Calling the function will do the following:
-1. Point data_internal to the same data.
-2. Argument checking on the data pointer and the size
-3. Read the `check data` option and accordingly to check for NaNs.
-*/
 template <typename T>
 da_status basic_handle<T>::check_1D_array(da_int n, const T *data,
                                           const std::string &n_name,
                                           const std::string &data_name, da_int n_min) {
 
-    if (data == nullptr)
-        return da_error(this->err, da_status_invalid_pointer,
-                        "The array " + data_name + " is null.");
-
-    // Check for illegal rows/columns arguments
-    if (n < n_min)
-        return da_error(this->err, da_status_invalid_array_dimension,
-                        "The function was called with " + n_name + " = " +
-                            std::to_string(n) + ". Constraint: " + n_name +
-                            " >= " + std::to_string(n_min) + ".");
-
-    // Check for NaNs if the `check data` option has been set
     da_int check_data = 0;
     std::string check_data_str;
-    this->opts.get("check data", check_data_str, check_data);
-    if (check_data) {
-        da_status status = ARCH::da_utils::check_data(column_major, n, 1, data, n);
-        if (status == da_status_invalid_input)
-            return da_error(this->err, da_status_invalid_input,
-                            "The array " + data_name + " contains at least one NaN.");
-    }
-
-    return da_status_success;
+    opts.get("check data", check_data_str, check_data);
+    return ARCH::da_utils::check_1D_array<T>(check_data != 0, this->err, n, data, n_name,
+                                             data_name, n_min);
 }
 
 template <typename T>
@@ -101,29 +77,13 @@ da_status basic_handle<T>::check_1D_array(da_int n, const da_int *data,
                                           const std::string &n_name,
                                           const std::string &data_name, da_int n_min) {
 
-    if (data == nullptr)
-        return da_error(this->err, da_status_invalid_pointer,
-                        "The array " + data_name + " is null.");
-
-    // Check for illegal rows/columns arguments
-    if (n < n_min)
-        return da_error(this->err, da_status_invalid_array_dimension,
-                        "The function was called with " + n_name + " = " +
-                            std::to_string(n) + ". Constraint: " + n_name +
-                            " >= " + std::to_string(n_min) + ".");
-    return da_status_success;
+    da_int check_data = 0;
+    std::string check_data_str;
+    opts.get("check data", check_data_str, check_data);
+    return ARCH::da_utils::check_1D_array<da_int>(check_data != 0, this->err, n, data,
+                                                  n_name, data_name, n_min);
 }
 
-/*
-Calling the function with mode = 0 will do the following:
-1. If the user's data array is in column major format, point data_internal to the same data.
-2. If the user's data array is in row major format, allocate memory for data_internal, copy and transpose the data.
-3. In each case, lddata_internal is updated appropriately and the `check data` option is read and acted upon accordingly to check for NaNs.
-4. The temp_data pointer is used to enable memory to be deallocated later (it is not const, but points to any allocated memory).
-Calling the function with mode = 1 will do the same except that no copying or data checking occurs (use case: output array)
-Calling the function with mode = 2 just copies the pointer and leading dimension argument, without argument
-or option checking (for use when we already know data is usable and in column major format)
-*/
 template <typename T>
 da_status basic_handle<T>::store_2D_array(
     da_int n_rows, da_int n_cols, const T *data, da_int lddata, T **temp_data,
@@ -131,8 +91,8 @@ da_status basic_handle<T>::store_2D_array(
     const std::string &n_cols_name, const std::string &data_name,
     const std::string &lddata_name, da_int mode, da_int n_rows_min, da_int n_cols_min) {
 
-    // Quick exit if mode == 2
     if (mode == 2) {
+        // Quick exit
         *data_internal = data;
         lddata_internal = lddata;
         return da_status_success;
@@ -154,18 +114,26 @@ da_status basic_handle<T>::store_2D_array(
         return da_error(this->err, da_status_invalid_pointer,
                         "The array " + data_name + " is null.");
 
-    // Read in data storage option
+    // Read in data storage option (if handle has a valid options registry)
     std::string opt_order;
-    this->opts.get("storage order", opt_order, this->order);
+    da_int iorder;
+    da_status status = this->opts.get("storage order", opt_order, iorder);
+    bool aux = status != da_status_success;
+    // aux = true => handle is an auxiliary handle with no options not error buffer
+
+    // don't change the default if aux handle
+    if (!aux)
+        this->order = da_order(iorder);
 
     // Check for NaNs if the `check data` option has been set
-    da_int check_data = 0;
-    if (mode == 0) {
+    da_int check_data{!aux &&
+                      (mode == 0 || mode == 3)}; // skip for mode 1 or if aux handle
+    if (check_data) {
         std::string check_data_str;
         this->opts.get("check data", check_data_str, check_data);
         if (check_data) {
-            da_status status = ARCH::da_utils::check_data((da_order)this->order, n_rows,
-                                                          n_cols, data, lddata);
+            status = ARCH::da_utils::check_data((da_order)this->order, n_rows, n_cols,
+                                                data, lddata);
             if (status == da_status_invalid_input)
                 return da_error(this->err, da_status_invalid_input,
                                 "The array " + data_name + " contains at least one NaN.");
@@ -174,9 +142,8 @@ da_status basic_handle<T>::store_2D_array(
 
     std::string wrong_order = "";
 
-    switch (order) {
+    switch (this->order) {
     case column_major:
-
         if (lddata < n_rows) {
             if (lddata >= n_cols) {
                 wrong_order = "The handle is set to expect column major data. Did "
@@ -189,8 +156,6 @@ da_status basic_handle<T>::store_2D_array(
                                 std::to_string(lddata) + ". Constraint: " + lddata_name +
                                 " >= " + n_rows_name + "." + wrong_order);
         }
-        *data_internal = data;
-        lddata_internal = lddata;
         break;
     case row_major: {
         if (lddata < n_cols) {
@@ -205,7 +170,24 @@ da_status basic_handle<T>::store_2D_array(
                                 std::to_string(lddata) + ". Constraint: " + lddata_name +
                                 " >= " + n_cols_name + "." + wrong_order);
         }
+        break;
+    }
+    default:
+        return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected storage scheme was requested.");
+        break;
+    }
 
+    if (mode == 3) {
+        // Mode 3: all done, exit
+        return da_status_success;
+    }
+
+    // From here on only mode 0 and 1 remain
+    if (this->order == column_major) {
+        *data_internal = data;
+        lddata_internal = lddata;
+    } else { // order == row_major
         // Allocate memory for transposed data
         try {
             *temp_data = new T[n_rows * n_cols];
@@ -222,10 +204,6 @@ da_status basic_handle<T>::store_2D_array(
         // Cast the non-const pointer and assign it to the const pointer
         *const_cast<T **>(data_internal) = *temp_data;
         lddata_internal = n_rows;
-        break;
-    }
-    default:
-        break;
     }
 
     return da_status_success;
@@ -234,6 +212,7 @@ da_status basic_handle<T>::store_2D_array(
 template <typename T>
 void basic_handle<T>::copy_2D_results_array(da_int n_rows, da_int n_cols, T *data,
                                             da_int lddata, T *results_arr) {
+    // Assumes input data is in column-major order and output is specified by this->order
     if (order == column_major) {
         for (da_int j = 0; j < n_cols; ++j) {
             for (da_int i = 0; i < n_rows; ++i) {

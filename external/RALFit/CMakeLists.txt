@@ -30,8 +30,12 @@ set(CMAKE_Fortran_PREPROCESS ON)
 
 if(NOT WIN32)
   set(CMAKE_Fortran_FLAGS -mavx2)
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    # Ask compiler to ignore unknon warning options
+    list(APPEND CMAKE_Fortran_FLAGS -Qunused-arguments -Wno-unused-command-line-argument -Wno-unknown-warning-option)
+  endif()
 elseif(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-  set(CMAKE_Fortran_FLAGS /Qavx2)
+  set(CMAKE_Fortran_FLAGS /QxCORE-AVX2)
 endif()
 
 if(BUILD_ILP64)
@@ -54,14 +58,6 @@ list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
 # Sets -fPIC flag
 if(BUILD_SHARED_LIBS)
   set(CMAKE_POSITION_INDEPENDENT_CODE ON) # SET fPIC
-endif()
-
-if(WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-  find_library(
-    LIBGFORTRAN
-    NAMES libgfortran libgfortran-5
-    HINTS ${MINGW_PATH}
-    DOC "gfortran library")
 endif()
 
 add_subdirectory(libRALFit/src EXCLUDE_FROM_ALL)

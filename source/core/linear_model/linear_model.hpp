@@ -79,7 +79,8 @@ template <typename T> struct cg_data {
     // Declare objects needed for conjugate gradient solver
     aoclsparse_itsol_handle handle;
     aoclsparse_itsol_rci_job ircomm;
-    T *u, *v, rinfo[100], tol;
+    T *u = nullptr, *v = nullptr;
+    T rinfo[100], tol;
     T beta = T(0.0), alpha = T(1.0);
     da_int nsamples, ncoef, min_order, maxit;
     std::vector<T> coef, A, b;
@@ -148,9 +149,11 @@ template <typename T> class linear_model : public basic_handle<T> {
      * yusr[nsamples]: model response, pointer to user data - will not be modified by any function
      * X[nsamples*nfeat,ldX]: is a pointer to either XUSR or a modifiable copy of XUSR it can also store a transposed copy of XUSR, etc.
      *    all solvers should reference this matrix for their initial setup.
-     *    It is always implicitly interpreted as column-major storage
+     * Xorder: the storage order of X
      * ldX: leading dimension of X
-     * [future] storage: the storage scheme used to pass XUSR [enum: row-major, col-major, undefined]
+     * basic_handle::order: the storage scheme used for XUSR and X [enum: row-major, col-major, undefined]
+     * Note that order ultimately will specify the order for X and this can be different from XUSR, since some solvers require
+     * X^T and this is done at copy time from XUSR.
      */
     da_int nfeat = 0, nsamples = 0;
     da_int nclass = 0;
@@ -161,12 +164,14 @@ template <typename T> class linear_model : public basic_handle<T> {
     T *X = nullptr;    // May contain a modified copy of XUSR
     da_int ldXUSR = 0; // leading dim of XUSR
     da_int ldX = 0;    // leading dim of X
-
-    T time = 0; // Computation time
+    da_int Xcinc = 0;  // column increment for X wrt base_handle::order
+    da_int Xrinc = 0;  // row increment for X wrt base_handle::order
+    da_order Xorder;   // storage order of X
+    T time = 0;        // Computation time
 
     /* Parameters used during the standardization of the problem
      * these are only defined if "scaling" is not "none" and populated
-     * on the call to ::model_scaling(...)
+     * on the call to ::preprocess_data(...)
      */
     scaling_t scaling = scaling_t::none;
     std::vector<T> std_shifts; // column-wise means [ X | y ], size nfeat + 1
@@ -199,10 +204,6 @@ template <typename T> class linear_model : public basic_handle<T> {
     // Private methods to allocate memory
     da_status init_opt_method(linmod_method method);
 
-    // QR fact data
-    da_status init_qr_data();
-    da_status qr_lsq();
-
     /* Dispatcher methods
      * choose_method: if "optim method" is set to auto, choose automatically how
      *                to compute the model
@@ -224,17 +225,19 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status define_features(da_int nfeat, da_int nsamples, const T *X, da_int ldX,
                               const T *y);
     da_status select_model(linmod_model mod);
-    da_status model_scaling(da_int method_id);
+    da_status prep_matrix_x(da_int &nrow, da_int &ncol, da_axis &axis, bool &transpose);
+    da_status preprocess_data(da_int method_id);
     void revert_scaling();
     void setup_xtx_xty(std::vector<T> &A, std::vector<T> &b);
     void scale_warmstart();
     da_status fit(da_int usr_ncoefs, const T *coefs);
-    da_status fit_logreg_lbfgs();
     da_status fit_linreg_lbfgs();
     da_status fit_linreg_coord();
     da_status fit_linreg_svd();
     da_status fit_linreg_cholesky();
     da_status fit_linreg_cg();
+    da_status fit_linreg_qr();
+    da_status fit_logreg_lbfgs();
     da_status get_coef(da_int &nx, T *coef, da_coef_type ctype);
     da_status evaluate_model(da_int nfeat, da_int nsamples, const T *X, da_int ldX,
                              T *predictions, T *observations, T *loss);

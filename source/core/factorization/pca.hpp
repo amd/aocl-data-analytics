@@ -60,18 +60,19 @@ template <typename T> class pca : public basic_handle<T> {
     /* SVD solver */
     da_int solver = solver_gesdd;
 
-    /* Sign flip flag for consistency with sklearn results */
-    bool svd_flip_u_based = false;
-
     /* Whether we are storing U */
     bool store_U = false;
+
+    /* Whether we are whitening */
+    bool whiten = false;
 
     /* Number of principal components requested */
     da_int npc = 1;
 
-    /* Degrees of freedom (bias) when computing variances, and associated divisor */
+    /* Degrees of freedom (bias) when computing variances, and associated divisor and sqrt */
     da_int dof = 0;
     da_int div = 0;
+    T sqrt_div = 0;
 
     /* Actual number of principal components found - on output should be the same as npc unless dgesvdx gives unexpected behaviour */
     da_int ns = 0;

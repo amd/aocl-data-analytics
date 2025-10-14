@@ -30,10 +30,10 @@
 import sys
 import os
 project = 'AOCL-DA'
-copyright = '2024, Advanced Micro Devices, Inc'
+copyright = '2025, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
 version = ''
-release = '5.0.1'
+release = '5.1.1'
 
 # -- Get doc working for Python ----------------------------------------------
 # Add to PYTHONPATH

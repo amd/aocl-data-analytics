@@ -189,11 +189,13 @@ template <> struct get_type<bool*>       { constexpr operator option_t() const n
 
 struct OptionUtils {
     static void prep_str(string &str) {
-        const std::regex ltrim("^[[:space:]]+");
-        const std::regex rtrim("[[:space:]]+$");
+        // This string preparation function is quite expensive,
+        // make sure to call it only if really required.
+        // ignore regexp exceptions,
+        /* coverity[fun_call_w_exception] */
+        const std::regex trim("^[[:space:]]+|[[:space:]]+$");
         const std::regex squeeze("[[:space:]]+");
-        str = std::regex_replace(str, ltrim, std::string(""));
-        str = std::regex_replace(str, rtrim, std::string(""));
+        str = std::regex_replace(str, trim, std::string(""));
         str = std::regex_replace(str, squeeze, std::string(" "));
         transform(str.begin(), str.end(), str.begin(), ::tolower);
     };
@@ -203,12 +205,19 @@ class OptionBase {
   public:
     const string setby_l[3] = {"(default)", "(user)", "(solver)"};
 
+    bool strict{false}; // Be strict when creating an option:
+    // make sure the strings passed are checked for tidyness
+    // This is HIGHLY recommended to set to true while developing new options
+    // but set to false once ready because it is not cheap to use.
+
     da_status set_name(string &str) {
         name = str;
-        OptionUtils::prep_str(name);
-        if (name == "") {
-            errmsg = "Invalid name (string reduced to zero-length).";
-            return da_status_option_invalid_value;
+        if (strict) {
+            OptionUtils::prep_str(name); // this is expensive: done only in strict mode
+            if (name.empty()) {
+                errmsg = "Invalid name (string reduced to zero-length).";
+                return da_status_option_invalid_value;
+            }
         }
         return da_status_success;
     }
@@ -308,9 +317,11 @@ template <typename T> class OptionNumeric : public OptionBase {
 
   public:
     OptionNumeric(string name, string desc, T lower, lbound_t lbound, T upper,
-                  ubound_t ubound, T vdefault, string vddesc = "") {
+                  ubound_t ubound, T vdefault, string vddesc = "",
+                  bool be_strict = false) {
         static_assert(is_same<T, da_int>::value || is_floating_point<T>::value,
                       "Constructor only valid for non boolean numeric type");
+        strict = be_strict;
         da_status status = set_name(name);
         if (status != da_status_success)
             throw std::invalid_argument(errmsg);
@@ -328,8 +339,9 @@ template <typename T> class OptionNumeric : public OptionBase {
         OptionNumeric::otype = get_type<T>();
         OptionNumeric::vddesc = vddesc;
     };
-    OptionNumeric(string name, string desc, bool vdefault) {
+    OptionNumeric(string name, string desc, bool vdefault, bool be_strict = false) {
         static_assert(is_same<T, bool>::value, "Constructor only valid for boolean");
+        strict = be_strict;
         da_status status = set_name(name);
         if (status != da_status_success)
             throw std::invalid_argument(errmsg);
@@ -499,23 +511,27 @@ class OptionString : public OptionBase {
     map<string, da_int> labels;
 
   public:
-    OptionString(string name, string desc, map<string, da_int> labels, string vdefault) {
+    OptionString(string name, string desc, map<string, da_int> labels, string vdefault,
+                 bool be_strict = false) {
+        strict = be_strict;
         string label, label_vdefault;
         bool defok = false;
         da_status status = set_name(name);
         if (status != da_status_success)
             throw std::invalid_argument(errmsg);
-
         label_vdefault = vdefault;
-        OptionUtils::prep_str(label_vdefault);
-        if (vdefault != label_vdefault) {
-            errmsg = "Option '" + name +
-                     "': Default string option changed after processing, replace '" +
-                     vdefault + "' by '" + label_vdefault + "'.";
-            throw std::invalid_argument(errmsg);
+        if (strict) {
+            OptionUtils::prep_str(
+                label_vdefault); // this is expensive: done only in strict mode
+            if (vdefault != label_vdefault) {
+                errmsg = "Option '" + name +
+                         "': Default string option changed after processing, replace '" +
+                         vdefault + "' by '" + label_vdefault + "'.";
+                throw std::invalid_argument(errmsg);
+            }
         }
 
-        if (labels.size() != 0) {
+        if (labels.size() != 0 && strict) {
             // Deal with categorical data slightly differently from freeform string options
 
             if (label_vdefault == "") {
@@ -526,7 +542,8 @@ class OptionString : public OptionBase {
 
             for (const auto &entry : labels) {
                 label = entry.first;
-                OptionUtils::prep_str(label);
+                OptionUtils::prep_str(
+                    label); // this is expensive: done only in strict mode
                 if (label == "") {
                     errmsg = "Option '" + name +
                              "': Invalid option value (string reduced to zero-length).";
@@ -656,26 +673,41 @@ class OptionString : public OptionBase {
         if (labels.size() != 0) {
             id = labels.at(OptionString::value);
         } else {
-            throw std::runtime_error("free-form option does not have label id and cannot "
-                                     "be queried with this method");
+            // Internal error: free-form option does not have label id and cannot be queried with this method
+            // return invalid index
+            id = -1;
         }
     }
     da_status set(string value, setby_t setby = setby_t::user) {
-        string val(value);
-        OptionUtils::prep_str(val);
-
         if (labels.size() != 0) {
             // Deal with categorical data slightly differently from freeform string options
             // check that value is a valid
-            auto pos = labels.find(val);
-            if (pos == labels.end()) {
-                errmsg = "Unrecognized value '" + val + "' for option '" +
-                         OptionBase::get_name() + "'.";
-                return da_status_option_invalid_value;
+            auto pos = labels.find(value);
+            if (pos != labels.end()) {
+                OptionString::value = value;
+            } else {
+                // not found, try again with value tidyed
+                string val{value};
+                OptionUtils::prep_str(val); // this is expensive: done only if find fails
+                pos = labels.find(val);
+                if (pos == labels.end()) {
+                    errmsg = "Unrecognized value '" + val + "' for option '" +
+                             OptionBase::get_name() + "'.";
+                    return da_status_option_invalid_value;
+                }
+                OptionString::value = val;
+            }
+        } else {
+            // free-form only process if strict mode
+            if (strict) {
+                string val{value};
+                OptionUtils::prep_str(val); // this is expensive: done only in strict mode
+                OptionString::value = val;
+            } else {
+                OptionString::value = value;
             }
         }
 
-        OptionString::value = val;
         OptionString::setby = setby;
         return da_status_success;
     };
@@ -731,16 +763,19 @@ class OptionRegistry {
             errmsg = "Registry is locked";
             return da_status_option_locked;
         }
-        string oname = name;
-        OptionUtils::prep_str(oname);
-        auto search = registry.find(oname);
+        auto search = registry.find(name); // search assuming name is tidy
         if (search == registry.end()) {
-            errmsg = "Option '" + oname + "' not found in the option registry";
-            return da_status_option_not_found;
+            string oname{name};
+            OptionUtils::prep_str(oname); // this is expensive: done only if search failed
+            search = registry.find(oname); // search again with oname tidy
+            if (search == registry.end()) {
+                errmsg = "Option '" + oname + "' not found in the option registry";
+                return da_status_option_not_found;
+            }
         }
         option_t otype = search->second->get_option_t();
         if (otype != get_type<U>()) {
-            errmsg = "Option setter for '" + oname + "' of type " + option_tl[otype] +
+            errmsg = "Option setter for '" + name + "' of type " + option_tl[otype] +
                      ", was called with the wrong type: " + option_tl[get_type<U>()];
             return da_status_option_wrong_type;
         }
@@ -770,17 +805,20 @@ class OptionRegistry {
      * value - location to store option value
      */
     template <typename U> da_status get(string name, U &value) {
-        string oname = name;
-        OptionUtils::prep_str(oname);
-        auto search = registry.find(oname);
+        auto search = registry.find(name); // search assuming name is tidy
         if (search == registry.end()) {
-            errmsg = "Option '" + oname + "' not found in the option registry";
-            return da_status_option_not_found;
+            string oname{name};
+            OptionUtils::prep_str(oname); // this is expensive: done only if search failed
+            search = registry.find(oname); // search again with oname tidy
+            if (search == registry.end()) {
+                errmsg = "Option '" + oname + "' not found in the option registry";
+                return da_status_option_not_found;
+            }
         }
         option_t otype = search->second->get_option_t();
         if (otype != get_type<U>()) {
             errmsg =
-                "Option getter for'" + oname + "' of type " + option_tl[otype] +
+                "Option getter for'" + name + "' of type " + option_tl[otype] +
                 ", was called with the wrong storage type: " + option_tl[get_type<U>()];
             return da_status_option_wrong_type;
         }
@@ -803,16 +841,19 @@ class OptionRegistry {
 
     // Auxiliary function to get value of a string option.
     da_status get(string name, string &value) {
-        string oname = name;
-        OptionUtils::prep_str(oname);
-        auto search = registry.find(oname);
+        auto search = registry.find(name); // search assuming name is tidy
         if (search == registry.end()) {
-            errmsg = "Option '" + oname + "' not found in the option registry";
-            return da_status_option_not_found;
+            string oname{name};
+            OptionUtils::prep_str(oname); // this is expensive: done only if search failed
+            search = registry.find(oname); // search again with oname tidy
+            if (search == registry.end()) {
+                errmsg = "Option '" + oname + "' not found in the option registry";
+                return da_status_option_not_found;
+            }
         }
         option_t otype = search->second->get_option_t();
         if (otype != option_t::opt_string) {
-            errmsg = "Option getter for'" + oname + "' of type " + option_tl[otype] +
+            errmsg = "Option getter for'" + name + "' of type " + option_tl[otype] +
                      ", was called with the wrong storage type: " +
                      option_tl[option_t::opt_string];
             return da_status_option_wrong_type;
@@ -823,16 +864,19 @@ class OptionRegistry {
 
     // Auxiliary function to get value and id from a categorical/string option
     da_status get(string name, string &value, da_int &id) {
-        string oname = name;
-        OptionUtils::prep_str(oname);
-        auto search = registry.find(oname);
+        auto search = registry.find(name); // search assuming name is tidy
         if (search == registry.end()) {
-            errmsg = "Option '" + oname + "' not found in the option registry";
-            return da_status_option_not_found;
+            string oname{name};
+            OptionUtils::prep_str(oname); // this is expensive: done only if search failed
+            search = registry.find(oname); // search again using tidy oname
+            if (search == registry.end()) {
+                errmsg = "Option '" + oname + "' not found in the option registry";
+                return da_status_option_not_found;
+            }
         }
         option_t otype = search->second->get_option_t();
         if (otype != option_t::opt_string) {
-            errmsg = "Option getter for'" + oname + "' of type " + option_tl[otype] +
+            errmsg = "Option getter for'" + name + "' of type " + option_tl[otype] +
                      ", was called with the wrong storage type: " +
                      option_tl[option_t::opt_string];
             return da_status_option_wrong_type;

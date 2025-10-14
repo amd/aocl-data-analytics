@@ -34,7 +34,8 @@ using namespace random_forest_public;
 
 da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
                                         da_int n_features, da_int n_class,
-                                        const double *X, da_int ldx, const da_int *y) {
+                                        const double *X, da_int ldx, const da_int *y,
+                                        const da_int *categorical_features) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -45,12 +46,13 @@ da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
     DISPATCHER(
         handle->err,
         return (random_forest_set_data<da_decision_forest::random_forest<double>, double>(
-            handle, n_samples, n_features, n_class, X, ldx, y)));
+            handle, n_samples, n_features, n_class, X, ldx, y, categorical_features)));
 }
 
 da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
                                         da_int n_features, da_int n_class, const float *X,
-                                        da_int ldx, const da_int *y) {
+                                        da_int ldx, const da_int *y,
+                                        const da_int *categorical_features) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
@@ -61,7 +63,7 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
     DISPATCHER(
         handle->err,
         return (random_forest_set_data<da_decision_forest::random_forest<float>, float>(
-            handle, n_samples, n_features, n_class, X, ldx, y)));
+            handle, n_samples, n_features, n_class, X, ldx, y, categorical_features)));
 }
 
 da_status da_forest_fit_d(da_handle handle) {

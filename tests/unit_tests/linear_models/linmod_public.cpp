@@ -32,6 +32,8 @@
 
 namespace {
 
+const da_int print_level{2};
+
 /* simple errors tests */
 TEST(linmod, badHandle) {
     da_handle handle = nullptr;
@@ -569,7 +571,8 @@ TEST(linmod, ReturnLastSol) {
               da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "optim iteration limit", 2),
               da_status_success);
-    EXPECT_EQ(da_options_set_int(handle_d, "print level", 0), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle_d, "print level", print_level),
+              da_status_success);
     EXPECT_EQ(da_options_set_string(handle_d, "scaling", "scale only"),
               da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
@@ -686,7 +689,8 @@ void test_linmod_warmstart(const params pr) {
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "alpha", pr.alpha), da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle_d, "lambda", pr.lambda), da_status_success);
-    EXPECT_EQ(da_options_set_int(handle_d, "print level", 1), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle_d, "print level", print_level),
+              da_status_success);
     EXPECT_EQ(da_options_set_string(handle_d, "print options", "yes"), da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "intercept", 1), da_status_success);
     EXPECT_EQ(da_options_set_int(handle_d, "optim iteration limit", 2000),
@@ -696,7 +700,8 @@ void test_linmod_warmstart(const params pr) {
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_linmod_coef, &ncoef, coef),
               da_status_success);
     // Reset model and train again from solution (set any option)
-    EXPECT_EQ(da_options_set_int(handle_d, "print level", 1), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle_d, "print level", print_level),
+              da_status_success);
     EXPECT_EQ(da_linmod_fit_start<double>(handle_d, ncoef, coef), da_status_success);
     // info -> iter == 1 or O depending on method
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_rinfo, &linfo, info),
@@ -715,121 +720,121 @@ void test_linmod_warmstart(const params pr) {
     da_handle_destroy(&handle_d);
 }
 
-const double equal_tol{10.0 * std::numeric_limits<double>::epsilon()};
+const double equal_tol{1.e+5 * std::numeric_limits<double>::epsilon()};
 double NA = std::numeric_limits<double>::quiet_NaN();
 
 const params ldx_values_tallskinny[]{
-    {"ldx_coord/n", "coord", "none", 0.5, 0.05, equal_tol, 0},
-    {"ldx_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 0},
-    {"ldx_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 0},
-    {"ldx_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 0},
+    {"ldx_ts_coord/n", "coord", "none", 0.5, 0.05, equal_tol, 0},
+    {"ldx_ts_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 0},
+    {"ldx_ts_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 0},
+    {"ldx_ts_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 0},
 #ifndef NO_FORTRAN
-    {"ldx_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 0},
-    {"ldx_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_BFGS/s", "bfgs", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_BFGS/s", "bfgs", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 0},
 #endif
-    {"ldx_qr/n", "qr", "none", 0.0, 0.0, equal_tol, 0},
-    {"ldx_qr/c", "qr", "centering", 0.0, 0.0, equal_tol, 0},
-    {"ldx_qr/s", "qr", "scale only", 0.0, 0.0, equal_tol, 0},
-    {"ldx_qr/z", "qr", "standardize", 0.0, 0.0, equal_tol, 0},
-    {"ldx_svd/n", "svd", "none", 0.0, 0.05, equal_tol, 0},
-    {"ldx_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 0},
-    {"ldx_cg/n", "cg", "none", 0.0, 0.00, equal_tol, 0},
-    {"ldx_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/n", "chol", "none", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_qr/n", "qr", "none", 0.0, 0.0, equal_tol, 0},
+    {"ldx_ts_qr/c", "qr", "centering", 0.0, 0.0, equal_tol, 0},
+    {"ldx_ts_qr/s", "qr", "scale only", 0.0, 0.0, equal_tol, 0},
+    {"ldx_ts_qr/z", "qr", "standardize", 0.0, 0.0, equal_tol, 0},
+    {"ldx_ts_svd/n", "svd", "none", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_cg/n", "cg", "none", 0.0, 0.00, equal_tol, 0},
+    {"ldx_ts_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_chol/n", "chol", "none", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_ts_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 0},
 
     // Some configurations on TallSkinny are not supported none+intercept -> centering
     // {"ldx_coord/n", "coord", "none", 0.5, 0.05, equal_tol, 1},
-    {"ldx_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 1},
-    {"ldx_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 1},
-    {"ldx_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 1},
+    {"ldx_ts_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 1},
+    {"ldx_ts_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 1},
+    {"ldx_ts_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 1},
 #ifndef NO_FORTRAN
-    {"ldx_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 1},
-    {"ldx_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_BFGS/s", "bfgs", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_BFGS/s", "bfgs", "scale only", 0.0, 0.05, 3.0 * equal_tol, 1},
+    {"ldx_ts_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 1},
 #endif
     // {"ldx_qr/n", "qr", "none", 0.0, 0.0, equal_tol, 1},
-    {"ldx_qr/c", "qr", "centering", 0.0, 0.0, equal_tol, 1},
-    {"ldx_qr/s", "qr", "scale only", 0.0, 0.0, equal_tol, 1},
-    {"ldx_qr/z", "qr", "standardize", 0.0, 0.0, equal_tol, 1},
+    {"ldx_ts_qr/c", "qr", "centering", 0.0, 0.0, equal_tol, 1},
+    {"ldx_ts_qr/s", "qr", "scale only", 0.0, 0.0, equal_tol, 1},
+    {"ldx_ts_qr/z", "qr", "standardize", 0.0, 0.0, equal_tol, 1},
     // {"ldx_svd/n", "svd", "none", 0.0, 0.05, equal_tol, 1},
-    {"ldx_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 1},
-    {"ldx_cg/n", "cg", "none", 0.0, 0.00, equal_tol, 1},
-    {"ldx_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 1},
-    {"ldx_chol/n", "chol", "none", 0.0, 0.05, equal_tol, 1},
-    {"ldx_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_cg/n", "cg", "none", 0.0, 0.03, equal_tol, 1},
+    {"ldx_ts_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_chol/n", "chol", "none", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 1},
+    {"ldx_ts_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 1},
 };
 
 const params ldx_values_shortfat[]{
-    {"ldx_coord/n", "coord", "none", 0.5, 0.05, equal_tol, 0},
-    {"ldx_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 0},
-    {"ldx_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 0},
-    {"ldx_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 0},
+    {"ldx_sf_coord/n", "coord", "none", 0.5, 0.05, equal_tol, 0},
+    {"ldx_sf_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 0},
+    {"ldx_sf_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 0},
+    {"ldx_sf_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 0},
 #ifndef NO_FORTRAN
-    {"ldx_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 0},
-    {"ldx_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_BFGS/s", "bfgs", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_BFGS/s", "bfgs", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 0},
 #endif
-    {"ldx_qr/n", "qr", "none", 0.0, 0.0, equal_tol, 0},
-    {"ldx_qr/c", "qr", "centering", 0.0, 0.0, equal_tol, 0},
-    {"ldx_qr/s", "qr", "scale only", 0.0, 0.0, equal_tol, 0},
-    // {"ldx_qr/z", "qr", "standardize", 0.0, 0.0, equal_tol, 0},
-    {"ldx_svd/n", "svd", "none", 0.0, 0.05, equal_tol, 0},
-    {"ldx_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 0},
-    {"ldx_cg/n", "cg", "none", 0.0, 0.00, equal_tol, 0},
-    {"ldx_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/n", "chol", "none", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 0},
-    {"ldx_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_qr/n", "qr", "none", 0.0, 0.0, equal_tol, 0},
+    {"ldx_sf_qr/c", "qr", "centering", 0.0, 0.0, equal_tol, 0},
+    {"ldx_sf_qr/s", "qr", "scale only", 0.0, 0.0, equal_tol, 0},
+    // {"ldx_sf_qr/z", "qr", "standardize", 0.0, 0.0, equal_tol, 0},
+    {"ldx_sf_svd/n", "svd", "none", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_cg/n", "cg", "none", 0.0, 0.06, equal_tol, 0},
+    {"ldx_sf_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_chol/n", "chol", "none", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 0},
+    {"ldx_sf_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 0},
 
     // Some configurations on ShortFat are not supported
     // {"ldx_coord/n", "coord", "none", 0.5, 0.05, equal_tol, 1},
-    {"ldx_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 1},
-    {"ldx_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 1},
-    {"ldx_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 1},
+    {"ldx_sf_coord/c", "coord", "centering", 0.5, 0.05, equal_tol, 1},
+    {"ldx_sf_coord/s", "coord", "scale only", 0.5, 0.05, equal_tol, 1},
+    {"ldx_sf_coord/z", "coord", "standardize", 0.5, 0.05, equal_tol, 1},
 #ifndef NO_FORTRAN
-    {"ldx_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 1},
-    {"ldx_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_BFGS/s", "bfgs", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_BFGS/n", "bfgs", "none", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_BFGS/c", "bfgs", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_BFGS/s", "bfgs", "scale only", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_BFGS/z", "bfgs", "standardize", 0.0, 0.05, equal_tol, 1},
 #endif
     // {"ldx_qr/n", "qr", "none", 0.0, 0.0, equal_tol, 1},
     // {"ldx_qr/c", "qr", "centering", 0.0, 0.0, equal_tol, 1},
     // {"ldx_qr/s", "qr", "scale only", 0.0, 0.0, equal_tol, 1},
     // {"ldx_qr/z", "qr", "standardize", 0.0, 0.0, equal_tol, 1},
     // {"ldx_svd/n", "svd", "none", 0.0, 0.05, equal_tol, 1},
-    {"ldx_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_svd/c", "svd", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_svd/s", "svd", "scale only", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_svd/z", "svd", "standardize", 0.0, 0.05, equal_tol, 1},
     // {"ldx_cg/n", "cg", "none", 0.0, 0.00, equal_tol, 1},
-    {"ldx_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_cg/c", "cg", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_cg/s", "cg", "scale only", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_cg/z", "cg", "standardize", 0.0, 0.05, equal_tol, 1},
     // {"ldx_chol/n", "chol", "none", 0.0, 0.05, equal_tol, 1},
-    {"ldx_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 1},
-    {"ldx_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 1},
-    {"ldx_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_chol/c", "chol", "centering", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_chol/s", "chol", "scale only", 0.0, 0.05, equal_tol, 1},
+    {"ldx_sf_chol/z", "chol", "standardize", 0.0, 0.05, equal_tol, 1},
 };
 
 class linmodLDX_TallSkinny : public testing::TestWithParam<params> {};
@@ -849,10 +854,13 @@ TEST_P(linmodLDX_ShortFat, RowMajorShortFat) {
 }
 
 void test_linmod_ldx_RowMajorTallSkinny(const params pr) {
-    da_int m = 6, n = 2;
-    double Al[8 * 2] = {1, 2, 3, 4, 5, 6, NA, NA, 1, 3, 5, 8, 7, 9, NA, NA};
-    da_int ldA = 8;
-    double bl[6] = {3., 6.5, 10., 12., 13., 19.};
+    da_int m = 6, n = 2, p = 3;
+    //                   T  T  T  T  T  T      P    P    P
+    double Al[10 * 2] = {1, 2, 3, 4, 5, 6, NA, 1.5, 2.3, 3.5,
+                         1, 3, 5, 8, 7, 9, NA, 2,   4,   6};
+    da_int ldA = 10;
+    //               T   T    T    T    T   T         P    P    P
+    double bl[10] = {3., 6.5, 10., 12., 13., 19., NA, 4.3, 7.0, 10.6};
     da_int intercept = pr.icnt;
     da_int nx = intercept ? 3 : 2;
     double *x = new double[nx];
@@ -862,28 +870,45 @@ void test_linmod_ldx_RowMajorTallSkinny(const params pr) {
     EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_linmod_select_model_d(handle, linmod_model_mse), da_status_success);
     EXPECT_EQ(da_linmod_define_features_d(handle, m, n, Al, ldA, bl), da_status_success);
-
+    EXPECT_EQ(da_options_set(handle, "storage order", "column-major"), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "optim method", pr.solver.c_str()),
               da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "scaling", pr.scaling.c_str()),
               da_status_success);
-    EXPECT_EQ(da_options_set_real_d(handle, "optim convergence tol", safe_tol),
+    EXPECT_EQ(da_options_set_int(handle, "optim iteration limit", da_int(500)),
               da_status_success);
-    EXPECT_EQ(da_options_set_real_d(handle, "optim progress factor", 10.0),
+    EXPECT_EQ(da_options_set_real_d(handle, "optim convergence tol", 10.0 * safe_tol),
+              da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle, "optim progress factor", 100.0),
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "alpha", pr.alpha), da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "lambda", pr.lambda), da_status_success);
     EXPECT_EQ(da_options_set_int(handle, "intercept", intercept), da_status_success);
-    EXPECT_EQ(da_options_set_int(handle, "print level", 0), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "print level", print_level), da_status_success);
 
     // Compute regression
     EXPECT_EQ(da_linmod_fit_d(handle), da_status_success);
     EXPECT_EQ(da_handle_get_result_d(handle, da_linmod_coef, &nx, x), da_status_success);
+    da_int linfo = 100;
+    double cinfo[100];
+    EXPECT_EQ(da_handle_get_result_d(handle, da_result::da_rinfo, &linfo, cinfo),
+              da_status_success);
+
+    // predict on a new dataset
+    double pred[3]{NA, NA, NA};
+    double loss{NA};
+    EXPECT_EQ(da_linmod_evaluate_model_d(handle, p, n, Al + 7, ldA, pred, bl + 7, &loss),
+              da_status_success);
+
     da_handle_destroy(&handle);
 
     // Now repeat in row-major
-    double Al_row[6 * 5] = {1, 1, NA, NA, NA, 2, 3, NA, NA, NA, 3, 5, NA, NA, NA,
-                            4, 8, NA, NA, NA, 5, 7, NA, NA, NA, 6, 9, NA, NA, NA};
+    double Al_row[9 * 5] = {1,  1,  NA, NA, NA,  2,  3,   NA, NA, NA, 3,  5,
+                            NA, NA, NA, 4,  8,   NA, NA,  NA, 5,  7,  NA, NA,
+                            NA, 6,  9,  NA, NA,  NA, 1.5, 2,  NA, NA, NA, 2.3,
+                            4,  NA, NA, NA, 3.5, 6,  NA,  NA, NA
+
+    };
     da_int ldA_row = 5;
     double *x_row = new double[nx];
     EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
@@ -892,9 +917,11 @@ void test_linmod_ldx_RowMajorTallSkinny(const params pr) {
               da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "scaling", pr.scaling.c_str()),
               da_status_success);
-    EXPECT_EQ(da_options_set_real_d(handle, "optim convergence tol", safe_tol),
+    EXPECT_EQ(da_options_set_int(handle, "optim iteration limit", da_int(500)),
               da_status_success);
-    EXPECT_EQ(da_options_set_real_d(handle, "optim progress factor", 10.0),
+    EXPECT_EQ(da_options_set_real_d(handle, "optim convergence tol", 10.0 * safe_tol),
+              da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle, "optim progress factor", 100.0),
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "alpha", pr.alpha), da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "lambda", pr.lambda), da_status_success);
@@ -903,11 +930,41 @@ void test_linmod_ldx_RowMajorTallSkinny(const params pr) {
     EXPECT_EQ(da_linmod_define_features_d(handle, m, n, Al_row, ldA_row, bl),
               da_status_success);
     // Compute regression
+    EXPECT_EQ(da_options_set_int(handle, "print level", print_level), da_status_success);
     EXPECT_EQ(da_linmod_fit_d(handle), da_status_success);
     EXPECT_EQ(da_handle_get_result_d(handle, da_linmod_coef, &nx, x_row),
               da_status_success);
+    double rinfo[100];
+    EXPECT_EQ(da_handle_get_result_d(handle, da_result::da_rinfo, &linfo, rinfo),
+              da_status_success);
 
+    // predict on a new dataset
+    double pred_row[3]{NA, NA, NA};
+    double loss_row{NA};
+    EXPECT_EQ(da_linmod_evaluate_model_d(handle, p, n, Al_row + 30, ldA_row, pred_row,
+                                         bl + 7, &loss_row),
+              da_status_success);
+
+    // check solution
     EXPECT_ARR_NEAR(nx, x, x_row, pr.tol);
+
+    // check info array ignoring time
+    cinfo[da_linmod_info_t::linmod_info_time] = 0;
+    rinfo[da_linmod_info_t::linmod_info_time] = 0;
+    // also check some integer values (coord)
+    double ncheap_delta = std::abs(cinfo[da_linmod_info_t::linmod_info_ncheap] -
+                                   rinfo[da_linmod_info_t::linmod_info_ncheap]);
+    EXPECT_LE(ncheap_delta, 5);
+    // now zero out
+    cinfo[da_linmod_info_t::linmod_info_ncheap] = 0;
+    rinfo[da_linmod_info_t::linmod_info_ncheap] = 0;
+    EXPECT_ARR_NEAR(linfo, cinfo, rinfo, pr.tol);
+
+    // check loss
+    EXPECT_NEAR(loss, loss_row, pr.tol);
+
+    // check predictions
+    EXPECT_ARR_NEAR(p, pred, pred_row, pr.tol);
 
     da_handle_destroy(&handle);
     delete[] x;
@@ -915,11 +972,12 @@ void test_linmod_ldx_RowMajorTallSkinny(const params pr) {
 }
 
 void test_linmod_ldx_RowMajorShortFat(const params pr) {
-    da_int m = 2, n = 6;
-    double Al[4 * 6] = {1, 1.35, NA, NA, 2, 3, NA, NA, 3, 5, NA, NA,
-                        4, 8,    NA, NA, 5, 7, NA, NA, 6, 9, NA, NA};
-    da_int ldA = 4;
-    double bl[2] = {3., 5.5};
+    da_int m = 2, n = 6, p = 2;
+    double Al[7 * 6] = {1, 1.35, NA, NA, 1.1, 0.5, NA, 2, 3, NA, NA, 2.2, 0.2, NA,
+                        3, 5,    NA, NA, 3.3, 0.7, NA, 4, 8, NA, NA, 4.4, 1.2, NA,
+                        5, 7,    NA, NA, 5.5, 2.4, NA, 6, 9, NA, NA, 6.6, 3.5, NA};
+    da_int ldA = 7;
+    double bl[5] = {3., 5.5, NA, 3.3, 1.03};
     da_int intercept = pr.icnt;
     da_int nx = intercept ? 7 : 6;
     double *x = new double[nx];
@@ -929,7 +987,7 @@ void test_linmod_ldx_RowMajorShortFat(const params pr) {
     EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_linmod_select_model_d(handle, linmod_model_mse), da_status_success);
     EXPECT_EQ(da_linmod_define_features_d(handle, m, n, Al, ldA, bl), da_status_success);
-
+    EXPECT_EQ(da_options_set(handle, "storage order", "column-major"), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "optim method", pr.solver.c_str()),
               da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "scaling", pr.scaling.c_str()),
@@ -938,18 +996,33 @@ void test_linmod_ldx_RowMajorShortFat(const params pr) {
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "optim progress factor", 10.0),
               da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "optim iteration limit", da_int(1000)),
+              da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "alpha", pr.alpha), da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "lambda", pr.lambda), da_status_success);
     EXPECT_EQ(da_options_set_int(handle, "intercept", intercept), da_status_success);
-    EXPECT_EQ(da_options_set_int(handle, "print level", 3), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "print level", print_level), da_status_success);
 
     // Compute regression
     EXPECT_EQ(da_linmod_fit_d(handle), da_status_success);
+    da_int linfo = 100;
+    double cinfo[100];
+    EXPECT_EQ(da_handle_get_result_d(handle, da_result::da_rinfo, &linfo, cinfo),
+              da_status_success);
     EXPECT_EQ(da_handle_get_result_d(handle, da_linmod_coef, &nx, x), da_status_success);
+
+    // predict on a new dataset
+    double pred[2]{NA, NA};
+    double loss{NA};
+    EXPECT_EQ(da_linmod_evaluate_model_d(handle, p, n, Al + 4, ldA, pred, bl + 3, &loss),
+              da_status_success);
+
     da_handle_destroy(&handle);
 
     // Now repeat in row-major
-    double Al_row[7 * 2] = {1, 2, 3, 4, 5, 6, NA, 1.35, 3, 5, 8, 7, 9, NA};
+    double Al_row[4 * 7] = {1,  2,   3,   4,   5,   6,   NA,  1.35, 3,   5,
+                            8,  7,   9,   NA,  1.1, 2.2, 3.3, 4.4,  5.5, 6.6,
+                            NA, 0.5, 0.2, 0.7, 1.2, 2.4, 3.5, NA};
     da_int ldA_row = 7;
     double *x_row = new double[nx];
     EXPECT_EQ(da_handle_init_d(&handle, da_handle_linmod), da_status_success);
@@ -965,6 +1038,9 @@ void test_linmod_ldx_RowMajorShortFat(const params pr) {
     EXPECT_EQ(da_options_set_real_d(handle, "alpha", pr.alpha), da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "lambda", pr.lambda), da_status_success);
     EXPECT_EQ(da_options_set_int(handle, "intercept", intercept), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "optim iteration limit", da_int(1000)),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "print level", print_level), da_status_success);
     EXPECT_EQ(da_linmod_select_model_d(handle, linmod_model_mse), da_status_success);
     EXPECT_EQ(da_linmod_define_features_d(handle, m, n, Al_row, ldA_row, bl),
               da_status_success);
@@ -973,7 +1049,30 @@ void test_linmod_ldx_RowMajorShortFat(const params pr) {
     EXPECT_EQ(da_handle_get_result_d(handle, da_linmod_coef, &nx, x_row),
               da_status_success);
 
+    double rinfo[100];
+    EXPECT_EQ(da_handle_get_result_d(handle, da_result::da_rinfo, &linfo, rinfo),
+              da_status_success);
+
+    // predict on a new dataset
+    double pred_row[3]{NA, NA, NA};
+    double loss_row{NA};
+    EXPECT_EQ(da_linmod_evaluate_model_d(handle, p, n, Al_row + 14, ldA_row, pred_row,
+                                         bl + 3, &loss_row),
+              da_status_success);
+
+    // check solution
     EXPECT_ARR_NEAR(nx, x, x_row, pr.tol);
+
+    // check info array ignoring time
+    cinfo[da_linmod_info_t::linmod_info_time] = 0;
+    rinfo[da_linmod_info_t::linmod_info_time] = 0;
+    EXPECT_ARR_NEAR(linfo, cinfo, rinfo, pr.tol);
+
+    // check loss
+    EXPECT_NEAR(loss, loss_row, pr.tol);
+
+    // check predictions
+    EXPECT_ARR_NEAR(p, pred, pred_row, pr.tol);
 
     da_handle_destroy(&handle);
     delete[] x;

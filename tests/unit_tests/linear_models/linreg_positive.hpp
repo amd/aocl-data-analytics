@@ -28,11 +28,6 @@
 #ifndef LINREG_POSITIVE_HPP
 #define LINREG_POSITIVE_HPP
 
-// Deal with some Windows compilation issues regarding max/min macros
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "linmod_functions.hpp"
@@ -61,16 +56,23 @@ typedef struct linregParam_t {
     float check_tol_scale{1.0f};
     // check dual-gap [0] = float [1] = double
     float dual_gap[2]{-1.0f, -1.0f};
+    bool initial_guess{false}; // use initial guess for the coefficients?
 } linregParam;
 
 template <typename T>
 void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iopts,
                           std::vector<option_t<std::string>> sopts,
                           std::vector<option_t<T>> ropts, bool check_coeff,
-                          bool check_predict, T check_tol_scale, T dual_gap) {
+                          bool check_predict, T check_tol_scale, T dual_gap,
+                          bool initial_guess = false) {
 
     // get template instantiation type (either single or double)
     const bool single = std::is_same_v<T, float>; // otherwise assume double
+    const da_int debug{0};
+    if (debug) {
+        EXPECT_EQ(da_debug_set("debug", std::to_string(debug).c_str()), da_status_success)
+            << "Failed to set debug level to " << debug;
+    }
 
     // Create main handle and set options
     da_handle linmod_handle = nullptr;
@@ -95,9 +97,38 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     ///////////////
     // Get the data
     ///////////////
+
+    da_datastore csv_store = nullptr;
+    // check to see if we are using initial guess
+    T *coef0{nullptr};
+    da_int ncoef0{0};
+    if (initial_guess) {
+        EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
+        std::string intercept_suff = "";
+        if (!intercept)
+            intercept_suff = "_noint";
+        std::string coef_fname = std::string(DATA_DIR) + "/linmod_data/linear_reg/" +
+                                 csvname + intercept_suff + "_coeffs0.csv";
+        if (FILE *file = fopen(coef_fname.c_str(), "r")) {
+            // read the expected coefficients
+            da_int mc0{0};
+            fclose(file);
+            EXPECT_EQ(da_read_csv(csv_store, coef_fname.c_str(), &coef0, &mc0, &ncoef0,
+                                  nullptr),
+                      da_status_success);
+        } else {
+            // if the file does not exist, we cannot use initial guess
+            da_datastore_destroy(&csv_store);
+            da_handle_destroy(&linmod_handle);
+            FAIL() << "Initial guess coefficients was requested but the file "
+                   << coef_fname << " could not be opened.";
+        }
+        da_datastore_destroy(&csv_store);
+    }
+
     std::string input_data_fname =
         std::string(DATA_DIR) + "/linmod_data/linear_reg/" + csvname + "_data.csv";
-    da_datastore csv_store = nullptr;
+    csv_store = nullptr;
     EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
     EXPECT_EQ(
         da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
@@ -137,8 +168,16 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(da_linmod_define_features(linmod_handle, nsamples, nfeat, A, nsamples, b),
               da_status_success);
 
-    // Compute regression
-    EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
+    // if coef0 is provided, set it as the initial guess
+    if (initial_guess) {
+        EXPECT_EQ(da_linmod_fit_start(linmod_handle, ncoef0, coef0), da_status_success);
+    } else {
+        // Compute regression
+        EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
+    }
+
+    if (coef0)
+        free(coef0);
 
     // Check that info contains the correct values
     da_int linfo = 100;
@@ -166,21 +205,22 @@ void test_linreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
 #endif
         EXPECT_GT(info[da_linmod_info_t::linmod_info_nevalf], 0);
         if (method == "coord"s) {
-            EXPECT_GT(iter, 1);
             EXPECT_GE(info[da_linmod_info_t::linmod_info_inorm], 0);
             EXPECT_GE(info[da_linmod_info_t::linmod_info_inorm_init], 0);
-            EXPECT_GT(info[da_linmod_info_t::linmod_info_nevalf], 0);
             EXPECT_GE(info[da_linmod_info_t::linmod_info_ncheap],
                       std::max(T(1), iter - T(1)));
             if (dual_gap >= T(0)) {
                 EXPECT_LT(info[da_linmod_info_t::linmod_info_optim], dual_gap)
                     << "Coord: Dual gap size unexpectedly LARGE!";
             }
+            // make sure the dual gap is valid...
+            // relax condition for being a metric
+            const T dual_relax_zero{50 * std::numeric_limits<T>::epsilon()};
+            EXPECT_GE(info[da_linmod_info_t::linmod_info_optim], -dual_relax_zero);
         } else {
-            EXPECT_GT(iter, 0);
-            EXPECT_GT(info[da_linmod_info_t::linmod_info_nevalf], 0);
             EXPECT_GE(info[da_linmod_info_t::linmod_info_grad_norm], 0);
         }
+        EXPECT_GT(iter, 0);
     }
 
     ////////////////////

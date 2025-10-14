@@ -24,11 +24,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 #include "aoclda_error.h"
 #include "aoclda_result.h"
 #include "callbacks.hpp"
 #include "da_error.hpp"
+#include "da_utils.hpp"
 #include "macros.h"
 #include "options.hpp"
 #include <chrono>
@@ -40,14 +40,6 @@
 #include <vector>
 
 #define HDRCNT 30 // how frequently to print iteration banner
-// Scaling for the convergence check
-// 0 - absolute: ||Delta_W||_inf < tol
-// 1 - relative: ||Delta_W||_inf < tol * ||W||_inf <------ sklearn / oneDAL
-// 2 - safe:     ||Delta_W||_inf < tol * max(1, ||W||_inf) <--- safe-guard version for the cases where
-// |Delta_W||_ing / ||W||_inf converges to a constant far from zero, say 1, and
-// relative tolerance check is never satisfied. Set to 1 when benchmarking "well-behaved" problems
-// Also can happen for problems where solution is zero (or when projecting to the positive cone)
-#define __DA_COORD_SCALE_CONV_TOL 1
 
 namespace ARCH {
 
@@ -221,10 +213,9 @@ enum solver_tasks {
 template <typename T> class coord_slv {
   public:
     // kdiff = x[k] - x_old[k]
-    T kdiff;
+    T kdiff = (T)0.0;
 
     // Ledger
-
     // Restart the skip ledger every <restart> iterations
     // restart = MAXINT disables periodic restarts
     // restart = 0 forces every iteration to be expensive
@@ -253,6 +244,36 @@ template <typename T> class coord_slv {
     T tol{T(0)};
     // tolerance to declare optimality
     T optim{T(0)}; // this is only checked if step < tol
+    T macheps_safe{T(2) * std::numeric_limits<T>::epsilon()};
+
+    // Tuning parameters (can be overridden using hidden context registry)
+    // ===================================================================
+
+    // Scaling for the convergence check
+    // 0 - absolute: ||Delta_W||_inf < tol
+    // 1 - relative: ||Delta_W||_inf < tol * ||W||_inf <--- sklearn / oneDAL
+    //               safe-guard with macheps_safe
+    //               ||Delta_W||_inf < max(macheps_safe, tol * ||W||_inf)
+    // 2 - safe:     ||Delta_W||_inf < tol * max(1, ||W||_inf) <--- safe-guard version for the cases where
+    // |Delta_W||_inf / ||W||_inf converges to a constant far from zero, say 1, and
+    // relative tolerance check is never satisfied. Set to 1 when benchmarking "well-behaved" problems
+    // Also can happen for problems where solution is zero (or when projecting to the positive cone)
+    const size_t scale_convergence_type =
+        da_utils::hidden_settings_query("coord.scale convergence type", 1U); // default
+
+    // When close to a solution, we don't want to skip, so we make sure that
+    // for atleast a short while we check all.
+    // The actual value used is max(skipmin, skipmin_reset)
+    const size_t skipmin_reset =
+        da_utils::hidden_settings_query("coord.skipmin reset", 10U); //default
+
+    // after skip[k] reached this ammount of skips, the coordinate is deemed to be
+    // inactive and is no longer reactivated by skipmax, the actual number used
+    // is max(skipmax_reset, skipmax_threshold)
+    const size_t skipmax_threshold =
+        da_utils::hidden_settings_query("coord.skipmax threshold", 1000U); // default
+
+    // Read context reistry for tuning parameters
 
     // Assumes all inputs are valid
     coord_slv(size_t restart, size_t skipmin, size_t skipmax_reset, T skiptol)
@@ -296,6 +317,23 @@ da_status coord_rcomm(da_int n, std::vector<T> &x, constraints::bound_constr<T> 
                       T optim, T tol, coord::solver_tasks &itask, da_int &k, T &newxk,
                       da_int &iter, T &inorm, da_int &action, da_errors::da_error_t &err,
                       coord_slv<T> &w);
+
+// Helper function to check progress of a metric
+template <typename T>
+void check_progress(bool check, T &current, T &old, T tol, size_t &count) {
+
+    // Check progress, STOP was not called, so new metric value is available in current
+    if (!check)
+        return;
+
+    T delta = current / old;
+    if (delta >= tol) {
+        // Stagnation detected, count for how many iterations
+        ++count;
+    } else {
+        count = 0;
+    }
+}
 
 /** Coordinate Descent Method - Forward Communication <templated>
  *
@@ -412,6 +450,25 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                         "Vector x needs to be of size n=" + std::to_string(n) + ".");
     }
 
+    // Slow progress detection
+    // previous optimality value, used to check progress
+    T optim_old{std::numeric_limits<T>::infinity()};
+    // number of slow iterations
+    size_t slow_cnt{0};
+
+    // Tuning parameters (can be overridden using hidden context registry)
+    // ===================================================================
+
+    // slow progress factor (dualgap(k)/dualgap(k-1)) < slow_progress_factor
+    // implies a slow progress counter increment, if this reaches slow_cnt_max
+    // the slow progress is declared
+    const T slow_progress_factor =
+        da_utils::hidden_settings_query("coord.slow progress factor", 0.9999); // default
+    const size_t slow_cnt_max =
+        da_utils::hidden_settings_query("coord.slow count max", 10U); // default
+
+    const da_int debug = da_utils::hidden_settings_query("debug", 0U); // default
+
     // Workspace
     coord_slv<T> w(restart, skipmin, skipmax_reset, skiptol);
     try {
@@ -437,7 +494,6 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     T newxk{T(0)};
     T inorm{std::numeric_limits<T>::infinity()};
     *f = std::numeric_limits<T>::infinity();
-    da_int cbflag{0};
     bool cbstop{false};
     bool callmon{false};
     bool timeout{false};
@@ -458,8 +514,8 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
     }
 
     while (itask == NEWX || itask == START || itask == EVAL || itask == OPTIMCHK) {
-        coord_rcomm<T>(n, x, bc, optim, tol, itask, k, newxk, iter, inorm, action, err,
-                       w);
+        status = coord_rcomm<T>(n, x, bc, optim, tol, itask, k, newxk, iter, inorm,
+                                action, err, w);
 
         switch (itask) {
         case EVAL: // Compute new iterate for x[k]
@@ -475,12 +531,11 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 lowrk++;
             }
 
-            cbflag = stepfun(n, &x[0], &newxk, k, nullptr, usrdata, action, w.kdiff);
-            if (cbflag != 0) {
+            cbstop = stepfun(n, &x[0], &newxk, k, nullptr, usrdata, action, w.kdiff);
+            if (cbstop) {
                 // Step could not be evaluated, set newxk = xk, f = fold;
                 // and signal to stop at end of the cycle (full iteration)
                 newxk = x[k];
-                cbstop = true;
             }
             if (prnlvl >= 4) {
                 bool skipmax = skipmax_reset < std::numeric_limits<T>::max();
@@ -491,14 +546,16 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 da_int exhaustion = w.flags & 8U; // Search-space exhausted
                 da_int optimf = w.flags & 16U;    // Optimality condition not met
                 da_int activate = w.flags & 32U;  // Movement was detected
+                da_int smallstep = w.flags & 64U; // Step was too small (noise?)
                 flagss += (reqskip) ? "S" : "";
                 flagss += (action < 1 ? "C" : "E");
                 flagss += (restartk) ? "R" : "";
                 flagss += (reset) ? "T" : "";
                 flagss += (exhaustion) ? "!" : "";
-                flagss += (cbflag) ? "X" : "";
+                flagss += (cbstop) ? "X" : "";
                 flagss += (optimf) ? "D" : "";
                 flagss += (activate) ? "A" : "";
+                flagss += (smallstep) ? "N" : "";
 
                 /*
                  * Iteration banner
@@ -506,15 +563,14 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                  * Low detail
                  * ----------
                  * After each outer iteration this banner is printed
-                 *
-                 * ------------------------------------------------------
-                 *  iteration objective maxchange       neval       lowrk
-                 * ------------------------------------------------------
-                 *         20 2.920e+08 8.844e-06           4         115
+                 * -----------------------------------------------------------------
+                 *  iteration objective maxchange       neval        ngap     optim
+                 * -----------------------------------------------------------------
+                 *         20 2.920e+08 8.844e-06           4           1 2.158e-05
                  * Where
                  * * maxchange is the infinity-norm of (xk - xk-1)
-                 * * neval are the number of calls to step function
-                 * * lowrk are the number of calls to step function hinting
+                 * * neval are the number of calls to step function cheap+expensive
+                 * * ngap is the number of calls to dual-gap function
                  *   to use a low rank update
                  * Total number of function calls is neval+lowrk
                  *
@@ -523,17 +579,20 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                  * for each inner iteration this banner is printed
                  *
                  * iteration coordinate   current       new    change      skip/  skipmax
-                 *        19          9 +1.25e+00 +1.25e+00 +5.43e-06#        0/        8 ACDERSTX!
+                 *        19          9 +1.25e+00 +1.25e+00 +5.43e-06#@       0/        8 ACDENRSTX!
                  * Where
                  * * current is the value of xold[k]
                  * * new is the value of x[k]
                  * * change is xold[k] - x[k] if post-fixed with "#" then it indicates that skip ledger will increment
+                 *                            if also post-fixed with "@" then it indicates that the step is set to zero
+                 *                            because it was too small
                  * * skip is the ledger entry for coordinate k
                  * * skipmax is the next count for when the coordinate k will be checked
                  * The "flags" at the end of the line inform about:
                  *  * "A" ledger indicates that a coordinate was re-activated for exploration
                  *  * "C" or "E" hinting to cheap or expensive step function evaluation
                  *  * "D" iterate is close to the previous one but optimality condition still not within tolerance
+                 *  * "N" a coordinate step was truncated because it was too small
                  *  * "R" a user-restart (reset of ledger and expensive evaluation) is requested
                  *  * "S" ledger indicates that there are previous coordinates that skipped exploration
                  *  * "T" iterate seems to be a solution (Tolerance ok) but some coordinates were skipped, resetting
@@ -548,17 +607,18 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                           << std::setw(10) << "coordinate" << std::setw(1) << ""
                           << std::setw(9) << "current" << std::setw(1) << ""
                           << std::setw(9) << "new" << std::setw(1) << "" << std::setw(9)
-                          << "change" << std::setw(1) << "" << std::setw(9) << "skip";
+                          << "change" << std::setw(2) << "" << std::setw(9) << "skip";
                 if (skipmax)
                     std::cout << "/" << std::setw(9) << "skipmax";
                 std::cout << std::endl;
-
+                T xkdiff = std::abs(x[k] - newxk);
                 std::cout << std::setw(10) << iter << std::setw(1) << "" << std::setw(10)
                           << k << std::setw(1) << "" << std::scientific << std::showpos
                           << std::setw(9) << x[k] << std::setw(1) << "" << std::setw(9)
                           << newxk << std::setw(1) << "" << std::setw(9) << x[k] - newxk
-                          << std::setw(1) << (std::abs(x[k] - newxk) > skiptol ? "" : "#")
-                          << std::setw(9) << w.skip[k];
+                          << std::setw(1) << (xkdiff > skiptol ? "" : "#") << std::setw(1)
+                          << (xkdiff > w.macheps_safe ? "" : "@") << std::setw(9)
+                          << w.skip[k];
                 if (skipmax)
                     std::cout << "/" << std::setw(9) << w.skipmax[k];
                 std::cout << " " << flagss << std::endl << std::noshowpos;
@@ -566,13 +626,28 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             }
             break;
         case OPTIMCHK:
+            if (chkcnt) {
+                optim_old = optim;
+            }
             ++chkcnt;
             chk_iter = iter;
-            cbflag = stepchk(n, &x[0], usrdata, &optim);
-            cbstop = cbflag != 0;
+            cbstop = stepchk(n, &x[0], usrdata, &optim);
+            // in case the user tapered with optim, we reset it to the
+            // last known value
+            if (cbstop) {
+                optim = optim_old;
+            }
             break;
+        case STOP:
+            // check for internal errors
+            if (status != da_status_success) {
+                return status;
+            }
+            // now print and update for the last time
+            [[fallthrough]];
         case NEWX:
-        case STOP: // Copy and print for the last time
+            // check if any internal error is raised
+            // status = err.status; AQUI // moove slow progress detection here
             if (mon != 0) {
                 callmon = (iter % mon == 0);
             }
@@ -600,12 +675,22 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             // make sure to return the correct optimatility measure
             // optim is NOT evaluated at every iteration (if prnlvl > 1)
             // it would print the "last known value" of optim
+            // stepchk could have failed and cbstop comes from OPTIMCHK
+            // so we skip calling stepchk again if chk_iter == iter
             if (eval && chk_iter < iter) {
+                if (chkcnt) {
+                    optim_old = optim;
+                }
                 ++chkcnt;
                 chk_iter = iter;
-                cbflag = stepchk(n, &x[0], usrdata, &optim);
-                cbstop = cbflag != 0;
+                cbstop = stepchk(n, &x[0], usrdata, &optim);
+                // in case the user tapered with optim, we reset it to the
+                // last known value
+                if (cbstop) {
+                    optim = optim_old;
+                }
             }
+
             info[da_linmod_info_t::linmod_info_optim] = optim;
             info[da_linmod_info_t::linmod_info_optimcnt] = (T)chkcnt;
 
@@ -617,7 +702,7 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                     std::cout << std::setw(10) << "iteration" << std::setw(1) << ""
                               << std::setw(9) << std::scientific << "objective"
                               << std::setw(1) << "" << std::setw(9) << "maxchange"
-                              << std::setw(12) << "neval" << std::setw(12) << "lowrk"
+                              << std::setw(12) << "neval" << std::setw(12) << "ngap"
                               << std::setw(1) << "" << std::setw(9) << "optim"
                               << std::endl;
                     std::cout << std::setw(65) << std::setfill('-') << "" << std::endl
@@ -627,8 +712,8 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                 std::cout.precision(3);
                 std::cout << std::setw(10) << iter << std::setw(1) << ""
                           << std::scientific << std::setw(9) << *f << std::setw(1) << ""
-                          << std::setw(9) << inorm << std::setw(12) << fcnt
-                          << std::setw(12) << lowrk;
+                          << std::setw(9) << inorm << std::setw(12) << fcnt + lowrk
+                          << std::setw(12) << chkcnt;
                 if (optim < std::numeric_limits<T>::infinity()) {
                     std::cout << std::setw(1) << "" << std::setw(9) << optim;
                 }
@@ -647,11 +732,13 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                     status = da_error(
                         &err, da_status_numerical_difficulties,
                         "Initial iterate is unusable. One or more coordinate steps could "
-                        "not be computed by the callback.");
+                        "not be computed by the callback or the optimality measure could "
+                        "not be computed.");
                 else if (status == da_status_success) {
                     status = da_warn(&err, da_status_numerical_difficulties,
                                      "One or more coordinate steps could not be computed "
-                                     "by the callback.");
+                                     "by the callback or the optimality measure could "
+                                     "not be computed.");
                 } // Otherwise status already filled.
                 itask = STOP;
                 break;
@@ -687,6 +774,20 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                             "Time limit reached without converging to set tolerance.");
                 break;
             }
+
+            // check for slow progress
+            if (chk_iter == iter) {
+                check_progress(chkcnt > 1, optim, optim_old, slow_progress_factor,
+                               slow_cnt);
+                if (slow_cnt >= slow_cnt_max) {
+                    itask = STOP;
+                    status = da_warn(
+                        &err,
+                        da_status_numerical_difficulties, // LCOV_EXCL_LINE
+                        "Solver detected slow progress (optimality gap reduction)");
+                    break;
+                }
+            }
             break;
         default:
             itask = STOP;
@@ -709,6 +810,14 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
                   << lowrk << ")" << std::endl;
         std::cout << " Total solve time: " << *time << " sec" << std::endl;
         std::cout << " Total number of iterations: " << iter << std::endl;
+        if (prnlvl >= 4) {
+            std::cout << " Solver internal settings " << std::endl;
+            std::cout << "   Safe machine epsilon: " << w.macheps_safe << std::endl;
+            std::cout << "   Step tolerance:       " << w.tol << std::endl;
+            std::cout << "   Optimality tolerance: " << w.optim << std::endl;
+            std::cout << "   Slow progress factor: " << slow_progress_factor
+                      << " [count: " << slow_cnt_max << "]" << std::endl;
+        }
         if (status == da_status_success) {
             std::cout << " Convergence status: ";
             if (optim_usr < std::numeric_limits<T>::infinity()) {
@@ -724,6 +833,14 @@ da_status coord(da_options::OptionRegistry &opts, da_int n, std::vector<T> &x,
             std::cout << " Exit status: " << errmsg << std::endl;
         }
         std::cout << std::endl;
+    }
+    if (debug) {
+        std::cout << "coord_debug_telem: S=" << std::setw(3) << status
+                  << " $=" << std::scientific << std::setprecision(3) << std::setw(12)
+                  << *f << " O=" << std::scientific << std::setprecision(3)
+                  << std::setw(12) << optim << " D=" << std::setw(8) << chkcnt
+                  << " F=" << std::setw(8) << fcnt << " L=" << std::setw(8) << lowrk
+                  << " I=" << std::setw(6) << iter << std::endl;
     }
     return status; // Error message already loaded
 }
@@ -761,8 +878,8 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
                       coord::coord_slv<T> &w) {
     // kchange = abs(kdiff)
     T kchange;
+    da_int kold = 0;
     bool endcycle, cheap;
-    da_int kold{-1};
 
     // Quick check of work spaces
     if ((w.skip.size() != (size_t)n) || (w.skipmax.size() != (size_t)n)) {
@@ -791,8 +908,12 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         // Infinity-norm of the coefficient vector
         w.inormbeta = T(0);
         // Save the tolerances for convergence and optimality
-        w.tol = tol;     // check step length
-        w.optim = optim; // check optimality tolerance
+        w.tol = std::max(w.macheps_safe, tol);     // check step length
+        w.optim = std::max(w.macheps_safe, optim); // check optimality tolerance
+
+        // AQUI: ADD hidden registry hidden settings for convergence type and slow progress detection
+        // check averything....
+
         return da_status_success;
         break;
     case EVAL:
@@ -801,14 +922,22 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         bc.proj(k, newxk);
         w.kdiff = newxk - x[k];
         kchange = std::abs(w.kdiff);
+        if (kchange <= w.macheps_safe) {
+            // If the change is smaller than safe machine epsilon,
+            // it is considered numerical noise
+            newxk = x[k];
+            kchange = T(0);
+            w.kdiff = T(0);
+            w.flags |= 64U; // "@" Step too small, zeroed out
+        }
         inorm = std::max(inorm, kchange);
         w.inormbeta = std::max(w.inormbeta, std::abs(newxk));
         x[k] = newxk;
 
+        kold = k;
         if (kchange == (T)0)
             action = 0; // Iterate did not change
         else {
-            kold = k;
             action = -(k + 1); // Inform the last coordinate to use for cheap iter
         }
 
@@ -820,16 +949,19 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
                 w.flags |= 32U; // Mark k coord reset;
             }
         } else {
+            da_int increment{1};
             if (w.skip[k] >= w.skipmax[k]) {
-                const size_t big{std::numeric_limits<size_t>::max()};
-                const size_t half{big / 2};
-                if (w.skipmax[k] >= half)
-                    w.skipmax[k] = big;
-                else
-                    w.skipmax[k] *= 2; // Double the threshold;
+                // skip limit, this should be big enough to avoid too
+                // frequent reactivations but much smaller that MAXINT
+                const size_t big{std::max(w.skipmax_reset, w.skipmax_threshold)};
+                w.skipmax[k] = std::min(w.skipmax[k] * 2, big);
+                // If hitting the limit, then ignore the request
+                // to reset due to skipmax[k], and leave deactivated until
+                // the convergence mechanism reactivates it.
+                increment = w.skipmax[k] == big ? 0 : 1;
             }
-            // increment ledger
-            ++(w.skip[k]);
+            // safe-guarded ledger update
+            w.skip[k] += increment;
         }
 
         // Check that one full cycle was performed
@@ -844,7 +976,7 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
         }
 
         // Find the next k to use...
-        while (w.skipmin < w.skip[k] && w.skip[k] < w.skipmax[k] && k != kold) {
+        while ((w.skipmin < w.skip[k]) && (w.skip[k] < w.skipmax[k]) && (k != kold)) {
             ++(w.skip[k]);
             w.flags |= 4U; // "S" mark iter as one or more coords were skipped;
             ++k;
@@ -859,39 +991,28 @@ da_status coord_rcomm(const da_int n, std::vector<T> &x, constraints::bound_cons
             // Completed a full cycle
             ++iter;
             tol = w.tol;
-            if (__DA_COORD_SCALE_CONV_TOL >= 1)
+            if (w.scale_convergence_type >= 1) {
                 tol *= w.inormbeta;
-            if (__DA_COORD_SCALE_CONV_TOL >= 2)
+                // safe-guard
+                tol = std::max(tol, w.macheps_safe);
+            }
+            if (w.scale_convergence_type >= 2)
                 tol = std::max(tol, w.tol);
-
-            // Should it also safe-guard and check for
-            // error < machine epsilon and inorm < machine epsilon?
 
             // Check for convergence or search-space exhaustion
             if (w.inormbeta == T(0) || inorm <= tol || k == kold) {
-                if (w.check_skip_ledger()) {
-                    // No coordinates were skipped and tolerance reached.
-                    // Now check for optimality condition before declaring convergence
-                    itask = OPTIMCHK;
-                    // Step tolerance met, possibly close to solution,
-                    // Bump skipmin to avoid skipping
-                    w.skipmin = std::max(w.skipmin, size_t(10U));
-                } else {
-                    // Iterate distance tolerance met but
-                    // there is at least one skipped coordinate, reset ledger
-                    // and recheck the coordinates
+                // ||beta||_inf small or skipped all coodinates (all are very small)
+                // check for optimality condition
+                itask = OPTIMCHK;
+                if (!w.check_skip_ledger()) {
+                    // there is at least one skipped coordinate, reset
                     w.flags |= 2U; // "T"
                     w.reset_skip_ledger();
-                    itask = NEWX;
-
-                    // Corner case where no new coordinate is available to explore...
-                    // set k to be the next in line
-                    if (k == kold) {
-                        ++k;
-                        if (k >= n)
-                            k = 0;
-                        w.flags |= 8U; // "!" Mark search space exhaustion
-                    }
+                }
+                // Bump skipmin to avoid skipping
+                w.skipmin = std::max(w.skipmin, w.skipmin_reset);
+                if (k == kold) {
+                    w.flags |= 8U; // "!" Mark search space exhaustion
                 }
             } else {
                 // Indicate that point x can be printed, monitored, etc.
