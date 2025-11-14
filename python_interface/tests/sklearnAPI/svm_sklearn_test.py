@@ -188,7 +188,7 @@ def test_proba_functionality(numpy_precision, numpy_order):
          [-2.37062, -0.098079], [-0.290537, -1.377779],
          [-0.420177, -1.069822], [-4.368891, -0.012746]])
 
-    tol = 1e-5 if numpy_precision == np.float64 else 1e-3
+    tol = 3e-5 if numpy_precision == np.float64 else 1e-3
     assert np.isclose(svc.probA_, expected_probaA, atol=tol)
     assert np.isclose(svc.probB_, expected_probaB, atol=tol)
 

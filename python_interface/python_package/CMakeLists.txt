@@ -66,7 +66,7 @@ if(USE_EXISTING_DA)
 else()
   target_link_libraries(_aoclda PRIVATE aocl-da)
 endif()
-if(BUILD_SMP OR UNIX)
+if(BUILD_SMP)
   target_link_libraries(_aoclda PRIVATE OpenMP::OpenMP_CXX)
 endif()
 install(

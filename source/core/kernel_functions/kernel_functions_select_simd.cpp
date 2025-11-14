@@ -44,6 +44,8 @@ struct KernelSelection {
 // Default lookup tables
 namespace da_kernel_functions {
 
+// Defaults for AVX2 systems
+
 constexpr std::array<KernelSelection, 3> float_ = {{
     {4, scalar},       // Up to 4 -> scalar
     {8, avx},          // Up to 8 -> avx
@@ -56,47 +58,23 @@ constexpr std::array<KernelSelection, 3> double_ = {{
     {DA_INT_MAX, avx2} // >= 4 -> avx2
 }};
 
-} // namespace da_kernel_functions
+// Defaults for AVX512 systems
 
-// Specific Zen 4 lookup tables for certain cases, which override the defaults
-namespace da_dynamic_dispatch_zen4 {
-namespace da_kernel_functions {
-
-constexpr std::array<KernelSelection, 4> float_ = {{
+constexpr std::array<KernelSelection, 4> float_avx512_ = {{
     {4, scalar},         // Up to 4 -> scalar
     {8, avx},            // Up to 8 -> avx
     {16, avx2},          // Up to 16 -> avx2
     {DA_INT_MAX, avx512} // >= 16 -> avx512
 }};
 
-constexpr std::array<KernelSelection, 4> double_ = {{
+constexpr std::array<KernelSelection, 4> double_avx512_ = {{
     {2, scalar},         // Up to 2 -> scalar
     {4, avx},            // Up to 4 -> avx
     {8, avx2},           // Up to 8 -> avx2
     {DA_INT_MAX, avx512} // >= 8 -> avx512
 }};
+
 } // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_zen4
-
-// Specific Zen 5 lookup tables for certain cases, which override the defaults
-namespace da_dynamic_dispatch_zen5 {
-namespace da_kernel_functions {
-
-constexpr std::array<KernelSelection, 4> float_ = {{
-    {4, scalar},         // Up to 4 -> scalar
-    {8, avx},            // Up to 8 -> avx
-    {16, avx2},          // Up to 16 -> avx2
-    {DA_INT_MAX, avx512} // >= 16 -> avx512
-}};
-
-constexpr std::array<KernelSelection, 4> double_ = {{
-    {2, scalar},         // Up to 2 -> scalar
-    {4, avx},            // Up to 4 -> avx
-    {8, avx2},           // Up to 8 -> avx2
-    {DA_INT_MAX, avx512} // >= 8 -> avx512
-}};
-} // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_zen5
 
 // Further specific lookup tables can be added here for other architectures
 
@@ -137,6 +115,13 @@ void select_simd_size_default(da_int size, vectorization_type &kernel_type) {
                       : lookup_kernel_kf(da_kernel_functions::double_, size);
 }
 
+template <class T>
+void select_simd_size_avx512(da_int size, vectorization_type &kernel_type) {
+    kernel_type = std::is_same<T, float>::value
+                      ? lookup_kernel_kf(da_kernel_functions::float_avx512_, size)
+                      : lookup_kernel_kf(da_kernel_functions::double_avx512_, size);
+}
+
 // Specializations for different architectures
 
 namespace da_dynamic_dispatch_generic {
@@ -152,6 +137,20 @@ template void select_simd_size<double>(da_int size, vectorization_type &kernel_t
 
 } // namespace da_kernel_functions
 } // namespace da_dynamic_dispatch_generic
+
+namespace da_dynamic_dispatch_generic_avx512 {
+namespace da_kernel_functions {
+template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
+
+    select_simd_size_avx512<T>(size, kernel_type);
+}
+
+// Explicit instantiations
+template void select_simd_size<float>(da_int size, vectorization_type &kernel_type);
+template void select_simd_size<double>(da_int size, vectorization_type &kernel_type);
+
+} // namespace da_kernel_functions
+} // namespace da_dynamic_dispatch_generic_avx512
 
 namespace da_dynamic_dispatch_zen2 {
 namespace da_kernel_functions {
@@ -183,11 +182,7 @@ namespace da_dynamic_dispatch_zen4 {
 namespace da_kernel_functions {
 template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
 
-    kernel_type = std::is_same<T, float>::value
-                      ? lookup_kernel_kf(
-                            da_dynamic_dispatch_zen4::da_kernel_functions::float_, size)
-                      : lookup_kernel_kf(
-                            da_dynamic_dispatch_zen4::da_kernel_functions::double_, size);
+    select_simd_size_avx512<T>(size, kernel_type);
 }
 
 // Explicit instantiations
@@ -200,11 +195,7 @@ namespace da_dynamic_dispatch_zen5 {
 namespace da_kernel_functions {
 template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
 
-    kernel_type = std::is_same<T, float>::value
-                      ? lookup_kernel_kf(
-                            da_dynamic_dispatch_zen5::da_kernel_functions::float_, size)
-                      : lookup_kernel_kf(
-                            da_dynamic_dispatch_zen5::da_kernel_functions::double_, size);
+    select_simd_size_avx512<T>(size, kernel_type);
 }
 
 // Explicit instantiations

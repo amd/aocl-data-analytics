@@ -77,6 +77,15 @@
     ASSERT_NEAR((std::abs(x[j])), (std::abs(y[j])), abs_error)                           \
         << "Vectors " #x " and " #y " different at index j=" << j << "."
 
+// return precision as a string literal to set CSV options
+template <typename T> constexpr const char *prec_name();
+template <> constexpr const char *prec_name<float>() { return "single"; }
+template <> constexpr const char *prec_name<double>() { return "double"; }
+
+template <typename T> constexpr const char *type_opt_name();
+template <> constexpr const char *type_opt_name<float>() { return "float"; }
+template <> constexpr const char *type_opt_name<double>() { return "double"; }
+
 namespace da_numeric {
 // Safe numerical tolerances to be used with single and double precision float types
 template <class T> struct tolerance {

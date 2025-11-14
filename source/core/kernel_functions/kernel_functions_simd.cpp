@@ -25,8 +25,7 @@
 #include "da_kernel_utils.hpp"
 #include "immintrin.h"
 #include "kernel_functions.hpp"
-using kt_int_t = da_int;
-#include "kernel_templates.hpp"
+#include "kt.hpp"
 #include "macros.h"
 #include <cmath>
 

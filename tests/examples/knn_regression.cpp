@@ -60,7 +60,7 @@ int main() {
 
     // Set up and train the kNN
     da_handle knn_handle = nullptr;
-    pass = da_handle_init_d(&knn_handle, da_handle_knn) == da_status_success;
+    pass = da_handle_init_d(&knn_handle, da_handle_nn) == da_status_success;
     // Set options
     pass &= da_options_set_int(knn_handle, "number of neighbors", n_neigh) ==
             da_status_success;
@@ -68,9 +68,9 @@ int main() {
     pass &= da_options_set_string(knn_handle, "weights", "uniform") == da_status_success;
     pass &= da_options_set_string(knn_handle, "algorithm", "auto") == da_status_success;
 
-    pass &= da_knn_regressor_set_training_data_d(knn_handle, n_samples, n_features,
-                                                 X_train.data(), n_samples,
-                                                 y_train.data()) == da_status_success;
+    pass &= da_nn_regressor_set_training_data_d(knn_handle, n_samples, n_features,
+                                                X_train.data(), n_samples,
+                                                y_train.data()) == da_status_success;
     if (!pass) {
         std::cout << "Something went wrong setting up the knn data and "
                      "optional parameters.\n";
@@ -82,8 +82,8 @@ int main() {
     // Compute the k-nearest neighbors and return the distances
     std::vector<double> k_dist(n_neigh * n_queries);
     std::vector<da_int> k_ind(n_neigh * n_queries);
-    status = da_knn_kneighbors_d(knn_handle, n_queries, n_features, X_test.data(),
-                                 n_queries, k_ind.data(), k_dist.data(), n_neigh, 1);
+    status = da_nn_kneighbors_d(knn_handle, n_queries, n_features, X_test.data(),
+                                n_queries, k_ind.data(), k_dist.data(), n_neigh, 1);
 
     if (status != da_status_success) {
         std::cout << "Failure while computing the neighbors\n";
@@ -110,8 +110,8 @@ int main() {
 
     // Allocate memory for predicted labels for test data
     std::vector<double> y_test(n_queries);
-    status = da_knn_regressor_predict_d(knn_handle, n_queries, n_features, X_test.data(),
-                                        n_queries, y_test.data());
+    status = da_nn_regressor_predict_d(knn_handle, n_queries, n_features, X_test.data(),
+                                       n_queries, y_test.data());
     if (status != da_status_success) {
         std::cout << "Failure while computing the predicted labels\n";
         return 1;

@@ -1,0 +1,112 @@
+/* ************************************************************************
+ * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * ************************************************************************ */
+
+#ifndef NEAREST_NEIGHBORS_OPTIONS_HPP
+#define NEAREST_NEIGHBORS_OPTIONS_HPP
+
+#include "aoclda_metrics.h"
+#include "aoclda_nearest_neighbors.h"
+#include "aoclda_types.h"
+#include "da_error.hpp"
+#include "macros.h"
+#include "nearest_neighbors_types.hpp"
+#include "options.hpp"
+
+namespace ARCH {
+
+namespace da_neighbors {
+
+using namespace da_neighbors_types;
+
+template <typename T>
+inline da_status register_neighbors_options(da_options::OptionRegistry &opts,
+                                            da_errors::da_error_t &err) {
+    using namespace da_options;
+    da_int imax = std::numeric_limits<da_int>::max();
+    T fpmax = std::numeric_limits<T>::max();
+    try {
+        // Integer options
+        std::shared_ptr<OptionNumeric<da_int>> oi;
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "number of neighbors",
+            "Number of neighbors considered for k-nearest neighbors.", 1,
+            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
+        opts.register_opt(oi);
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "leaf size", "Leaf size for k-d tree.", 1, da_options::lbound_t::greaterequal,
+            imax, da_options::ubound_t::p_inf, 30));
+        opts.register_opt(oi);
+        // fp options
+        std::shared_ptr<OptionNumeric<T>> ofp;
+        ofp = std::make_shared<OptionNumeric<T>>(
+            OptionNumeric<T>("minkowski parameter",
+                             "Minkowski parameter for metric used for the computation of "
+                             "k-nearest neighbors.",
+                             0.0, da_options::lbound_t::greaterthan, fpmax,
+                             da_options::ubound_t::p_inf, 2.0));
+        opts.register_opt(ofp);
+        // String options
+        std::shared_ptr<OptionString> os;
+        os = std::make_shared<OptionString>(OptionString(
+            "algorithm", "Algorithm used to compute the k-nearest neighbors.",
+            {{"auto", da_neighbors_types::automatic},
+             {"brute", da_neighbors_types::brute},
+             {"kd tree", da_neighbors_types::kd_tree},
+             {"ball tree", da_neighbors_types::ball_tree}},
+            "auto"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(
+            OptionString("metric", "Metric used to compute the pairwise distance matrix.",
+                         {{"euclidean", da_euclidean},
+                          {"l2", da_l2},
+                          {"sqeuclidean", da_sqeuclidean},
+                          {"manhattan", da_manhattan},
+                          {"l1", da_l1},
+                          {"cityblock", da_cityblock},
+                          {"cosine", da_cosine},
+                          {"minkowski", da_minkowski},
+                          {"sqeuclidean_gemm", da_sqeuclidean_gemm},
+                          {"euclidean_gemm", da_euclidean_gemm}},
+                         "euclidean"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "weights", "Weight function used to compute the k-nearest neighbors.",
+            {{"uniform", uniform}, {"distance", distance}}, "uniform"));
+        opts.register_opt(os);
+    } catch (std::bad_alloc &) {
+        return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation failed.");
+    } catch (...) {
+        // Invalid use of the constructor, shouldn't happen (invalid_argument)
+        return da_error(&err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected error while registering options");
+    }
+
+    return da_status_success;
+};
+
+} // namespace da_neighbors
+
+} // namespace ARCH
+
+#endif

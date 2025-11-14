@@ -27,10 +27,14 @@
 #include "decision_forest.hpp"
 #include "kernel_functions.hpp"
 #include "kmeans.hpp"
-#include "knn.hpp"
 #include "linear_model.hpp"
+#include "nearest_neighbors.hpp"
 #include "nlls.hpp"
 #include "pairwise_distances.hpp"
 #include "pca.hpp"
 #include "radius_neighbors.hpp"
 #include "svm.hpp"
+
+//clang-format off
+#include "undef_macros.h"
+//clang-format on

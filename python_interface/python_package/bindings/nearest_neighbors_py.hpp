@@ -51,9 +51,9 @@ class knn_classifier : public pyda_handle {
                    bool check_data = false) {
         da_status status;
         if (prec == "double") {
-            status = da_handle_init<double>(&handle, da_handle_knn);
+            status = da_handle_init<double>(&handle, da_handle_nn);
         } else {
-            status = da_handle_init<float>(&handle, da_handle_knn);
+            status = da_handle_init<float>(&handle, da_handle_nn);
             precision = da_single;
         }
         exception_check(status);
@@ -102,8 +102,8 @@ class knn_classifier : public pyda_handle {
         status = da_options_set(handle, "minkowski parameter", T(p));
         exception_check(status);
 
-        status = da_knn_classifier_set_training_data(handle, n_samples, n_features,
-                                                     X.data(), ldx, y_internal.data());
+        status = da_nn_classifier_set_training_data(handle, n_samples, n_features,
+                                                    X.data(), ldx, y_internal.data());
         exception_check(status); // throw an exception if status is not success
             // Store the pointers since they can be temporary so that memory is not
         // freed and reused later.
@@ -134,8 +134,8 @@ class knn_classifier : public pyda_handle {
         }
 
         auto k_ind = py::array_t<da_int>(shape, strides);
-        status = da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                                   k_ind.mutable_data(), nullptr, req_neigh, 0);
+        status = da_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
+                                  k_ind.mutable_data(), nullptr, req_neigh, 0);
         exception_check(status);
         return k_ind;
     }
@@ -170,8 +170,8 @@ class knn_classifier : public pyda_handle {
         auto k_dist = py::array_t<T>(shape, strides_f);
 
         status =
-            da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                              k_ind.mutable_data(), k_dist.mutable_data(), req_neigh, 1);
+            da_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
+                             k_ind.mutable_data(), k_dist.mutable_data(), req_neigh, 1);
         exception_check(status);
         py::tuple k_info = py::make_tuple(k_dist, k_ind);
         return k_info;
@@ -185,7 +185,7 @@ class knn_classifier : public pyda_handle {
         get_numpy_array_properties(X, n_queries, n_features, ldx);
 
         da_int num_classes = -3;
-        status = da_knn_classes<T>(handle, &num_classes, nullptr);
+        status = da_nn_classes<T>(handle, &num_classes, nullptr);
         exception_check(status);
 
         size_t shape[2]{(size_t)n_queries, (size_t)num_classes};
@@ -200,8 +200,8 @@ class knn_classifier : public pyda_handle {
         }
 
         auto proba = py::array_t<T>(shape, strides);
-        status = da_knn_classifier_predict_proba(handle, n_queries, n_features, X.data(),
-                                                 ldx, proba.mutable_data());
+        status = da_nn_classifier_predict_proba(handle, n_queries, n_features, X.data(),
+                                                ldx, proba.mutable_data());
         exception_check(status);
         return proba;
     }
@@ -214,8 +214,8 @@ class knn_classifier : public pyda_handle {
 
         size_t shape[1]{(size_t)n_queries};
         auto y_test = py::array_t<da_int>(shape);
-        status = da_knn_classifier_predict(handle, n_queries, n_features, X.data(), ldx,
-                                           y_test.mutable_data());
+        status = da_nn_classifier_predict(handle, n_queries, n_features, X.data(), ldx,
+                                          y_test.mutable_data());
         exception_check(status);
         return y_test;
     }
@@ -230,9 +230,9 @@ class nearest_neighbors : public pyda_handle {
                       std::string prec = "double", bool check_data = false) {
         da_status status;
         if (prec == "double") {
-            status = da_handle_init<double>(&handle, da_handle_knn);
+            status = da_handle_init<double>(&handle, da_handle_nn);
         } else {
-            status = da_handle_init<float>(&handle, da_handle_knn);
+            status = da_handle_init<float>(&handle, da_handle_nn);
             precision = da_single;
         }
         exception_check(status);
@@ -277,10 +277,10 @@ class nearest_neighbors : public pyda_handle {
         status = da_options_set(handle, "minkowski parameter", T(p));
         exception_check(status);
 
-        // Create a dummy for y_internal so that da_knn_classifier_set_training_data() does not throw an error
+        // Create a dummy for y_internal so that da_nn_classifier_set_training_data() does not throw an error
         da_int dummy_y = 0;
-        status = da_knn_classifier_set_training_data(handle, n_samples, n_features,
-                                                     X.data(), ldx, &dummy_y);
+        status = da_nn_classifier_set_training_data(handle, n_samples, n_features,
+                                                    X.data(), ldx, &dummy_y);
         exception_check(status); // throw an exception if status is not success
             // Store the pointers since they can be temporary so that memory is not
         // freed and reused later.
@@ -311,8 +311,8 @@ class nearest_neighbors : public pyda_handle {
         }
 
         auto k_ind = py::array_t<da_int>(shape, strides);
-        status = da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                                   k_ind.mutable_data(), nullptr, req_neigh, 0);
+        status = da_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
+                                  k_ind.mutable_data(), nullptr, req_neigh, 0);
         exception_check(status);
         return k_ind;
     }
@@ -347,8 +347,8 @@ class nearest_neighbors : public pyda_handle {
         auto k_dist = py::array_t<T>(shape, strides_f);
 
         status =
-            da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                              k_ind.mutable_data(), k_dist.mutable_data(), req_neigh, 1);
+            da_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
+                             k_ind.mutable_data(), k_dist.mutable_data(), req_neigh, 1);
         exception_check(status);
         py::tuple k_info = py::make_tuple(k_dist, k_ind);
         return k_info;
@@ -365,9 +365,9 @@ class knn_regressor : public pyda_handle {
                   bool check_data = false) {
         da_status status;
         if (prec == "double") {
-            status = da_handle_init<double>(&handle, da_handle_knn);
+            status = da_handle_init<double>(&handle, da_handle_nn);
         } else {
-            status = da_handle_init<float>(&handle, da_handle_knn);
+            status = da_handle_init<float>(&handle, da_handle_nn);
             precision = da_single;
         }
         exception_check(status);
@@ -413,8 +413,8 @@ class knn_regressor : public pyda_handle {
         status = da_options_set(handle, "minkowski parameter", T(p));
         exception_check(status);
 
-        status = da_knn_regressor_set_training_data(handle, n_samples, n_features,
-                                                    X.data(), ldx, y.data());
+        status = da_nn_regressor_set_training_data(handle, n_samples, n_features,
+                                                   X.data(), ldx, y.data());
         exception_check(status); // throw an exception if status is not success
             // Store the pointers since they can be temporary so that memory is not
         // freed and reused later.
@@ -445,8 +445,8 @@ class knn_regressor : public pyda_handle {
         }
 
         auto k_ind = py::array_t<da_int>(shape, strides);
-        status = da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                                   k_ind.mutable_data(), nullptr, req_neigh, 0);
+        status = da_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
+                                  k_ind.mutable_data(), nullptr, req_neigh, 0);
         exception_check(status);
         return k_ind;
     }
@@ -481,8 +481,8 @@ class knn_regressor : public pyda_handle {
         auto k_dist = py::array_t<T>(shape, strides_f);
 
         status =
-            da_knn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                              k_ind.mutable_data(), k_dist.mutable_data(), req_neigh, 1);
+            da_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
+                             k_ind.mutable_data(), k_dist.mutable_data(), req_neigh, 1);
         exception_check(status);
         py::tuple k_info = py::make_tuple(k_dist, k_ind);
         return k_info;
@@ -496,8 +496,8 @@ class knn_regressor : public pyda_handle {
 
         size_t shape[1]{(size_t)n_queries};
         auto y_test = py::array_t<T>(shape);
-        status = da_knn_regressor_predict(handle, n_queries, n_features, X.data(), ldx,
-                                          y_test.mutable_data());
+        status = da_nn_regressor_predict(handle, n_queries, n_features, X.data(), ldx,
+                                         y_test.mutable_data());
         exception_check(status);
         return y_test;
     }

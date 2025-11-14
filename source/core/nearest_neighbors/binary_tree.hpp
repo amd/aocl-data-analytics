@@ -25,7 +25,7 @@
 #include "basic_handle.hpp"
 #include "da_error.hpp"
 #include "da_vector.hpp"
-#include "nn_types.hpp"
+#include "nearest_neighbors_types.hpp"
 #include <algorithm>
 #include <memory>
 #include <vector>
@@ -214,9 +214,9 @@ template <typename T> class kd_tree : public binary_tree<kd_tree<T>, kd_node<T>>
                                            std::vector<T> *max_bounds = nullptr,
                                            da_int root_dim = 0);
 
-    da_nn_types::nn_check_region check_bounding_box(T *X, T eps,
-                                                    std::vector<T> &min_bounds,
-                                                    std::vector<T> &max_bounds);
+    da_neighbors_types::nn_check_region check_bounding_box(T *X, T eps,
+                                                           std::vector<T> &min_bounds,
+                                                           std::vector<T> &max_bounds);
 };
 
 template <typename T>
@@ -257,8 +257,8 @@ template <typename T> class ball_tree : public binary_tree<ball_tree<T>, ball_no
     void furthest_point(da_int *indices, da_int n_indices, da_int index,
                         da_int &furthest_index);
 
-    da_nn_types::nn_check_region check_ball(T *X, T eps, std::vector<T> &centroid,
-                                            T radius, T &dist);
+    da_neighbors_types::nn_check_region check_ball(T *X, T eps, std::vector<T> &centroid,
+                                                   T radius, T &dist);
 
     std::vector<T> A_row1, A_row2;
 };

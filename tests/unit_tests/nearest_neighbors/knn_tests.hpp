@@ -419,7 +419,135 @@ template <typename T> void GetRowMajorData(std::vector<KNNParamType<T>> &params)
     params.push_back(test);
 }
 
+static std::list<std::tuple<da_int, da_int, da_int, da_int, std::string>>
+    large_data_sets = {
+        // samples, queries, features, n_classes, weights
+        std::make_tuple(2063, 2070, 130, 4, "uniform"),
+        std::make_tuple(2063, 2070, 130, 4, "distance"),
+        std::make_tuple(2125, 2068, 20, 3, "uniform"),
+        std::make_tuple(2125, 2068, 20, 3, "distance"),
+        std::make_tuple(2092, 2071, 5, 3, "uniform"),
+        std::make_tuple(2092, 2071, 5, 3, "distance")};
+
+template <typename T>
+void set_test_data_from_csv(std::string datafile, std::string datatype, da_int n_rows,
+                            da_int n_cols, T *testdata) {
+    da_datastore csv_store = nullptr;
+    EXPECT_EQ(da_datastore_init(&csv_store), da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(csv_store, "datatype", datatype.c_str()),
+              da_status_success);
+    EXPECT_EQ(da_data_load_from_csv(csv_store, datafile.c_str()), da_status_success);
+    EXPECT_EQ(da_data_get_n_rows(csv_store, &n_rows), da_status_success);
+    EXPECT_EQ(da_data_get_n_cols(csv_store, &n_cols), da_status_success);
+    EXPECT_EQ(
+        da_data_select_slice(csv_store, datafile.c_str(), 0, n_rows - 1, 0, n_cols - 1),
+        da_status_success);
+    EXPECT_EQ(da_data_extract_selection(csv_store, datafile.c_str(), column_major,
+                                        testdata, n_rows),
+              da_status_success);
+    da_datastore_destroy(&csv_store);
+}
+
+template <typename T> void GetLargeData(std::vector<KNNParamType<T>> &params) {
+    for (auto const &ds : large_data_sets) {
+
+        da_int samples = std::get<0>(ds);
+        da_int queries = std::get<1>(ds);
+        da_int features = std::get<2>(ds);
+        da_int n_classes = std::get<3>(ds);
+        std::string weights = std::get<4>(ds);
+
+        da_int n_neigh = 5;
+        KNNParamType<T> test(n_neigh, n_neigh, "euclidean", "brute", weights, 30);
+        test.n_samples = samples;
+        test.n_queries = queries;
+        test.n_features = features;
+        test.ldx_train = samples;
+        test.ldx_test = queries;
+        test.tol = 500 * std::numeric_limits<T>::epsilon();
+
+        test.name = "Large data set: samples=" + std::to_string(test.n_samples) +
+                    ", features=" + std::to_string(test.n_features) +
+                    ", queries=" + std::to_string(test.n_queries) +
+                    ", weights=" + weights;
+
+        da_int one = 1;
+        // Get the training data
+        std::string input_data_fname = std::string(DATA_DIR) + "/knn_data/X_train_" +
+                                       std::to_string(samples) + "x" +
+                                       std::to_string(features) + ".csv";
+
+        test.X_train.resize(test.n_samples * test.n_features);
+        set_test_data_from_csv<T>(input_data_fname, type_opt_name<T>(), test.n_samples,
+                                  test.n_features, test.X_train.data());
+
+        // Get the test data
+        input_data_fname = std::string(DATA_DIR) + "/knn_data/X_test_" +
+                           std::to_string(queries) + "x" + std::to_string(features) +
+                           ".csv";
+        test.X_test.resize(test.n_queries * test.n_features);
+        set_test_data_from_csv<T>(input_data_fname, type_opt_name<T>(), test.n_queries,
+                                  test.n_features, test.X_test.data());
+
+        // Get the training targets for classification and regression
+        input_data_fname = std::string(DATA_DIR) + "/knn_data/y_train_" +
+                           std::to_string(samples) + "x" + std::to_string(features) +
+                           ".csv";
+        test.y_train_regression.resize(test.n_samples);
+        set_test_data_from_csv<T>(input_data_fname, type_opt_name<T>(), test.n_samples,
+                                  one, test.y_train_regression.data());
+
+        test.y_train_class.resize(test.n_samples);
+        set_test_data_from_csv<da_int>(input_data_fname, "integer", test.n_samples, one,
+                                       test.y_train_class.data());
+
+        // Extract expected distances
+        input_data_fname = std::string(DATA_DIR) + "/knn_data/k_dist_" +
+                           std::to_string(samples) + "x" + std::to_string(queries) + "x" +
+                           std::to_string(features) + "_5.csv";
+
+        test.expected_kdist.resize(test.n_queries * n_neigh);
+        set_test_data_from_csv<T>(input_data_fname, type_opt_name<T>(), test.n_queries,
+                                  n_neigh, test.expected_kdist.data());
+
+        // Extract expected indices
+        input_data_fname = std::string(DATA_DIR) + "/knn_data/k_ind_" +
+                           std::to_string(samples) + "x" + std::to_string(queries) + "x" +
+                           std::to_string(features) + "_5.csv";
+        test.expected_kind.resize(test.n_queries * n_neigh);
+        set_test_data_from_csv<da_int>(input_data_fname, "integer", test.n_queries,
+                                       n_neigh, test.expected_kind.data());
+
+        // Extract expected probabilities
+        input_data_fname = std::string(DATA_DIR) + "/knn_data/proba_" +
+                           std::to_string(queries) + "x" + std::to_string(features) +
+                           "_" + weights + ".csv";
+        test.expected_proba.resize(test.n_queries * n_classes);
+        set_test_data_from_csv<T>(input_data_fname, type_opt_name<T>(), test.n_queries,
+                                  n_classes, test.expected_proba.data());
+
+        // Extract expected labels
+        input_data_fname = std::string(DATA_DIR) + "/knn_data/predict_class_" +
+                           std::to_string(queries) + "x" + std::to_string(features) +
+                           "_" + weights + ".csv";
+        test.expected_labels.resize(test.n_queries);
+        set_test_data_from_csv<da_int>(input_data_fname, "integer", test.n_queries, one,
+                                       test.expected_labels.data());
+
+        // Extract expected targets
+        input_data_fname = std::string(DATA_DIR) + "/knn_data/predict_reg_" +
+                           std::to_string(queries) + "x" + std::to_string(features) +
+                           "_" + weights + ".csv";
+        test.expected_targets.resize(test.n_queries);
+        set_test_data_from_csv<T>(input_data_fname, type_opt_name<T>(), test.n_queries,
+                                  one, test.expected_targets.data());
+
+        params.push_back(test);
+    }
+}
+
 template <typename T> void GetKNNData(std::vector<KNNParamType<T>> &params) {
     GetExampleData(params);
     GetRowMajorData(params);
+    GetLargeData(params);
 }

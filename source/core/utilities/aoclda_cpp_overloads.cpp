@@ -83,12 +83,12 @@ template <> da_status da_forest_fit<float>(da_handle handle) {
     return da_forest_fit_s(handle);
 }
 template <>
-da_status da_knn_classes<double>(da_handle handle, da_int *n_classes, da_int *classes) {
-    return da_knn_classes_d(handle, n_classes, classes);
+da_status da_nn_classes<double>(da_handle handle, da_int *n_classes, da_int *classes) {
+    return da_nn_classes_d(handle, n_classes, classes);
 }
 template <>
-da_status da_knn_classes<float>(da_handle handle, da_int *n_classes, da_int *classes) {
-    return da_knn_classes_s(handle, n_classes, classes);
+da_status da_nn_classes<float>(da_handle handle, da_int *n_classes, da_int *classes) {
+    return da_nn_classes_s(handle, n_classes, classes);
 }
 template <> da_status da_dbscan_compute<double>(da_handle handle) {
     return da_dbscan_compute_d(handle);

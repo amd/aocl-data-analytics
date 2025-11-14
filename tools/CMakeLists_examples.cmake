@@ -34,13 +34,20 @@ option(BUILD_ILP64 "ILP64 support" OFF)
 # option(BUILD_SMP "Enable Shared Memory parallelism" ON)
 
 # Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
-set(CMAKE_AOCL_ROOT $ENV{AOCL_ROOT} CACHE STRING "AOCL_ROOT directory to be used to find AOCL BLAS/LAPACK/SPARSE/UTILS libraries")
+set(CMAKE_AOCL_ROOT
+    $ENV{AOCL_ROOT}
+    CACHE
+      STRING
+      "AOCL_ROOT directory to be used to find AOCL BLAS/LAPACK/SPARSE/UTILS libraries"
+)
 if(CMAKE_AOCL_ROOT STREQUAL "")
-  message(FATAL_ERROR "CMAKE_AOCL_ROOT is empty. Either set environment variable AOCL_ROOT or set -DCMAKE_AOCL_ROOT=<path_to_AOCL_libs>.")
+  message(
+    FATAL_ERROR
+      "CMAKE_AOCL_ROOT is empty. Either set environment variable AOCL_ROOT or set -DCMAKE_AOCL_ROOT=<path_to_AOCL_libs>."
+  )
 endif()
 
 find_package(OpenMP REQUIRED)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 
 if(BUILD_ILP64)
   set(INT_LIB "ILP64")
@@ -51,10 +58,16 @@ endif()
 
 # ##############################################################################
 # Location of the AOCL-DA installation. Either set AOCLDA_ROOT specifically or
-# inherit AOCL_ROOT where AOCL-DA artifacts would be as part of AOCL installation
-set(CMAKE_AOCLDA_ROOT $ENV{AOCLDA_ROOT} CACHE STRING "AOCLDA_ROOT directory to be used to find DA artifacts")
+# inherit AOCL_ROOT where AOCL-DA artifacts would be as part of AOCL
+# installation
+set(CMAKE_AOCLDA_ROOT
+    $ENV{AOCLDA_ROOT}
+    CACHE STRING "AOCLDA_ROOT directory to be used to find DA artifacts")
 if(CMAKE_AOCLDA_ROOT STREQUAL "")
-  message(WARNING "AOCLDA_ROOT was not set. Will search for it in main CMAKE_AOCL_ROOT directory.")
+  message(
+    WARNING
+      "AOCLDA_ROOT was not set. Will search for it in main CMAKE_AOCL_ROOT directory."
+  )
   set(CMAKE_AOCLDA_ROOT ${CMAKE_AOCL_ROOT})
 endif()
 
@@ -131,12 +144,20 @@ foreach(ex_source ${DA_EX})
   string(REPLACE ".cpp" "" ex_name ${ex_source})
   get_filename_component(ex_target ${ex_name} NAME)
   # Exclude cmake produced source files
-  if (${ex_target} MATCHES ".*CMake.*")
+  if(${ex_target} MATCHES ".*CMake.*")
     continue()
   endif()
   add_executable(${ex_target} ${ex_source})
   target_include_directories(${ex_target} PRIVATE ${DA_INCLUDE_DIR})
-  target_link_libraries(${ex_target} PRIVATE ${AOCL_DA} ${SPARSE} ${LAPACK} ${BLAS} ${UTILS} ${FORTRAN_RUNTIME})
+  target_link_libraries(
+    ${ex_target}
+    PRIVATE ${AOCL_DA}
+            ${SPARSE}
+            ${LAPACK}
+            ${BLAS}
+            ${UTILS}
+            ${FORTRAN_RUNTIME}
+            OpenMP::OpenMP_CXX)
   target_compile_definitions(${ex_target} PRIVATE ${AOCLDA_ILP64})
 
   message(NOTICE "   ${ex_target}")

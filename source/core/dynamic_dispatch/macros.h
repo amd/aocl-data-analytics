@@ -35,6 +35,8 @@
 // Define ARCHITECTURE
 #if defined ARCH_znver
 #define ARCHITECTURE CONCAT(zen, ARCH_znver)
+#elif defined ARCH_generic_avx512
+#define ARCHITECTURE generic_avx512
 #elif defined ARCH_generic
 #define ARCHITECTURE generic
 #endif
@@ -55,6 +57,18 @@
 #define DYNAMIC_DISPATCH_GENERIC(err_buffer, code)                                       \
     return da_error_bypass(err_buffer, da_status_arch_not_supported,                     \
                            "Generic architecture not supported.");
+#endif
+
+#if defined(generic_avx512_AVAILABLE)
+#define DYNAMIC_DISPATCH_GENERIC_AVX512(err_buffer, code)                                \
+    {                                                                                    \
+        using namespace da_dynamic_dispatch_generic_avx512;                              \
+        code;                                                                            \
+    }
+#else
+#define DYNAMIC_DISPATCH_GENERIC_AVX512(err_buffer, code)                                \
+    return da_error_bypass(err_buffer, da_status_arch_not_supported,                     \
+                           "Generic AVX512 architecture not supported.");
 #endif
 
 #if defined(znver2_AVAILABLE)
@@ -111,6 +125,9 @@
         case generic:                                                                    \
             DYNAMIC_DISPATCH_GENERIC(err_buffer, code)                                   \
             break;                                                                       \
+        case generic_avx512:                                                             \
+            DYNAMIC_DISPATCH_GENERIC_AVX512(err_buffer, code)                            \
+            break;                                                                       \
         case zen2:                                                                       \
             DYNAMIC_DISPATCH_ZEN2(err_buffer, code)                                      \
             break;                                                                       \
@@ -126,7 +143,7 @@
         default:                                                                         \
             return da_error_bypass(                                                      \
                 err_buffer, da_status_internal_error,                                    \
-                "dynamic dispatcher trying to call an unknown architecture?");           \
+                "Dynamic dispatcher trying to call an unknown architecture");            \
         }                                                                                \
     }
 

@@ -2096,9 +2096,11 @@ void linear_model<T>::setup_xtx_xty(std::vector<T> &A, std::vector<T> &b) {
         da_blas::cblas_gemv(storage, CblasTrans, nsamples, nfeat, (T)1.0, X, ldX, y, 1,
                             (T)0.0, b.data(), 1);
         if (intercept) {
-#pragma omp simd
+            T sum = T(0);
+#pragma omp simd reduction(+ : sum)
             for (da_int i = 0; i < nsamples; i++)
-                b[nfeat] += y[i];
+                sum += y[i];
+            b[nfeat] = sum;
         }
     } else {
         // In case of underdetermined system, use Moore-Penrose pseudoinverse

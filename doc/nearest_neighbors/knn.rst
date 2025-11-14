@@ -82,21 +82,21 @@ The standard way of computing the *k*-nearest neighbors using AOCL-DA is as foll
       :sync: C
 
       For classification:
-      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_knn``.
-      2. Pass data to the handle using :ref:`da_knn_classifier_set_training_data_? <da_knn_classifier_set_training_data>`.
-      3. Set the number of neighbors required and the metric or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <knn_options>`).
-      4. Compute the indices of the nearest neighbors and optionally the corresponding distances using :ref:`da_knn_kneighbors_? <da_knn_kneighbors>`.
-      5. If only the labels of the test data are required, use :ref:`da_knn_classifier_predict_? <da_knn_classifier_predict>`.
-      6. If the probability estimates for each label are required, use :ref:`da_knn_classifier_predict_proba_? <da_knn_classifier_predict_proba>`. To allocate the appropriate memory space for the predicted probabilities, use :ref:`da_knn_classes_? <da_knn_classes>`.
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_nn``.
+      2. Pass data to the handle using :ref:`da_nn_classifier_set_training_data_? <da_nn_classifier_set_training_data>`.
+      3. Set the number of neighbors required and the metric or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <nn_options>`).
+      4. Compute the indices of the nearest neighbors and optionally the corresponding distances using :ref:`da_nn_kneighbors_? <da_nn_kneighbors>`.
+      5. If only the labels of the test data are required, use :ref:`da_nn_classifier_predict_? <da_nn_classifier_predict>`.
+      6. If the probability estimates for each label are required, use :ref:`da_nn_classifier_predict_proba_? <da_nn_classifier_predict_proba>`. To allocate the appropriate memory space for the predicted probabilities, use :ref:`da_nn_classes_? <da_nn_classes>`.
 
       For regression:
-      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_knn``.
-      2. Pass data to the handle using :ref:`da_knn_regressor_set_training_data_? <da_knn_regressor_set_training_data>`.
-      3. Set the number of neighbors required and the metric or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <knn_options>`).
-      4. Compute the indices of the nearest neighbors and optionally the corresponding distances using :ref:`da_knn_kneighbors_? <da_knn_kneighbors>`.
-      5. If only the target values of the test data are required, use :ref:`da_knn_regressor_predict_? <da_knn_regressor_predict>`.
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_nn``.
+      2. Pass data to the handle using :ref:`da_nn_regressor_set_training_data_? <da_nn_regressor_set_training_data>`.
+      3. Set the number of neighbors required and the metric or weights used in *k*-NN using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <nn_options>`).
+      4. Compute the indices of the nearest neighbors and optionally the corresponding distances using :ref:`da_nn_kneighbors_? <da_nn_kneighbors>`.
+      5. If only the target values of the test data are required, use :ref:`da_nn_regressor_predict_? <da_nn_regressor_predict>`.
 
-.. _knn_options:
+.. _nn_options:
 
 Options
 -------
@@ -185,58 +185,58 @@ Examples
 
    .. tab-item:: C
 
-      .. _da_knn_classifier_set_training_data:
+      .. _da_nn_classifier_set_training_data:
 
-      .. doxygenfunction:: da_knn_classifier_set_training_data_s
+      .. doxygenfunction:: da_nn_classifier_set_training_data_s
          :project: da
          :outline:
-      .. doxygenfunction:: da_knn_classifier_set_training_data_d
+      .. doxygenfunction:: da_nn_classifier_set_training_data_d
          :project: da
 
-      .. _da_knn_regressor_set_training_data:
+      .. _da_nn_regressor_set_training_data:
 
-      .. doxygenfunction:: da_knn_regressor_set_training_data_s
-         :project: da
-         :outline:
-      .. doxygenfunction:: da_knn_regressor_set_training_data_d
-         :project: da
-
-      .. _da_knn_kneighbors:
-
-      .. doxygenfunction:: da_knn_kneighbors_s
+      .. doxygenfunction:: da_nn_regressor_set_training_data_s
          :project: da
          :outline:
-      .. doxygenfunction:: da_knn_kneighbors_d
+      .. doxygenfunction:: da_nn_regressor_set_training_data_d
          :project: da
 
-      .. _da_knn_classes:
+      .. _da_nn_kneighbors:
 
-      .. doxygenfunction:: da_knn_classes_s
-         :project: da
-         :outline:
-      .. doxygenfunction:: da_knn_classes_d
-         :project: da
-
-      .. _da_knn_classifier_predict_proba:
-
-      .. doxygenfunction:: da_knn_classifier_predict_proba_s
+      .. doxygenfunction:: da_nn_kneighbors_s
          :project: da
          :outline:
-      .. doxygenfunction:: da_knn_classifier_predict_proba_d
+      .. doxygenfunction:: da_nn_kneighbors_d
          :project: da
 
-      .. _da_knn_classifier_predict:
+      .. _da_nn_classes:
 
-      .. doxygenfunction:: da_knn_classifier_predict_s
-         :project: da
-         :outline:
-      .. doxygenfunction:: da_knn_classifier_predict_d
-         :project: da
-
-      .. _da_knn_regressor_predict:
-
-      .. doxygenfunction:: da_knn_regressor_predict_s
+      .. doxygenfunction:: da_nn_classes_s
          :project: da
          :outline:
-      .. doxygenfunction:: da_knn_regressor_predict_d
+      .. doxygenfunction:: da_nn_classes_d
+         :project: da
+
+      .. _da_nn_classifier_predict_proba:
+
+      .. doxygenfunction:: da_nn_classifier_predict_proba_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nn_classifier_predict_proba_d
+         :project: da
+
+      .. _da_nn_classifier_predict:
+
+      .. doxygenfunction:: da_nn_classifier_predict_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nn_classifier_predict_d
+         :project: da
+
+      .. _da_nn_regressor_predict:
+
+      .. doxygenfunction:: da_nn_regressor_predict_s
+         :project: da
+         :outline:
+      .. doxygenfunction:: da_nn_regressor_predict_d
          :project: da

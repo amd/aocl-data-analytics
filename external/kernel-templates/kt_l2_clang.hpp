@@ -22,8 +22,8 @@
  * ************************************************************************
  */
 
-#ifndef KERNEL_TEMPLATES_T_HPP
-#error "Never use ``kt_l2_clang.hpp'' directly; include ``kernel_templates.hpp'' instead."
+#ifndef DA_KT_HPP
+#error "Never use ``kt_l2_clang.hpp'' directly; include ``kt.hpp'' instead."
 #endif
 
 #ifndef _KT_L2_CLANG_
@@ -34,17 +34,17 @@
 // macro to use AMD libm vectorized functions
 #define AMD_LIBM_VEC_EXPERIMENTAL
 #include "amdlibm_vec.h"
-#include "kt_common_x86.hpp"
+#include "kt_exp.hpp"
 
 /*
  * NOTE: This file needs Clang compiler and AOCL libm support.
  */
 
-namespace kernel_templates {
-
 // Computes the exponential of the given AVX vector using AOCC-specific intrinsics.
-template <bsz SZ, typename SUF>
-KT_FORCE_INLINE avxvector_t<SZ, SUF> kt_exp_p(const avxvector_t<SZ, SUF> a) noexcept {
+template <kernel_templates::bsz SZ, typename SUF>
+KT_FORCE_INLINE kernel_templates::avxvector_t<SZ, SUF> kernel_templates::kt_exp_p(const kernel_templates::avxvector_t<SZ, SUF> a) noexcept {
+
+    using namespace kernel_templates;
 
     if constexpr (SZ == bsz::b128) {
         if constexpr (std::is_same_v<SUF, double>) {
@@ -70,6 +70,5 @@ KT_FORCE_INLINE avxvector_t<SZ, SUF> kt_exp_p(const avxvector_t<SZ, SUF> a) noex
 #endif // __AVX512F__
 }
 
-} // namespace kernel_templates
 
 #endif // _KT_L2_CLANG_

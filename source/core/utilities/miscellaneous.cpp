@@ -50,9 +50,11 @@ da_status da_parallel_check() {
 }
 
 static const char *da_version = AOCLDA_VERSION_STRING;
+static const char *da_git_commit = AOCLDA_GIT_COMMIT;
 
 // Return the version string of AOCL-DA.
 const char *da_get_version() { return da_version; }
+const char *da_get_git_commit() { return da_git_commit; }
 
 void context_set_hidden_settings(const std::string &key,
                                  const std::string &value) noexcept {

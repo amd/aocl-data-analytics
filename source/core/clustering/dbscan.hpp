@@ -26,7 +26,7 @@
 #include "da_error.hpp"
 #include "da_vector.hpp"
 #include "macros.h"
-#include "nn_types.hpp"
+#include "nearest_neighbors_types.hpp"
 #include <algorithm>
 #include <random>
 #include <string>
@@ -35,7 +35,7 @@ namespace ARCH {
 
 namespace da_dbscan {
 
-using namespace da_nn_types;
+using namespace da_neighbors_types;
 
 /* DBSCAN class */
 template <typename T> class dbscan : public basic_handle<T> {

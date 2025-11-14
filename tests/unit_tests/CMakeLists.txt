@@ -82,9 +82,11 @@ target_link_libraries(basic_stats_public PRIVATE ${BLAS})
 # ##############################################################################
 # ########## Train Test Split #############
 # ##############################################################################
-add_executable(train_test_split_public train_test_split/train_test_split_public.cpp)
+add_executable(train_test_split_public
+               train_test_split/train_test_split_public.cpp)
 target_link_libraries(train_test_split_public PRIVATE ${BLAS})
-add_executable(shuffle_indices_public train_test_split/shuffle_indices_public.cpp)
+add_executable(shuffle_indices_public
+               train_test_split/shuffle_indices_public.cpp)
 target_link_libraries(shuffle_indices_public PRIVATE ${BLAS})
 
 # ##############################################################################
@@ -178,7 +180,7 @@ set_target_properties(c_compatibility_nog_public PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(c_compatibility_nog_public PRIVATE aocl-da)
 
 add_executable(miscellaneous_internal da_utilities/miscellaneous_internal.cpp)
-target_compile_definitions(miscellaneous_internal PRIVATE ${VERS_DEF})
+target_compile_definitions(miscellaneous_internal PRIVATE ${AOCLDA_DEFS})
 
 # ##############################################################################
 # ############ kmeans ################
@@ -226,6 +228,7 @@ add_executable(interval_set_internal data_management/interval_set_internal.cpp)
 # ##############################################################################
 add_executable(knn_public nearest_neighbors/knn_public.cpp)
 target_link_libraries(knn_public PRIVATE aocl-da ${BLAS})
+target_compile_definitions(knn_public PRIVATE DATA_DIR="${DATA_PATH}")
 add_executable(trees_internal nearest_neighbors/trees_internal.cpp)
 add_executable(radius_neighbors_internal
                nearest_neighbors/radius_neighbors_internal.cpp)
@@ -238,7 +241,8 @@ target_link_libraries(radius_neighbors_internal PRIVATE ${BLAS})
 add_executable(kernel_functions_public
                kernel_functions/kernel_functions_public.cpp)
 
-add_executable(kernel_functions_internal kernel_functions/kernel_functions_internal.cpp)
+add_executable(kernel_functions_internal
+               kernel_functions/kernel_functions_internal.cpp)
 
 # ##############################################################################
 # ############## SVM #################
@@ -312,10 +316,13 @@ set(UTESTS ${INTERNAL_UTESTS} ${PUBLIC_UTESTS})
 # Include source/core directories for internal tests
 foreach(internal_test ${INTERNAL_UTESTS})
   target_include_directories(${internal_test} PRIVATE ${INTERNAL_INC_DIRS})
-  if(ARCH STREQUAL "dynamic")
+  if(ARCH STREQUAL "dynamic" OR ARCH STREQUAL "generic")
     # Internal tests will just use the generic codepath
     target_compile_definitions(${internal_test}
                                PRIVATE ARCH_generic;ZNVER_MAX=generic)
+  elseif(ARCH STREQUAL "generic_avx512")
+    target_compile_definitions(
+      ${internal_test} PRIVATE ARCH_generic_avx512;ZNVER_MAX=generic_avx512)
   elseif(ARCH STREQUAL "native")
     # Extract the target Zen generation, as this namespace is used in the code
     extract_native_namespace(NATIVE_NAMESPACE)
@@ -338,6 +345,9 @@ endforeach()
 
 foreach(target ${UTESTS})
   target_link_libraries(${target} PRIVATE aocl-da gtest_main gmock_main)
+  if(BUILD_SMP)
+    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
+  endif()
   target_link_directories(${target} PRIVATE ${IFORT_LIBS})
   target_link_directories(${target} PRIVATE ${FLANG_LIBS})
   target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
@@ -365,7 +375,7 @@ if(WIN32 AND BUILD_SHARED_LIBS)
 endif()
 
 foreach(GTEST_EXE ${GTEST_EXES})
-  gtest_discover_tests(${GTEST_EXE})
+  gtest_discover_tests(${GTEST_EXE} DISCOVERY_TIMEOUT 120)
 endforeach()
 foreach(INDEP_EXE ${INDEP_EXES})
   add_test(${INDEP_EXE} ${INDEP_EXE})

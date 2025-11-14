@@ -58,19 +58,20 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
 
     da_int n_threads = ARCH::da_utils::get_n_threads_loop(n_blocks * n_blocks);
 
-    std::vector<T> D, A_norms;
+    std::vector<T> A_norms;
+    std::vector<std::vector<T>> D;
 
     // For da_euclidean it is more efficient to use the squared distance
-    T eps_internal = (metric == da_euclidean) ? eps * eps : eps;
+    T eps_internal = (metric == da_euclidean_gemm) ? eps * eps : eps;
 
     da_metric metric_internal =
-        (metric == da_euclidean || (metric == da_minkowski && p == T(2.0)))
-            ? da_sqeuclidean
+        (metric == da_euclidean_gemm || (metric == da_minkowski && p == T(2.0)))
+            ? da_sqeuclidean_gemm
             : metric;
 
     try {
-        D.resize(max_block_size * max_block_size * n_threads);
-        if (metric_internal == da_sqeuclidean)
+        D.resize(n_threads);
+        if (metric_internal == da_sqeuclidean_gemm)
             A_norms.resize(n_samples);
     } catch (std::bad_alloc const &) {
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
@@ -78,7 +79,7 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
     }
     da_int ldd = max_block_size;
 
-    if (metric_internal == da_sqeuclidean) {
+    if (metric_internal == da_sqeuclidean_gemm) {
         // Precompute the row norms of A to speed up Euclidean distance computation
         for (da_int j = 0; j < n_features; j++) {
             for (da_int i = 0; i < n_samples; i++) {
@@ -100,13 +101,15 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
 
         // Thread 0 can write to neighbors; all other threads need to use neighbors_local
         da_int this_thread = omp_get_thread_num();
-        if (this_thread > 0) {
-            try {
+
+        try {
+            if (this_thread > 0) {
                 neighbors_local[this_thread].resize(n_samples);
-            } catch (std::bad_alloc const &) {
-#pragma omp atomic write
-                threading_error = 1;
             }
+            D[this_thread].resize(max_block_size_sq);
+        } catch (std::bad_alloc const &) {
+#pragma omp atomic write
+            threading_error = 1;
         }
 
 #pragma omp single
@@ -121,7 +124,7 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
                         if (task_error == 0) {
                             // Need a separate thread_num variable here since we don't know which thread will execute this task
                             da_int task_thread = omp_get_thread_num();
-                            da_int D_index = task_thread * max_block_size_sq;
+                            //da_int D_index = task_thread * max_block_size_sq;
                             da_int A_index_block_i = block_i * max_block_size;
                             da_int A_index_block_j = block_j * max_block_size;
                             da_int block_size_dim1 = max_block_size;
@@ -133,11 +136,11 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
                             bool diagonal_block = (block_i == block_j) ? true : false;
 
                             // Compute the distance matrix
-                            if (metric_internal == da_sqeuclidean) {
+                            if (metric_internal == da_sqeuclidean_gemm) {
                                 ARCH::euclidean_gemm_distance(
                                     da_order::column_major, block_size_dim1,
                                     block_size_dim2, n_features, &A[A_index_block_i], lda,
-                                    &A[A_index_block_j], lda, &D[D_index], ldd,
+                                    &A[A_index_block_j], lda, D[task_thread].data(), ldd,
                                     &A_norms[A_index_block_i], 1,
                                     &A_norms[A_index_block_j], 1, true, diagonal_block);
                             } else {
@@ -148,7 +151,7 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
                                     pairwise_distances::pairwise_distance_kernel(
                                         da_order::column_major, block_size_dim1,
                                         block_size_dim2, n_features, &A[A_index_block_i],
-                                        lda, A_j, lda, &D[D_index], ldd, p,
+                                        lda, A_j, lda, D[task_thread].data(), ldd, p,
                                         metric_internal);
                                 if (thd_status != da_status_success) {
 #pragma omp atomic write
@@ -160,11 +163,12 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
                                 da_int ii_max =
                                     (diagonal_block) ? jj : block_size_dim1 - 1;
                                 da_int j = A_index_block_j + jj;
-                                da_int D_index_offset = D_index + ldd * jj;
+                                da_int D_index_offset = ldd * jj;
                                 for (da_int ii = 0; ii <= ii_max; ii++) {
                                     // i and j correspond to the actual sample point indices we are considering
                                     da_int i = A_index_block_i + ii;
-                                    if (D[D_index_offset + ii] <= eps_internal &&
+                                    if (D[task_thread][D_index_offset + ii] <=
+                                            eps_internal &&
                                         i != j) {
                                         try {
                                             if (task_thread == 0) {
@@ -198,6 +202,7 @@ da_status radius_neighbors_brute(da_int n_samples, da_int n_features, const T *A
                 }
             }
         }
+        neighbors_local[this_thread] = neighbors_t{};
     } // End of parallel region
     if (threading_error != 0)
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE

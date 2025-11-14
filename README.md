@@ -79,13 +79,15 @@ Building on Linux
 
    * `-DBUILD_FORTRAN=On` to build those parts of the library that require Fortran code (`On` by default, but you can set it to `Off` if you do not have a Fortran compiler, in which case the LBFGSB linear model solver, and the nonlinear least squares solver will not be available)
 
+   * `-DKT_PATH=<path>` to explicitly set the path that contains the Reusable Kernel Templates Library (KT). This path is expected to contain the subdirectory `kernel-templates/`.  By default it will point to the AOCL-Sparse library include path.
+
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
    **Note** that not all the options available in `Release` build mode.
 
-5. Type `cmake --build . --target all` (or `--target doc`, to build the documentation).
+4. Type `cmake --build . --target all` (or `--target doc`, to build the documentation).
 
-6. Run the tests or examples using ctest e.g. `ctest -V –R` followed by a string to find a particular set of tests.
+5. Run the tests or examples using ctest e.g. `ctest -V –R` followed by a string to find a particular set of tests.
 
 Building on MS Windows
 ----------------------
@@ -112,6 +114,8 @@ Building on MS Windows
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 
    * `-DBUILD_FORTRAN=On` to build those parts of the library that require Fortran code (`On` by default, but you can set it to `Off` if you do not have a Fortran compiler, in which case the LBFGSB linear model solver, and the nonlinear least squares solver will not be available)
+
+   * `-DKT_PATH=<path>` to explicitly set the path that contains the Reusable Kernel Templates Library (KT). This path is expected to contain the subdirectory `kernel-templates/`.  By default it will point to the AOCL-Sparse library include path.
 
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 

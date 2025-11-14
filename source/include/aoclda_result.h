@@ -68,9 +68,6 @@ enum da_result_ {
     da_dbscan_n_clusters,     ///< The number of clusters found in DBSCAN clustering.
     da_dbscan_n_core_samples, ///< The number of core samples found in DBSCAN clustering.
     da_dbscan_core_sample_indices, ///< Indices of core samples in the data matrix used to compute DBSCAN clustering.
-    // KNN 601..700
-    da_knn_model_params =
-        601, ///< Model parameters for the trained and fitted k-nearest neighbors.
     // SVM 701..800
     da_svm_n_support_vectors = 701,     ///< Overall number of support vectors
     da_svm_n_support_vectors_per_class, ///< Number of support vectors per each class

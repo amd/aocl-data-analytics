@@ -1,0 +1,54 @@
+# Self-enablement configuration for AI Code Review
+# List the AI Assistants you want to enable, their parameters, and the branches for each.
+# Also specify the name of the GitHub secret token to use for API authentication.
+# AOCL-DA Version 1.0 - Sep 2025
+
+ai_assistants:
+  PRSummary:
+    enable: true
+    filtered_ticket_ids:
+    branches:
+      - amd-main
+
+  AICodeReview:
+    enable: true
+    branches:
+      - amd-main
+    filtered_ticket_ids:
+    
+  AIReviewCommentFix:
+    enable: true
+    branches:
+      - amd-main
+    exclude_comment_authors:
+    filtered_ticket_ids:
+
+# If you want to use the default token (AI_REVIEW_COMMENT_FIX_APIKEY), leave the value below as is or comment it out.
+# To use a custom secret token, provide its name below.
+github_secret_token_name: AI_GH_TOKEN  # Replace with your repo's secret name if you want to use a custom token
+
+# Optional: Email notification settings
+email_notifications:
+  # Enable/disable email notifications
+  enabled: true
+  # Add email recipients
+  recipients:
+    - "andrew.sajo@amd.com"
+    
+# Optional: PR metadata configuration for teams with specific standards
+pr_metadata:
+  pr_title: "AMD AI Code Review (experimental)"
+  pr_description: |
+    This PR adds the "AMD AI Code Review" workflow setup.
+    
+    ## Changes
+    - Added workflow file: `.github/workflows/amd_ai_code_review`
+    - Configured AI assistants: See .github/self_enablement.yaml
+    
+    Please review and merge to add support for "AMD AI Code Review workflow" on this repository.
+    
+  branch_name: "dev-ai-code-review"
+  commit_title: "Add AMD AI Code Review workflow"
+  commit_description: "Setup AMD AI Code Review workflow"
+  labels: []
+  reviewers: [andrsajo_amdeng]

@@ -21,6 +21,9 @@
  *
  * ************************************************************************ */
 
+#ifndef KMEANS_HPP
+#define KMEANS_HPP
+
 #include "aoclda.h"
 #include "basic_handle.hpp"
 #include "da_error.hpp"
@@ -262,3 +265,5 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
 } // namespace da_kmeans
 
 } // namespace ARCH
+
+#endif // KMEANS_HPP

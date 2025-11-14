@@ -44,6 +44,8 @@ struct KernelSelection {
 // Default lookup tables
 namespace da_svm {
 
+// Default lookup tables for AVX2 systems
+
 constexpr std::array<KernelSelection, 3> wssi_float = {{
     {4, scalar},       // Up to 4 -> scalar
     {1024, avx},       // Up to 1024 -> avx
@@ -64,6 +66,30 @@ constexpr std::array<KernelSelection, 2> wssj_float = {{
 constexpr std::array<KernelSelection, 2> wssj_double = {{
     {64, avx},         // Up to 64 -> avx
     {DA_INT_MAX, avx2} // >= 64 -> avx2
+}};
+
+// Default lookup tables for AVX512 systems
+
+constexpr std::array<KernelSelection, 3> wssi_float_avx512 = {{
+    {8, scalar},       // Up to 8 -> scalar
+    {1024, avx},       // Up to 1024 -> avx
+    {DA_INT_MAX, avx2} // >= 1024 -> avx2
+}};
+
+constexpr std::array<KernelSelection, 3> wssi_double_avx512 = {{
+    {8, avx},            // Up to 8 -> avx
+    {1024, avx2},        // Up to 1024 -> avx2
+    {DA_INT_MAX, avx512} // >= 1024 -> avx512
+}};
+
+constexpr std::array<KernelSelection, 2> wssj_float_avx512 = {{
+    {128, avx2},         // Up to 128 -> avx2
+    {DA_INT_MAX, avx512} // >= 128 -> avx512
+}};
+
+constexpr std::array<KernelSelection, 2> wssj_double_avx512 = {{
+    {64, avx2},          // Up to 64 -> avx2
+    {DA_INT_MAX, avx512} // >= 64 -> avx512
 }};
 
 } // namespace da_svm
@@ -97,35 +123,6 @@ constexpr std::array<KernelSelection, 2> wssj_double = {{
 
 } // namespace da_svm
 } // namespace da_dynamic_dispatch_zen4
-
-// Specific Zen 5 lookup tables for certain cases, which override the defaults
-namespace da_dynamic_dispatch_zen5 {
-namespace da_svm {
-
-constexpr std::array<KernelSelection, 3> wssi_float = {{
-    {8, scalar},       // Up to 8 -> scalar
-    {1024, avx},       // Up to 1024 -> avx
-    {DA_INT_MAX, avx2} // >= 1024 -> avx2
-}};
-
-constexpr std::array<KernelSelection, 3> wssi_double = {{
-    {8, avx},            // Up to 8 -> avx
-    {1024, avx2},        // Up to 1024 -> avx2
-    {DA_INT_MAX, avx512} // >= 1024 -> avx512
-}};
-
-constexpr std::array<KernelSelection, 2> wssj_float = {{
-    {128, avx2},         // Up to 128 -> avx2
-    {DA_INT_MAX, avx512} // >= 128 -> avx512
-}};
-
-constexpr std::array<KernelSelection, 2> wssj_double = {{
-    {64, avx2},          // Up to 64 -> avx2
-    {DA_INT_MAX, avx512} // >= 64 -> avx512
-}};
-
-} // namespace da_svm
-} // namespace da_dynamic_dispatch_zen5
 
 // Further specific lookup tables can be added here for other architectures
 
@@ -202,6 +199,26 @@ void select_simd_size_default_wss(da_int ws_size, da_int &padding,
     padding = get_padding<T>(kernel_type_larger);
 }
 
+template <class T>
+void select_simd_size_wss_avx512(da_int ws_size, da_int &padding,
+                                 vectorization_type &kernel_type_wssi,
+                                 vectorization_type &kernel_type_wssj) {
+    // Choose kernel type and padding for WSSI algorithm (default case)
+
+    kernel_type_wssi = std::is_same<T, float>::value
+                           ? lookup_kernel_svm(da_svm::wssi_float_avx512, ws_size)
+                           : lookup_kernel_svm(da_svm::wssi_double_avx512, ws_size);
+    kernel_type_wssj = std::is_same<T, float>::value
+                           ? lookup_kernel_svm(da_svm::wssj_float_avx512, ws_size)
+                           : lookup_kernel_svm(da_svm::wssj_double_avx512, ws_size);
+
+    // Get padding based on the larger kernel type
+    vectorization_type kernel_type_larger =
+        (kernel_type_wssi > kernel_type_wssj) ? kernel_type_wssi : kernel_type_wssj;
+
+    padding = get_padding<T>(kernel_type_larger);
+}
+
 // Specializations for different architectures
 
 namespace da_dynamic_dispatch_generic {
@@ -224,6 +241,27 @@ template void select_simd_size_wss<double>(da_int ws_size, da_int &padding,
 
 } // namespace da_svm
 } // namespace da_dynamic_dispatch_generic
+
+namespace da_dynamic_dispatch_generic_avx512 {
+namespace da_svm {
+template <class T>
+void select_simd_size_wss(da_int ws_size, da_int &padding,
+                          vectorization_type &kernel_type_wssi,
+                          vectorization_type &kernel_type_wssj) {
+
+    select_simd_size_wss_avx512<T>(ws_size, padding, kernel_type_wssi, kernel_type_wssj);
+}
+
+// Explicit instantiations
+template void select_simd_size_wss<float>(da_int ws_size, da_int &padding,
+                                          vectorization_type &kernel_type_wssi,
+                                          vectorization_type &kernel_type_wssj);
+template void select_simd_size_wss<double>(da_int ws_size, da_int &padding,
+                                           vectorization_type &kernel_type_wssi,
+                                           vectorization_type &kernel_type_wssj);
+
+} // namespace da_svm
+} // namespace da_dynamic_dispatch_generic_avx512
 
 namespace da_dynamic_dispatch_zen2 {
 namespace da_svm {
@@ -305,20 +343,7 @@ void select_simd_size_wss(da_int ws_size, da_int &padding,
                           vectorization_type &kernel_type_wssi,
                           vectorization_type &kernel_type_wssj) {
 
-    kernel_type_wssi =
-        std::is_same<T, float>::value
-            ? lookup_kernel_svm(da_dynamic_dispatch_zen5::da_svm::wssi_float, ws_size)
-            : lookup_kernel_svm(da_dynamic_dispatch_zen5::da_svm::wssi_double, ws_size);
-    kernel_type_wssj =
-        std::is_same<T, float>::value
-            ? lookup_kernel_svm(da_dynamic_dispatch_zen5::da_svm::wssj_float, ws_size)
-            : lookup_kernel_svm(da_dynamic_dispatch_zen5::da_svm::wssj_double, ws_size);
-
-    // Get padding based on the larger kernel type
-    vectorization_type kernel_type_larger =
-        (kernel_type_wssi > kernel_type_wssj) ? kernel_type_wssi : kernel_type_wssj;
-
-    padding = get_padding<T>(kernel_type_larger);
+    select_simd_size_wss_avx512<T>(ws_size, padding, kernel_type_wssi, kernel_type_wssj);
 }
 
 // Explicit instantiations

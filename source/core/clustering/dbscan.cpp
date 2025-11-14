@@ -33,7 +33,6 @@
 #include "lapack_templates.hpp"
 #include "macros.h"
 #include "miscellaneous.hpp"
-#include "nn_types.hpp"
 #include "pairwise_distances.hpp"
 #include "radius_neighbors.hpp"
 #include <algorithm>
@@ -51,7 +50,7 @@ namespace ARCH {
 
 namespace da_dbscan {
 
-using namespace da_nn_types;
+using namespace da_neighbors_types;
 using namespace std::literals::string_literals;
 
 /* Utility function to add a rule in an unordered map. Recursively searches for rules with the same
@@ -266,7 +265,7 @@ template <typename T> da_status dbscan<T>::compute() {
 
     // Check for incompatible options
     if (algorithm == kd_tree || algorithm == ball_tree) {
-        if (metric == da_cosine || metric == da_sqeuclidean) {
+        if (metric == da_cosine || metric == da_sqeuclidean_gemm) {
             return da_error(this->err, da_status_incompatible_options,
                             "Tree algorithms are not compatible with the cosine or "
                             "squared Euclidean distances.");
@@ -277,7 +276,7 @@ template <typename T> da_status dbscan<T>::compute() {
         }
     }
 
-    alg_internal = da_nn_types::nn_algorithm(algorithm);
+    alg_internal = da_neighbors_types::nn_algorithm(algorithm);
     if (alg_internal == automatic) {
         // If the user has not specified an algorithm, we will use the k-d tree if the data is small
         // in dimension and the Minkowski options allow it. Otherwise we will use brute force.

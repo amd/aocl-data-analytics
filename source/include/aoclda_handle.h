@@ -65,9 +65,9 @@ enum da_handle_type_ {
     da_handle_nlls , ///< @rst
                      ///< the handle is to be used with functions from the :ref:`nonlinear data fitting chapter <chapter_nlls>`.
                      ///< @endrst
-    da_handle_knn,  ///< @rst
-                    ///< the handle is to be used with functions from the :ref:`k-nearest neighbors for classification <knn_intro>`.
-                    ///< @endrst
+    da_handle_nn, ///< @rst
+                  ///< the handle is to be used with functions from the :ref:`k-nearest neighbors for classification <knn_intro>`.
+                  ///< @endrst
     da_handle_svm ,  ///< @rst
                      ///< the handle is to be used with functions for computing the :ref:`svm <chapter_svm>`.
                      ///< @endrst

@@ -48,6 +48,8 @@ struct KernelSelection {
 // Default lookup tables
 namespace da_kmeans {
 
+// Lookup tables for AVX2 machines
+
 constexpr std::array<KernelSelection, 3> lloyd_float = {{
     {2, scalar},       // Up to 2 -> scalar
     {16, avx},         // Up to 16 -> avx
@@ -78,50 +80,45 @@ constexpr std::array<KernelSelection, 1> elkan_update_double = {{
     {DA_INT_MAX, avx2} // always avx2
 }};
 
-} // namespace da_kmeans
+//Lookup tables for AVX512 machines
 
-// Specific Zen 5 lookup tables for certain cases, which override the defaults
-namespace da_dynamic_dispatch_zen5 {
-namespace da_kmeans {
-
-constexpr std::array<KernelSelection, 4> lloyd_double = {{
+constexpr std::array<KernelSelection, 4> lloyd_double_avx512 = {{
     {4, scalar},         // Up to 4 -> scalar
     {6, avx},            // Up to 6 -> avx
     {19, avx2},          // Up to 19 -> avx2
     {DA_INT_MAX, avx512} // > 19 -> avx512
 }};
 
-constexpr std::array<KernelSelection, 3> lloyd_float = {{
+constexpr std::array<KernelSelection, 3> lloyd_float_avx512 = {{
     {4, scalar},       // Up to 4 -> scalar
     {16, avx},         // < 16 -> avx
     {DA_INT_MAX, avx2} // > 16 -> avx2
 }};
 
-constexpr std::array<KernelSelection, 2> elkan_reduce_float = {{
+constexpr std::array<KernelSelection, 2> elkan_reduce_float_avx512 = {{
     {8, avx},         // Up to 8 scalar
     {DA_INT_MAX, avx} // > 8 -> avx
 }};
 
-constexpr std::array<KernelSelection, 4> elkan_reduce_double = {{
+constexpr std::array<KernelSelection, 4> elkan_reduce_double_avx512 = {{
     {4, scalar},         // Up to 4 -> scalar
     {8, avx},            // Up to 8 -> avx
     {15, avx2},          // Up to 15 -> avx2
     {DA_INT_MAX, avx512} // > 15 -> avx512
 }};
 
-constexpr std::array<KernelSelection, 2> elkan_update_float = {{
+constexpr std::array<KernelSelection, 2> elkan_update_float_avx512 = {{
     {4, avx},           // Up to 4 -> avx
     {DA_INT_MAX, avx2}, // >4 -> avx2
 }};
 
-constexpr std::array<KernelSelection, 3> elkan_update_double = {{
+constexpr std::array<KernelSelection, 3> elkan_update_double_avx512 = {{
     {6, avx},            // Up to 6 -> avx
     {15, avx2},          // Up to 15 -> avx2
     {DA_INT_MAX, avx512} // > 15 -> avx512
 }};
 
 } // namespace da_kmeans
-} // namespace da_dynamic_dispatch_zen5
 
 // Further specific lookup tables can be added here for other architectures
 
@@ -179,6 +176,8 @@ template <class T> da_int get_padding(vectorization_type kernel_type) {
     return value;
 }
 
+// Default selection functions - AVX2 only
+
 template <class T>
 void select_simd_size_default_lloyd(da_int n_clusters, da_int &padding,
                                     vectorization_type &kernel_type) {
@@ -208,6 +207,42 @@ void select_simd_size_default_elkan([[maybe_unused]] da_int n_clusters,
             lookup_kernel_kmeans(da_kmeans::elkan_update_double, n_clusters);
         reduce_kernel_type =
             lookup_kernel_kmeans(da_kmeans::elkan_reduce_double, n_features);
+    }
+
+    padding = get_padding<T>(update_kernel_type);
+}
+
+// Selection functions when AVX512 is deemed beneficial
+
+template <class T>
+void select_simd_size_lloyd_avx512(da_int n_clusters, da_int &padding,
+                                   vectorization_type &kernel_type) {
+    // Choose kernel type and padding for Lloyd algorithm (default case)
+
+    kernel_type = std::is_same<T, float>::value
+                      ? lookup_kernel_kmeans(da_kmeans::lloyd_float_avx512, n_clusters)
+                      : lookup_kernel_kmeans(da_kmeans::lloyd_double_avx512, n_clusters);
+
+    padding = get_padding<T>(kernel_type);
+}
+
+template <class T>
+void select_simd_size_elkan_avx512([[maybe_unused]] da_int n_clusters,
+                                   [[maybe_unused]] da_int n_features, da_int &padding,
+                                   vectorization_type &update_kernel_type,
+                                   vectorization_type &reduce_kernel_type) {
+    // Choose kernel type and padding for Elkan algorithm (default case)
+
+    if (std::is_same<T, float>::value) {
+        update_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_update_float_avx512, n_clusters);
+        reduce_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_reduce_float_avx512, n_features);
+    } else {
+        update_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_update_double_avx512, n_clusters);
+        reduce_kernel_type =
+            lookup_kernel_kmeans(da_kmeans::elkan_reduce_double_avx512, n_features);
     }
 
     padding = get_padding<T>(update_kernel_type);
@@ -249,6 +284,41 @@ template void select_simd_size_elkan<double>(da_int n_clusters, da_int n_feature
 
 } // namespace da_kmeans
 } // namespace da_dynamic_dispatch_generic
+
+namespace da_dynamic_dispatch_generic_avx512 {
+namespace da_kmeans {
+template <class T>
+void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
+                            vectorization_type &kernel_type) {
+
+    select_simd_size_lloyd_avx512<T>(n_clusters, padding, kernel_type);
+}
+
+template <class T>
+void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &reduce_kernel_type) {
+
+    select_simd_size_elkan_avx512<T>(n_clusters, n_features, padding, update_kernel_type,
+                                     reduce_kernel_type);
+}
+
+// Explicit instantiations
+template void select_simd_size_lloyd<float>(da_int n_clusters, da_int &padding,
+                                            vectorization_type &kernel_type);
+template void select_simd_size_lloyd<double>(da_int n_clusters, da_int &padding,
+                                             vectorization_type &kernel_type);
+template void select_simd_size_elkan<float>(da_int n_clusters, da_int n_features,
+                                            da_int &padding,
+                                            vectorization_type &update_kernel_type,
+                                            vectorization_type &reduce_kernel_type);
+template void select_simd_size_elkan<double>(da_int n_clusters, da_int n_features,
+                                             da_int &padding,
+                                             vectorization_type &update_kernel_type,
+                                             vectorization_type &reduce_kernel_type);
+
+} // namespace da_kmeans
+} // namespace da_dynamic_dispatch_generic_avx512
 
 namespace da_dynamic_dispatch_zen2 {
 namespace da_kmeans {
@@ -358,14 +428,7 @@ template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
                             vectorization_type &kernel_type) {
 
-    kernel_type =
-        std::is_same<T, float>::value
-            ? lookup_kernel_kmeans(da_dynamic_dispatch_zen5::da_kmeans::lloyd_float,
-                                   n_clusters)
-            : lookup_kernel_kmeans(da_dynamic_dispatch_zen5::da_kmeans::lloyd_double,
-                                   n_clusters);
-
-    padding = get_padding<T>(kernel_type);
+    select_simd_size_lloyd_avx512<T>(n_clusters, padding, kernel_type);
 }
 
 template <class T>
@@ -373,19 +436,8 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
                             vectorization_type &update_kernel_type,
                             vectorization_type &reduce_kernel_type) {
 
-    if (std::is_same<T, float>::value) {
-        update_kernel_type = lookup_kernel_kmeans(
-            da_dynamic_dispatch_zen5::da_kmeans::elkan_update_float, n_clusters);
-        reduce_kernel_type = lookup_kernel_kmeans(
-            da_dynamic_dispatch_zen5::da_kmeans::elkan_reduce_float, n_features);
-    } else {
-        update_kernel_type = lookup_kernel_kmeans(
-            da_dynamic_dispatch_zen5::da_kmeans::elkan_update_double, n_clusters);
-        reduce_kernel_type = lookup_kernel_kmeans(
-            da_dynamic_dispatch_zen5::da_kmeans::elkan_reduce_double, n_features);
-    }
-
-    padding = get_padding<T>(update_kernel_type);
+    select_simd_size_elkan_avx512<T>(n_clusters, n_features, padding, update_kernel_type,
+                                     reduce_kernel_type);
 }
 
 // Explicit instantiations

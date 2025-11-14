@@ -133,6 +133,16 @@ void select_ws_size(da_int n, da_svm_types::svm_kernel kernel, da_int &ws_size) 
 } // namespace da_svm
 } // namespace da_dynamic_dispatch_generic
 
+namespace da_dynamic_dispatch_generic_avx512 {
+namespace da_svm {
+void select_ws_size(da_int n, da_svm_types::svm_kernel kernel, da_int &ws_size) {
+
+    select_ws_size_default(n, kernel, ws_size);
+}
+
+} // namespace da_svm
+} // namespace da_dynamic_dispatch_generic_avx512
+
 namespace da_dynamic_dispatch_zen2 {
 namespace da_svm {
 void select_ws_size(da_int n, da_svm_types::svm_kernel kernel, da_int &ws_size) {

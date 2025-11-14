@@ -43,5 +43,6 @@
 
 da_status da_parallel_check();
 const char *da_get_version();
+const char *da_get_git_commit();
 
 #endif

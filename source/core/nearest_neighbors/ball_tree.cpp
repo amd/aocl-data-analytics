@@ -390,7 +390,7 @@ ball_tree<T>::build_tree(da_int depth, da_int *indices, da_int n_indices,
 *          region_within_eps if the entirety of the ball is within eps of X
 */
 template <typename T>
-da_nn_types::nn_check_region
+da_neighbors_types::nn_check_region
 ball_tree<T>::check_ball(T *X, T eps, std::vector<T> &centroid, T radius, T &dist) {
 
     dist = 0.0;
@@ -420,14 +420,14 @@ ball_tree<T>::check_ball(T *X, T eps, std::vector<T> &centroid, T radius, T &dis
 
     if (dist + radius <= eps) {
         // The entire ball is within eps of X
-        return da_nn_types::region_within_eps;
+        return da_neighbors_types::region_within_eps;
     }
     // If the minimum distance is less than eps, then X is within eps of the edge of the ball
     if (dist - radius <= eps) {
-        return da_nn_types::pt_within_eps;
+        return da_neighbors_types::pt_within_eps;
     }
     // Otherwise, the point is outside the ball by at least eps
-    return da_nn_types::pt_outside_eps;
+    return da_neighbors_types::pt_outside_eps;
 }
 
 // Recursive function to find the radius neighbors of a point (determined by index_X) in X
@@ -440,14 +440,14 @@ da_status ball_tree<T>::radius_neighbors_recursive(
 
     // Check the ball for quick pruning of the search space
     T dist;
-    da_nn_types::nn_check_region proximity =
+    da_neighbors_types::nn_check_region proximity =
         check_ball(X, eps, current_node->centroid, current_node->radius, dist);
-    if (proximity == da_nn_types::pt_outside_eps) {
+    if (proximity == da_neighbors_types::pt_outside_eps) {
         // The point is too far from the bounding ball for this node, we can return and ignore all sub-nodes
         return da_status_success;
     }
 
-    if (proximity == da_nn_types::region_within_eps) {
+    if (proximity == da_neighbors_types::region_within_eps) {
         // The entire ball is inside the search radius, so we can add all points in the node
         for (da_int i = 0; i < current_node->n_indices; i++) {
             da_int index_A = current_node->indices[i];

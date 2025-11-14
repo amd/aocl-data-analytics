@@ -28,6 +28,7 @@
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_qr.hpp"
+#include "da_syrk.hpp"
 #include "lapack_templates.hpp"
 #include "macros.h"
 #include "options.hpp"
@@ -380,8 +381,8 @@ template <typename T> da_status pca<T>::compute() {
 
     if (solver == solver_syevd) {
         // Compute A^T A in vt
-        da_blas::cblas_gemm(CblasColMajor, CblasTrans, CblasNoTrans, p, p, n, 1.0, A, lda,
-                            A, lda, 0.0, vt.data(), ldvt);
+        da_syrk(column_major, da_upper, da_trans, p, n, (T)1.0, A, lda, (T)0.0, vt.data(),
+                ldvt);
     }
 
     // Depending on the chosen method standardize by column means and possible standard deviations

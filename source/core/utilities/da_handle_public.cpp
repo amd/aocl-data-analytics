@@ -125,9 +125,10 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
-        case da_handle_knn:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
-                                           new da_knn::knn<double>(*(*handle)->err));
+        case da_handle_nn:
+            DISPATCHER((*handle)->err,
+                       (*handle)->alg_handle_d =
+                           new da_neighbors::neighbors<double>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_d = nullptr;
@@ -238,9 +239,10 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
-        case da_handle_knn:
+        case da_handle_nn:
             DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s = new da_knn::knn<float>(*(*handle)->err));
+                       (*handle)->alg_handle_s =
+                           new da_neighbors::neighbors<float>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_s = nullptr;

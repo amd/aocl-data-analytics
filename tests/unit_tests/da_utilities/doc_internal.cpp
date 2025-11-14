@@ -53,7 +53,7 @@ const static std::map<da_handle_type, std::string> htypes{
     {da_handle_dbscan, "DBSCAN clustering"},
     {da_handle_decision_tree, "Decision Trees"},
     {da_handle_decision_forest, "Decision Forests"},
-    {da_handle_knn, "k-Nearest Neighbors"},
+    {da_handle_nn, "k-Nearest Neighbors"},
 #ifndef NO_FORTRAN
     {da_handle_nlls, "Nonlinear Least Squares"},
 #endif

@@ -36,15 +36,6 @@ template <class T> struct option_t {
     T value;
 };
 
-// return precision as a string literal to set CSV options
-template <typename T> constexpr const char *prec_name();
-template <> constexpr const char *prec_name<float>() { return "single"; }
-template <> constexpr const char *prec_name<double>() { return "double"; }
-
-template <typename T> constexpr const char *type_opt_name();
-template <> constexpr const char *type_opt_name<float>() { return "float"; }
-template <> constexpr const char *type_opt_name<double>() { return "double"; }
-
 template <typename T>
 void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iopts,
                           std::vector<option_t<std::string>> sopts,

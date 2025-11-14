@@ -134,9 +134,3 @@ Note that only a subset of the AOCL-DA functionality is available in this manner
 patching, you attempt to call class member functions which have not been implemented in AOCL-DA,
 then a ``RuntimeError`` will be thrown. It is recommended that for the full benefit of using AOCL-DA
 you use the Python APIs described on the subsequent pages of this manual.
-
-The scikit-learn dispatcher
-===========================
-Since the AOCL-DA scikit-learn extension is not yet feature-complete, we also offer a dispatcher which can automatically select functions from Intel's Extension for scikit-learn where they are known to perform well.
-
-To enable this dispatcher, set the environment variable ``USE_INTEL_SKLEARNEX``. The AOCL-DA scikit-learn extension will then detect your Intel installation and use it where appropriate.

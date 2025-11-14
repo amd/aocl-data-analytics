@@ -186,7 +186,7 @@ add_custom_target(
   WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
   VERBATIM
   SOURCES Doxyfile
-  DEPENDS update_options_tables
+  DEPENDS $<$<BOOL:${UPDATE_OPTIONS_DOC}>:update_options_tables>
   COMMENT "Building doxygen xml files")
 
 # Bump version string in conf.py (Sphinx)

@@ -110,6 +110,9 @@ endif()
 
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)
+  if(BUILD_SMP)
+    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
+  endif()
   # Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an
   # empty string. This is what AOCL-DA users will need to do explicitly to get
   # the correct symbols, otherwise they will get linking errors or aborts.

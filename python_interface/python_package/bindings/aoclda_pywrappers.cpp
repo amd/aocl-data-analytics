@@ -95,6 +95,8 @@ PYBIND11_MODULE(_aoclda, m) {
     /*         Utility functions    */
     /**********************************/
     auto m_utils = m.def_submodule("utils", "Utility functions.");
+    m_utils.def("pybind_get_version", []() { return py::str(da_get_version()); });
+    m_utils.def("pybind_get_git_commit", []() { return py::str(da_get_git_commit()); });
     m_utils.def("pybind_train_test_split", &py_train_test_split<da_int>, "X"_a,
                 "test_size"_a, "train_size"_a, "shuffled_indices"_a);
     m_utils.def("pybind_train_test_split", &py_train_test_split<float>, "X"_a,

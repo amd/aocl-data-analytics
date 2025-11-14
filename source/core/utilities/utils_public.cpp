@@ -99,6 +99,9 @@ da_status da_get_arch_info(da_int *len = nullptr, char *arch = nullptr,
     case generic:
         Arch = "generic";
         break;
+    case generic_avx512:
+        Arch = "generic_avx512";
+        break;
     case zen2:
     case zen3:
     case zen4:
