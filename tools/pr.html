@@ -1,0 +1,1975 @@
+
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns:dt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882"
+xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+xmlns="http://www.w3.org/TR/REC-html40">
+
+<head>
+<meta http-equiv=Content-Type content="text/html; charset=utf-8">
+<meta name=ProgId content=Word.Document>
+<meta name=Generator content="Microsoft Word 15">
+<meta name=Originator content="Microsoft Word 15">
+</head>
+<body>
+<h1 id="peer-review-checklist-for-pull-request-prpr">Peer Review
+Checklist for Pull-Request (PRPR)</h1>
+<p><em>Revision 7/5/2025  [distilled from .github/PULL_REQUEST_TEMPLATE/pr.md on 2025-05-14]</em></p>
+<p>See Appendix for the <em>Peer Review Guide</em>.</p>
+<p><strong>Synopsis</strong> <fill in=""></fill></p>
+<p>JIRA Tickets #<fill in=""></fill></p>
+<p>Fixes #<fill in=""></fill></p>
+<p>Relates to #<fill in=""></fill></p>
+<p>Reviewers: Add reviewers in the right-hand-side tab, select one.</p>
+<h1 id="self-review-checklist">Self-Review Checklist</h1>
+<p>This checklist is used to help the developer(s) ensure that the new
+code is ready to be peer reviewed and the Pull-Request issued.</p>
+<p><strong>Before passing to the PRs, this checklist needs to be
+completed</strong>. If any answers are not <code>Yes</code> or
+<code>NA</code>, please provide details to the reviewer so that any
+problems get resolved.</p>
+<p><strong>Don’t waste PR’s time by not checking this basic
+Self-Review</strong></p>
+<table border="1">
+<tr>
+<th>
+YES
+</th>
+<th>
+NA
+</th>
+<th>
+Item
+</th>
+<th>
+Description
+</th>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+1
+</td>
+<td>
+Does the Pull-Request message reference the correct JIRA ticket(s)?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+2
+</td>
+<td>
+Does the commit message reference PR issue number?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+3
+</td>
+<td>
+<p>Is the PR from a branch branched off <code>amd-dev</code> and is the
+name prefixed with <code>dev-</code>?</p>
+<ul>
+<li>Are there any conflicts to be resolved? Rebase and resolve as
+required.</li>
+<li>Are all the automatic builds of the branch successful? Fix/update as
+required.</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+4
+</td>
+<td>
+<p>Is the code polished (e.g., <code>clang-format</code> style format
+for C/C++, etc)<br/> Are all <code>da_status enum</code> variables that
+store return status of an internal function appropriately called
+<code>status</code>?</p>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+5
+</td>
+<td>
+Is the standard copyright banner and license information at the top of
+all relevant files?<br/> Also, are/is the copyright year(s) on the
+banners correct? Copyright is expressed on a continuous range of years
+since its inception, so must have at least (e.g. 2023) and optionally
+followed by the last year the file was updated (e.g. 2023-2025).
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+6
+</td>
+<td>
+<p>Does the <strong>full-debug build</strong> complete successfully
+without any “legit” warnings?<br/> <strong>Add only “legit” warnings to
+the Suppressions List.</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+7
+</td>
+<td>
+<p>Has the C API been sufficiently unit-tested?<br/></p>
+<ul>
+<li>Code coverage (lines of code)</li>
+<li>Algorithmic paths coverage (refinement of a solution under bad
+problem conditioning)</li>
+<li>Ideally at least one unit-test for each error returned by the
+API</li>
+<li>Tests for both row-major and column-major data if appropriate</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+8
+</td>
+<td>
+Have all errors reported by running the unit-tests on different
+hardware/OS combinations been resolved?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+9
+</td>
+<td>
+Have the example source files (and input data) been checked (tidy,
+correct spelling in comments, etc.)? Are they referenced in the
+documentation?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+10
+</td>
+<td>
+<p>Are all array (vectors, etc) that are allocated (resized) ringfenced
+with <code>try-catch</code> and return
+<code>da_status_memory_error</code>?</p>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+11
+</td>
+<td>
+<p>For all public APIs that have a handle (i.e., <code>handle</code> or
+<code>store</code>), do they call <code>handle-&gt;clear()</code> at
+entry in the appropriate place?</p>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+12
+</td>
+<td>
+Have additional APIs been written e.g. C++ overloads in
+<code>aoclda_cpp_overloads.hpp</code>, Python API and Scikit-learn
+patch? Do these APIs have tests and examples where appropriate?
+</td>
+</tr>
+</table>
+<p><br/> Only for new or updated API requiring documentation</p>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+<table border="1">
+<tr>
+<th>
+YES
+</th>
+<th>
+NA
+</th>
+<th>
+Item
+</th>
+<th>
+Description
+</th>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+13
+</td>
+<td>
+<p>Does the documentation correctly describe the API? * A high-level
+description of the implemented algorithm is provided at the top of the
+API (i.e., comments used for Doxygen) or where applicable; if
+applicable, include the maximum expected error or tolerance * All inputs
+and output are sufficiently explained and marked as
+<code>in</code>/<code>out</code> * List and explain all returned errors
+(if advice how to rectify the error is available, include it in the
+description) * If there are example sources, refer/link/include these,
+using the code snippet in <code>utils.rst</code></p>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+14
+</td>
+<td>
+Has the API documentation been checked for spelling and grammar?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+15
+</td>
+<td>
+Are all references to groups of implementations for the same API using
+<code>api_name_?</code>?<br/> e.g. <code>da_nlls_fit_d</code> (and
+<code>da_nlls_fit_s</code>) should be referenced
+<code>da_nlls_fit_?</code>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+16
+</td>
+<td>
+Does compiling the documentation, i.e., running Sphinx/Doxygen/LaTeX
+report no errors?
+</td>
+</tr>
+</table>
+<p>If all questions are answered YES, then assign reviewer to PR. It is
+strongly advised for the developer(s) to also review the PR checklist
+prior to contacting the reviewer.</p>
+<p><strong>Proceed with the PR only if the above table(s) is/are
+completed</strong></p>
+<h1 id="peer-review-pr-checklist">Peer review (PR) checklist</h1>
+<h2 id="purpose-and-scope">Purpose and Scope</h2>
+<p>This checklist is to assist the peer reviewer in assessing the
+quality of the new code (project files) before declaring it to be
+‘complete’.</p>
+<p>The code should not be considered complete <strong>until all
+items</strong> are answered <code>Yes</code>/<code>NA</code> or
+justified explain the discrepancy. The PR Checklist is composed of four
+major parts:</p>
+<ol type="1">
+<li>Documentation,</li>
+<li>Code,</li>
+<li>Examples, and</li>
+<li>Unit testing.</li>
+</ol>
+<p>All are essential to the review process.</p>
+<h2 id="documentation-compulsory-for-new-and-updated-apis">Documentation
+(compulsory for new and updated APIs)</h2>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+<table border="1">
+<tr>
+<th>
+YES
+</th>
+<th>
+NA
+</th>
+<th>
+Item
+</th>
+<th>
+Description
+</th>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+17
+</td>
+<td>
+<p>Does the documentation correctly describe the API?</p>
+<ul>
+<li>A high-level description of the implemented algorithm is provided at
+the top of the API (i.e., comments used for Doxygen) or where
+applicable; if applicable, include the maximum expected error or
+tolerance</li>
+<li>All inputs and output are sufficiently explained and marked as
+in/out</li>
+<li>List and explain all returned errors (if advice how to rectify the
+error is available, include it in the description)</li>
+<li>If useful, refer to the examples</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+18
+</td>
+<td>
+Is the documentation clear, concise, and free of any grammatical or
+spelling errors?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+19
+</td>
+<td>
+Does the documentation state clearly where non-successful exit statuses
+still convey useful or relevant results? Some APIs go beyond
+success/failure, e.g., in numerical optimization, a warning can be
+issued to notify a sub-optimal solution.
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+20
+</td>
+<td>
+Optional, are any suitable references to further resources provided?
+</td>
+</tr>
+</table>
+<h2 id="code">Code</h2>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+<table border="1">
+<tr>
+<th>
+YES
+</th>
+<th>
+NA
+</th>
+<th>
+Item
+</th>
+<th>
+Description
+</th>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+21
+</td>
+<td>
+Have the API goals been achieved? (e.g., target performance, etc.)
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+22
+</td>
+<td>
+Does the API correctly implement the algorithm(s) (e.g., for a
+matrix-vector product API, does the code correctly perform a
+matrix-vector product for all valid inputs)? Does it handle row-major
+and column-major data?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+23
+</td>
+<td>
+<p>Is the code reasonably easy to read and understand? Is it clear in
+the code how the underlying algorithm is implemented? Do you consider
+that other colleagues will be able to debug the API?</p>
+Has the source code been written in an appropriately concise and
+efficient way? Do you understand what is happening? Speak to the
+developer if you have any doubts and suggest improvements.
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+24
+</td>
+<td>
+Is the source code appropriately documented? Are the comments relevant
+and helpful? Are descriptions and comments correctly styled and
+relevant? Do you understand all the comments in the code? If not, then a
+user is also unlikely to understand them so query any such comments with
+the author. While comments in the code don’t have to be grammatically
+correct (e.g., single line comments don’t require full sentences), they
+should still make sense.
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+25
+</td>
+<td>
+Have you been (reasonably) unsuccessful in breaking the code? The main
+objective here is to assess the robustness of the API. For example, by
+testing how well it handles unintended usage either by passing
+unexpected (valid input) data, or by defining unexpected combination of
+algorithmic options, etc. This requires skillful creativity from the
+peer-reviewer.
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+26
+</td>
+<td>
+Does the code gracefully handle trivial and edge-cases (e.g.,
+factorizing identity matrix, working with matrix of dimension 1x1 or
+sparse matrix with no nonzeroes)?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+27
+</td>
+<td>
+Is there adequate error handling?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+28
+</td>
+<td>
+Is the code thread-safe?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+29
+</td>
+<td>
+Are variable and function names short, sensible, and consistent with
+those of other similar functions?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+30
+</td>
+<td>
+Does the API signature have a <code>const</code> qualifier for all input
+parameters passed by reference?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+31
+</td>
+<td>
+Do all the source files have copyright banner with correct year(s) as
+well as license information?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+32
+</td>
+<td>
+<p>Is the source code formatted (polished) appropriately?<br/></p>
+Also, if there are changes to <code>CMakeList.txt</code> files, are
+these polished?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+33
+</td>
+<td>
+Are all code files correctly placed (i.e., in the <code>source/</code>
+or <code>include/</code> directories)?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+34
+</td>
+<td>
+Have all necessary additional APIs been written e.g. Python, C++
+overloads and Scikit-learn patch?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+35
+</td>
+<td>
+The code does not produce any warnings when compiling with full-debug
+build using GCC and AOCC (including Address SANitizer checking)?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+36
+</td>
+<td>
+Do all periodic Jenkins jobs (Linux/Windows) pass without producing
+significant compiler warnings?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+37
+</td>
+<td>
+Optional, look closely at the conformance tests. Are there any potential
+tests that have not been included? This is worth spending some time
+thinking about.
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+38
+</td>
+<td>
+Optional, is the new or updated API performance adequately efficient?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+39
+</td>
+<td>
+Optional, is the parallel implementation (OpenMP) showing acceleration?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+40
+</td>
+<td>
+Are all array-type objects (vectors, etc) that are dynamically allocated
+(new, resized, etc) properly ringfenced with
+<code>try</code>-<code>catch</code> and return on error
+<code>da_status_memory_error</code>? Also, are all <code>new</code>
+instances <code>delete</code>d? Are all <code>new[]</code> objects
+properly <code>delete[]</code>d?
+</td>
+</tr>
+</table>
+<h2 id="examples">Examples</h2>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+<table border="1">
+<tr>
+<th>
+YES
+</th>
+<th>
+NA
+</th>
+<th>
+Item
+</th>
+<th>
+Description
+</th>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+41
+</td>
+<td>
+Is the example easy to understand, solving a simple (yet not completely
+trivial) case and can it be used as a template by the user?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+42
+</td>
+<td>
+Does the example avoid numerical issues (e.g., close to zero division,
+poor matrix conditioning, etc.)?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+43
+</td>
+<td>
+Given the example input data, is the output uniquely defined?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+44
+</td>
+<td>
+Does the example check the returned status of every relevant API call
+and gracefully handle the condition? For example, on non-successful
+status return, identify if the API still returns relevant results (e.g.,
+iterative methods stop with sub-optimal solutions).
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+45
+</td>
+<td>
+<p>Does the example return exit status 0 on successful (expected)
+completion of a run and a non-zero exit status otherwise (CTest
+compatibility, this allows the use of the examples for testing)?</p>
+Also, when printing a solution, print also a message that the result is
+within the tolerance, where appropriate.
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+46
+</td>
+<td>
+<p>If appropriate, has a Python example been written? Does it
+<code>sys.exit(1)</code> on failure? Does it use if
+<code>__name__ == "__main__"</code>: then call the example in a separate
+function?</p>
+</td>
+</tr>
+</table>
+<h2 id="unit-testing">Unit testing</h2>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+<table border="1">
+<tr>
+<th>
+YES
+</th>
+<th>
+NA
+</th>
+<th>
+Item
+</th>
+<th>
+Description
+</th>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+47
+</td>
+<td>
+Are there tests checking that invalid input is correctly handled by the
+API returning expected error status? (e.g., negative dimension,
+<code>nullptr</code> or <code>NULL</code> pointer)
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+48
+</td>
+<td>
+Are edge cases tested (e.g., dimension is 1)?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+49
+</td>
+<td>
+Are trivial cases tested (e.g., when providing the solution as input)?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+50
+</td>
+<td>
+Are all <em>reasonable</em> algorithmic failures tested where possible?
+(e.g., factorizing singular matrix)
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+51
+</td>
+<td>
+Do the unit tests cover a range of realistic problems?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+52
+</td>
+<td>
+Is the code coverage by the unit tests sufficient? Particularly, are all
+possible code paths and functionality use cases exercised? (e.g.,
+different AVX extensions, types of matrices, row-major and column-major
+data)
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+53
+</td>
+<td>
+Is it easy to understand what is being tested from the source and
+comments?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+54
+</td>
+<td>
+Do the automatic Linux/Windows builds build successfully without
+failing? Are all unit tests passing?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+55
+</td>
+<td>
+Optional, are precision-related tolerances defined relative to the type
+(<code>float</code>/<code>double</code>) using scaling on
+<code>epsilon</code> (machine precision, taken from the appropriate
+header file) and not hard-coded constants?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+56
+</td>
+<td>
+<p>If the API uses and internal <code>handle</code> (e.g. PCA, Linear
+Models) are there tests to check that the same handle can be reused
+multiple times successfully? Does it test for the cycle: setup, set
+options, calculate, setup, set options, …?</p>
+Also, are the errors cleared between public API calls?
+</td>
+</tr>
+<tr>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+
+    <p class=MsoNormal><span style='mso-fareast-font-family:"Times New Roman"'>
+        <w:Sdt CheckBox="t" CheckBoxIsChecked="f" CheckBoxValueChecked="&#9746;"
+    CheckBoxValueUnchecked="&#9744;" CheckBoxFontChecked="MS Gothic"
+    CheckBoxFontUnchecked="MS Gothic" ID="1210377956">
+        <span style='font-family: "MS Gothic"'>&#9744;</span></w:Sdt></span></p>
+    
+</td>
+<td>
+57
+</td>
+<td>
+Have the Python and Scikit-learn APIs been tested appropriately, with
+double/single precision tests where needed, C/Fortran Numpy array order
+and tests for Scikit-learn functionality that is not implemented?
+</td>
+</tr>
+</table>
+<h1 id="appendix-a---quick-guide">Appendix A - Quick guide</h1>
+<details>
+<summary>
+Click to expand
+</summary>
+<h1 id="section"></h1>
+<h2 id="motivation-purpose-and-scope">Motivation, purpose, and
+scope</h2>
+<p>The peer review process needs to ensure that all AMD libraries are
+developed to the highest standards of quality in order to deliver the
+best experience we can for the user. This means that a diverse set of
+factors needs to be considered as part of the review, including the
+following.</p>
+<ol type="1">
+<li><p><strong>Code implementation</strong>: design, correctness,
+efficiency, robustness, and usability</p></li>
+<li><p>Monitoring of <strong>quality</strong>: checks via thorough
+testing (<strong>unit tests</strong>, coverage, etc.)</p></li>
+<li><p>User experience – product learning curve</p>
+<ol type="a">
+<li><p><strong>Documentation</strong>: API specs, underlying algorithm
+description, theoretical math background, etc.</p></li>
+<li><p><strong>Examples</strong> as templates for users to start
+with</p></li>
+</ol></li>
+</ol>
+<p>The development process involves two parties who are jointly
+responsible for a successful completion:</p>
+<p><strong>Developer(s)</strong>: assigned the tasks of developing and
+documenting the software. Either a single person or a small team.</p>
+<p><strong>Peer Reviewer (PR)</strong>: a <strong>single</strong>
+designated person helping the developer(s) make the right decisions
+along the way (“development buddy”) and ultimately responsible for the
+final approval confirming the overall quality of the code and
+documentation, as well as for the thorough testing of the API and
+example(s).</p>
+<p>Peer reviewing is a process that starts at the same time as the
+planning of the new API or updating an existing one and culminates with
+the merging of the feature branch. It is strongly encouraged that
+development be done in an open manner and to have periodic review
+meetings with the peer reviewer. The process is presented below as a
+flow chart and assumes that development is done using a feature branch
+based off a trunk and that revisions are done using Gerrit. These are
+not mandatory, and the PR process can be adapted to similar setups
+(e.g., GitHub). To aid the peer review process two checklists are
+presented. These checklists should be considered as templates which can
+be customized to suit the requirements and processes of specific
+libraries.</p>
+<h2 id="notes">Notes</h2>
+<p><strong>Full-debug build</strong> refers to either a GCC or AOCC
+(Clang) target that uses -Wall and -Wextra or similar flags and is the
+default defined by CMake build type “Debug.” This may also include
+checks with an address sanitizer facility.</p>
+<p><strong>Suppressions List</strong> is an optional list of source
+filenames and associated compiler/linker warnings that can be safely
+ignored. Warnings in this list are suppressed when assessing QA.</p>
+<p><strong>All Jenkins jobs</strong> refers to a collection of
+(automatic) jobs that are setup to verify code quality using debug
+builds on both Linux and Windows platforms. These jobs not only build
+but also run all the unit-tests and examples and report compiler,
+unit-tests and examples result logs. It possibly also includes jobs that
+build a code coverage report and compile the documentation.</p>
+<strong>Unit-tests</strong> refers to all test source codes related to
+the project. These may be a suite in Google Tests/CTests.
+</details>
+<h1 id="appendix-b---table-of-da_status-error-messages">Appendix B -
+Table of <code>da_status</code> error messages</h1>
+<details>
+<summary>
+Click to expand
+</summary>
+<p>As part of the PR code review make sure the use of
+<code>da_status</code> error messages are used consistently. This table
+is a general guidance for you on which enumeration should be used in
+which cases. Make sure the error description associated with it is
+verbose enough for the user to understand any corrective actions to be
+taken. Only the general-purpose enumerations are presented.</p>
+<table>
+<colgroup>
+<col style="width: 52%"/>
+<col style="width: 47%"/>
+</colgroup>
+<thead>
+<tr class="header">
+<th><strong>Enum</strong></th>
+<th><strong>Use</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>da_status_success</code></td>
+<td>Only use when operation was completed successfully</td>
+</tr>
+<tr class="even">
+<td><code>da_status_internal_error</code></td>
+<td>Only use on unexpected internal error state</td>
+</tr>
+<tr class="odd">
+<td><code>da_status_memory_error</code></td>
+<td>Use when try-catch bad_alloc exception occurs</td>
+</tr>
+<tr class="even">
+<td><code>da_status_invalid_pointer</code></td>
+<td>Use on input validation specifically for pointer</td>
+</tr>
+<tr class="odd">
+<td><code>da_status_invalid_input</code></td>
+<td>Use on input validation on any other type</td>
+</tr>
+<tr class="even">
+<td><code>da_status_not_implemented</code></td>
+<td>Indicates a feature is not implemented</td>
+</tr>
+<tr class="odd">
+<td><code>da_status_wrong_type</code></td>
+<td>Only use in public API entry to check that handle and API have the
+same type<br/><br/>This status should be returned after a statement
+similar
+to<br/><br/><code>if (handle-&gt;precision != da_double)</code></td>
+</tr>
+<tr class="even">
+<td><code>da_status_overflow</code></td>
+<td>Numerical overflow detected</td>
+</tr>
+<tr class="odd">
+<td><code>da_status_invalid_handle_type</code></td>
+<td>Only use in public API entry to check that handle type and API are
+compatible<br/><br/>This status should be returned after a statement
+similar to<br/><br/>In a linear model type double API:
+<code>if (handle-&gt;linreg_d == nullptr)</code>, that is, it checks
+that the appropriated chapter pointer is valid.</td>
+</tr>
+<tr class="even">
+<td><code>da_status_handle_not_initialized</code></td>
+<td>Indicates that the handle was not previously initialized with a
+chapter<br/><br/>This status should be returned after the statement
+<code>if (!handle)</code> or <code>if(!store)</code></td>
+</tr>
+<tr class="odd">
+<td><code>da_status_store_not_initialized</code></td>
+<td>Indicates that the handle was not previously initialized with a
+tag</td>
+</tr>
+<tr class="even">
+<td><code>da_status_invalid_option</code></td>
+<td>Setter/getter: the option is not part of the initialized handle
+chapter</td>
+</tr>
+<tr class="odd">
+<td><code>da_status_incompatible_options</code></td>
+<td>Indicates that two or more options clash and cannot continue</td>
+</tr>
+<tr class="even">
+<td><code>da_status_invalid_leading_dimension</code></td>
+<td>No handle error code</td>
+</tr>
+<tr class="odd">
+<td><code>da_status_negative_data</code></td>
+<td>No handle error code</td>
+</tr>
+<tr class="even">
+<td><code>da_status_invalid_array_dimension</code></td>
+<td>No handle error code</td>
+</tr>
+<tr class="odd">
+<td><code>da_status_unknown_query</code></td>
+<td>Only use to indicate that the API did not satisfy the query, either
+because data is not yet available or because the queried object cannot
+be satisfied by the previously called calculation API.</td>
+</tr>
+</tbody>
+</table>
+</details>
+
+</body>
+</html>

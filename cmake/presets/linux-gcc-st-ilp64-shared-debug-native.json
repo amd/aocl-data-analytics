@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-st-ilp64-shared-debug-native",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "st",
+        "ilp64",
+        "shared",
+        "native",
+        "debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-native-debug"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-st-ilp64-shared-native-debug",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-st-ilp64-shared-debug-native",
+      "configurePreset": "linux-gcc-st-ilp64-shared-debug-native",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-gcc-st-ilp64-shared-debug-native-install",
+      "configurePreset": "linux-gcc-st-ilp64-shared-debug-native",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-st-ilp64-shared-debug-native",
+      "configurePreset": "linux-gcc-st-ilp64-shared-debug-native",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-st-ilp64-shared-debug-native",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-st-ilp64-shared-debug-native"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-st-ilp64-shared-debug-native-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-gcc-st-ilp64-shared-debug-native"
+        }
+      ]
+    }
+  ]
+}

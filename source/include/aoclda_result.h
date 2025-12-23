@@ -47,6 +47,7 @@ enum da_result_ {
     // Linear models 101..200
     da_linmod_coef =
         101, ///< Optimal fitted coefficients produced by the last call to a linear regression solver.
+    da_linmod_dual_coef, ///< Optimal fitted dual coefficients produced by the last call to a linear regression solver. Only available for CG solver and when number of columns is greater or equal to number of rows.
     // Factorization 201..300
     da_pca_scores = 201, ///< Matrix of scores computed by the PCA API.
     da_pca_variance, ///< The variance explained by each component computed by the PCA API.
@@ -77,6 +78,8 @@ enum da_result_ {
     da_svm_n_iterations, ///< Number of iterations. In this context it counts the number of SMO subproblems solved, for each classifier.
     da_svm_support_vectors, ///< Support vectors
     da_svm_bias,            ///< Constant in decision function
+    da_svm_probaA, ///< Array of parameters A for each binary classifier when probability estimates are enabled.
+    da_svm_probaB, ///< Array of parameters B for each binary classifier when probability estimates are enabled.
     da_svm_dual_coef, ///< Weights assigned to each support vector, reflecting their importance in defining the optimal decision boundary.
     // ...
 };

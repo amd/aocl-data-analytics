@@ -52,7 +52,15 @@ inline da_status register_pca_options(da_options::OptionRegistry &opts,
             0, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 1));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "store U", "Whether or not to store the matrix U from the SVD.", 0,
+            "store u", "Whether or not to store the matrix U from the SVD.", 0,
+            da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
+        opts.register_opt(oi);
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "whiten", "Whether or not we whiten when transforming the data.", 0,
+            da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
+        opts.register_opt(oi);
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "whiten", "Whether or not we whiten when transforming the data.", 0,
             da_options::lbound_t::greaterequal, 1, da_options::ubound_t::lessequal, 0));
         opts.register_opt(oi);
         std::shared_ptr<OptionString> os;

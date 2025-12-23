@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -34,7 +34,7 @@ import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
 
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_pca(precision):
     """
     Basic 3 x 2 problem
@@ -95,7 +95,7 @@ def test_pca(precision):
     print("   sklearn: \n", components)
 
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_double_solve(precision):
     """"
     Check that solving the model twice doesn't fail

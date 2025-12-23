@@ -39,7 +39,7 @@ def dummy():
     return 0
 
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_kmeans(precision):
     """
     Basic 8 x 2 problem
@@ -117,7 +117,7 @@ def test_kmeans(precision):
     print("   sklearn: \n", sk_predict)
 
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_double_solve(precision):
     """"
     Check that solving the model twice doesn't fail
@@ -133,7 +133,7 @@ def test_double_solve(precision):
                   [1., 2.]], dtype=precision)
     skpatch()
     from sklearn.cluster import KMeans
-    kmeans_da = KMeans(n_clusters=2)
+    kmeans_da = KMeans(n_clusters=2, random_state=34)
     kmeans_da = kmeans_da.fit(a)
     inertia_pre = kmeans_da.inertia_
     kmeans_da = kmeans_da.fit(a)
@@ -190,8 +190,6 @@ def test_kmeans_errors():
         kmeans.set_fit_request()
 
     assert kmeans.feature_names_in_ is None
-
-
 
 
 if __name__ == "__main__":

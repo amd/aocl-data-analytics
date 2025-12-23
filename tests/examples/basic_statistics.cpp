@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -48,7 +48,8 @@ int main() {
     // Problem data
     double X[20]{1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0, 2.0, 8.0,
                  4.0, 6.0, 9.0, 5.0, 4.0, 3.0, 1.0, 1.0, 2.0, 2.0};
-    da_int n_rows = 4, n_cols = 5, ldx = 4, ldcov = 5, dof = 0, mode = 0;
+    da_int n_rows = 4, n_cols = 5, ldx = 4, ldcov = 5, dof = 0, mode = 0,
+           assume_centered = 0;
     da_order order = column_major;
 
     // Arrays for output data
@@ -101,8 +102,8 @@ int main() {
                                             maximum) == da_status_success);
 
     // Compute covariance matrix
-    pass = pass && (da_covariance_matrix_d(order, n_rows, n_cols, X, ldx, dof, cov,
-                                           ldcov) == da_status_success);
+    pass = pass && (da_covariance_matrix_d(order, n_rows, n_cols, X, ldx, dof, cov, ldcov,
+                                           assume_centered) == da_status_success);
 
     // Standardize the original data matrix
     pass = pass && (da_standardize_d(order, da_axis_col, n_rows, n_cols, X, ldx, dof,

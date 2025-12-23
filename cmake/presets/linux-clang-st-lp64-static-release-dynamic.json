@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-clang-st-lp64-static-release-dynamic",
+      "inherits": [
+        "base",
+        "linux",
+        "clang",
+        "st",
+        "lp64",
+        "static",
+        "dynamic",
+        "release"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-clang-dynamic-release"
+      },
+      "binaryDir": "${sourceDir}/build-linux-clang-st-lp64-static-dynamic-release",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-clang-st-lp64-static-release-dynamic",
+      "configurePreset": "linux-clang-st-lp64-static-release-dynamic",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-clang-st-lp64-static-release-dynamic-install",
+      "configurePreset": "linux-clang-st-lp64-static-release-dynamic",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-clang-st-lp64-static-release-dynamic",
+      "configurePreset": "linux-clang-st-lp64-static-release-dynamic",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-clang-st-lp64-static-release-dynamic",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-clang-st-lp64-static-release-dynamic"
+        },
+        {
+          "type": "build",
+          "name": "linux-clang-st-lp64-static-release-dynamic-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-clang-st-lp64-static-release-dynamic"
+        }
+      ]
+    }
+  ]
+}

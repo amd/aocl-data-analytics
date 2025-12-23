@@ -30,6 +30,8 @@
 #include <cmath>
 #include <iostream>
 
+#ifndef NO_FORTRAN
+
 using namespace TEST_ARCH;
 
 template <typename T> int solve(void) {
@@ -131,3 +133,5 @@ int main(void) {
     status += solve<float>();
     return status;
 }
+
+#endif

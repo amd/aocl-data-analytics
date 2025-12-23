@@ -44,8 +44,22 @@ template <typename T> qr_data<T>::qr_data(da_int nsamples, da_int nfeat) {
     n_col = std::min(nsamples, nfeat);
     n_row = std::max(nsamples, nfeat);
     tau.resize(n_col);
-    lwork = n_col;
+    lwork = 1;
     work.resize(lwork);
+
+    da_int qlwork{-1};
+    da_int info{1};
+    T X[1];
+    da::geqrf(&n_row, &n_col, X, &n_row, tau.data(), work.data(), &qlwork, &info);
+    qlwork = work[0]; // get optimal size of work array
+    if (info != 0 || qlwork < 0) {
+        throw std::runtime_error(
+            "encountered an unexpected error while quering work array size in the QR "
+            "factorization (geqrf INFO=" +
+            std::to_string(info) + ")");
+    }
+    work.resize(qlwork);
+    lwork = qlwork;
 };
 
 template struct qr_data<float>;

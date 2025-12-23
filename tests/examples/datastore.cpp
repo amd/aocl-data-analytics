@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -70,7 +70,7 @@ int main() {
     da_handle handle;
     da_handle_init_d(&handle, da_handle_linmod);
     da_linmod_select_model_d(handle, linmod_model_mse);
-    da_linmod_define_features_d(handle, 5, 2, features.data(), rhs.data());
+    da_linmod_define_features_d(handle, 5, 2, features.data(), 5, rhs.data());
 
     // Solve the problem
     status = da_linmod_fit_d(handle);

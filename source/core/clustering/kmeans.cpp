@@ -28,28 +28,24 @@
 #include "da_omp.hpp"
 #include "da_std.hpp"
 #include "hartigan_wong.hpp"
-#include "kmeans_loop_unrolls.hpp"
 #include "kmeans_options.hpp"
 #include "kmeans_types.hpp"
 #include "lapack_templates.hpp"
 #include "macros.h"
+#include "miscellaneous.hpp"
 #include "pairwise_distances.hpp"
 #include <cstdlib>
-#include <iostream>
 #include <numeric>
 #include <random>
 #include <string>
 #include <type_traits>
-
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 
 namespace ARCH {
 
 namespace da_kmeans {
 
 using namespace da_kmeans_types;
+using namespace std::literals::string_literals;
 
 template <typename T> kmeans<T>::~kmeans() {
     // Destructor needs to handle arrays that were allocated due to row major storage of input data
@@ -114,7 +110,7 @@ da_status kmeans<T>::get_result(da_result query, da_int *dim, T *result) {
 
 template <typename T>
 da_status kmeans<T>::get_result(da_result query, da_int *dim, da_int *result) {
-    // Don't return anything if k-means has not been computed
+    // Don't return anything if k-means clustering has not been computed
     if (!iscomputed) {
         return da_warn(this->err, da_status_no_data,
                        "k-means clustering has not yet been computed. Please call "
@@ -142,12 +138,31 @@ da_status kmeans<T>::get_result(da_result query, da_int *dim, da_int *result) {
     return da_status_success;
 };
 
+template <typename T> void kmeans<T>::refresh() {
+
+    // Reset internal class variables to their defaults
+    best_n_iter = 0;
+    current_n_iter = 0;
+    warn_maxit_reached = false;
+    converged = 0;
+    normc = 0.0;
+    max_block_size = 0;
+    n_blocks = 0;
+    block_rem = 0;
+    ldworkcs1 = 0;
+    best_inertia = 0.0;
+    current_inertia = 0.0;
+    padding = 0;
+}
+
 /* Store details about user's data matrix in preparation for k-means computation */
 template <typename T>
 da_status kmeans<T>::set_data(da_int n_samples, da_int n_features, const T *A_in,
                               da_int lda_in) {
 
     // Guard against errors due to multiple calls using the same class instantiation
+    this->refresh();
+
     if (A_temp) {
         delete[] (A_temp);
         A_temp = nullptr;
@@ -276,21 +291,35 @@ template <typename T> da_status kmeans<T>::compute() {
     switch (algorithm) {
     case lloyd:
         max_block_size = KMEANS_LLOYD_BLOCK_SIZE;
-        initialize_algorithm = &kmeans<T>::init_lloyd;
+        // Assign lloyd_kernel to the correct AVX kernel and get the required padding for use in memory allocation
+        assign_lloyd_kernel(lloyd_kernel, this->padding, n_clusters);
+        single_iteration = std::bind(&kmeans<T>::lloyd_iteration, this,
+                                     std::placeholders::_1, std::placeholders::_2);
+        // Lloyd requires no further initialization so set initialize_algorithm to nullptr
+        initialize_algorithm = nullptr;
         break;
     case elkan:
         max_block_size = KMEANS_ELKAN_BLOCK_SIZE;
-        initialize_algorithm = &kmeans<T>::init_elkan;
+        // Assign elkan_kernel to the correct AVX kernel and get the required padding for use in memory allocation
+        assign_elkan_kernels(elkan_update_kernel, elkan_reduce_kernel, this->padding,
+                             n_clusters, n_features);
+        single_iteration = std::bind(&kmeans<T>::elkan_iteration, this,
+                                     std::placeholders::_1, std::placeholders::_2);
+        initialize_algorithm = std::bind(&kmeans<T>::init_elkan, this);
         break;
     case macqueen:
         max_block_size = KMEANS_MACQUEEN_BLOCK_SIZE;
-        initialize_algorithm = &kmeans<T>::init_macqueen;
+        single_iteration = std::bind(&kmeans<T>::macqueen_iteration, this,
+                                     std::placeholders::_1, std::placeholders::_2);
+        initialize_algorithm = std::bind(&kmeans<T>::init_macqueen, this);
         break;
     default:
         max_block_size = n_samples;
         break;
     }
+
     max_block_size = std::min(max_block_size, n_samples);
+    ldworkcs1 = n_clusters + padding;
 
     da_int n_threads = omp_get_max_threads();
 
@@ -302,13 +331,13 @@ template <typename T> da_status kmeans<T>::compute() {
         cluster_count.resize(n_clusters, 0);
         work_int1.resize(n_clusters * n_threads, 0);
         work_int2.resize(n_samples, 0);
-        // Extra bit on workc1 just to enable some padding to be done if loop unrolling occurs
-        workc1.resize(n_clusters + 8, 0.0);
+        // Extra bit on workc1 just to enable some padding to be done for vectorization
+        workc1.resize(n_clusters + padding, 0.0);
         current_labels->resize(n_samples, 0);
         previous_labels->resize(n_samples, 0);
         if (n_init > 1) {
-            best_cluster_centres->resize(n_clusters * n_features);
-            best_labels->resize(n_samples);
+            best_cluster_centres->resize(n_clusters * n_features, 0.0);
+            best_labels->resize(n_samples, 0);
         }
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
@@ -316,7 +345,8 @@ template <typename T> da_status kmeans<T>::compute() {
     }
 
     // Ensure the extra padding in workc1 (for vectorization) won't interfere with any computation
-    da_std::fill(workc1.end() - 8, workc1.end(), std::numeric_limits<T>::infinity());
+    da_std::fill(workc1.end() - padding, workc1.end(),
+                 std::numeric_limits<T>::infinity());
 
     // Based on what algorithms we are using, allocate the remaining memory
     try {
@@ -324,7 +354,7 @@ template <typename T> da_status kmeans<T>::compute() {
         switch (algorithm) {
         case elkan:
             workcc1.resize(n_clusters * n_clusters, 0.0);
-            workcs1.resize(n_samples * (n_clusters + 8), 0.0);
+            workcs1.resize(n_samples * (n_clusters + padding), 0.0);
             works1.resize(n_samples, 0.0);
             break;
         case macqueen:
@@ -332,7 +362,7 @@ template <typename T> da_status kmeans<T>::compute() {
             workc2.resize(n_clusters, 0.0);
             break;
         case lloyd:
-            workcs1.resize(max_block_size * (n_clusters + 8) * n_threads, 0.0);
+            workcs1.resize(max_block_size * (n_clusters + padding) * n_threads, 0.0);
             works1.resize(n_samples, 0.0);
             break;
         case hartigan_wong:
@@ -462,10 +492,10 @@ da_status kmeans<T>::transform(da_int m_samples, da_int m_features, const T *X,
     }
 
     // Compute m_samples x n_clusters matrix of distances to cluster centres
-    ARCH::euclidean_distance(column_major, m_samples, n_clusters, n_features, X_temp,
-                             ldx_temp, (*best_cluster_centres).data(), n_clusters,
-                             X_transform_temp, ldx_transform_temp, x_work.data(), 2,
-                             workc1.data(), 1, false, false);
+    ARCH::euclidean_gemm_distance(column_major, m_samples, n_clusters, n_features, X_temp,
+                                  ldx_temp, (*best_cluster_centres).data(), n_clusters,
+                                  X_transform_temp, ldx_transform_temp, x_work.data(), 2,
+                                  workc1.data(), 1, false, false);
 
     if (this->order == row_major) {
 
@@ -478,6 +508,90 @@ da_status kmeans<T>::transform(da_int m_samples, da_int m_features, const T *X,
     }
 
     return da_status_success;
+}
+
+template <typename T>
+void kmeans<T>::assign_lloyd_kernel(
+    std::function<void(bool, da_int, T *, da_int *, da_int *, T *, da_int, da_int)>
+        &kernel,
+    da_int &padding, da_int n_clusters) {
+    vectorization_type vec_type;
+    select_simd_size_lloyd<T>(n_clusters, padding, vec_type);
+    // Add telemetry
+    context_set_hidden_settings("kmeans.setup"s,
+                                "kernel=lloyd,kernel.type="s + std::to_string(vec_type) +
+                                    ",kernel.padding="s + std::to_string(padding));
+    switch (vec_type) {
+    case vectorization_type::avx:
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx>;
+        break;
+    case vectorization_type::avx2:
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx2>;
+        break;
+    case vectorization_type::avx512:
+#ifdef __AVX512F__
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx512>;
+#else
+        kernel = lloyd_iteration_kernel<T, vectorization_type::avx2>;
+#endif
+        break;
+    default:
+        kernel = lloyd_iteration_kernel<T, vectorization_type::scalar>;
+        break;
+    }
+}
+
+template <typename T>
+void kmeans<T>::assign_elkan_kernels(
+    std::function<void(da_int, T *, da_int, T *, T *, da_int *, da_int)> &update_kernel,
+    std::function<T(da_int, const T *, da_int, T *, da_int)> &reduce_kernel,
+    da_int &padding, da_int n_clusters, da_int n_features) {
+    vectorization_type update_vec_type, reduce_vec_type;
+
+    // The update kernel is more complicated to assign as it depends on the number of clusters
+    select_simd_size_elkan<T>(n_clusters, n_features, padding, update_vec_type,
+                              reduce_vec_type);
+    // Add telemetry
+    context_set_hidden_settings(
+        "kmeans.setup"s,
+        "kernel=elkan,kernel.update_kernel.type="s + std::to_string(update_vec_type) +
+            ",kernel.reduce_kernel.type="s + std::to_string(reduce_vec_type) +
+            ",kernel.padding="s + std::to_string(padding));
+    switch (update_vec_type) {
+    case vectorization_type::avx:
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx>;
+        break;
+    case vectorization_type::avx2:
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx2>;
+        break;
+    case vectorization_type::avx512:
+#ifdef __AVX512F__
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx512>;
+#else
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::avx2>;
+#endif
+        break;
+    default:
+        update_kernel = elkan_iteration_kernel<T, vectorization_type::scalar>;
+        break;
+    }
+
+    switch (reduce_vec_type) {
+    case vectorization_type::avx:
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::avx>;
+        break;
+    case vectorization_type::avx512:
+#ifdef __AVX512F__
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::avx512>;
+        break;
+#endif
+    case vectorization_type::avx2:
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::avx2>;
+        break;
+    default:
+        reduce_kernel = elkan_reduction_kernel<T, vectorization_type::scalar>;
+        break;
+    }
 }
 
 template <typename T>
@@ -516,40 +630,34 @@ da_status kmeans<T>::predict(da_int k_samples, da_int k_features, const T *Y, da
     da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
 
     da_int ldy_work;
+    // Assign predict_kernel to the correct lloyd kernel and get the required padding
+    da_int padding = 0;
+    assign_lloyd_kernel(predict_kernel, padding, n_clusters);
 
     try {
-        y_work.resize(max_block_size * (n_clusters + 8) * n_threads);
+        y_work.resize(max_block_size * (n_clusters + padding) * n_threads);
+        // Add padding to workc1 if needed but don't overwrite existing values
+        workc1.resize(n_clusters + padding);
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
     }
+    da_std::fill(workc1.end() - padding, workc1.end(),
+                 std::numeric_limits<T>::infinity());
 
-    if (n_clusters < 4) {
-        ldy_work = n_clusters + 8;
-        predict_block = &kmeans<T>::lloyd_iteration_block_no_unroll;
-    } else if (n_clusters < 6) {
-        ldy_work = max_block_size;
-        predict_block = &kmeans<T>::lloyd_iteration_block_unroll_4_T;
-    } else if (n_clusters < 16) {
-        predict_block = &kmeans<T>::lloyd_iteration_block_unroll_4;
-        ldy_work = n_clusters + 8;
-    } else {
-        predict_block = &kmeans<T>::lloyd_iteration_block_unroll_8;
-        ldy_work = n_clusters + 8;
-    }
+    ldy_work = n_clusters + padding;
 
-    T *dummy = nullptr;
     da_int *dummy_int = nullptr;
     da_int block_index;
     da_int block_size = max_block_size;
 
 #pragma omp parallel firstprivate(block_size) private(block_index)                       \
     shared(n_blocks, block_rem, k_samples, max_block_size, Y_temp, ldy_temp,             \
-               best_cluster_centres, dummy, workc1, dummy_int, Y_labels, y_work,         \
+               best_cluster_centres, workc1, dummy_int, Y_labels, y_work, padding,       \
                ldy_work) default(none) num_threads(n_threads)
     {
         da_int y_work_index =
-            ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + 8);
+            ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + padding);
 #pragma omp for schedule(dynamic)
         for (da_int i = 0; i < n_blocks; i++) {
             if (i == n_blocks - 1 && block_rem > 0) {
@@ -558,10 +666,19 @@ da_status kmeans<T>::predict(da_int k_samples, da_int k_features, const T *Y, da
             } else {
                 block_index = i * max_block_size;
             }
-            (this->*predict_block)(false, block_size, &Y_temp[block_index], ldy_temp,
-                                   (*best_cluster_centres).data(), dummy, workc1.data(),
-                                   dummy_int, &Y_labels[block_index],
-                                   &y_work[y_work_index], ldy_work);
+
+            // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
+            // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
+            // Array access patterns mean for this loop it is quicker to form -2CA^T
+            da_blas::cblas_gemm(
+                CblasColMajor, CblasNoTrans, CblasTrans, n_clusters, block_size,
+                n_features, -2.0, (*best_cluster_centres).data(), n_clusters,
+                &Y_temp[block_index], ldy_temp, 0.0, &y_work[y_work_index], ldy_work);
+
+            // Loop through the samples and find the closest cluster centre and its label
+            predict_kernel(false, block_size, workc1.data(), dummy_int,
+                           &Y_labels[block_index], &y_work[y_work_index], ldy_work,
+                           n_clusters);
         }
     }
 
@@ -571,22 +688,8 @@ da_status kmeans<T>::predict(da_int k_samples, da_int k_features, const T *Y, da
     return da_status_success;
 }
 
-/* Initialization function for Elkan's algorithm */
-template <typename T> void kmeans<T>::init_elkan() {
-    ldworkcs1 = n_clusters + 8;
-    if (n_clusters < 4) {
-        elkan_iteration_update_block = &kmeans<T>::elkan_iteration_update_block_no_unroll;
-    } else if (n_clusters < 16) {
-        elkan_iteration_update_block = &kmeans<T>::elkan_iteration_update_block_unroll_4;
-    } else {
-        elkan_iteration_update_block = &kmeans<T>::elkan_iteration_update_block_unroll_8;
-    }
-    init_elkan_bounds();
-    single_iteration = &kmeans<T>::elkan_iteration;
-}
-
 /* Initialize the upper and lower bounds for Elkan's method; stored in works1 and workcs1 */
-template <typename T> void kmeans<T>::init_elkan_bounds() {
+template <typename T> void kmeans<T>::init_elkan() {
 
     compute_centre_half_distances();
     da_int label;
@@ -772,15 +875,13 @@ void kmeans<T>::elkan_iteration(bool update_centres, da_int n_threads) {
                 } else {
                     block_index = i * max_block_size;
                 }
-                (this->*elkan_iteration_update_block)(
-                    block_size, &workcs1[block_index * ldworkcs1], ldworkcs1,
-                    &works1[block_index], workc1.data(), &(*current_labels)[block_index]);
+                elkan_update_kernel(block_size, &workcs1[block_index * ldworkcs1],
+                                    ldworkcs1, &works1[block_index], workc1.data(),
+                                    &(*current_labels)[block_index], n_clusters);
             }
         } else {
-
-            (this->*elkan_iteration_update_block)(n_samples, workcs1.data(), ldworkcs1,
-                                                  works1.data(), workc1.data(),
-                                                  (*current_labels).data());
+            elkan_update_kernel(n_samples, workcs1.data(), ldworkcs1, works1.data(),
+                                workc1.data(), (*current_labels).data(), n_clusters);
         }
     }
 
@@ -821,12 +922,11 @@ void kmeans<T>::elkan_iteration_assign_block(
                     if (tight_bounds == false) {
                         // Get distance from sample point to currently assigned centre
                         u_bound = (T)0.0;
-#pragma omp simd reduction(+ : u_bound)
-                        for (da_int k = 0; k < n_features; k++) {
-                            T tmp = data[i + k * lddata] -
-                                    old_cluster_centres[label + k * n_clusters];
-                            u_bound += tmp * tmp;
-                        }
+
+                        u_bound =
+                            elkan_reduce_kernel(n_features, &data[i], lddata,
+                                                &old_cluster_centres[label], n_clusters);
+
                         u_bound = std::sqrt(u_bound);
                         l_bounds[l_bounds_index + label] = u_bound;
                         tight_bounds = true;
@@ -835,12 +935,9 @@ void kmeans<T>::elkan_iteration_assign_block(
                     // If condition still holds then compute distance to candidate centre and check
                     if (u_bound > l_bound || u_bound > centre_half_distance) {
                         T dist = (T)0.0;
-#pragma omp simd reduction(+ : dist)
-                        for (da_int k = 0; k < n_features; k++) {
-                            T tmp = data[i + k * lddata] -
-                                    old_cluster_centres[j + k * n_clusters];
-                            dist += tmp * tmp;
-                        }
+
+                        dist = elkan_reduce_kernel(n_features, &data[i], lddata,
+                                                   &old_cluster_centres[j], n_clusters);
 
                         dist = std::sqrt(dist);
                         l_bounds[l_bounds_index + j] = dist;
@@ -873,10 +970,10 @@ void kmeans<T>::elkan_iteration_assign_block(
 template <typename T> void kmeans<T>::compute_centre_half_distances() {
     T *dummy = nullptr;
 
-    ARCH::euclidean_distance(column_major, n_clusters, n_clusters, n_features,
-                             (*current_cluster_centres).data(), n_clusters, dummy, 0,
-                             workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0,
-                             false, true);
+    ARCH::euclidean_gemm_distance(column_major, n_clusters, n_clusters, n_features,
+                                  (*current_cluster_centres).data(), n_clusters, dummy, 0,
+                                  workcc1.data(), n_clusters, workc1.data(), 2, dummy, 0,
+                                  false, true);
     // For each centre, compute the half distance to next closest centre and store in workc1
     da_std::fill(workc1.begin(), workc1.begin() + n_clusters,
                  std::numeric_limits<T>::infinity());
@@ -891,21 +988,6 @@ template <typename T> void kmeans<T>::compute_centre_half_distances() {
             if (tmp < workc1[j])
                 workc1[j] = tmp;
         }
-    }
-}
-
-template <typename T> void kmeans<T>::init_lloyd() {
-    single_iteration = &kmeans<T>::lloyd_iteration;
-    ldworkcs1 = n_clusters + 8;
-    if (n_clusters < 4) {
-        lloyd_iteration_block = &kmeans<T>::lloyd_iteration_block_no_unroll;
-    } else if (n_clusters < 6) {
-        ldworkcs1 = max_block_size;
-        lloyd_iteration_block = &kmeans<T>::lloyd_iteration_block_unroll_4_T;
-    } else if (n_clusters < 16) {
-        lloyd_iteration_block = &kmeans<T>::lloyd_iteration_block_unroll_4;
-    } else {
-        lloyd_iteration_block = &kmeans<T>::lloyd_iteration_block_unroll_8;
     }
 }
 
@@ -962,7 +1044,7 @@ void kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
             da_int thread_cluster_centres_index =
                 (da_int)omp_get_thread_num() * n_clusters * n_features;
             da_int workcs1_index =
-                ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + 8);
+                ((da_int)omp_get_thread_num()) * max_block_size * (n_clusters + padding);
 #pragma omp for nowait schedule(dynamic)
             for (da_int i = 0; i < n_blocks; i++) {
                 if (i == n_blocks - 1 && block_rem > 0) {
@@ -971,12 +1053,25 @@ void kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
                 } else {
                     block_index = i * max_block_size;
                 }
-                (this->*lloyd_iteration_block)(
-                    update_centres, block_size, &A[block_index], lda,
-                    (*previous_cluster_centres).data(),
-                    &thread_cluster_centres[thread_cluster_centres_index], workc1.data(),
-                    &work_int1[work_int1_index], &(*current_labels)[block_index],
-                    &workcs1[workcs1_index], ldworkcs1);
+
+                // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
+                // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
+                // Array access patterns mean for this loop it is quicker to form -2CA^T
+                da_blas::cblas_gemm(
+                    CblasColMajor, CblasNoTrans, CblasTrans, n_clusters, block_size,
+                    n_features, -2.0, (*previous_cluster_centres).data(), n_clusters,
+                    &A[block_index], lda, 0.0, &workcs1[workcs1_index], ldworkcs1);
+
+                // Loop through the samples and find the closest cluster centre and its label
+                lloyd_kernel(update_centres, block_size, workc1.data(),
+                             &work_int1[work_int1_index], &(*current_labels)[block_index],
+                             &workcs1[workcs1_index], ldworkcs1, n_clusters);
+
+                if (update_centres)
+                    lloyd_iteration_update_centres(
+                        block_size, &A[block_index], lda,
+                        &thread_cluster_centres[thread_cluster_centres_index],
+                        &(*current_labels)[block_index]);
             }
             // Now aggregate work_int1 into cluster_count and thread_cluster_centres into current_cluster_centres
             // The while loop is used because we don't mind what order each thread executes the two critical regions
@@ -1013,11 +1108,24 @@ void kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
             } else {
                 block_index = i * max_block_size;
             }
-            (this->*lloyd_iteration_block)(
-                update_centres, block_size, &A[block_index], lda,
-                (*previous_cluster_centres).data(), (*current_cluster_centres).data(),
-                workc1.data(), cluster_count.data(), &(*current_labels)[block_index],
-                workcs1.data(), ldworkcs1);
+
+            // Compute the matrix D where D_{ij} = ||C_j||^2 - 2 A C^T
+            // Don't form it explicitly though: just form -2AC^T and add the ||C_j||^2 as and when we need them
+            // Array access patterns mean for this loop it is quicker to form -2CA^T
+            da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, n_clusters,
+                                block_size, n_features, -2.0,
+                                (*previous_cluster_centres).data(), n_clusters,
+                                &A[block_index], lda, 0.0, workcs1.data(), ldworkcs1);
+
+            // Loop through the samples and find the closest cluster centre and its label
+            lloyd_kernel(update_centres, block_size, workc1.data(), cluster_count.data(),
+                         &(*current_labels)[block_index], workcs1.data(), ldworkcs1,
+                         n_clusters);
+
+            if (update_centres)
+                lloyd_iteration_update_centres(block_size, &A[block_index], lda,
+                                               (*current_cluster_centres).data(),
+                                               &(*current_labels)[block_index]);
         }
     }
 
@@ -1026,6 +1134,31 @@ void kmeans<T>::lloyd_iteration(bool update_centres, da_int n_threads) {
 
         // Compute change in centres in this iteration
         compute_centre_shift();
+    }
+}
+
+/* During the Lloyd iteration, update the cenres of the computed clusters */
+template <typename T>
+void kmeans<T>::lloyd_iteration_update_centres(da_int block_size, const T *data,
+                                               da_int lddata, T *new_cluster_centres,
+                                               da_int *labels) {
+    if (n_features > block_size / 2) {
+        for (da_int j = 0; j < n_features; j++) {
+            da_int jnc = j * n_clusters;
+            da_int jld = j * lddata;
+            for (da_int i = 0; i < block_size; i++) {
+                da_int label = labels[i];
+                new_cluster_centres[label + jnc] += data[i + jld];
+            }
+        }
+    } else {
+        for (da_int i = 0; i < block_size; i++) {
+            da_int label = labels[i];
+            // Add this sample to the cluster mean
+            for (da_int j = 0; j < n_features; j++) {
+                new_cluster_centres[label + j * n_clusters] += data[i + j * lddata];
+            }
+        }
     }
 }
 
@@ -1048,9 +1181,6 @@ template <typename T> void kmeans<T>::scale_current_cluster_centres() {
 
 /* Initialization for MacQueen's method */
 template <typename T> void kmeans<T>::init_macqueen() {
-    ldworkcs1 = n_clusters;
-
-    single_iteration = &kmeans<T>::macqueen_iteration;
 
     for (da_int j = 0; j < n_clusters; j++) {
         cluster_count[j] = 0; // Initialize to zero for use later
@@ -1149,10 +1279,10 @@ void kmeans<T>::macqueen_iteration(bool update_centres,
 
         T *dummy = nullptr;
         T tmp;
-        ARCH::euclidean_distance(column_major, 1, n_clusters, n_features, &A[i], lda,
-                                 (*current_cluster_centres).data(), n_clusters,
-                                 workc2.data(), 1, dummy, 0, workc1.data(), 1, true,
-                                 false);
+        ARCH::euclidean_gemm_distance(column_major, 1, n_clusters, n_features, &A[i], lda,
+                                      (*current_cluster_centres).data(), n_clusters,
+                                      workc2.data(), 1, dummy, 0, workc1.data(), 1, true,
+                                      false);
 
         T smallest_dist = workc2[0];
         da_int closest_centre = 0;
@@ -1249,15 +1379,15 @@ template <typename T> void kmeans<T>::perform_kmeans() {
     da_utils::blocking_scheme(n_samples, max_block_size, n_blocks, block_rem);
 
     da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
-
-    (this->*initialize_algorithm)();
+    if (initialize_algorithm)
+        initialize_algorithm();
 
     for (current_n_iter = 0; current_n_iter < max_iter; current_n_iter++) {
         // Start with the 'old' centres stored in previous_cluster_centres
         std::swap(previous_cluster_centres, current_cluster_centres);
         std::swap(previous_labels, current_labels);
 
-        (this->*single_iteration)(true, n_threads);
+        single_iteration(true, n_threads);
 
         // Check for convergence
         converged = convergence_test();
@@ -1271,7 +1401,7 @@ template <typename T> void kmeans<T>::perform_kmeans() {
         std::swap(previous_labels, current_labels);
         std::swap(previous_cluster_centres, current_cluster_centres);
         // Perform one more iteration to update labels, but without updating the cluster centres
-        (this->*single_iteration)(false, n_threads);
+        single_iteration(false, n_threads);
         std::swap(previous_cluster_centres, current_cluster_centres);
     }
 
@@ -1391,6 +1521,7 @@ template <typename T> void kmeans<T>::initialize_centres() {
 template <typename T> void kmeans<T>::kmeans_plusplus() {
 
     // Compute squared norms of the data points and store in works1
+    da_std::fill(works1.begin(), works1.end(), (T)0.0);
     for (da_int j = 0; j < n_features; j++) {
         for (da_int i = 0; i < n_samples; i++) {
             works1[i] += A[j * lda + i] * A[j * lda + i];
@@ -1408,9 +1539,9 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
     }
 
     T dummy = (T)0.0;
-    ARCH::euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
-                             (*current_cluster_centres).data(), n_clusters, works3.data(),
-                             n_samples, works1.data(), 1, &dummy, 2, true, false);
+    ARCH::euclidean_gemm_distance(
+        column_major, n_samples, 1, n_features, A, lda, (*current_cluster_centres).data(),
+        n_clusters, works3.data(), n_samples, works1.data(), 1, &dummy, 2, true, false);
 
     // Numerical errors could cause one of the distances to be slightly negative, leading to undefined behaviour in std::discrete_distribution
     works3[random_int] = (T)0.0;
@@ -1466,10 +1597,10 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
                 da_int current_candidate = work_int2[trials];
 
                 // Compute the distance from each point to the candidate centre and store in works4
-                ARCH::euclidean_distance(column_major, n_samples, 1, n_features, A, lda,
-                                         &A[current_candidate], lda, works4.data(),
-                                         n_samples, works1.data(), 1,
-                                         &works1[current_candidate], 1, true, false);
+                ARCH::euclidean_gemm_distance(column_major, n_samples, 1, n_features, A,
+                                              lda, &A[current_candidate], lda,
+                                              works4.data(), n_samples, works1.data(), 1,
+                                              &works1[current_candidate], 1, true, false);
                 // Get minimum squared distance of each sample point to potential centre
                 current_cost = 0;
                 for (da_int j = 0; j < n_samples; j++) {

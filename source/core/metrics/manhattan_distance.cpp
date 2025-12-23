@@ -31,52 +31,90 @@
 #include "da_error.hpp"
 #include "da_std.hpp"
 #include "pairwise_distances.hpp"
+#include "partitioning_infrastructure.hpp"
 
 namespace ARCH {
 namespace da_metrics {
 namespace pairwise_distances {
 
+// Functor for Manhattan distance calculation
+template <typename T, da_int MR, da_int NR> struct ManhattanKernelFunctor_packed {
+    inline void operator()(da_int m, da_int n, da_int k, const T *Atilde, const T *Btilde,
+                           T *C, da_int ldc, T *C_temp) const {
+
+        // Call microkernel if we have a full block
+        if ((m == MR) && (n == NR)) {
+#if defined(__AVX512F__)
+            avx512::manhattan_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C, ldc);
+#elif defined(__AVX2__)
+            avx2::manhattan_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C, ldc);
+#endif
+        } else { //Call simple kernel if we have a partial block
+            for (da_int j = 0; j < n; j++)
+                for (da_int i = 0; i < m; i++)
+                    ctemp_matrix(i, j) = c_matrix(i, j);
+
+#if defined(__AVX512F__)
+            avx512::manhattan_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C_temp, MR);
+#elif defined(__AVX2__)
+            avx2::manhattan_kernel_packed<T, MR, NR>(k, Atilde, Btilde, C_temp, MR);
+#endif
+
+            for (da_int j = 0; j < n; j++)
+                for (da_int i = 0; i < m; i++)
+                    c_matrix(i, j) = ctemp_matrix(i, j);
+        }
+    }
+};
+
 template <typename T>
 da_status manhattan(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
                     const T *Y, da_int ldy, T *D, da_int ldd) {
-    da_status status = da_status_success;
-    const T *Y_new = Y;
-    // We want to compute the distance of X to itself
-    // The sizes are copies so it's safe to update them
-    if (Y == nullptr) {
-        n = m;
-        ldy = ldx;
-        Y_new = X;
-    }
-    if (order == column_major) {
-        // Go through the columns of D
-        for (da_int j = 0; j < n; j++) {
-            // Fill the column Dj with zeros
-            da_std::fill(D + j * ldd, D + j * ldd + m, 0.0);
-            // Go through the columns of both X and Y
-            for (da_int l = 0; l < k; l++) {
-                // Go through the rows of X (also updating the rows of D)
-                for (da_int i = 0; i < m; i++) {
-                    D[i + j * ldd] += std::abs(X[i + l * ldx] - Y_new[j + l * ldy]);
-                }
-            }
+
+    constexpr da_int MR = BlockSizes<T>::MR;
+    constexpr da_int NR = BlockSizes<T>::NR;
+    constexpr da_int MC = BlockSizes<T>::MC;
+    constexpr da_int NC = BlockSizes<T>::NC;
+    constexpr da_int KC = BlockSizes<T>::KC;
+
+    ManhattanKernelFunctor_packed<T, MR, NR> kernel_op;
+
+    if (order == row_major) {
+        const T *Y_new = Y;
+        // We want to compute the distance of X to itself
+        // The sizes are copies so it's safe to update them
+        if (!Y) {
+            n = m;
+
+            ldy = ldx;
+            Y_new = X;
         }
+
+        // Create temporary vectors X_col and Y_col
+        std::vector<T> X_col(m * k), Y_col(n * k), D_col(m * n);
+        // Transpose X_col and Y_col so that now the data of X and Y are
+        // stored in column major order
+        da_blas::omatcopy('T', k, m, 1.0, X, ldx, X_col.data(), m);
+        da_blas::omatcopy('T', k, n, 1.0, Y_new, ldy, Y_col.data(), n);
+
+        LoopFive_packed<T, MR, NR, MC, NC, KC>(m, n, k, X_col.data(), m, Y_col.data(), n,
+                                               D_col.data(), m, kernel_op);
+        // Transpose D to return data in column major order
+        da_blas::omatcopy('T', m, n, 1.0, D_col.data(), m, D, ldd);
     } else {
-        // Go through the rows of D
-        for (da_int i = 0; i < m; i++) {
-            // Fill the row Di with zeros
-            da_std::fill(D + i * ldd, D + i * ldd + n, 0.0);
-            // Go through the columns of both X and Y
-            for (da_int l = 0; l < k; l++) {
-                // Go through the columns of X (also updating the columns of D)
-                for (da_int j = 0; j < n; j++) {
-                    D[i * ldd + j] += std::abs(X[i * ldx + l] - Y_new[j * ldy + l]);
-                }
-            }
+        const T *Y_new = Y;
+        // We want to compute the distance of X to itself
+        // The sizes are copies so it's safe to update them
+        if (!Y) {
+            n = m;
+            ldy = ldx;
+            Y_new = X;
         }
+        LoopFive_packed<T, MR, NR, MC, NC, KC>(m, n, k, X, ldx, Y_new, ldy, D, ldd,
+                                               kernel_op);
     }
 
-    return status;
+    return da_status_success;
 }
 
 template da_status manhattan<float>(da_order order, da_int m, da_int n, da_int k,

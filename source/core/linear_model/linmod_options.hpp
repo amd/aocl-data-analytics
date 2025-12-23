@@ -113,7 +113,7 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts,
             "Tolerance to declare convergence for the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps(10, 2), tol.safe_eps_latex(10, 2)));
+            1.e-4, "10^{-4}"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "optim progress factor",
@@ -121,6 +121,13 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts,
             "option in the corresponding optimization solver documentation.",
             0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
+        opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "optim dual gap tol",
+            "Tolerance to declare convergence based on the estimate of dual gap size. "
+            "See option in the corresponding optimization solver documentation.",
+            0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::p_inf,
+            1.e-4, "10^{-4}"));
         opts.register_opt(oT);
 
         std::shared_ptr<OptionString> os;

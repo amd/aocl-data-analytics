@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-dynamic",
+      "inherits": [
+        "base",
+        "win",
+        "msvc",
+        "mt",
+        "ilp64",
+        "shared",
+        "dynamic",
+        "debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-win-dynamic-debug"
+      },
+      "binaryDir": "${sourceDir}/build-win-mt-ilp64-shared-dynamic-debug",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-dynamic",
+      "configurePreset": "win-mt-ilp64-shared-debug-dynamic",
+      "inherits": "base"
+    },
+    {
+      "name": "win-mt-ilp64-shared-debug-dynamic-install",
+      "configurePreset": "win-mt-ilp64-shared-debug-dynamic",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-dynamic",
+      "configurePreset": "win-mt-ilp64-shared-debug-dynamic",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-dynamic",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "win-mt-ilp64-shared-debug-dynamic"
+        },
+        {
+          "type": "build",
+          "name": "win-mt-ilp64-shared-debug-dynamic-install"
+        },
+        {
+          "type": "test",
+          "name": "win-mt-ilp64-shared-debug-dynamic"
+        }
+      ]
+    }
+  ]
+}

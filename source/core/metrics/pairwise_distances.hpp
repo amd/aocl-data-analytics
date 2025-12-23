@@ -32,10 +32,10 @@
 namespace ARCH {
 
 template <typename T>
-void euclidean_distance(da_order order, da_int m, da_int n, da_int k, const T *X,
-                        da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T *X_norms,
-                        da_int compute_X_norms, T *Y_norms, da_int compute_Y_norms,
-                        bool square, bool X_is_Y);
+void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const T *X,
+                             da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
+                             T *X_norms, da_int compute_X_norms, T *Y_norms,
+                             da_int compute_Y_norms, bool square, bool X_is_Y);
 
 namespace da_metrics {
 namespace pairwise_distances {
@@ -59,8 +59,17 @@ da_status cosine(da_order order, da_int m, da_int n, da_int k, const T *X, da_in
                  const T *Y, da_int ldy, T *D, da_int ldd);
 
 template <typename T>
+da_status euclidean_gemm(da_order order, da_int m, da_int n, da_int k, const T *X,
+                         da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
+                         bool square_distances);
+
+template <typename T>
+da_status sqeuclidean(da_order order, da_int m, da_int n, da_int k, const T *X,
+                      da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd);
+
+template <typename T>
 da_status euclidean(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,
-                    const T *Y, da_int ldy, T *D, da_int ldd, bool square_distances);
+                    const T *Y, da_int ldy, T *D, da_int ldd);
 
 template <typename T>
 da_status manhattan(da_order order, da_int m, da_int n, da_int k, const T *X, da_int ldx,

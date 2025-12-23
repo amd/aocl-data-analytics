@@ -190,11 +190,11 @@ void test_forest_positive(std::string csvname, std::vector<option_t<da_int>> iop
     //////////////
     // Print rinfo
     //////////////
-    // T rinfo[100];
-    // da_int dim = 100;
-    // EXPECT_EQ(da_handle_get_result(forest_handle, da_result::da_rinfo, &dim, rinfo),
-    //           da_status_success);
-    // std::cout << "Tree depth: " << rinfo[4] << std::endl;
+    T rinfo[100];
+    da_int dim = 100;
+    EXPECT_EQ(da_handle_get_result(forest_handle, da_result::da_rinfo, &dim, rinfo),
+              da_status_success);
+    std::cout << "Tree depth: " << rinfo[4] << std::endl;
 
     da_handle_destroy(&forest_handle);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -36,6 +36,15 @@
 #include <vector>
 
 namespace {
+
+#ifdef NO_FORTRAN
+TEST(nlls, not_implemented) {
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_nlls), da_status_not_implemented);
+    da_handle_destroy(&handle);
+}
+
+#else
 
 /* RALFit examples as test of interface */
 TEST(nlls, double_nlls_example_box_fortran) {
@@ -81,10 +90,10 @@ TEST(nlls, double_nlls_example_box_fortran) {
     EXPECT_EQ(da_handle_get_result_d(handle, da_result::da_rinfo, &size, info.data()),
               da_status_success);
 
-    EXPECT_LT(info[0], 2.3);
-    EXPECT_LT(info[1], 1.0e-4);
-    EXPECT_GT(info[4], 1);
-    EXPECT_GT(info[12], 3);
+    EXPECT_LT(info[da_optim_info_t::info_objective], 2.3);
+    EXPECT_LT(info[da_optim_info_t::info_grad_norm], 1.0e-4);
+    EXPECT_GT(info[da_optim_info_t::info_nevalf], 1);
+    EXPECT_GT(info[da_optim_info_t::info_nevalfd], 3);
 
     da_handle_destroy(&handle);
 }
@@ -367,5 +376,7 @@ TEST(nlls, wrongType) {
     EXPECT_EQ(da_nlls_fit(handle, n, x, nullptr), da_status_wrong_type);
     da_handle_destroy(&handle);
 }
+
+#endif
 
 } // namespace

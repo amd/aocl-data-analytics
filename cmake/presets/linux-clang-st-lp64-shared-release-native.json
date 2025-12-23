@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-release-native",
+      "inherits": [
+        "base",
+        "linux",
+        "clang",
+        "st",
+        "lp64",
+        "shared",
+        "native",
+        "release"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-clang-native-release"
+      },
+      "binaryDir": "${sourceDir}/build-linux-clang-st-lp64-shared-native-release",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-release-native",
+      "configurePreset": "linux-clang-st-lp64-shared-release-native",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-clang-st-lp64-shared-release-native-install",
+      "configurePreset": "linux-clang-st-lp64-shared-release-native",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-release-native",
+      "configurePreset": "linux-clang-st-lp64-shared-release-native",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-release-native",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-clang-st-lp64-shared-release-native"
+        },
+        {
+          "type": "build",
+          "name": "linux-clang-st-lp64-shared-release-native-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-clang-st-lp64-shared-release-native"
+        }
+      ]
+    }
+  ]
+}

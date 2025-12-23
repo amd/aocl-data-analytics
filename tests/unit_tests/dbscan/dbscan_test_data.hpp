@@ -78,6 +78,29 @@ template <typename T> void Get1by1BaseData(DBSCANParamType<T> &param) {
     param.expected_n_clusters = 1;
 }
 
+template <typename T> void GetWideBaseData(DBSCANParamType<T> &param) {
+    param.test_name = "2 by 25 data matrix";
+
+    param.n_samples = 2;
+    param.n_features = 25;
+    std::vector<double> A(param.n_samples * param.n_features);
+    for (da_int i = 0; i < (da_int)A.size(); ++i) {
+        A[i] = (i % 2 == 0) ? 0.0 : 1.0;
+    }
+    param.A = convert_vector<double, T>(A);
+    param.lda = 2;
+    param.min_samples = 1;
+    param.algorithm = "kd tree";
+    param.leaf_size = 1;
+    param.eps = 100.0;
+    std::vector<double> expected_rinfo_double{2, 25, 2, 100, 1, 1, 2, 2, 1};
+    param.expected_core_sample_indices = std::vector<da_int>{0, 1};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo_double);
+    param.expected_labels = std::vector<da_int>{0, 0};
+    param.expected_n_core_samples = 2;
+    param.expected_n_clusters = 1;
+}
+
 template <typename T> void GetZeroBaseData(DBSCANParamType<T> &param) {
     param.test_name = "Data matrix full of zeros";
 
@@ -123,6 +146,43 @@ template <typename T> void Get30by3BaseData(DBSCANParamType<T> &param) {
     param.min_samples = 3;
 
     std::vector<double> expected_rinfo_double{30, 3, 30, 0.5, 3, 30, 2, 30, 3};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo_double);
+    param.expected_labels =
+        std::vector<da_int>{0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+                            0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2};
+    param.expected_core_sample_indices = std::vector<da_int>(30);
+    std::iota(param.expected_core_sample_indices.begin(),
+              param.expected_core_sample_indices.end(), (da_int)0);
+    param.expected_n_core_samples = 30;
+    param.expected_n_clusters = 3;
+}
+
+template <typename T> void Get30by1BaseData(DBSCANParamType<T> &param) {
+    param.test_name = "30 by 1 data matrix containing 3 clusters";
+
+    param.n_samples = 30;
+    param.n_features = 1;
+    std::vector<double> A(30);
+
+    std::random_device rd;  // Random number generator seed
+    std::mt19937 gen(rd()); // Initialize Mersenne Twister random number generator
+    std::uniform_real_distribution<> dis(
+        -0.1, 0.1); // Create uniform distribution in range [-0.1, 0.1]
+
+    for (da_int i = 0; i < 30; i++) {
+        A[i] = dis(gen);
+        if (i % 3 == 0) {
+            A[i] += 2.0;
+        } else if (i % 3 == 1) {
+            A[i] -= 2.0;
+        }
+    }
+    param.A = convert_vector<double, T>(A);
+    // A now contains three clusters centered on (2, 2, 2), (-2, -2, -2), and (0, 0, 0)
+    param.lda = 30;
+    param.min_samples = 3;
+
+    std::vector<double> expected_rinfo_double{30, 1, 30, 0.5, 3, 30, 2, 30, 3};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo_double);
     param.expected_labels =
         std::vector<da_int>{0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
@@ -182,7 +242,7 @@ template <typename T> void Get1by1Data(std::vector<DBSCANParamType<T>> &params) 
     DBSCANParamType<T> param;
     Get1by1BaseData(param);
     params.push_back(param);
-    param.algorithm = "brute serial";
+    param.algorithm = "brute";
     param.test_name = "1 by 1 data matrix with serial DBSCAN";
     params.push_back(param);
 }
@@ -192,8 +252,18 @@ template <typename T> void GetZeroData(std::vector<DBSCANParamType<T>> &params) 
     DBSCANParamType<T> param;
     GetZeroBaseData(param);
     params.push_back(param);
-    param.algorithm = "brute serial";
-    param.test_name = "Empty data matrix with serial DBSCAN";
+    param.algorithm = "brute";
+    param.test_name = "Empty data matrix with brute force DBSCAN";
+    params.push_back(param);
+}
+
+template <typename T> void GetWideData(std::vector<DBSCANParamType<T>> &params) {
+    // Tests with a data matrix full of zeros
+    DBSCANParamType<T> param;
+    GetWideBaseData(param);
+    params.push_back(param);
+    param.algorithm = "auto";
+    param.test_name = "Wide matrix with automatic algorithm selection";
     params.push_back(param);
 }
 
@@ -202,8 +272,48 @@ template <typename T> void Get30by3Data(std::vector<DBSCANParamType<T>> &params)
     DBSCANParamType<T> param;
     Get30by3BaseData(param);
     params.push_back(param);
-    param.algorithm = "brute serial";
-    param.test_name = "30 by 3 data matrix with serial DBSCAN";
+    param.algorithm = "brute";
+    param.test_name = "30 by 3 data matrix with brute force DBSCAN";
+    params.push_back(param);
+    param.algorithm = "kd tree";
+    param.test_name = "30 by 3 data matrix with k-d tree DBSCAN";
+    params.push_back(param);
+    param.algorithm = "auto";
+    param.test_name = "30 by 3 data matrix with automatic algorithm selection";
+    params.push_back(param);
+    param.algorithm = "ball tree";
+    param.test_name = "30 by 3 data matrix with ball tree";
+    params.push_back(param);
+}
+
+template <typename T> void Get30by1Data(std::vector<DBSCANParamType<T>> &params) {
+    // Tests with a 30 x 1 data matrix
+    DBSCANParamType<T> param;
+    Get30by1BaseData(param);
+    params.push_back(param);
+    param.metric = "manhattan";
+    param.test_name = "30 by 1 data matrix with Manhattan distance";
+    params.push_back(param);
+    param.metric = "minkowski";
+    param.power = 2.0;
+    param.test_name = "30 by 1 data matrix with Minkowski distance";
+    params.push_back(param);
+    param.power = 2.0000001;
+    param.expected_rinfo[6] = 2.0000001;
+    param.test_name = "30 by 1 data matrix with Minkowski distance and p near 2";
+    params.push_back(param);
+    param.metric = "euclidean";
+    param.algorithm = "kd tree";
+    param.test_name = "30 by 1 data matrix with k-d tree DBSCAN and Euclidean distance";
+    params.push_back(param);
+    param.algorithm = "ball tree";
+    param.test_name = "30 by 1 data matrix with ball tree DBSCAN and Euclidean distance";
+    params.push_back(param);
+    param.metric = "sqeuclidean";
+    param.algorithm = "brute";
+    param.test_name = "30 by 1 data matrix with squared Euclidean distance";
+    param.eps = 0.25;
+    param.expected_rinfo[3] = 0.25;
     params.push_back(param);
 }
 
@@ -212,7 +322,7 @@ template <typename T> void Get25by2Data(std::vector<DBSCANParamType<T>> &params)
     DBSCANParamType<T> param;
     Get25by2BaseData(param);
     params.push_back(param);
-    param.algorithm = "brute serial";
+    param.algorithm = "brute";
     param.test_name = "25 by 2 data matrix with serial DBSCAN";
     params.push_back(param);
     Get25by2BaseData(param);
@@ -227,7 +337,7 @@ template <typename T> void Get25by2Data(std::vector<DBSCANParamType<T>> &params)
     param.expected_rinfo[7] = 0;
     param.expected_rinfo[8] = 0;
     params.push_back(param);
-    param.algorithm = "brute serial";
+    param.algorithm = "brute";
     param.test_name = "25 by 2 data matrix with tiny eps and serial DBSCAN";
     params.push_back(param);
     Get25by2BaseData(param);
@@ -247,7 +357,9 @@ template <typename T> void Get25by2Data(std::vector<DBSCANParamType<T>> &params)
 template <typename T> void GetDBSCANData(std::vector<DBSCANParamType<T>> &params) {
     Get1by1Data(params);
     Get30by3Data(params);
+    Get30by1Data(params);
     Get25by2Data(params);
     GetZeroData(params);
     GetRowMajorData(params);
+    GetWideData(params);
 }

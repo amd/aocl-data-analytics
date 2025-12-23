@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@ import sys
 import numpy as np
 from aoclda.decision_forest import decision_forest
 
+
 def decision_forest_example():
     """
     Decision forest classification
@@ -40,9 +41,9 @@ def decision_forest_example():
     X_test = np.array([[2., 2.]])
     y_test = np.array([[1]])
 
-    forest = decision_forest(seed = 988,
-                          n_trees = 100,
-                          criterion = "gini")
+    forest = decision_forest(seed=988,
+                             n_trees=100,
+                             criterion="gini")
     forest.fit(X_train, y_train)
 
     pred = forest.predict(X_test)
@@ -50,6 +51,7 @@ def decision_forest_example():
 
     score = forest.score(X_test, y_test)
     print(f"score: {score:.3f}")
+
 
 if __name__ == "__main__":
     try:

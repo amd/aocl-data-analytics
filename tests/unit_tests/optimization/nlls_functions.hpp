@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -208,10 +208,10 @@ template <typename T> void driver(void) {
         tol = 1.0e-4;
     }
 
-    EXPECT_LT(info[0], T(2.3));
-    EXPECT_LT(info[1], tol);
-    EXPECT_GT(info[4], T(1));
-    EXPECT_GT(info[12], T(3));
+    EXPECT_LT(info[da_optim_info_t::info_objective], T(2.3));
+    EXPECT_LT(info[da_optim_info_t::info_grad_norm], tol);
+    EXPECT_GT(info[da_optim_info_t::info_nevalf], T(1));
+    EXPECT_GT(info[da_optim_info_t::info_nevalfd], T(3));
 
     da_handle_destroy(&handle);
 }

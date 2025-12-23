@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -38,11 +38,11 @@ inline int omp_get_level() { return 1; };
 inline int omp_get_max_threads() { return 1; };
 inline int omp_get_thread_num() { return 0; };
 typedef int omp_lock_t;
-inline void omp_init_lock(omp_lock_t *lock) {};
-inline void omp_destroy_lock(omp_lock_t *lock) {};
-inline void omp_set_lock(omp_lock_t *lock) {};
-inline void omp_unset_lock(omp_lock_t *lock) {};
-inline void omp_set_num_threads(int num_threads) {};
+inline void omp_init_lock([[maybe_unused]] omp_lock_t *lock) {};
+inline void omp_destroy_lock([[maybe_unused]] omp_lock_t *lock) {};
+inline void omp_set_lock([[maybe_unused]] omp_lock_t *lock) {};
+inline void omp_unset_lock([[maybe_unused]] omp_lock_t *lock) {};
+inline void omp_set_num_threads([[maybe_unused]] int num_threads) {};
 #endif
 
 #endif

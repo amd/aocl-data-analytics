@@ -39,7 +39,6 @@
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <utility>
 #include <vector>
 
@@ -74,12 +73,14 @@ namespace da_linmod {
 
 enum fit_opt_type { fit_opt_nln = 0, fit_opt_lsq, fit_opt_coord };
 enum class coord_algo_t { undefined = 0, GLMNet = 1, sklearn = 2 };
+enum da_coef_type { primal = 0, dual };
 
 template <typename T> struct cg_data {
     // Declare objects needed for conjugate gradient solver
     aoclsparse_itsol_handle handle;
     aoclsparse_itsol_rci_job ircomm;
-    T *u, *v, rinfo[100], tol;
+    T *u = nullptr, *v = nullptr;
+    T rinfo[100], tol;
     T beta = T(0.0), alpha = T(1.0);
     da_int nsamples, ncoef, min_order, maxit;
     std::vector<T> coef, A, b;
@@ -134,35 +135,43 @@ template <typename T> class linear_model : public basic_handle<T> {
     // True if the model has been successfully trained
     bool model_trained = false;
     bool is_well_determined;
-    bool is_transposed = false;
     bool copycoefs = false;
     bool use_dual_coefs = false;
 
     /* Regression data
+     * ---------------
      * nfeat: number of features
      * nsamples: number of data points
      * nclass: number of different classes in the case of linear classification. unused otherwise
      * intercept: controls if the linear regression intercept is to be set
-     * XUSR[nsamples*nfeat]: feature matrix, pointer to user data directly - will not be modified by any function
+     * XUSR[nsamples*nfeat,ldXUSR]: feature matrix, pointer to user data directly - will not be modified by any function
+     * ldXUSR: leading dim of XUSR
      * yusr[nsamples]: model response, pointer to user data - will not be modified by any function
-     * X is a pointer to either XUSR or a modifiable copy of XUSR
+     * X[nsamples*nfeat,ldX]: is a pointer to either XUSR or a modifiable copy of XUSR it can also store a transposed copy of XUSR, etc.
+     *    all solvers should reference this matrix for their initial setup.
+     * Xorder: the storage order of X
+     * ldX: leading dimension of X
+     * basic_handle::order: the storage scheme used for XUSR and X [enum: row-major, col-major, undefined]
+     * Note that order ultimately will specify the order for X and this can be different from XUSR, since some solvers require
+     * X^T and this is done at copy time from XUSR.
      */
     da_int nfeat = 0, nsamples = 0;
     da_int nclass = 0;
     bool intercept = false;
     const T *yusr = nullptr;
     const T *XUSR = nullptr;
-    T *y = nullptr; // May contain a modified copy of yusr
-    T *X = nullptr; // May contain a modified copy of XUSR
-
-    //Utility pointer to column major allocated copy of user's data
-    T *X_temp = nullptr;
-
-    T time; // Computation time
+    T *y = nullptr;    // May contain a modified copy of yusr
+    T *X = nullptr;    // May contain a modified copy of XUSR
+    da_int ldXUSR = 0; // leading dim of XUSR
+    da_int ldX = 0;    // leading dim of X
+    da_int Xcinc = 0;  // column increment for X wrt base_handle::order
+    da_int Xrinc = 0;  // row increment for X wrt base_handle::order
+    da_order Xorder;   // storage order of X
+    T time = 0;        // Computation time
 
     /* Parameters used during the standardization of the problem
      * these are only defined if "scaling" is not "none" and populated
-     * on the call to ::model_scaling(...)
+     * on the call to ::preprocess_data(...)
      */
     scaling_t scaling = scaling_t::none;
     std::vector<T> std_shifts; // column-wise means [ X | y ], size nfeat + 1
@@ -174,14 +183,15 @@ template <typename T> class linear_model : public basic_handle<T> {
        dual_coef: vector containing the trained dual coefficients of the model
      */
     da_int ncoef = 0;
+    da_int nrow_coef = 0, ncol_coef = 0; // dimensions of coef array, returned in rinfo
     std::vector<T> coef;
-    std::vector<T> dual_coef; // Currently only used to store user's initial start coefs
+    std::vector<T> dual_coef;
 
     /* Elastic net penalty parameters (Regularization L1: LASSO, L2: Ridge, combination => Elastic net)
      * Penalty parameters are: lambda ( (1-alpha)L2 + alpha*L1 )
      * lambda >= 0 and 0<=alpha<=1.
      */
-    T alpha, lambda;
+    T alpha{0}, lambda{0};
 
     // Optimization object to call generic algorithms
     ARCH::da_optim::da_optimization<T> *opt = nullptr;
@@ -193,10 +203,6 @@ template <typename T> class linear_model : public basic_handle<T> {
 
     // Private methods to allocate memory
     da_status init_opt_method(linmod_method method);
-
-    // QR fact data
-    da_status init_qr_data();
-    da_status qr_lsq();
 
     /* Dispatcher methods
      * choose_method: if "optim method" is set to auto, choose automatically how
@@ -216,23 +222,25 @@ template <typename T> class linear_model : public basic_handle<T> {
      */
     void refresh();
 
-    da_status define_features(da_int nfeat, da_int nsamples, const T *X, const T *y);
+    da_status define_features(da_int nfeat, da_int nsamples, const T *X, da_int ldX,
+                              const T *y);
     da_status select_model(linmod_model mod);
-    da_status model_scaling(da_int method_id);
+    da_status prep_matrix_x(da_int &nrow, da_int &ncol, da_axis &axis, bool &transpose);
+    da_status preprocess_data(da_int method_id);
     void revert_scaling();
-    void setup_xtx_xty(const T *X_input, const T *y_input, std::vector<T> &A,
-                       std::vector<T> &b);
+    void setup_xtx_xty(std::vector<T> &A, std::vector<T> &b);
     void scale_warmstart();
     da_status fit(da_int usr_ncoefs, const T *coefs);
-    da_status fit_logreg_lbfgs();
     da_status fit_linreg_lbfgs();
     da_status fit_linreg_coord();
     da_status fit_linreg_svd();
     da_status fit_linreg_cholesky();
     da_status fit_linreg_cg();
-    da_status get_coef(da_int &nx, T *coef);
-    da_status evaluate_model(da_int nfeat, da_int nsamples, const T *X, T *predictions,
-                             T *observations, T *loss);
+    da_status fit_linreg_qr();
+    da_status fit_logreg_lbfgs();
+    da_status get_coef(da_int &nx, T *coef, da_coef_type ctype);
+    da_status evaluate_model(da_int nfeat, da_int nsamples, const T *X, da_int ldX,
+                             T *predictions, T *observations, T *loss);
 
     da_status get_result(da_result query, da_int *dim, T *result);
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,

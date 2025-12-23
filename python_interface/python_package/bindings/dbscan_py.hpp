@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -57,7 +57,12 @@ class DBSCAN : public pyda_handle {
         exception_check(status);
         status = da_options_set_int(handle, "min samples", min_samples);
         exception_check(status);
-        status = da_options_set_string(handle, "algorithm", algorithm.c_str());
+        std::string algo = algorithm;
+        if (algorithm == "kd_tree")
+            algo = "kd tree";
+        if (algorithm == "ball_tree")
+            algo = "ball tree";
+        status = da_options_set_string(handle, "algorithm", algo.c_str());
         exception_check(status);
         status = da_options_set_string(handle, "metric", metric.c_str());
         exception_check(status);
@@ -83,10 +88,11 @@ class DBSCAN : public pyda_handle {
         if (order == c_contiguous) {
             status = da_options_set(handle, "storage order", "row-major");
         } else {
-            status = da_options_set(handle, "storage order", "column");
+            status = da_options_set(handle, "storage order", "column-major");
         }
-        status = da_dbscan_set_data(handle, n_samples, n_features, A.data(), lda);
+        exception_check(status);
 
+        status = da_dbscan_set_data(handle, n_samples, n_features, A.data(), lda);
         exception_check(status);
 
         status = da_dbscan_compute<T>(handle);

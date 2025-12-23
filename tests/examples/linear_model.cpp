@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 #include "aoclda.h"
 #include <assert.h>
 #include <iostream>
+#include <limits>
 
 int main() {
 
@@ -39,8 +40,11 @@ int main() {
 
     // Problem data
     da_int m = 5, n = 2;
-    double Al[10] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1};
-    double bl[5] = {1, 1, 1, 1, 1};
+    da_int ldA = 6;
+    double NA = std::numeric_limits<double>::quiet_NaN();
+    // Define feature matrix with leading dimension 6 and 5 observations
+    double Ad[12] = {1, 2, 3, 4, 5, NA, 1, 3, 5, 1, 1, NA};
+    double bd[5] = {1, 1, 1, 1, 1};
     da_int nx = 2;
     double x[2];
 
@@ -51,7 +55,8 @@ int main() {
     pass = pass && da_handle_init_d(&handle, da_handle_linmod) == da_status_success;
     pass =
         pass && da_linmod_select_model_d(handle, linmod_model_mse) == da_status_success;
-    pass = pass && da_linmod_define_features_d(handle, m, n, Al, bl) == da_status_success;
+    pass = pass &&
+           da_linmod_define_features_d(handle, m, n, Ad, ldA, bd) == da_status_success;
     if (!pass) {
         std::cout << "Something unexpected happened in the model definition\n";
         da_handle_destroy(&handle);
@@ -76,9 +81,11 @@ int main() {
     }
     std::cout << "----------------------------------------" << std::endl;
 
+    float NAs = std::numeric_limits<float>::quiet_NaN();
     // Solve the same model with single precision
     // Problem data
-    float As[10] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1};
+    ldA = 6;
+    float As[12] = {NAs, 1, 2, 3, 4, 5, NAs, 1, 3, 5, 1, 1};
     float bs[5] = {1, 1, 1, 1, 1};
     float xs[2];
 
@@ -89,8 +96,8 @@ int main() {
     pass = pass && da_handle_init_s(&handle_s, da_handle_linmod) == da_status_success;
     pass =
         pass && da_linmod_select_model_s(handle_s, linmod_model_mse) == da_status_success;
-    pass =
-        pass && da_linmod_define_features_s(handle_s, m, n, As, bs) == da_status_success;
+    pass = pass && da_linmod_define_features_s(handle_s, m, n, &As[1], ldA, bs) ==
+                       da_status_success;
     if (!pass) {
         std::cout << "Something unexpected happened in the model definition\n";
         da_handle_destroy(&handle);

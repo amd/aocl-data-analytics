@@ -33,6 +33,15 @@
 
 #define INIT_CAPACITY 64
 
+#if defined(__GNUC__) && !defined(__clang__)
+#define DO_PRAGMA(x) _Pragma(#x)
+#else
+#define DO_PRAGMA(x)
+#endif
+
+DO_PRAGMA(GCC diagnostic push)
+DO_PRAGMA(GCC diagnostic ignored "-Wstringop-overflow")
+
 namespace da_vector {
 
 /*
@@ -70,6 +79,19 @@ template <typename T> class da_vector {
         if (_data)
             free(_data);
         _data = nullptr;
+    }
+
+    void clear() {
+        if (_data) {
+            free(_data);
+            _data = nullptr;
+        }
+        _size = 0;
+        _capacity = INIT_CAPACITY;
+        _data = (T *)malloc(_capacity * sizeof(T));
+        if (!_data) {
+            throw std::bad_alloc(); // LCOV_EXCL_LINE
+        }
     }
 
     void push_back(const T &val) {
@@ -126,5 +148,7 @@ template <typename T> class da_vector {
 };
 
 } // namespace da_vector
+
+DO_PRAGMA(GCC diagnostic pop)
 
 #endif

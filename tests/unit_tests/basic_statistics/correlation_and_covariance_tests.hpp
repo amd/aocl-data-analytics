@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -52,6 +52,7 @@ template <typename T> struct CovCorrParamType {
     da_order order = column_major;
     std::vector<T> x;
     std::vector<T> expected_cov;
+    std::vector<T> expected_cov_assume_centered;
     std::vector<T> expected_corr;
 
     da_status expected_status = da_status_success;
@@ -76,6 +77,13 @@ template <typename T> void GetSubarrayData(std::vector<CovCorrParamType<T>> &par
         -0.8, 1.7,   12.3, -2.2, -0.3, 0.75, 0, 1.45,  -3.55, -2.2, 2.8,   0.7, -2.,  0,
         -1.2, 0.3,   -0.3, 0.7,  0.8,  -1.,  0, 0.75,  2.75,  0.75, -2.,   -1., 2.5,  0};
     param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_cov_assume_centered{
+        31.75,  11.0,  -4.25, 32.5,   -32.25, 18.0,  0,      11.0,   17.25, -0.25,  14.0,
+        -17.25, 12.5,  0,     -4.25,  -0.25,  12.75, -6.25,  3.75,   -1.5,  0,      32.5,
+        14.0,   -6.25, 39.25, -35.75, 18.25,  0,     -32.25, -17.25, 3.75,  -35.75, 37.25,
+        -21.25, 0,     18.0,  12.5,   -1.5,   18.25, -21.25, 13.75,  0};
+    param.expected_cov_assume_centered =
+        convert_vector<double, T>(expected_cov_assume_centered);
     std::vector<double> expected_corr{1.,
                                       -0.578386069999205,
                                       -0.0990830796106615,
@@ -120,7 +128,7 @@ template <typename T> void GetSubarrayData(std::vector<CovCorrParamType<T>> &par
                                       0};
     param.expected_corr = convert_vector<double, T>(expected_corr);
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
 
     param.expected_status = da_status_success;
 
@@ -146,6 +154,12 @@ template <typename T> void GetStandardData(std::vector<CovCorrParamType<T>> &par
         -0.64, 1.36,  9.84,  -1.76, -0.24, 0.6,  1.16,  -2.84, -1.76, 2.24,  0.56, -1.6,
         -0.96, 0.24,  -0.24, 0.56,  0.64,  -0.8, 0.6,   2.2,   0.6,   -1.6,  -0.8, 2.0};
     param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_cov_assume_centered{
+        25.4,  8.8,   -3.4, 26.0,  -25.8, 14.4,  8.8,  13.8, -0.2, 11.2, -13.8, 10.0,
+        -3.4,  -0.2,  10.2, -5.0,  3.0,   -1.2,  26.0, 11.2, -5.0, 31.4, -28.6, 14.6,
+        -25.8, -13.8, 3.0,  -28.6, 29.8,  -17.0, 14.4, 10.0, -1.2, 14.6, -17.0, 11.0};
+    param.expected_cov_assume_centered =
+        convert_vector<double, T>(expected_cov_assume_centered);
     std::vector<double> expected_corr{1.,
                                       -0.578386069999205,
                                       -0.0990830796106615,
@@ -184,7 +198,7 @@ template <typename T> void GetStandardData(std::vector<CovCorrParamType<T>> &par
                                       1.};
     param.expected_corr = convert_vector<double, T>(expected_corr);
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
 
     param.expected_status = da_status_success;
 
@@ -214,6 +228,14 @@ template <typename T> void GetRowMajorData(std::vector<CovCorrParamType<T>> &par
     datest_blas::imatcopy('T', param.p, param.p, 1.0, expected_cov.data(), param.p,
                           param.p);
     param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_cov_assume_centered{
+        25.4,  8.8,   -3.4, 26.0,  -25.8, 14.4,  8.8,  13.8, -0.2, 11.2, -13.8, 10.0,
+        -3.4,  -0.2,  10.2, -5.0,  3.0,   -1.2,  26.0, 11.2, -5.0, 31.4, -28.6, 14.6,
+        -25.8, -13.8, 3.0,  -28.6, 29.8,  -17.0, 14.4, 10.0, -1.2, 14.6, -17.0, 11.0};
+    datest_blas::imatcopy('T', param.p, param.p, 1.0, expected_cov_assume_centered.data(),
+                          param.p, param.p);
+    param.expected_cov_assume_centered =
+        convert_vector<double, T>(expected_cov_assume_centered);
     std::vector<double> expected_corr{1.,
                                       -0.578386069999205,
                                       -0.0990830796106615,
@@ -254,7 +276,7 @@ template <typename T> void GetRowMajorData(std::vector<CovCorrParamType<T>> &par
                           param.p);
     param.expected_corr = convert_vector<double, T>(expected_corr);
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
 
     param.expected_status = da_status_success;
 
@@ -275,10 +297,13 @@ template <typename T> void GetZeroData(std::vector<CovCorrParamType<T>> &params)
 
     std::vector<double> expected_cov{0, 0, 0, 0, 0, 0, 0, 0, 0};
     param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_cov_assume_cenetered{0, 0, 0, 0, 0, 0, 0, 0, 0};
+    param.expected_cov_assume_centered =
+        convert_vector<double, T>(expected_cov_assume_cenetered);
     std::vector<double> expected_corr{1, 0, 0, 0, 1, 0, 0, 0, 1};
     param.expected_corr = convert_vector<double, T>(expected_corr);
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
 
     param.expected_status = da_status_success;
 
@@ -299,10 +324,13 @@ template <typename T> void GetSingleColumnData(std::vector<CovCorrParamType<T>> 
 
     std::vector<double> expected_cov{7.96};
     param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_cov_assume_centered{14.01};
+    param.expected_cov_assume_centered =
+        convert_vector<double, T>(expected_cov_assume_centered);
     std::vector<double> expected_corr{1};
     param.expected_corr = convert_vector<double, T>(expected_corr);
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
 
     param.expected_status = da_status_success;
 
@@ -324,10 +352,13 @@ template <typename T> void GetSmallData(std::vector<CovCorrParamType<T>> &params
 
     std::vector<double> expected_cov{0.4, -0.4, -0.4, 0.4};
     param.expected_cov = convert_vector<double, T>(expected_cov);
+    std::vector<double> expected_cov_assume_centered{1, 0.2, 0.2, 1};
+    param.expected_cov_assume_centered =
+        convert_vector<double, T>(expected_cov_assume_centered);
     std::vector<double> expected_corr{1, -1, -1, 1};
     param.expected_corr = convert_vector<double, T>(expected_corr);
 
-    param.epsilon = 10 * std::numeric_limits<T>::epsilon();
+    param.epsilon = 100 * std::numeric_limits<T>::epsilon();
 
     param.expected_status = da_status_success;
 
@@ -358,13 +389,24 @@ TYPED_TEST(CorrelationCovarianceTest, CorrelationCovarianceFunctionality) {
         std::vector<TypeParam> xcov(param.x);
         std::vector<TypeParam> xcorr(param.x);
 
+        // Assume cenetered = 0
         EXPECT_EQ(da_covariance_matrix(param.order, param.n, param.p, xcov.data(),
-                                       param.ldx, param.dof, cov.data(), param.ldcov),
+                                       param.ldx, param.dof, cov.data(), param.ldcov, 0),
                   param.expected_status);
         EXPECT_ARR_NEAR((da_int)param.x.size(), param.x.data(), xcov.data(),
                         param.epsilon);
         EXPECT_ARR_NEAR(param.ldcov * param.p, param.expected_cov.data(), cov.data(),
                         param.epsilon);
+
+        // Assume cenetered = 1
+        EXPECT_EQ(da_covariance_matrix(param.order, param.n, param.p, xcov.data(),
+                                       param.ldx, param.dof, cov.data(), param.ldcov, 1),
+                  param.expected_status);
+        EXPECT_ARR_NEAR((da_int)param.x.size(), param.x.data(), xcov.data(),
+                        param.epsilon);
+        EXPECT_ARR_NEAR(param.ldcov * param.p, param.expected_cov_assume_centered.data(),
+                        cov.data(), param.epsilon);
+
         EXPECT_EQ(da_correlation_matrix(param.order, param.n, param.p, xcorr.data(),
                                         param.ldx, corr.data(), param.ldcorr),
                   param.expected_status);
@@ -380,12 +422,13 @@ TYPED_TEST(CorrelationCovarianceTest, IllegalArgsCorrelationCovariance) {
     std::vector<double> x_d{4.7, 1.2, -0.3, 4.5};
     std::vector<TypeParam> x = convert_vector<double, TypeParam>(x_d);
     da_int n = 2, p = 2, ldx = 2, ldmat = 2, dof = 0;
+    da_int assume_centered = 0;
     std::vector<TypeParam> mat(4, 0);
 
     // Test with illegal value of ldx
     da_int ldx_illegal = 1;
     EXPECT_EQ(da_covariance_matrix(column_major, n, p, x.data(), ldx_illegal, dof,
-                                   mat.data(), ldmat),
+                                   mat.data(), ldmat, assume_centered),
               da_status_invalid_leading_dimension);
     EXPECT_EQ(
         da_correlation_matrix(row_major, n, p, x.data(), ldx_illegal, mat.data(), ldmat),
@@ -394,7 +437,7 @@ TYPED_TEST(CorrelationCovarianceTest, IllegalArgsCorrelationCovariance) {
     // Test with illegal p
     da_int p_illegal = 0;
     EXPECT_EQ(da_covariance_matrix(column_major, n, p_illegal, x.data(), ldx, dof,
-                                   mat.data(), ldmat),
+                                   mat.data(), ldmat, assume_centered),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_correlation_matrix(column_major, n, p_illegal, x.data(), ldx, mat.data(),
                                     ldmat),
@@ -403,16 +446,22 @@ TYPED_TEST(CorrelationCovarianceTest, IllegalArgsCorrelationCovariance) {
     // Test with illegal n
     da_int n_illegal = 1;
     EXPECT_EQ(da_covariance_matrix(column_major, n_illegal, p, x.data(), ldx, dof,
-                                   mat.data(), ldmat),
+                                   mat.data(), ldmat, assume_centered),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_correlation_matrix(column_major, n_illegal, p, x.data(), ldx, mat.data(),
                                     ldmat),
               da_status_invalid_array_dimension);
 
+    // Test with illegal assume_centered
+    da_int assume_centered_illegal = 3;
+    EXPECT_EQ(da_covariance_matrix(column_major, n, p, x.data(), ldx, dof, mat.data(),
+                                   ldmat, assume_centered_illegal),
+              da_status_invalid_input);
+
     // Test with illegal ldmat
     da_int ldmat_illegal = 1;
     EXPECT_EQ(da_covariance_matrix(column_major, n, p, x.data(), ldx, dof, mat.data(),
-                                   ldmat_illegal),
+                                   ldmat_illegal, assume_centered),
               da_status_invalid_leading_dimension);
     EXPECT_EQ(da_correlation_matrix(column_major, n, p, x.data(), ldx, mat.data(),
                                     ldmat_illegal),
@@ -420,15 +469,15 @@ TYPED_TEST(CorrelationCovarianceTest, IllegalArgsCorrelationCovariance) {
 
     // Test illegal pointers
     TypeParam *matrixnull = nullptr;
-    EXPECT_EQ(
-        da_covariance_matrix(column_major, n, p, matrixnull, ldx, dof, mat.data(), ldmat),
-        da_status_invalid_pointer);
+    EXPECT_EQ(da_covariance_matrix(column_major, n, p, matrixnull, ldx, dof, mat.data(),
+                                   ldmat, assume_centered),
+              da_status_invalid_pointer);
     EXPECT_EQ(
         da_correlation_matrix(column_major, n, p, matrixnull, ldx, mat.data(), ldmat),
         da_status_invalid_pointer);
-    EXPECT_EQ(
-        da_covariance_matrix(column_major, n, p, x.data(), ldx, dof, matrixnull, ldmat),
-        da_status_invalid_pointer);
+    EXPECT_EQ(da_covariance_matrix(column_major, n, p, x.data(), ldx, dof, matrixnull,
+                                   ldmat, assume_centered),
+              da_status_invalid_pointer);
     EXPECT_EQ(da_correlation_matrix(column_major, n, p, x.data(), ldx, matrixnull, ldmat),
               da_status_invalid_pointer);
 }

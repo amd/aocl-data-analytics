@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,7 +27,8 @@
 """
 Patching scikit learn decomposition: PCA
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called
+# pylint: disable = missing-function-docstring, too-many-ancestors,
+# useless-return, super-init-not-called
 
 import warnings
 from sklearn.decomposition import PCA as PCA_sklearn
@@ -45,10 +46,10 @@ class PCA(PCA_sklearn):
                  power_iteration_normalizer='auto', random_state=None):
         # Supported attributes
         self.n_components = n_components
+        self.whiten = whiten
 
         # Not supported yet
         self.copy = copy
-        self.whiten = whiten
         self.svd_solver = svd_solver
         self.tol = tol
         self.iterated_power = iterated_power
@@ -65,9 +66,6 @@ class PCA(PCA_sklearn):
         if copy is False:
             raise ValueError("copy must be set to True or None")
 
-        if whiten is True:
-            raise ValueError("whiten must be set to False or None")
-
         if svd_solver in ('arpack', 'randomized'):
             raise ValueError(
                 "svd_solver must be set to auto, full, covariance_eigh or None")
@@ -76,7 +74,8 @@ class PCA(PCA_sklearn):
                 power_iteration_normalizer != 'auto' or random_state is not None):
             warnings.warn(
                 "The parameters tol, iterated_power, n_oversamples, power_iteration_normalizer and"
-                "random state are not supported and have been ignored.", category=RuntimeWarning)
+                "random state are not supported and have been ignored.",
+                category=RuntimeWarning)
 
         # new internal attributes
         self.aocl = True
@@ -91,7 +90,7 @@ class PCA(PCA_sklearn):
             solver = 'syevd'
 
         self.pca = PCA_da(n_components, method="covariance",
-                          solver=solver, bias='unbiased')
+                          solver=solver, bias='unbiased', whiten=whiten)
 
     def fit(self, X, y=None):
         self.pca.fit(X)

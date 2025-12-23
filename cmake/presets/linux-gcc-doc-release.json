@@ -1,0 +1,46 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-doc-release",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "release",
+        "doc"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-release"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-release-doc",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-doc-release",
+      "configurePreset": "linux-gcc-doc-release",
+      "targets": "doc"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-doc-release",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-doc-release"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-doc-release"
+        }
+      ]
+    }
+  ]
+}

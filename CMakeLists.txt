@@ -24,7 +24,7 @@
 
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 
-project(AOCL-DA VERSION 5.1.0)
+project(AOCL-DA VERSION 5.2.0)
 
 set(AOCLDA_VERSION
     "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
@@ -66,6 +66,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 option(BUILD_EXAMPLES "Build the example programs" ON)
 option(BUILD_GTEST "Build Gtest unit-tests" ON)
 option(COVERAGE "Builds coverage of Gtests and examples (Debug/GCC)" OFF)
+option(BUILD_FORTRAN
+       "Builds aocl-da with the Fortran dependencies, RALFit and lbfgsb" ON)
 option(BUILD_ILP64 "ILP64 Support" OFF)
 if(NOT WIN32) # Linux options only
   option(ASAN "Enable Address SANitizer tool (GNU/Linux)" OFF)
@@ -73,15 +75,29 @@ if(NOT WIN32) # Linux options only
   option(VALGRIND "Enable memory leak detection tool (GNU/Linux)" OFF)
 endif()
 option(BUILD_DOC "Build HTML documentation" OFF)
+option(INTERNAL_DOC "Build interal HTML documentation" OFF)
+# Do not let INTERNAL_DOC appear on cmake-gui
+mark_as_advanced(INTERNAL_DOC)
 option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
 option(BUILD_SHARED_LIBS "Shared library build" OFF)
 option(USE_LIBMEM "Link with AOCL LibMem" OFF)
-set(ARCH "native" CACHE STRING "Architecture(s) to build: dynamic, native, znver2, znver3, ... (default: native)")
+# ARCH can be set as shown below, with default "native". If "dynamic" is set,
+# then a list of target architectures will be built and returned in BUILD_ARCHS.
+# If "native" is set, then the native architecture will be built, and the
+# internal namespace will be set to NATIVE_NAMESPACE to ensure appropriate
+# performant kernels are called.
+set(ARCH
+    "native"
+    CACHE
+      STRING
+      "Architecture(s) to build: dynamic, native, znver2, znver3, ... (default: native)"
+)
 set(ARCH_LIST "dynamic" "native" "znver2" "znver3" "znver4" "znver5")
 if(NOT ARCH IN_LIST ARCH_LIST)
-    message(FATAL_ERROR "Invalid ARCH value: \"${ARCH}\"\n" "Valid values are: ${ARCH_LIST}")
+  message(FATAL_ERROR "Invalid ARCH value: \"${ARCH}\"\n"
+                      "Valid values are: ${ARCH_LIST}")
 endif()
 option(BUILD_PYTHON "Python bindings" OFF)
 # Set paths to AOCL-Utils, BLAS, LAPACK and AOCL-Sparse installations.
@@ -130,24 +146,26 @@ set(LIBMEM_LIB
     ""
     CACHE STRING "Path to LIBMEM library")
 
-if(BUILD_SMP OR UNIX)
-  # Even serial builds need an OpenMP runtime to enable correct LAPACK linking
+# Even serial builds need an OpenMP runtime to enable correct LAPACK linking
+if(BUILD_SMP)
   find_package(OpenMP REQUIRED)
-  if((NOT WIN32)) # AND (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  endif()
+  message(STATUS "OpenMP C++ libs: ${OpenMP_CXX_LIB_NAMES}")
+  get_target_property(_omp_libs OpenMP::OpenMP_CXX INTERFACE_LINK_LIBRARIES)
+  get_target_property(_omp_opts OpenMP::OpenMP_CXX INTERFACE_COMPILE_OPTIONS)
+  message(STATUS "OpenMP imported target libs: ${_omp_libs}")
+  message(STATUS "OpenMP imported target compile options: ${_omp_opts}")
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS
+      "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+else()
+  message(
+    WARNING
+      "Building without OpenMP may cause linking issues with threaded BLAS/LAPACK/Sparse libraries"
+  )
 endif()
 
-# With MSVC suppress some unnecessary warnings and ensure we are linking to
-# sufficiently recent OpenMP
-if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4305")
-  if(BUILD_SMP)
-    set(CMAKE_CXX_FLAGS
-        "${CMAKE_CXX_FLAGS} /openmp:llvm /openmp:experimental /wd4005")
-  endif()
-endif()
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
 # from Windows
 if(ASAN AND NOT UNIX)
@@ -223,7 +241,12 @@ if(CMAKE_AOCL_ROOT STREQUAL ""
   )
 endif()
 
-enable_language(Fortran)
+if(BUILD_FORTRAN)
+  enable_language(Fortran)
+else()
+  add_compile_definitions(NO_FORTRAN)
+endif()
+
 if(WIN32)
   # MSVC has warnings about deprecated CRT functions; these definitions overload
   # them automatically with _s versions
@@ -231,6 +254,9 @@ if(WIN32)
     _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
     _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT=1 _CRT_SECURE_NO_WARNINGS=1
     _SILENCE_CXX20_CISO646_REMOVED_WARNING=1)
+
+  # Deal with issues concerning min/max macros in Windows STL headers
+  add_compile_definitions(NOMINMAX)
 
   # Clang-cl on Windows: ensure we are linking against the correct MSVC runtime
   # libraries
@@ -243,41 +269,45 @@ if(WIN32)
     endif()
   endif()
 
-  # Clang-cl or MSVC require ifort for the Fortran compilation
-  if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL
-                                            "MSVC")
-    if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
-      if(NOT DEFINED ENV{FLANG_COMPILER})
-        message(FATAL_ERROR "Environment variable \$FLANG_COMPILER not found.")
-      endif()
-
-      file(TO_CMAKE_PATH $ENV{FLANG_COMPILER} FLANG_PATH)
-      set(CMAKE_Fortran_COMPILER "${FLANG_PATH}/bin/flang.exe")
-      set(FLANG_LIBS "${FLANG_PATH}/lib")
-      set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib"
-                          "${FLANG_LIBS}/libpgmath.lib")
-    else()
-      set(IFORT_LIBS
-          "$ENV{LIB}"
-          CACHE STRING
-                "Setting path to Intel Fortran runtime libraries on Windows")
-      set(FORTRAN_RUNTIME
-          "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>")
-      add_compile_definitions(WIN_IFORT_NAME_MANGLING)
-    endif()
-  else()
-    if(NOT DEFINED ENV{MINGW_BIN})
-      message(FATAL_ERROR "Environment variable \$MINGW_BIN not found.")
-    endif()
-
-    file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
-    set(CMAKE_Fortran_COMPILER gfortran)
-  endif()
-
   set(CMAKE_FIND_LIBRARY_PREFIXES "")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".dll")
+
+  if(BUILD_FORTRAN)
+    # Clang-cl or MSVC require ifort for the Fortran compilation
+    if(CLANG_OPTIONS_STYLE STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL
+                                              "MSVC")
+      if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+        if(NOT DEFINED ENV{FLANG_COMPILER})
+          message(
+            FATAL_ERROR "Environment variable \$FLANG_COMPILER not found.")
+        endif()
+
+        file(TO_CMAKE_PATH $ENV{FLANG_COMPILER} FLANG_PATH)
+        set(CMAKE_Fortran_COMPILER "${FLANG_PATH}/bin/flang.exe")
+        set(FLANG_LIBS "${FLANG_PATH}/lib")
+        set(FORTRAN_RUNTIME "${FLANG_LIBS}/flang.lib"
+                            "${FLANG_LIBS}/libpgmath.lib")
+      else()
+        set(IFORT_LIBS
+            "$ENV{LIB}"
+            CACHE STRING
+                  "Setting path to Intel Fortran runtime libraries on Windows")
+        set(FORTRAN_RUNTIME
+            "$<IF:$<CONFIG:Debug>,libifcoremdd.lib,libifcoremd.lib>")
+        add_compile_definitions(WIN_IFORT_NAME_MANGLING)
+      endif()
+    else()
+      if(NOT DEFINED ENV{MINGW_BIN})
+        message(FATAL_ERROR "Environment variable \$MINGW_BIN not found.")
+      endif()
+
+      file(TO_CMAKE_PATH $ENV{MINGW_BIN} MINGW_PATH)
+      set(CMAKE_Fortran_COMPILER gfortran)
+    endif()
+  endif()
+
 else()
-  if(NOT WIN32)
+  if(BUILD_FORTRAN)
     if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
       set(FORTRAN_RUNTIME "flang")
     else() # GNU
@@ -299,8 +329,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};-W3;-DEBUG")
     set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};/std:c++17;/EHsc")
   else()
-    set(COMPILER_FLAGS_RELEASE
-        "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;/fp:fast")
+    set(COMPILER_FLAGS_RELEASE "${COMPILER_FLAGS_RELEASE};/DNDEBUG;/O2;")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};/Od")
     set(COMPILER_FLAGS_CXX_DEBUG "${COMPILER_FLAGS_CXX_DEBUG};/W3;/DEBUG")
     set(COMPILER_FLAGS_CXX
@@ -316,17 +345,20 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
        OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
-  set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-Wall;-Wextra;")
   set(COMPILER_FLAGS_CXX
-      "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled;-Wno-macro-redefined;-Wno-sign-conversion;"
+      "${COMPILER_FLAGS_CXX};-Wno-macro-redefined;-Wno-sign-conversion;-Wall;-Wextra;"
   )
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION
+                                                VERSION_GREATER_EQUAL "18.0.0")
+    set(COMPILER_FLAGS_CXX "${COMPILER_FLAGS_CXX};-Wno-nan-infinity-disabled")
+  endif()
   if(NOT CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
     set(COMPILER_FLAGS_COMMON "${COMPILER_FLAGS_COMMON};-mavx2;-mfma;")
   endif()
 
   # Release flags
   set(COMPILER_FLAGS_RELEASE
-      "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;")
+      "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;-fno-fast-math")
   if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
   else()
@@ -389,8 +421,10 @@ endif()
 
 if(NOT USE_EXISTING_DA)
   # Compile external packages
-  add_subdirectory(external/Lbfgsb.3.0)
-  add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
+  if(BUILD_FORTRAN)
+    add_subdirectory(external/Lbfgsb.3.0)
+    add_subdirectory(external/RALFit EXCLUDE_FROM_ALL)
+  endif()
 
   # add Boost for Boost.Sort functionality (assume Boost is installed on system)
   set(BOOST_MIN_VERSION "1.66.0")
@@ -398,7 +432,6 @@ if(NOT USE_EXISTING_DA)
 
   # Compile data analytics core library
   add_subdirectory(source)
-
 
   # Put all custom configuration BEFORE including "CTest"
   if(VALGRIND)
@@ -429,7 +462,7 @@ endif()
 if(NOT USE_EXISTING_DA)
   # Install examples and README files
   install(FILES README.md DESTINATION ${CMAKE_INSTALL_PREFIX})
-  install(FILES License DESTINATION ${CMAKE_INSTALL_PREFIX})
+  install(FILES License Notices DESTINATION ${CMAKE_INSTALL_PREFIX})
   install(
     DIRECTORY tests/examples/
     DESTINATION examples
@@ -463,9 +496,12 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
     "COMPILER_FLAGS_COMMON   : ${COMPILER_FLAGS_COMMON}${COMPILER_FLAGS_RELEASE}"
   )
 endif()
-
+message(NOTICE "OpenMP flags          : ${OpenMP_CXX_FLAGS}")
+message(NOTICE "OpenMP linker flags   : ${OpenMP_EXE_LINKER_FLAGS}")
 message(NOTICE "\nOPTIONS")
-message(NOTICE "Requested architecture(s) ARCH.................: ${ARCH} (${BUILD_ARCHS})")
+message(
+  NOTICE
+  "Requested architecture(s) ARCH.................: ${ARCH} (${BUILD_ARCHS})")
 message(NOTICE "Building with ASan        ASAN.................: ${ASAN}")
 message(NOTICE "Building docs             BUILD_DOC............: ${BUILD_DOC}")
 if(INTERNAL_DOC)
@@ -476,6 +512,8 @@ message(NOTICE
         "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
 message(NOTICE
         "Building Python bindings  BUILD_PYTHON.........: ${BUILD_PYTHON}")
+message(NOTICE
+        "Building Fortran code     BUILD_FORTRAN........: ${BUILD_FORTRAN}")
 message(NOTICE "Building with OpenMP      BUILD_SMP............: ${BUILD_SMP}")
 message(NOTICE
         "Shared library build      BUILD_SHARED_LIBS....: ${BUILD_SHARED_LIBS}")

@@ -27,62 +27,70 @@
 
 #include "aoclda.h"
 #include "basic_handle.hpp"
+#include "da_cache.hpp"
 #include "da_error.hpp"
+#include "da_kernel_utils.hpp"
 #include "macros.h"
 #include "options.hpp"
 #include "svm_types.hpp"
 #include <algorithm>
 #include <optional>
+#include <random>
 #include <utility>
 #include <vector>
 
 /*
- * SVM handle class that contains definitions to all the user
- * facing functionalities like set_data(),
- */
+  * SVM handle class that contains definitions to all the user
+  * facing functionalities like set_data(),
+  */
 
 namespace ARCH {
 
 // This function returns whether observation is in I_up set
-template <typename T> bool is_upper(T &alpha, const T &y, T &C);
+template <typename T> da_int is_upper(const T &alpha, const T &y, const T &C);
 // This function returns whether observation is in I_low set
-template <typename T> bool is_lower(T &alpha, const T &y, T &C);
+template <typename T> da_int is_lower(const T &alpha, const T &y, const T &C);
 
 // This function returns whether observation is in I_up set and is a positive class
-template <typename T> bool is_upper_pos(T &alpha, const T &y, T &C);
+template <typename T> da_int is_upper_pos(const T &alpha, const T &y, const T &C);
 
 // This function returns whether observation is in I_up set and is a negative class
-template <typename T> bool is_upper_neg(T &alpha, const T &y);
+template <typename T> da_int is_upper_neg(const T &alpha, const T &y);
 
 // This function returns whether observation is in I_low set and is a positive class
-template <typename T> bool is_lower_pos(T &alpha, const T &y);
+template <typename T> da_int is_lower_pos(const T &alpha, const T &y);
 
 // This function returns whether observation is in I_low set and is a negative class
-template <typename T> bool is_lower_neg(T &alpha, const T &y, T &C);
+template <typename T> da_int is_lower_neg(const T &alpha, const T &y, const T &C);
 
 // Functions that return pointer to internal kernel function implementation
 template <typename T>
 static void rbf_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
-                        T *x_norm, da_int ldx, const T *Y, T *y_norm, da_int ldy, T *D,
-                        da_int ldd, T gamma, da_int /*degree*/, T /*coef0*/, bool X_is_Y);
+                        T *x_norm, da_int compute_X_norms, da_int ldx, const T *Y,
+                        T *y_norm, da_int compute_Y_norms, da_int ldy, T *D, da_int ldd,
+                        T gamma, da_int /*degree*/, T /*coef0*/, bool X_is_Y,
+                        da_int vectorisation);
 
 template <typename T>
 static void linear_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
-                           T * /*x_norm*/, da_int ldx, const T *Y, T * /*y_norm*/,
+                           T * /*x_norm*/, da_int /*compute_X_norms*/, da_int ldx,
+                           const T *Y, T * /*y_norm*/, da_int /*compute_Y_norms*/,
                            da_int ldy, T *D, da_int ldd, T /*gamma*/, da_int /*degree*/,
-                           T /*coef0*/, bool X_is_Y);
+                           T /*coef0*/, bool X_is_Y, da_int /*vectorisation*/);
 
 template <typename T>
 static void sigmoid_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
-                            T * /*x_norm*/, da_int ldx, const T *Y, T * /*y_norm*/,
+                            T * /*x_norm*/, da_int /*compute_X_norms*/, da_int ldx,
+                            const T *Y, T * /*y_norm*/, da_int /*compute_Y_norms*/,
                             da_int ldy, T *D, da_int ldd, T gamma, da_int /*degree*/,
-                            T coef0, bool X_is_Y);
+                            T coef0, bool X_is_Y, da_int /*vectorisation*/);
 
 template <typename T>
 static void polynomial_wrapper(da_order order, da_int m, da_int n, da_int k, const T *X,
-                               T * /*x_norm*/, da_int ldx, const T *Y, T * /*y_norm*/,
+                               T * /*x_norm*/, da_int /*compute_X_norms*/, da_int ldx,
+                               const T *Y, T * /*y_norm*/, da_int /*compute_Y_norms*/,
                                da_int ldy, T *D, da_int ldd, T gamma, da_int degree,
-                               T coef0, bool X_is_Y);
+                               T coef0, bool X_is_Y, da_int /*vectorisation*/);
 
 namespace da_svm {
 
@@ -92,21 +100,21 @@ using namespace da_svm_types;
 template <typename T> class svm;
 
 /*
- * Base SVM handle class that contains members that
- * are common for all SVM models.
- *
- * This handle is inherited by all specialized svm handles.
- *
- * The inheritance scheme is as follows:
- *
- *                          SVM
- *                         /   \
- *                        /     \
- *                   C-SVM       Nu-SVM
- *                  /     \      /     \
- *                 /       \    /       \
- *              SVC       SVR Nu-SVC   Nu-SVR
- */
+  * Base SVM handle class that contains members that
+  * are common for all SVM models.
+  *
+  * This handle is inherited by all specialized svm handles.
+  *
+  * The inheritance scheme is as follows:
+  *
+  *                          SVM
+  *                         /   \
+  *                        /     \
+  *                   C-SVM       Nu-SVM
+  *                  /     \      /     \
+  *                 /       \    /       \
+  *              SVC       SVR Nu-SVC   Nu-SVR
+  */
 
 template <typename T> class base_svm {
   public:
@@ -145,9 +153,10 @@ template <typename T> class base_svm {
     T tau = 2 * std::numeric_limits<T>::epsilon();
     // Convergence tolerance
     T tol = 1.0e-3;
-    da_int max_iter;
-    da_int iter;
-
+    da_int iter, max_iter, max_ws_size;
+    bool cache_smaller_than_ws;
+    da_int padding;
+    da_int wssi_vec_type = scalar, wssj_vec_type = scalar;
     // Variable is being set at the contructors of spiecialised classes
     da_svm_model mod = svm_undefined;
 
@@ -165,9 +174,10 @@ template <typename T> class base_svm {
     // Internal working variables
     std::vector<T> alpha_diff;
     da_int ws_size; // Size of working set
+    T cache_size;   // Size of cache for each classifier (in MB)
     std::vector<T> local_alpha, local_gradient, local_response;
     std::vector<T> x_norm_aux, y_norm_aux; // Work array for kernel computation
-    std::vector<bool> I_low_p, I_up_p, I_low_n, I_up_n;
+    std::vector<da_int> I_low_p, I_up_p, I_low_n, I_up_n;
 
     // ws_indexes is array with indexes of outer working set
     // index_aux is array with argsorted gradient array
@@ -188,31 +198,44 @@ template <typename T> class base_svm {
                                 da_int ldx_test, T *decision_values);
 
     // General auxiliary functions
-    void update_gradient(std::vector<T> &gradient, std::vector<T> &alpha_diff,
-                         da_int &nrow, da_int &ncol, std::vector<T> &kernel_matrix);
+    void update_gradient(T *gradient, std::vector<T> &gradient_threads,
+                         std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
+                         std::vector<T *> &ptr_kernel_col);
     void kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
-                        std::vector<T> &X_temp, std::vector<T> &kernel_matrix);
-    void compute_ws_size(da_int &ws_size);
+                        std::vector<T> &X_temp, std::vector<T> &kernel_temp,
+                        std::vector<T *> &ptr_kernel_col, da_cache::LRUCache<T> &cache);
+    void compute_ws_size(da_int &ws_size, da_int max_ws_size);
     da_int maxpowtwo(da_int &n);
-    void wssi(std::vector<bool> &I_up, std::vector<T> &gradient, da_int &i, T &min_grad);
-    void wssj(std::vector<bool> &I_low, std::vector<T> &gradient, da_int &i, T &min_grad,
-              da_int &j, T &max_grad, std::vector<T> &kernel_matrix, T &delta,
-              T &max_fun);
+    void wssi(std::vector<da_int> &I_up, std::vector<T> &gradient, da_int &i,
+              T &min_grad);
+    void wssj(std::vector<da_int> &I_low, std::vector<T> &gradient, da_int &i,
+              T &min_grad, da_int &j, T &max_grad,
+              std::vector<T> &kernel_matrix_row_major,
+              std::vector<T> &kernel_matrix_diagonal, T &delta, T &max_fun);
+    void prepare_kernel_matrix(std::vector<T *> &ptr_kernel_col, da_int ws_size,
+                               std::vector<T> &local_kernel_matrix,
+                               std::vector<T> &local_kernel_matrix_row_major,
+                               std::vector<T> &kernel_diagonal,
+                               std::vector<da_int> &real_indices);
 
     // Functions that need specialisation
     virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
-                                     std::vector<T> &response, std::vector<T> &alpha) = 0;
+                                     std::vector<T> &response, std::vector<T> &alpha,
+                                     da_cache::LRUCache<T> &cache) = 0;
     virtual void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
                            std::vector<bool> &selected_ws_indicator,
                            da_int &n_selected) = 0;
     virtual void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                           std::vector<T> &kernel_matrix,
-                           std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
+                           std::vector<T *> &ptr_kernel_col,
+                           std::vector<T> &local_kernel_matrix,
+                           std::vector<T> &local_kernel_matrix_row_major,
+                           std::vector<T> &kernel_diagonal,
+                           std::vector<da_int> &real_indices, std::vector<T> &alpha,
                            std::vector<T> &local_alpha, std::vector<T> &gradient,
                            std::vector<T> &local_gradient, std::vector<T> &response,
-                           std::vector<T> &local_response, std::vector<bool> &I_low_p,
-                           std::vector<bool> &I_up_p, std::vector<bool> &I_low_n,
-                           std::vector<bool> &I_up_n, T &first_diff,
+                           std::vector<T> &local_response, std::vector<da_int> &I_low_p,
+                           std::vector<da_int> &I_up_p, std::vector<da_int> &I_low_n,
+                           std::vector<da_int> &I_up_n, T &first_diff,
                            std::vector<T> &alpha_diff, std::optional<T> tol) = 0;
     virtual da_status set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
                                std::vector<T> &response, da_int &size, T &bias) = 0;
@@ -237,18 +260,22 @@ template <typename T> class svm : public basic_handle<T> {
 
     da_int ldx_train;
 
+    std::mt19937_64 mt_gen;
+    da_int seed;
+
     // Set true when user data is loaded
     bool loadingdone = false;
     // Set true when SVM is computed successfully
     bool iscomputed = false;
     bool ismulticlass = false;
+    da_int predict_proba_opt = false;
 
     da_svm_model mod = svm_undefined;
 
     // Results
     std::vector<bool> is_sv; // only used for multiclass
     da_int n_sv = 0;
-    std::vector<T> support_coefficients, support_vectors, bias;
+    std::vector<T> support_coefficients, support_vectors, bias, probaA, probaB;
     std::vector<da_int> support_indexes, n_sv_per_class, n_iteration;
 
   public:
@@ -260,6 +287,8 @@ template <typename T> class svm : public basic_handle<T> {
                        const T *y);
     da_status select_model(da_svm_model mod);
     da_status compute();
+    da_status compute_probabilities(base_svm<T> &classifier, da_int n_fold, T &probA,
+                                    T &probB);
     da_status predict(da_int nsamples, da_int nfeat, const T *X_test, da_int ldx_test,
                       T *predictions);
     da_status decision_function(da_int nsamples, da_int nfeat, const T *X_test,
@@ -267,6 +296,10 @@ template <typename T> class svm : public basic_handle<T> {
                                 T *decision_values, da_int ldd);
     da_status score(da_int nsamples, da_int nfeat, const T *X_test, da_int ldx_test,
                     const T *y_test, T *score);
+    da_status predict_proba(da_int nsamples, da_int nfeat, const T *X_test,
+                            da_int ldx_test, T *y_proba, da_int ldy);
+    da_status predict_log_proba(da_int nsamples, da_int nfeat, const T *X_test,
+                                da_int ldx_test, T *y_log_proba, da_int ldy);
 
     void refresh();
 
@@ -284,19 +317,22 @@ template <typename T> class csvm : public base_svm<T> {
     void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
                    std::vector<bool> &selected_ws_indicator, da_int &n_selected);
     void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                   std::vector<T> &kernel_matrix, std::vector<T> &local_kernel_matrix,
+                   std::vector<T *> &ptr_kernel_col, std::vector<T> &local_kernel_matrix,
+                   std::vector<T> &local_kernel_matrix_row_major,
+                   std::vector<T> &kernel_diagonal, std::vector<da_int> &real_indices,
                    std::vector<T> &alpha, std::vector<T> &local_alpha,
                    std::vector<T> &gradient, std::vector<T> &local_gradient,
                    std::vector<T> &response, std::vector<T> &local_response,
-                   std::vector<bool> &I_low_p, std::vector<bool> &I_up_p,
-                   std::vector<bool> &I_low_n, std::vector<bool> &I_up_n, T &first_diff,
-                   std::vector<T> &alpha_diff, std::optional<T> tol);
+                   std::vector<da_int> &I_low_p, std::vector<da_int> &I_up_p,
+                   std::vector<da_int> &I_low_n, std::vector<da_int> &I_up_n,
+                   T &first_diff, std::vector<T> &alpha_diff, std::optional<T> tol);
     da_status set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
                        std::vector<T> &response, da_int &size, T &bias);
 
     // Inherited functions
     virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
-                                     std::vector<T> &response, std::vector<T> &alpha) = 0;
+                                     std::vector<T> &response, std::vector<T> &alpha,
+                                     da_cache::LRUCache<T> &cache) = 0;
     virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
 };
 
@@ -307,7 +343,8 @@ template <typename T> class svc : public csvm<T> {
     virtual ~svc(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
+                             std::vector<T> &response, std::vector<T> &alpha,
+                             da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);
 };
 
@@ -318,7 +355,8 @@ template <typename T> class svr : public csvm<T> {
     virtual ~svr(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
+                             std::vector<T> &response, std::vector<T> &alpha,
+                             da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);
 };
 
@@ -331,24 +369,27 @@ template <typename T> class nusvm : public base_svm<T> {
     void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
                    std::vector<bool> &selected_ws_indicator, da_int &n_selected);
     void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                   std::vector<T> &kernel_matrix, std::vector<T> &local_kernel_matrix,
+                   std::vector<T *> &ptr_kernel_col, std::vector<T> &local_kernel_matrix,
+                   std::vector<T> &local_kernel_matrix_row_major,
+                   std::vector<T> &kernel_diagonal, std::vector<da_int> &real_indices,
                    std::vector<T> &alpha, std::vector<T> &local_alpha,
                    std::vector<T> &gradient, std::vector<T> &local_gradient,
                    std::vector<T> &response, std::vector<T> &local_response,
-                   std::vector<bool> &I_low_p, std::vector<bool> &I_up_p,
-                   std::vector<bool> &I_low_n, std::vector<bool> &I_up_n, T &first_diff,
-                   std::vector<T> &alpha_diff, std::optional<T> tol);
+                   std::vector<da_int> &I_low_p, std::vector<da_int> &I_up_p,
+                   std::vector<da_int> &I_low_n, std::vector<da_int> &I_up_n,
+                   T &first_diff, std::vector<T> &alpha_diff, std::optional<T> tol);
     da_status set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
                        std::vector<T> &response, da_int &size, T &bias);
 
     // Inherited functions
     virtual da_status initialisation(da_int &size, std::vector<T> &gradient,
-                                     std::vector<T> &response, std::vector<T> &alpha) = 0;
+                                     std::vector<T> &response, std::vector<T> &alpha,
+                                     da_cache::LRUCache<T> &cache) = 0;
     virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
 
     // Auxiliary functions
     da_status initialise_gradient(std::vector<T> &alpha_diff, da_int counter,
-                                  std::vector<T> &gradient);
+                                  std::vector<T> &gradient, da_cache::LRUCache<T> &cache);
 };
 
 template <typename T> class nusvc : public nusvm<T> {
@@ -358,7 +399,8 @@ template <typename T> class nusvc : public nusvm<T> {
     virtual ~nusvc(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
+                             std::vector<T> &response, std::vector<T> &alpha,
+                             da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);
 };
 
@@ -369,9 +411,26 @@ template <typename T> class nusvr : public nusvm<T> {
     virtual ~nusvr(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
-                             std::vector<T> &response, std::vector<T> &alpha);
+                             std::vector<T> &response, std::vector<T> &alpha,
+                             da_cache::LRUCache<T> &cache);
     da_status set_sv(std::vector<T> &alpha, da_int &n_support);
 };
+
+// Declare the kernel functions for the various SIMD implementations and a generic function for
+// choosing the SIMD size and associated padding requirement
+template <class T, vectorization_type U>
+void wssi_kernel(da_int *I_up, T *gradient, da_int &min_grad_idx, T &min_grad_value,
+                 da_int ws_size);
+template <class T, vectorization_type U>
+void wssj_kernel(da_int *I_low, T *gradient, T *K_ith_row, T *K_diagonal, T &K_ii,
+                 da_int &max_grad_idx, T &max_grad_value, T &min_grad, T &max_fun,
+                 T &delta, T &tau, da_int ws_size);
+
+template <class T>
+void select_simd_size_wss(da_int ws_size, da_int &padding,
+                          vectorization_type &kernel_type_wssi,
+                          vectorization_type &kernel_type_wssj);
+void select_ws_size(da_int n, da_svm_types::svm_kernel kernel, da_int &ws_size);
 
 } // namespace da_svm
 

@@ -40,7 +40,11 @@ using namespace TEST_ARCH;
 using T = double;
 da_int stepchk_dummy([[maybe_unused]] da_int n, [[maybe_unused]] T *x,
                      [[maybe_unused]] void *usrdata, T *optim) {
-    *optim = T(0);
+    T f = 0;
+    for (auto i = 0; i < n; i++) {
+        f += (1.0 - x[i]) * (1.0 - x[i]);
+    }
+    *optim = 10.0e6 * f;
     return 0;
 }
 
@@ -113,7 +117,7 @@ TEST(Coord, CycleEnd) {
     EXPECT_EQ(status, da_status_success) << "error setting coord skip tol";
     status = opts.set("coord skip min", da_int(2), da_options::setby_t::user);
     EXPECT_EQ(status, da_status_success) << "error setting coord skip min";
-    status = opts.set("coord convergence tol", 1.0e-8, da_options::setby_t::user);
+    status = opts.set("coord convergence tol", 1.0e-9, da_options::setby_t::user);
     EXPECT_EQ(status, da_status_success) << "error setting coord convergence tol";
     status = opts.set("coord restart", da_int(10), da_options::setby_t::user);
     EXPECT_EQ(status, da_status_success) << "error setting coord restart";
@@ -126,29 +130,29 @@ TEST(Coord, CycleEnd) {
 
     // Check info array
     // time
-    EXPECT_GT(info[da_optim_info_t::info_time], T(0));
+    EXPECT_GT(info[da_linmod_info_t::linmod_info_time], T(0));
     // iter
-    EXPECT_GT(info[da_optim_info_t::info_iter], T(28));
-    EXPECT_LT(info[da_optim_info_t::info_iter], T(32));
+    EXPECT_GT(info[da_linmod_info_t::linmod_info_iter], T(24));
+    EXPECT_LT(info[da_linmod_info_t::linmod_info_iter], T(38));
     // expensive
-    EXPECT_GT(info[da_optim_info_t::info_nevalf], T(28));
-    EXPECT_LT(info[da_optim_info_t::info_nevalf], T(32));
+    EXPECT_GT(info[da_linmod_info_t::linmod_info_nevalf], T(24));
+    EXPECT_LT(info[da_linmod_info_t::linmod_info_nevalf], T(38));
     // cheap
-    EXPECT_GT(info[da_optim_info_t::info_ncheap], T(28 * (n - 1)));
-    EXPECT_LT(info[da_optim_info_t::info_ncheap], T(32 * (n - 1)));
+    EXPECT_GT(info[da_linmod_info_t::linmod_info_ncheap], T(22 * (n - 1)));
+    EXPECT_LT(info[da_linmod_info_t::linmod_info_ncheap], T(38 * (n - 1)));
     // objective
-    EXPECT_LT(info[da_optim_info_t::info_objective], ftol);
+    EXPECT_LT(info[da_linmod_info_t::linmod_info_objective], ftol);
     // gradient infinity norm
-    EXPECT_EQ(info[da_optim_info_t::info_grad_norm], T(0));
+    EXPECT_EQ(info[da_linmod_info_t::linmod_info_grad_norm], T(0));
     // delta from two iterates in infinity norm
-    EXPECT_LT(info[da_optim_info_t::info_inorm], tol);
+    EXPECT_LT(info[da_linmod_info_t::linmod_info_inorm], tol);
     // infinity-norm of the initial iterate
-    EXPECT_EQ(info[da_optim_info_t::info_inorm_init], inorm_init);
+    EXPECT_EQ(info[da_linmod_info_t::linmod_info_inorm_init], inorm_init);
 
     // Second call at solution
     status = TEST_ARCH::coord::coord(opts, n, x, l, u, info, stepfun_cycleend, monit,
                                      usrdata, err, stepchk_dummy);
     EXPECT_EQ(status, da_status_success) << "error from 2nd call to coord";
 
-    EXPECT_LE(info[da_optim_info_t::info_iter], 1);
+    EXPECT_LE(info[da_linmod_info_t::linmod_info_iter], 1);
 }

@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -67,11 +67,11 @@ def pca_example():
     expected_components = np.array([[-0.14907884486130418, -0.6612054163818867,
                                      -0.031706610956396264, -0.7289116905829763,
                                      -0.09091387966203135],
-                                    [-0.07220367025708045,  0.623738867070505,
+                                    [-0.07220367025708045, 0.623738867070505,
                                      0.20952521660694667, -0.6138062400926413,
                                      0.4302063910917139],
                                     [-0.38718653977350936, -0.06907631947413592,
-                                     0.8854125206703791,  0.1296593407398653,
+                                     0.8854125206703791, 0.1296593407398653,
                                      -0.21106437194645863]])
 
     expected_x_transform = np.array([[-3.250305270939447, -2.1581247424555086, -1.9477723543266676],

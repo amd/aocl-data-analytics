@@ -28,10 +28,14 @@
 
 if(NOT WIN32)
   set(CMAKE_Fortran_FLAGS -cpp -Wno-unused-parameter -mavx2)
+  if(CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    # Ask compiler to ignore unknon warning options
+    list(APPEND CMAKE_Fortran_FLAGS -Qunused-arguments -Wno-unused-command-line-argument -Wno-unknown-warning-option)
+  endif()
 else()
   set(CMAKE_Fortran_PREPROCESS ON)
   if(CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-    set(CMAKE_Fortran_FLAGS /Qavx2)
+    set(CMAKE_Fortran_FLAGS /QxCORE-AVX2)
   endif()
 endif()
 
@@ -45,14 +49,6 @@ if(BUILD_ILP64)
   else()
     message(FATAL_ERROR "Unknown Fortran compiler!")
   endif()
-endif()
-
-if(WIN32 AND NOT CMAKE_Fortran_COMPILER_ID MATCHES "Intel")
-  find_library(
-    LIBGFORTRAN
-    NAMES libgfortran libgfortran-5
-    HINTS ${MINGW_PATH}
-    DOC "gfortran library")
 endif()
 
 list(JOIN CMAKE_Fortran_FLAGS " " CMAKE_Fortran_FLAGS)
@@ -87,7 +83,6 @@ function(generate_lbfgsb_targets precision)
       link_libraries("flang")
     else()
       set_target_properties(${lbfgsb_prec} PROPERTIES PREFIX "")
-      target_link_libraries(${lbfgsb_prec} PRIVATE ${LIBGFORTRAN})
     endif()
   endif()
   target_link_libraries(${lbfgsb_prec} PRIVATE ${BLAS})

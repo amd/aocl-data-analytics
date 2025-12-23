@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -37,6 +37,72 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+// taken from  "kmeans_types.hpp"
+enum vectorization_type { scalar = 0, avx = 2, avx2 = 5, avx512 = 11 };
+
+// Test kernel overrides
+TEST(KMeansKernelOverride, SetAndGet) {
+    using T = float;
+
+    da_int n_samples = 10;
+    da_int n_features = 2;
+    const std::vector<T> A{1.0, 1.1, 0.5,  0.49, -2.0, -2.0, 0.53, 0.9,  1.2, -1.8,
+                           1.0, 1.2, -2.0, -1.9, 0.5,  0.51, -2.1, 0.95, 0.8, 0.6};
+    da_int lda = 10;
+
+    // setup a micro problem
+    da_handle handle{nullptr};
+    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_kmeans), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "algorithm", "lloyd"), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_clusters", 2), da_status_success);
+    EXPECT_EQ(da_kmeans_set_data(handle, n_samples, n_features, A.data(), lda),
+              da_status_success);
+
+    char answer[100];
+
+    EXPECT_EQ(da_kmeans_compute<T>(handle), da_status_success);
+    // Run kmean and expect telemetry data
+    EXPECT_EQ(da_debug_get("kmeans.setup", 100, answer), da_status_success);
+    // no need to parse...
+    // solve again with invalid ISA
+    // Rerun with invalid ISA value and expect "scalar" kernel type
+    EXPECT_EQ(da_debug_set("kmeans.ISA", "invalid"), da_status_success);
+    EXPECT_EQ(da_kmeans_compute<T>(handle), da_status_success);
+    // Run kmean and expect telemetry data
+    EXPECT_EQ(da_debug_get("kmeans.setup", 100, answer), da_status_success);
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(
+                    ("kernel.type=" + std::to_string(vectorization_type::scalar))));
+
+    // solve again Lloyd - AVX2
+    EXPECT_EQ(da_debug_set("kmeans.isa", "avx2"), da_status_success);
+    EXPECT_EQ(da_kmeans_compute<T>(handle), da_status_success);
+    // Check telemetry
+    EXPECT_EQ(da_debug_get("kmeans.setup", 100, answer), da_status_success);
+    EXPECT_EQ(da_debug_get(nullptr, 100, answer), da_status_success);
+    // "kmeans.settings" =
+    // "kernel=lloyd,kernel.type=" + std::to_string(kernel_type) + ",kernel.padding=" +
+    // std::to_string(padding));
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(
+                    ("kernel.type=" + std::to_string(vectorization_type::avx2))));
+
+    // solve again Elkan
+    EXPECT_EQ(da_options_set_string(handle, "algorithm", "elkan"), da_status_success);
+    EXPECT_EQ(da_kmeans_compute<T>(handle), da_status_success);
+    EXPECT_EQ(da_debug_get("kmeans.setup", 100, answer), da_status_success);
+    // "kernel=elkan,kernel.update_kernel_type=" + std::to_string(update_kernel_type) +
+    // ",kernel.reduce_kernel.type=" + std::to_string(reduce_kernel_type) +
+    // ",kernel.padding=" + std::to_string(padding));
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(("kernel.update_kernel.type=" +
+                                      std::to_string(vectorization_type::avx2))));
+    EXPECT_THAT(std::string(answer),
+                ::testing::HasSubstr(("kernel.reduce_kernel.type=" +
+                                      std::to_string(vectorization_type::avx2))));
+    da_handle_destroy(&handle);
+}
+
 template <typename T> class KMeansTest : public testing::Test {
   public:
     using List = std::list<T>;
@@ -44,24 +110,42 @@ template <typename T> class KMeansTest : public testing::Test {
     T value_;
 };
 
-using FloatTypes = ::testing::Types<float, double>;
-TYPED_TEST_SUITE(KMeansTest, FloatTypes);
-
-TYPED_TEST(KMeansTest, KMeansFunctionality) {
-    std::vector<KMeansParamType<TypeParam>> params;
+template <typename T> std::vector<KMeansParamType<T>> getParams() {
+    std::vector<KMeansParamType<T>> params;
     GetKMeansData(params);
+    return params;
+}
+
+template <typename T> void test_functionality(const KMeansParamType<T> &param) {
     da_handle handle = nullptr;
-    da_int count = 0;
+    std::unordered_map<std::string, vectorization_type> isa_list{
+        {"none", vectorization_type::scalar}};
 
-    for (auto &param : params) {
+    // These kernels have multiple implementations, so we need to set the ISA
+    if (param.algorithm == "elkan" || param.algorithm == "lloyd") {
+        isa_list = {{"scalar", vectorization_type::scalar},
+                    {"avx", vectorization_type::avx},
+                    {"avx2", vectorization_type::avx2},
+                    // will trickle down to AVX2 where is AVX512 not available
+                    {"avx512", vectorization_type::avx512}};
+    } else {
+        isa_list = {{"none", vectorization_type::scalar}};
+    }
 
-        count++;
+    for (const auto &isa : isa_list) {
+        if (isa.first == "none") {
+            // remove isa requirement
+            EXPECT_EQ(da_debug_set("kmeans.isa", ""), da_status_success);
+        } else {
+            EXPECT_EQ(da_debug_set("kmeans.isa", (isa.first).c_str()), da_status_success);
+        }
 
-        std::cout << "Functionality test " << std::to_string(count) << ": "
-                  << param.test_name << std::endl;
+        std::cout << "Functionality test: " << param.test_name
+                  << ": param.algorithm=" << param.algorithm
+                  << "  [kmeans.isa=" << isa.first << " (" << std::to_string(isa.second)
+                  << ")]" << std::endl;
 
-        EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans),
-                  da_status_success);
+        EXPECT_EQ(da_handle_init<T>(&handle, da_handle_kmeans), da_status_success);
         EXPECT_EQ(da_options_set_string(handle, "initialization method",
                                         param.initialization_method.c_str()),
                   da_status_success);
@@ -88,15 +172,31 @@ TYPED_TEST(KMeansTest, KMeansFunctionality) {
                       da_status_success);
         }
 
-        EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), param.expected_status);
+        EXPECT_EQ(da_kmeans_compute<T>(handle), param.expected_status);
+
+        if (isa.first != "none") {
+            // Check that the kernel isa path is correct
+            char answer[100];
+            EXPECT_EQ(da_debug_get("kmeans.setup", 100, answer), da_status_success);
+            auto expect =
+                ::testing::HasSubstr(("kernel.type=" + std::to_string(isa.second)));
+            if (isa.second == vectorization_type::avx512) {
+                // take care of the AVX2/AVX512 fallback
+                auto fallback = ::testing::HasSubstr(
+                    ("kernel.type=" + std::to_string(vectorization_type::avx2)));
+                EXPECT_THAT(std::string(answer), ::testing::AnyOf(expect, fallback));
+            } else {
+                EXPECT_THAT(std::string(answer), expect);
+            }
+        }
 
         da_int size_rinfo = 5;
-        std::vector<TypeParam> rinfo(size_rinfo);
+        std::vector<T> rinfo(size_rinfo);
         EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &size_rinfo, rinfo.data()),
                   da_status_success);
 
         da_int size_centres = param.n_clusters * param.n_features;
-        std::vector<TypeParam> centres(size_centres);
+        std::vector<T> centres(size_centres);
         EXPECT_EQ(da_handle_get_result(handle, da_kmeans_cluster_centres, &size_centres,
                                        centres.data()),
                   da_status_success);
@@ -110,13 +210,15 @@ TYPED_TEST(KMeansTest, KMeansFunctionality) {
         if (param.is_random == false) {
 
             // This test is sufficiently deterministic to check values explicitly
+            std::vector<T> X_transform = param.X_transform;
             EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
-                                          param.X.data(), param.ldx,
-                                          param.X_transform.data(), param.ldx_transform),
+                                          param.X.data(), param.ldx, X_transform.data(),
+                                          param.ldx_transform),
                       da_status_success);
 
+            std::vector<da_int> Y_labels = param.Y_labels;
             EXPECT_EQ(da_kmeans_predict(handle, param.k_samples, param.k_features,
-                                        param.Y.data(), param.ldy, param.Y_labels.data()),
+                                        param.Y.data(), param.ldy, Y_labels.data()),
                       da_status_success);
 
             EXPECT_ARR_NEAR(size_rinfo, rinfo.data(), param.expected_rinfo.data(),
@@ -128,11 +230,10 @@ TYPED_TEST(KMeansTest, KMeansFunctionality) {
             EXPECT_ARR_EQ(size_labels, labels.data(), param.expected_labels.data(), 1, 1,
                           0, 0);
 
-            EXPECT_ARR_NEAR(param.ldx_transform * param.m_features,
-                            param.X_transform.data(), param.expected_X_transform.data(),
-                            param.tol);
+            EXPECT_ARR_NEAR(param.ldx_transform * param.n_clusters, X_transform.data(),
+                            param.expected_X_transform.data(), param.tol);
 
-            EXPECT_ARR_EQ(param.k_samples, param.Y_labels.data(),
+            EXPECT_ARR_EQ(param.k_samples, Y_labels.data(),
                           param.expected_Y_labels.data(), 1, 1, 0, 0);
         } else {
             // Randomness in this test so just check the final inertia is sufficiently small
@@ -143,6 +244,31 @@ TYPED_TEST(KMeansTest, KMeansFunctionality) {
         da_handle_destroy(&handle);
     }
 }
+
+class DoubleFunctionalityTest : public testing::TestWithParam<KMeansParamType<double>> {};
+class FloatFunctionalityTest : public testing::TestWithParam<KMeansParamType<float>> {};
+
+template <typename T> void PrintTo(const KMeansParamType<T> &param, ::std::ostream *os) {
+    *os << param.test_name;
+}
+
+TEST_P(DoubleFunctionalityTest, ParameterizedTest) {
+    const KMeansParamType<double> &p = GetParam();
+    test_functionality(p);
+}
+
+TEST_P(FloatFunctionalityTest, ParameterizedTest) {
+    const KMeansParamType<float> &p = GetParam();
+    test_functionality(p);
+}
+
+INSTANTIATE_TEST_SUITE_P(KMeans_Functionality_Tests_Double, DoubleFunctionalityTest,
+                         ::testing::ValuesIn(getParams<double>()));
+INSTANTIATE_TEST_SUITE_P(KMeans_Functionality_Tests_Float, FloatFunctionalityTest,
+                         ::testing::ValuesIn(getParams<float>()));
+
+using FloatTypes = ::testing::Types<float, double>;
+TYPED_TEST_SUITE(KMeansTest, FloatTypes);
 
 TYPED_TEST(KMeansTest, MultipleCalls) {
     // Check we can repeatedly call compute etc with the same single handle
@@ -222,13 +348,15 @@ TYPED_TEST(KMeansTest, MultipleCalls) {
                                            labels.data()),
                   da_status_success);
 
+        std::vector<TypeParam> X_transform = param.X_transform;
         EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
-                                      param.X.data(), param.ldx, param.X_transform.data(),
+                                      param.X.data(), param.ldx, X_transform.data(),
                                       param.ldx_transform),
                   da_status_success);
 
+        std::vector<da_int> Y_labels = param.Y_labels;
         EXPECT_EQ(da_kmeans_predict(handle, param.k_samples, param.k_features,
-                                    param.Y.data(), param.ldy, param.Y_labels.data()),
+                                    param.Y.data(), param.ldy, Y_labels.data()),
                   da_status_success);
 
         EXPECT_ARR_NEAR(size_rinfo, rinfo.data(), param.expected_rinfo.data(), param.tol);
@@ -239,15 +367,19 @@ TYPED_TEST(KMeansTest, MultipleCalls) {
         EXPECT_ARR_EQ(size_labels, labels.data(), param.expected_labels.data(), 1, 1, 0,
                       0);
 
-        EXPECT_ARR_NEAR(param.ldx_transform * param.m_features, param.X_transform.data(),
+        EXPECT_ARR_NEAR(param.ldx_transform * param.m_features, X_transform.data(),
                         param.expected_X_transform.data(), param.tol);
 
-        EXPECT_ARR_EQ(param.k_samples, param.Y_labels.data(),
-                      param.expected_Y_labels.data(), 1, 1, 0, 0);
+        EXPECT_ARR_EQ(param.k_samples, Y_labels.data(), param.expected_Y_labels.data(), 1,
+                      1, 0, 0);
 
         if (count == 1) {
             // Triggers the code path where the user re-uses a handle, meaning an illegal value of n_clusters hasn't been caught
             EXPECT_EQ(da_options_set_int(handle, "n_clusters", 56), da_status_success);
+            if (param.initialization_method == "supplied") {
+                EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
+                          da_status_success);
+            }
             EXPECT_EQ(da_kmeans_compute<TypeParam>(handle),
                       da_status_incompatible_options);
         }
@@ -285,12 +417,14 @@ TYPED_TEST(KMeansTest, ErrorExits) {
     EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
               da_status_no_data);
     EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), da_status_no_data);
+    std::vector<TypeParam> X_transform = param.X_transform;
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
-                                  param.X.data(), param.ldx, param.X_transform.data(),
+                                  param.X.data(), param.ldx, X_transform.data(),
                                   param.ldx_transform),
               da_status_no_data);
+    std::vector<da_int> Y_labels = param.Y_labels;
     EXPECT_EQ(da_kmeans_predict(handle, param.k_samples, param.k_features, param.Y.data(),
-                                param.ldy, param.Y_labels.data()),
+                                param.ldy, Y_labels.data()),
               da_status_no_data);
     EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &dim, results_arr),
               da_status_no_data);
@@ -338,42 +472,41 @@ TYPED_TEST(KMeansTest, ErrorExits) {
 
     // transform error exits
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features, null_arr,
-                                  param.ldx, param.X_transform.data(),
-                                  param.ldx_transform),
+                                  param.ldx, X_transform.data(), param.ldx_transform),
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
                                   param.X.data(), param.ldx, null_arr,
                                   param.ldx_transform),
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_transform(handle, 0, param.m_features, param.X.data(), param.ldx,
-                                  param.X_transform.data(), param.ldx_transform),
+                                  X_transform.data(), param.ldx_transform),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, 0, param.X.data(), param.ldx,
-                                  param.X_transform.data(), param.ldx_transform),
+                                  X_transform.data(), param.ldx_transform),
               da_status_invalid_input);
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
-                                  param.X.data(), 0, param.X_transform.data(),
+                                  param.X.data(), 0, X_transform.data(),
                                   param.ldx_transform),
               da_status_invalid_leading_dimension);
     EXPECT_EQ(da_kmeans_transform(handle, param.m_samples, param.m_features,
-                                  param.X.data(), param.ldx, param.X_transform.data(), 0),
+                                  param.X.data(), param.ldx, X_transform.data(), 0),
               da_status_invalid_leading_dimension);
 
     // predict error exits
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, param.k_samples, null_arr,
-                                param.ldy, param.Y_labels.data()),
+                                param.ldy, Y_labels.data()),
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, param.k_samples, param.Y.data(),
                                 param.ldy, null_arr_int),
               da_status_invalid_pointer);
     EXPECT_EQ(da_kmeans_predict(handle, 0, param.k_samples, param.Y.data(), param.ldy,
-                                param.Y_labels.data()),
+                                Y_labels.data()),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, 0, param.Y.data(), param.ldy,
-                                param.Y_labels.data()),
+                                Y_labels.data()),
               da_status_invalid_array_dimension);
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, param.k_samples, param.Y.data(),
-                                0, param.Y_labels.data()),
+                                0, Y_labels.data()),
               da_status_invalid_leading_dimension);
 
     // get results error exits

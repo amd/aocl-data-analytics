@@ -1,0 +1,58 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-lp64-debug-valgrind",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "lp64",
+        "debug",
+        "valgrind"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-debug-valgrind"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-lp64-debug-valgrind",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-lp64-debug-valgrind",
+      "configurePreset": "linux-gcc-lp64-debug-valgrind",
+      "inherits": "base"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-lp64-debug-valgrind",
+      "configurePreset": "linux-gcc-lp64-debug-valgrind",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-lp64-debug-valgrind",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-lp64-debug-valgrind"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-lp64-debug-valgrind"
+        },
+        {
+          "type": "test",
+          "name": "linux-gcc-lp64-debug-valgrind"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "win-st-ilp64-shared-release-native-python",
+      "inherits": [
+        "base",
+        "win",
+        "msvc",
+        "st",
+        "ilp64",
+        "shared",
+        "python",
+        "native",
+        "release"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-win-native-release"
+      },
+      "binaryDir": "${sourceDir}/build-win-st-ilp64-shared-python-native-release",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-st-ilp64-shared-release-native-python",
+      "configurePreset": "win-st-ilp64-shared-release-native-python",
+      "inherits": "base"
+    },
+    {
+      "name": "win-st-ilp64-shared-release-native-python-install",
+      "configurePreset": "win-st-ilp64-shared-release-native-python",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "win-st-ilp64-shared-release-native-python",
+      "configurePreset": "win-st-ilp64-shared-release-native-python",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "win-st-ilp64-shared-release-native-python",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "win-st-ilp64-shared-release-native-python"
+        },
+        {
+          "type": "build",
+          "name": "win-st-ilp64-shared-release-native-python-install"
+        },
+        {
+          "type": "test",
+          "name": "win-st-ilp64-shared-release-native-python"
+        }
+      ]
+    }
+  ]
+}

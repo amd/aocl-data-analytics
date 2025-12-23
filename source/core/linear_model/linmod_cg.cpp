@@ -121,9 +121,9 @@ template <typename T> da_status cg_data<T>::compute_cg() {
 template <typename T>
 da_status cg_data<T>::get_info([[maybe_unused]] da_int linfo, T *info) {
     // Save information about the norm of the gradient of the loss function
-    info[1] = static_cast<T>(rinfo[0] * rinfo[1]);
+    info[da_linmod_info_t::linmod_info_grad_norm] = static_cast<T>(rinfo[0] * rinfo[1]);
     // Save information about the number of iterations
-    info[2] = static_cast<T>(rinfo[30]);
+    info[da_linmod_info_t::linmod_info_iter] = static_cast<T>(rinfo[30]);
     return da_status_success;
 }
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -33,6 +33,7 @@ import sys
 from aoclda.nonlinear_model import nlls
 import numpy as np
 
+
 def res(x, residuals, data=None) -> int:
     (t, y) = data
     x1 = x[0]
@@ -46,8 +47,8 @@ def jac(x, jacobian, data) -> int:
     x2 = x[1]
     (t, y) = data
     jacobian[:] = np.column_stack((
-        np.exp(x2*t),
-        t * x1 * np.exp(x2*t)
+        np.exp(x2 * t),
+        t * x1 * np.exp(x2 * t)
     ))
     return 0
 
@@ -58,13 +59,13 @@ def hes(x, r, Hr, data) -> int:
     x2 = x[1]
     Hr[:] = np.zeros((2, 2))
     Hr[0, 0] = 0.0                    # H_11
-    v = t * np.exp(x2*t)
+    v = t * np.exp(x2 * t)
     Hr[1, 0] = np.dot(r, v)           # H_21
-    Hr[1, 1] = np.dot(r, (t*x1)*v)    # H_22
+    Hr[1, 1] = np.dot(r, (t * x1) * v)    # H_22
     return 0
 
 
-def nlls_example(dt = np.float64):
+def nlls_example(dt=np.float64):
     """
     Nonlinear data fitting of a convolution model, the solution
     provides the isolated parameters for the model:
@@ -72,7 +73,7 @@ def nlls_example(dt = np.float64):
     for data vectors y : yi and t : ti (i=1:5)
     """
     # Data to be fitted
-    t = np.array([1.0, 2.0, 4.0,  5.0,  8.0])
+    t = np.array([1.0, 2.0, 4.0, 5.0, 8.0])
     y = np.array([3.0, 4.0, 6.0, 11.0, 20.0])
 
     # Set correct tolerances base on data precision
@@ -96,8 +97,8 @@ def nlls_example(dt = np.float64):
     xexp = np.array([2.54104549, 0.25950481], dtype=dt)
     x = np.array([2.5, 0.25], dtype=dt)
     w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=dt)
-    blx = np.array([0.0,  0.0], dtype=dt)
-    bux = np.array([5.0,  3.0], dtype=dt)
+    blx = np.array([0.0, 0.0], dtype=dt)
+    bux = np.array([5.0, 3.0], dtype=dt)
     ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
                check_derivatives='yes', verbose=3)
     ndf.fit(x, res, jac, hes, data=(t, y), abs_gtol=abs_gtol, gtol=gtol,
@@ -107,8 +108,9 @@ def nlls_example(dt = np.float64):
     print(f"Residual norm at solution: {ndf.metrics['obj']:.4f}")
     print("Solution:")
     for i in range(2):
-        ok = np.abs(x[i]-xexp[i]) <= tol
+        ok = np.abs(x[i] - xexp[i]) <= tol
         print(f"x[{i}]={x[i]:.5f} expected: ({xexp[i]:.5f}) OK? {ok}")
+
 
 if __name__ == "__main__":
     try:

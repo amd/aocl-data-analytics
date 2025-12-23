@@ -33,7 +33,7 @@ project = 'AOCL-DA'
 copyright = '2025, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
 version = ''
-release = '5.1.0'
+release = '5.2.0'
 
 # -- Get doc working for Python ----------------------------------------------
 # Add to PYTHONPATH
@@ -45,7 +45,6 @@ extensions = ['sphinxcontrib.bibtex', 'breathe', 'sphinx.ext.napoleon',
               'sphinx.ext.autodoc', 'sphinx_collapse', 'sphinx_design']
 bibtex_bibfiles = ['refs.bib']
 bibtex_reference_style = 'author_year'
-breathe_default_project = 'aocl-da'
 
 # -- Option for generating output conditional on cmake INTERNAL_DOC variable -
 exclude_patterns = ['**/doc/trees_forests/df_intro.rst']

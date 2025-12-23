@@ -24,6 +24,46 @@
 
 include(CheckCXXCompilerFlag)
 
+function(extract_native_namespace NATIVE_NAMESPACE)
+  # For -march=native builds, extract the target Zen generation so we can assign
+  # namespaces correctly. NATIVE_NAMESPACE will be set to generic, or the Zen
+  # generation number
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/tmp_compile_test.cpp" "")
+
+  # Default if we don't find a Zen generation in the target list
+  set(NATIVE_NAMESPACE
+      "generic"
+      PARENT_SCOPE)
+
+  if(WIN32)
+    set(DEV_NULL "nul")
+  else()
+    set(DEV_NULL "/dev/null")
+  endif()
+
+  execute_process(
+    COMMAND ${CMAKE_CXX_COMPILER} -E -march=native -v
+            ${CMAKE_CURRENT_BINARY_DIR}/tmp_compile_test.cpp -o ${DEV_NULL}
+    OUTPUT_VARIABLE output_var
+    ERROR_VARIABLE error_var)
+
+  # Depending on the compiler, preprocessor information might be on stderr or
+  # stdout so we should search both. We only want to look for znver2 and above,
+  # everything else can be assigned to the generic namespace
+  if("${output_var}${error_var}" MATCHES "znver([2-9])")
+    set(number ${CMAKE_MATCH_1})
+    set(NATIVE_NAMESPACE
+        ${number}
+        PARENT_SCOPE)
+  else()
+    message(
+      WARNING
+        "Unable to find native Zen architecture, defaulting to generic namespace."
+    )
+  endif()
+
+endfunction()
+
 function(extract_znver_generation ARCHITECTURE ZNVER)
   # Given a -march=znverX type flag, extract the zen generation number
   if(${ARCHITECTURE} MATCHES "^znver([0-9]+)$")

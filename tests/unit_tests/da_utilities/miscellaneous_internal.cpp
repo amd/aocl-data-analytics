@@ -59,7 +59,7 @@ TYPED_TEST(misc_test_suite, refresh) {
     da_handle handle = nullptr;
 
     EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_define_features(handle, nsamples, nfeat, Ad, bd),
+    EXPECT_EQ(da_linmod_define_features(handle, nsamples, nfeat, Ad, nsamples, bd),
               da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "optim method", "QR"), da_status_success);
     EXPECT_EQ(da_linmod_select_model<TypeParam>(handle, linmod_model_mse),

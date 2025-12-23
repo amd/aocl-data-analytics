@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2023 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -29,17 +29,17 @@
 
 .. _aocl-da-index:
 
-AOCL-DA Documentation
-*********************
+AOCL-Data Analytics
+********************
 
-The AOCL Data Analytics Library (AOCL-DA) is a software library providing optimized building blocks for data analysis.
+The AOCL Data Analytics Library (AOCL-DA) is a software library providing optimized building blocks for data analysis and classical machine learning applications.
 It provides users with a complete workflow, including data handling, preprocessing, modeling and validation.
 It is designed with a focus on usability, reliability and performance.
 
 AOCL-DA is written with both C-compatible and Python interfaces to make it as seamless as possible to integrate with the library from
 whichever programming language you are using. Both sets of interfaces call the same underlying optimized code base.
 
-This documentation is available online in the form of web pages, or as a pdf file. It consists of three main sections:
+This documentation is available online in the form of web pages. It consists of three main sections:
 
 * **AOCL-DA for Python**: contains instructions for calling and using the Python APIs.
 * **AOCL-DA for C**: contains instructions for calling and using the C APIs.
@@ -50,48 +50,53 @@ Your installation is also packaged with C++ and Python example programs.
 The source code for AOCL-DA can be obtained from https://github.com/amd/aocl-data-analytics/.
 You can also install AOCL-DA using the AOCL spack recipe: https://www.amd.com/en/developer/zen-software-studio/applications/spack/spack-aocl.html.
 
-AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
-toolchainsupport@amd.com.
+.. AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
+   toolchainsupport@amd.com.
 
-Library Reference Documentation
--------------------------------
+AOCL-DA for Python
+------------------
 
 .. toctree::
    :maxdepth: 1
-   :caption: AOCL-DA for Python
 
    python_intro
    sklearn
 
+AOCL-DA for C
+-------------
+
 .. toctree::
    :maxdepth: 1
-   :caption: AOCL-DA for C
 
    C_intro
-   data_management/data_intro
-   da_handle/handle_intro
-   options/option_intro
-   errors/error_intro
-   results/results_intro
+   data_management/data
+   da_handle/handle
+   options/option
+   errors/error
+   results/results
+
+Algorithms
+----------
 
 .. toctree::
    :maxdepth: 1
-   :caption: Algorithms
 
-   basic_statistics/basic_stats_intro
-   clustering/clustering_intro
-   factorization/factorization_intro
-   linear_models/linmod_intro
-   nonlinear_models/nldf_intro
-   trees_forests/df_intro
-   metrics/metrics_intro
-   nearest_neighbors/knn_intro
-   kernel_functions/kernel_functions_intro
-   svm/svm_intro
+   basic_statistics/basic_stats
+   clustering/clustering
+   factorization/factorization
+   linear_models/linear_models
+   nonlinear_models/nldf
+   trees_forests/trees_forest
+   metrics/metrics
+   nearest_neighbors/knn
+   kernel_functions/kernel_functions
+   svm/svm
+
+Appendices
+----------
 
 .. toctree::
     :maxdepth: 1
-    :caption: Appendices
 
     options/all_table
     bibliography

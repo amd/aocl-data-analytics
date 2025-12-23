@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -139,7 +139,7 @@ int main() {
            da_options_set_string(handle, "print options", "yes") == da_status_success;
     pass = pass && da_options_set_int(handle, "intercept", 0) == da_status_success;
     pass = pass && da_options_set_int(handle, "print level", 1) == da_status_success;
-    pass = pass && da_linmod_define_features_d(handle, m, n, features.data(),
+    pass = pass && da_linmod_define_features_d(handle, m, n, features.data(), m,
                                                rhs.data()) == da_status_success;
     if (!pass) {
         std::cout << "Unexpected error in the model definition.\n";

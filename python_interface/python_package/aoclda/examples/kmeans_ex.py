@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -55,7 +55,7 @@ def kmeans_example():
 
     print("\nk-means clustering for a small data matrix\n")
     try:
-        km = kmeans(n_clusters=2, C = c)
+        km = kmeans(n_clusters=2, C=c)
         km.fit(a)
         x_transform = km.transform(x)
         x_labels = km.predict(x)

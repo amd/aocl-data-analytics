@@ -1,0 +1,67 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-native-python",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "mt",
+        "ilp64",
+        "shared",
+        "python",
+        "native",
+        "debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-native-debug"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-mt-ilp64-shared-python-native-debug",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-native-python",
+      "configurePreset": "linux-gcc-mt-ilp64-shared-debug-native-python",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-native-python-install",
+      "configurePreset": "linux-gcc-mt-ilp64-shared-debug-native-python",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-native-python",
+      "configurePreset": "linux-gcc-mt-ilp64-shared-debug-native-python",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-native-python",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-mt-ilp64-shared-debug-native-python"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-mt-ilp64-shared-debug-native-python-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-gcc-mt-ilp64-shared-debug-native-python"
+        }
+      ]
+    }
+  ]
+}

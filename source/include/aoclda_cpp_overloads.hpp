@@ -231,14 +231,16 @@ inline da_status da_standardize(da_order order, da_axis axis, da_int n_rows,
 
 inline da_status da_covariance_matrix(da_order order, da_int n_rows, da_int n_cols,
                                       const float *X, da_int ldx, da_int dof, float *cov,
-                                      da_int ldcov) {
-    return da_covariance_matrix_s(order, n_rows, n_cols, X, ldx, dof, cov, ldcov);
+                                      da_int ldcov, da_int assume_centered) {
+    return da_covariance_matrix_s(order, n_rows, n_cols, X, ldx, dof, cov, ldcov,
+                                  assume_centered);
 }
 
 inline da_status da_covariance_matrix(da_order order, da_int n_rows, da_int n_cols,
                                       const double *X, da_int ldx, da_int dof,
-                                      double *cov, da_int ldcov) {
-    return da_covariance_matrix_d(order, n_rows, n_cols, X, ldx, dof, cov, ldcov);
+                                      double *cov, da_int ldcov, da_int assume_centered) {
+    return da_covariance_matrix_d(order, n_rows, n_cols, X, ldx, dof, cov, ldcov,
+                                  assume_centered);
 }
 
 inline da_status da_correlation_matrix(da_order order, da_int n_rows, da_int n_cols,
@@ -257,14 +259,14 @@ inline da_status da_correlation_matrix(da_order order, da_int n_rows, da_int n_c
 template <class T> da_status da_linmod_select_model(da_handle handle, linmod_model mod);
 
 inline da_status da_linmod_define_features(da_handle handle, da_int n_samples,
-                                           da_int n_features, const float *X,
+                                           da_int n_features, const float *X, da_int ldx,
                                            const float *y) {
-    return da_linmod_define_features_s(handle, n_samples, n_features, X, y);
+    return da_linmod_define_features_s(handle, n_samples, n_features, X, ldx, y);
 }
 inline da_status da_linmod_define_features(da_handle handle, da_int n_samples,
-                                           da_int n_features, const double *X,
+                                           da_int n_features, const double *X, da_int ldx,
                                            const double *y) {
-    return da_linmod_define_features_d(handle, n_samples, n_features, X, y);
+    return da_linmod_define_features_d(handle, n_samples, n_features, X, ldx, y);
 }
 
 template <class T> da_status da_linmod_fit(da_handle handle);
@@ -272,19 +274,21 @@ template <class T> da_status da_linmod_fit(da_handle handle);
 template <class T>
 da_status da_linmod_fit_start(da_handle handle, da_int ncoef, const T *coefs);
 
-inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
-                                          const double *X, double *predictions,
+inline da_status da_linmod_evaluate_model(da_handle handle, da_int n_samples,
+                                          da_int n_features, const double *X, da_int ldx,
+                                          double *predictions,
                                           double *observations = nullptr,
                                           double *loss = nullptr) {
-    return da_linmod_evaluate_model_d(handle, nsamples, nfeat, X, predictions,
+    return da_linmod_evaluate_model_d(handle, n_samples, n_features, X, ldx, predictions,
                                       observations, loss);
 }
 
-inline da_status da_linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
-                                          const float *X, float *predictions,
+inline da_status da_linmod_evaluate_model(da_handle handle, da_int n_samples,
+                                          da_int n_features, const float *X, da_int ldx,
+                                          float *predictions,
                                           float *observations = nullptr,
                                           float *loss = nullptr) {
-    return da_linmod_evaluate_model_s(handle, nsamples, nfeat, X, predictions,
+    return da_linmod_evaluate_model_s(handle, n_samples, n_features, X, ldx, predictions,
                                       observations, loss);
 }
 
@@ -434,13 +438,17 @@ template <class T> da_status da_dbscan_compute(da_handle handle);
 /* Decision tree */
 inline da_status da_tree_set_training_data(da_handle handle, da_int n_samples,
                                            da_int n_features, da_int n_class,
-                                           const double *X, da_int ldx, const da_int *y) {
-    return da_tree_set_training_data_d(handle, n_samples, n_features, n_class, X, ldx, y);
+                                           const double *X, da_int ldx, const da_int *y,
+                                           const da_int *categorical_feat = nullptr) {
+    return da_tree_set_training_data_d(handle, n_samples, n_features, n_class, X, ldx, y,
+                                       categorical_feat);
 }
 inline da_status da_tree_set_training_data(da_handle handle, da_int n_samples,
                                            da_int n_features, da_int n_class,
-                                           const float *X, da_int ldx, const da_int *y) {
-    return da_tree_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx, y);
+                                           const float *X, da_int ldx, const da_int *y,
+                                           const da_int *categorical_feat = nullptr) {
+    return da_tree_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx, y,
+                                       categorical_feat);
 }
 
 template <typename T> da_status da_tree_fit(da_handle handle);
@@ -500,17 +508,17 @@ inline da_status da_tree_score(da_handle handle, da_int n_samples, da_int n_feat
 /* Random forest */
 inline da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
                                              da_int n_features, da_int n_class,
-                                             const double *X, da_int ldx,
-                                             const da_int *y) {
+                                             const double *X, da_int ldx, const da_int *y,
+                                             const da_int *categorical_feat = nullptr) {
     return da_forest_set_training_data_d(handle, n_samples, n_features, n_class, X, ldx,
-                                         y);
+                                         y, categorical_feat);
 }
 inline da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
                                              da_int n_features, da_int n_class,
-                                             const float *X, da_int ldx,
-                                             const da_int *y) {
+                                             const float *X, da_int ldx, const da_int *y,
+                                             const da_int *categorical_feat = nullptr) {
     return da_forest_set_training_data_s(handle, n_samples, n_features, n_class, X, ldx,
-                                         y);
+                                         y, categorical_feat);
 }
 
 template <typename T> da_status da_forest_fit(da_handle handle);
@@ -627,18 +635,38 @@ inline da_status da_pairwise_distances(da_order order, da_int m, da_int n, da_in
     return da_pairwise_distances_s(order, m, n, k, X, ldx, Y, ldy, D, ldd, p, metric);
 }
 
-/* k-NN for classification functions */
-inline da_status da_knn_set_training_data(da_handle handle, da_int n_samples,
-                                          da_int n_features, const double *X_train,
-                                          da_int ldx_train, const da_int *y_train) {
-    return da_knn_set_training_data_d(handle, n_samples, n_features, X_train, ldx_train,
-                                      y_train);
+/* k-NN for classification and regression functions */
+inline da_status da_knn_classifier_set_training_data(da_handle handle, da_int n_samples,
+                                                     da_int n_features,
+                                                     const double *X_train,
+                                                     da_int ldx_train,
+                                                     const da_int *y_train) {
+    return da_knn_classifier_set_training_data_d(handle, n_samples, n_features, X_train,
+                                                 ldx_train, y_train);
 }
-inline da_status da_knn_set_training_data(da_handle handle, da_int n_samples,
-                                          da_int n_features, const float *X_train,
-                                          da_int ldx_train, const da_int *y_train) {
-    return da_knn_set_training_data_s(handle, n_samples, n_features, X_train, ldx_train,
-                                      y_train);
+inline da_status da_knn_classifier_set_training_data(da_handle handle, da_int n_samples,
+                                                     da_int n_features,
+                                                     const float *X_train,
+                                                     da_int ldx_train,
+                                                     const da_int *y_train) {
+    return da_knn_classifier_set_training_data_s(handle, n_samples, n_features, X_train,
+                                                 ldx_train, y_train);
+}
+inline da_status da_knn_regressor_set_training_data(da_handle handle, da_int n_samples,
+                                                    da_int n_features,
+                                                    const double *X_train,
+                                                    da_int ldx_train,
+                                                    const double *y_train) {
+    return da_knn_regressor_set_training_data_d(handle, n_samples, n_features, X_train,
+                                                ldx_train, y_train);
+}
+inline da_status da_knn_regressor_set_training_data(da_handle handle, da_int n_samples,
+                                                    da_int n_features,
+                                                    const float *X_train,
+                                                    da_int ldx_train,
+                                                    const float *y_train) {
+    return da_knn_regressor_set_training_data_s(handle, n_samples, n_features, X_train,
+                                                ldx_train, y_train);
 }
 inline da_status da_knn_kneighbors(da_handle handle, da_int n_queries, da_int n_features,
                                    const double *X_test, da_int ldx_test, da_int *n_ind,
@@ -657,26 +685,45 @@ inline da_status da_knn_kneighbors(da_handle handle, da_int n_queries, da_int n_
 template <class T>
 da_status da_knn_classes(da_handle handle, da_int *n_classes, da_int *classes);
 
-inline da_status da_knn_predict_proba(da_handle handle, da_int n_queries,
-                                      da_int n_features, const double *X_test,
-                                      da_int ldx_test, double *proba) {
-    return da_knn_predict_proba_d(handle, n_queries, n_features, X_test, ldx_test, proba);
+inline da_status da_knn_classifier_predict_proba(da_handle handle, da_int n_queries,
+                                                 da_int n_features, const double *X_test,
+                                                 da_int ldx_test, double *proba) {
+    return da_knn_classifier_predict_proba_d(handle, n_queries, n_features, X_test,
+                                             ldx_test, proba);
 }
 
-inline da_status da_knn_predict_proba(da_handle handle, da_int n_queries,
-                                      da_int n_features, const float *X_test,
-                                      da_int ldx_test, float *proba) {
-    return da_knn_predict_proba_s(handle, n_queries, n_features, X_test, ldx_test, proba);
+inline da_status da_knn_classifier_predict_proba(da_handle handle, da_int n_queries,
+                                                 da_int n_features, const float *X_test,
+                                                 da_int ldx_test, float *proba) {
+    return da_knn_classifier_predict_proba_s(handle, n_queries, n_features, X_test,
+                                             ldx_test, proba);
 }
 
-inline da_status da_knn_predict(da_handle handle, da_int n_queries, da_int n_features,
-                                const double *X_test, da_int ldx_test, da_int *y_test) {
-    return da_knn_predict_d(handle, n_queries, n_features, X_test, ldx_test, y_test);
+inline da_status da_knn_classifier_predict(da_handle handle, da_int n_queries,
+                                           da_int n_features, const double *X_test,
+                                           da_int ldx_test, da_int *y_test) {
+    return da_knn_classifier_predict_d(handle, n_queries, n_features, X_test, ldx_test,
+                                       y_test);
 }
 
-inline da_status da_knn_predict(da_handle handle, da_int n_queries, da_int n_features,
-                                const float *X_test, da_int ldx_test, da_int *y_test) {
-    return da_knn_predict_s(handle, n_queries, n_features, X_test, ldx_test, y_test);
+inline da_status da_knn_classifier_predict(da_handle handle, da_int n_queries,
+                                           da_int n_features, const float *X_test,
+                                           da_int ldx_test, da_int *y_test) {
+    return da_knn_classifier_predict_s(handle, n_queries, n_features, X_test, ldx_test,
+                                       y_test);
+}
+inline da_status da_knn_regressor_predict(da_handle handle, da_int n_queries,
+                                          da_int n_features, const double *X_test,
+                                          da_int ldx_test, double *y_test) {
+    return da_knn_regressor_predict_d(handle, n_queries, n_features, X_test, ldx_test,
+                                      y_test);
+}
+
+inline da_status da_knn_regressor_predict(da_handle handle, da_int n_queries,
+                                          da_int n_features, const float *X_test,
+                                          da_int ldx_test, float *y_test) {
+    return da_knn_regressor_predict_s(handle, n_queries, n_features, X_test, ldx_test,
+                                      y_test);
 }
 
 /* Utility overloaded functions */
@@ -706,6 +753,47 @@ inline da_status da_switch_order_in_place(da_order order_X_in, da_int n_rows,
                                           da_int n_cols, double *X, da_int ldx_in,
                                           da_int ldx_out) {
     return da_switch_order_in_place_d(order_X_in, n_rows, n_cols, X, ldx_in, ldx_out);
+}
+
+inline da_status da_get_shuffled_indices(da_int m, da_int seed, da_int train_size,
+                                         da_int test_size, da_int fp_precision,
+                                         const da_int *classes, da_int *shuffle_array) {
+    return da_get_shuffled_indices_int(m, seed, train_size, test_size, fp_precision,
+                                       classes, shuffle_array);
+};
+inline da_status da_get_shuffled_indices(da_int m, da_int seed, da_int train_size,
+                                         da_int test_size, da_int fp_precision,
+                                         const float *classes, da_int *shuffle_array) {
+    return da_get_shuffled_indices_s(m, seed, train_size, test_size, fp_precision,
+                                     classes, shuffle_array);
+};
+inline da_status da_get_shuffled_indices(da_int m, da_int seed, da_int train_size,
+                                         da_int test_size, da_int fp_precision,
+                                         const double *classes, da_int *shuffle_array) {
+    return da_get_shuffled_indices_d(m, seed, train_size, test_size, fp_precision,
+                                     classes, shuffle_array);
+};
+
+inline da_status da_train_test_split(da_order order, da_int m, da_int n, const da_int *X,
+                                     da_int ldx, da_int train_size, da_int test_size,
+                                     const da_int *shuffle_array, da_int *X_train,
+                                     da_int ldx_train, da_int *X_test, da_int ldx_test) {
+    return da_train_test_split_int(order, m, n, X, ldx, train_size, test_size,
+                                   shuffle_array, X_train, ldx_train, X_test, ldx_test);
+}
+inline da_status da_train_test_split(da_order order, da_int m, da_int n, const double *X,
+                                     da_int ldx, da_int train_size, da_int test_size,
+                                     const da_int *shuffle_array, double *X_train,
+                                     da_int ldx_train, double *X_test, da_int ldx_test) {
+    return da_train_test_split_d(order, m, n, X, ldx, train_size, test_size,
+                                 shuffle_array, X_train, ldx_train, X_test, ldx_test);
+}
+inline da_status da_train_test_split(da_order order, da_int m, da_int n, const float *X,
+                                     da_int ldx, da_int train_size, da_int test_size,
+                                     const da_int *shuffle_array, float *X_train,
+                                     da_int ldx_train, float *X_test, da_int ldx_test) {
+    return da_train_test_split_s(order, m, n, X, ldx, train_size, test_size,
+                                 shuffle_array, X_train, ldx_train, X_test, ldx_test);
 }
 
 /* Kernel functions */
@@ -811,6 +899,36 @@ inline da_status da_svm_score(da_handle handle, da_int n_samples, da_int n_featu
                               const float *X_test, da_int ldx_test, const float *y_test,
                               float *score) {
     return da_svm_score_s(handle, n_samples, n_features, X_test, ldx_test, y_test, score);
+}
+
+inline da_status da_svm_predict_proba(da_handle handle, da_int n_samples,
+                                      da_int n_features, const double *X_test,
+                                      da_int ldx_test, double *y_proba, da_int ldy) {
+    return da_svm_predict_proba_d(handle, n_samples, n_features, X_test, ldx_test,
+                                  y_proba, ldy);
+}
+
+inline da_status da_svm_predict_proba(da_handle handle, da_int n_samples,
+                                      da_int n_features, const float *X_test,
+                                      da_int ldx_test, float *y_proba, da_int ldy) {
+    return da_svm_predict_proba_s(handle, n_samples, n_features, X_test, ldx_test,
+                                  y_proba, ldy);
+}
+
+inline da_status da_svm_predict_log_proba(da_handle handle, da_int n_samples,
+                                          da_int n_features, const double *X_test,
+                                          da_int ldx_test, double *y_log_proba,
+                                          da_int ldy) {
+    return da_svm_predict_log_proba_d(handle, n_samples, n_features, X_test, ldx_test,
+                                      y_log_proba, ldy);
+}
+
+inline da_status da_svm_predict_log_proba(da_handle handle, da_int n_samples,
+                                          da_int n_features, const float *X_test,
+                                          da_int ldx_test, float *y_log_proba,
+                                          da_int ldy) {
+    return da_svm_predict_log_proba_s(handle, n_samples, n_features, X_test, ldx_test,
+                                      y_log_proba, ldy);
 }
 
 #endif // AOCLDA_CPP_OVERLOADS

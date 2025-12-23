@@ -25,11 +25,6 @@
  *
  */
 
-// Deal with some Windows compilation issues regarding max/min macros
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "basic_handle.hpp"
 #include "da_error.hpp"
 #include "lbfgsb_driver.hpp"

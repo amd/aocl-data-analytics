@@ -34,7 +34,6 @@
 #include "options.hpp"
 #include "random_forest_options.hpp"
 
-#include <chrono>
 #include <deque>
 #include <functional>
 #include <limits>
@@ -65,6 +64,8 @@ template <typename T> random_forest<T>::~random_forest() {
     // Destructor needs to handle arrays that were allocated due to row major storage of input data
     if (X_temp)
         delete[] (X_temp);
+    if (X_binned)
+        delete (X_binned);
 }
 
 template <typename T>
@@ -111,7 +112,8 @@ da_status random_forest<T>::get_result(da_result query, da_int *dim, T *result) 
 template <typename T>
 da_status random_forest<T>::set_training_data(da_int n_samples, da_int n_features,
                                               const T *X, da_int ldx, const da_int *y,
-                                              da_int n_class) {
+                                              da_int n_class,
+                                              const da_int *usr_cat_feat) {
 
     // Guard against errors due to multiple calls using the same class instantiation
     if (X_temp) {
@@ -137,6 +139,8 @@ da_status random_forest<T>::set_training_data(da_int n_samples, da_int n_feature
     if (n_class <= 0)
         this->n_class = *std::max_element(y, y + n_samples) + 1;
 
+    usr_categorical_feat = usr_cat_feat;
+
     return da_status_success;
 }
 
@@ -144,9 +148,9 @@ template <typename T> da_status random_forest<T>::fit() {
 
     // Read optional parameters
     bool opt_pass = true, bootstrap;
-    da_int max_depth, min_node_sample, method, build_order, nfeat_split, bootstrap_opt,
-        feat_select, sort_method;
-    T feat_thresh, min_split_score, min_improvement, prop;
+    da_int max_depth, min_node_sample, method, nfeat_split, bootstrap_opt, feat_select,
+        cat_split_strat;
+    T feat_thresh, min_split_score, min_improvement, prop, feat_proportion;
     std::string opt_val;
     opt_pass &= this->opts.get("number of trees", n_tree) == da_status_success;
     opt_pass &= this->opts.get("maximum depth", max_depth) == da_status_success;
@@ -157,20 +161,24 @@ template <typename T> da_status random_forest<T>::fit() {
         this->opts.get("node minimum samples", min_node_sample) == da_status_success;
     opt_pass &= this->opts.get("scoring function", opt_val, method) == da_status_success;
     opt_pass &=
-        this->opts.get("tree building order", opt_val, build_order) == da_status_success;
-    opt_pass &=
         this->opts.get("features selection", opt_val, feat_select) == da_status_success;
     opt_pass &= this->opts.get("maximum features", nfeat_split) == da_status_success;
+    opt_pass &=
+        this->opts.get("proportion features", feat_proportion) == da_status_success;
     opt_pass &= this->opts.get("feature threshold", feat_thresh) == da_status_success;
     opt_pass &=
         this->opts.get("minimum split score", min_split_score) == da_status_success;
     opt_pass &=
-        this->opts.get("minimum split improvement", min_improvement) == da_status_success;
+        this->opts.get("minimum impurity decrease", min_improvement) == da_status_success;
     opt_pass &= this->opts.get("bootstrap", opt_val, bootstrap_opt) == da_status_success;
     opt_pass &= this->opts.get("bootstrap samples factor", prop) == da_status_success;
     opt_pass &= this->opts.get("block size", block_size) == da_status_success;
-    opt_pass &=
-        this->opts.get("sorting method", opt_val, sort_method) == da_status_success;
+    // Histogram options
+    opt_pass &= this->opts.get("histogram", opt_val, use_hist) == da_status_success;
+    opt_pass &= this->opts.get("maximum bins", usr_max_bins) == da_status_success;
+    opt_pass &= this->opts.get("category split strategy", opt_val, cat_split_strat) ==
+                da_status_success;
+
     if (!opt_pass)
         return da_error_trace(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                               "Unexpected error while reading the optional parameters.");
@@ -179,10 +187,22 @@ template <typename T> da_status random_forest<T>::fit() {
     try {
         forest.resize(n_tree);
         seed_tree.resize(n_tree);
+        if (use_hist) {
+            if (X_binned != nullptr) {
+                delete X_binned;
+                X_binned = nullptr;
+            }
+            X_binned = new bins<T>(usr_max_bins, n_samples, n_features);
+        }
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
+    } catch (std::invalid_argument &e) {
+        return da_error(this->err, da_status_invalid_option,
+                        std::string("Exception: ") + e.what());
     }
+    if (use_hist)
+        X_binned->compute_histograms(X, n_samples, n_features, ldx);
 
     // Initialize the seeds of all the trees to be able to reproduce results if required
     std::mt19937 mt_engine;
@@ -201,12 +221,16 @@ template <typename T> da_status random_forest<T>::fit() {
         nfeat_split = n_features;
         break;
 
+    case feat_selection::proportion:
+        nfeat_split = (da_int)std::ceil(feat_proportion * n_features);
+        break;
+
     case feat_selection::sqrt:
         nfeat_split = (da_int)std::ceil(std::sqrt(n_features));
         break;
 
     case feat_selection::log2:
-        nfeat_split = (da_int)std::ceil(std::sqrt(n_features));
+        nfeat_split = (da_int)std::ceil(std::log2(n_features));
         break;
 
     case feat_selection::custom:
@@ -217,33 +241,36 @@ template <typename T> da_status random_forest<T>::fit() {
     bootstrap = bootstrap_opt == 1;
 
     n_obs = n_samples;
-    if (bootstrap && prop < 1.0) {
+    if (bootstrap) {
         n_obs = std::max((da_int)std::round(n_samples * prop), (da_int)1);
     }
-    da_int prn_times = 0;
     da_int n_failed_tree = 0;
-
     // Train all the trees in parallel
 #pragma omp parallel for shared(                                                         \
-        n_failed_tree, forest, n_tree, max_depth, min_node_sample, method, prn_times,    \
-            build_order, seed_tree, min_split_score, feat_thresh, min_improvement,       \
-            n_samples, n_features, X, ldx, y, n_class, n_obs, nfeat_split, bootstrap,    \
-            sort_method) default(none) schedule(dynamic)
+        n_failed_tree, forest, n_tree, max_depth, min_node_sample, method, seed_tree,    \
+            min_split_score, feat_thresh, min_improvement, n_samples, n_features, X,     \
+            ldx, y, n_class, n_obs, nfeat_split, bootstrap, use_hist, usr_max_bins,      \
+            X_binned, cat_split_strat) default(none) schedule(dynamic)
     for (da_int i = 0; i < n_tree; i++) {
         // Set tree optional parameters
+        bool check_categorical_data = false;
+        da_int opt_max_cat = 10;
+        T cat_tol = (T)0.0;
         try {
             forest[i] = std::make_unique<decision_tree<T>>(
-                decision_tree(max_depth, min_node_sample, method, prn_times, build_order,
-                              nfeat_split, seed_tree[i], sort_method, min_split_score,
-                              feat_thresh, min_improvement, bootstrap));
+                decision_tree(X_binned, max_depth, min_node_sample, method, nfeat_split,
+                              seed_tree[i], min_split_score, feat_thresh, min_improvement,
+                              bootstrap, check_categorical_data, opt_max_cat, use_hist,
+                              usr_max_bins, cat_tol, cat_split_strat));
         } catch (std::bad_alloc &) {
 #pragma omp atomic
             n_failed_tree++;
             continue;
         }
         da_status tree_status;
-        tree_status = forest[i]->set_training_data(n_samples, n_features, X, ldx, y,
-                                                   n_class, n_obs, nullptr);
+        tree_status =
+            forest[i]->set_training_data(n_samples, n_features, X, ldx, y, n_class, n_obs,
+                                         nullptr, usr_categorical_feat);
         tree_status = forest[i]->fit();
         forest[i]->clear_working_memory();
         if (tree_status != da_status_success) {

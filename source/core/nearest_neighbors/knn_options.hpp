@@ -29,11 +29,14 @@
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "macros.h"
+#include "nn_types.hpp"
 #include "options.hpp"
 
 namespace ARCH {
 
 namespace da_knn {
+
+using namespace da_nn_types;
 
 template <typename T>
 inline da_status register_knn_options(da_options::OptionRegistry &opts,
@@ -49,6 +52,10 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
             "Number of neighbors considered for k-nearest neighbors.", 1,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
         opts.register_opt(oi);
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "leaf size", "Leaf size for k-d tree.", 1, da_options::lbound_t::greaterequal,
+            imax, da_options::ubound_t::p_inf, 30));
+        opts.register_opt(oi);
         // fp options
         std::shared_ptr<OptionNumeric<T>> ofp;
         ofp = std::make_shared<OptionNumeric<T>>(
@@ -62,7 +69,11 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(
             "algorithm", "Algorithm used to compute the k-nearest neighbors.",
-            {{"brute", da_brute_force}}, "brute"));
+            {{"auto", automatic},
+             {"brute", brute},
+             {"kd tree", kd_tree},
+             {"ball tree", ball_tree}},
+            "auto"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(
             OptionString("metric", "Metric used to compute the pairwise distance matrix.",
@@ -73,12 +84,14 @@ inline da_status register_knn_options(da_options::OptionRegistry &opts,
                           {"l1", da_l1},
                           {"cityblock", da_cityblock},
                           {"cosine", da_cosine},
-                          {"minkowski", da_minkowski}},
+                          {"minkowski", da_minkowski},
+                          {"sqeuclidean_gemm", da_sqeuclidean_gemm},
+                          {"euclidean_gemm", da_euclidean_gemm}},
                          "euclidean"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
             "weights", "Weight function used to compute the k-nearest neighbors.",
-            {{"uniform", da_knn_uniform}, {"distance", da_knn_distance}}, "uniform"));
+            {{"uniform", uniform}, {"distance", distance}}, "uniform"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE

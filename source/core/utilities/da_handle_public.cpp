@@ -111,6 +111,11 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             }
             break;
         case da_handle_nlls:
+#ifdef NO_FORTRAN
+            return da_error((*handle)->err, da_status_not_implemented, // LCOV_EXCL_LINE
+                            "The nonlinear least squares solver is not available in this "
+                            "implementation");
+#endif
             DISPATCHER((*handle)->err,
                        (*handle)->alg_handle_d =
                            new da_nlls::nlls<double>(status, *(*handle)->err));
@@ -204,7 +209,6 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
-
         case da_handle_decision_tree:
             DISPATCHER((*handle)->err,
                        (*handle)->alg_handle_s =

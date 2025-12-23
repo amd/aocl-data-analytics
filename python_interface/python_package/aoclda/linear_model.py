@@ -23,7 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable = import-error, anomalous-backslash-in-string, invalid-name, too-many-arguments
+# pylint: disable = import-error, anomalous-backslash-in-string,
+# invalid-name, too-many-arguments
 
 """
 aoclda.linear_model module
@@ -31,16 +32,21 @@ aoclda.linear_model module
 
 import numpy as np
 from ._aoclda.linear_model import pybind_linmod
+from ._internal_utils import check_convert_data
+
 
 class linmod():
     """
     Linear models.
 
+    Note that linear models currently do not accept array slices (e.g. ``X[0:2, 0:3]``) as input.
+    Please use copies (e.g. ``X[0:2, 0:3].copy()``) instead.
+
     Args:
 
         mod (str): Which linear model to compute.
 
-            - If ``linmod_model='mse'`` then :math:`\ell_2` norm linear regression is calculated.
+            - If ``linmod_model='mse'`` then :math:`\\ell_2` norm linear regression is calculated.
 
             - If ``linmod_model='logistic'`` then logistic regression is calculated.
 
@@ -92,14 +98,15 @@ class linmod():
             - ``'ssc'`` means the sum of coefficients class-wise for each feature \
                 is 0. It will result in K class coefficients for K class problems.
 
-        reg_lambda (float, optional): :math:`\lambda`, the magnitude of the regularization term.
+        reg_lambda (float, optional): :math:`\\lambda`, the magnitude of the regularization term.
             Default=0.0.
 
-        reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\ell_1` term in the
+        reg_alpha (float, optional): :math:`\\alpha`, the share of the :math:`\\ell_1` term in the
             regularization. Default=0.0.
 
-        x0 (numpy.ndarray, optional): Initial guess for solution. Applies only to iterative solvers.
-            Default=None.
+        warm_start (bool, optional): Reuse coefficients from the previous run when using the \
+            same object to compute coefficients on the new data. Applies only to iterative solvers. \
+            For more details refer to initial coefficients section of linear models documentation.
 
         tol (float, optional): Convergence tolerance for iterative solvers. Applies only to
             iterative solvers: 'sparse_cg', 'coord', 'lbfgs'. Default=1.0e-4.
@@ -110,59 +117,98 @@ class linmod():
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
-    def __init__(self, mod, intercept=False, solver='auto', scaling='auto', max_iter=None,
-                 constraint='ssc', reg_lambda=0.0, reg_alpha=0.0, x0=None, tol=1.0e-4,
-                 progress_factor=None, check_data=False):
-        self.linmod_double = pybind_linmod(mod=mod, max_iter=max_iter, intercept=intercept,
-                                           solver=solver, scaling=scaling, constraint=constraint,
-                                           precision="double", check_data=check_data)
-        self.linmod_single = pybind_linmod(mod=mod, max_iter=max_iter, intercept=intercept,
-                                           solver=solver, scaling=scaling, constraint=constraint,
-                                           precision="single", check_data=check_data)
-        self.reg_lambda=reg_lambda
-        self.reg_alpha=reg_alpha
-        self.x0=x0
-        self.tol=tol
-        self.progress_factor=progress_factor
-        self.linmod=self.linmod_double
+    def __init__(
+            self,
+            mod,
+            intercept=False,
+            solver='auto',
+            scaling='auto',
+            max_iter=None,
+            constraint='ssc',
+            reg_lambda=0.0,
+            reg_alpha=0.0,
+            warm_start=False,
+            tol=1.0e-4,
+            progress_factor=None,
+            check_data=False):
+        self.linmod_double = pybind_linmod(
+            mod=mod,
+            max_iter=max_iter,
+            intercept=intercept,
+            solver=solver,
+            scaling=scaling,
+            constraint=constraint,
+            warm_start=warm_start,
+            precision="double",
+            check_data=check_data)
+        self.linmod_single = pybind_linmod(
+            mod=mod,
+            max_iter=max_iter,
+            intercept=intercept,
+            solver=solver,
+            scaling=scaling,
+            constraint=constraint,
+            warm_start=warm_start,
+            precision="single",
+            check_data=check_data)
+        self.order = 'A'
+        self.dtype = 'float'
+        self.reg_lambda = reg_lambda
+        self.reg_alpha = reg_alpha
+        self.x0 = None
+        self.tol = tol
+        self.progress_factor = progress_factor
+        self.linmod = self.linmod_double
 
-    def fit(self, X, y):
+    def fit(self, X, y, x0=None):
         """
         Computes the chosen linear model on the feature matrix ``X`` and response vector ``y``
 
         Args:
-            X (numpy.ndarray): The feature matrix on which to compute the model.
+            X (array-like): The feature matrix on which to compute the model.
                 Its shape is (n_samples, n_features).
 
-            y (numpy.ndarray): The response vector. Its shape is (n_samples).
+            y (array-like): The response vector. Its shape is (n_samples).
+
+            x0 (array-like, optional): Initial guess for solution. Applies only to iterative solvers. \
+                The required shape depends on the problem that is being solved (look at coef attribute). \
+                If None then x0 is set to a vector of 0. Default=None.
 
         Returns:
             self (object): Returns the instance itself.
         """
-        if X.dtype == 'float32':
-            self.linmod=self.linmod_single
-            self.linmod_double=None
+        X, self.order, self.dtype = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        y, _, _ = check_convert_data(
+            y, order=self.order, dtype=self.dtype, force_dtype=True)
+        if x0 is not None:
+            self.x0, _, _ = check_convert_data(
+                x0, order=self.order, dtype=self.dtype, force_dtype=True)
+            self.x0 = np.ravel(self.x0, order=self.order)
+
+        if self.dtype == 'float32':
+            self.linmod = self.linmod_single
+            self.linmod_double = None
             self.reg_alpha = np.float32(self.reg_alpha)
             self.reg_lambda = np.float32(self.reg_lambda)
             self.tol = np.float32(self.tol)
-            if self.x0 is not None:
-                self.x0 = np.float32(self.x0)
             if self.progress_factor is not None:
                 self.progress_factor = np.float32(self.progress_factor)
         else:
             self.reg_alpha = np.float64(self.reg_alpha)
             self.reg_lambda = np.float64(self.reg_lambda)
             self.tol = np.float64(self.tol)
-            if self.x0 is not None:
-                self.x0 = np.float64(self.x0)
             if self.progress_factor is not None:
                 self.progress_factor = np.float64(self.progress_factor)
 
-        if y.dtype.kind in np.typecodes["AllInteger"]:
-            y = y.astype(X.dtype, copy=False)
-
-        self.linmod.pybind_fit(X, y, x0=self.x0, progress_factor=self.progress_factor,
-                        reg_lambda=self.reg_lambda, reg_alpha=self.reg_alpha, tol=self.tol)
+        self.linmod.pybind_fit(
+            X,
+            y,
+            x0=self.x0,
+            progress_factor=self.progress_factor,
+            reg_lambda=self.reg_lambda,
+            reg_alpha=self.reg_alpha,
+            tol=self.tol)
         return self
 
     def predict(self, X):
@@ -170,22 +216,35 @@ class linmod():
         Evaluate the model on a data set ``X``.
 
         Args:
-            X (numpy.ndarray): The feature matrix to evaluate the model on. It must have \
+            X (array-like): The feature matrix to evaluate the model on. It must have \
                 n_features columns.
 
         Returns:
             numpy.ndarray of length n_samples: The prediction vector, where n_samples is \
                 the number of rows of ``X``.
         """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self.linmod.pybind_predict(X)
 
     @property
     def coef(self):
         """
-        numpy.ndarray: contains the output coefficients of the model. If an intercept variable was
-            required, it corresponds to the last element.
+        numpy.ndarray: contains the output coefficients of the model. Its shape depends on a \
+            problem being solved. When ``linmod_model='mse'`` or when ``linmod_model='logistic'`` \
+            but the data has 2 classes, it is 1D ndarray of shape (, ncoef) where ncoef \
+            is nfeat+intercept. Otherwise, for K-class problem, it is 2D ndarray of shape \
+            (nrows, ncoef) where nrows is K-1 if ``constraint='rsc'`` and K otherwise.
         """
         return self.linmod.get_coef()
+
+    @property
+    def dual_coef(self):
+        """
+        numpy.ndarray: contains the dual coefficients of the model. Only valid for CG solver and \
+            undertermined problems.
+        """
+        return self.linmod.get_dual_coef()
 
     @property
     def loss(self):

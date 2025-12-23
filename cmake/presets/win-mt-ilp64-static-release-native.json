@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "win-mt-ilp64-static-release-native",
+      "inherits": [
+        "base",
+        "win",
+        "msvc",
+        "mt",
+        "ilp64",
+        "static",
+        "native",
+        "release"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-win-native-release"
+      },
+      "binaryDir": "${sourceDir}/build-win-mt-ilp64-static-native-release",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-mt-ilp64-static-release-native",
+      "configurePreset": "win-mt-ilp64-static-release-native",
+      "inherits": "base"
+    },
+    {
+      "name": "win-mt-ilp64-static-release-native-install",
+      "configurePreset": "win-mt-ilp64-static-release-native",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "win-mt-ilp64-static-release-native",
+      "configurePreset": "win-mt-ilp64-static-release-native",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "win-mt-ilp64-static-release-native",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "win-mt-ilp64-static-release-native"
+        },
+        {
+          "type": "build",
+          "name": "win-mt-ilp64-static-release-native-install"
+        },
+        {
+          "type": "test",
+          "name": "win-mt-ilp64-static-release-native"
+        }
+      ]
+    }
+  ]
+}

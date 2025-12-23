@@ -29,6 +29,10 @@
 #define DECISION_TREE_TYPES
 
 #define DF_BLOCK_SIZE da_int(256)
+// Controls which sorting split method is used for histograms.
+// compute_best_split_hist_sort is called for nodes nd where nd.n_samples < DF_SAMPLES_SORT_HIST.
+// It could be faster for low samples nodes but benchmarks were inconclusive.
+#define DF_SAMPLES_SORT_HIST 0
 
 namespace da_decision_tree_types {
 enum score_method {
@@ -37,19 +41,17 @@ enum score_method {
     misclassification,
 };
 
-enum sort_method { stl_sort = 0, boost_sort };
-
-enum tree_order {
-    depth_first = 0,
-    breadth_first,
-};
-
 enum feat_selection {
     all = 0,
+    proportion,
     sqrt,
     log2,
     custom,
 };
+
+enum cat_feat { no_cat = 0, cat };
+
+enum split_property { continuous = 0, categorical_ordered, categorical_onevall };
 } // namespace da_decision_tree_types
 
 #endif

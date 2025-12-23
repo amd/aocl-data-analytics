@@ -55,7 +55,7 @@ da_status test_linmod(void) {
         da_handle_destroy(&handle);
         return status;
     }
-    status = da_linmod_define_features_d(handle, m, n, Al, bl);
+    status = da_linmod_define_features_d(handle, m, n, Al, m, bl);
     if (status != da_status_success) {
         da_handle_print_error_message(handle);
         da_handle_destroy(&handle);
@@ -214,10 +214,11 @@ int main(void) {
         return 1;
     }
 
+#ifndef NO_FORTRAN
     status = test_nlls();
     if (status != da_status_success) {
         return 2;
     }
-
+#endif
     return 0;
 }

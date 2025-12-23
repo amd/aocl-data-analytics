@@ -39,20 +39,34 @@
 namespace ARCH {
 
 // L-BFGS-B Reverse Communication <overloaded>
-inline void lbfgsb_rcomm(da_int *n, da_int *m, double *x, double *l, double *u,
-                         da_int *nbd, double *f, double *g, double *factr, double *pgtol,
-                         double *wa, da_int *iwa, da_int *itask, da_int *iprint,
-                         da_int *lsavei, da_int *isave, double *dsave) {
+inline void lbfgsb_rcomm([[maybe_unused]] da_int *n, [[maybe_unused]] da_int *m,
+                         [[maybe_unused]] double *x, [[maybe_unused]] double *l,
+                         [[maybe_unused]] double *u, [[maybe_unused]] da_int *nbd,
+                         [[maybe_unused]] double *f, [[maybe_unused]] double *g,
+                         [[maybe_unused]] double *factr, [[maybe_unused]] double *pgtol,
+                         [[maybe_unused]] double *wa, [[maybe_unused]] da_int *iwa,
+                         [[maybe_unused]] da_int *itask, [[maybe_unused]] da_int *iprint,
+                         [[maybe_unused]] da_int *lsavei, [[maybe_unused]] da_int *isave,
+                         [[maybe_unused]] double *dsave) {
+#ifndef NO_FORTRAN
     DLBFGSB_SOLVER(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, lsavei,
                    isave, dsave);
+#endif
 }
 
-inline void lbfgsb_rcomm(da_int *n, da_int *m, float *x, float *l, float *u, da_int *nbd,
-                         float *f, float *g, float *factr, float *pgtol, float *wa,
-                         da_int *iwa, da_int *itask, da_int *iprint, da_int *lsavei,
-                         da_int *isave, float *dsave) {
+inline void lbfgsb_rcomm([[maybe_unused]] da_int *n, [[maybe_unused]] da_int *m,
+                         [[maybe_unused]] float *x, [[maybe_unused]] float *l,
+                         [[maybe_unused]] float *u, [[maybe_unused]] da_int *nbd,
+                         [[maybe_unused]] float *f, [[maybe_unused]] float *g,
+                         [[maybe_unused]] float *factr, [[maybe_unused]] float *pgtol,
+                         [[maybe_unused]] float *wa, [[maybe_unused]] da_int *iwa,
+                         [[maybe_unused]] da_int *itask, [[maybe_unused]] da_int *iprint,
+                         [[maybe_unused]] da_int *lsavei, [[maybe_unused]] da_int *isave,
+                         [[maybe_unused]] float *dsave) {
+#ifndef NO_FORTRAN
     SLBFGSB_SOLVER(n, m, x, l, u, nbd, f, g, factr, pgtol, wa, iwa, itask, iprint, lsavei,
                    isave, dsave);
+#endif
 }
 
 /* Internal memory for lbfgsb */
@@ -229,7 +243,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
     da_int n = nvar;
     da_int iprint;
     da_int iter = 0;
-    T *f = &info[da_optim_info_t::info_objective];
+    T *f = &info[da_linmod_info_t::linmod_info_objective];
     da_int itask = 2; // 'START'
     bool compute_fg = true;
     da_int lsavei[4], isave[44];
@@ -267,9 +281,9 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
                      &isave[0], &dsave[0]);
         if (itask == 1) { // NEW_X
             iter++;
-            info[da_optim_info_t::info_iter] = static_cast<T>(iter);
-            info[da_optim_info_t::info_grad_norm] = dsave[12]; // sbgnrm
-            info[da_optim_info_t::info_time] = dsave[6] + dsave[7] + dsave[8];
+            info[da_linmod_info_t::linmod_info_iter] = static_cast<T>(iter);
+            info[da_linmod_info_t::linmod_info_grad_norm] = dsave[12]; // sbgnrm
+            info[da_linmod_info_t::linmod_info_time] = dsave[6] + dsave[7] + dsave[8];
 
             if (iter > maxit) {
                 itask = 100;
@@ -287,7 +301,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
             }
 
             if (maxtime > 0) {
-                if (info[da_optim_info_t::info_time] > maxtime) {
+                if (info[da_linmod_info_t::linmod_info_time] > maxtime) {
                     // Run out of time
                     itask = 101;
                 }
@@ -297,7 +311,7 @@ da_status lbfgsb_fcomm(da_options::OptionRegistry &opts, da_int nvar, std::vecto
                      itask == 21 || // 'FG_START'
                      itask == 20;   // 'FG_LNSRCH
         if (compute_fg) {
-            ++info[da_optim_info_t::info_nevalf];
+            ++info[da_linmod_info_t::linmod_info_nevalf];
             if (objfun(n, &x[0], f, usrdata) != 0) {
                 // This solver does not have recovery, stop
                 itask = 120;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+/* Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -151,7 +151,7 @@ int main(void) {
         da_options_set_string(handle, "storage order", "row-major") == da_status_success;
     pass &= da_options_set_real_d(handle, "finite differences step", 1e-7) ==
             da_status_success;
-    pass &= pass &=
+    pass &=
         da_options_set_real_d(handle, "derivative test tol", 1e-3) == da_status_success;
     pass &=
         da_options_set_string(handle, "check derivatives", "yes") == da_status_success;

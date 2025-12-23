@@ -25,18 +25,15 @@
  *
  */
 
-// Deal with some Windows compilation issues regarding max/min macros
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_omp.hpp"
 #include "da_std.hpp"
 #include "macros.h"
 #include "svm.hpp"
 #include <algorithm>
+#include <boost/sort/spreadsort/float_sort.hpp>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -47,12 +44,12 @@
 namespace ARCH {
 
 // This function returns whether observation is in I_up set
-template <typename T> bool is_upper(T &alpha, const T &y, T &C) {
-    return ((alpha < C && y > 0) || (alpha > 0 && y < 0));
+template <typename T> inline da_int is_upper(const T &alpha, const T &y, const T &C) {
+    return (y > 0 ? alpha < C : alpha > 0) ? -1 : 0;
 };
 // This function returns whether observation is in I_low set
-template <typename T> bool is_lower(T &alpha, const T &y, T &C) {
-    return ((alpha < C && y < 0) || (alpha > 0 && y > 0));
+template <typename T> inline da_int is_lower(const T &alpha, const T &y, const T &C) {
+    return (y > 0 ? alpha > 0 : alpha < C) ? -1 : 0;
 };
 
 /*
@@ -103,9 +100,18 @@ void csvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
     // Fill index_aux with numbers from 0, 1, ..., n
     da_std::iota(this->index_aux.begin(), this->index_aux.end(), 0);
     // Perform argsort
-    std::stable_sort(
-        this->index_aux.begin(), this->index_aux.end(),
-        [&](size_t i, size_t j) { return this->gradient[i] < this->gradient[j]; });
+    auto rightshift = [this](const da_int &idx, const unsigned offset) {
+        using sort_type =
+            std::conditional_t<std::is_same<T, double>::value, int64_t, int32_t>;
+        return boost::sort::spreadsort::float_mem_cast<T, sort_type>(
+                   this->gradient[idx]) >>
+               offset;
+    };
+    boost::sort::spreadsort::float_sort(this->index_aux.begin(), this->index_aux.end(),
+                                        rightshift, [&](da_int &i, da_int &j) {
+                                            // Compare the gradient values at the indices i and j
+                                            return this->gradient[i] < this->gradient[j];
+                                        });
     // Here index_aux is where we get indexes from, it contains argsorted gradient array
     // Select first ws_size/2 indices that are in I_up
     // Select last ws_size/2 indices that are in I_low
@@ -155,30 +161,31 @@ void csvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
 }
 
 template <typename T>
-void csvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                        std::vector<T> &kernel_matrix,
-                        std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
-                        std::vector<T> &local_alpha, std::vector<T> &gradient,
-                        std::vector<T> &local_gradient, std::vector<T> &response,
-                        std::vector<T> &local_response, std::vector<bool> &I_low_p,
-                        std::vector<bool> &I_up_p,
-                        [[maybe_unused]] std::vector<bool> &I_low_n,
-                        [[maybe_unused]] std::vector<bool> &I_up_n, T &first_diff,
-                        std::vector<T> &alpha_diff, std::optional<T> tol) {
+void csvm<T>::local_smo(
+    da_int &ws_size, std::vector<da_int> &idx, std::vector<T *> &ptr_kernel_col,
+    std::vector<T> &local_kernel_matrix, std::vector<T> &local_kernel_matrix_row_major,
+    std::vector<T> &kernel_diagonal, std::vector<da_int> &real_indices,
+    std::vector<T> &alpha, std::vector<T> &local_alpha, std::vector<T> &gradient,
+    std::vector<T> &local_gradient, std::vector<T> &response,
+    std::vector<T> &local_response, std::vector<da_int> &I_low_p,
+    std::vector<da_int> &I_up_p, [[maybe_unused]] std::vector<da_int> &I_low_n,
+    [[maybe_unused]] std::vector<da_int> &I_up_n, T &first_diff,
+    std::vector<T> &alpha_diff, std::optional<T> tol) {
     // Grab the values of alpha, gradient and response that are in the working set, so that we operate on smaller arrays
+    // First loop: Copy alpha, gradient, response, and compute flags
     for (da_int iter = 0; iter < ws_size; iter++) {
-        local_alpha[iter] = alpha[idx[iter]];
-        local_gradient[iter] = gradient[idx[iter]];
-        local_response[iter] = response[idx[iter]];
-        // Evaluate which samples from the working set are in I_up and I_low
+        const da_int idx_iter = idx[iter];
+        local_alpha[iter] = alpha[idx_iter];
+        local_gradient[iter] = gradient[idx_iter];
+        local_response[iter] = response[idx_iter];
         I_low_p[iter] = is_lower(local_alpha[iter], local_response[iter], this->C);
         I_up_p[iter] = is_upper(local_alpha[iter], local_response[iter], this->C);
-        // This can benefit from kernel matrix being stored in row-major
-        for (da_int j = 0; j < ws_size; j++) {
-            local_kernel_matrix[j * ws_size + iter] =
-                kernel_matrix[j * this->n + (idx[iter] % this->n)];
-        }
+        real_indices[iter] = idx[iter] % this->n;
     }
+
+    this->prepare_kernel_matrix(ptr_kernel_col, ws_size, local_kernel_matrix,
+                                local_kernel_matrix_row_major, kernel_diagonal,
+                                real_indices);
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
     da_int i, j;
     da_int max_iter_inner = ws_size * 100;
@@ -191,18 +198,19 @@ void csvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
         epsilon = tol.value();
         is_custom_epsilon = true;
     }
-    for (da_int iter = 0; iter < max_iter_inner; iter++) {
+    da_int iter = 0;
+    for (; iter < max_iter_inner; iter++) {
         // Find i-th index
         this->wssi(I_up_p, local_gradient, i, min_grad);
         // Find j-th index based on i, kernel matrix and min_grad
-        this->wssj(I_low_p, local_gradient, i, min_grad, j, max_grad, local_kernel_matrix,
-                   delta, max_fun);
+        this->wssj(I_low_p, local_gradient, i, min_grad, j, max_grad,
+                   local_kernel_matrix_row_major, kernel_diagonal, delta, max_fun);
         diff = max_grad - min_grad;
         if (iter == 0 && !is_custom_epsilon) {
             first_diff = diff;
             epsilon = std::max(this->tol, T(0.1) * diff);
         }
-        if (diff < epsilon)
+        if (diff < epsilon || i == -1 || j == -1)
             break;
         // Theory behind following formulas are in libsvm paper chapter 6 (page 28)
         alpha_i_diff = local_response[i] > 0 ? this->C - local_alpha[i] : local_alpha[i];
@@ -261,7 +269,8 @@ da_status csvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
 
 template <typename T>
 da_status svc<T>::initialisation(da_int &size, std::vector<T> &gradient,
-                                 std::vector<T> &response, std::vector<T> &alpha) {
+                                 std::vector<T> &response, std::vector<T> &alpha,
+                                 [[maybe_unused]] da_cache::LRUCache<T> &cache) {
     for (da_int i = 0; i < size; i++) {
         gradient[i] = this->y[i] == 0 ? 1.0 : -this->y[i];
         response[i] = this->y[i] == 0 ? -1.0 : this->y[i];
@@ -272,7 +281,8 @@ da_status svc<T>::initialisation(da_int &size, std::vector<T> &gradient,
 
 template <typename T>
 da_status svr<T>::initialisation(da_int &size, std::vector<T> &gradient,
-                                 std::vector<T> &response, std::vector<T> &alpha) {
+                                 std::vector<T> &response, std::vector<T> &alpha,
+                                 [[maybe_unused]] da_cache::LRUCache<T> &cache) {
     for (da_int i = 0; i < size; i++) {
         gradient[i] = this->eps - this->y[i];
         gradient[i + size] = -this->eps - this->y[i];
@@ -373,9 +383,9 @@ template class svr<double>;
 
 } // namespace da_svm
 
-template bool is_upper<double>(double &alpha, const double &y, double &C);
-template bool is_upper<float>(float &alpha, const float &y, float &C);
-template bool is_lower<double>(double &alpha, const double &y, double &C);
-template bool is_lower<float>(float &alpha, const float &y, float &C);
+template da_int is_upper<double>(const double &alpha, const double &y, const double &C);
+template da_int is_upper<float>(const float &alpha, const float &y, const float &C);
+template da_int is_lower<double>(const double &alpha, const double &y, const double &C);
+template da_int is_lower<float>(const float &alpha, const float &y, const float &C);
 
 } // namespace ARCH

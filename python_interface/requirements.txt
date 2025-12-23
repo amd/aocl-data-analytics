@@ -7,3 +7,4 @@ pylint
 setuptools
 auditwheel
 delvewheel
+pandas

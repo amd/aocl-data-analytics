@@ -60,18 +60,13 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
                          "gini"));
         status = opts.register_opt(os);
 
-        os = std::make_shared<OptionString>(
-            OptionString("sorting method", "Select sorting method to use.",
-                         {{"stl", stl_sort}, {"boost", boost_sort}}, "boost"));
-        status = opts.register_opt(os);
-
-        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+        os = std::make_shared<OptionString>(OptionString(
             "predict probabilities",
-            "evaluate class probabilities (in addition to class predictions)."
-            "Needs to be 1 if calls to predict_proba or predict_log_proba"
+            "evaluate class probabilities (in addition to class predictions). "
+            "Needs to be set to 'yes' if calls to predict_proba or predict_log_proba "
             "are made after fit.",
-            0, lbound_t::greaterequal, 1, ubound_t::lessequal, 1));
-        status = opts.register_opt(oi);
+            {{"yes", 1}, {"no", 0}}, "yes"));
+        status = opts.register_opt(os);
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "maximum depth", "Set the maximum depth of trees.", 0, lbound_t::greaterequal,
@@ -95,12 +90,12 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "node minimum samples",
-            "The minimum number of samples required to split an internal node.", 2,
+            "The minimum number of samples required to split an internal node.", 1,
             lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 2));
         status = opts.register_opt(oi);
 
         T rmax = std::numeric_limits<T>::max();
-        T diff_thres_default = (T)1e-6;
+        T diff_thres_default = (T)1e-5;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "feature threshold",
             "Minimum difference in feature value required for splitting.", 0.0,
@@ -110,26 +105,57 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "minimum split score",
             "Minimum score needed for a node to be considered for splitting.", 0.0,
-            lbound_t::greaterequal, 1.0, ubound_t::lessequal, (T)0.03));
+            lbound_t::greaterequal, 1.0, ubound_t::lessequal, (T)0.0));
+        status = opts.register_opt(oT);
+
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "minimum impurity decrease",
+            "Minimum score improvement needed to consider a split from the parent node.",
+            0.0, lbound_t::greaterequal, rmax, ubound_t::p_inf, (T)0.0));
         status = opts.register_opt(oT);
 
         os = std::make_shared<OptionString>(OptionString(
-            "tree building order", "Select in which order to explore the nodes.",
-            {{"depth first", depth_first}, {"breadth first", breadth_first}},
-            "depth first"));
+            "detect categorical data",
+            "Check if the data is categorical, encoded in [0, n_categories-1].",
+            {{"yes", 1}, {"no", 0}}, "no"));
         status = opts.register_opt(os);
 
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "maximum categories",
+            "Number of distinct values required for each feature for it to be considered "
+            "categorical.",
+            2, lbound_t::greaterequal, max_da_int, ubound_t::p_inf, 50));
+        status = opts.register_opt(oi);
+
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "minimum split improvement",
-            "Minimum score improvement needed to consider a split from the parent node.",
-            0.0, lbound_t::greaterequal, rmax, ubound_t::p_inf, (T)0.03));
+            "category tolerance",
+            "How far data can be from an integer to be considered not categorical.", 0.0,
+            lbound_t::greaterequal, (T)1.0, ubound_t::lessthan, (T)1.0e-05));
         status = opts.register_opt(oT);
 
         os = std::make_shared<OptionString>(
-            OptionString("print timings",
-                         "Print the timings of different parts of the fitting process.",
-                         {{"yes", 1}, {"no", 0}}, "no"));
+            OptionString("category split strategy",
+                         "Strategy to split categorical features. For a given "
+                         "categorical feature, 'one-vs-all' tries to "
+                         "split each categorical value from all the the others while "
+                         "'ordered' will try "
+                         "to split the smaller categories from the bigger ones.",
+                         {{"one-vs-all", (da_int)categorical_onevall},
+                          {"ordered", (da_int)categorical_ordered}},
+                         "ordered"));
         status = opts.register_opt(os);
+
+        // Histogram options
+        os = std::make_shared<OptionString>(OptionString(
+            "histogram",
+            "Choose whether to use histograms constructed from the data matrix X.",
+            {{"yes", 1}, {"no", 0}}, "no"));
+        status = opts.register_opt(os);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "maximum bins", "Maximum number of bins in histograms.", 2,
+            lbound_t::greaterequal, 65535, ubound_t::lessequal, 256));
+        status = opts.register_opt(oi);
 
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE

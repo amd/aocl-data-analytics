@@ -72,6 +72,9 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
 
    * - scikit-learn class
      - Notes
+   * - ``sklearn.covariance.EmpiricalCovariance``
+     - * ``fit`` method and ``assume_centered``, ``covariance_``, ``location_`` attributes are supported.
+       * ``get_precision``, ``score``, ``error_norm``, ``mahalanobis`` methods and ``store_precision``, ``precision_`` attributes are not supported.
    * - ``sklearn.cluster.KMeans``
      - ``fit``, ``transform``, ``predict``, ``fit_transform`` and ``fit_predict`` methods and various class attributes
    * - ``sklearn.cluster.DBSCAN``
@@ -80,22 +83,31 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
    * - ``sklearn.decomposition.PCA``
      - ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes
    * - ``sklearn.linear_model.LinearRegression``
-     - ``fit``, ``predict`` and ``score`` methods and various class attributes
+     - ``fit``, ``predict`` and ``score`` methods. LBFGSB solver is not available in precompiled Windows wheels.
    * - ``sklearn.linear_model.Ridge``
-     - ``fit`` and ``predict`` methods and various class attributes
+     - ``fit`` and ``predict`` methods
    * - ``sklearn.linear_model.Lasso``
-     - ``fit`` and ``predict`` methods and various class attributes
+     - ``fit`` and ``predict`` methods
    * - ``sklearn.linear_model.ElasticNet``
-     - ``fit`` and ``predict`` methods and various class attributes
+     - ``fit`` and ``predict`` methods
    * - ``sklearn.linear_model.LogisticRegression``
-     - ``fit`` and ``predict`` methods and various class attributes
+     - ``fit`` and ``predict`` methods. Not available in precompiled Windows wheels.
    * - ``sklearn.metrics.pairwise``
      - * ``pairwise_distances`` method with ``cityblock``, ``cosine``, ``euclidean``, ``sqeuclidean``, ``l1``, ``l2``, ``manhattan`` and ``minkowski`` distances
        * ``ensure_all_finite`` option is not supported
+   * - ``sklearn.neighbors.NearestNeighbors``
+     - * ``fit``, ``kneighbors``, ``get_params`` methods are supported.
+       * ``auto``, ``ball_tree``, ``kd_tree`` and ``brute`` algorithms are supported.
+       * ``euclidean``, ``l1``, ``l2``, ``sqeuclidean``, ``manhattan``, ``cityblock``, ``cosine`` and ``minkowski`` distance metrics are supported.
+       * ``get_metadata_routing``, ``kneighbors_graph``, ``set_params``, ``radius_neighbors``, ``radius_neighbors_graph`` methods and ``n_jobs``, ``metric_params`` attributes are not supported.
    * - ``sklearn.neighbors.KNeighborsClassifier``
-     - * ``fit``, ``kneighbors``, ``predict`` and ``predict_proba`` methods
-       * brute force algorithm only
-       * ``cityblock``, ``cosine``, ``euclidean``, ``sqeuclidean``, ``l1``, ``l2``, ``manhattan`` and ``minkowski`` distance metrics supported
+     - * ``fit``, ``kneighbors``, ``predict`` and ``predict_proba`` methods are supported.
+       * ``auto``, ``ball_tree``, ``kd_tree`` and ``brute`` algorithms are supported.
+       * ``cityblock``, ``cosine``, ``euclidean``, ``sqeuclidean``, ``l1``, ``l2``, ``manhattan`` and ``minkowski`` distance metrics supported.
+   * - ``sklearn.neighbors.KNeighborsRegressor``
+     - * ``fit``, ``kneighbors`` and ``predict`` methods are supported.
+       * ``auto``, ``ball_tree``, ``kd_tree`` and ``brute`` algorithms are supported.
+       * ``cityblock``, ``cosine``, ``euclidean``, ``sqeuclidean``, ``l1``, ``l2``, ``manhattan`` and ``minkowski`` distance metrics supported.
    * - ``sklearn.svm.SVC``
      - * ``fit``, ``predict``, ``score`` and ``decision_function`` methods
        * user-callable and precomputed kernels are not supported
@@ -112,7 +124,11 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
      - ``fit``, ``predict``, ``score``, ``predict_proba`` and ``predict_log_proba`` methods and various class attributes
    * - ``sklearn.tree.RandomForestClassifier``
      - ``fit``, ``predict``, ``score``, ``predict_proba`` and ``predict_log_proba`` methods and various class attributes
+   * - ``sklearn.model_selection.train_test_split``
+     - All functionalities are supported.
 
+For scikit-learn classes that use ``n_jobs`` to specify the number of threads, you should instead
+use the ``OMP_NUM_THREADS`` environment variable to control the number of threads used by AOCL-DA.
 
 Note that only a subset of the AOCL-DA functionality is available in this manner, and if, after
 patching, you attempt to call class member functions which have not been implemented in AOCL-DA,

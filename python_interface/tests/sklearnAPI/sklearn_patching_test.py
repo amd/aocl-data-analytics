@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -32,6 +32,7 @@ PCA tests, check output of skpatch versus sklearn
 import numpy as np
 import pytest
 from aoclda.sklearn import skpatch, undo_skpatch
+
 
 def test_patching():
     """
@@ -80,6 +81,7 @@ def test_patching():
 
     with pytest.raises(TypeError):
         undo_skpatch(1)
+
 
 if __name__ == "__main__":
     test_patching()

@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-debug-dynamic",
+      "inherits": [
+        "base",
+        "linux",
+        "clang",
+        "st",
+        "lp64",
+        "shared",
+        "dynamic",
+        "debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-clang-dynamic-debug"
+      },
+      "binaryDir": "${sourceDir}/build-linux-clang-st-lp64-shared-dynamic-debug",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-debug-dynamic",
+      "configurePreset": "linux-clang-st-lp64-shared-debug-dynamic",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-clang-st-lp64-shared-debug-dynamic-install",
+      "configurePreset": "linux-clang-st-lp64-shared-debug-dynamic",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-debug-dynamic",
+      "configurePreset": "linux-clang-st-lp64-shared-debug-dynamic",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-clang-st-lp64-shared-debug-dynamic",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-clang-st-lp64-shared-debug-dynamic"
+        },
+        {
+          "type": "build",
+          "name": "linux-clang-st-lp64-shared-debug-dynamic-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-clang-st-lp64-shared-debug-dynamic"
+        }
+      ]
+    }
+  ]
+}

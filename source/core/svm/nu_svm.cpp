@@ -25,17 +25,15 @@
  *
  */
 
-// Deal with some Windows compilation issues regarding max/min macros
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_omp.hpp"
 #include "da_std.hpp"
+#include "kernel_functions.hpp"
 #include "macros.h"
 #include "svm.hpp"
+#include <boost/sort/spreadsort/float_sort.hpp>
 #include <cstdlib>
 #include <cstring>
 #include <functional>
@@ -48,23 +46,23 @@
 namespace ARCH {
 
 // This function returns whether observation is in I_up set and is a positive class
-template <typename T> bool is_upper_pos(T &alpha, const T &y, T &C) {
-    return (alpha < C && y > 0);
+template <typename T> inline da_int is_upper_pos(const T &alpha, const T &y, const T &C) {
+    return (alpha < C && y > 0) ? -1 : 0;
 };
 
 // This function returns whether observation is in I_up set and is a negative class
-template <typename T> bool is_upper_neg(T &alpha, const T &y) {
-    return (alpha > 0 && y < 0);
+template <typename T> inline da_int is_upper_neg(const T &alpha, const T &y) {
+    return (alpha > 0 && y < 0) ? -1 : 0;
 };
 
 // This function returns whether observation is in I_low set and is a positive class
-template <typename T> bool is_lower_pos(T &alpha, const T &y) {
-    return (alpha > 0 && y > 0);
+template <typename T> inline da_int is_lower_pos(const T &alpha, const T &y) {
+    return (alpha > 0 && y > 0) ? -1 : 0;
 };
 
 // This function returns whether observation is in I_low set and is a negative class
-template <typename T> bool is_lower_neg(T &alpha, const T &y, T &C) {
-    return (alpha < C && y < 0);
+template <typename T> inline da_int is_lower_neg(const T &alpha, const T &y, const T &C) {
+    return (alpha < C && y < 0) ? -1 : 0;
 };
 
 /*
@@ -116,9 +114,18 @@ void nusvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
     // Fill index_aux with numbers from 0, 1, ..., n
     da_std::iota(this->index_aux.begin(), this->index_aux.end(), 0);
     // Perform argsort
-    std::stable_sort(
-        this->index_aux.begin(), this->index_aux.end(),
-        [&](size_t i, size_t j) { return this->gradient[i] < this->gradient[j]; });
+    auto rightshift = [this](const da_int &idx, const unsigned offset) {
+        using sort_type =
+            std::conditional_t<std::is_same<T, double>::value, int64_t, int32_t>;
+        return boost::sort::spreadsort::float_mem_cast<T, sort_type>(
+                   this->gradient[idx]) >>
+               offset;
+    };
+    boost::sort::spreadsort::float_sort(this->index_aux.begin(), this->index_aux.end(),
+                                        rightshift, [&](da_int &i, da_int &j) {
+                                            // Compare the gradient values at the indices i and j
+                                            return this->gradient[i] < this->gradient[j];
+                                        });
     // Here index_aux is where we get indexes from, it contains argsorted gradient array
     // Select first ws_size/4 indices that are in I_up and are positive
     // Select first ws_size/4 indices that are in I_up and are negative
@@ -212,28 +219,35 @@ void nusvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
 
 template <typename T>
 void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                         std::vector<T> &kernel_matrix,
-                         std::vector<T> &local_kernel_matrix, std::vector<T> &alpha,
+                         std::vector<T *> &ptr_kernel_col,
+                         std::vector<T> &local_kernel_matrix,
+                         std::vector<T> &local_kernel_matrix_row_major,
+                         std::vector<T> &kernel_diagonal,
+                         std::vector<da_int> &real_indices, std::vector<T> &alpha,
                          std::vector<T> &local_alpha, std::vector<T> &gradient,
                          std::vector<T> &local_gradient, std::vector<T> &response,
-                         std::vector<T> &local_response, std::vector<bool> &I_low_p,
-                         std::vector<bool> &I_up_p, std::vector<bool> &I_low_n,
-                         std::vector<bool> &I_up_n, T &first_diff,
+                         std::vector<T> &local_response, std::vector<da_int> &I_low_p,
+                         std::vector<da_int> &I_up_p, std::vector<da_int> &I_low_n,
+                         std::vector<da_int> &I_up_n, T &first_diff,
                          std::vector<T> &alpha_diff, std::optional<T> tol) {
+    // Grab the values of alpha, gradient and response that are in the working set, so that we operate on smaller arrays
+    // First loop: Copy alpha, gradient, response, and compute flags
     for (da_int iter = 0; iter < ws_size; iter++) {
-        local_alpha[iter] = alpha[idx[iter]];
-        local_gradient[iter] = gradient[idx[iter]];
-        local_response[iter] = response[idx[iter]];
+        const da_int idx_iter = idx[iter];
+        local_alpha[iter] = alpha[idx_iter];
+        local_gradient[iter] = gradient[idx_iter];
+        local_response[iter] = response[idx_iter];
         I_low_p[iter] = is_lower_pos(local_alpha[iter], local_response[iter]);
         I_up_p[iter] = is_upper_pos(local_alpha[iter], local_response[iter], this->C);
         I_low_n[iter] = is_lower_neg(local_alpha[iter], local_response[iter], this->C);
         I_up_n[iter] = is_upper_neg(local_alpha[iter], local_response[iter]);
-        // This can benefit from kernel matrix being stored in row-major
-        for (da_int j = 0; j < ws_size; j++) {
-            local_kernel_matrix[j * ws_size + iter] =
-                kernel_matrix[j * this->n + (idx[iter] % this->n)];
-        }
+        real_indices[iter] = idx[iter] % this->n;
     }
+
+    this->prepare_kernel_matrix(ptr_kernel_col, ws_size, local_kernel_matrix,
+                                local_kernel_matrix_row_major, kernel_diagonal,
+                                real_indices);
+
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
     da_int i, j, i_p, i_n, j_p, j_n;
     da_int max_iter_inner = ws_size * 100;
@@ -252,9 +266,9 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
         this->wssi(I_up_p, local_gradient, i_p, min_grad_p);
         this->wssi(I_up_n, local_gradient, i_n, min_grad_n);
         this->wssj(I_low_p, local_gradient, i_p, min_grad_p, j_p, max_grad_p,
-                   local_kernel_matrix, delta_p, max_fun_p);
+                   local_kernel_matrix_row_major, kernel_diagonal, delta_p, max_fun_p);
         this->wssj(I_low_n, local_gradient, i_n, min_grad_n, j_n, max_grad_n,
-                   local_kernel_matrix, delta_n, max_fun_n);
+                   local_kernel_matrix_row_major, kernel_diagonal, delta_n, max_fun_n);
         diff = std::max(max_grad_p - min_grad_p, max_grad_n - min_grad_n);
         if (iter == 0 && !is_custom_epsilon) {
             first_diff = diff;
@@ -271,6 +285,8 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
             j = j_n;
             delta = delta_n;
         }
+        if (i == -1 || j == -1)
+            break;
         alpha_i_diff = local_response[i] > 0 ? this->C - local_alpha[i] : local_alpha[i];
         alpha_j_diff = std::min(
             local_response[j] > 0 ? local_alpha[j] : this->C - local_alpha[j], delta);
@@ -353,59 +369,138 @@ da_status nusvm<T>::set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
 
 template <typename T>
 da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int counter,
-                                        std::vector<T> &gradient) {
+                                        std::vector<T> &gradient,
+                                        da_cache::LRUCache<T> &cache) {
+    // Early-out to avoid division by zero and unnecessary work
+    if (counter <= 0) {
+        return da_status_success;
+    }
+    da_int gradient_size = gradient.size();
     da_int block_size = std::min(counter, SVM_MAX_BLOCK_SIZE);
     da_int n_blocks = counter / block_size, residual = counter % block_size;
-    std::vector<T> current_alpha_diff;
+    std::vector<T> kernel_matrix, X_temp, gradient_threads, current_alpha_diff,
+        gradient_local;
+    std::vector<T *> ptr_kernel_col;
     std::vector<da_int> current_idx;
+    [[maybe_unused]] da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
+    n_threads = std::min(n_threads, da_int(64));
+    // Create local arrays for each thread
     try {
         current_idx.resize(block_size);
         current_alpha_diff.resize(block_size);
+        ptr_kernel_col.resize(block_size);
+        gradient_local.resize(gradient_size * n_threads);
+        kernel_matrix.resize(this->n * block_size);
+        X_temp.resize(block_size * this->p);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
+    da_int n = this->n, p = this->p, ldx_2 = this->ldx_2;
+    std::vector<da_int> index_aux = this->index_aux;
+    T *X = this->X, *x_norm_aux = this->x_norm_aux.data();
+    kernel_f_type<T> kernel_f = this->kernel_f;
+    T coef0 = this->coef0, gamma = this->gamma;
+    da_int degree = this->degree, threading_error = 0;
+#pragma omp parallel for schedule(dynamic) num_threads(n_threads) default(none)          \
+    firstprivate(current_idx, ptr_kernel_col, current_alpha_diff, kernel_matrix, X_temp, \
+                     gradient_threads)                                                   \
+    shared(n_blocks, block_size, residual, index_aux, cache, n, p, ldx_2, degree, coef0, \
+               gamma, kernel_f, X, x_norm_aux, alpha_diff, gradient_local,               \
+               gradient_size, threading_error)
+    // Loop over blocks and residual
     for (da_int i = 0; i <= n_blocks; i++) {
         da_int current_block_size = (i < n_blocks) ? block_size : residual;
         if (current_block_size == 0) {
             continue;
         }
 
-        std::vector<T> kernel_matrix, X_temp;
-        try {
-            kernel_matrix.resize(this->n * current_block_size);
-            X_temp.resize(current_block_size * this->p);
-            if (current_block_size > this->ws_size) {
-                this->y_norm_aux.resize(current_block_size);
-            }
-        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation error");
-        }
         if (i < n_blocks) { // we are in block
-            current_idx.assign(this->index_aux.begin() + i * block_size,
-                               this->index_aux.begin() + (i + 1) * block_size);
+            current_idx.assign(index_aux.begin() + i * block_size,
+                               index_aux.begin() + (i + 1) * block_size);
             current_alpha_diff.assign(alpha_diff.begin() + i * block_size,
                                       alpha_diff.begin() + (i + 1) * block_size);
         } else { // we are in residual
-            current_idx.assign(this->index_aux.begin() + n_blocks * block_size,
-                               this->index_aux.end());
+            current_idx.assign(index_aux.begin() + n_blocks * block_size,
+                               index_aux.end());
             current_alpha_diff.assign(alpha_diff.begin() + n_blocks * block_size,
                                       alpha_diff.end());
         }
 
-        this->kernel_compute(current_idx, current_block_size, X_temp, kernel_matrix);
-        this->update_gradient(gradient, current_alpha_diff, this->n, current_block_size,
-                              kernel_matrix);
+        // Get the relevant slices of original matrix (working set)
+        // Note: it would be more efficient to operate on row-major order
+        for (da_int j = 0; j < current_block_size; j++) {
+            da_int current_idx2 = current_idx[j] % n;
+            for (da_int k = 0; k < p; k++) {
+                X_temp[j + k * current_block_size] = X[current_idx2 + k * ldx_2];
+            }
+        }
+
+        // Call to appropriate kernel function. Note that only idx_to_compute_count columns of kernel_temp will be filled.
+        vectorization_type vectorisation;
+        da_kernel_functions::select_simd_size<T>(n, vectorisation);
+        // Variables used in euclidean_distance interface, 1 means to use precomputed norms, 2 means to compute norms
+        da_int compute_X_norms = 1;
+        da_int compute_y_norms = 2;
+        // Make y-norms buffer thread-local to avoid data races
+        std::vector<T> y_norm_aux_local(current_block_size);
+        kernel_f(column_major, n, current_block_size, p, X, x_norm_aux, compute_X_norms,
+                 ldx_2, X_temp.data(), y_norm_aux_local.data(), compute_y_norms,
+                 current_block_size, kernel_matrix.data(), n, gamma, degree, coef0, false,
+                 (da_int)vectorisation);
+
+        // Update cache with idx_computed_count new columns of kernel matrix, otherwise just fill result array
+        if (cache.active_) {
+            // Get pointers to first values of each column, to later pass into cache.put()
+            std::vector<T *> ptr_kernel_col_temp(current_block_size);
+            std::vector<da_int> idx_temp(current_block_size);
+            try {
+                ptr_kernel_col_temp.resize(current_block_size);
+                idx_temp.resize(current_block_size);
+            } catch (std::bad_alloc const &) {
+#pragma omp atomic write
+                threading_error = 1;
+            }
+            // Call put for each computed index, this will update list that tracks LRU columns in the cache
+            for (da_int j = 0; j < current_block_size; j++) {
+                idx_temp[j] = current_idx[j] % n;
+                ptr_kernel_col_temp[j] = &kernel_matrix[j * n];
+                // Fill result array
+                ptr_kernel_col[j] = &kernel_matrix[j * n];
+            }
+#pragma omp critical
+            cache.put(idx_temp, ptr_kernel_col_temp);
+        } else {
+            for (da_int j = 0; j < current_block_size; j++) {
+                ptr_kernel_col[j] = &kernel_matrix[j * n];
+            }
+        }
+        da_int t_id = omp_get_thread_num();
+        this->update_gradient(&gradient_local[t_id * gradient_size], gradient_threads,
+                              current_alpha_diff, n, current_block_size, ptr_kernel_col);
         if (this->mod == da_svm_model::nusvr) {
             // alpha_diff is just of size n (when technically it should be 2n) but since
             // second half of alpha_diff is just first half negated, we can just multiply by -1
             // and call update_gradient again with new values
             std::for_each(current_alpha_diff.begin(), current_alpha_diff.end(),
                           [](T &value) { value = -value; });
-            this->update_gradient(gradient, current_alpha_diff, this->n,
-                                  current_block_size, kernel_matrix);
+            this->update_gradient(&gradient_local[t_id * gradient_size], gradient_threads,
+                                  current_alpha_diff, n, current_block_size,
+                                  ptr_kernel_col);
         }
+    }
+    if (threading_error == 1)
+        return da_error(this->err, da_status_memory_error, "Memory allocation failed.");
+
+        // Merge thread-local contributions in fixed order
+#pragma omp parallel for schedule(static) num_threads(n_threads) default(none)           \
+    shared(gradient_local, gradient, n_threads, gradient_size)
+    for (da_int i = 0; i < gradient_size; i++) {
+        T sum = 0;
+        for (da_int t = 0; t < n_threads; t++) {
+            sum += gradient_local[t * gradient_size + i];
+        }
+        gradient[i] += sum;
     }
     return da_status_success;
 }
@@ -413,7 +508,8 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
 // Alphas here non-trivial, gradient needs to be calculated based on alphas
 template <typename T>
 da_status nusvc<T>::initialisation(da_int &size, std::vector<T> &gradient,
-                                   std::vector<T> &response, std::vector<T> &alpha) {
+                                   std::vector<T> &response, std::vector<T> &alpha,
+                                   da_cache::LRUCache<T> &cache) {
     std::vector<T> alpha_diff;
     this->C = 1;
     try {
@@ -446,13 +542,14 @@ da_status nusvc<T>::initialisation(da_int &size, std::vector<T> &gradient,
             counter++;
         }
     }
-    da_status status = this->initialise_gradient(alpha_diff, counter, gradient);
+    da_status status = this->initialise_gradient(alpha_diff, counter, gradient, cache);
     return status;
 }
 
 template <typename T>
 da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
-                                   std::vector<T> &response, std::vector<T> &alpha) {
+                                   std::vector<T> &response, std::vector<T> &alpha,
+                                   da_cache::LRUCache<T> &cache) {
     std::vector<T> alpha_diff;
     T sum = this->C * this->nu * size / 2;
     try {
@@ -480,7 +577,7 @@ da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
             counter++;
         }
     }
-    da_status status = this->initialise_gradient(alpha_diff, counter, gradient);
+    da_status status = this->initialise_gradient(alpha_diff, counter, gradient, cache);
     return status;
 }
 
@@ -575,13 +672,15 @@ template class nusvr<double>;
 
 } // namespace da_svm
 
-template bool is_upper_pos<double>(double &alpha, const double &y, double &C);
-template bool is_upper_pos<float>(float &alpha, const float &y, float &C);
-template bool is_lower_pos<double>(double &alpha, const double &y);
-template bool is_lower_pos<float>(float &alpha, const float &y);
-template bool is_upper_neg<double>(double &alpha, const double &y);
-template bool is_upper_neg<float>(float &alpha, const float &y);
-template bool is_lower_neg<double>(double &alpha, const double &y, double &C);
-template bool is_lower_neg<float>(float &alpha, const float &y, float &C);
+template da_int is_upper_pos<double>(const double &alpha, const double &y,
+                                     const double &C);
+template da_int is_upper_pos<float>(const float &alpha, const float &y, const float &C);
+template da_int is_lower_pos<double>(const double &alpha, const double &y);
+template da_int is_lower_pos<float>(const float &alpha, const float &y);
+template da_int is_upper_neg<double>(const double &alpha, const double &y);
+template da_int is_upper_neg<float>(const float &alpha, const float &y);
+template da_int is_lower_neg<double>(const double &alpha, const double &y,
+                                     const double &C);
+template da_int is_lower_neg<float>(const float &alpha, const float &y, const float &C);
 
 } // namespace ARCH

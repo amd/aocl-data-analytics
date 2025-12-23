@@ -27,8 +27,9 @@
 
 .. _chapter_python_intro:
 
-Introduction
-*******************
+
+Introduction to the Python APIs
+********************************
 
 This section contains general instructions for calling AOCL-DA using the Python APIs.
 
@@ -40,13 +41,19 @@ To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.
 For Linux users, if you find that your system is incompatible with the supplied wheel, you can instead install the Python package using the Spack recipe at the following link: https://www.amd.com/en/developer/zen-software-studio/applications/spack/spack-aocl.html
 
 .. note::
-   Python support on Windows is currently experimental, and building from source is required. Source code and compilation instructions are available at https://github.com/amd/aocl-data-analytics/. If you encounter issues, please e-mail us on
+   Python support on Windows is currently experimental.
+   The Python wheels downloaded from https://www.amd.com/en/developer/aocl.html do not include the LBFGSB linear model solver or the nonlinear least squares solver.
+   To access these, building from source is required. Source code and compilation instructions are available at https://github.com/amd/aocl-data-analytics/.
+   If you encounter issues, please e-mail us on
    toolchainsupport@amd.com.
 
-NumPy arrays
+Arrays
 =============
 
-AOCL-DA Python interfaces typically expect data to be supplied as NumPy arrays. These can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
+AOCL-DA Python interfaces typically expect data to be supplied as array-like objects. These include NumPy arrays, Pandas data frames, Python lists, etc. 
+The Python interfaces will try to convert the array-like object to a NumPy array, if it is not already one or has an unsupported data type.
+However, it is recommended to supply NumPy arrays directly, as this will avoid additional copying or conversion of the data, which can affect performance.
+If supported, the data objects can be supplied either with ``order='C'`` or ``order='F'`` for row- or column-major ordering respectively.
 For best performance, it is generally recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions since row-major arrays may be copied and transposed internally.
 
 In order to provide the best possible performance, the algorithmic functions will not automatically check for

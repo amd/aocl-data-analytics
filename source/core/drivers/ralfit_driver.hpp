@@ -63,6 +63,7 @@
 
 #include <cassert>
 #include <functional>
+#include <sstream>
 #include <type_traits>
 
 namespace ARCH {
@@ -142,7 +143,6 @@ da_status get_exit_status(ral_nlls_inform_t<T> &inform, da_errors::da_error_t &e
         return da_status_success;
 
     std::string errmsg{inform.error_message};
-    da_options::OptionUtils::prep_str(errmsg); // prepare string
     std::string msg;
     bool warn{false}; // Exit status is a warning or error?
     da_status status{da_status_internal_error};
@@ -198,23 +198,31 @@ da_status get_exit_status(ral_nlls_inform_t<T> &inform, da_errors::da_error_t &e
     case -999:
         status = da_status_memory_error;
         break;
-    default:
-        msg = "Unexpected exit status from RALFit solver. return="s +
-              std::to_string(inform.status) + " ("s + errmsg + ")."s;
+    default: {
+        // Use string stream to avoid multiple temporary allocations
+        std::ostringstream oss;
+        oss << "Unexpected exit status from RALFit solver. return=" << inform.status
+            << " (" << errmsg << ").";
+        msg = oss.str();
+    }
         return da_error(&err, da_status_internal_error, msg);
         break;
     }
 
     if (warn) {
         // Compose and return a warning
-        msg = "RALFit solver warning message: "s + errmsg + " (return="s +
-              std::to_string(inform.status) + ").";
+        std::ostringstream oss;
+        oss << "RALFit solver warning message: " << errmsg << " (return=" << inform.status
+            << ").";
+        msg = oss.str();
         return da_warn(&err, status, msg);
     }
 
     // Compose and return an error
-    msg = "RALFit solver error message: "s + errmsg + " (return="s +
-          std::to_string(inform.status) + ").";
+    std::ostringstream oss;
+    oss << "RALFit solver error message: " << errmsg << " (return=" << inform.status
+        << ").";
+    msg = oss.str();
     return da_error(&err, status, msg);
 }
 
@@ -223,7 +231,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
                                  ral_nlls_options_t<T> &options,
                                  da_errors::da_error_t &err, bool ok_eval_HF) {
     da_status status;
-    const std::string msg{" option not found in the registry?"};
+    constexpr const char *const msg_suffix = " option not found in the registry?";
 
     // ===========================================================================
     // INTEGER OPTIONS
@@ -232,7 +240,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("debug", debug);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<debug>"s + msg);
+                        "<debug>"s + msg_suffix);
     }
     if (debug)
         options.print_options = true;
@@ -241,7 +249,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("print level", prlvl);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<print level>"s + msg);
+                        "<print level>"s + msg_suffix);
     }
     options.print_level = prlvl;
 
@@ -249,7 +257,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit iteration limit", maxit);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit iteration limit>"s + msg);
+                        "<ralfit iteration limit>"s + msg_suffix);
     }
     options.maxit = maxit;
     // ===========================================================================
@@ -259,21 +267,21 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("derivative test tol", derivative_test_tol);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<derivative test tol>"s + msg);
+                        "<derivative test tol>"s + msg_suffix);
     }
     options.derivative_test_tol = derivative_test_tol;
     T fd_step;
     status = opts.get("finite differences step", fd_step);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<finite differences step>"s + msg);
+                        "<finite differences step>"s + msg_suffix);
     }
     options.fd_step = fd_step;
     T bigbnd;
     status = opts.get("infinite bound size", bigbnd);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<infinite bound size>"s + msg);
+                        "<infinite bound size>"s + msg_suffix);
     }
     options.box_bigbnd = bigbnd;
 
@@ -281,7 +289,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit convergence abs tol fun", atolf);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit convergence abs tol fun>"s + msg);
+                        "<ralfit convergence abs tol fun>"s + msg_suffix);
     }
     options.stop_f_absolute = atolf;
 
@@ -289,7 +297,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit convergence rel tol fun", rtolf);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit convergence rel tol fun>"s + msg);
+                        "<ralfit convergence rel tol fun>"s + msg_suffix);
     }
     options.stop_f_relative = rtolf;
 
@@ -297,7 +305,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit convergence abs tol grd", atolg);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit convergence abs tol grd>"s + msg);
+                        "<ralfit convergence abs tol grd>"s + msg_suffix);
     }
     options.stop_g_absolute = atolg;
 
@@ -305,7 +313,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit convergence rel tol grd", rtolg);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit convergence rel tol grd>"s + msg);
+                        "<ralfit convergence rel tol grd>"s + msg_suffix);
     }
     options.stop_g_relative = rtolg;
 
@@ -313,7 +321,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit convergence step size", stol);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit convergence step size>"s + msg);
+                        "<ralfit convergence step size>"s + msg_suffix);
     }
     options.stop_s = stol;
 
@@ -321,7 +329,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("regularization term", reg_term);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<regularization term>"s + msg);
+                        "<regularization term>"s + msg_suffix);
     }
     options.regularization_term = reg_term;
 
@@ -333,7 +341,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("check derivatives", chkder, ichkder);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<check derivatives>"s + msg);
+                        "<check derivatives>"s + msg_suffix);
     }
     options.check_derivatives = ichkder;
 
@@ -342,7 +350,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit model", model, imodel);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit model>"s + msg);
+                        "<ralfit model>"s + msg_suffix);
     }
     options.model = imodel;
 
@@ -351,7 +359,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit nlls method", nlls_method, inlls_method);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit nlls method>"s + msg);
+                        "<ralfit nlls method>"s + msg_suffix);
     }
     options.nlls_method = inlls_method;
 
@@ -360,7 +368,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("ralfit globalization method", glob_method, iglob_method);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<ralfit globalization method>"s + msg);
+                        "<ralfit globalization method>"s + msg_suffix);
     }
     options.type_of_method = iglob_method;
 
@@ -369,7 +377,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("storage order", storage, istorage);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<storage order>"s + msg);
+                        "<storage order>"s + msg_suffix);
     }
     if (istorage == column_major) {
         options.Fortran_Jacobian = true;
@@ -382,7 +390,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
     status = opts.get("regularization power", reg_power, ireg_power);
     if (status != da_status_success) {
         return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
-                        "<regularization power>"s + msg);
+                        "<regularization power>"s + msg_suffix);
     }
     switch (ireg_power) {
     case da_optim_types::regularization::quadratic:
@@ -399,8 +407,7 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
 
     // Set up automatic options
     if (reg_term > 0)
-        options.regularization = 1;
-
+        options.regularization = 1; // type 1 but can also be of type 2
     // Exact second derivative -> user provided HF?
     options.exact_second_derivatives = ok_eval_HF;
 
@@ -409,40 +416,56 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
 
 // Entry point to RALFit (via ral_nlls.h)
 template <typename T>
-da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nres, T *x,
-                        resfun_t<T> eval_r, resgrd_t<T> eval_J, reshes_t<T> eval_HF,
-                        reshp_t<T> eval_HP, T *lower_bounds, T *upper_bounds, T *weights,
-                        void *usrdata, std::vector<T> &info, da_errors::da_error_t &err) {
+da_status ralfit_driver(da_options::OptionRegistry &opts, [[maybe_unused]] da_int nvar,
+                        [[maybe_unused]] da_int nres, [[maybe_unused]] T *x,
+                        [[maybe_unused]] resfun_t<T> eval_r, resgrd_t<T> eval_J,
+                        reshes_t<T> eval_HF, reshp_t<T> eval_HP,
+                        [[maybe_unused]] T *lower_bounds,
+                        [[maybe_unused]] T *upper_bounds, [[maybe_unused]] T *weights,
+                        [[maybe_unused]] void *usrdata, std::vector<T> &info,
+                        da_errors::da_error_t &err) {
     ral_nlls_options_t<T> options;
     ral_nlls_inform_t<T> inform;
 
     // Initialize option values
     if constexpr (std::is_same_v<T, double>) {
+#ifndef NO_FORTRAN
         ral_nlls_default_options_d(&options);
+#endif
     } else {
+#ifndef NO_FORTRAN
         ral_nlls_default_options_s(&options);
+#endif
     }
 
     if (copy_options_to_ralfit<T>(opts, options, err, bool(eval_HF)) != da_status_success)
         return da_error_trace(&err, da_status_internal_error,
                               "Could not copy the options into the RALFit struct.");
 
+#ifndef NO_FORTRAN
     // Initialize the workspace
     void *workspace;
     void *inner_workspace;
+#endif
 
     // init_workspace allocates and links together workspace with inner_workspace
     if constexpr (std::is_same_v<T, double>) {
+#ifndef NO_FORTRAN
         ral_nlls_init_workspace_d(&workspace, &inner_workspace);
+#endif
     } else {
+#ifndef NO_FORTRAN
         ral_nlls_init_workspace_s(&workspace, &inner_workspace);
+#endif
     }
 
     // Get address of eval_r
     assert(typeid(ral_nlls_eval_r_type_t<T>) == eval_r.target_type());
 
+#ifndef NO_FORTRAN
     ral_nlls_eval_r_type_t<T> ral_nlls_eval_r =
         *(eval_r.template target<ral_nlls_eval_r_type_t<T>>());
+#endif
 
     ral_nlls_eval_j_type_t<T> ral_nlls_eval_J{nullptr};
     ral_nlls_eval_hf_type_t<T> ral_nlls_eval_HF{nullptr};
@@ -477,17 +500,21 @@ da_status ralfit_driver(da_options::OptionRegistry &opts, da_int nvar, da_int nr
     }
 
     if constexpr (std::is_same_v<T, double>) {
+#ifndef NO_FORTRAN
         nlls_solve_d(nvar, nres, x, ral_nlls_eval_r, ral_nlls_eval_J, ral_nlls_eval_HF,
                      usrdata, &options, &inform, weights, ral_nlls_eval_HP, lower_bounds,
                      upper_bounds);
         ral_nlls_free_workspace_d(&workspace);
         ral_nlls_free_workspace_d(&inner_workspace);
+#endif
     } else {
+#ifndef NO_FORTRAN
         nlls_solve_s(nvar, nres, x, ral_nlls_eval_r, ral_nlls_eval_J, ral_nlls_eval_HF,
                      usrdata, &options, &inform, weights, ral_nlls_eval_HP, lower_bounds,
                      upper_bounds);
         ral_nlls_free_workspace_s(&workspace);
         ral_nlls_free_workspace_s(&inner_workspace);
+#endif
     }
 
     copy_inform(inform, info);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -76,6 +76,7 @@ template <typename T> struct PCAParamType {
 
     da_status expected_status = da_status_success;
     da_int store_U = 1;
+    da_int whiten = 0;
     T epsilon = 10 * std::numeric_limits<T>::epsilon();
 };
 
@@ -937,6 +938,243 @@ template <typename T> void GetTallThinData4(std::vector<PCAParamType<T>> &params
         -11.12944237741829, -8.929412948858758, -5.998571520336921, -1.965471274648701,
         8.213628377799804,  3.4138252479100837, 0.64114064861087,   1.5397586079913463,
         12.838600918423584, -4.694421617930349};
+    param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetTallThinData5(std::vector<PCAParamType<T>> &params) {
+    // Test with a tall thin data matrix - solver is gesvd and don't store U
+    PCAParamType<T> param;
+    param.test_name = "Tall thin data matrix 5";
+    param.n = 8;
+    param.p = 5;
+    std::vector<double> A{1.0,  3.0, 0.0, -7.0, 1.0,  2.0, 2.0,  5.5, 1.0, 2.0,
+                          3.0,  0.2, 0.1, 0.8,  6.0,  4.0, 1.0,  0.9, 3.1, 0.0,
+                          -7.8, 9.8, 0.7, 4.0,  4.1,  1.1, 3.0,  2.1, 6.2, 0.6,
+                          2.0,  2.0, 5.5, 1.0,  -2.0, 3.0, -0.2, 0.1, 0.8, 6.0};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 8;
+    param.components_required = 3;
+    param.method = "covariance";
+    param.svd_solver = "gesvd";
+    param.store_U = 0;
+    std::vector<double> expected_components{
+        -0.2954425943504331, 0.8849609837284986, 0.1446432602770579,  -0.1382105916438464,
+        0.2816840581108922,  0.1303095727620542, -0.9021744345829193, -0.3065240592424442,
+        -0.0030782406962135, 0.2749744482897113, 0.1254695563831541,  -0.0170570562188144,
+        -0.063889343193544,  0.1667289423316099, -0.9807126611655212};
+    param.expected_components = convert_vector<double, T>(expected_components);
+    std::vector<double> expected_vt{
+        -0.2954425943504331, 0.8849609837284986, 0.1446432602770579,  -0.1382105916438464,
+        0.2816840581108922,  0.1303095727620542, -0.9021744345829193, -0.3065240592424442,
+        -0.0030782406962135, 0.2749744482897113, 0.1254695563831541,  -0.0170570562188144,
+        -0.063889343193544,  0.1667289423316099, -0.9807126611655212};
+    param.expected_vt = convert_vector<double, T>(expected_vt);
+    std::vector<double> expected_variance{27.798402201433294, 12.939878761717376,
+                                          7.765700962743379};
+    param.expected_variance = convert_vector<double, T>(expected_variance);
+    std::vector<double> expected_sigma{13.949509504281254, 9.517307987662353,
+                                       7.372917111917348};
+    param.expected_sigma = convert_vector<double, T>(expected_sigma);
+    param.expected_total_variance = (T)52.47857142857144;
+    param.expected_n_components = 3;
+    std::vector<double> expected_rinfo{8.0, 5.0, 3.0};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> X{0.1, 1.2, 3.1, 0.6, 5.1, -0.4, 0.1, -0.9, 12.3, 1.1};
+    param.X = convert_vector<double, T>(X);
+    param.m = 2;
+    param.ldx = 2;
+    param.ldx_transform = 2;
+    std::vector<double> expected_X_transform{-4.5374370271312765, 0.8856481838769008,
+                                             -0.1485720647173343, -0.1862765125569579,
+                                             -10.285631345842905, 0.5656714936585496};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    std::vector<double> Xinv{1.1, 1.5, 4.1, 3.6, 5.2, -1.4};
+    param.k = 2;
+    param.ldxinv_transform = 2;
+    param.ldxinv = 2;
+    param.Xinv = convert_vector<double, T>(Xinv);
+    std::vector<double> expected_Xinv_transform{
+        4.992998132942069,   3.4776950855090645, 3.817982765809109, 2.7618133198665666,
+        -0.8026473725555425, -0.989938728172479, 3.36570038195178,  3.5255319541202623,
+        -2.7113954520140084, 3.6523879032352093};
+    param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetTallThinData6(std::vector<PCAParamType<T>> &params) {
+    // Test with a tall thin data matrix - whiten covariance
+    PCAParamType<T> param;
+    param.test_name = "Tall thin data matrix 6";
+    param.n = 8;
+    param.p = 5;
+    std::vector<double> A{1.0,  3.0, 0.0, -7.0, 1.0,  2.0, 2.0,  5.5, 1.0, 2.0,
+                          3.0,  0.2, 0.1, 0.8,  6.0,  4.0, 1.0,  0.9, 3.1, 0.0,
+                          -7.8, 9.8, 0.7, 4.0,  4.1,  1.1, 3.0,  2.1, 6.2, 0.6,
+                          2.0,  2.0, 5.5, 1.0,  -2.0, 3.0, -0.2, 0.1, 0.8, 6.0};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 8;
+    param.components_required = 3;
+    param.method = "covariance";
+    param.svd_solver = "gesdd";
+    param.whiten = 1;
+    std::vector<double> expected_scores{
+        0.1365914560102628,  -0.0865128980790304, -0.1856224495959318,
+        0.7029459356673105,  1.8445627192698657,  -1.5370888038203108,
+        -0.0517489715976956, -0.8231269878544711, -0.1893766110397092,
+        -0.4550188828382611, 0.4649584715458993,  1.941798571276809,
+        -0.6778190292570032, 0.7025013640093815,  -0.5613950686591076,
+        -1.2256488150380083, 1.3693123966945833,  -0.383398975358128,
+        -1.3161640944829478, 0.9287985474400644,  -0.5914479364614582,
+        -0.5853434565725828, -0.5836364297750894, 1.1618799485155589};
+    param.expected_scores = convert_vector<double, T>(expected_scores);
+    std::vector<double> expected_u{
+        0.0516267176884819,  -0.0326988019309418, -0.070158691340208,
+        0.2656885901284733,  0.6971791761213015,  -0.5809649597043267,
+        -0.0195592727786925, -0.3111127581840877, -0.0715776309918971,
+        -0.1719809722612106, 0.1757377836690215,  0.7339308736827092,
+        -0.2561915121887491, 0.2655205578360693,  -0.2121873912757186,
+        -0.4632517084702247, 0.51755143840167,    -0.1449111916735129,
+        -0.4974632683649137, 0.3510528535149199,  -0.2235463076170502,
+        -0.2212390310928557, -0.2205938356089281, 0.4391493424406711};
+    std::vector<double> expected_components{
+        -0.2954425943504331, -0.8849609837284986, -0.1446432602770579,
+        -0.1382105916438464, -0.2816840581108922, -0.1303095727620542,
+        -0.9021744345829193, 0.3065240592424442,  0.0030782406962135,
+        0.2749744482897113,  -0.1254695563831541, 0.0170570562188144,
+        -0.063889343193544,  -0.1667289423316099, 0.9807126611655212};
+    param.expected_components = convert_vector<double, T>(expected_components);
+    std::vector<double> expected_vt{
+        -0.2954425943504331, -0.8849609837284986, -0.1446432602770579,
+        -0.1382105916438464, -0.2816840581108922, -0.1303095727620542,
+        -0.9021744345829193, 0.3065240592424442,  0.0030782406962135,
+        0.2749744482897113,  -0.1254695563831541, 0.0170570562188144,
+        -0.063889343193544,  -0.1667289423316099, 0.9807126611655212};
+    param.expected_vt = convert_vector<double, T>(expected_vt);
+    std::vector<double> expected_variance{27.798402201433294, 12.939878761717383,
+                                          7.765700962743365};
+    param.expected_variance = convert_vector<double, T>(expected_variance);
+    std::vector<double> expected_sigma{13.949509504281254, 9.517307987662356,
+                                       7.372917111917341};
+    param.expected_sigma = convert_vector<double, T>(expected_sigma);
+    param.expected_total_variance = (T)52.47857142857144;
+    param.expected_n_components = 3;
+    std::vector<double> expected_rinfo{8.0, 5.0, 3.0};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> X{0.1, 1.2, 3.1, 0.6, 5.1, -0.4, 0.1, -0.9, 12.3, 1.1};
+    param.X = convert_vector<double, T>(X);
+    param.m = 2;
+    param.ldx = 2;
+    param.ldx_transform = 2;
+    std::vector<double> expected_X_transform{-0.8605987156552815, 0.1679775796356944,
+                                             0.0413020925163956,  0.0517836900893619,
+                                             3.690970914945504,   -0.2029896814599851};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    std::vector<double> Xinv{1.1, 1.5, 4.1, 3.6, 5.2, -1.4};
+    param.k = 2;
+    param.ldxinv_transform = 2;
+    param.ldxinv = 2;
+    param.Xinv = convert_vector<double, T>(Xinv);
+    std::vector<double> expected_Xinv_transform{
+        -15.9238501192285966, -12.2949248901184340, -4.7067981586794359,
+        -2.0949593078244462,  0.7955821231724117,   -1.7150050586080094,
+        2.6289372234559902,   3.1208020276168318,   13.1568093806343942,
+        -4.7155398912313533};
+    param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
+    param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
+
+    param.expected_status = da_status_success;
+
+    params.push_back(param);
+}
+
+template <typename T> void GetTallThinData7(std::vector<PCAParamType<T>> &params) {
+    // Test with a tall thin data matrix - whiten correlation
+    PCAParamType<T> param;
+    param.test_name = "Tall thin data matrix 7";
+    param.n = 8;
+    param.p = 5;
+    std::vector<double> A{1.0,  3.0, 0.0, -7.0, 1.0,  2.0, 2.0,  5.5, 1.0, 2.0,
+                          3.0,  0.2, 0.1, 0.8,  6.0,  4.0, 1.0,  0.9, 3.1, 0.0,
+                          -7.8, 9.8, 0.7, 4.0,  4.1,  1.1, 3.0,  2.1, 6.2, 0.6,
+                          2.0,  2.0, 5.5, 1.0,  -2.0, 3.0, -0.2, 0.1, 0.8, 6.0};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 8;
+    param.components_required = 3;
+    param.method = "correlation";
+    param.svd_solver = "gesvdx";
+    param.whiten = 1;
+    std::vector<double> expected_scores{
+        0.4312956072336704,  -0.40189209503809,   -0.0202980976622845,
+        0.8053832848354829,  1.8761060121810975,  -0.9726265578499133,
+        -0.683016585072279,  -1.034951568627684,  -0.3821262637560575,
+        0.0396806789522891,  0.283637402913679,   1.592526889734713,
+        -0.8480552905835941, 1.2593889927445068,  -0.8329911885392223,
+        -1.1120612214663146, 1.4014196513964383,  -0.2836561295411672,
+        -1.3534981308577587, 0.8062496428375888,  -0.5691079789266178,
+        -0.2483269237715071, -0.8908209981692637, 1.1377408670322908};
+    param.expected_scores = convert_vector<double, T>(expected_scores);
+    std::vector<double> expected_u{
+        0.16301441689926877,  -0.15190093390764553, -0.007671959786015266,
+        0.30440626882328325,  0.7091014202034718,   -0.36761828437252125,
+        -0.2581560036334061,  -0.3911749242264357,  -0.1444301519035428,
+        0.014997886908849872, 0.10720486151797456,  0.601918586631605,
+        -0.3205347709881148,  0.4760042969562981,   -0.3148410755975569,
+        -0.42031963352551305, 0.5296868400048295,   -0.10721193951786444,
+        -0.5115742077486266,  0.3047337213689863,   -0.2151025973403451,
+        -0.09385875487730042, -0.3366986891185997,  0.43002562722892085};
+    param.expected_u = convert_vector<double, T>(expected_u);
+    std::vector<double> expected_components{
+        -0.36868737869699797, -0.6316232406874217, -0.06683479410503197,
+        -0.43113246622806944, -0.4801687992018557, -0.28425022864703875,
+        -0.5779618011659566,  0.3844037107350251,  0.08444048886635638,
+        0.5784712910192207,   -0.4144512975032958, -0.009353960170916515,
+        -0.09759884842147158, -0.2257297394397662, 0.9526369849424157};
+    param.expected_components = convert_vector<double, T>(expected_components);
+    std::vector<double> expected_vt{
+        -0.36868737869699797, -0.6316232406874217, -0.06683479410503197,
+        -0.43113246622806944, -0.4801687992018557, -0.28425022864703875,
+        -0.5779618011659566,  0.3844037107350251,  0.08444048886635638,
+        0.5784712910192207,   -0.4144512975032958, -0.009353960170916515,
+        -0.09759884842147158, -0.2257297394397662, 0.9526369849424157};
+    param.expected_vt = convert_vector<double, T>(expected_vt);
+    std::vector<double> expected_variance{2.1120544797846836, 1.205278130973026,
+                                          0.9932201143631529};
+    param.expected_variance = convert_vector<double, T>(expected_variance);
+    std::vector<double> expected_sigma{3.8450463402269657, 2.9046423044518215,
+                                       2.6367671115481683};
+    param.expected_sigma = convert_vector<double, T>(expected_sigma);
+    param.expected_total_variance = (T)5.0;
+    param.expected_n_components = 3;
+    std::vector<double> expected_rinfo{8.0, 5.0, 3.0};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> X{0.1, 1.2, 3.1, 0.6, 5.1, -0.4, 0.1, -0.9, 12.3, 1.1};
+    param.X = convert_vector<double, T>(X);
+    param.m = 2;
+    param.ldx = 2;
+    param.ldx_transform = 2;
+    std::vector<double> expected_X_transform{-1.187202030373203, -0.4152425075155651,
+                                             -0.042718492705155, 0.941760037578876,
+                                             3.5249182331748448, -0.0359551737822111};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    std::vector<double> Xinv{1.1, 1.5, 4.1, 3.6, 5.2, -1.4};
+    param.k = 2;
+    param.ldxinv_transform = 2;
+    param.ldxinv = 2;
+    param.Xinv = convert_vector<double, T>(Xinv);
+    std::vector<double> expected_Xinv_transform{
+        -12.7035555930177964, -10.6386955472236533, -6.8339407141018240,
+        -2.9275163554394750,  7.5506727636816677,   2.1551913645536942,
+        0.8608393047062108,   1.9838719179791413,   12.3982789970167406,
+        -5.0932699965500721};
     param.expected_Xinv_transform = convert_vector<double, T>(expected_Xinv_transform);
     param.epsilon = 1000 * std::numeric_limits<T>::epsilon();
 
@@ -1919,6 +2157,9 @@ template <typename T> void GetPCAData(std::vector<PCAParamType<T>> &params) {
     GetTallThinData2(params);
     GetTallThinData3(params);
     GetTallThinData4(params);
+    GetTallThinData5(params);
+    GetTallThinData6(params);
+    GetTallThinData7(params);
     GetRowMajorData(params);
     GetShortFatData(params);
     GetSubarrayData1(params);

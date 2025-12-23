@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,7 +27,8 @@
 """
 Patching scikit-learn clustering: kmeans
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors, useless-return, super-init-not-called, no-member
+# pylint: disable = missing-function-docstring, too-many-ancestors,
+# useless-return, super-init-not-called, no-member
 
 import warnings
 from sklearn.cluster import KMeans as kmeans_sklearn
@@ -40,8 +41,18 @@ class kmeans(kmeans_sklearn):
     Overwrite scikit-learn kmeans to call AOCL-DA library
     """
 
-    def __init__(self, n_clusters=8, *, init='k-means++', n_init='auto', max_iter=300, tol=0.0001,
-                 verbose=None, random_state=None, copy_x=None, algorithm='lloyd'):
+    def __init__(
+            self,
+            n_clusters=8,
+            *,
+            init='k-means++',
+            n_init='auto',
+            max_iter=300,
+            tol=0.0001,
+            verbose=None,
+            random_state=None,
+            copy_x=None,
+            algorithm='lloyd'):
 
         # Supported attributes
         self.n_clusters = n_clusters
@@ -63,8 +74,9 @@ class kmeans(kmeans_sklearn):
                 category=RuntimeWarning)
 
         if callable(init):
-            raise ValueError("init must be set to 'random', 'random partitions', 'k-means++' "
-                             "or an array.")
+            raise ValueError(
+                "init must be set to 'random', 'random partitions', 'k-means++' "
+                "or an array.")
 
         # new internal attributes
         self.aocl = True
@@ -82,17 +94,38 @@ class kmeans(kmeans_sklearn):
             self.seed = -1
 
         if isinstance(init, np.ndarray):
-            self.kmeans = kmeans_da(n_clusters, initialization_method="supplied", n_init=1,
-                                    max_iter=self.max_iter, seed=self.seed, C=init,
-                                    algorithm=algorithm_internal, tol=self.tol)
+            self.kmeans = kmeans_da(
+                n_clusters,
+                initialization_method="supplied",
+                n_init=1,
+                max_iter=self.max_iter,
+                seed=self.seed,
+                C=init,
+                algorithm=algorithm_internal,
+                tol=self.tol)
         elif n_init == "auto":
-            self.kmeans = kmeans_da(n_clusters, initialization_method=self.init, n_init=10,
-                                    max_iter=self.max_iter, seed=self.seed, tol=self.tol,
-                                    algorithm=algorithm_internal)
+            if init == "k-means++":
+                n_init_internal = 1
+            else:
+                n_init_internal = 10
+
+            self.kmeans = kmeans_da(
+                n_clusters,
+                initialization_method=self.init,
+                n_init=n_init_internal,
+                max_iter=self.max_iter,
+                seed=self.seed,
+                tol=self.tol,
+                algorithm=algorithm_internal)
         else:
-            self.kmeans = kmeans_da(n_clusters, initialization_method=self.init,
-                                    n_init=self.n_init, max_iter=self.max_iter, tol=self.tol,
-                                    seed=self.seed, algorithm=algorithm_internal)
+            self.kmeans = kmeans_da(
+                n_clusters,
+                initialization_method=self.init,
+                n_init=self.n_init,
+                max_iter=self.max_iter,
+                tol=self.tol,
+                seed=self.seed,
+                algorithm=algorithm_internal)
 
     def fit(self, X, y=None, sample_weight=None):
         self.kmeans.fit(X)

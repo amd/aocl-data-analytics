@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -130,6 +130,7 @@ def test_general_functions_functionality1D(get_data1D, da_func, other_func,
     # Compute mean
     da_result = da_func(X, axis=da_axis)
     da_result2 = da_func(X2D, axis=da_axis)
+
     # check expected results
     ex_result = other_func(X, axis=np_axis)
 
@@ -138,6 +139,213 @@ def test_general_functions_functionality1D(get_data1D, da_func, other_func,
     # Assert that 1D array passed as 2D array is also correct
     error = np.max(np.abs(da_result2 - ex_result))
     assert error < tol
+
+
+@pytest.mark.parametrize(
+    "numpy_precision",
+    [np.float16, np.float32, np.float64, np.int16, np.int32, np.int64, 'object'])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+@pytest.mark.parametrize("da_axis", ["col", "row", "all"])
+def test_basic_stats_all_dtypes(numpy_precision, numpy_order, da_axis):
+    """
+    Test it runs when supported/unsupported C-interface type is provided.
+    """
+
+    X = np.array(
+        [[1.92, -0.52],
+         [1.76, 0.84],
+         [-1.02, 0.94],
+         [0.79, 1.34],
+         [2.86, -0.43]],
+        dtype=numpy_precision, order=numpy_order)
+
+    # variance
+    da_var = da_stats.variance(X, axis=da_axis, dof=-1)
+
+    # moment
+    shift = da_stats.mean(X, axis=da_axis)
+    _ = da_stats.moment(X, 3, axis=da_axis)
+    _ = da_stats.moment(X,
+                        3,
+                        mean=shift,
+                        axis=da_axis)
+
+    # quantile
+    _ = da_stats.quantile(X, 0.21, axis=da_axis)
+
+    # fivesum
+    _, _, _, _, _ = da_stats.five_point_summary(
+        X, axis=da_axis)
+
+    # mean
+    mean = da_stats.mean(X, axis=da_axis)
+
+    # standardize
+    standardized = da_stats.standardize(X, axis=da_axis, inplace=False, dof=-1)
+    _ = da_stats.standardize(standardized,
+                             axis=da_axis,
+                             reverse=True,
+                             shift=mean,
+                             scale=np.sqrt(da_var),
+                             inplace=False)
+
+    # covariance
+    _ = da_stats.covariance_matrix(X)
+
+    # correlation
+    _ = da_stats.correlation_matrix(X)
+
+
+@pytest.mark.parametrize(
+    "numpy_precision", [np.float32])
+@pytest.mark.parametrize("da_axis", ["col", "row", "all"])
+@pytest.mark.parametrize("numpy_orders",
+                         [("C", "F"), ("F", "C")])
+def test_basic_stats_multiple_orders(numpy_precision, numpy_orders, da_axis):
+    """
+    Test it runs when arrays of multiple orders are provided.
+    """
+
+    X1 = np.array(
+        [[1.92, -0.52],
+         [1.76, 0.84],
+         [-1.02, 0.94],
+         [0.79, 1.34],
+         [2.86, -0.43]],
+        dtype=numpy_precision, order=numpy_orders[0])
+    X2 = np.array(
+        [[1.92, -0.52],
+         [1.76, 0.84],
+         [-1.02, 0.94],
+         [0.79, 1.34],
+         [2.86, -0.43]],
+        dtype=numpy_precision, order=numpy_orders[1])
+
+    # variance
+    da_var1 = da_stats.variance(X1, axis=da_axis, dof=-1)
+    da_var2 = da_stats.variance(X2, axis=da_axis, dof=-1)
+
+    # moment
+    shift1 = da_stats.mean(X1, axis=da_axis)
+    shift2 = da_stats.mean(X2, axis=da_axis)
+    da_moment = da_stats.moment(X1, 3, axis=da_axis)
+    da_moment_with_precomputed_mean = da_stats.moment(X1,
+                                                      3,
+                                                      mean=shift2,
+                                                      axis=da_axis)
+    da_moment_with_precomputed_mean = da_stats.moment(X2,
+                                                      3,
+                                                      mean=shift1,
+                                                      axis=da_axis)
+
+    # quantile
+    da_quantile = da_stats.quantile(X1, 0.21, axis=da_axis)
+
+    # fivesum
+    min_da, lh_da, med_da, uh_da, max_da = da_stats.five_point_summary(
+        X1, axis=da_axis)
+
+    # mean
+    mean1 = da_stats.mean(X1, axis=da_axis)
+    mean2 = da_stats.mean(X2, axis=da_axis)
+
+    # standardize
+    standardized1 = da_stats.standardize(X1, axis=da_axis, inplace=False, dof=-1)
+    standardized2 = da_stats.standardize(X2, axis=da_axis, inplace=False, dof=-1)
+    reversed_standardized = da_stats.standardize(standardized1,
+                                                 axis=da_axis,
+                                                 reverse=True,
+                                                 shift=mean2,
+                                                 scale=np.sqrt(da_var2),
+                                                 inplace=False)
+    reversed_standardized = da_stats.standardize(standardized2,
+                                                 axis=da_axis,
+                                                 reverse=True,
+                                                 shift=mean1,
+                                                 scale=np.sqrt(da_var1),
+                                                 inplace=False)
+
+    # covariance
+    covariance = da_stats.covariance_matrix(X1)
+
+    # correlation
+    correlation = da_stats.correlation_matrix(X1)
+
+
+@pytest.mark.parametrize(
+    "numpy_precisions", [('float32', 'float64'),
+                         ('float64', 'float32')])
+@pytest.mark.parametrize("da_axis", ["col", "row", "all"])
+@pytest.mark.parametrize("numpy_order", ["C"])
+def test_basic_stats_multiple_dtypes(numpy_precisions, numpy_order, da_axis):
+    """
+    Test it runs when arrays of multiple dtypes are provided.
+    """
+
+    X1 = np.array(
+        [[1.92, -0.52],
+         [1.76, 0.84],
+         [-1.02, 0.94],
+         [0.79, 1.34],
+         [2.86, -0.43]],
+        dtype=numpy_precisions[0], order=numpy_order)
+    X2 = np.array(
+        [[1.92, -0.52],
+         [1.76, 0.84],
+         [-1.02, 0.94],
+         [0.79, 1.34],
+         [2.86, -0.43]],
+        dtype=numpy_precisions[1], order=numpy_order)
+
+    # variance
+    da_var1 = da_stats.variance(X1, axis=da_axis, dof=-1)
+    da_var2 = da_stats.variance(X2, axis=da_axis, dof=-1)
+
+    # moment
+    shift1 = da_stats.mean(X1, axis=da_axis)
+    shift2 = da_stats.mean(X2, axis=da_axis)
+    da_moment = da_stats.moment(X1, 3, axis=da_axis)
+    da_moment_with_precomputed_mean = da_stats.moment(X1,
+                                                      3,
+                                                      mean=shift2,
+                                                      axis=da_axis)
+    da_moment_with_precomputed_mean = da_stats.moment(X2,
+                                                      3,
+                                                      mean=shift1,
+                                                      axis=da_axis)
+
+    # quantile
+    da_quantile = da_stats.quantile(X1, 0.21, axis=da_axis)
+
+    # fivesum
+    min_da, lh_da, med_da, uh_da, max_da = da_stats.five_point_summary(
+        X1, axis=da_axis)
+
+    # mean
+    mean1 = da_stats.mean(X1, axis=da_axis)
+    mean2 = da_stats.mean(X2, axis=da_axis)
+
+    # standardize
+    standardized1 = da_stats.standardize(X1, axis=da_axis, inplace=False, dof=-1)
+    standardized2 = da_stats.standardize(X2, axis=da_axis, inplace=False, dof=-1)
+    reversed_standardized = da_stats.standardize(standardized1,
+                                                 axis=da_axis,
+                                                 reverse=True,
+                                                 shift=mean2,
+                                                 scale=np.sqrt(da_var2),
+                                                 inplace=False)
+    reversed_standardized = da_stats.standardize(standardized2,
+                                                 axis=da_axis,
+                                                 reverse=True,
+                                                 shift=mean1,
+                                                 scale=np.sqrt(da_var1),
+                                                 inplace=False)
+
+    # covariance
+    covariance = da_stats.covariance_matrix(X1)
+
+    # correlation
+    correlation = da_stats.correlation_matrix(X1)
 
 
 @pytest.mark.parametrize("da_axis, np_axis", [("row", 1), ("col", 0),
@@ -355,7 +563,7 @@ def get_standardized_with_shift_or_mean(array,
         return X
     # Case when we want to do calculations over columns
     if axis == "col":
-        if shift_a is not None and scale_a is not None :
+        if shift_a is not None and scale_a is not None:
             for i in range(array.shape[1]):
                 X[:, i] = (array[:, i] - shift_a[i]) / scale_a[i]
         elif shift_a is not None:
@@ -375,18 +583,20 @@ def get_standardized_with_shift_or_mean(array,
     return X
 
 
-@pytest.mark.parametrize(
-    "da_axis, np_axis, shift_a, scale_a",
-    [("row", 1, np.array([4.1, 5., 10., 6.]), np.array([7., 3., 1.5, 2.])),
-     ("col", 0, np.array([12., 10., 4., 1.2, 2.6]), np.array([1.2, 5., 1.76, 8., 4.7])),
-     ("all", 2, np.array([10.4]), np.array([4.9]))],
-    ids=['row', 'column', 'all'])
+@pytest.mark.parametrize("da_axis, np_axis, shift_a, scale_a",
+                         [("row", 1, np.array([4.1, 5., 10., 6.]),
+                           np.array([7., 3., 1.5, 2.])),
+                          ("col", 0, np.array([12., 10., 4., 1.2, 2.6]),
+                           np.array([1.2, 5., 1.76, 8., 4.7])),
+                          ("all", 2, np.array([10.4]),
+                           np.array([4.9]))],
+                         ids=['row', 'column', 'all'])
 def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
                                    scale_a):
     """
     Testing functionality of standardization function
     """
-    warnings.filterwarnings("ignore",module="sklearn")
+    warnings.filterwarnings("ignore", module="sklearn")
     X = get_data2D["data"]
     tol = get_data2D["tol"]
 
@@ -489,16 +699,16 @@ def test_standardize_functionality(get_data2D, da_axis, np_axis, shift_a,
     assert shifted.dtype == X.dtype
     assert shifted.flags.f_contiguous == X.flags.f_contiguous
 
-    #assert scaled.dtype == X.dtype
+    # assert scaled.dtype == X.dtype
     assert scaled.flags.f_contiguous == X.flags.f_contiguous
 
-    #assert reversed_shifted.dtype == X.dtype
+    # assert reversed_shifted.dtype == X.dtype
     assert reversed_shifted.flags.f_contiguous == X.flags.f_contiguous
 
-    #assert reversed_shifted_scaled.dtype == X.dtype
+    # assert reversed_shifted_scaled.dtype == X.dtype
     assert reversed_shifted_scaled.flags.f_contiguous == X.flags.f_contiguous
 
-    #assert reversed_scaled.dtype == X.dtype
+    # assert reversed_scaled.dtype == X.dtype
     assert reversed_scaled.flags.f_contiguous == X.flags.f_contiguous
 
 
@@ -519,6 +729,20 @@ def test_covariance_functionality(get_data2D, da_biased, numpy_biased):
     error = np.max(np.abs(covariance - covariance_ex))
     assert error < tol
 
+    assert covariance.dtype == X.dtype
+    assert covariance.flags.f_contiguous == X.flags.f_contiguous
+
+    # Check covariance with assume_centered=True
+    covariance = da_stats.covariance_matrix(X, dof=da_biased, assume_centered=True)
+
+    # expected result
+    if numpy_biased:
+        covariance_ex = np.dot(X.T, X) / X.shape[0]
+    else:
+        covariance_ex = np.dot(X.T, X) / (X.shape[0] - 1)
+
+    error = np.max(np.abs(covariance - covariance_ex))
+    assert error < tol
     assert covariance.dtype == X.dtype
     assert covariance.flags.f_contiguous == X.flags.f_contiguous
 
@@ -555,18 +779,18 @@ def test_error_exits_general(func, da_axis):
     """
     # Check empty array input
     with pytest.raises(ValueError):
-        func([], axis=da_axis)
+        func(np.array([]), axis=da_axis)
     # Check wrong input type
-    with pytest.raises(TypeError):
-        func([[1, 2, 3], [4, 'a', 6]], axis=da_axis)
+    with pytest.raises(ValueError):
+        func(np.array([[1, 2, 3], [4, 'a', 6]]), axis=da_axis)
     # Check 3D input
     with pytest.raises(ValueError):
-        func([[[]]], axis=da_axis)
+        func(np.array([[[]]]), axis=da_axis)
 
 
-@pytest.mark.parametrize("da_axis, wrong_shape_input", [("row", [1, 2, 3]),
-                                                        ("col", [1, 2, 3, 4]),
-                                                        ("all", [1, 2])])
+@pytest.mark.parametrize("da_axis, wrong_shape_input", [("row", np.array([1, 2, 3])),
+                                                        ("col", np.array([1, 2, 3, 4])),
+                                                        ("all", np.array([1, 2]))])
 def test_error_exits_moment(get_data2D, da_axis, wrong_shape_input):
     """
     Testing error exits in moment function
@@ -579,17 +803,17 @@ def test_error_exits_moment(get_data2D, da_axis, wrong_shape_input):
                         mean=wrong_shape_input)
     # Check empty array input
     with pytest.raises(ValueError):
-        da_stats.moment([], k=2, axis=da_axis)
+        da_stats.moment(np.array([]), k=2, axis=da_axis)
     # Check wrong input type
-    with pytest.raises(TypeError):
-        da_stats.moment([[1, 2, 3], [4, 'a', 6]], k=2, axis=da_axis)
     with pytest.raises(ValueError):
-        da_stats.moment([[1, 2, 3], [4, 5, 6]], k=-1, axis=da_axis)
+        da_stats.moment(np.array([[1, 2, 3], [4, 'a', 6]]), k=2, axis=da_axis)
+    with pytest.raises(ValueError):
+        da_stats.moment(np.array([[1, 2, 3], [4, 5, 6]]), k=-1, axis=da_axis)
     with pytest.raises(TypeError):
-        da_stats.moment([[1, 2, 3], [4, 5, 6]], k='a', axis=da_axis)
+        da_stats.moment(np.array([[1, 2, 3], [4, 5, 6]]), k='a', axis=da_axis)
     # Check 3D input
     with pytest.raises(ValueError):
-        da_stats.moment([[[]]], k=2, axis=da_axis)
+        da_stats.moment(np.array([[[]]]), k=2, axis=da_axis)
 
 
 @pytest.mark.parametrize("da_axis", ["row", "col", "all"])
@@ -605,26 +829,27 @@ def test_error_exits_quantile(da_axis):
         da_stats.quantile(X, 0.12, axis=da_axis, method='lineear')
     # Check empty array input
     with pytest.raises(ValueError):
-        da_stats.quantile([], 0.2, axis=da_axis)
+        da_stats.quantile(np.array([]), 0.2, axis=da_axis)
     # Check wrong input type
-    with pytest.raises(TypeError):
-        da_stats.quantile([[1, 2, 3], [4, 'a', 6]], 0.2, axis=da_axis)
+    with pytest.raises(ValueError):
+        da_stats.quantile(np.array([[1, 2, 3], [4, 'a', 6]]), 0.2, axis=da_axis)
     with pytest.raises(ValueError):
         da_stats.quantile(X, q=-1.2, axis=da_axis)
     with pytest.raises(TypeError):
         da_stats.quantile(X, q='a', axis=da_axis)
 
 
-@pytest.mark.parametrize("da_axis, wrong_shape_input", [("row", [1, 2, 3]),
-                                                        ("col", [1, 2]),
-                                                        ("all", [1, 2])])
+@pytest.mark.parametrize("da_axis, wrong_shape_input", [("row", np.array([1, 2, 3])),
+                                                        ("col", np.array([1, 2])),
+                                                        ("all", np.array([1, 2]))])
 def test_error_exits_standardize(da_axis, wrong_shape_input):
     """
     Testing error exits in standardize function
     """
     X = np.array([[1, 2, 3], [4, -5, 6]], dtype=np.float32, order='F')
     tol = np.sqrt(np.finfo(np.float32).eps)
-    # Check that reverse standardization does not work without both shift and scale parameters
+    # Check that reverse standardization does not work without both shift and
+    # scale parameters
     with pytest.raises(ValueError):
         da_stats.standardize(X, reverse=True, axis=da_axis)
     # Check wrong shift/scale parameter size
@@ -651,13 +876,13 @@ def test_error_exits_cov_corr(func):
     """
     # Check empty array input
     with pytest.raises(ValueError):
-        func([])
+        func(np.array([]))
     # Check wrong input type
-    with pytest.raises(TypeError):
-        func([[1, 2, 3], [4, 'a', 6]])
+    with pytest.raises(ValueError):
+        func(np.array([[1, 2, 3], [4, 'a', 6]]))
     # Check 3D input
     with pytest.raises(ValueError):
-        func([[[]]])
+        func(np.array([[[]]]))
 
 
 @pytest.mark.parametrize("da_axis", ["row", "col", "all"])

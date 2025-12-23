@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -44,8 +44,10 @@ class decision_tree : public pyda_handle {
   public:
     decision_tree(da_int seed = -1, da_int max_depth = 29, da_int max_features = 0,
                   std::string criterion = "gini", da_int min_samples_split = 2,
-                  std::string build_order = "breadth first",
-                  std::string sort_method = "boost", std::string prec = "double",
+                  std::string prec = "double", bool detect_categorical_data = false,
+                  da_int max_category = 50,
+                  std::string category_split_strategy = "ordered", bool histogram = false,
+                  da_int maximum_bins = 256, bool predict_proba = true,
                   bool check_data = false) {
         da_status status;
         if (prec == "double") {
@@ -54,6 +56,8 @@ class decision_tree : public pyda_handle {
             da_handle_init<float>(&handle, da_handle_decision_tree);
             precision = da_single;
         }
+
+        std::string opt_str;
 
         status = da_options_set(handle, "seed", seed);
         exception_check(status);
@@ -65,9 +69,20 @@ class decision_tree : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "node minimum samples", min_samples_split);
         exception_check(status);
-        status = da_options_set(handle, "tree building order", build_order.data());
+        status = da_options_set(handle, "detect categorical data",
+                                detect_categorical_data ? "yes" : "no");
         exception_check(status);
-        status = da_options_set(handle, "sorting method", sort_method.data());
+        status = da_options_set(handle, "maximum categories", max_category);
+        exception_check(status);
+        status = da_options_set(handle, "histogram", histogram ? "yes" : "no");
+        exception_check(status);
+        status = da_options_set(handle, "maximum bins", maximum_bins);
+        exception_check(status);
+        status =
+            da_options_set(handle, "predict probabilities", predict_proba ? "yes" : "no");
+        exception_check(status);
+        status = da_options_set(handle, "category split strategy",
+                                category_split_strategy.data());
         exception_check(status);
         if (check_data == true) {
             std::string yes_str = "yes";
@@ -85,15 +100,18 @@ class decision_tree : public pyda_handle {
 
     template <typename T>
     void fit(py::array_t<T> X, py::array y, T min_impurity_decrease = 0.0,
-             T min_split_score = 0.0, T feat_thresh = 0.0) {
+             T min_split_score = 0.0, T feat_thresh = (T)1.0e-05, T cat_tol = (T)1.0e-05,
+             std::optional<py::array_t<da_int>> categorical_features = std::nullopt) {
         da_status status;
 
         status =
-            da_options_set(handle, "minimum split improvement", min_impurity_decrease);
+            da_options_set(handle, "minimum impurity decrease", min_impurity_decrease);
         exception_check(status);
         status = da_options_set(handle, "minimum split score", min_split_score);
         exception_check(status);
         status = da_options_set(handle, "feature threshold", feat_thresh);
+        exception_check(status);
+        status = da_options_set(handle, "category tolerance", cat_tol);
         exception_check(status);
 
         da_int n_samples, n_features, ldx;
@@ -106,14 +124,18 @@ class decision_tree : public pyda_handle {
             status = da_options_set(handle, "storage order", "column-major");
         }
 
-        auto y_int = py::array_t<da_int>(y); // Convert y to da_int.
+        auto y_int = py::array_t<da_int>(y);
 
         n_class = (da_int)(std::round(*std::max_element(y_int.data(),
                                                         y_int.data() + n_samples)) +
                            1);
+        const da_int *cat_data = nullptr;
+        if (categorical_features.has_value()) {
+            cat_data = categorical_features->data();
+        }
         status = da_tree_set_training_data(handle, n_samples, n_features, n_class,
-                                           X.data(), ldx, y_int.data());
-        exception_check(status); // throw an exception if status is not success
+                                           X.data(), ldx, y_int.data(), cat_data);
+        exception_check(status);
 
         status = da_tree_fit<T>(handle);
         exception_check(status);
@@ -206,15 +228,16 @@ class decision_tree : public pyda_handle {
         return proba;
     }
 
-    void get_rinfo(da_int &n_samples, da_int &n_features, da_int &n_obs, da_int &seed,
-                   da_int &depth, da_int &n_nodes, da_int &n_leaves) {
+    py::dict get_model_info() {
         da_status status;
 
+        da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
         da_int dim = 10;
 
         if (precision == da_single) {
             float rinfo[10];
             status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            exception_check(status);
             n_features = (da_int)rinfo[0];
             n_samples = (da_int)rinfo[1];
             n_obs = (da_int)rinfo[2];
@@ -225,6 +248,7 @@ class decision_tree : public pyda_handle {
         } else {
             double rinfo[10];
             status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
+            exception_check(status);
             n_features = (da_int)rinfo[0];
             n_samples = (da_int)rinfo[1];
             n_obs = (da_int)rinfo[2];
@@ -234,32 +258,16 @@ class decision_tree : public pyda_handle {
             n_leaves = (da_int)rinfo[6];
         }
 
-        exception_check(status);
-    }
+        py::dict model_info;
+        model_info["n_samples"] = n_samples;
+        model_info["n_features"] = n_features;
+        model_info["n_obs"] = n_obs;
+        model_info["seed"] = seed;
+        model_info["depth"] = depth;
+        model_info["n_nodes"] = n_nodes;
+        model_info["n_leaves"] = n_leaves;
 
-    auto get_n_nodes() {
-
-        da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
-
-        if (precision == da_single) {
-            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
-        } else {
-            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
-        }
-
-        return n_nodes;
-    }
-    auto get_n_leaves() {
-
-        da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
-
-        if (precision == da_single) {
-            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
-        } else {
-            get_rinfo(n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves);
-        }
-
-        return n_leaves;
+        return model_info;
     }
 };
 
@@ -270,9 +278,12 @@ class decision_forest : public pyda_handle {
   public:
     decision_forest(da_int n_trees = 100, std::string criterion = "gini",
                     da_int seed = -1, da_int max_depth = 29, da_int min_samples_split = 2,
-                    std::string build_order = "breadth first", bool bootstrap = true,
-                    std::string features_selection = "sqrt", da_int max_features = 0,
-                    std::string prec = "double", bool check_data = false) {
+                    bool bootstrap = true, std::string features_selection = "sqrt",
+                    da_int max_features = 0, std::string prec = "double",
+                    bool histogram = false, da_int maximum_bins = 256,
+                    da_int block_size = 256,
+                    std::string category_split_strategy = "ordered",
+                    bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_forest);
@@ -280,9 +291,6 @@ class decision_forest : public pyda_handle {
             da_handle_init<float>(&handle, da_handle_decision_forest);
             precision = da_single;
         }
-        std::string bootstrap_str = "yes";
-        if (!bootstrap)
-            bootstrap_str = "no";
 
         status = da_options_set(handle, "seed", seed);
         exception_check(status);
@@ -294,13 +302,20 @@ class decision_forest : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "node minimum samples", min_samples_split);
         exception_check(status);
-        status = da_options_set(handle, "tree building order", build_order.data());
-        exception_check(status);
-        status = da_options_set(handle, "bootstrap", bootstrap_str.data());
+        status = da_options_set(handle, "bootstrap", bootstrap ? "yes" : "no");
         exception_check(status);
         status = da_options_set(handle, "features selection", features_selection.data());
         exception_check(status);
         status = da_options_set(handle, "maximum features", max_features);
+        exception_check(status);
+        status = da_options_set_string(handle, "histogram", histogram ? "yes" : "no");
+        exception_check(status);
+        status = da_options_set(handle, "maximum bins", maximum_bins);
+        exception_check(status);
+        status = da_options_set(handle, "block size", block_size);
+        exception_check(status);
+        status = da_options_set(handle, "category split strategy",
+                                category_split_strategy.data());
         exception_check(status);
         if (check_data == true) {
             std::string yes_str = "yes";
@@ -323,19 +338,22 @@ class decision_forest : public pyda_handle {
     }
 
     template <typename T>
-    void fit(py::array_t<T> X, py::array y, T samples_factor = 0.8,
-             T min_impurity_decrease = 0.0, T min_split_score = 0.0,
-             T feat_thresh = 0.03) {
+    void fit(py::array_t<T> X, py::array y, T samples_factor = (T)1.0,
+             T min_impurity_decrease = (T)0.0, T min_split_score = 0.0,
+             T feat_thresh = (T)1.0e-05, T proportion_features = (T)0.1,
+             std::optional<py::array_t<da_int>> categorical_features = std::nullopt) {
         da_status status;
 
         status = da_options_set(handle, "bootstrap samples factor", samples_factor);
         exception_check(status);
         status =
-            da_options_set(handle, "minimum split improvement", min_impurity_decrease);
+            da_options_set(handle, "minimum impurity decrease", min_impurity_decrease);
         exception_check(status);
         status = da_options_set(handle, "minimum split score", min_split_score);
         exception_check(status);
         status = da_options_set(handle, "feature threshold", feat_thresh);
+        exception_check(status);
+        status = da_options_set(handle, "proportion features", proportion_features);
         exception_check(status);
 
         da_int n_samples, n_features, ldx;
@@ -354,8 +372,12 @@ class decision_forest : public pyda_handle {
                                                         y_int.data() + n_samples)) +
                            1);
 
+        const da_int *cat_data = nullptr;
+        if (categorical_features.has_value()) {
+            cat_data = categorical_features->data();
+        }
         status = da_forest_set_training_data(handle, n_samples, n_features, n_class,
-                                             X.data(), ldx, y_int.data());
+                                             X.data(), ldx, y_int.data(), cat_data);
         exception_check(status); // throw an exception if status is not success
 
         status = da_forest_fit<T>(handle);

@@ -103,15 +103,31 @@ da_status pca<T>::get_result(da_result query, da_int *dim, T *result) {
         this->copy_2D_results_array(n, ns, u.data(), ldu, result);
         // Compute Scores matrix, U * Sigma
         if (this->order == column_major) {
-            for (da_int j = 0; j < ns; j++) {
-                for (da_int i = 0; i < n; i++) {
-                    result[j * n + i] *= sigma[j];
+            if (whiten) {
+                for (da_int j = 0; j < ns; j++) {
+                    for (da_int i = 0; i < n; i++) {
+                        result[j * n + i] *= sqrt_div;
+                    }
+                }
+            } else {
+                for (da_int j = 0; j < ns; j++) {
+                    for (da_int i = 0; i < n; i++) {
+                        result[j * n + i] *= sigma[j];
+                    }
                 }
             }
         } else {
-            for (da_int i = 0; i < n; i++) {
-                for (da_int j = 0; j < ns; j++) {
-                    result[i * ns + j] *= sigma[j];
+            if (whiten) {
+                for (da_int i = 0; i < n; i++) {
+                    for (da_int j = 0; j < ns; j++) {
+                        result[i * ns + j] *= sqrt_div;
+                    }
+                }
+            } else {
+                for (da_int i = 0; i < n; i++) {
+                    for (da_int j = 0; j < ns; j++) {
+                        result[i * ns + j] *= sigma[j];
+                    }
                 }
             }
         }
@@ -177,7 +193,7 @@ da_status pca<T>::get_result(da_result query, da_int *dim, T *result) {
     case da_result::da_pca_column_means:
         if (method == pca_method_svd)
             return da_warn(this->err, da_status_unknown_query,
-                           "Column means are only computed if the 'PCA method' "
+                           "Column means are only computed if the 'pca method' "
                            "option is set to 'covariance' or 'correlation'.");
         if (*dim < p) {
             *dim = p;
@@ -294,11 +310,15 @@ template <typename T> da_status pca<T>::compute() {
     ns = npc;
     std::string opt_method;
 
-    this->opts.get("PCA method", opt_method, method);
+    this->opts.get("pca method", opt_method, method);
 
     da_int u_tmp;
-    this->opts.get("store U", u_tmp);
+    this->opts.get("store u", u_tmp);
     store_U = (u_tmp > 0) ? true : false;
+
+    da_int whiten_tmp;
+    this->opts.get("whiten", whiten_tmp);
+    whiten = (whiten_tmp > 0) ? true : false;
 
     std::string svd_routine;
     this->opts.get("svd solver", svd_routine, solver);
@@ -307,7 +327,7 @@ template <typename T> da_status pca<T>::compute() {
     }
     if (solver == solver_syevd && store_U) {
         return da_error(this->err, da_status_incompatible_options,
-                        "The 'store U' and 'syevd' options cannot be used together.");
+                        "The 'store u' and 'syevd' options cannot be used together.");
     }
 
     std::string degrees_of_freedom;
@@ -317,6 +337,8 @@ template <typename T> da_status pca<T>::compute() {
         dof = -1;
         div = n;
     }
+    // sqrt_div derives from div and assumes div never changes
+    sqrt_div = sqrt(div);
 
     // Initialize some workspace arrays
     da_int iwork_size = 0, sigma_size = 0, A_copy_size = 0;
@@ -377,15 +399,15 @@ template <typename T> da_status pca<T>::compute() {
                                         column_means.data());
 
         if (solver == solver_syevd) {
-#pragma omp simd
             for (da_int j = 0; j < p; j++) {
+#pragma omp simd
                 for (da_int i = 0; i <= j; i++) {
-                    vt[i + ldvt * j] -= 2 * n * column_means[j] * column_means[i];
+                    vt[i + ldvt * j] -= n * column_means[j] * column_means[i];
                 }
             }
         } else {
-#pragma omp simd
             for (da_int j = 0; j < p; j++) {
+#pragma omp simd
                 for (da_int i = 0; i < n; i++) {
                     A_copy[i + j * n] = A[i + lda * j] - column_means[j];
                 }
@@ -404,23 +426,23 @@ template <typename T> da_status pca<T>::compute() {
         ARCH::da_basic_statistics::variance(column_major, da_axis_col, n, p, A, lda, dof,
                                             column_means.data(), column_sdevs.data());
         if (solver == solver_syevd) {
-#pragma omp simd
             for (da_int j = 0; j < p; j++) {
                 column_sdevs[j] = sqrt(column_sdevs[j]);
                 column_sdevs_nonzero[j] =
                     (column_sdevs[j] == (T)0.0) ? (T)1.0 : column_sdevs[j];
+#pragma omp simd
                 for (da_int i = 0; i <= j; i++) {
-                    vt[i + ldvt * j] -= 2 * n * column_means[j] * column_means[i];
+                    vt[i + ldvt * j] -= n * column_means[j] * column_means[i];
                     vt[i + ldvt * j] /=
                         (column_sdevs_nonzero[j] * column_sdevs_nonzero[i]);
                 }
             }
         } else {
-#pragma omp simd
             for (da_int j = 0; j < p; j++) {
                 column_sdevs[j] = sqrt(column_sdevs[j]);
                 column_sdevs_nonzero[j] =
                     (column_sdevs[j] == (T)0.0) ? (T)1.0 : column_sdevs[j];
+#pragma omp simd
                 for (da_int i = 0; i < n; i++) {
                     A_copy[i + j * n] =
                         (A[i + lda * j] - column_means[j]) / column_sdevs_nonzero[j];
@@ -431,8 +453,8 @@ template <typename T> da_status pca<T>::compute() {
     default:
         if (solver != solver_syevd) {
             // No standardization is required, just copy the input matrix into internal matrix buffer
-#pragma omp simd
             for (da_int j = 0; j < p; j++) {
+#pragma omp simd
                 for (da_int i = 0; i < n; i++) {
                     A_copy[i + j * n] = A[i + lda * j];
                 }
@@ -529,7 +551,7 @@ template <typename T> da_status pca<T>::compute() {
     }
 
     case solver_gesvd: {
-        char JOBU = 'S';
+        char JOBU = (store_U) ? 'S' : 'N';
         char JOBVT = 'S';
 
         // Query gesvd for optimal work space required
@@ -657,16 +679,13 @@ template <typename T> da_status pca<T>::compute() {
             sigma[i] = (sigma[i] < 0) ? (T)0.0 : sqrt(sigma[i]);
         }
 
-        for (da_int i = 0; i < p; i++) {
-            std::reverse(vt.begin() + i * p, vt.begin() + (i + 1) * p);
-        }
-
-#pragma omp simd
-        for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < j; i++) {
-                vt[i + ldvt * j] = vt[j + ldvt * i];
+        for (da_int j = 0; j < p / 2; j++) {
+            for (da_int i = 0; i < p; i++) {
+                std::swap(vt[i + ldvt * j], vt[i + ldvt * (p - 1 - j)]);
             }
         }
+
+        da_blas::imatcopy('T', p, p, (T)1.0, vt.data(), ldvt, ldvt);
 
         break;
     }
@@ -754,52 +773,86 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
     if (status != da_status_success)
         return status;
 
-    // We need a copy of X to avoid changing the user's data
-    std::vector<T> X_copy;
+    std::vector<T> v;
+    da_int ldv;
     try {
-        X_copy.resize(p * m);
+        v.resize(p * npc);
+        ldv = p;
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error,
                         "Memory allocation failed."); // LCOV_EXCL_LINE
     }
 
-    const T *X_gemm;
-    da_int ldx_gemm;
+    T sdev_factor;
+    // If whitening, transform V -> V * S^-1 * sqrt(div)
+    if (whiten) {
+        // check smallest singular value is not zero
+        bool sigma_contains_zero = false;
+        if (sigma[npc - 1] == (T)0.0) {
+            sigma_contains_zero = true;
+        }
 
-    // Standardize the new data matrix based on the standardization used in the PCA computation
-    switch (method) {
-    case pca_method_cov:
+        if (sigma_contains_zero) {
+            T eps = std::numeric_limits<T>::epsilon();
+            for (da_int j = 0; j < p; j++) {
+                sdev_factor = (method == pca_method_corr)
+                                  ? sqrt_div / column_sdevs_nonzero[j]
+                                  : sqrt_div;
+                for (da_int i = 0; i < npc; i++) {
+                    v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor /
+                                     ((sigma[i] > 0) ? sigma[i] : eps);
+                }
+            }
+        } else {
+            for (da_int j = 0; j < p; j++) {
+                sdev_factor = (method == pca_method_corr)
+                                  ? sqrt_div / column_sdevs_nonzero[j]
+                                  : sqrt_div;
 #pragma omp simd
-        for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < m; i++) {
-                X_copy[i + j * m] = X_temp[i + ldx_temp * j] - column_means[j];
+                for (da_int i = 0; i < npc; i++) {
+                    v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor / sigma[i];
+                }
             }
         }
-        X_gemm = X_copy.data();
-        ldx_gemm = m;
-        break;
-    case pca_method_corr:
-#pragma omp simd
+    } else {
         for (da_int j = 0; j < p; j++) {
-            for (da_int i = 0; i < m; i++) {
-                X_copy[i + j * m] = (X_temp[i + ldx_temp * j] - column_means[j]) /
-                                    column_sdevs_nonzero[j];
+            sdev_factor =
+                (method == pca_method_corr) ? (T)1.0 / column_sdevs_nonzero[j] : (T)1.0;
+#pragma omp simd
+            for (da_int i = 0; i < npc; i++) {
+                v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor;
             }
         }
-        X_gemm = X_copy.data();
-        ldx_gemm = m;
-        break;
-    default:
-        // No standardization is required
-        X_gemm = X_temp;
-        ldx_gemm = ldx_temp;
-        break;
     }
 
-    // Compute X * VT^T and store in transformed_data
-    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, m, ns, p, 1.0, X_gemm,
-                        ldx_gemm, vt.data(), ldvt, 0.0, X_transform_temp,
+    // Transform is (X - \mu) * V
+    // Compute X * V and store in transformed_data
+    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, npc, p, 1.0, X_temp,
+                        ldx_temp, v.data(), ldv, 0.0, X_transform_temp,
                         ldx_transform_temp);
+
+    if (method == pca_method_cov || method == pca_method_corr) {
+        // Get mean correction \mu
+        // \mu is rank 1 matrix where each row is column_means
+        std::vector<T> mean_correction;
+        try {
+            mean_correction.resize(npc);
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error,
+                            "Memory allocation failed."); // LCOV_EXCL_LINE
+        }
+
+        da_blas::cblas_gemv(CblasColMajor, CblasTrans, p, npc, (T)1.0, v.data(), ldv,
+                            column_means.data(), 1, (T)0.0, mean_correction.data(), 1);
+
+#pragma omp parallel for collapse(2)                                                     \
+    shared(npc, m, X_transform_temp, ldx_transform_temp, mean_correction) default(none)
+        for (da_int j = 0; j < npc; j++) {
+            for (da_int i = 0; i < m; i++) {
+                X_transform_temp[i + ldx_transform_temp * j] -= mean_correction[j];
+            }
+        }
+    }
 
     if (this->order == row_major) {
 
@@ -851,10 +904,37 @@ da_status pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ldx,
     if (status != da_status_success)
         return status;
 
+    T *inv_transform_operator;
+    da_int ld_inv_transform_operator;
+    std::vector<T> inv_transform_operator_temp;
+
+    // If whitening inverse transform operation is X * V^T * S / sqrt(div)
+    // Else it's simply X*V^T
+    if (whiten) {
+        try {
+            inv_transform_operator_temp.resize(p * npc);
+            ld_inv_transform_operator = npc;
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error,
+                            "Memory allocation failed."); // LCOV_EXCL_LINE
+        }
+        for (da_int j = 0; j < p; j++) {
+#pragma omp simd
+            for (da_int i = 0; i < npc; i++) {
+                inv_transform_operator_temp[i + ld_inv_transform_operator * j] =
+                    vt[i + ldvt * j] * sigma[i] / sqrt_div;
+            }
+        }
+        inv_transform_operator = inv_transform_operator_temp.data();
+    } else {
+        inv_transform_operator = vt.data();
+        ld_inv_transform_operator = ldvt;
+    }
+
     // Compute X * VT and store
     da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X_temp,
-                        ldx_temp, vt.data(), ldvt, 0.0, X_inv_transform_temp,
-                        ldx_inv_transform_temp);
+                        ldx_temp, inv_transform_operator, ld_inv_transform_operator, 0.0,
+                        X_inv_transform_temp, ldx_inv_transform_temp);
 
     // Undo the standardization used in the PCA computation
     switch (method) {

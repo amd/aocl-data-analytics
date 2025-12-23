@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -754,6 +754,10 @@ TEST(csvtest, incorrect_headings) {
     if (headings != nullptr) {
         EXPECT_EQ(da_delete_string_array(&headings, ncols), da_status_success);
     }
+    if (a != nullptr) {
+        free(a);
+        a = nullptr;
+    }
 }
 
 TEST(csvtest, incorrect_headings2) {
@@ -776,6 +780,10 @@ TEST(csvtest, incorrect_headings2) {
     da_datastore_destroy(&store);
     if (headings != nullptr) {
         EXPECT_EQ(da_delete_string_array(&headings, ncols), da_status_success);
+    }
+    if (a != nullptr) {
+        free(a);
+        a = nullptr;
     }
 }
 
@@ -904,6 +912,8 @@ TEST(csvtest, error_exits) {
         free(a);
     if (a_double != nullptr)
         free(a_double);
+    if (a_uint8 != nullptr)
+        free(a_uint8);
 }
 
 TEST(csvtest, no_data) {

@@ -21,11 +21,6 @@
  *
  * ************************************************************************ */
 
-// Deal with some Windows compilation issues regarding max/min macros
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "da_error.hpp"
 #include "macros.h"
 #include "options.hpp"
@@ -61,14 +56,47 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "max_iter",
             "Sets the maximum number of iterations. Use 0 to specify no limit.", 0,
-            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 0));
+            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
+            100000));
+        opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "max_ws_size",
+            "Specifies the maximum working set size. A value divisible by 64 is "
+            "recommended for optimal performance. Setting -1 automatically selects the "
+            "optimal size based on the input data.",
+            -1.0, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
+            -1.0));
+        opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "n_folds",
+            "Number of folds to use with cross validation. Only used when predict "
+            "probabilities is enabled.",
+            1, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
+        opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "seed",
+            "Seed for random number generation; set to -1 for non-deterministic "
+            "results.",
+            -1, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
+            0));
+        opts.register_opt(oi);
+
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "predict probabilities",
+            "Evaluate class probabilities (in addition to class predictions)."
+            "Needs to be 1 if calls to predict_proba or predict_log_proba"
+            "are made after fit.",
+            0, lbound_t::greaterequal, 1, ubound_t::lessequal, 0));
         opts.register_opt(oi);
 
         /* Float options */
         std::shared_ptr<OptionNumeric<T>> oT;
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "C",
+            "c",
             "Regularization parameter. Controls the trade-off between maximizing the "
             "margin between classes and minimizing classification errors. A larger "
             "value means higher penalty to the loss function on misclassified "
@@ -118,6 +146,16 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
             "not positive semi definite.",
             0.0, da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,
             tol.mcheps(1, 1), tol.mcheps_latex(1, 1)));
+        opts.register_opt(oT);
+
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "cache size",
+            "Size of the kernel cache in MB. The default value is -1.0 "
+            "which automatically sets it to a value which will enable storage of the "
+            "sampled kernel matrix. Increasing value of this "
+            "option will result in faster training time.",
+            -1.0, da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,
+            -1.0));
         opts.register_opt(oT);
 
         /* String options */

@@ -31,6 +31,150 @@ k-means clustering Python test script
 import numpy as np
 import pytest
 from aoclda.clustering import kmeans
+from aoclda._internal_utils import debug as dbg
+
+
+@pytest.mark.parametrize(
+    "numpy_precision",
+    [np.float16, np.float32, np.float64, np.int16, np.int32, np.int64, 'object'])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_kmeans_all_dtypes(numpy_precision, numpy_order):
+    """
+    Test it runs when supported/unsupported C-interface type is provided.
+    """
+
+    a = np.array([[2.5, 1.4],
+                  [-1.0, -2.3],
+                  [3.8, 2.6],
+                  [2.4, 3.6],
+                  [-3.0, -2.4],
+                  [-2.2, -1.5],
+                  [-2.3, -3.1],
+                  [1.5, 2.1]], dtype=numpy_precision, order=numpy_order)
+
+    c = np.array([[1.6, 1.6],
+                  [-3.2, -3.4]], dtype=numpy_precision, order=numpy_order)
+
+    x = np.array([[0.1, 1.6],
+                  [0.3, -1.5]], dtype=numpy_precision, order=numpy_order)
+
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, seed=23)
+    km.fit(a)
+
+    x_transform = km.transform(x)
+    x_labels = km.predict(x)
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float32])
+@pytest.mark.parametrize("numpy_orders",
+                         [("C", "F"), ("F", "C")])
+def test_kmeans_multiple_orders(numpy_precision, numpy_orders):
+    """
+    Test it runs when arrays of multiple orders are provided.
+    """
+
+    a = np.array([[2.5, 1.4],
+                  [-1.0, -2.3],
+                  [3.8, 2.6],
+                  [2.4, 3.6],
+                  [-3.0, -2.4],
+                  [-2.2, -1.5],
+                  [-2.3, -3.1],
+                  [1.5, 2.1]], dtype=numpy_precision, order=numpy_orders[0])
+
+    x = np.array([[0.1, 1.6],
+                  [0.3, -1.5]], dtype=numpy_precision, order=numpy_orders[0])
+
+    c = np.array([[1.6, 1.6],
+                  [-3.2, -3.4]], dtype=numpy_precision, order=numpy_orders[1])
+
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, seed=23)
+
+    with pytest.warns(UserWarning):
+        km.fit(a)
+
+    x_transform = km.transform(x)
+    x_labels = km.predict(x)
+
+    # Change order of a to be different to x
+    a = np.array(a, order=numpy_orders[1])
+
+    km = kmeans(n_clusters=2, tol=1.0e-4, seed=23)
+    km.fit(a)
+
+    with pytest.warns(UserWarning):
+        x_transform = km.transform(x)
+    with pytest.warns(UserWarning):
+        x_labels = km.predict(x)
+
+    a = np.array(a, order=numpy_orders[0])
+    with pytest.warns(UserWarning):
+        km.fit(a)
+
+
+@pytest.mark.parametrize(
+    "numpy_precisions", [('float32', 'float64'),
+                         ('float64', 'float32')])
+@pytest.mark.parametrize("numpy_order", ["C"])
+def test_kmeans_multiple_dtypes(numpy_precisions, numpy_order):
+    """
+    Test it runs when arrays of multiple dtypes are provided.
+    """
+
+    a = np.array([[2.5, 1.4],
+                  [-1.0, -2.3],
+                  [3.8, 2.6],
+                  [2.4, 3.6],
+                  [-3.0, -2.4],
+                  [-2.2, -1.5],
+                  [-2.3, -3.1],
+                  [1.5, 2.1]], dtype=numpy_precisions[0], order=numpy_order)
+
+    x = np.array([[0.1, 1.6],
+                  [0.3, -1.5]], dtype=numpy_precisions[0], order=numpy_order)
+
+    c = np.array([[1.6, 1.6],
+                  [-3.2, -3.4]], dtype=numpy_precisions[1], order=numpy_order)
+
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, seed=23)
+
+    km.fit(a)
+
+    x_transform = km.transform(x)
+    x_labels = km.predict(x)
+
+    # Change order of a to be different to x
+    a = np.array(a, dtype=numpy_precisions[1], order=numpy_order)
+
+    km = kmeans(n_clusters=2, tol=1.0e-4, seed=23)
+
+    km.fit(a)
+
+    x_transform = km.transform(x)
+    x_labels = km.predict(x)
+
+    a = np.array(a, dtype=numpy_precisions[0])
+    km.fit(a)
+
+
+@pytest.mark.parametrize("isa", ["scalar", "avx"])
+def test_context_getsetters_kmeans(isa):
+    """
+    Check kmeans setup registry, request a specific kernel, expect setup to
+    record it
+    """
+    isae = {"scalar": "0", "avx": "2"}  # matches with enum in kmeans_type.hpp
+    dbg.set({"kmeans.isa": isa})
+    _ = test_kmeans_functionality(np.float32, "C")
+    d = dbg.get("kmeans.setup")
+    tokens = (d["kmeans.setup"]).split(",")
+    ok = False
+    for t in tokens:
+        pair = t.split("=")
+        if (pair[0] == "kernel.type") and (pair[1] == isae[isa]):
+            ok = True
+            break
+    assert ok
 
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
@@ -91,10 +235,10 @@ def test_kmeans_functionality(numpy_precision, numpy_order):
     assert km.n_iter == 1
 
 
-@pytest.mark.parametrize("da_precision, numpy_precision", [
+@pytest.mark.parametrize("_da_precision, numpy_precision", [
     ("double", np.float64), ("single", np.float32),
 ])
-def test_kmeans_error_exits(da_precision, numpy_precision):
+def test_kmeans_error_exits(_da_precision, numpy_precision):
     """
     Test error exits in the Python wrapper
     """
@@ -108,14 +252,6 @@ def test_kmeans_error_exits(da_precision, numpy_precision):
         km.fit(a)
 
     b = np.array([1], dtype=numpy_precision)
-    with pytest.raises(RuntimeError):
-        km.transform(b)
-
-    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="F")
-    b = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=numpy_precision, order="C")
-    km = kmeans(n_clusters=10)
-    with pytest.warns(RuntimeWarning):
-        km.fit(a)
     with pytest.raises(RuntimeError):
         km.transform(b)
 

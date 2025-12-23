@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -24,12 +24,5 @@
 #
 
 # pylint: disable = missing-module-docstring wrong-import-position
-import os
-
-# If this is an ifort Windows build then pick up the ifort runtime
-FORTRAN_RUNTIME = os.environ.get('FORTRAN_RUNTIME','')
-
-if os.path.exists(FORTRAN_RUNTIME):
-    os.add_dll_directory(FORTRAN_RUNTIME)
 
 import numpy as np

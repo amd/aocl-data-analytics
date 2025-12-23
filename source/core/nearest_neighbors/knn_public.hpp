@@ -29,15 +29,30 @@
 namespace knn_public {
 
 template <typename knn_class, typename T>
-da_status knn_set_data(da_handle handle, da_int n_samples, da_int n_features,
-                       const T *X_train, da_int ldx_train, const da_int *y_train) {
+da_status knn_classifier_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                  const T *X_train, da_int ldx_train,
+                                  const da_int *y_train) {
     knn_class *knn = dynamic_cast<knn_class *>(handle->get_alg_handle<T>());
     if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_knn or "
                         "handle is invalid.");
 
-    return knn->set_training_data(n_samples, n_features, X_train, ldx_train, y_train);
+    return knn->set_classifier_training_data(n_samples, n_features, X_train, ldx_train,
+                                             y_train);
+}
+
+template <typename knn_class, typename T>
+da_status knn_regressor_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                 const T *X_train, da_int ldx_train, const T *y_train) {
+    knn_class *knn = dynamic_cast<knn_class *>(handle->get_alg_handle<T>());
+    if (knn == nullptr)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_knn or "
+                        "handle is invalid.");
+
+    return knn->set_regressor_training_data(n_samples, n_features, X_train, ldx_train,
+                                            y_train);
 }
 
 template <typename knn_class, typename T>
@@ -77,8 +92,9 @@ da_status knn_classes(da_handle handle, da_int *n_classes, da_int *classes) {
 }
 
 template <typename knn_class, typename T>
-da_status knn_predict_proba(da_handle handle, da_int n_queries, da_int n_features,
-                            const T *X_test, da_int ldx_test, T *proba) {
+da_status knn_classifier_predict_proba(da_handle handle, da_int n_queries,
+                                       da_int n_features, const T *X_test,
+                                       da_int ldx_test, T *proba) {
     knn_class *knn = dynamic_cast<knn_class *>(handle->get_alg_handle<T>());
     if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
@@ -89,8 +105,20 @@ da_status knn_predict_proba(da_handle handle, da_int n_queries, da_int n_feature
 }
 
 template <typename knn_class, typename T>
-da_status knn_predict(da_handle handle, da_int n_queries, da_int n_features,
-                      const T *X_test, da_int ldx_test, da_int *y_test) {
+da_status knn_classifier_predict(da_handle handle, da_int n_queries, da_int n_features,
+                                 const T *X_test, da_int ldx_test, da_int *y_test) {
+    knn_class *knn = dynamic_cast<knn_class *>(handle->get_alg_handle<T>());
+    if (knn == nullptr)
+        return da_error(handle->err, da_status_invalid_handle_type,
+                        "handle was not initialized with handle_type=da_handle_knn or "
+                        "handle is invalid.");
+
+    return knn->predict(n_queries, n_features, X_test, ldx_test, y_test);
+}
+
+template <typename knn_class, typename T>
+da_status knn_regressor_predict(da_handle handle, da_int n_queries, da_int n_features,
+                                const T *X_test, da_int ldx_test, T *y_test) {
     knn_class *knn = dynamic_cast<knn_class *>(handle->get_alg_handle<T>());
     if (knn == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,

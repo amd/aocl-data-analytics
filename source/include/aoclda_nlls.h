@@ -386,28 +386,22 @@ da_status da_nlls_fit_s(da_handle handle, da_int n_coef, float *coef, void *udat
  * The information vector can be retrieved after a successful return from the
  * fit function :cpp:func:`da_nlls_fit_? <da_nlls_fit_d>` by querying the handle,
  * using :cpp:func:`da_handle_get_result_? <da_handle_get_result_d>` and passing
- * the :ref:`query <extracting-results>` :cpp:enum:`da_result::da_rinfo`.
+ * the :ref:`query <extracting-results>` :cpp:enumerator:`da_result_::da_rinfo`.
  * @endrst
  * \{
  */
 typedef enum da_optim_info_t_ {
-    info_objective = 0,      ///< objective value
-    info_grad_norm = 1,      ///< norm of the objective gradient
-    info_iter = 2,           ///< number of iterations
-    info_time = 3,           ///< current time
-    info_nevalf = 4,         ///< number of objective function callback evaluations
-    info_inorm = 5,          ///< infinity norm of gradient
-    info_inorm_init = 6,     ///< infinity norm of gradient at the initial iteration
-    info_ncheap = 7,         ///< number of objective function callback
-                             ///< evaluations requesting "cheap" update
-    info_nevalg = 8,         ///< number of gradient callback evaluations
-    info_nevalh = 9,         ///< number of Hessian callback evaluations
-    info_nevalhp = 10,       ///< number of Hessian-vector callback evaluations
-    info_scl_grad_norm = 11, ///< scaled gradient norm of objective
-    info_nevalfd = 12,  ///< number of objective function callback evaluations used for
-                        ///< approximating the derivatives or due to derivative checker
-    info_optim = 13,    ///< optimality measure (only coordinate descent solver)
-    info_optimcnt = 14, ///< number of optimality checks (only coordinate descent solver)
+    info_objective = 0,     ///< objective value
+    info_grad_norm = 1,     ///< norm of the objective gradient
+    info_iter = 2,          ///< number of iterations
+    info_time = 3,          ///< current time
+    info_nevalf = 4,        ///< number of objective function callback evaluations
+    info_nevalg = 5,        ///< number of gradient callback evaluations
+    info_nevalh = 6,        ///< number of Hessian callback evaluations
+    info_nevalhp = 7,       ///< number of Hessian-vector callback evaluations
+    info_scl_grad_norm = 8, ///< scaled gradient norm of objective
+    info_nevalfd = 9, ///< number of objective function callback evaluations used for
+                      ///< approximating the derivatives or due to derivative checker
 
     info_number ///< for internal use
 } da_optim_info_t;

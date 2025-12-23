@@ -47,8 +47,9 @@ function(aoclda_add_dependencies OBJ_NAME)
             ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
             ${CMAKE_SOURCE_DIR}/external/RALFit
             ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
-            ${Boost_INCLUDE_DIRS}
+            ${CMAKE_SOURCE_DIR}/external/kernel-templates
             ${UTILS_INCLUDE_DIR})
+  target_include_directories(${OBJ_NAME} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
   # Add definitions that depend on the CMake configuration.
   target_compile_definitions(${OBJ_NAME} PRIVATE ${AOCLDA_DEFS})
@@ -61,7 +62,8 @@ function(aoclda_add_dependencies OBJ_NAME)
   endif()
 endfunction()
 
-# Public APIs requiring generic compilation
+# Public APIs requiring generic compilation and other .cpp files that only
+# require single compilation
 set(DA_LINMOD_PUBLIC core/linear_model/linmod_public.cpp)
 set(DA_BASIC_STATISTICS_PUBLIC
     core/basic_statistics/basic_statistics_public.cpp)
@@ -77,8 +79,9 @@ set(DA_MISC core/utilities/miscellaneous.cpp)
 set(DA_CONTEXT core/dynamic_dispatch/context.cpp)
 set(DA_METRICS_PUBLIC core/metrics/pairwise_distances_public.cpp)
 set(DA_NEAREST_NEIGHBORS_PUBLIC core/nearest_neighbors/knn_public.cpp)
-set(DA_CLUSTERING_PUBLIC core/clustering/kmeans_public.cpp
-                         core/clustering/dbscan_public.cpp)
+set(DA_CLUSTERING_PUBLIC
+    core/clustering/kmeans_public.cpp core/clustering/dbscan_public.cpp
+    core/clustering/kmeans_select_simd.cpp)
 set(DA_DECISION_FOREST_PUBLIC core/decision_forest/decision_tree_public.cpp
                               core/decision_forest/random_forest_public.cpp)
 set(DA_NLLS_PUBLIC core/nlls/nlls_public.cpp)
@@ -86,8 +89,11 @@ set(DA_NLLS_INTERNAL core/nlls/nlls.cpp)
 set(DA_HANDLE_PUBLIC core/utilities/da_handle.cpp
                      core/utilities/da_handle_public.cpp)
 set(DA_CSV_PUBLIC core/csv/tokenizer.c core/csv/read_csv_public.cpp)
-set(DA_SVM_PUBLIC core/svm/svm_public.cpp)
-set(DA_KERNEL_FUNCTIONS_PUBLIC core/kernel_functions/kernel_functions_public.cpp)
+set(DA_SVM_PUBLIC core/svm/svm_public.cpp core/svm/svm_select_simd.cpp
+                  core/svm/svm_select_ws.cpp)
+set(DA_KERNEL_FUNCTIONS_PUBLIC
+    core/kernel_functions/kernel_functions_public.cpp
+    core/kernel_functions/kernel_functions_select_simd.cpp)
 
 # Internal APIs require multi-compilation for different zen architectures
 set(DA_BASIC_STATISTICS_INTERNAL
@@ -97,27 +103,39 @@ set(DA_BASIC_STATISTICS_INTERNAL
     core/basic_statistics/order_statistics.cpp
     core/basic_statistics/row_to_col_major.cpp)
 set(DA_FACTORIZATION_INTERNAL core/factorization/pca.cpp)
-set(DA_DECISION_FOREST_INTERNAL core/decision_forest/decision_tree.cpp
-                                core/decision_forest/random_forest.cpp)
-set(DA_NEAREST_NEIGHBORS_INTERNAL core/nearest_neighbors/knn.cpp)
+set(DA_DECISION_FOREST_INTERNAL
+    core/decision_forest/histogram.cpp core/decision_forest/decision_tree.cpp
+    core/decision_forest/random_forest.cpp
+    core/decision_forest/decision_tree_misc.cpp)
+set(DA_NEAREST_NEIGHBORS_INTERNAL
+    core/nearest_neighbors/knn.cpp core/nearest_neighbors/radius_neighbors.cpp
+    core/nearest_neighbors/kd_tree.cpp core/nearest_neighbors/ball_tree.cpp
+    core/nearest_neighbors/binary_tree.cpp)
 set(DA_CLUSTERING_INTERNAL
     core/clustering/kmeans.cpp core/clustering/dbscan.cpp
-    core/clustering/radius_neighbors.cpp)
+    core/clustering/kmeans_kernels.cpp)
 set(DA_UTILS_INTERNAL core/utilities/da_utils.cpp)
 set(DA_OPTIMIZATION_INTERNAL core/optimization/optimization.cpp)
 set(DA_SVM_INTERNAL core/svm/svm.cpp core/svm/base_svm.cpp core/svm/c_svm.cpp
-                    core/svm/nu_svm.cpp)
+                    core/svm/nu_svm.cpp core/svm/svm_kernels.cpp)
 set(DA_LINMOD_INTERNAL
     core/linear_model/linear_model.cpp core/linear_model/linmod_cg.cpp
     core/linear_model/linmod_cholesky.cpp core/linear_model/linmod_qr.cpp
     core/linear_model/linmod_svd.cpp core/linear_model/linmod_nln_optim.cpp)
 set(DA_BASIC_HANDLE_INTERNAL core/utilities/basic_handle.cpp)
-set(DA_KERNEL_FUNCTIONS_INTERNAL core/kernel_functions/kernel_functions.cpp)
-set(DA_METRICS_INTERNAL core/metrics/pairwise_distances.cpp
-                        core/metrics/euclidean_distance.cpp
-                        core/metrics/cosine_distance.cpp
-                        core/metrics/manhattan_distance.cpp
-                        core/metrics/minkowski_distance.cpp)
+set(DA_KERNEL_FUNCTIONS_INTERNAL
+    core/kernel_functions/kernel_functions.cpp
+    core/kernel_functions/kernel_functions_simd.cpp)
+set(DA_METRICS_INTERNAL
+    core/metrics/pairwise_distances.cpp
+    core/metrics/euclidean_distance.cpp
+    core/metrics/cosine_distance.cpp
+    core/metrics/manhattan_distance.cpp
+    core/metrics/sqeuclidean_distance.cpp
+    core/metrics/minkowski_distance.cpp
+    core/metrics/euclidean_gemm_distance.cpp
+    core/metrics/kernels_avx2.cpp
+    core/metrics/kernels_avx512.cpp)
 
 set(DA_CORE_PUBLIC
     ${DA_LINMOD_PUBLIC}
@@ -164,10 +182,11 @@ endif()
 
 # Extend version string with built architecture(s)
 string(REPLACE ";" " " ARCHITECTURES_LABELS "${ARCHITECTURES}")
-string(REGEX REPLACE "(-DAOCLDA_VERSION_STRING=\".*)(\")"
-                "\\1 ${CMAKE_BUILD_TYPE} [${ARCHITECTURES_LABELS}]\\2"
-                AOCLDA_DEFS "${AOCLDA_DEFS}")
-
+string(
+  REGEX
+  REPLACE "(-DAOCLDA_VERSION_STRING=\".*)(\")"
+          "\\1 ${CMAKE_BUILD_TYPE} [${ARCHITECTURES_LABELS}]\\2" AOCLDA_DEFS
+          "${AOCLDA_DEFS}")
 
 add_library(da_core_public OBJECT ${DA_CORE_PUBLIC})
 aoclda_add_dependencies(da_core_public)
@@ -177,11 +196,15 @@ add_library(da_core OBJECT $<TARGET_OBJECTS:da_core_public>)
 
 # Create combined library from da_core and Fortran libraries
 add_library(
-  aocl-da $<TARGET_OBJECTS:da_core> $<TARGET_OBJECTS:da_core_public>
-          $<TARGET_OBJECTS:lbfgsb> $<TARGET_OBJECTS:lbfgsb_s> ${nlls_obj_list})
+  aocl-da
+  $<TARGET_OBJECTS:da_core>
+  $<TARGET_OBJECTS:da_core_public>
+  $<$<BOOL:${BUILD_FORTRAN}>:$<TARGET_OBJECTS:lbfgsb>>
+  $<$<BOOL:${BUILD_FORTRAN}>:$<TARGET_OBJECTS:lbfgsb_s>>
+  $<$<BOOL:${BUILD_FORTRAN}>:${nlls_obj_list}>)
 
 # Set -mavx2 so generic code will still perform acceptably
-set(GENERIC_FLAGS "-march=x86-64;-mavx2")
+set(GENERIC_FLAGS "-march=x86-64;-mavx2;-mfma")
 
 # Add compile definitions
 if(ARCH STREQUAL "dynamic")
@@ -190,10 +213,22 @@ if(ARCH STREQUAL "dynamic")
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS})
   target_compile_definitions(da_core_public PRIVATE ${DEFINITIONS})
 elseif(ARCH STREQUAL "native")
-  # For native builds reuse the generic compile definitions to give access to
-  # the generic namespaces internally
-  target_compile_definitions(da_core_public
-                             PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+  # For native builds we need to extract the architecture corresponding to the
+  # -march=native flag in order to use the correct namespace in the source code
+  extract_native_namespace(NATIVE_NAMESPACE)
+  set(NATIVE_NAMESPACE
+      ${NATIVE_NAMESPACE}
+      PARENT_SCOPE)
+  if(NATIVE_NAMESPACE STREQUAL "generic")
+    target_compile_definitions(da_core_public
+                               PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+  else()
+    message(NOTICE "Building using znver${NATIVE_NAMESPACE} namespace.")
+    target_compile_definitions(
+      da_core_public
+      PRIVATE
+        znver${NATIVE_NAMESPACE}_AVAILABLE;ZNVER_MAX=zen${NATIVE_NAMESPACE})
+  endif()
 else()
   # For a specific target build, use the target architecture and set the
   # appropriate compile options
@@ -214,13 +249,19 @@ foreach(ARCHITECTURE IN LISTS ARCHITECTURES)
   add_library(${ARCH_OBJECTS} OBJECT ${DA_CORE_DYNAMIC_DISPATCH})
 
   # Set the compile definitions for the architecture
-  if(ARCHITECTURE STREQUAL "native" OR ARCHITECTURE STREQUAL "generic")
-    # For a native build we will reuse the generic namespaces internally but
-    # compile with -march=native
-    target_compile_definitions(${ARCH_OBJECTS} PRIVATE ARCH_generic)
+  if(ARCHITECTURE STREQUAL "generic"
+     OR (ARCHITECTURE STREQUAL "native" AND NATIVE_NAMESPACE STREQUAL "generic"
+        ))
+    target_compile_definitions(${ARCH_OBJECTS} PRIVATE ARCH_generic
+                                                       ZNVER_MAX=generic)
+  elseif(ARCHITECTURE STREQUAL "native")
+    target_compile_definitions(
+      ${ARCH_OBJECTS} PRIVATE ARCH_znver=${NATIVE_NAMESPACE}
+                              ZNVER_MAX=zen${NATIVE_NAMESPACE})
   else()
     extract_znver_generation(${ARCHITECTURE} znver)
-    target_compile_definitions(${ARCH_OBJECTS} PRIVATE ARCH_znver=${znver})
+    target_compile_definitions(${ARCH_OBJECTS} PRIVATE ARCH_znver=${znver}
+                                                       ZNVER_MAX=zen${znver})
   endif()
 
   # Set the compile options for the architecture
@@ -246,6 +287,17 @@ set(USE_O2 "")
 # List of targets that should use vectorised math for release/benchmark builds
 set(USE_VEC_MATH ${DA_KERNEL_FUNCTIONS_INTERNAL})
 
+# Check if AOCC compiler is used on Linux
+set(IS_AOCC_LINUX -1)
+if(UNIX AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  execute_process(COMMAND ${CMAKE_C_COMPILER} --version
+                  OUTPUT_VARIABLE clang_full_version_string)
+  # Check if we are using AOCC If AOCC is part of the clang version string then
+  # IS_AOCC_LINUX returns the position of the "AOCC" string If it is not found
+  # then IS_AOCC_LINUX returns -1
+  string(FIND ${clang_full_version_string} "AOCC" IS_AOCC_LINUX)
+endif()
+
 # By default release builds have -O3, here we add -O2 which will override it for
 # the source files in the USE_O2 list, since it will appear after the -O3
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL
@@ -255,10 +307,21 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND CMAKE_CXX_COMPILER_ID STREQUAL
       set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS "-O2")
     endif()
     # Add flag to enable vectorised math given that amdlibm has been linked
-    if(UNIX AND SOURCE IN_LIST USE_VEC_MATH)
-      set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS "-fveclib=AMDLIBM")
+    if(IS_AOCC_LINUX GREATER -1 AND SOURCE IN_LIST USE_VEC_MATH)
+      set_source_files_properties(${SOURCE} PROPERTIES COMPILE_FLAGS
+                                                       "-fveclib=AMDLIBM")
     endif()
   endforeach()
+endif()
+
+# Add macro to dispatch to scalar math in case of unsupported compiler Supported
+# compilers are AOCC and GCC and Clang on Linux
+if(NOT
+   (IS_AOCC_LINUX GREATER -1
+    OR CMAKE_CXX_COMPILER_ID MATCHES "GNU"
+    OR (UNIX AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
+  set_source_files_properties(${USE_VEC_MATH} PROPERTIES COMPILE_FLAGS
+                                                         "-DUSE_SCALAR_MATH")
 endif()
 
 if(WIN32 AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
@@ -271,9 +334,16 @@ endif()
 
 target_link_libraries(aocl-da PRIVATE ${SPARSE} ${LAPACK} ${BLAS} ${UTILS}
                                       ${FORTRAN_RUNTIME})
+if(BUILD_SMP)
+  target_link_libraries(aocl-da PRIVATE OpenMP::OpenMP_CXX)
+  if(WIN32)
+    target_link_libraries(da_core PRIVATE OpenMP::OpenMP_CXX)
+    target_link_libraries(da_core_public PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+endif()
 
 # If we use AOCC then link libm library
-if(UNIX AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(IS_AOCC_LINUX GREATER -1)
   target_link_libraries(aocl-da PRIVATE amdlibm)
 endif()
 

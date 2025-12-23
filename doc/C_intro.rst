@@ -27,8 +27,8 @@
 
 .. _C_intro:
 
-Introduction
-************
+Introduction to the C APIs
+*****************************
 
 This section contains instructions for writing code that calls AOCL-DA using the C APIs and for building
 applications that link to the library.

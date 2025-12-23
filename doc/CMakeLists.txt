@@ -1,5 +1,5 @@
 # ##############################################################################
-# Copyright (c) 2023-2024 Advanced Micro Devices, Inc.
+# Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -162,6 +162,7 @@ add_custom_target(
     COMMAND tools/update_options_tables.sh
     --db=${PROJECT_SOURCE_DIR}/options/all_table.rst ${REST_FILES}
     COMMENT "Search and update ReSt files doc/*.rst"
+    DEPENDS gen_options_tables
 )
 
 
@@ -209,8 +210,8 @@ endif()
 add_custom_target(
   doc_html
   COMMAND
-    ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b html
-    -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
+    ${SPHINX_EXECUTABLE} [[${SPHINXOPTS}]] ${SPHINX_TAG} -b html
+    -Dbreathe_projects.da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
     ${SPHINX_BUILD}/html
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   DEPENDS doxygen_xml conf_py_version_bumping
@@ -220,9 +221,9 @@ add_custom_target(
 add_custom_target(
   doc_pdf
   COMMAND
-    ${SPHINX_EXECUTABLE} ${SPHINX_TAG} -b latex
+    ${SPHINX_EXECUTABLE} [[${SPHINXOPTS}]] ${SPHINX_TAG} -b latex
     # Tell Breathe where to find the Doxygen output
-    -Dbreathe_projects.aocl-da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
+    -Dbreathe_projects.da=${DOXYGEN_OUTPUT_DIR}/xml ${SPHINX_SOURCE}
     ${SPHINX_BUILD}/latex/
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
   COMMAND

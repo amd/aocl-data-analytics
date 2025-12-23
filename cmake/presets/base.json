@@ -1,0 +1,244 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "win",
+      "hidden": true,
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "linux",
+      "hidden": true,
+      "condition": {
+        "type": "notEquals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "ninja",
+      "hidden": true,
+      "generator": "Ninja"
+    },
+    {
+      "name": "make",
+      "hidden": true,
+      "generator": "Unix Makefiles"
+    },
+    {
+      "name": "msvc",
+      "hidden": true,
+      "generator": "Visual Studio 17 2022",
+      "toolset": "ClangCl",
+      "cacheVariables": {
+        "CMAKE_Fortran_COMPILER": "ifort"
+      }
+    },
+    {
+      "name": "clang",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_Fortran_COMPILER": "flang"
+      }
+    },
+    {
+      "name": "gcc",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_Fortran_COMPILER": "gfortran"
+      }
+    },
+    {
+      "name": "lp64",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_ILP64": "OFF"
+      }
+    },
+    {
+      "name": "ilp64",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_ILP64": "ON"
+      }
+    },
+    {
+      "name": "st",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_SMP": "OFF"
+      }
+    },
+    {
+      "name": "mt",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_SMP": "ON"
+      }
+    },
+    {
+      "name": "static",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "shared",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "native",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "native"
+      }
+    },
+    {
+      "name": "dynamic",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "dynamic"
+      }
+    },
+    {
+      "name": "znver2",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "znver2"
+      }
+    },
+    {
+      "name": "znver3",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "znver3"
+      }
+    },
+    {
+      "name": "znver4",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "znver4"
+      }
+    },
+    {
+      "name": "znver5",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "znver5"
+      }
+    },
+    {
+      "name": "asan",
+      "hidden": true,
+      "cacheVariables": {
+        "ASAN": "ON"
+      }
+    },
+    {
+      "name": "memsan",
+      "hidden": true,
+      "cacheVariables": {
+        "MEMSAN": "ON"
+      }
+    },
+    {
+      "name": "coverage",
+      "hidden": true,
+      "cacheVariables": {
+        "COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "valgrind",
+      "hidden": true,
+      "cacheVariables": {
+        "VALGRIND": "ON"
+      }
+    },
+    {
+      "name": "python",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_PYTHON": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "debug",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "relwithdebinfo",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "doc",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_DOC": "ON"
+      }
+    },
+    {
+      "name": "libmem",
+      "hidden": true,
+      "cacheVariables": {
+        "USE_LIBMEM": "ON"
+      }
+    },
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "BUILD_EXAMPLES": "ON",
+        "BUILD_GTEST": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "base",
+      "configurePreset": "base",
+      "targets": "all",
+      "jobs": 0
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "base",
+      "configurePreset": "base",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "jobs": 0,
+        "timeout": 300,
+        "outputJUnitFile": "${binaryDir}/Testing/Report.xml"
+      }
+    }
+  ]
+}

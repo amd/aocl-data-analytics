@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -32,6 +32,68 @@ import pytest
 from aoclda.factorization import PCA
 
 
+@pytest.mark.parametrize(
+    "numpy_precision",
+    [np.float16, np.float32, np.float64, np.int16, np.int32, np.int64, 'object'])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_pca_all_dtypes(numpy_precision, numpy_order):
+    """
+    Test it runs when supported/unsupported C-interface type is provided.
+    """
+
+    a = np.array([[1.3, 2.53, 3.86], [2.4, 5.5, 4.5], [3.33, 6.21, 1.76]],
+                 dtype=numpy_precision, order=numpy_order)
+    x = np.array([[1.2, 1.1, 4.3], [3.333, 2.6, 3.4], [0.3, 2.2, 3.8], [
+                 1.8, 0.7, 1.3]], dtype=numpy_precision, order=numpy_order)
+
+    pca = PCA(n_components=2, store_U=True)
+    pca.fit(a)
+    pca.inverse_transform(pca.transform(x))
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float32])
+@pytest.mark.parametrize("numpy_orders",
+                         [("C", "F"), ("F", "C")])
+def test_pca_multiple_orders(numpy_precision, numpy_orders):
+    """
+    Test it runs when arrays of multiple orders are provided.
+    """
+
+    a = np.array([[1.3, 2.53, 3.86], [2.4, 5.5, 4.5], [3.33, 6.21, 1.76]],
+                 dtype=numpy_precision, order=numpy_orders[0])
+    x = np.array([[1.2, 1.1, 4.3], [3.333, 2.6, 3.4], [0.3, 2.2, 3.8], [
+                 1.8, 0.7, 1.3]], dtype=numpy_precision, order=numpy_orders[1])
+
+    pca = PCA(n_components=2, store_U=True)
+    pca.fit(a)
+    with pytest.warns(UserWarning):
+        pca.inverse_transform(pca.transform(x))
+    a = np.array(a, order=numpy_orders[1])
+    with pytest.warns(UserWarning):
+        pca.fit(a)
+
+
+@pytest.mark.parametrize(
+    "numpy_precisions", [('float32', 'float64'),
+                         ('float64', 'float32')])
+@pytest.mark.parametrize("numpy_order", ["C"])
+def test_pca_multiple_dtypes(numpy_precisions, numpy_order):
+    """
+    Test it runs when arrays of multiple dtypes are provided.
+    """
+
+    a = np.array([[1.3, 2.53, 3.86], [2.4, 5.5, 4.5], [3.33, 6.21, 1.76]],
+                 dtype=numpy_precisions[0], order=numpy_order)
+    x = np.array([[1.2, 1.1, 4.3], [3.333, 2.6, 3.4], [0.3, 2.2, 3.8], [
+                 1.8, 0.7, 1.3]], dtype=numpy_precisions[1], order=numpy_order)
+
+    pca = PCA(n_components=2, store_U=True)
+    pca.fit(a)
+    pca.inverse_transform(pca.transform(x))
+    a = np.array(a, dtype=numpy_precisions[1])
+    pca.fit(a)
+
+
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
 def test_pca_functionality(numpy_precision, numpy_order):
@@ -47,8 +109,9 @@ def test_pca_functionality(numpy_precision, numpy_order):
     pca = PCA(n_components=2, store_U=True)
     pca.fit(a)
 
-    expected_components = np.array([[0.4082482904638631,  0.816496580927726, -0.408248290463863],
-                                   [0.,  0.447213595499958,  0.8944271909999159]])
+    expected_components = np.array(
+        [[0.4082482904638631, 0.816496580927726, -0.408248290463863],
+         [0., 0.447213595499958, 0.8944271909999159]])
 
     expected_explained_variance = np.array(
         [5.999999999999999, 1.6666666666666665])
@@ -58,16 +121,15 @@ def test_pca_functionality(numpy_precision, numpy_order):
     expected_u = np.array([[-7.0710678118654724e-01, -4.0824829046386296e-01],
                            [3.7336028004349413e-17, 8.1649658092772626e-01],
                            [7.0710678118654746e-01, -4.0824829046386302e-01]])
-    expected_scores = np.array([[-2.4494897427831770e+00, -7.4535599249992979e-01],
-                                [1.2933579491269523e-16,  1.4907119849998600e+00],
-                                [2.4494897427831779e+00, -7.4535599249992990e-01]])
-    expected_transform = np.array([[0.5, 1.2000000000000002, 3.8999999999999995],
-                                   [1.3333333333333335, 2.6666666666666665,
-                                    2.6666666666666665],
-                                   [0.8333333333333333, 1.6666666666666665,
-                                    3.1666666666666665],
-                                   [0.6666666666666665, 0.13333333333333286,
-                                    0.9333333333333333]])
+    expected_scores = np.array(
+        [[-2.4494897427831770e+00, -7.4535599249992979e-01],
+         [1.2933579491269523e-16, 1.4907119849998600e+00],
+         [2.4494897427831779e+00, -7.4535599249992990e-01]])
+    expected_transform = np.array(
+        [[0.5, 1.2000000000000002, 3.8999999999999995],
+         [1.3333333333333335, 2.6666666666666665, 2.6666666666666665],
+         [0.8333333333333333, 1.6666666666666665, 3.1666666666666665],
+         [0.6666666666666665, 0.13333333333333286, 0.9333333333333333]])
 
     # Check we have the right answer, note use of abs to allow for different normalization
     tol = np.finfo(numpy_precision).eps * 1000
@@ -119,6 +181,21 @@ def test_pca_functionality(numpy_precision, numpy_order):
     norm = np.linalg.norm(pca.column_sdevs - np.array([1., 1., 1.]))
     assert norm < tol
 
+    # Simple test to check whitening returns something sensible
+    a = np.array([[1, 2, 3], [4, 5, 3], [3, -2, 1]],
+                 dtype=numpy_precision, order=numpy_order)
+    pca = PCA(n_components=2, whiten=True)
+    pca.fit(a)
+    at = pca.transform(a)
+    at_cov = np.cov(at, rowvar=False)
+    norm = np.linalg.norm(np.identity(2) - at_cov)
+    assert norm < tol
+
+    # last singular value of a is small so should approximate a well here
+    a_inv_t = pca.inverse_transform(at)
+    norm = np.linalg.norm(a - a_inv_t)
+    assert norm < tol
+
 
 @pytest.mark.parametrize("da_precision, numpy_precision", [
     ("double", np.float64), ("single", np.float32),
@@ -142,13 +219,3 @@ def test_pca_error_exits(da_precision, numpy_precision):
 
     with pytest.raises(RuntimeError):
         pca.inverse_transform(b)
-
-    a = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
-                 dtype=numpy_precision, order="F")
-    b = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
-                 dtype=numpy_precision, order="C")
-    pca = PCA(n_components=10, method="correlation")
-    with pytest.warns(RuntimeWarning):
-        pca.fit(a)
-    with pytest.raises(RuntimeError):
-        pca.transform(b)

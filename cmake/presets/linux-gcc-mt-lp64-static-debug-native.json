@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-debug-native",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "mt",
+        "lp64",
+        "static",
+        "native",
+        "debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-native-debug"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-mt-lp64-static-native-debug",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-debug-native",
+      "configurePreset": "linux-gcc-mt-lp64-static-debug-native",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-gcc-mt-lp64-static-debug-native-install",
+      "configurePreset": "linux-gcc-mt-lp64-static-debug-native",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-debug-native",
+      "configurePreset": "linux-gcc-mt-lp64-static-debug-native",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-debug-native",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-mt-lp64-static-debug-native"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-mt-lp64-static-debug-native-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-gcc-mt-lp64-static-debug-native"
+        }
+      ]
+    }
+  ]
+}

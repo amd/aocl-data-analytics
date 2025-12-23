@@ -21,16 +21,12 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include "basic_handle.hpp"
 #include "da_error.hpp"
 #include "da_vector.hpp"
-#include "dbscan_types.hpp"
 #include "macros.h"
+#include "nn_types.hpp"
 #include <algorithm>
 #include <random>
 #include <string>
@@ -39,7 +35,7 @@ namespace ARCH {
 
 namespace da_dbscan {
 
-using namespace da_dbscan_types;
+using namespace da_nn_types;
 
 /* DBSCAN class */
 template <typename T> class dbscan : public basic_handle<T> {
@@ -71,7 +67,7 @@ template <typename T> class dbscan : public basic_handle<T> {
     T p = 2.0;
 
     da_int algorithm = brute;
-    da_int metric = euclidean;
+    da_int metric = da_euclidean;
 
     // Scalar outputs
     da_int n_core_samples = 0;
@@ -86,7 +82,16 @@ template <typename T> class dbscan : public basic_handle<T> {
     std::vector<da_vector::da_vector<da_int>>
         neighbors; // Use da_vector since we will be dynamically expanding this array
 
+    // Miscellaneous variables
+    da_int min_samples_m1 = 0;
+    nn_algorithm alg_internal = brute;
+    da_metric metric_internal = da_euclidean;
+
     da_status dbscan_clusters();
+
+    da_status dbscan_clusters_parallel();
+
+    da_status dbscan_clusters_serial();
 
   public:
     dbscan(da_errors::da_error_t &err);

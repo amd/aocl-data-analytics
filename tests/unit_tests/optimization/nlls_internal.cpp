@@ -31,6 +31,8 @@
 #include "nlls_functions.hpp"
 #include "gtest/gtest.h"
 
+#ifndef NO_FORTRAN
+
 using namespace TEST_ARCH;
 
 TEST(nlls, tamperNllsHandle) {
@@ -78,3 +80,5 @@ TEST(nlls, tamperNllsHandle) {
     da_handle_destroy(&handle_s);
     da_handle_destroy(&handle_d);
 }
+
+#endif

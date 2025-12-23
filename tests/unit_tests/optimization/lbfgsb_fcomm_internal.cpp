@@ -34,6 +34,8 @@
 #include <cmath>
 #include <iostream>
 
+#ifndef NO_FORTRAN
+
 using namespace TEST_ARCH;
 
 da_int objfun(da_int n [[maybe_unused]], double *x, double *val, void *usrdata) {
@@ -65,14 +67,14 @@ da_int objgrd(da_int n [[maybe_unused]], double *x, double *val, void *usrdata,
 
 da_int monit(da_int n, double *x, double *val, double *info,
              void *usrdata [[maybe_unused]]) {
-    if (info[da_optim_info_t::info_iter] <= 1)
+    if (info[da_linmod_info_t::linmod_info_iter] <= 1)
         std::cout << "Iter objective gradient x[0] g[n]" << std::endl;
-    std::cout << (size_t)info[da_optim_info_t::info_iter] << " "
-              << info[da_optim_info_t::info_objective] << " "
-              << info[da_optim_info_t::info_grad_norm] << " " << x[0] << " " << val[n - 1]
-              << std::endl;
+    std::cout << (size_t)info[da_linmod_info_t::linmod_info_iter] << " "
+              << info[da_linmod_info_t::linmod_info_objective] << " "
+              << info[da_linmod_info_t::linmod_info_grad_norm] << " " << x[0] << " "
+              << val[n - 1] << std::endl;
 
-    if (info[da_optim_info_t::info_iter] == 3)
+    if (info[da_linmod_info_t::linmod_info_iter] == 3)
         return -1;
     return 0;
 }
@@ -169,3 +171,5 @@ abort:
 
     return exit_status;
 }
+
+#endif

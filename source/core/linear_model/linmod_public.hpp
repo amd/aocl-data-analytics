@@ -41,14 +41,14 @@ da_status linmod_select_model(da_handle handle, linmod_model mod) {
 
 template <typename linmod_class, typename T>
 da_status linmod_define_features(da_handle handle, da_int nsamples, da_int nfeat,
-                                 const T *A, const T *b) {
+                                 const T *X, da_int ldX, const T *b) {
     linmod_class *linmod = dynamic_cast<linmod_class *>(handle->get_alg_handle<T>());
     if (linmod == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
                         "handle was not initialized with handle_type=da_handle_linmod or "
                         "handle is invalid.");
 
-    return linmod->define_features(nfeat, nsamples, A, b);
+    return linmod->define_features(nfeat, nsamples, X, ldX, b);
 }
 
 template <typename linmod_class, typename T>
@@ -64,7 +64,8 @@ da_status linmod_fit_start(da_handle handle, da_int ncoefs, const T *coefs) {
 
 template <typename linmod_class, typename T>
 da_status linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
-                                const T *X, T *predictions, T *observations, T *loss) {
+                                const T *X, da_int ldX, T *predictions, T *observations,
+                                T *loss) {
     linmod_class *linmod = dynamic_cast<linmod_class *>(handle->get_alg_handle<T>());
     if (linmod == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
@@ -72,10 +73,11 @@ da_status linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
                         "handle is invalid.");
 
     if (observations && loss)
-        return linmod->evaluate_model(nfeat, nsamples, X, predictions, observations,
+        return linmod->evaluate_model(nfeat, nsamples, X, ldX, predictions, observations,
                                       loss);
     else if (!observations || !loss) {
-        return linmod->evaluate_model(nfeat, nsamples, X, predictions, nullptr, nullptr);
+        return linmod->evaluate_model(nfeat, nsamples, X, ldX, predictions, nullptr,
+                                      nullptr);
     }
     return da_error(handle->err, da_status_invalid_input,
                     "Parameter `observations` should contain at least one single "

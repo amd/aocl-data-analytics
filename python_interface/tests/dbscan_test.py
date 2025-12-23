@@ -30,7 +30,82 @@ DBSCAN clustering Python test script
 
 import numpy as np
 import pytest
-from aoclda.clustering import DBSCAN, kmeans
+from aoclda.clustering import DBSCAN
+
+
+@pytest.mark.parametrize(
+    "numpy_precision",
+    [np.float16, np.float32, np.float64, np.int16, np.int32, np.int64, 'object'])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_dbscan_all_dtypes(numpy_precision, numpy_order):
+    """
+    Test it runs when supported/unsupported C-interface type is provided.
+    """
+
+    a = np.array([[2.3, 1.6],
+                  [-1.1, -2.7],
+                  [3.3, 2.7],
+                  [2.5, 3.4],
+                  [-3.5, -2.2],
+                  [-2.7, -1.7],
+                  [-2.6, -3.3],
+                  [1.1, 2.1]], dtype=numpy_precision, order=numpy_order)
+
+    db = DBSCAN(eps=2.0, min_samples=2)
+    db.fit(a)
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float32])
+@pytest.mark.parametrize("numpy_orders",
+                         [("C", "F"), ("F", "C")])
+def test_dbscan_multiple_orders(numpy_precision, numpy_orders):
+    """
+    Test it runs when arrays of multiple orders are provided.
+    """
+
+    a = np.array([[2.3, 1.6],
+                  [-1.1, -2.7],
+                  [3.3, 2.7],
+                  [2.5, 3.4],
+                  [-3.5, -2.2],
+                  [-2.7, -1.7],
+                  [-2.6, -3.3],
+                  [1.1, 2.1]], dtype=numpy_precision, order=numpy_orders[0])
+
+    db = DBSCAN(eps=2.0, min_samples=2)
+    db.fit(a)
+
+    a = np.array(a, order=numpy_orders[1])
+
+    with pytest.warns(UserWarning):
+        db.fit(a)
+
+
+@pytest.mark.parametrize(
+    "numpy_precisions", [('float32', 'float64'),
+                         ('float64', 'float32')])
+@pytest.mark.parametrize("numpy_order", ["C"])
+def test_dbscan_multiple_dtypes(numpy_precisions, numpy_order):
+    """
+    Test it runs when arrays of multiple dtypes are provided.
+    """
+
+    a = np.array([[2.3, 1.6],
+                  [-1.1, -2.7],
+                  [3.3, 2.7],
+                  [2.5, 3.4],
+                  [-3.5, -2.2],
+                  [-2.7, -1.7],
+                  [-2.6, -3.3],
+                  [1.1, 2.1]], dtype=numpy_precisions[0], order=numpy_order)
+
+    db = DBSCAN(eps=2.0, min_samples=2)
+    db.fit(a)
+
+    a = np.array(a, dtype=numpy_precisions[1], order=numpy_order)
+
+    db.fit(a)
+
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
@@ -67,6 +142,38 @@ def test_dbscan_functionality(numpy_precision, numpy_order):
     assert not np.any(db.labels - expected_labels)
 
     assert not np.any(db.core_sample_indices - expected_core_sample_indices)
+
+    db2 = DBSCAN(eps=2.0, algorithm="kd_tree",
+                 metric="minkowski", min_samples=2)
+    db2.fit(a)
+
+    assert db2.n_clusters == expected_n_clusters
+
+    assert db2.n_core_samples == expected_n_core_samples
+
+    assert db2.n_samples == a.shape[0]
+
+    assert db2.n_features == a.shape[1]
+
+    assert not np.any(db2.labels - expected_labels)
+
+    assert not np.any(db2.core_sample_indices - expected_core_sample_indices)
+
+    db3 = DBSCAN(eps=2.0, algorithm="ball_tree",
+                 metric="minkowski", min_samples=2)
+    db3.fit(a)
+
+    assert db3.n_clusters == expected_n_clusters
+
+    assert db3.n_core_samples == expected_n_core_samples
+
+    assert db3.n_samples == a.shape[0]
+
+    assert db3.n_features == a.shape[1]
+
+    assert not np.any(db3.labels - expected_labels)
+
+    assert not np.any(db3.core_sample_indices - expected_core_sample_indices)
 
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])

@@ -159,7 +159,7 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "coord convergence tol",
             "Tolerance of the projected gradient infinity norm to declare convergence.",
             0.0, da_options::lbound_t::greaterthan, 1.0, da_options::ubound_t::lessthan,
-            tol.safe_eps(), tol.safe_eps_latex()));
+            tol.safe_eps((T)50, (T)1), tol.safe_eps_latex((T)50, (T)1)));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "coord skip tol",
@@ -167,18 +167,13 @@ inline da_status register_optimization_options(da_errors::da_error_t &err,
             "change between two consecutive iterates is less than tolerance. Any "
             "negative value disables the skipping scheme.",
             -1.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            tol.safe_eps(), tol.safe_eps_latex()));
+            tol.safe_eps((T)50, (T)1), tol.safe_eps_latex((T)50, (T)1)));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "coord progress factor",
-            "The iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= "
-            "factr*epsmch"
-            " where epsmch is the machine precision. Typical values for type double: "
-            "10e12 for"
-            " low accuracy; 10e7 for moderate accuracy; 10 for extremely"
-            " high accuracy.",
-            0.0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            tol.safe_inveps((T)10, (T)1), tol.safe_inveps_latex((T)10, (T)1)));
+            "coord optimality tol",
+            "Tolerance to declare optimality, e.g. dual-gap, KKT conditions, etc.", 0.0,
+            da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
+            tol.safe_eps((T)50, (T)1), tol.safe_eps_latex((T)50, (T)1)));
         opts.register_opt(oT);
 
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(

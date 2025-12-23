@@ -30,7 +30,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
-#include "utilities_py.hpp"
+#include "internal_utilities_py.hpp"
 #include <iostream>
 #include <optional>
 #include <pybind11/numpy.h>
@@ -45,7 +45,9 @@ class py_svm : public pyda_handle {
 
   public:
     py_svm(da_svm_model model, std::string kernel = "rbf", da_int degree = 3,
-           da_int max_iter = -1, std::string prec = "double", bool check_data = false) {
+           da_int max_iter = -1, da_int probability = 0, da_int seed = 0,
+           da_int max_ws_size = -1, std::string prec = "double",
+           bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_svm);
@@ -63,6 +65,12 @@ class py_svm : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "max_iter", max_iter);
         exception_check(status);
+        status = da_options_set(handle, "predict probabilities", probability);
+        exception_check(status);
+        status = da_options_set(handle, "seed", seed);
+        exception_check(status);
+        status = da_options_set(handle, "max_ws_size", max_ws_size);
+        exception_check(status);
         if (check_data == true) {
             std::string yes_str = "yes";
             status = da_options_set(handle, "check data", yes_str.data());
@@ -73,7 +81,7 @@ class py_svm : public pyda_handle {
 
     template <typename T>
     void common_fit(py::array_t<T> &X, py::array_t<T> &y, T gamma, T coef0, T tol,
-                    std::optional<T> tau) {
+                    T cache_size, std::optional<T> tau) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
         da_int ldx;
@@ -83,6 +91,8 @@ class py_svm : public pyda_handle {
         status = da_options_set(handle, "coef0", coef0);
         exception_check(status);
         status = da_options_set(handle, "tolerance", tol);
+        exception_check(status);
+        status = da_options_set(handle, "cache size", cache_size);
         exception_check(status);
         if (tau.has_value()) {
             status = da_options_set(handle, "tau", tau.value());
@@ -165,6 +175,54 @@ class py_svm : public pyda_handle {
             exception_check(status);
             return decision_values;
         }
+    }
+
+    template <typename T> py::array_t<T> predict_proba(py::array_t<T> X) {
+        da_status status;
+        da_int n_samples, n_features, ldx, ldy;
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+        da_int nclass = get_n_classes();
+
+        size_t shape[2]{(size_t)n_samples, (size_t)nclass};
+        size_t strides[2];
+        if (order == c_contiguous) {
+            ldy = nclass;
+            strides[0] = sizeof(T) * nclass;
+            strides[1] = sizeof(T);
+        } else {
+            ldy = n_samples;
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * n_samples;
+        }
+        auto probabilities = py::array_t<T>(shape, strides);
+        status = da_svm_predict_proba(handle, n_samples, n_features, X.data(), ldx,
+                                      probabilities.mutable_data(), ldy);
+        exception_check(status);
+        return probabilities;
+    }
+
+    template <typename T> py::array_t<T> predict_log_proba(py::array_t<T> X) {
+        da_status status;
+        da_int n_samples, n_features, ldx, ldy;
+        get_numpy_array_properties(X, n_samples, n_features, ldx);
+        da_int nclass = get_n_classes();
+
+        size_t shape[2]{(size_t)n_samples, (size_t)nclass};
+        size_t strides[2];
+        if (order == c_contiguous) {
+            ldy = nclass;
+            strides[0] = sizeof(T) * nclass;
+            strides[1] = sizeof(T);
+        } else {
+            ldy = n_samples;
+            strides[0] = sizeof(T);
+            strides[1] = sizeof(T) * n_samples;
+        }
+        auto probabilities = py::array_t<T>(shape, strides);
+        status = da_svm_predict_log_proba(handle, n_samples, n_features, X.data(), ldx,
+                                          probabilities.mutable_data(), ldy);
+        exception_check(status);
+        return probabilities;
     }
 
     template <typename T> T score(py::array_t<T> X, py::array_t<T> y) {
@@ -265,6 +323,58 @@ class py_svm : public pyda_handle {
             exception_check(status);
             auto res = py::array_t<float>(shape, strides);
             py::array ret = py::reinterpret_borrow<py::array>(bias);
+            return ret;
+        }
+    }
+
+    auto get_probA() {
+        da_status status = da_status_success;
+        da_int n_samples, n_features, n_classes;
+        get_rinfo(&n_samples, &n_features, &n_classes);
+        da_int n_classifiers = n_classes * (n_classes - 1) / 2;
+        size_t shape[1]{(size_t)n_classifiers};
+        if (precision == da_double) {
+            size_t strides[1]{sizeof(double)};
+            auto probA = py::array_t<double>(shape, strides);
+            status = da_handle_get_result(handle, da_svm_probaA, &n_classifiers,
+                                          probA.mutable_data());
+            exception_check(status);
+            py::array ret = py::reinterpret_borrow<py::array>(probA);
+            return ret;
+        } else {
+            size_t strides[1]{sizeof(float)};
+            auto probA = py::array_t<float>(shape, strides);
+            status = da_handle_get_result(handle, da_svm_probaA, &n_classifiers,
+                                          probA.mutable_data());
+            exception_check(status);
+            auto res = py::array_t<float>(shape, strides);
+            py::array ret = py::reinterpret_borrow<py::array>(probA);
+            return ret;
+        }
+    }
+
+    auto get_probB() {
+        da_status status = da_status_success;
+        da_int n_samples, n_features, n_classes;
+        get_rinfo(&n_samples, &n_features, &n_classes);
+        da_int n_classifiers = n_classes * (n_classes - 1) / 2;
+        size_t shape[1]{(size_t)n_classifiers};
+        if (precision == da_double) {
+            size_t strides[1]{sizeof(double)};
+            auto probB = py::array_t<double>(shape, strides);
+            status = da_handle_get_result(handle, da_svm_probaB, &n_classifiers,
+                                          probB.mutable_data());
+            exception_check(status);
+            py::array ret = py::reinterpret_borrow<py::array>(probB);
+            return ret;
+        } else {
+            size_t strides[1]{sizeof(float)};
+            auto probB = py::array_t<float>(shape, strides);
+            status = da_handle_get_result(handle, da_svm_probaB, &n_classifiers,
+                                          probB.mutable_data());
+            exception_check(status);
+            auto res = py::array_t<float>(shape, strides);
+            py::array ret = py::reinterpret_borrow<py::array>(probB);
             return ret;
         }
     }
@@ -391,20 +501,22 @@ class py_svm : public pyda_handle {
 class py_svc : public py_svm {
 
   public:
-    py_svc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
+    py_svc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
+           da_int probability = 0, da_int seed = 0, da_int max_ws_size = -1,
            std::string prec = "double", bool check_data = false)
-        : py_svm(svc, kernel, degree, max_iter, prec, check_data) {}
+        : py_svm(svc, kernel, degree, max_iter, probability, seed, max_ws_size, prec,
+                 check_data) {}
     ~py_svc() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T C = 1.0,
-             T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
+             T gamma = 1, T coef0 = 0.0, T tol = 0.001, T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
         status = da_options_set(handle, "C", C);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, tau);
+        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
     }
 };
 
@@ -414,14 +526,15 @@ class py_svc : public py_svm {
 class py_svr : public py_svm {
 
   public:
-    py_svr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
-           std::string prec = "double", bool check_data = false)
-        : py_svm(svr, kernel, degree, max_iter, prec, check_data) {}
+    py_svr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
+           da_int max_ws_size = -1, std::string prec = "double", bool check_data = false)
+        : py_svm(svr, kernel, degree, max_iter, 0, 0, max_ws_size, prec, check_data) {}
     ~py_svr() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T C = 1.0,
-             T epsilon = 0.1, T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
+             T epsilon = 0.1, T gamma = 1, T coef0 = 0.0, T tol = 0.001,
+             T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
@@ -429,7 +542,7 @@ class py_svr : public py_svm {
         exception_check(status);
         status = da_options_set(handle, "epsilon", epsilon);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, tau);
+        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
     }
 };
 
@@ -439,20 +552,24 @@ class py_svr : public py_svm {
 class py_nusvc : public py_svm {
 
   public:
-    py_nusvc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
-             std::string prec = "double", bool check_data = false)
-        : py_svm(nusvc, kernel, degree, max_iter, prec, check_data) {}
+    py_nusvc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
+             da_int probability = 0, da_int seed = 0, da_int max_ws_size = -1,
+             std::string prec = "double",
+
+             bool check_data = false)
+        : py_svm(nusvc, kernel, degree, max_iter, probability, seed, max_ws_size, prec,
+                 check_data) {}
     ~py_nusvc() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T nu = 0.5,
-             T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
+             T gamma = 1, T coef0 = 0.0, T tol = 0.001, T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
         status = da_options_set(handle, "nu", nu);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, tau);
+        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
     }
 };
 
@@ -462,14 +579,15 @@ class py_nusvc : public py_svm {
 class py_nusvr : public py_svm {
 
   public:
-    py_nusvr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = 100000,
-             std::string prec = "double", bool check_data = false)
-        : py_svm(nusvr, kernel, degree, max_iter, prec, check_data) {}
+    py_nusvr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
+             da_int max_ws_size = -1, std::string prec = "double",
+             bool check_data = false)
+        : py_svm(nusvr, kernel, degree, max_iter, 0, 0, max_ws_size, prec, check_data) {}
     ~py_nusvr() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T nu = 0.5,
-             T C = 1.0, T gamma = 1, T coef0 = 0.0, T tol = 0.001) {
+             T C = 1.0, T gamma = 1, T coef0 = 0.0, T tol = 0.001, T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
@@ -477,7 +595,7 @@ class py_nusvr : public py_svm {
         exception_check(status);
         status = da_options_set(handle, "C", C);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, tau);
+        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
     }
 };
 #endif

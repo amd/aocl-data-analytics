@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -35,8 +35,19 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 # CMAKE_PREFIX_PATH=C:\path\to\python\site-packages\pybind11\share\cmake\pybind11;%CMAKE_PREFIX_PATH%
 
 set(CMAKE_INSTALL_MODE COPY)
-install(DIRECTORY python_package/aoclda DESTINATION python_package)
-install(FILES python_package/setup.py DESTINATION python_package)
+if(BUILD_FORTRAN)
+  install(DIRECTORY python_package/aoclda DESTINATION python_package)
+else()
+  # Exclude those Python examples that rely on Fortran code
+  install(
+    DIRECTORY python_package/aoclda
+    DESTINATION python_package
+    PATTERN "nlls_*.py" EXCLUDE)
+endif()
+install(FILES python_package/setup.py python_package/pyproject.toml python_package/README.rst
+        DESTINATION python_package)
+install(FILES ${CMAKE_SOURCE_DIR}/Notices ${CMAKE_SOURCE_DIR}/License
+        DESTINATION python_package/aoclda)
 
 if(NOT USE_EXISTING_DA)
   # Install aocl-da libraries in a temporary folder
@@ -82,7 +93,7 @@ add_subdirectory(python_package)
 
 # Create the wheel after installation
 install(
-  CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel ${CMAKE_INSTALL_PREFIX}/python_package/ --no-deps --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package)"
+  CODE "execute_process(COMMAND ${Python3_EXECUTABLE} -m pip wheel ${CMAKE_INSTALL_PREFIX}/python_package/ --no-deps --wheel-dir ${CMAKE_INSTALL_PREFIX}/python_package/unrepaired-wheels)"
 )
 
 install(CODE "set(BLAS \"${BLAS}\")")

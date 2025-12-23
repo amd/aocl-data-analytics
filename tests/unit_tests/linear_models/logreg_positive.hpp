@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,6 +27,8 @@
 
 #ifndef LOGREG_POSITIVE_HPP
 #define LOGREG_POSITIVE_HPP
+
+#ifndef NO_FORTRAN
 
 #include "../datests_cblas.hh"
 #include "../utest_utils.hpp"
@@ -128,7 +130,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     ///////////////////
     EXPECT_EQ(da_linmod_select_model<T>(linmod_handle, linmod_model_logistic),
               da_status_success);
-    EXPECT_EQ(da_linmod_define_features(linmod_handle, nrows, ncols - 1, A, b),
+    EXPECT_EQ(da_linmod_define_features(linmod_handle, nrows, ncols - 1, A, nrows, b),
               da_status_success);
 
     // Compute regression
@@ -204,7 +206,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         // Check that the model evaluates the classes correctly
         T *predictions = new T[nrows_test];
         da_linmod_evaluate_model(linmod_handle, nrows_test, ncols_test - 1, A_test,
-                                 predictions);
+                                 nrows_test, predictions);
         std::cout << "Predictions: " << std::endl;
         for (da_int i = 0; i < nrows_test; i++)
             std::cout << predictions[i] << " ";
@@ -226,5 +228,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     da_datastore_destroy(&csv_store);
     da_handle_destroy(&linmod_handle);
 }
+
+#endif
 
 #endif

@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -28,6 +28,11 @@ import numpy as np
 import pytest
 from aoclda.nonlinear_model import nlls
 
+
+@pytest.fixture(scope="function")
+def no_fortran(request):
+    return request.config.no_fortran
+
 # Common functions
 # Attempts to fit the model y_i = x_1 e^(x_2 t_i)
 # For parameters x_1 and x_2, and input data (t_i, y_i)
@@ -52,8 +57,8 @@ def exp_J(x, J, data) -> int:
     x1 = x[0]
     x2 = x[1]
     J[:] = np.column_stack((
-        np.exp(x2*data['t']),
-        data['t'] * x1 * np.exp(x2*data['t'])
+        np.exp(x2 * data['t']),
+        data['t'] * x1 * np.exp(x2 * data['t'])
     ))
     return 0
 
@@ -67,15 +72,15 @@ def exp_Hr(x, r, Hr, data) -> int:
     x1 = x[0]
     x2 = x[1]
     Hr[:] = np.zeros((2, 2))
-    v = data['t'] * np.exp(x2*data['t'])
+    v = data['t'] * np.exp(x2 * data['t'])
     Hr[1, 0] = np.dot(r, v)                 # H_21
     Hr[0, 1] = Hr[1, 0]                     # H_21
-    Hr[1, 1] = np.dot(r, (data['t']*x1)*v)  # H_22
+    Hr[1, 1] = np.dot(r, (data['t'] * x1) * v)  # H_22
     return 0
 
 
 # Data to be fitted
-exp_data = {"t": np.array([1.0, 2.0, 4.0,  5.0,  8.0]),
+exp_data = {"t": np.array([1.0, 2.0, 4.0, 5.0, 8.0]),
             "y": np.array([3.0, 4.0, 6.0, 11.0, 20.0])}
 
 
@@ -88,16 +93,18 @@ def J_fail(x, r, data) -> int:
 
 
 @pytest.mark.parametrize("opt_params", [True, False])
-def test_functionality(opt_params):
+def test_functionality(no_fortran, opt_params):
     """Test correct functionality while solving a simple problem"""
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     numpy_precision = np.float32
     n_coef = 2
     n_res = 5
-    xexp = np.array([2.54104549, 0.25950481], dtype=numpy_precision)
     x = np.array([2.5, 0.25], dtype=numpy_precision)
     w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=numpy_precision)
-    blx = np.array([0.0,  0.0], dtype=numpy_precision)
-    bux = np.array([5.0,  3.0], dtype=numpy_precision)
+    blx = np.array([0.0, 0.0], dtype=numpy_precision)
+    bux = np.array([5.0, 3.0], dtype=numpy_precision)
     ndf = nlls(n_coef, n_res, weights=w,
                lower_bounds=blx, upper_bounds=bux)
 
@@ -117,9 +124,16 @@ def test_functionality(opt_params):
             "Did not catch the expected exception for FLOAT test")
 
 
-@pytest.mark.parametrize("numpy_order, use_fd", [("C", False), ("C", True), ("F", False)])
-def test_functionality_order(numpy_order, use_fd):
+@pytest.mark.parametrize("numpy_order, use_fd",
+                         [("C", False),
+                          ("C", True),
+                          ("F", False),
+                          ("F", True)])
+def test_functionality_order(no_fortran, numpy_order, use_fd):
     """Test correct functionality while solving a simple problem"""
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     if use_fd:
         tol = 1e-4
         abs_gtol = 1e-7
@@ -135,8 +149,8 @@ def test_functionality_order(numpy_order, use_fd):
     expected_x = np.array([2.54104549, 0.25950481])
     x = np.array([2.5, 0.25])
     w = 0.12 * np.array([1, 1, 1, 1, 1])
-    blx = np.array([0.0,  0.0])
-    bux = np.array([5.0,  3.0])
+    blx = np.array([0.0, 0.0])
+    bux = np.array([5.0, 3.0])
     ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
                order=numpy_order, verbose=0, check_derivatives='yes')
     if use_fd:
@@ -165,8 +179,11 @@ def test_functionality_order(numpy_order, use_fd):
 # Interface checks
 
 
-def test_iface_too_tight():
+def test_iface_too_tight(no_fortran):
     """Finite difference test tolerance too tight"""
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     tol = 1e-10
     n_coef = 2
     n_res = 5
@@ -188,26 +205,10 @@ def test_iface_too_tight():
             "Did not catch the expected exception for FLOAT test")
 
 
-def test_iface_weights():
-    n_coef = 2
-    n_res = 5
-    w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=np.float32)
-    blx = np.array([0.0,  0.0])
-    bux = np.array([5.0,  3.0])
-    try:
-        ndf = nlls(n_coef, n_res, weights=w,
-                   lower_bounds=blx, upper_bounds=bux)
-    except RuntimeError as e:
-        print('Ok')
-    except Exception as e:
-        raise AssertionError(
-            "Did not catch the expected exception for FLOAT test") from e
-    else:
-        raise AssertionError(
-            "Did not catch the expected exception for FLOAT test")
+def test_iface_bad_weights(no_fortran):
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
 
-
-def test_iface_bad_weights():
     n_coef = 2
     n_res = 5
     x = np.array([2.5, 0.25])
@@ -225,34 +226,20 @@ def test_iface_bad_weights():
             "Did not catch the expected exception for FLOAT test")
 
 
-def test_iface_bounds():
+def test_iface_wrong_option(no_fortran):
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     n_coef = 2
     n_res = 5
+    x = np.array([2.5, 0.25])
     w = 0.12 * np.array([1, 1, 1, 1, 1])
-    blx = np.array([0.0,  0.0], dtype=np.float32)
-    bux = np.array([5.0,  3.0])
+    blx = np.array([0.0, 0.0])
+    bux = np.array([5.0, 3.0])
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx,
+               upper_bounds=bux, model="invalid")
     try:
-        ndf = nlls(n_coef, n_res, weights=w,
-                   lower_bounds=blx, upper_bounds=bux)
-    except RuntimeError as e:
-        print('Ok')
-    except Exception as e:
-        raise AssertionError(
-            "Did not catch the expected exception for FLOAT test") from e
-    else:
-        raise AssertionError(
-            "Did not catch the expected exception for FLOAT test")
-
-
-def test_iface_wrong_option():
-    n_coef = 2
-    n_res = 5
-    w = 0.12 * np.array([1, 1, 1, 1, 1])
-    blx = np.array([0.0,  0.0])
-    bux = np.array([5.0,  3.0])
-    try:
-        ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx,
-                   upper_bounds=bux, model="invalid")
+        ndf.fit(x, exp_r, data=exp_data)
     except RuntimeError as e:
         print("Ok")
     except Exception as e:
@@ -263,13 +250,16 @@ def test_iface_wrong_option():
             "Did not catch the expected exception")
 
 
-def test_iface_x():
+def test_iface_x(no_fortran):
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     n_coef = 2
     n_res = 5
     x = np.array([2.5, 0.25], dtype=np.float32)
     w = 0.12 * np.array([1, 1, 1, 1, 1])
-    blx = np.array([0.0,  0.0])
-    bux = np.array([5.0,  3.0])
+    blx = np.array([0.0, 0.0])
+    bux = np.array([5.0, 3.0])
     ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux)
     try:
         ndf.fit(x, r_fail, J_fail)
@@ -283,15 +273,16 @@ def test_iface_x():
             "Did not catch the expected exception")
 
 
-def test_warning():
-    tol = 1e-7
+def test_warning(no_fortran):
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     n_coef = 2
     n_res = 5
-    xexp = np.array([2.54104549, 0.25950481])
     x = np.array([2.5, 0.25])
     w = 0.12 * np.array([1, 1, 1, 1, 1])
-    blx = np.array([0.0,  0.0])
-    bux = np.array([5.0,  3.0])
+    blx = np.array([0.0, 0.0])
+    bux = np.array([5.0, 3.0])
     ndf = nlls(n_coef, n_res, weights=w,
                lower_bounds=blx, upper_bounds=bux)
 
@@ -299,25 +290,11 @@ def test_warning():
         ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
                 abs_gtol=1e-7, gtol=1.e-9, maxit=1)
 
-def test_unsupported_type():
-    tol = 1e-7
-    n_coef = 2
-    n_res = 5
-    xexp = np.array([2.54104549, 0.25950481])
-    x = np.array([2.5, 0.25], np.float16)
-    w = 0.12 * np.array([1, 1, 1, 1, 1], np.float16)
-    blx = np.array([0.0,  0.0], np.float16)
-    bux = np.array([5.0,  3.0], np.float16)
-    # Test .nlls(...) with unsupported type
-    with pytest.raises(ValueError):
-        ndf = nlls(n_coef, n_res, weights=w,
-               lower_bounds=blx, upper_bounds=bux)
-    # Test .fit(...) with unsupported type
-    ndf = nlls(n_coef, n_res)
-    with pytest.raises(ValueError):
-        ndf.fit(x, exp_r)
 
-def test_nan():
+def test_nan(no_fortran):
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     abs_gtol = 1e-7
     gtol = 1.e-9
     maxit = 20
@@ -325,14 +302,185 @@ def test_nan():
     n_res = 5
     x = np.array([2.5, np.nan])
     w = 0.12 * np.array([1, 1, 1, 1, 1])
-    blx = np.array([np.nan,  0.0])
-    bux = np.array([5.0,  3.0])
-    with pytest.raises(RuntimeError):
-        ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
-                   verbose=0, check_derivatives='yes', check_data=True)
-    blx = np.array([0.0,  0.0])
+    blx = np.array([np.nan, 0.0])
+    bux = np.array([5.0, 3.0])
     ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
-                   verbose=0, check_derivatives='yes', check_data=True)
+               verbose=0, check_derivatives='yes', check_data=True)
     with pytest.raises(RuntimeError):
         ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
-                    abs_gtol=abs_gtol, gtol=gtol, maxit=maxit)
+                abs_gtol=abs_gtol, gtol=gtol, maxit=maxit)
+    blx = np.array([0.0, 0.0])
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
+               verbose=0, check_derivatives='yes', check_data=True)
+    with pytest.raises(RuntimeError):
+        ndf.fit(x, exp_r, exp_J, exp_Hr, data=exp_data,
+                abs_gtol=abs_gtol, gtol=gtol, maxit=maxit)
+
+
+@pytest.mark.parametrize(
+    "numpy_precision",
+    [np.float16, np.float32, np.float64, np.int16, np.int32, np.int64, 'object'])
+def test_nlls_all_dtypes(no_fortran, numpy_precision):
+    """
+    Test it runs when supported/unsupported C-interface type is provided.
+    """
+
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
+    abs_gtol = 1e-7
+    gtol = 1.e-7
+    maxit = 100
+    n_coef = 2
+    n_res = 5
+    x = np.array([0.5, 2.5], dtype=numpy_precision)
+    w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=numpy_precision)
+    blx = np.array([0.0, 0.0], dtype=numpy_precision)
+    bux = np.array([7.0, 9.0], dtype=numpy_precision)
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float32])
+@pytest.mark.parametrize("numpy_orders",
+                         [("F", "C", "C", "C", "F"),
+                          ("F", "C", "C", "F", "C"),
+                          ("F", "C", "C", "F", "F"),
+                          ("F", "C", "F", "C", "C"),
+                          ("F", "C", "F", "C", "F"),
+                          ("F", "C", "F", "F", "C"),
+                          ("F", "C", "F", "F", "F"),
+                          ("C", "F", "C", "C", "C"),
+                          ("C", "F", "C", "C", "F"),
+                          ("C", "F", "C", "F", "C"),
+                          ("C", "F", "C", "F", "F"),
+                          ("C", "F", "F", "C", "C"),
+                          ("C", "F", "F", "C", "F"),
+                          ("C", "F", "F", "F", "C")])
+def test_nlls_multiple_orders(no_fortran, numpy_precision, numpy_orders):
+    """
+    Test it runs when arrays of multiple orders are provided.
+    """
+
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
+    abs_gtol = 1e-7
+    gtol = 1.e-4
+    maxit = 100
+    n_coef = 2
+    n_res = 5
+    x = np.array([0.5, 2.5], dtype=numpy_precision, order=numpy_orders[1])
+    w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=numpy_precision, order=numpy_orders[2])
+    blx = np.array([0.0, 0.0], dtype=numpy_precision, order=numpy_orders[3])
+    bux = np.array([7.0, 9.0], dtype=numpy_precision, order=numpy_orders[4])
+
+    # No warnings expected due to arrays being 1d
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=bux,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    x2 = np.array([0.5, 2.5], dtype=numpy_precision, order=numpy_orders[0])
+    ndf.fit(x2, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+
+    bux = np.array([0, 8.0], dtype=numpy_precision, order=numpy_orders[4])
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=None, upper_bounds=bux,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    x2 = np.array([0.5, 2.5], dtype=numpy_precision, order=numpy_orders[0])
+    ndf.fit(x2, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+
+    x = np.array([0.5, 2], dtype=numpy_precision, order=numpy_orders[1])
+    w = 0.01 * np.array([1, 1, 1, 1, 1], dtype=numpy_precision, order=numpy_orders[2])
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=None,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-4)
+    x2 = np.array([0.5, 2], dtype=numpy_precision, order=numpy_orders[0])
+    ndf.fit(x2, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-4)
+
+    x = np.array([0.5, 2.5], dtype=numpy_precision, order=numpy_orders[1])
+    ndf = nlls(n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    x2 = np.array([0.5, 2.5], dtype=numpy_precision, order=numpy_orders[0])
+    ndf.fit(x2, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+
+
+@pytest.mark.parametrize(
+    "numpy_precisions", [('float64', 'float32', 'float32', 'float32', 'float64'),
+                         ('float64', 'float32', 'float32', 'float64', 'float32'),
+                         ('float64', 'float32', 'float32', 'float64', 'float64'),
+                         ('float64', 'float32', 'float64', 'float32', 'float32'),
+                         ('float64', 'float32', 'float64', 'float32', 'float64'),
+                         ('float64', 'float32', 'float64', 'float64', 'float32'),
+                         ('float64', 'float32', 'float64', 'float64', 'float64'),
+                         ('float32', 'float64', 'float32', 'float32', 'float32'),
+                         ('float32', 'float64', 'float32', 'float32', 'float64'),
+                         ('float32', 'float64', 'float32', 'float64', 'float32'),
+                         ('float32', 'float64', 'float32', 'float64', 'float64'),
+                         ('float32', 'float64', 'float64', 'float32', 'float32'),
+                         ('float32', 'float64', 'float64', 'float32', 'float64'),
+                         ('float32', 'float64', 'float64', 'float64', 'float32')])
+@pytest.mark.parametrize("numpy_order", ["C"])
+def test_nlls_multiple_dtypes(no_fortran, numpy_precisions, numpy_order):
+    """
+    Test it runs when arrays of multiple dtypes are provided.
+    """
+
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
+    abs_gtol = 1e-7
+    gtol = 1.e-4
+    maxit = 100
+    n_coef = 2
+    n_res = 5
+    x = np.array([0.5, 2.5], dtype=numpy_precisions[1], order=numpy_order)
+    w = 0.12 * np.array([1, 1, 1, 1, 1], dtype=numpy_precisions[2], order=numpy_order)
+    blx = np.array([0.0, 0.0], dtype=numpy_precisions[3], order=numpy_order)
+    bux = np.array([7.0, 9.0], dtype=numpy_precisions[4], order=numpy_order)
+
+    ndf = nlls(n_coef, n_res, weights=None, lower_bounds=blx, upper_bounds=bux,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    x2 = np.array([0.5, 2.5], dtype=numpy_precisions[0], order=numpy_order)
+    ndf.fit(x2, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+
+    bux = np.array([0, 8.0], dtype=numpy_precisions[4], order=numpy_order)
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=None, upper_bounds=bux,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    x2 = np.array([0.5, 2.5], dtype=numpy_precisions[0], order=numpy_order)
+    ndf.fit(x2, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+
+    x = np.array([0.5, 2], dtype=numpy_precisions[1], order=numpy_order)
+    w = 0.02 * np.array([1, 1, 1, 1, 1], dtype=numpy_precisions[2], order=numpy_order)
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, upper_bounds=None,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    x2 = np.array([0.5, 5], dtype=numpy_precisions[0], order=numpy_order)
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-10)
+
+    x = np.array([0.5, 2.5], dtype=numpy_precisions[1], order=numpy_order)
+    ndf = nlls(n_coef, n_res, weights=None, lower_bounds=None, upper_bounds=None,
+               verbose=0, check_derivatives='yes')
+    ndf.fit(x, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)
+    x2 = np.array([0.5, 2.5], dtype=numpy_precisions[0], order=numpy_order)
+    ndf.fit(x2, exp_r, data=exp_data,
+            abs_gtol=abs_gtol, gtol=gtol, maxit=maxit, fd_step=2.e-7)

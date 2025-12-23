@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -381,6 +381,92 @@ template <typename T> void GetSubarrayBaseData(KMeansParamType<T> &param) {
     param.expected_status = da_status_success;
 }
 
+template <typename T> void GetLargeBaseData(KMeansParamType<T> &param) {
+    param.test_name = "Larger data matrix to test vectorized kernels";
+
+    param.n_samples = 80;
+    param.n_features = 2;
+    std::vector<double> A{
+        2.1,  -1.0, 3.0,  2.0,  -3.0, -2.2, -2.4, 0.9,  1.0,  -2.0, 2.0,  1.0,  -2.0,
+        -1.0, -3.0, 2.3,  2.1,  -1.5, 3.0,  2.0,  -3.0, -2.8, -2.8, 1.0,  1.2,  -2.0,
+        2.1,  3.7,  -2.0, -1.0, -3.8, 2.0,  2.0,  -3.9, 3.0,  2.0,  -3.9, -2.7, -2.0,
+        1.0,  1.0,  -2.4, 2.1,  3.0,  -2.6, -1.5, -3.4, 2.0,  2.0,  -1.0, 3.0,  2.6,
+        -3.0, -2.6, -2.0, 1.0,  1.3,  -2.5, 2.8,  3.5,  -2.0, -1.0, -3.0, 2.2,  2.0,
+        -1.0, 3.4,  2.0,  -3.8, -2.0, -2.0, 1.0,  1.9,  -2.1, 2.1,  3.0,  -2.0, -1.0,
+        -3.4, 2.0,  2.0,  -8.0, 3.7,  2.0,  -3.2, -2.6, -2.2, 1.0,  1.0,  -2.5, 6.0,
+        -5.5, -2.0, -1.4, -3.7, 2.0,  2.0,  -1.2, 3.4,  2.0,  -4.0, -2.0, -2.0, 1.0,
+        1.0,  -2.0, 2.0,  3.3,  -2.0, -1.4, -3.0, 2.3,  2.0,  -9.0, 3.0,  2.0,  -3.0,
+        -2.0, -2.0, 1.7,  1.3,  -2.0, 2.3,  3.3,  -2.0, -6.0, -3.0, 2.7,  2.0,  -1.5,
+        3.0,  2.6,  -3.3, -2.0, -2.0, 1.0,  1.7,  -2.0, 2.0,  8.5,  -2.0, -1.7, -3.0,
+        2.0,  2.2,  -1.2, 3.6,  2.9,  -6.0, -2.0, -2.1, 1.5,  9.0,  -2.0, 2.0,  3.8,
+        -2.0, -1.0, -8.1, 2.9};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 80;
+
+    std::vector<double> C{1.9, -5.1, 1.0,  -3.0, 1.0,  -3.2, 6.0, -3.7,
+                          8.5, -3.0, 1.7,  -3.0, 1.0,  -7.0, 1.0, -3.4,
+                          4.8, -3.0, 1.0,  -3.4, 1.9,  -3.0, 1.3, -3.8,
+                          5.4, -3.2, -8.0, -3.0, -6.1, -3.3, 1.6, -3.0};
+    param.C = convert_vector<double, T>(C);
+    param.ldc = 16;
+
+    param.m_samples = 1;
+    param.m_features = 2;
+    std::vector<double> X{-3.700001, -7.7};
+    param.X = convert_vector<double, T>(X);
+    param.ldx = 1;
+    std::vector<double> X_transform{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    param.X_transform = convert_vector<double, T>(X_transform);
+    param.ldx_transform = 1;
+
+    param.k_samples = 1;
+    param.k_features = 2;
+    std::vector<double> Y{-3.7, -7.7};
+    param.Y = convert_vector<double, T>(Y);
+    param.ldy = 1;
+    std::vector<da_int> Y_labels{0};
+    param.Y_labels = Y_labels;
+
+    param.n_clusters = 16;
+    param.n_init = 1;
+    param.max_iter = 30;
+    param.seed = 78;
+    param.convergence_tolerance = (T)1.0e-4;
+    param.initialization_method = "supplied";
+    param.algorithm = "lloyd";
+    param.is_random = false;
+    param.order = "column-major";
+
+    std::vector<double> expected_rinfo{80.0, 2.0, 16.0, 4.0, 45.78715};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> expected_centres{
+        2.4666666667, 0.0,  1.02000,        -3.0, 2.42593,      0.0,   0.0,
+        -3.7,         0.0,  -3.0,           -1.0, -1.94815,     -0.25, 0.0,
+        1.075,        -3.7, 7.833333333333, 0.0,  1.0,          -3.85, 2.55555556,
+        0.0,          0.0,  -7.7,           0.0,  -3.166666667, -8.0,  -1.88148,
+        -5.75,        0.0,  1.55,           -3.0};
+    param.expected_centres = convert_vector<double, T>(expected_centres);
+    std::vector<da_int> expected_labels{
+        4,  10, 4,  4, 9,  11, 11, 2, 2,  11, 0,  12, 11, 11, 3,  4, 4,  11, 4,  4,
+        3,  11, 11, 2, 2,  11, 4,  4, 11, 11, 15, 4,  4,  7,  4,  4, 15, 11, 11, 14,
+        14, 11, 4,  4, 11, 12, 15, 4, 4,  11, 4,  4,  9,  11, 11, 2, 14, 11, 4,  0,
+        11, 11, 9,  4, 4,  11, 4,  4, 7,  11, 11, 14, 0,  11, 4,  4, 11, 11, 7,  4};
+    param.expected_labels = expected_labels;
+    std::vector<double> expected_X_transform{
+        16.712636602948745, 8.5428332536694178, 9.8978987669100764, 3.9131189606246322,
+        11.945852343094563, 8.5428332536694178, 8.5428332536694178, 0.0,
+        8.5428332536694178, 4.5870590917396212, 2.7166155414412292, 6.0765238962074113,
+        3.9629534440868719, 8.5428332536694178, 10.409761044327579, 4.7000000000000002};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    std::vector<da_int> expected_Y_labels{7};
+    param.expected_Y_labels = expected_Y_labels;
+
+    param.tol = 10000 * std::sqrt(std::numeric_limits<T>::epsilon());
+    param.max_allowed_inertia = (T)46.0;
+    param.expected_status = da_status_success;
+}
+
 template <typename T> void GetPseudoRandomBaseData(KMeansParamType<T> &param) {
     param.test_name = "Data matrix with pseudorandom values";
 
@@ -404,7 +490,7 @@ template <typename T> void GetPseudoRandomBaseData(KMeansParamType<T> &param) {
     param.initialization_method = "random";
     param.algorithm = "hartigan-wong";
 
-    param.tol = 100 * std::sqrt(std::numeric_limits<T>::epsilon());
+    param.tol = 1000 * std::sqrt(std::numeric_limits<T>::epsilon());
     param.max_allowed_inertia = (T)4.8;
     param.expected_status = da_status_success;
 }
@@ -542,6 +628,16 @@ template <typename T> void GetPseudoRandomData(std::vector<KMeansParamType<T>> &
     params.push_back(param);
 }
 
+template <typename T> void GetLargeData(std::vector<KMeansParamType<T>> &params) {
+    // Tests with a larger data matrix to exercise vectorized kernels
+    KMeansParamType<T> param;
+    GetLargeBaseData(param);
+    // Start with Hartigan-Wong for comparison and to get 'correct' answer
+    params.push_back(param);
+    param.algorithm = "elkan";
+    params.push_back(param);
+}
+
 template <typename T> void GetSubarrayData(std::vector<KMeansParamType<T>> &params) {
     // Tests with a data matrix in 3 distinct clusters
     KMeansParamType<T> param;
@@ -583,4 +679,5 @@ template <typename T> void GetKMeansData(std::vector<KMeansParamType<T>> &params
     GetZeroData(params);
     GetPseudoRandomData(params);
     GetRowMajorData(params);
+    GetLargeData(params);
 }

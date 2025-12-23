@@ -1,6 +1,6 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
-
+    Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+    
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
     1. Redistributions of source code must retain the above copyright notice,
@@ -11,7 +11,7 @@
     3. Neither the name of the copyright holder nor the names of its contributors
        may be used to endorse or promote products derived from this software without
        specific prior written permission.
-
+    
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -22,7 +22,7 @@
     WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
-
+    
 
 
 .. AUTO GENERATED. Do not hand edit this file! (see doc_test.cpp)
@@ -45,14 +45,15 @@ The following options are supported.
 .. csv-table:: :strong:`Table of Options for Linear Models.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-
+   
    "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
    "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "optim dual gap tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence based on the estimate of dual gap size. See option in the corresponding optimization solver documentation.", ":math:`0 < r`"
    "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`"
-   "optim convergence tol", "real", ":math:`r=10/2\sqrt{2\,\varepsilon}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
+   "optim convergence tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`"
    "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
    "optim coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than coord skip tol to start skipping.", ":math:`2 \le i`"
@@ -75,9 +76,10 @@ The following options are supported.
 .. csv-table:: :strong:`Table of Options for Principal Component Analysis.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-
+   
    "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`."
    "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`."
+   "whiten", "integer", ":math:`i=0`", "Whether or not we whiten when transforming the data.", ":math:`0 \le i \le 1`"
    "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`"
    "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`"
    "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, or `syevd`."
@@ -95,7 +97,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of Options for k-means Clustering.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-
+   
    "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
    "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres.", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
    "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`"
@@ -118,10 +120,10 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used (reserved for future use).", ":math:`0 \le r`"
-   "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances (reserved for future use).", ":math:`s=` `euclidean`, `manhattan`, `minkowski`, or `sqeuclidean`."
-   "algorithm", "string", ":math:`s=` `brute`", "Choice of algorithm (reserved for future use).", ":math:`s=` `auto`, `ball tree`, `brute`, `brute serial`, or `kd tree`."
-   "leaf size", "integer", ":math:`i=30`", "Leaf size for KD tree or ball tree (reserved for future use).", ":math:`1 \le i`"
+   "power", "real", ":math:`r=2.0`", "The power of the Minkowski metric used.", ":math:`0 \le r`"
+   "metric", "string", ":math:`s=` `euclidean`", "Choice of metric used to compute pairwise distances.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`."
+   "algorithm", "string", ":math:`s=` `auto`", "Choice of algorithm.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
+   "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree or ball tree.", ":math:`1 \le i`"
    "eps", "real", ":math:`r=10^{-4}`", "Maximum distance for two samples to be considered in each other's neighborhood.", ":math:`0 \le r`"
    "min samples", "integer", ":math:`i=5`", "Minimum number of neighborhood samples for a core point.", ":math:`1 \le i`"
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
@@ -139,20 +141,23 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "print timings", "string", ":math:`s=` `no`", "Print the timings of different parts of the fitting process.", ":math:`s=` `no`, or `yes`."
+   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
+   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
+   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
-   "sorting method", "string", ":math:`s=` `boost`", "Select sorting method to use.", ":math:`s=` `boost`, or `stl`."
-   "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
-   "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes.", ":math:`s=` `breadth first`, or `depth first`."
-   "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`2 \le i`"
-   "predict probabilities", "integer", ":math:`i=1`", "evaluate class probabilities (in addition to class predictions).Needs to be 1 if calls to predict_proba or predict_log_probaare made after fit.", ":math:`0 \le i \le 1`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
+   "node minimum samples", "integer", ":math:`i=2`", "The minimum number of samples required to split an internal node.", ":math:`1 \le i`"
+   "predict probabilities", "string", ":math:`s=` `yes`", "evaluate class probabilities (in addition to class predictions). Needs to be set to 'yes' if calls to predict_proba or predict_log_proba are made after fit.", ":math:`s=` `no`, or `yes`."
+   "detect categorical data", "string", ":math:`s=` `no`", "Check if the data is categorical, encoded in [0, n_categories-1].", ":math:`s=` `no`, or `yes`."
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
-   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 61`"
+   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
    "seed", "integer", ":math:`i=-1`", "Set the random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
    "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
-   "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-   "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+   "minimum split score", "real", ":math:`r=0`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
+   "category tolerance", "real", ":math:`r=1e-05`", "How far data can be from an integer to be considered not categorical.", ":math:`0 \le r < 1`"
+   "maximum categories", "integer", ":math:`i=50`", "Number of distinct values required for each feature for it to be considered categorical.", ":math:`2 \le i`"
+   "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
 
 
 .. _opts_decisionforests:
@@ -166,23 +171,25 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 9223372036854775807`"
-   "feature threshold", "real", ":math:`r=1e-06`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
+   "category split strategy", "string", ":math:`s=` `ordered`", "How to split categorical features: split one category from all other or consider them ordered.", ":math:`s=` `one-vs-all`, or `ordered`."
+   "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
+   "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
+   "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
-   "minimum split improvement", "real", ":math:`r=0.03`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-   "minimum split score", "real", ":math:`r=0.03`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
-   "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when splitting a node. 0 means take all the features.", ":math:`0 \le i`"
+   "minimum split score", "real", ":math:`r=1e-05`", "Minimum score needed for a node to be considered for splitting.", ":math:`0 \le r \le 1`"
+   "maximum features", "integer", ":math:`i=0`", "Set the number of features to consider when 'features selection' is set to 'custom'. 0 means take all the features.", ":math:`0 \le i`"
    "number of trees", "integer", ":math:`i=100`", "Set the number of trees to compute. ", ":math:`1 \le i`"
-   "tree building order", "string", ":math:`s=` `depth first`", "Select in which order to explore the nodes.", ":math:`s=` `breadth first`, or `depth first`."
-   "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`2 \le i`"
-   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
-   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 61`"
    "seed", "integer", ":math:`i=-1`", "Set random seed for the random number generator. If the value is -1, a random seed is automatically generated. In this case the resulting classification will create non-reproducible results.", ":math:`-1 \le i`"
+   "node minimum samples", "integer", ":math:`i=2`", "Minimum number of samples to consider a node for splitting.", ":math:`1 \le i`"
+   "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
+   "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
+   "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
+   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
+   "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split. 'custom' reads the 'maximum features' option, proportion reads the 'proportion features' option. 'all', 'sqrt' and 'log2' select respectively all, the square root or the base-2 logarithm of the total number of features.", ":math:`s=` `all`, `custom`, `log2`, `proportion`, or `sqrt`."
    "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
-   "sorting method", "string", ":math:`s=` `boost`", "Select sorting method to use.", ":math:`s=` `boost`, or `stl`."
-   "bootstrap samples factor", "real", ":math:`r=0.8`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
-   "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split.", ":math:`s=` `all`, `custom`, `log2`, or `sqrt`."
+   "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
+   "proportion features", "real", ":math:`r=0.1`", "Set the proportion of features to consider when 'features selection' is set to 'proportion'.", ":math:`0 < r \le 1`"
 
 
 .. _opts_nonlinearleastsquares:
@@ -195,7 +202,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of Options for Nonlinear Least Squares.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-
+   
    "ralfit model", "string", ":math:`s=` `hybrid`", "NLLS model to solve.", ":math:`s=` `gauss-newton`, `hybrid`, `quasi-newton`, or `tensor-newton`."
    "print level", "integer", ":math:`i=1`", "Set level of verbosity for the solver: from 0, indicating no output, to 5, which is very verbose.", ":math:`0 \le i \le 5`"
    "derivative test tol", "real", ":math:`r=10^{-4}`", "Tolerance used to check user-provided derivatives by finite-differences. If <print level> is 1, then only the entries with larger discrepancy are reported, and if print level is greater than or equal to 2, then all entries are printed.", ":math:`0 < r \le 10`"
@@ -224,11 +231,11 @@ The following options are supported.
    "lbfgsb progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "The iteration stops when (f^k - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
    "regularization power", "string", ":math:`s=` `quadratic`", "Value of the regularization power term.", ":math:`s=` `cubic`, or `quadratic`."
    "infinite bound size", "real", ":math:`r=10^{20}`", "Threshold value to take for +/- infinity.", ":math:`1000 < r`"
-   "coord progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "The iteration stops when (fk - f{k+1})/max{abs(fk);abs(f{k+1});1} <= factr*epsmch where epsmch is the machine precision. Typical values for type double: 10e12 for low accuracy; 10e7 for moderate accuracy; 10 for extremely high accuracy.", ":math:`0 \le r`"
    "time limit", "real", ":math:`r=10^6`", "Maximum time allowed to run (in seconds).", ":math:`0 < r`"
-   "coord convergence tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`"
+   "coord convergence tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance of the projected gradient infinity norm to declare convergence.", ":math:`0 < r < 1`"
+   "coord optimality tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Tolerance to declare optimality, e.g. dual-gap, KKT conditions, etc.", ":math:`0 \le r`"
    "ralfit convergence rel tol fun", "real", ":math:`r=10/21\sqrt{2\,\varepsilon}`", "Relative tolerance to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
-   "coord skip tol", "real", ":math:`r=\sqrt{2\,\varepsilon}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", ":math:`-1 \le r`"
+   "coord skip tol", "real", ":math:`r=50\;\sqrt{2\,\varepsilon}`", "Coordinate skip tolerance, a given coordinate could be skipped if the change between two consecutive iterates is less than tolerance. Any negative value disables the skipping scheme.", ":math:`-1 \le r`"
    "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
 
 
@@ -242,11 +249,12 @@ The following options are supported.
 .. csv-table:: :strong:`Table of Options for k-Nearest Neighbors.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-
+   
    "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
-   "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `l1`, `l2`, `manhattan`, `minkowski`, or `sqeuclidean`."
-   "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `brute`."
+   "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`."
+   "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
    "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of k-nearest neighbors.", ":math:`0 < r`"
+   "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`"
    "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
@@ -263,35 +271,23 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`."
-   "coef0", "real", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`."
-   "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`"
-   "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`"
    "tau", "real", ":math:`r=\varepsilon`", "Numerical stability parameter used in working set selection when kernel is not positive semi definite.", ":math:`0 \le r`"
-   "tolerance", "real", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`"
-   "nu", "real", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.", ":math:`0 < r \le 1`"
-   "max_iter", "integer", ":math:`i=0`", "Sets the maximum number of iterations. Use 0 to specify no limit.", ":math:`0 \le i`"
-   "c", "real", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. A larger value means higher penalty to the loss function on misclassified observations. Applies to SVC, SVR and NuSVR.", ":math:`0 < r`"
-   "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`"
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
-
-
-.. _opts_k-nearestneighbors:
-
-k-nearest neighbors
-==============================================
-
-The following options are supported.
-
-.. csv-table:: :strong:`Table of options for k-nearest neighbors.`
-   :escape: ~
-   :header: "Option name", "Type", "Default", "Description", "Constraints"
-   
-   "weights", "string", ":math:`s=` `uniform`", "Weight function used to compute the k-nearest neighbors.", ":math:`s=` `distance`, or `uniform`."
-   "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `euclidean`, or `sqeuclidean`."
-   "algorithm", "string", ":math:`s=` `brute`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `brute`."
-   "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
+   "n_folds", "integer", ":math:`i=5`", "Number of folds to use with cross validation. Only used when predict probabilities is enabled.", ":math:`1 \le i`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "cache size", "real", ":math:`r=-1`", "Size of the kernel cache in MB. The default value is -1.0 which automatically sets it to a value which will enable storage of the sampled kernel matrix. Increasing value of this option will result in faster training time.", ":math:`-1 \le r`"
+   "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`"
+   "c", "real", ":math:`r=1`", "Regularization parameter. Controls the trade-off between maximizing the margin between classes and minimizing classification errors. A larger value means higher penalty to the loss function on misclassified observations. Applies to SVC, SVR and NuSVR.", ":math:`0 < r`"
+   "max_iter", "integer", ":math:`i=100000`", "Sets the maximum number of iterations. Use 0 to specify no limit.", ":math:`0 \le i`"
+   "nu", "real", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.", ":math:`0 < r \le 1`"
+   "coef0", "real", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`."
+   "tolerance", "real", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`"
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
+   "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`"
+   "max_ws_size", "integer", ":math:`i=-1`", "Specifies the maximum working set size. A value divisible by 64 is recommended for optimal performance. Setting -1 automatically selects the optimal size based on the input data.", ":math:`-1 \le i`"
+   "predict probabilities", "integer", ":math:`i=0`", "Evaluate class probabilities (in addition to class predictions).Needs to be 1 if calls to predict_proba or predict_log_probaare made after fit.", ":math:`0 \le i \le 1`"
+   "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`"
 
 
 .. _opts_datastore:
@@ -304,7 +300,7 @@ The following options are supported.
 .. csv-table:: :strong:`Table of options for` :cpp:type:`da_datastore`.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
-
+   
    "datastore precision", "string", ":math:`s=` `double`", "The precision used when reading floating point numbers using autodetection.", ":math:`s=` `double`, or `single`."
    "datatype", "string", ":math:`s=` `auto`", "If a CSV file is known to be of a single datatype, set this option to disable autodetection and make reading the file quicker.", ":math:`s=` `auto`, `boolean`, `double`, `float`, `integer`, or `string`."
    "use header row", "integer", ":math:`i=0`", "Whether or not to interpret the first row as a header.", ":math:`0 \le i \le 1`"

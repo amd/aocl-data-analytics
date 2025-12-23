@@ -25,10 +25,6 @@
  *
  */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include <type_traits>
 

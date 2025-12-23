@@ -27,6 +27,23 @@
 
 #include <numeric>
 
+template <typename T> struct test_probabilities_type {
+    std::vector<T> X_train, X_train_row;
+    std::vector<T> y_train;
+    std::vector<T> X_test, X_test_row;
+    da_svm_model model = svm_undefined;
+    std::string kernel;
+    T C = 1.0, nu = 0.5, tol = 1e-5;
+    da_int seed = 0;
+    da_int n_samples = 0, n_feat = 0, n_class = 0, n_samples_test = 0;
+    da_int ldx_train = 0, ldx_test = 0, ldx_train_row = 0, ldx_test_row = 0,
+           ldy_proba = 0, ldy_proba_row = 0;
+    // Arrays to check
+    std::vector<T> probaA_expected, probaB_expected;
+    std::vector<T> probabilities_expected, log_prob_expected;
+    std::vector<T> probabilities_expected_row, log_prob_expected_row;
+};
+
 template <typename T> struct test_local_smo_type {
     std::vector<T> kernel_data, local_kernel_data;
     std::vector<T> local_alpha;
@@ -43,14 +60,14 @@ template <typename T> struct test_local_smo_type {
 
 template <typename T> struct test_is_upper_lower_type {
     T alpha = 0.0, y = 0.0, C = 0.0;
-    bool is_low = false, is_up = false;
+    da_int is_low = false, is_up = false;
 };
 
 template <typename T> struct test_working_set_selection_type {
     std::vector<T> alpha, gradient, response;
     da_int i = 0, j = 0, i_expected = 0, j_expected = 0;
     std::vector<da_int> idx;
-    std::vector<bool> I_up, I_low;
+    std::vector<da_int> I_up, I_low;
     T tau = 1e-6;
     da_int size = 0;
     T C = 0.0, min_gradient = 0.0, min_gradient_expected = 0.0;
@@ -315,7 +332,7 @@ void set_rbf_kernel_data(std::vector<test_local_smo_type<T>> &params) {
     data.local_alpha.resize(data.n);
     data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
-    data.local_gradient.resize(data.n);
+    data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};
     data.first_diff = 0;
     data.alpha_diff.resize(data.n);
@@ -550,7 +567,7 @@ void set_linear_kernel_data(std::vector<test_local_smo_type<T>> &params) {
     data.local_alpha.resize(data.n);
     data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
-    data.local_gradient.resize(data.n);
+    data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};
     data.first_diff = 0;
     data.alpha_diff.resize(data.n);
@@ -784,7 +801,7 @@ void set_polynomial_kernel_data(std::vector<test_local_smo_type<T>> &params) {
     data.local_alpha.resize(data.n);
     data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
-    data.local_gradient.resize(data.n);
+    data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};
     data.first_diff = 0;
     data.alpha_diff.resize(data.n);
@@ -1019,7 +1036,7 @@ void set_sigmoid_kernel_data(std::vector<test_local_smo_type<T>> &params) {
     data.local_alpha.resize(data.n);
     data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
-    data.local_gradient.resize(data.n);
+    data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};
     data.first_diff = 0;
     data.alpha_diff.resize(data.n);
@@ -1152,8 +1169,8 @@ void set_wss1_data(std::vector<test_working_set_selection_type<T>> &params) {
     data.delta_expected = 1.3120748299319727;
     data.idx.resize(data.size);
     std::iota(data.idx.begin(), data.idx.end(), 0);
-    data.I_up.resize(data.size);
-    data.I_low.resize(data.size);
+    data.I_up.resize(data.size + 16); // 16 is maximum padding possible
+    data.I_low.resize(data.size + 16);
     params.push_back(data);
 }
 
@@ -1185,8 +1202,8 @@ void set_wss2_data(std::vector<test_working_set_selection_type<T>> &params) {
     data.delta_expected = 1.0660980810234542;
     data.idx.resize(data.size);
     std::iota(data.idx.begin(), data.idx.end(), 0);
-    data.I_up.resize(data.size);
-    data.I_low.resize(data.size);
+    data.I_up.resize(data.size + 16); // 16 is maximum padding possible
+    data.I_low.resize(data.size + 16);
     params.push_back(data);
 }
 
@@ -1213,8 +1230,8 @@ void set_wss3_data(std::vector<test_working_set_selection_type<T>> &params) {
     data.delta_expected = 0.5921212121212122;
     data.idx.resize(data.size);
     std::iota(data.idx.begin(), data.idx.end(), 0);
-    data.I_up.resize(data.size);
-    data.I_low.resize(data.size);
+    data.I_up.resize(data.size + 16); // 16 is maximum padding possible
+    data.I_low.resize(data.size + 16);
     params.push_back(data);
 }
 
@@ -1238,8 +1255,8 @@ void set_wss4_data(std::vector<test_working_set_selection_type<T>> &params) {
     data.delta_expected = 0.16050119331742246;
     data.idx.resize(data.size);
     std::iota(data.idx.begin(), data.idx.end(), 0);
-    data.I_up.resize(data.size);
-    data.I_low.resize(data.size);
+    data.I_up.resize(data.size + 16); // 16 is maximum padding possible
+    data.I_low.resize(data.size + 16);
     params.push_back(data);
 }
 
@@ -1264,8 +1281,8 @@ void set_wss5_data(std::vector<test_working_set_selection_type<T>> &params) {
     data.delta_expected = 0;
     data.idx.resize(data.size);
     std::iota(data.idx.begin(), data.idx.end(), 0);
-    data.I_up.resize(data.size);
-    data.I_low.resize(data.size);
+    data.I_up.resize(data.size + 16); // 16 is maximum padding possible
+    data.I_low.resize(data.size + 16);
     params.push_back(data);
 }
 
@@ -1300,8 +1317,8 @@ void set_wss6_data(std::vector<test_working_set_selection_type<T>> &params) {
     data.idx.resize(data.size);
     std::iota(data.idx.begin(), data.idx.end(), 0);
     data.tau = 1e-4;
-    data.I_up.resize(data.size);
-    data.I_low.resize(data.size);
+    data.I_up.resize(data.size + 16); // 16 is maximum padding possible
+    data.I_low.resize(data.size + 16);
     params.push_back(data);
 }
 
@@ -1847,4 +1864,384 @@ void set_invalid_data_X_small_regr(test_invalid_data_type<T> &data) {
     data.compute_expected_status = da_status_numerical_difficulties;
     data.predict_expected_status =
         da_status_success; // above is just a warning so predict should pass
+}
+
+// Binary SVC linear
+template <typename T> void set_probabilities1_data(test_probabilities_type<T> &data) {
+    data.n_samples = 28, data.n_feat = 3;
+    data.n_class = 2;
+    data.n_samples_test = 12;
+    data.ldx_train = data.n_samples, data.ldx_test = data.n_samples_test;
+    data.ldx_train_row = data.n_feat, data.ldx_test_row = data.n_feat;
+    data.ldy_proba = data.n_samples_test, data.ldy_proba_row = data.n_class;
+
+    data.X_train = {1.65,  2.82,  -0.37, 2.68,  0.33,  1.74,  -1.34, -2.12, -2.75, 0.28,
+                    -0.25, 0.64,  -0.76, -0.68, -1.77, 4.18,  3.81,  1.97,  2.1,   0.01,
+                    -1.96, 0.59,  -0.27, -1.74, -2.23, 1.5,   2.27,  3.28,  1.31,  2.31,
+                    -0.23, 2.52,  1.51,  1.61,  0.95,  0.48,  1.12,  0.49,  1.17,  0.66,
+                    0.79,  1.33,  0.78,  0.84,  0.89,  -0.58, -2.88, 0.24,  -2.7,  -2.49,
+                    -2.16, 0.74,  -2.33, -0.59, -0.37, 0.23,  0.68,  -0.28, 0.94,  0.58,
+                    -1.25, -0.05, -1.45, -0.65, -2.25, 0.59,  -0.35, 1.13,  -0.31, -1.49,
+                    -0.51, -0.61, 0.24,  -0.3,  0.65,  2.33,  -0.52, 0.59,  -0.1,  1.91,
+                    -0.62, 1.57,  0.48,  0.79};
+    data.X_train_row = {
+        1.65,  1.31,  0.68,  2.82,  2.31,  -0.28, -0.37, -0.23, 0.94,  2.68,  2.52, 0.58,
+        0.33,  1.51,  -1.25, 1.74,  1.61,  -0.05, -1.34, 0.95,  -1.45, -2.12, 0.48, -0.65,
+        -2.75, 1.12,  -2.25, 0.28,  0.49,  0.59,  -0.25, 1.17,  -0.35, 0.64,  0.66, 1.13,
+        -0.76, 0.79,  -0.31, -0.68, 1.33,  -1.49, -1.77, 0.78,  -0.51, 4.18,  0.84, -0.61,
+        3.81,  0.89,  0.24,  1.97,  -0.58, -0.3,  2.1,   -2.88, 0.65,  0.01,  0.24, 2.33,
+        -1.96, -2.7,  -0.52, 0.59,  -2.49, 0.59,  -0.27, -2.16, -0.1,  -1.74, 0.74, 1.91,
+        -2.23, -2.33, -0.62, 1.5,   -0.59, 1.57,  2.27,  -0.37, 0.48,  3.28,  0.23, 0.79};
+    data.y_train = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
+    data.X_test = {-0.2,  2.09,  -0.61, -0.76, 0.23, -1.94, 2.05,  -2.66, -2.68,
+                   0.03,  -0.25, 1.5,   0.06,  1.82, -1.7,  -0.51, -2.55, 1.82,
+                   -0.32, -0.58, -0.97, -1.99, 1.2,  -3.38, 0.73,  0.94,  3.43,
+                   -0.47, 0.25,  -3.06, 0.06,  0.6,  0.72,  0.34,  -1.25, 0.17};
+    data.X_test_row = {-0.2,  0.06,  0.73,  2.09,  1.82,  0.94,  -0.61, -1.7,  3.43,
+                       -0.76, -0.51, -0.47, 0.23,  -2.55, 0.25,  -1.94, 1.82,  -3.06,
+                       2.05,  -0.32, 0.06,  -2.66, -0.58, 0.6,   -2.68, -0.97, 0.72,
+                       0.03,  -1.99, 0.34,  -0.25, 1.2,   -1.25, 1.5,   -3.38, 0.17};
+
+    data.kernel = "linear";
+    data.C = 0.1;
+    data.seed = 1;
+    data.model = svc;
+    data.tol = 1e-5;
+
+    data.probaA_expected = {-1.8845257};
+    data.probaB_expected = {0.00309963};
+    data.probabilities_expected = {
+        0.539505, 0.766954, 0.070849, 0.48307,  0.025215, 0.987721, 0.167365, 0.685091,
+        0.555097, 0.058965, 0.896823, 0.003811, 0.460495, 0.233046, 0.929151, 0.51693,
+        0.974785, 0.012279, 0.832635, 0.314909, 0.444903, 0.941035, 0.103177, 0.996189};
+    data.probabilities_expected_row = {
+        0.539505, 0.460495, 0.766954, 0.233046, 0.070849, 0.929151, 0.48307,  0.51693,
+        0.025215, 0.974785, 0.987721, 0.012279, 0.167365, 0.832635, 0.685091, 0.314909,
+        0.555097, 0.444903, 0.058965, 0.941035, 0.896823, 0.103177, 0.003811, 0.996189};
+    data.log_prob_expected = {-0.617103, -0.265328, -2.647207, -0.727593, -3.680311,
+                              -0.012355, -1.787576, -0.378204, -0.588612, -2.830817,
+                              -0.108897, -5.569942, -0.775454, -1.456521, -0.073484,
+                              -0.659849, -0.025538, -4.399884, -0.18316,  -1.155471,
+                              -0.809899, -0.060775, -2.271309, -0.003818};
+    data.log_prob_expected_row = {-0.617103, -0.775454, -0.265328, -1.456521, -2.647207,
+                                  -0.073484, -0.727593, -0.659849, -3.680311, -0.025538,
+                                  -0.012355, -4.399884, -1.787576, -0.18316,  -0.378204,
+                                  -1.155471, -0.588612, -0.809899, -2.830817, -0.060775,
+                                  -0.108897, -2.271309, -5.569942, -0.003818};
+}
+
+// Multi-class NuSVC rbf
+template <typename T> void set_probabilities2_data(test_probabilities_type<T> &data) {
+    data.n_samples = 28, data.n_feat = 3;
+    data.n_class = 3;
+    data.n_samples_test = 12;
+    data.ldx_train = data.n_samples, data.ldx_test = data.n_samples_test;
+    data.ldx_train_row = data.n_feat, data.ldx_test_row = data.n_feat;
+    data.ldy_proba = data.n_samples_test, data.ldy_proba_row = data.n_class;
+
+    data.X_train = {2.75,  1.13,  -0.05, 0.14,  0.58,  -0.66, 0.74,  -0.89, 0.03,  0.71,
+                    -0.71, -0.52, -0.95, 2.33,  1.99,  -0.62, -0.55, -0.03, -1.57, -0.42,
+                    -2.53, -1.37, -0.35, -3.08, -1.53, -1.36, -3.16, -1.93, 0.46,  0.64,
+                    1.74,  2.58,  2.68,  0.35,  -1.09, -1.89, -1.55, -2.07, -1.3,  -1.96,
+                    0.01,  0.01,  1.02,  -2.23, -0.97, -1.98, 1.7,   1.42,  -0.49, -0.27,
+                    -0.25, 0.06,  1.85,  0.74,  -0.34, -0.09, -1.14, 0.66,  1.61,  0.17,
+                    2.52,  -1.43, -0.7,  -1.52, -1.55, -0.65, -0.7,  -2.7,  -0.31, 0.24,
+                    -0.59, -2.33, 1.27,  0.04,  0.46,  -1.68, 2.0,   -1.48, 1.17,  2.33,
+                    0.62,  -0.61, 2.01,  1.7};
+    data.X_train_row = {
+        2.75,  0.46,  -1.14, 1.13,  0.64,  0.66,  -0.05, 1.74,  1.61,  0.14,  2.58,
+        0.17,  0.58,  2.68,  2.52,  -0.66, 0.35,  -1.43, 0.74,  -1.09, -0.7,  -0.89,
+        -1.89, -1.52, 0.03,  -1.55, -1.55, 0.71,  -2.07, -0.65, -0.71, -1.3,  -0.7,
+        -0.52, -1.96, -2.7,  -0.95, 0.01,  -0.31, 2.33,  0.01,  0.24,  1.99,  1.02,
+        -0.59, -0.62, -2.23, -2.33, -0.55, -0.97, 1.27,  -0.03, -1.98, 0.04,  -1.57,
+        1.7,   0.46,  -0.42, 1.42,  -1.68, -2.53, -0.49, 2.0,   -1.37, -0.27, -1.48,
+        -0.35, -0.25, 1.17,  -3.08, 0.06,  2.33,  -1.53, 1.85,  0.62,  -1.36, 0.74,
+        -0.61, -3.16, -0.34, 2.01,  -1.93, -0.09, 1.7};
+    data.y_train = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
+                    1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+
+    data.X_test = {-0.05, -0.8,  1.59, 0.73,  -0.9,  0.59,  0.6,   -0.28, 0.56,
+                   0.94,  0.73,  1.09, -1.12, -1.15, 0.48,  -0.32, -0.31, 0.28,
+                   -2.66, 2.82,  0.02, -0.37, -0.2,  1.78,  -0.76, -1.3,  -1.23,
+                   -1.56, -2.24, 0.49, -0.58, 2.31,  -1.83, -0.23, 0.06,  -0.5};
+    data.X_test_row = {-0.05, -1.12, -0.76, -0.8,  -1.15, -1.3,  1.59, 0.48, -1.23,
+                       0.73,  -0.32, -1.56, -0.9,  -0.31, -2.24, 0.59, 0.28, 0.49,
+                       0.6,   -2.66, -0.58, -0.28, 2.82,  2.31,  0.56, 0.02, -1.83,
+                       0.94,  -0.37, -0.23, 0.73,  -0.2,  0.06,  1.09, 1.78, -0.5};
+
+    data.kernel = "rbf";
+    data.nu = 0.4;
+    data.seed = 1;
+    data.model = nusvc;
+    data.tol = 1e-5;
+
+    data.probaA_expected = {-0.52048229, -1.69345963, -1.80719586};
+    data.probaB_expected = {0.37316912, 0.08349463, 0.05986692};
+    data.probabilities_expected = {
+        0.155003, 0.149523, 0.384254, 0.306878, 0.183898, 0.335347, 0.154357, 0.485578,
+        0.317652, 0.258246, 0.261128, 0.435947, 0.637182, 0.605715, 0.512921, 0.508883,
+        0.311994, 0.360953, 0.645332, 0.264557, 0.416796, 0.56446,  0.488644, 0.4142,
+        0.207815, 0.244762, 0.102825, 0.18424,  0.504108, 0.3037,   0.200311, 0.249865,
+        0.265552, 0.177294, 0.250228, 0.149853};
+    data.probabilities_expected_row = {
+        0.155003, 0.637182, 0.207815, 0.149523, 0.605715, 0.244762, 0.384254, 0.512921,
+        0.102825, 0.306878, 0.508883, 0.18424,  0.183898, 0.311994, 0.504108, 0.335347,
+        0.360953, 0.3037,   0.154357, 0.645332, 0.200311, 0.485578, 0.264557, 0.249865,
+        0.317652, 0.416796, 0.265552, 0.258246, 0.56446,  0.177294, 0.261128, 0.488644,
+        0.250228, 0.435947, 0.4142,   0.149853};
+    data.log_prob_expected = {
+        -1.864311, -1.900304, -0.956452, -1.181306, -1.693375, -1.092589,
+        -1.868484, -0.722416, -1.1468,   -1.353843, -1.342743, -0.830234,
+        -0.450699, -0.501346, -0.667633, -0.675538, -1.16477,  -1.019007,
+        -0.437991, -1.329697, -0.875157, -0.571886, -0.716122, -0.881407,
+        -1.571108, -1.407469, -2.274727, -1.691517, -0.684965, -1.191716,
+        -1.607884, -1.386835, -1.325945, -1.729944, -1.385383, -1.898102};
+    data.log_prob_expected_row = {
+        -1.864311, -0.450699, -1.571108, -1.900304, -0.501346, -1.407469,
+        -0.956452, -0.667633, -2.274727, -1.181306, -0.675538, -1.691517,
+        -1.693375, -1.16477,  -0.684965, -1.092589, -1.019007, -1.191716,
+        -1.868484, -0.437991, -1.607884, -0.722416, -1.329697, -1.386835,
+        -1.1468,   -0.875157, -1.325945, -1.353843, -0.571886, -1.729944,
+        -1.342743, -0.716122, -1.385383, -0.830234, -0.881407, -1.898102};
+}
+
+// Multi-class SVC polynomial with leading dimension
+template <typename T> void set_probabilities3_data(test_probabilities_type<T> &data) {
+    data.n_samples = 21, data.n_feat = 3;
+    data.n_class = 3;
+    data.n_samples_test = 9;
+    data.ldx_train = 23, data.ldx_test = 10;
+    data.ldx_train_row = 4, data.ldx_test_row = 4;
+    data.ldy_proba = 11, data.ldy_proba_row = 5;
+
+    data.X_train = {0.54,  0.44,  0.3,   0.31,  0.27,  -1.91, 0.85,  -0.57, -3.13, -1.14,
+                    -1.22, -0.64, -1.55, -0.25, -1.48, -1.88, -2.06, -3.45, 0.48,  1.88,
+                    -1.86, 0.0,   0.0,   3.1,   0.58,  1.74,  1.14,  0.82,  0.67,  1.35,
+                    1.3,   0.13,  0.54,  0.14,  -1.2,  -0.76, -1.68, 3.85,  1.26,  -2.82,
+                    -1.49, -0.16, -2.43, -1.93, 0.0,   0.0,   1.66,  0.54,  0.6,   0.69,
+                    1.36,  1.01,  0.39,  2.71,  -1.34, -2.41, -2.53, -0.32, -1.66, -0.05,
+                    -1.61, -1.61, 2.05,  2.26,  -1.11, -0.72, 2.47,  0.0,   0.0};
+    data.X_train_row = {
+        0.54,  3.1,   1.66,  0.0, 0.44,  0.58,  0.54,  0.0, 0.3,   1.74,  0.6,   0.0,
+        0.31,  1.14,  0.69,  0.0, 0.27,  0.82,  1.36,  0.0, -1.91, 0.67,  1.01,  0.0,
+        0.85,  1.35,  0.39,  0.0, -0.57, 1.3,   2.71,  0.0, -3.13, 0.13,  -1.34, 0.0,
+        -1.14, 0.54,  -2.41, 0.0, -1.22, 0.14,  -2.53, 0.0, -0.64, -1.2,  -0.32, 0.0,
+        -1.55, -0.76, -1.66, 0.0, -0.25, -1.68, -0.05, 0.0, -1.48, 3.85,  -1.61, 0.0,
+        -1.88, 1.26,  -1.61, 0.0, -2.06, -2.82, 2.05,  0.0, -3.45, -1.49, 2.26,  0.0,
+        0.48,  -0.16, -1.11, 0.0, 1.88,  -2.43, -0.72, 0.0, -1.86, -1.93, 2.47,  0.0};
+    data.y_train = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2};
+
+    data.X_test = {-1.37, -1.35, 1.43,  0.53,  -0.85, 0.18,  2.49,  -0.05, -1.2, 0.0,
+                   -1.49, 1.19,  -1.55, -1.22, 2.46,  0.11,  -0.93, 0.28,  1.64, 0.0,
+                   -1.52, -1.11, -1.06, -0.7,  -0.97, -0.64, -1.84, 0.06,  1.66, 0.0};
+    data.X_test_row = {-1.37, -1.49, -1.52, 0.0,  -1.35, 1.19, -1.11, 0.0,   1.43,
+                       -1.55, -1.06, 0.0,   0.53, -1.22, -0.7, 0.0,   -0.85, 2.46,
+                       -0.97, 0.0,   0.18,  0.11, -0.64, 0.0,  2.49,  -0.93, -1.84,
+                       0.0,   -0.05, 0.28,  0.06, 0.0,   -1.2, 1.64,  1.66,  0.0};
+
+    data.kernel = "poly";
+    data.seed = 1;
+    data.model = svc;
+    data.tol = 1e-5;
+    data.C = 1.0;
+
+    data.probaA_expected = {-0.80752395, -1.90121208, -0.8019147};
+    data.probaB_expected = {0.08679179, 0.91811356, 0.04827995};
+    data.probabilities_expected = {
+        0.37512,  0.474093, 0.300765, 0.450543, 0.508423, 0.497157, 0.256656,
+        0.497544, 0.642299, 0.0,      0.0,      0.424449, 0.374406, 0.306642,
+        0.315062, 0.407331, 0.313115, 0.33009,  0.311438, 0.291071, 0.0,
+        0.0,      0.20043,  0.1515,   0.392593, 0.234395, 0.084246, 0.189728,
+        0.413255, 0.191018, 0.06663,  0.0,      0.0};
+    data.probabilities_expected_row = {
+        0.37512,  0.424449, 0.20043,  0.0, 0.0, 0.474093, 0.374406, 0.1515,   0.0, 0.0,
+        0.300765, 0.306642, 0.392593, 0.0, 0.0, 0.450543, 0.315062, 0.234395, 0.0, 0.0,
+        0.508423, 0.407331, 0.084246, 0.0, 0.0, 0.497157, 0.313115, 0.189728, 0.0, 0.0,
+        0.256656, 0.33009,  0.413255, 0.0, 0.0, 0.497544, 0.311438, 0.191018, 0.0, 0.0,
+        0.642299, 0.291071, 0.06663,  0.0, 0.0};
+    data.log_prob_expected = {
+        -0.980508, -0.746351, -1.201426, -0.797301, -0.676441, -0.69885,  -1.36002,
+        -0.698071, -0.442702, 0.0,       0.0,       -0.856963, -0.982414, -1.182074,
+        -1.154987, -0.89813,  -1.161185, -1.108391, -1.166555, -1.234187, 0.0,
+        0.0,       -1.607288, -1.887167, -0.934982, -1.450748, -2.474015, -1.662161,
+        -0.883691, -1.655389, -2.708605, 0.0,       0.0};
+    data.log_prob_expected_row = {
+        -0.980508, -0.856963, -1.607288, 0.0,       0.0,       -0.746351, -0.982414,
+        -1.887167, 0.0,       0.0,       -1.201426, -1.182074, -0.934982, 0.0,
+        0.0,       -0.797301, -1.154987, -1.450748, 0.0,       0.0,       -0.676441,
+        -0.89813,  -2.474015, 0.0,       0.0,       -0.69885,  -1.161185, -1.662161,
+        0.0,       0.0,       -1.36002,  -1.108391, -0.883691, 0.0,       0.0,
+        -0.698071, -1.166555, -1.655389, 0.0,       0.0,       -0.442702, -1.234187,
+        -2.708605, 0.0,       0.0};
+}
+
+// Binary NuSVC sigmoid with leading dimension
+template <typename T> void set_probabilities4_data(test_probabilities_type<T> &data) {
+    data.n_samples = 17, data.n_feat = 3;
+    data.n_class = 2;
+    data.n_samples_test = 8;
+    data.ldx_train = 19, data.ldx_test = 9;
+    data.ldx_train_row = 4, data.ldx_test_row = 4;
+    data.ldy_proba = 11, data.ldy_proba_row = 3;
+
+    data.X_train = {-1.2,  1.84,  0.91,  3.31,  -0.01, 2.14,  -0.54, 1.46, 0.44,  -0.99,
+                    0.09,  -0.67, -1.9,  0.47,  -1.53, -1.81, 0.32,  0.0,  0.0,   -1.08,
+                    -0.08, 0.92,  2.22,  -0.85, 0.35,  -1.05, 1.38,  0.67, 1.13,  -1.69,
+                    0.01,  -1.64, 0.92,  -0.3,  0.92,  0.99,  0.0,   0.0,  -2.92, 0.03,
+                    0.75,  -1.48, -2.22, -1.52, -2.06, 1.83,  1.86,  1.35, 0.36,  0.46,
+                    0.6,   0.44,  -0.93, 0.65,  1.41,  0.0,   0.0};
+    data.X_train_row = {
+        -1.2,  -1.08, -2.92, 0.0, 1.84,  -0.08, 0.03,  0.0, 0.91,  0.92, 0.75,  0.0,
+        3.31,  2.22,  -1.48, 0.0, -0.01, -0.85, -2.22, 0.0, 2.14,  0.35, -1.52, 0.0,
+        -0.54, -1.05, -2.06, 0.0, 1.46,  1.38,  1.83,  0.0, 0.44,  0.67, 1.86,  0.0,
+        -0.99, 1.13,  1.35,  0.0, 0.09,  -1.69, 0.36,  0.0, -0.67, 0.01, 0.46,  0.0,
+        -1.9,  -1.64, 0.6,   0.0, 0.47,  0.92,  0.44,  0.0, -1.53, -0.3, -0.93, 0.0,
+        -1.81, 0.92,  0.65,  0.0, 0.32,  0.99,  1.41,  0.0};
+    data.y_train = {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
+
+    data.X_test = {-0.14, 1.98, -0.66, 1.89,  -1.48, 0.62, 0.81, -0.8, 0.0,
+                   -0.01, 1.55, -0.61, -1.54, -2.81, 0.8,  0.8,  0.64, 0.0,
+                   1.93,  0.69, 0.41,  -0.08, 0.77,  2.02, 0.44, 0.56, 0.0};
+    data.X_test_row = {-0.14, -0.01, 1.93, 0.0, 1.98, 1.55,  0.69,  0.0,
+                       -0.66, -0.61, 0.41, 0.0, 1.89, -1.54, -0.08, 0.0,
+                       -1.48, -2.81, 0.77, 0.0, 0.62, 0.8,   2.02,  0.0,
+                       0.81,  0.8,   0.44, 0.0, -0.8, 0.64,  0.56,  0.0};
+
+    data.kernel = "sigmoid";
+    data.seed = 1;
+    data.model = nusvc;
+    data.tol = 1e-5;
+    data.nu = 0.6;
+
+    data.probaA_expected = {-0.74369434};
+    data.probaB_expected = {0.03822147};
+    data.probabilities_expected = {
+        0.324032, 0.708623, 0.368247, 0.71603,  0.247028, 0.463836, 0.603955, 0.377684,
+        0.0,      0.0,      0.0,      0.675968, 0.291377, 0.631753, 0.28397,  0.752972,
+        0.536164, 0.396045, 0.622316, 0.0,      0.0,      0.0};
+    data.probabilities_expected_row = {0.324032, 0.675968, 0.0, 0.708623, 0.291377, 0.0,
+                                       0.368247, 0.631753, 0.0, 0.71603,  0.28397,  0.0,
+                                       0.247028, 0.752972, 0.0, 0.463836, 0.536164, 0.0,
+                                       0.603955, 0.396045, 0.0, 0.377684, 0.622316, 0.0};
+    data.log_prob_expected = {-1.126913, -0.344431, -0.999002, -0.334033, -1.398252,
+                              -0.768225, -0.504256, -0.973697, 0.0,       0.0,
+                              0.0,       -0.39161,  -1.233138, -0.459257, -1.258888,
+                              -0.283728, -0.623315, -0.926227, -0.474308, 0.0,
+                              0.0,       0.0};
+    data.log_prob_expected_row = {-1.126913, -0.39161,  0.0, -0.344431, -1.233138, 0.0,
+                                  -0.999002, -0.459257, 0.0, -0.334033, -1.258888, 0.0,
+                                  -1.398252, -0.283728, 0.0, -0.768225, -0.623315, 0.0,
+                                  -0.504256, -0.926227, 0.0, -0.973697, -0.474308, 0.0};
+}
+
+// Binary SVC rbf dataset that triggers missing_positive
+template <typename T>
+void set_probabilities_missing_positive_data(test_probabilities_type<T> &data) {
+    data.n_samples = 17, data.n_feat = 3;
+    data.n_class = 2;
+    data.n_samples_test = 8;
+    data.ldx_train = data.n_samples, data.ldx_test = data.n_samples_test;
+    data.ldx_train_row = data.n_feat, data.ldx_test_row = data.n_feat;
+    data.ldy_proba = data.n_samples_test, data.ldy_proba_row = data.n_class;
+
+    data.X_train = {-1.2,  1.84,  0.91,  3.31,  -0.01, 2.14,  -0.54, 1.46,  0.44,
+                    -0.99, 0.09,  -0.67, -1.9,  0.47,  -1.53, -1.81, 0.32,  -1.08,
+                    -0.08, 0.92,  2.22,  -0.85, 0.35,  -1.05, 1.38,  0.67,  1.13,
+                    -1.69, 0.01,  -1.64, 0.92,  -0.3,  0.92,  0.99,  -2.92, 0.03,
+                    0.75,  -1.48, -2.22, -1.52, -2.06, 1.83,  1.86,  1.35,  0.36,
+                    0.46,  0.6,   0.44,  -0.93, 0.65,  1.41};
+    data.X_train_row = {-1.2,  -1.08, -2.92, 1.84,  -0.08, 0.03,  0.91,  0.92, 0.75,
+                        3.31,  2.22,  -1.48, -0.01, -0.85, -2.22, 2.14,  0.35, -1.52,
+                        -0.54, -1.05, -2.06, 1.46,  1.38,  1.83,  0.44,  0.67, 1.86,
+                        -0.99, 1.13,  1.35,  0.09,  -1.69, 0.36,  -0.67, 0.01, 0.46,
+                        -1.9,  -1.64, 0.6,   0.47,  0.92,  0.44,  -1.53, -0.3, -0.93,
+                        -1.81, 0.92,  0.65,  0.32,  0.99,  1.41};
+    data.y_train = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
+
+    data.X_test = {-0.14, 1.98, -0.66, 1.89,  -1.48, 0.62, 0.81, -0.8,
+                   -0.01, 1.55, -0.61, -1.54, -2.81, 0.8,  0.8,  0.64,
+                   1.93,  0.69, 0.41,  -0.08, 0.77,  2.02, 0.44, 0.56};
+    data.X_test_row = {-0.14, -0.01, 1.93,  1.98,  1.55,  0.69,  -0.66, -0.61,
+                       0.41,  1.89,  -1.54, -0.08, -1.48, -2.81, 0.77,  0.62,
+                       0.8,   2.02,  0.81,  0.8,   0.44,  -0.8,  0.64,  0.56};
+
+    data.kernel = "rbf";
+    data.seed = 1;
+    data.model = svc;
+    data.tol = 1e-5;
+    data.C = 1.0;
+
+    data.probaA_expected = {-0.62962823};
+    data.probaB_expected = {-1.65890475};
+    data.probabilities_expected = {
+        0.910581, 0.909913, 0.911781, 0.913174, 0.912314, 0.907993, 0.908826, 0.909086,
+        0.089419, 0.090087, 0.088219, 0.086826, 0.087686, 0.092007, 0.091174, 0.090914};
+    data.probabilities_expected_row = {
+        0.910581, 0.089419, 0.909913, 0.090087, 0.911781, 0.088219, 0.913174, 0.086826,
+        0.912314, 0.087686, 0.907993, 0.092007, 0.908826, 0.091174, 0.909086, 0.090914};
+    data.log_prob_expected = {-0.093673, -0.094407, -0.092355, -0.090829,
+                              -0.091771, -0.096518, -0.095601, -0.095315,
+                              -2.414417, -2.406974, -2.427937, -2.443845,
+                              -2.433995, -2.385895, -2.39499,  -2.397843};
+    data.log_prob_expected_row = {-0.093673, -2.414417, -0.094407, -2.406974,
+                                  -0.092355, -2.427937, -0.090829, -2.443845,
+                                  -0.091771, -2.433995, -0.096518, -2.385895,
+                                  -0.095601, -2.39499,  -0.095315, -2.397843};
+}
+
+// Binary SVC rbf dataset that triggers missing_negative
+template <typename T>
+void set_probabilities_missing_negative_data(test_probabilities_type<T> &data) {
+    data.n_samples = 17, data.n_feat = 3;
+    data.n_class = 2;
+    data.n_samples_test = 8;
+    data.ldx_train = data.n_samples, data.ldx_test = data.n_samples_test;
+    data.ldx_train_row = data.n_feat, data.ldx_test_row = data.n_feat;
+    data.ldy_proba = data.n_samples_test, data.ldy_proba_row = data.n_class;
+
+    data.X_train = {-1.2,  1.84,  0.91,  3.31,  -0.01, 2.14,  -0.54, 1.46,  0.44,
+                    -0.99, 0.09,  -0.67, -1.9,  0.47,  -1.53, -1.81, 0.32,  -1.08,
+                    -0.08, 0.92,  2.22,  -0.85, 0.35,  -1.05, 1.38,  0.67,  1.13,
+                    -1.69, 0.01,  -1.64, 0.92,  -0.3,  0.92,  0.99,  -2.92, 0.03,
+                    0.75,  -1.48, -2.22, -1.52, -2.06, 1.83,  1.86,  1.35,  0.36,
+                    0.46,  0.6,   0.44,  -0.93, 0.65,  1.41};
+    data.X_train_row = {-1.2,  -1.08, -2.92, 1.84,  -0.08, 0.03,  0.91,  0.92, 0.75,
+                        3.31,  2.22,  -1.48, -0.01, -0.85, -2.22, 2.14,  0.35, -1.52,
+                        -0.54, -1.05, -2.06, 1.46,  1.38,  1.83,  0.44,  0.67, 1.86,
+                        -0.99, 1.13,  1.35,  0.09,  -1.69, 0.36,  -0.67, 0.01, 0.46,
+                        -1.9,  -1.64, 0.6,   0.47,  0.92,  0.44,  -1.53, -0.3, -0.93,
+                        -1.81, 0.92,  0.65,  0.32,  0.99,  1.41};
+    data.y_train = {0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
+    data.X_test = {-0.14, 1.98, -0.66, 1.89,  -1.48, 0.62, 0.81, -0.8,
+                   -0.01, 1.55, -0.61, -1.54, -2.81, 0.8,  0.8,  0.64,
+                   1.93,  0.69, 0.41,  -0.08, 0.77,  2.02, 0.44, 0.56};
+    data.X_test_row = {-0.14, -0.01, 1.93,  1.98,  1.55,  0.69,  -0.66, -0.61,
+                       0.41,  1.89,  -1.54, -0.08, -1.48, -2.81, 0.77,  0.62,
+                       0.8,   2.02,  0.81,  0.8,   0.44,  -0.8,  0.64,  0.56};
+
+    data.kernel = "rbf";
+    data.seed = 1;
+    data.model = svc;
+    data.tol = 1e-5;
+    data.C = 1.0;
+
+    data.probaA_expected = {-3.83450139};
+    data.probaB_expected = {-1.59507182};
+    data.probabilities_expected = {
+        0.097102, 0.094555, 0.06613, 0.084187, 0.10167, 0.096079, 0.080095, 0.08057,
+        0.902898, 0.905445, 0.93387, 0.915813, 0.89833, 0.903921, 0.919905, 0.91943};
+    data.probabilities_expected_row = {
+        0.097102, 0.902898, 0.094555, 0.905445, 0.06613,  0.93387,  0.084187, 0.915813,
+        0.10167,  0.89833,  0.096079, 0.903921, 0.080095, 0.919905, 0.08057,  0.91943};
+    data.log_prob_expected = {-2.331996, -2.358576, -2.716128, -2.474714,
+                              -2.286019, -2.342583, -2.524543, -2.518626,
+                              -0.102145, -0.099328, -0.068418, -0.087943,
+                              -0.107218, -0.101014, -0.083485, -0.084002};
+    data.log_prob_expected_row = {-2.331996, -0.102145, -2.358576, -0.099328,
+                                  -2.716128, -0.068418, -2.474714, -0.087943,
+                                  -2.286019, -0.107218, -2.342583, -0.101014,
+                                  -2.524543, -0.083485, -2.518626, -0.084002};
 }

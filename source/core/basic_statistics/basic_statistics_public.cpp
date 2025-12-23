@@ -178,16 +178,18 @@ da_status da_standardize_s(da_order order, da_axis axis, da_int n_rows, da_int n
 
 da_status da_covariance_matrix_d(da_order order, da_int n_rows, da_int n_cols,
                                  const double *X, da_int ldx, da_int dof, double *cov,
-                                 da_int ldcov) {
-    DISPATCHER(nosave_stats, return (da_basic_statistics::covariance_matrix(
-                                 order, n_rows, n_cols, X, ldx, dof, cov, ldcov)));
+                                 da_int ldcov, da_int assume_centered) {
+    DISPATCHER(nosave_stats,
+               return (da_basic_statistics::covariance_matrix(
+                   order, n_rows, n_cols, X, ldx, dof, cov, ldcov, assume_centered)));
 }
 
 da_status da_covariance_matrix_s(da_order order, da_int n_rows, da_int n_cols,
                                  const float *X, da_int ldx, da_int dof, float *cov,
-                                 da_int ldcov) {
-    DISPATCHER(nosave_stats, return (da_basic_statistics::covariance_matrix(
-                                 order, n_rows, n_cols, X, ldx, dof, cov, ldcov)));
+                                 da_int ldcov, da_int assume_centered) {
+    DISPATCHER(nosave_stats,
+               return (da_basic_statistics::covariance_matrix(
+                   order, n_rows, n_cols, X, ldx, dof, cov, ldcov, assume_centered)));
 }
 
 da_status da_correlation_matrix_d(da_order order, da_int n_rows, da_int n_cols,

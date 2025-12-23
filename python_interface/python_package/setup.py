@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -23,7 +23,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-# pylint: disable = missing-module-docstring, missing-class-docstring, attribute-defined-outside-init
+# pylint: disable = missing-module-docstring, missing-class-docstring,
+# attribute-defined-outside-init
 
 import os
 from setuptools import setup, find_packages
@@ -31,6 +32,7 @@ from wheel.bdist_wheel import bdist_wheel
 from packaging.tags import sys_tags
 
 # Create a specific bdist_wheel to signal to setup.py that the wheel is not pure python
+
 
 class spec_bdist_wheel(bdist_wheel):
     def get_tag(self):
@@ -46,10 +48,8 @@ class spec_bdist_wheel(bdist_wheel):
             if abi_tag is not None and platform_tag is not None:
                 break
 
-        if 'manylinux' in str(platform_tag):
-            platform_tag = 'linux_x86_64'
-
         return python_tag, abi_tag, platform_tag
+
 
 # List of all dependent libraries that were copied in the python_package install
 lib_extensions = ['.so', '.dll', '.lib', '.pyd']
@@ -59,12 +59,8 @@ for lib in os.listdir('aoclda'):
         dep_libs.append(lib)
 
 setup(
-    name="aoclda",
     cmdclass={'bdist_wheel': spec_bdist_wheel},
-    long_description="AOCL-DA Python Interfaces",
-    version="5.0.1",
     packages=find_packages(),
     include_package_data=True,
-    package_data={'aoclda': dep_libs},
-    install_requires=['numpy', 'wheel'],
+    package_data={'aoclda': dep_libs + ['License', 'Notices']},
 )

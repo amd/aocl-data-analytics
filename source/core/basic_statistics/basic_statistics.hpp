@@ -73,11 +73,12 @@ da_status moment(da_order order, da_axis axis_in, da_int n_in, da_int p_in, cons
 /* Correlation or covariance matrix of x */
 template <typename T>
 da_status cov_corr_matrix(da_order order, da_int n, da_int p, const T *x, da_int ldx,
-                          da_int dof, T *mat, da_int ldmat, bool compute_corr);
+                          da_int dof, T *mat, da_int ldmat, bool compute_corr,
+                          da_int assume_centered);
 
 template <typename T>
 da_status covariance_matrix(da_order order, da_int n, da_int p, const T *x, da_int ldx,
-                            da_int dof, T *cov, da_int ldcov);
+                            da_int dof, T *cov, da_int ldcov, da_int assume_centered);
 
 template <typename T>
 da_status correlation_matrix(da_order order, da_int n, da_int p, const T *x, da_int ldx,

@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-release-dynamic",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "mt",
+        "lp64",
+        "static",
+        "dynamic",
+        "release"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-dynamic-release"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-mt-lp64-static-dynamic-release",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-release-dynamic",
+      "configurePreset": "linux-gcc-mt-lp64-static-release-dynamic",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-gcc-mt-lp64-static-release-dynamic-install",
+      "configurePreset": "linux-gcc-mt-lp64-static-release-dynamic",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-release-dynamic",
+      "configurePreset": "linux-gcc-mt-lp64-static-release-dynamic",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-mt-lp64-static-release-dynamic",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-mt-lp64-static-release-dynamic"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-mt-lp64-static-release-dynamic-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-gcc-mt-lp64-static-release-dynamic"
+        }
+      ]
+    }
+  ]
+}

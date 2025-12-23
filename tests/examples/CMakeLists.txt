@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -24,17 +24,23 @@
 
 include_directories(${CMAKE_SOURCE_DIR}/source/include)
 
-add_executable(nlls nlls.cpp)
+if(BUILD_FORTRAN)
 
-add_executable(nlls_single nlls_single.cpp)
+  add_executable(nlls nlls.cpp)
 
-add_executable(nlls_lanczos_fd nlls_lanczos_fd.cpp)
+  add_executable(nlls_single nlls_single.cpp)
+
+  add_executable(nlls_lanczos_fd nlls_lanczos_fd.cpp)
+
+  add_executable(reglinear_model reglinear_model.cpp)
+
+endif()
 
 add_executable(basic_statistics basic_statistics.cpp)
 
-add_executable(linear_model linear_model.cpp)
+add_executable(train_test_split train_test_split.cpp)
 
-add_executable(reglinear_model reglinear_model.cpp)
+add_executable(linear_model linear_model.cpp)
 
 add_executable(linmod_diabetes linmod_diabetes.cpp)
 target_compile_definitions(linmod_diabetes
@@ -69,7 +75,9 @@ target_link_libraries(dbscan PRIVATE aocl-da)
 
 add_executable(metrics metrics.cpp)
 
-add_executable(knn knn.cpp)
+add_executable(knn_classification knn_classification.cpp)
+
+add_executable(knn_regression knn_regression.cpp)
 
 add_executable(kernel_functions kernel_functions.cpp)
 
@@ -78,13 +86,10 @@ add_executable(svc svc.cpp)
 add_executable(nusvr nusvr.cpp)
 
 set(EXAMPLE_EXES
-    nlls
-    nlls_single
-    nlls_lanczos_fd
-    reglinear_model
     linear_model
     linmod_diabetes
     basic_statistics
+    train_test_split
     pca
     pca_cancer
     kmeans
@@ -93,14 +98,19 @@ set(EXAMPLE_EXES
     decision_tree
     random_forest
     metrics
-    knn
+    knn_classification
+    knn_regression
     svc
     nusvr
     kernel_functions)
 
+if(BUILD_FORTRAN)
+  list(APPEND EXAMPLE_EXES nlls nlls_single nlls_lanczos_fd reglinear_model)
+endif()
+
 foreach(target ${EXAMPLE_EXES})
   target_link_libraries(${target} PRIVATE aocl-da)
-  if(BUILD_SMP OR UNIX)
+  if(BUILD_SMP)
     target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
   endif()
   # Define -DAOCL_ILP64 when ILP64 libraries are built. For LP64, this is an

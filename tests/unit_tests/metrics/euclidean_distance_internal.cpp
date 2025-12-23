@@ -25,10 +25,6 @@
  *
  */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "pairwise_distances.hpp"
@@ -432,7 +428,7 @@ TYPED_TEST(EDTest, Euclidean_Distance) {
             std::vector<TypeParam> X_norms(test.X_norms);
             std::vector<TypeParam> Y_norms(test.Y_norms);
 
-            TEST_ARCH::euclidean_distance(
+            TEST_ARCH::euclidean_gemm_distance(
                 test.order, test.m, test.n, test.k, test.X.data(), test.ldx,
                 test.Y.data(), test.ldy, D.data(), test.ldd, X_norms.data(),
                 param.compute_X_norms, Y_norms.data(), param.compute_Y_norms,

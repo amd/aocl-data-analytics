@@ -1,0 +1,67 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "mt",
+        "ilp64",
+        "shared",
+        "python",
+        "dynamic",
+        "debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-dynamic-debug"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-mt-ilp64-shared-python-dynamic-debug",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python",
+      "configurePreset": "linux-gcc-mt-ilp64-shared-debug-dynamic-python",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python-install",
+      "configurePreset": "linux-gcc-mt-ilp64-shared-debug-dynamic-python",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python",
+      "configurePreset": "linux-gcc-mt-ilp64-shared-debug-dynamic-python",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-gcc-mt-ilp64-shared-debug-dynamic-python"
+        }
+      ]
+    }
+  ]
+}

@@ -38,13 +38,13 @@ def kernel_functions_examples():
     """
 
     X = np.array([
-        [1.0,  2.0],
+        [1.0, 2.0],
         [-1.0, 0.0],
         [2.0, -2.0]
     ])
     Y = np.array([
         [0.5, -0.5],
-        [1.0,  3.0]
+        [1.0, 3.0]
     ])
 
     print("\n--- Kernel Functions Examples ---\n")

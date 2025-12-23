@@ -26,11 +26,15 @@
  */
 
 #include "aoclda.h"
+#include "context.hpp"
 #include "da_cblas.hh"
 #include "da_error.hpp"
 #include "da_omp.hpp"
+#include "da_utils.hpp"
 #include "lapack_templates.hpp"
 #include "macros.h"
+#include "miscellaneous.hpp"
+#include <string>
 #include <vector>
 
 /* This function implements a blocked, parallelized QR algorithm for tall skinny matrices, similar to
@@ -88,10 +92,12 @@
 
  */
 
-#define MAX_NUM_BLOCKS da_int(256)
-#define MIN_BLOCK_SIZE da_int(1024)
+#define QR_MAX_NUM_BLOCKS da_int(256)
+#define QR_MIN_BLOCK_SIZE da_int(1024)
 
 namespace ARCH {
+
+using namespace std::literals::string_literals;
 
 template <typename T>
 da_status da_qr(da_int m, da_int n, std::vector<T> &A, da_int lda, std::vector<T> &tau,
@@ -109,48 +115,46 @@ da_status da_qr(da_int m, da_int n, std::vector<T> &A, da_int lda, std::vector<T
     /* Heuristic based on flop counts to determine the level of blocking. We need the following:
        1. m > n else it's never cheaper to do blocked QR
        2. block_size > n for same reason, which is implied by condition 4
-       3. n_blocks < m / n x [ (n_threads-1) / (3 x n_threads - 1) ]
+       3. n_blocks < (m / n) x [3 x (n_threads-1) / (3 x n_threads - 1)]
        4. n_blocks < m / n (which is implied by condition 3)
        5. n_blocks < 256 or some other suitable value e.g. number of cores on a node
-       6. block_size > 2048 to prevent excessively small geqrf calls
+       6. block_size > 1024 to prevent excessively small geqrf calls
        7. block_size to be rounded up to the nearest multiple of 256 for better cache use
        8. block_size < m
        9. the remainder, final_block_size, or size of the last block, must be no smaller than n to avoid a short wide QR
        10. n_blocks should exceed the number of threads available so we can exploit parallelism
      */
     da_int max_blocks =
-        std::max(std::min(MAX_NUM_BLOCKS,
-                          (da_int)(3 * (n_threads - 2) * m / ((3 * n_threads - 1) * n))),
+        std::max(std::min(QR_MAX_NUM_BLOCKS,
+                          (da_int)(3 * (n_threads - 1) * m / ((3 * n_threads - 1) * n))),
                  (da_int)1);
 
-    max_blocks = std::min(max_blocks, n_threads * 2);
+    max_blocks = std::min(max_blocks, n_threads);
+
+    da_int min_block_size = QR_MIN_BLOCK_SIZE;
+    const char block_size_override[]{"pca.qr_block_size_override"};
+    if (context::get_context()->hidden_settings.find(block_size_override) !=
+        context::get_context()->hidden_settings.end()) {
+        // Override min_block_size
+        std::string block_size_str =
+            context::get_context()->hidden_settings[block_size_override];
+
+        min_block_size = static_cast<da_int>(std::stoi(block_size_str));
+        // Override max_blocks too so we can force the blocking we want
+        max_blocks = QR_MAX_NUM_BLOCKS;
+    }
 
     if (max_blocks == 1) {
         n_blocks = 1;
         final_block_size = m;
         block_size = m;
     } else {
-
-        block_size = std::min(MIN_BLOCK_SIZE, m);
-
-        if (m / block_size > max_blocks) {
-            block_size = m / max_blocks;
-            // Round up to nearest multiple of 256 as long as we don't exceed m
-            block_size = std::min(((block_size + 255) >> 8) << 8, m);
-        }
-
-        n_blocks = m / block_size;
-        final_block_size = m % block_size;
-        // Count the remainder in the number of blocks but ensure it's larger than n, else concatenate with previous block
-        if (final_block_size >= n) {
-            n_blocks += 1;
-        } else {
-            final_block_size += block_size;
-            if (n_blocks == 1)
-                // Special case of 1 block with a small remainder
-                block_size = final_block_size;
-        }
+        da_utils::tall_skinny_blocking_scheme(m, min_block_size, max_blocks, n, n_blocks,
+                                              block_size, final_block_size);
     }
+
+    // Add telemetry of final block size we use
+    context_set_hidden_settings("pca.block_size"s, std::to_string(block_size));
 
     n_threads = std::min(n_threads, n_blocks);
 

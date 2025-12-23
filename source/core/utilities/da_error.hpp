@@ -298,7 +298,7 @@ class da_error_t {
         if (this->action == action_t::DA_ABORT)
             std::abort();
         else if (this->action == action_t::DA_THROW)
-            std::runtime_error(this->get_mesg());
+            throw std::runtime_error(this->get_mesg());
         return status;
     };
 };

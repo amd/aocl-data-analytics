@@ -21,14 +21,10 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda_types.h"
 #include "da_error.hpp"
-#include "dbscan_types.hpp"
 #include "macros.h"
+#include "nn_types.hpp"
 #include "options.hpp"
 
 #include <limits>
@@ -37,7 +33,7 @@ namespace ARCH {
 
 namespace da_dbscan {
 
-using namespace da_dbscan_types;
+using namespace da_nn_types;
 
 template <class T>
 inline da_status register_dbscan_options(da_options::OptionRegistry &opts,
@@ -52,29 +48,35 @@ inline da_status register_dbscan_options(da_options::OptionRegistry &opts,
             da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 5));
         opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
-            "leaf size", "Leaf size for KD tree or ball tree (reserved for future use).",
-            1, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
-            30));
+            "leaf size", "Leaf size for k-d tree or ball tree.", 1,
+            da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf, 30));
         opts.register_opt(oi);
         std::shared_ptr<OptionString> os;
-        os = std::make_shared<OptionString>(
-            OptionString("algorithm", "Choice of algorithm (reserved for future use).",
-                         {{"brute", brute},
-                          {"brute serial", brute_serial},
-                          {"kd tree", kd_tree},
-                          {"ball tree", ball_tree},
-                          {"auto", automatic}},
-                         "brute"));
+        os = std::make_shared<OptionString>(OptionString("algorithm",
+                                                         "Choice of algorithm.",
+                                                         {{"brute", brute},
+                                                          {"kd tree", kd_tree},
+                                                          {"ball tree", ball_tree},
+                                                          {"auto", automatic}},
+                                                         "auto"));
         opts.register_opt(os);
+        // da_euclidean_gemm will call syrk which is optimized for the case where dist(X,X) is required.
+        // Since da_euclidean is optimized for generic dist(X,Y) only, when
+        // "euclidean" is chosen as an option we call the syrk-based implementation through euclidean_gemm.
+        // Once blocked distances are optimized for the cases where dist(X,X) is computed,
+        // we will make available both euclidean_gemm and euclidean options.
         os = std::make_shared<OptionString>(
-            OptionString("metric",
-                         "Choice of metric used to compute pairwise distances (reserved "
-                         "for future use).",
-                         {{"euclidean", euclidean},
-                          {"sqeuclidean", sqeuclidean},
-                          {"minkowski", minkowski},
-                          {"manhattan", manhattan}},
+            OptionString("metric", "Choice of metric used to compute pairwise distances.",
+                         {{"euclidean", da_euclidean_gemm},
+                          {"l2", da_l2},
+                          {"sqeuclidean", da_sqeuclidean_gemm},
+                          {"manhattan", da_manhattan},
+                          {"l1", da_l1},
+                          {"cityblock", da_cityblock},
+                          {"cosine", da_cosine},
+                          {"minkowski", da_minkowski}},
                          "euclidean"));
+        opts.register_opt(os);
         opts.register_opt(os);
         std::shared_ptr<OptionNumeric<T>> oT;
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
@@ -84,10 +86,10 @@ inline da_status register_dbscan_options(da_options::OptionRegistry &opts,
             0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
             static_cast<T>(1.0e-4), "10^{-4}"));
         opts.register_opt(oT);
-        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
-            "power", "The power of the Minkowski metric used (reserved for future use).",
-            0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
-            static_cast<T>(2.0), "2.0"));
+        oT = std::make_shared<OptionNumeric<T>>(
+            OptionNumeric<T>("power", "The power of the Minkowski metric used.", 0,
+                             da_options::lbound_t::greaterequal, 0,
+                             da_options::ubound_t::p_inf, static_cast<T>(2.0), "2.0"));
         opts.register_opt(oT);
 
     } catch (std::bad_alloc &) {

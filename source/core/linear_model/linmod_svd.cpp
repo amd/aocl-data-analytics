@@ -40,13 +40,33 @@ template <typename T> svd_data<T>::svd_data(da_int nsamples, da_int nfeat) {
 
     // Work arrays for the SVD
     min_order = std::min(nsamples, nfeat);
+    temp.resize(min_order);
     S.resize(min_order);
     U.resize(nsamples * min_order);
     Vt.resize(min_order * nfeat);
-    temp.resize(min_order);
-    lwork = 4 * min_order * min_order + 7 * min_order;
     iwork.resize(8 * min_order);
+
+    lwork = 1;
     work.resize(lwork);
+
+    da_int qlwork{-1};
+    T X[1];
+    da_int ldX = nsamples;
+    da_int info = 1;
+    char jobz = 'S';
+
+    // Query optimal work array size
+    da::gesdd(&jobz, &nsamples, &nfeat, X, &ldX, S.data(), U.data(), &nsamples, Vt.data(),
+              &min_order, work.data(), &qlwork, iwork.data(), &info);
+    qlwork = work[0]; // get optimal size of work array
+    if (info != 0 || qlwork < 0) {
+        throw std::runtime_error(
+            "encountered an unexpected error while quering work array size in the SVD "
+            "decomposition (gesdd INFO=" +
+            std::to_string(info) + ")");
+    }
+    work.resize(qlwork);
+    lwork = qlwork;
 };
 
 template struct svd_data<float>;

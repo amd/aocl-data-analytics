@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -25,7 +25,7 @@
 # Python bindings
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(py_aoclda VERSION 5.1.0)
+project(py_aoclda VERSION 5.2.0)
 
 set(BUILD_SHARED_LIBS ON)
 option(BUILD_ILP64 "ILP64 Support" OFF)
@@ -57,8 +57,7 @@ else()
   add_definitions(-DAOCLDA_ILP64)
 endif()
 # Create the pybind11 modules
-pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp
-                    bindings/utilities_py.cpp)
+pybind11_add_module(_aoclda bindings/aoclda_pywrappers.cpp)
 # Do not add any new directories here. This is to keep the python wrapper
 # separate from the main library
 target_include_directories(_aoclda PRIVATE ${CMAKE_SOURCE_DIR}/source/include)
@@ -67,7 +66,7 @@ if(USE_EXISTING_DA)
 else()
   target_link_libraries(_aoclda PRIVATE aocl-da)
 endif()
-if(BUILD_SMP OR UNIX)
+if(BUILD_SMP)
   target_link_libraries(_aoclda PRIVATE OpenMP::OpenMP_CXX)
 endif()
 install(

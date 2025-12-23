@@ -30,8 +30,8 @@ namespace random_forest_public {
 
 template <typename random_forest_class, typename T>
 da_status random_forest_set_data(da_handle handle, da_int n_samples, da_int n_features,
-                                 da_int n_class, const T *X, da_int ldx,
-                                 const da_int *y) {
+                                 da_int n_class, const T *X, da_int ldx, const da_int *y,
+                                 const da_int *categorical_features) {
     random_forest_class *random_forest =
         dynamic_cast<random_forest_class *>(handle->get_alg_handle<T>());
     if (random_forest == nullptr)
@@ -40,7 +40,8 @@ da_status random_forest_set_data(da_handle handle, da_int n_samples, da_int n_fe
             "handle was not initialized with handle_type=da_handle_random_forest or "
             "handle is invalid.");
 
-    return random_forest->set_training_data(n_samples, n_features, X, ldx, y, n_class);
+    return random_forest->set_training_data(n_samples, n_features, X, ldx, y, n_class,
+                                            categorical_features);
 }
 
 template <typename random_forest_class, typename T>

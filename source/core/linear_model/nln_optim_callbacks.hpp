@@ -40,9 +40,16 @@ namespace ARCH {
  * Contain all the basic data to compute */
 template <class T> class usrdata_base {
   public:
+    // User data storage order (copied from the handle)
+    da_order order{da_order::column_major};
+
+    // Number of samples and features
     da_int nsamples = 0, nfeat = 0;
-    // Feature matrix of size (nsamples x nfeat)
+    // Feature matrix of size (nsamples x nfeat with ld = ldX)
     const T *X = nullptr;
+    da_int ldX = 0;
+    da_int Xcinc = 0; // column increment for X wrt order
+    da_int Xrinc = 0; // row increment for X wrt order
     // Response vector
     const T *y = nullptr;
 
@@ -63,8 +70,10 @@ template <class T> class usrdata_base {
     const T *xv{nullptr};
     da_linmod_types::scaling_t scaling{da_linmod_types::scaling_t::none};
 
-    usrdata_base(const T *X, const T *y, da_int nsamples, da_int nfeat, bool intercept,
-                 T lambda, T alpha, const T *xv = nullptr,
+    // coefficients are restricted to the positive cone?
+    bool positive = false;
+    usrdata_base(da_order order, const T *X, da_int ldX, const T *y, da_int nsamples,
+                 da_int nfeat, bool intercept, T lambda, T alpha, const T *xv = nullptr,
                  da_linmod_types::scaling_t scaling = da_linmod_types::scaling_t::none);
     virtual ~usrdata_base();
 };
@@ -81,8 +90,9 @@ template <class T> class cb_usrdata_logreg : public usrdata_base<T> {
      */
     std::vector<T> maxexp, sumexp, lincomb, gradients_p;
 
-    cb_usrdata_logreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                      bool intercept, T lambda, T alpha, da_int nclass, da_int nparam);
+    cb_usrdata_logreg(da_order order, const T *X, da_int ldX, const T *y, da_int nsamples,
+                      da_int nfeat, bool intercept, T lambda, T alpha, da_int nclass,
+                      da_int nparam);
     ~cb_usrdata_logreg();
 };
 
@@ -94,8 +104,8 @@ template <class T> class cb_usrdata_linreg : public usrdata_base<T> {
      */
     std::vector<T> matvec;
 
-    cb_usrdata_linreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                      bool intercept, T lambda, T alpha);
+    cb_usrdata_linreg(da_order order, const T *X, da_int ldX, const T *y, da_int nsamples,
+                      da_int nfeat, bool intercept, T lambda, T alpha);
     ~cb_usrdata_linreg();
 };
 
@@ -104,12 +114,15 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
   public:
     /* Add working memory array
      * residual[nsamples]: holds the residual (and all the intermediate calculations)
+     * work[nsamples]: work array used in the dual gap calculation:
+     *                 X^T * Residual - l2 * coef
      */
     std::vector<T> residual;
+    std::vector<T> work; // Size nmod (no intercept)
 
-    stepfun_usrdata_linreg(const T *X, const T *y, da_int nsamples, da_int nfeat,
-                           bool intercept, T lambda, T alpha, const T *xv,
-                           da_linmod_types::scaling_t scaling);
+    stepfun_usrdata_linreg(da_order order, const T *X, da_int ldX, const T *y,
+                           da_int nsamples, da_int nfeat, bool intercept, T lambda,
+                           T alpha, const T *xv, da_linmod_types::scaling_t scaling);
     ~stepfun_usrdata_linreg();
 };
 
@@ -124,8 +137,9 @@ template <class T> class stepfun_usrdata_linreg : public usrdata_base<T> {
  * x[m], X[m,n], v[n]
  */
 template <typename T>
-void eval_feature_matrix(da_int n, const T *x, da_int m, const T *X, T *v, bool intercept,
-                         bool trans = false, T alpha = 1.0, T beta = 0.0);
+void eval_feature_matrix(da_order order, da_int n, const T *x, da_int m, const T *X,
+                         da_int ldX, T *v, bool intercept, bool trans = false,
+                         T alpha = 1.0, T beta = 0.0);
 
 /* Add regularization, l1 and l2 terms */
 template <typename T> T regfun(da_int n, const T *x, const T l1reg, const T l2reg);
@@ -189,8 +203,9 @@ template <typename T> da_int objfun_mse(da_int n, T *x, T *loss, void *udata);
  * Assumes that all input is valid
  */
 template <typename T>
-da_int loss_mse(da_int nsamples, da_int nfeat, const T *X, bool intercept, T l1reg,
-                T l2reg, const T *coef, const T *y, T *loss, T *pred);
+da_int loss_mse(da_order order, da_int nsamples, da_int nfeat, const T *X, da_int ldX,
+                bool intercept, T l1reg, T l2reg, const T *coef, const T *y, T *loss,
+                T *pred);
 
 /* Mean square error callbacks (gradient)
  * The MSE loss objective gradient is
@@ -242,10 +257,8 @@ template <typename T>
 da_int stepfun_linreg_sklearn(da_int nfeat, T *coef, T *knew, da_int k, T *f, void *udata,
                               da_int action, [[maybe_unused]] T kdiff);
 
-/* Dual gap for linear least squares (sklearn variant) */
+/* Dual gap for linear least squares */
 template <typename T>
-da_int stepchk_linreg_sklearn([[maybe_unused]] da_int nfeat,
-                              [[maybe_unused]] const T *coef,
-                              [[maybe_unused]] void *udata, T *gap);
+da_int stepchk_linreg_dualgap(da_int nfeat, const T *coef, void *udata, T *gap);
 
 } // namespace ARCH

@@ -1,7 +1,7 @@
 AOCL Data Analytics Library
 ===========================
 
-The AOCL Data Analytics Library (AOCL-DA) is a data analytics library providing
+The AOCL Data Analytics Library (AOCL-DA) provides
 optimized building blocks for data analysis and machine learning. It is written with a `C`-compatible
 interface to make it as seamless as possible to integrate with the library from
 whichever programming language you are using. For further details on the library
@@ -16,6 +16,8 @@ The intended workflow for using the library is as follows:
  - data processing (e.g. principal component analysis, linear model fitting, etc.)
 
 C++ example programs can be found in the `examples` folder of your installation.
+
+Full API documentation is available at https://docs.amd.com/r/en-US/68552-AOCL-api-guide/AOCL-Data-Analytics
 
 AOCL-DA is developed and maintained by [AMD](https://www.amd.com/). For support or queries, you can email us on
 [toolchainsupport@amd.com](toolchainsupport@amd.com).
@@ -75,6 +77,8 @@ Building on Linux
 
    * `-DCMAKE_INSTALL_PREFIX=<install path>` to specify the install path for the library
 
+   * `-DBUILD_FORTRAN=On` to build those parts of the library that require Fortran code (`On` by default, but you can set it to `Off` if you do not have a Fortran compiler, in which case the LBFGSB linear model solver, and the nonlinear least squares solver will not be available)
+
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
    **Note** that not all the options available in `Release` build mode.
@@ -107,6 +111,8 @@ Building on MS Windows
 
    * `-DCMAKE_AOCL_ROOT=<path to AOCL>` if you wish to specify a location for AOCL libraries without using environment variables
 
+   * `-DBUILD_FORTRAN=On` to build those parts of the library that require Fortran code (`On` by default, but you can set it to `Off` if you do not have a Fortran compiler, in which case the LBFGSB linear model solver, and the nonlinear least squares solver will not be available)
+
    * Any combination of `-DLAPACK_LIB`, `-DBLAS_LIB`, `-DSPARSE_LIB`, `-DUTILS_LIB`, `-DUTILS_CPUID_LIB`, `-DLAPACK_INCLUDE_DIR` and `-DBLAS_INCLUDE_DIR` if you wish to override the use of `AOCL_ROOT` with specific choices of BLAS/LAPACK/Sparse libraries and include directories. Care should be taken if you do this as there will be no checks for the correctness of the linked libraries.
 
     **Note** that not all the options available in Linux are available in Windows
@@ -128,3 +134,68 @@ On Windows you may also need to set the `CMAKE_PREFIX_PATH` to point to the loca
 By default, cmake will compile the bindings but will not install them.
 If you set `-DCMAKE_INSTALL_PREFIX=<install path>` in your configure step and run `cmake --build . --target install`, then cmake will also create a Python wheel, `aoclda-*.whl`, where `*` depends on your system. This wheel can be installed using `pip install aoclda-*.whl`.
 When using the bindings on Windows, the Intel Fortran runtime must be available. This can be done by setting the environment variable `INTEL_FCOMPILER`.
+
+Building the documentation on Linux
+-----------------------------------
+
+The documentation is based on Doxygen, Sphinx, Breathe and the underlying requirements of
+Python3 packages (and its dependencies) listed under `doc/requirements.txt` and a modern LaTeX distribution with at least the
+packages:
+`amsmath`, `array`, `courier`, `doxygen`, `etoc`,
+`fancyhdr`, `fixltx2e`, `fontenc`, `geometry`,
+`graphicx`, `helvet`, `hyperref`, `ifthen`,
+`ifxetex`, `inputenc`, `natbib`, `newunicodechar`,
+`sectsty`, `textcomp`, `tocloft`, and `wasysym`.
+
+To build the documentation, the Python interfaces must be enabled and built (`-DBUILD_PYTHON=On`) as well as the
+unit-tests (`–DBUILD_GTEST=On`). Set the option `-DBUILD_DOC=On` to build the documentation. Use `cmake --build . --target doc` to build all documentation formats (or `doc_pdf`, `doc_html` to build only PDF or only HTML formats).
+
+Using CMake Presets for building and testing the library
+--------------------------------------------------------
+
+CMake Presets can help with configuring, building and testing AOCL-DA in a simplified manner. CMake Presets are available for common combinations on Linux and on Windows platforms.
+To see the available presets, from the source directory, you can use:
+```
+cmake --list-presets
+```
+To configure only, from the source directory, you can use:
+```
+cmake --preset linux-gcc-mt-lp64-static-release-dynamic
+```
+For example, this will configure CMake for Linux platform so that CMake uses GCC to build a multi-threaded (mt) LP64 Release library with dynamic dispatch.
+This command will generate a build directory with the corresponding naming convention "build-linux-gcc-mt-lp64-static-dynamic-release".
+One can simply `cd build-linux-gcc-mt-lp64-static-dynamic-release` and continue the usual process of building, installing and so on.
+
+Alternatively, to build from the source directory, you can use:
+```
+cmake --build --preset linux-gcc-mt-lp64-static-release-dynamic
+```
+
+To build and install from the source directory, you can use:
+```
+cmake --build --preset linux-gcc-mt-lp64-static-release-dynamic-install
+```
+The library will be installed in a directory with the corresponding naming convention "install-linux-gcc-dynamic-release".
+
+To configure, build, install and validate the library in a single step, you can use:
+```
+cmake --workflow --preset linux-gcc-mt-lp64-static-release-dynamic
+```
+
+You can configure the presets and append them with an known CMake option. For example:
+```
+cmake --preset linux-gcc-mt-lp64-static-release-dynamic -DCOVERAGE=ON
+```
+would configure CMake as before and enable coverage in addition. The build step can continue as before.
+
+There is a mechanism to generate appropriate presets using a python script. To see how to use the generator, from aocl-da directory run:
+```
+python ./cmake/presets/preset_generator.py --help
+```
+
+For example, running
+```
+python ./cmake/presets/preset_generator.py linux-ninja-gcc-lp64-shared-znver5
+```
+will create a JSON file located in `./cmake/presets/` directory with configure, build and workflow commands that uses the Ninja generator, GCC compilers and produces a 32-bit shared library for zen5 architectures.
+The script will also append the `./cmake/presets/includes.json` file so that the new preset can be detected.

@@ -54,7 +54,7 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
         break;
     default:
         return da_error(this->err, da_status_internal_error, // LCOV_EXCL_LINE
-                        "handle precision ws not correctly set");
+                        "handle precision was not correctly set");
         break;
     }
     return da_status_success;

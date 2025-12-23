@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-clang-mt-ilp64-shared-release-dynamic",
+      "inherits": [
+        "base",
+        "linux",
+        "clang",
+        "mt",
+        "ilp64",
+        "shared",
+        "dynamic",
+        "release"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-clang-dynamic-release"
+      },
+      "binaryDir": "${sourceDir}/build-linux-clang-mt-ilp64-shared-dynamic-release",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-clang-mt-ilp64-shared-release-dynamic",
+      "configurePreset": "linux-clang-mt-ilp64-shared-release-dynamic",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-clang-mt-ilp64-shared-release-dynamic-install",
+      "configurePreset": "linux-clang-mt-ilp64-shared-release-dynamic",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-clang-mt-ilp64-shared-release-dynamic",
+      "configurePreset": "linux-clang-mt-ilp64-shared-release-dynamic",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-clang-mt-ilp64-shared-release-dynamic",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-clang-mt-ilp64-shared-release-dynamic"
+        },
+        {
+          "type": "build",
+          "name": "linux-clang-mt-ilp64-shared-release-dynamic-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-clang-mt-ilp64-shared-release-dynamic"
+        }
+      ]
+    }
+  ]
+}

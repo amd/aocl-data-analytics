@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -79,12 +79,13 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
  * Pass pointers to a data matrix @p X containing @p n_samples observations (rows) over @p n_features features (columns)
  * and a response vector @p y of size @p n_samples.
  *
- * Only the pointers to @p X and @p y are stored; no internal copy is made.
+ * Only the pointers to @p X and @p y are stored; an internal copy may be made depending on the model, solver and scaling method selected.
  *
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples the number of observations (rows) of the data matrix @p X. Constraint: @p n_samples @f$\ge@f$ 1.
  * @param[in] n_features the number of features (columns) of the data matrix, @p X. Constraint: @p n_features @f$\ge@f$ 1.
- * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. For best performance store in column-major order, can be changed by setting <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] ldx the leading dimension of the data matrix @p X. Constraint: @p ldx @f$\ge@f$ @p n_samples if the data is stored in column-major order, or @p ldx @f$\ge@f$ @p n_features if the data is stored in row-major order.
  * @param[in] y the response vector, of size @p n_samples.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.
@@ -93,10 +94,11 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
  * - @ref da_status_invalid_input - one of the arguments had an invalid value. You can obtain further information using @ref da_handle_print_error_message.
  */
 da_status da_linmod_define_features_d(da_handle handle, da_int n_samples,
-                                      da_int n_features, const double *X,
+                                      da_int n_features, const double *X, da_int ldx,
                                       const double *y);
 da_status da_linmod_define_features_s(da_handle handle, da_int n_samples,
-                                      da_int n_features, const float *X, const float *y);
+                                      da_int n_features, const float *X, da_int ldx,
+                                      const float *y);
 /** \} */
 
 /** \{
@@ -159,7 +161,8 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, const float *c
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples number of rows of \p X or equivalently the number of samples to estimate the model on.
  * @param[in] n_features number of columns of \p X or equivalently the number of features of the test data. It must match the number features of the data defined in the \p handle.
- * @param[in] X the @p nsamples @f$\times@f$ @p n_features data matrix to evaluate the model on. By default, it should be stored in column-major order, unless you have set the <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. For best performance store in column-major order, can be changed by setting <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] ldx the leading dimension of the data matrix @p X. Constraint: @p ldx @f$\ge@f$ @p n_samples if the data is stored in column-major order, or @p ldx @f$\ge@f$ @p n_features if the data is stored in row-major order.
  * @param[out] predictions vector of size \p n_samples containing the model's prediction.
  * @param[in] observations vector of size \p n_samples containing new observations; may be \p NULL if none are provided.
  * @param[out] loss scalar containing the model's loss given the new data \p X and the new observations \p y; may be \p NULL if
@@ -175,14 +178,52 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, const float *c
  *
  */
 da_status da_linmod_evaluate_model_d(da_handle handle, da_int n_samples,
-                                     da_int n_features, const double *X,
+                                     da_int n_features, const double *X, da_int ldx,
                                      double *predictions, double *observations,
                                      double *loss);
 
 da_status da_linmod_evaluate_model_s(da_handle handle, da_int n_samples,
-                                     da_int n_features, const float *X,
+                                     da_int n_features, const float *X, da_int ldx,
                                      float *predictions, float *observations,
                                      float *loss);
+/** \} */
+
+/**
+ * @brief Indices of the information vector containing metrics from optimization solvers
+ *
+ * @details
+ * @rst
+ * The information vector can be retrieved after a successful return from the
+ * fit function :cpp:func:`da_linmod_fit_? <da_linmod_fit_d>` by querying the handle,
+ * using :cpp:func:`da_handle_get_result_? <da_handle_get_result_d>` and passing
+ * the :ref:`query <extracting-results>` :cpp:enumerator:`da_result_::da_rinfo`.
+ * @endrst
+ * \{
+ */
+typedef enum da_linmod_info_t_ {
+    linmod_info_objective = 0,  ///< objective value
+    linmod_info_grad_norm = 1,  ///< norm of the objective gradient
+    linmod_info_iter = 2,       ///< number of iterations
+    linmod_info_time = 3,       ///< current time
+    linmod_info_nevalf = 4,     ///< number of objective function callback evaluations
+    linmod_info_inorm = 5,      ///< infinity norm of gradient
+    linmod_info_inorm_init = 6, ///< infinity norm of gradient at the initial iteration
+    linmod_info_ncheap = 7,     ///< number of objective function callback
+    ///< evaluations requesting "cheap" update (only coordinate descent solver)
+    linmod_info_optim = 8, ///< optimality measure (only coordinate descent solver)
+    linmod_info_optimcnt =
+        9, ///< number of optimality checks (only coordinate descent solver)
+    linmod_info_nsamples = 10, ///< number of rows in the input matrix
+    linmod_info_nfeat = 11,    ///< number of columns in the input matrix
+    linmod_info_nclass =
+        12, ///< number of classes in the input data (0 when regression problem)
+    linmod_info_nrow_coef = 13, ///< number of rows of the coefficient array
+    linmod_info_ncol_coef = 14, ///< number of columns of the coefficient array
+    linmod_info_well_determined =
+        15, ///< flag indicating if the problem is well determined
+
+    linmod_info_number ///< for internal use
+} da_linmod_info_t;
 /** \} */
 
 #endif

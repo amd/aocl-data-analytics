@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -36,8 +36,14 @@ from aoclda.sklearn import skpatch, undo_skpatch
 import pytest
 from sklearn.datasets import make_regression, make_classification
 
+
+@pytest.fixture(scope="function")
+def no_fortran(request):
+    return request.config.no_fortran
+
+
 @pytest.mark.parametrize("intercept", [True, False])
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_linear_regression(intercept, precision):
     """
     Vanilla linear regression
@@ -77,7 +83,8 @@ def test_linear_regression(intercept, precision):
     print("    aoclda:", linreg_da.intercept_)
     print("   sklearn:", linreg_da.intercept_)
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_double_solve_linreg(precision):
     """"
     Check that solving the model twice doesn't fail
@@ -90,8 +97,9 @@ def test_double_solve_linreg(precision):
     linreg_da.fit(X, y)
     linreg_da.fit(X, y)
 
+
 @pytest.mark.parametrize("intercept", [True, False])
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_ridge(intercept, precision):
     """
     Ridge regression using LBFGS
@@ -106,7 +114,7 @@ def test_ridge(intercept, precision):
     ridge_da = Ridge(fit_intercept=intercept)
     ridge_da.fit(X, y)
     da_coef = ridge_da.coef_
-    # da_intercept = ridge_da.intercept_
+    da_intercept = ridge_da.intercept_
     assert ridge_da.aocl is True
 
     # unpatch and solve the same problem with sklearn
@@ -115,14 +123,12 @@ def test_ridge(intercept, precision):
     ridge = Ridge(fit_intercept=intercept, solver='lbfgs', positive=True)
     ridge.fit(X, y)
     coef = ridge.coef_
-    # intercept = ridge.intercept_
+    intercept = ridge.intercept_
     assert not hasattr(ridge, 'aocl')
 
     # Check results
     assert da_coef == pytest.approx(coef, 1.0e-01)
-    # Deactivate the intercept check, a factor 2 needs to be investigated
-    # assert da_intercept == pytest.approx(
-    #     intercept/2, 0.1)
+    assert da_intercept == pytest.approx(intercept, 0.1)
 
     # print the results if pytest is invoked with the -rA option
     print("coefficients")
@@ -130,16 +136,16 @@ def test_ridge(intercept, precision):
     print("   sklearn: ", ridge.coef_)
     print("Intercept")
     print("    aoclda:", ridge_da.intercept_)
-    print("   sklearn:", ridge.intercept_/2)
+    print("   sklearn:", ridge.intercept_ / 2)
 
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_double_solve_ridge(precision):
     """"
     Check that solving the model twice doesn't fail
     """
     X, y, _ = make_regression(
-    n_samples=200, n_features=8, coef=True, random_state=1)
+        n_samples=200, n_features=8, coef=True, random_state=1)
     X = X.astype(precision)
     y = y.astype(precision)
     skpatch()
@@ -148,8 +154,9 @@ def test_double_solve_ridge(precision):
     ridge_da.fit(X, y)
     ridge_da.fit(X, y)
 
+
 @pytest.mark.parametrize("intercept", [True, False])
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
 def test_lasso(intercept, precision):
     """
     Lasso
@@ -191,13 +198,16 @@ def test_lasso(intercept, precision):
     print("   sklearn:", lasso_da.intercept_)
 
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_double_solve_lasso(precision):
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
+def test_double_solve_lasso(no_fortran, precision):
     """"
     Check that solving the model twice doesn't fail
     """
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     X, y, _ = make_regression(
-    n_samples=200, n_features=8, coef=True, random_state=1)
+        n_samples=200, n_features=8, coef=True, random_state=1)
     X = X.astype(precision)
     y = y.astype(precision)
     skpatch()
@@ -206,12 +216,16 @@ def test_double_solve_lasso(precision):
     lasso_da.fit(X, y)
     lasso_da.fit(X, y)
 
+
 @pytest.mark.parametrize("intercept", [True, False])
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_logistic(intercept, precision):
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
+def test_logistic(no_fortran, intercept, precision):
     """
     Logistic Regression
     """
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     X, y = make_classification(
         n_samples=200, n_features=8, random_state=1)
     X = X.astype(precision)
@@ -244,11 +258,14 @@ def test_logistic(intercept, precision):
     print("   sklearn:", lg.intercept_)
 
 
-@pytest.mark.parametrize("precision", [np.float64,  np.float32])
-def test_double_solve_lasso(precision):
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
+def test_double_solve_logistic(no_fortran, precision):
     """"
     Check that solving the model twice doesn't fail
     """
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
     X, y = make_classification(
         n_samples=200, n_features=8, random_state=1)
     X = X.astype(precision)
@@ -259,7 +276,6 @@ def test_double_solve_lasso(precision):
     lg_da = LogisticRegression()
     lg_da.fit(X, y)
     lg_da.fit(X, y)
-
 
 
 @pytest.mark.parametrize("problem", ["LinearRegression", "Ridge", "Lasso", "ElasticNet"])
@@ -290,3 +306,54 @@ def test_errors(problem):
 
     with pytest.raises(RuntimeError):
         model.set_score_request()
+
+
+@pytest.mark.parametrize("problem", ["Lasso", "ElasticNet"])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_warm_start_linreg(problem, numpy_order):
+    '''
+    Test warm start functionality
+    '''
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9.1]], order=numpy_order)
+    y = np.array([3., 6.5, 10., 12., 13., 19.])
+    # patch and import scikit-learn
+    skpatch()
+    sklearn_patch_module = importlib.import_module("sklearn.linear_model")
+    problem_class = getattr(sklearn_patch_module, problem)
+    model = problem_class(tol=1e-8, warm_start=True)
+    model.fit(X, y)
+    coefs_first = model.coef_
+    n_iter_first = model.n_iter_
+    model.fit(X, y)
+    coefs_second = model.coef_
+    n_iter_second = model.n_iter_
+    assert coefs_first == pytest.approx(coefs_second)
+    assert n_iter_first > 1
+    assert n_iter_second == 1
+
+
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+def test_warm_start_logreg(no_fortran, numpy_order):
+    '''
+    Test warm start functionality
+    '''
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+
+    X = np.array([[1, 1], [2, 3], [3, 5], [4, 8], [5, 7], [6, 9.1]], order=numpy_order)
+    y = np.array([0, 1, 1, 2, 0, 2])
+    # patch and import scikit-learn
+    skpatch()
+    from sklearn.linear_model import LogisticRegression
+    model = LogisticRegression(tol=1e-10, warm_start=True)
+    model.fit(X, y)
+    coefs_first = model.coef_
+    n_iter_first = model.n_iter_
+    model.fit(X, y)
+    coefs_second = model.coef_
+    n_iter_second = model.n_iter_
+    # Currently when we use warm model, we do one iteration regardless, hence
+    # solution is slightly different
+    assert coefs_first == pytest.approx(coefs_second, abs=2e-5)
+    assert n_iter_first > 1
+    assert n_iter_second == 1

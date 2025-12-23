@@ -21,15 +21,14 @@
  *
  * ************************************************************************ */
 
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "aoclda.h"
 #include "basic_handle.hpp"
 #include "da_error.hpp"
+#include "da_kernel_utils.hpp"
 #include "kmeans_types.hpp"
 #include "macros.h"
+#include <functional>
+#include <iostream>
 #include <random>
 #include <string>
 
@@ -89,6 +88,9 @@ template <typename T> class kmeans : public basic_handle<T> {
     da_int seed = 0;
     std::mt19937_64 mt_gen;
 
+    // Amount of padding to use in Lloyd and Elkan algorithms to enable kernels to use SIMD efficiently
+    da_int padding = 0;
+
     // Norm of previous cluster centre array, for use in convergence testing
     T normc = 0.0;
 
@@ -136,41 +138,12 @@ template <typename T> class kmeans : public basic_handle<T> {
 
     void lloyd_iteration(bool update_centres, da_int n_threads);
 
-    void lloyd_iteration_block_no_unroll(bool update_centres, da_int block_size,
-                                         const T *data, da_int lddata, T *cluster_centres,
-                                         T *new_cluster_centres, T *centre_norms,
-                                         da_int *cluster_count, da_int *labels, T *work,
-                                         da_int ldwork);
-
-    void lloyd_iteration_block_unroll_2(bool update_centres, da_int block_size,
-                                        const T *data, da_int lddata, T *cluster_centres,
-                                        T *new_cluster_centres, T *centre_norms,
-                                        da_int *cluster_count, da_int *labels, T *work,
-                                        da_int ldwork);
-
-    void lloyd_iteration_block_unroll_4_T(bool update_centres, da_int block_size,
-                                          const T *data, da_int lddata,
-                                          T *cluster_centres, T *new_cluster_centres,
-                                          T *centre_norms, da_int *cluster_count,
-                                          da_int *labels, T *work, da_int ldwork);
-
-    void lloyd_iteration_block_unroll_4(bool update_centres, da_int block_size,
-                                        const T *data, da_int lddata, T *cluster_centres,
-                                        T *new_cluster_centres, T *centre_norms,
-                                        da_int *cluster_count, da_int *labels, T *work,
-                                        da_int ldwork);
-
-    void lloyd_iteration_block_unroll_8(bool update_centres, da_int block_size,
-                                        const T *data, da_int lddata, T *cluster_centres,
-                                        T *new_cluster_centres, T *centre_norms,
-                                        da_int *cluster_count, da_int *labels, T *work,
-                                        da_int ldwork);
+    void lloyd_iteration_update_centres(da_int block_size, const T *data, da_int lddata,
+                                        T *new_cluster_centres, da_int *labels);
 
     // Elkan algorithm functions, including various unrolled versions of the blocked part of the iteration
 
     void init_elkan();
-
-    void init_elkan_bounds();
 
     void elkan_iteration(bool update_centres, da_int n_threads);
 
@@ -182,32 +155,32 @@ template <typename T> class kmeans : public basic_handle<T> {
                                       T *centre_half_distances, T *next_centre_distances,
                                       da_int *cluster_counts);
 
-    void elkan_iteration_update_block_no_unroll(da_int block_size, T *l_bound,
-                                                da_int ldl_bound, T *u_bound,
-                                                T *centre_shift, da_int *labels);
-
-    void elkan_iteration_update_block_unroll_4(da_int block_size, T *l_bound,
-                                               da_int ldl_bound, T *u_bound,
-                                               T *centre_shift, da_int *labels);
-
-    void elkan_iteration_update_block_unroll_8(da_int block_size, T *l_bound,
-                                               da_int ldl_bound, T *u_bound,
-                                               T *centre_shift, da_int *labels);
-
     // Function pointers which will be set when the algorithm has been chosen
 
-    void (kmeans<T>::*single_iteration)(bool, da_int);
+    std::function<void(bool, da_int)> single_iteration;
 
-    void (kmeans<T>::*initialize_algorithm)();
+    std::function<void()> initialize_algorithm;
 
-    void (kmeans<T>::*lloyd_iteration_block)(bool, da_int, const T *, da_int, T *, T *,
-                                             T *, da_int *, da_int *, T *, da_int);
+    std::function<void(bool, da_int, T *, da_int *, da_int *, T *, da_int, da_int)>
+        lloyd_kernel;
 
-    void (kmeans<T>::*predict_block)(bool, da_int, const T *, da_int, T *, T *, T *,
-                                     da_int *, da_int *, T *, da_int);
+    std::function<void(bool, da_int, T *, da_int *, da_int *, T *, da_int, da_int)>
+        predict_kernel;
 
-    void (kmeans<T>::*elkan_iteration_update_block)(da_int, T *, da_int, T *, T *,
-                                                    da_int *);
+    std::function<void(da_int, T *, da_int, T *, T *, da_int *, da_int)>
+        elkan_update_kernel;
+
+    std::function<T(da_int, const T *, da_int, T *, da_int)> elkan_reduce_kernel;
+
+    void assign_lloyd_kernel(std::function<void(bool, da_int, T *, da_int *, da_int *,
+                                                T *, da_int, da_int)> &kernel,
+                             da_int &padding, da_int n_clusters);
+
+    void assign_elkan_kernels(
+        std::function<void(da_int, T *, da_int, T *, T *, da_int *, da_int)>
+            &update_kernel,
+        std::function<T(da_int, const T *, da_int, T *, da_int)> &reduce_kernel,
+        da_int &padding, da_int n_clusters, da_int n_features);
 
     // MacQueen algorithm functions
 
@@ -259,7 +232,32 @@ template <typename T> class kmeans : public basic_handle<T> {
 
     da_status predict(da_int k_samples, da_int k_features, const T *Y, da_int ldy,
                       da_int *Y_labels);
+
+    void refresh();
 };
+
+// Declare the kernel functions for the various SIMD implementations and a generic function for
+// choosing the SIMD size and associated padding requirement
+template <class T, vectorization_type U>
+void lloyd_iteration_kernel(bool update_centres, da_int block_size, T *centre_norms,
+                            da_int *cluster_count, da_int *labels, T *work, da_int ldwork,
+                            da_int n_clusters);
+
+template <class T, vectorization_type U>
+void elkan_iteration_kernel(da_int block_size, T *l_bound, da_int ldl_bound, T *u_bound,
+                            T *centre_shift, da_int *labels, da_int n_clusters);
+
+template <class T, vectorization_type U>
+T elkan_reduction_kernel(da_int m, const T *x, da_int incx, T *y, da_int incy);
+
+template <class T>
+void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
+                            vectorization_type &kernel_type);
+
+template <class T>
+void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &padding,
+                            vectorization_type &update_kernel_type,
+                            vectorization_type &redeuce_kernel_type);
 
 } // namespace da_kmeans
 

@@ -25,11 +25,6 @@
  *
  */
 
-// Deal with some Windows compilation issues regarding max/min macros
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-
 #include "optimization.hpp"
 #include "da_error.hpp"
 #include "macros.h"
@@ -111,12 +106,12 @@ template <typename T>
 da_optimization<T>::da_optimization(da_status &status, da_errors::da_error_t &err)
     : basic_handle<T>(err) {
     try {
-        this->info.resize(da_optim_info_t::info_number);
+        this->info.resize(da_linmod_info_t::linmod_info_number);
     } catch (...) {
         status = da_error(&err, da_status_memory_error,
                           "could not resize solver information vector");
     }
-    this->info.assign(da_optim_info_t::info_number, 0);
+    this->info.assign(da_linmod_info_t::linmod_info_number, 0);
     status = register_optimization_options<T>(*this->err, this->opts);
 };
 

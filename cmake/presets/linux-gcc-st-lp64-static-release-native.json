@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "linux-gcc-st-lp64-static-release-native",
+      "inherits": [
+        "base",
+        "linux",
+        "gcc",
+        "st",
+        "lp64",
+        "static",
+        "native",
+        "release"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-linux-gcc-native-release"
+      },
+      "binaryDir": "${sourceDir}/build-linux-gcc-st-lp64-static-native-release",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "linux-gcc-st-lp64-static-release-native",
+      "configurePreset": "linux-gcc-st-lp64-static-release-native",
+      "inherits": "base"
+    },
+    {
+      "name": "linux-gcc-st-lp64-static-release-native-install",
+      "configurePreset": "linux-gcc-st-lp64-static-release-native",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "linux-gcc-st-lp64-static-release-native",
+      "configurePreset": "linux-gcc-st-lp64-static-release-native",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "linux-gcc-st-lp64-static-release-native",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "linux-gcc-st-lp64-static-release-native"
+        },
+        {
+          "type": "build",
+          "name": "linux-gcc-st-lp64-static-release-native-install"
+        },
+        {
+          "type": "test",
+          "name": "linux-gcc-st-lp64-static-release-native"
+        }
+      ]
+    }
+  ]
+}

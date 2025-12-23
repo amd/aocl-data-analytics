@@ -1,0 +1,66 @@
+{
+  "version": 6,
+  "include": [
+    "base.json"
+  ],
+  "configurePresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-native",
+      "inherits": [
+        "base",
+        "win",
+        "msvc",
+        "mt",
+        "ilp64",
+        "shared",
+        "native",
+        "debug"
+      ],
+      "cacheVariables": {
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install-win-native-debug"
+      },
+      "binaryDir": "${sourceDir}/build-win-mt-ilp64-shared-native-debug",
+      "hidden": false
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-native",
+      "configurePreset": "win-mt-ilp64-shared-debug-native",
+      "inherits": "base"
+    },
+    {
+      "name": "win-mt-ilp64-shared-debug-native-install",
+      "configurePreset": "win-mt-ilp64-shared-debug-native",
+      "inherits": "base",
+      "targets": "install"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-native",
+      "configurePreset": "win-mt-ilp64-shared-debug-native",
+      "inherits": "base"
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "win-mt-ilp64-shared-debug-native",
+      "description": "Build and check AOCL-DA",
+      "steps": [
+        {
+          "type": "configure",
+          "name": "win-mt-ilp64-shared-debug-native"
+        },
+        {
+          "type": "build",
+          "name": "win-mt-ilp64-shared-debug-native-install"
+        },
+        {
+          "type": "test",
+          "name": "win-mt-ilp64-shared-debug-native"
+        }
+      ]
+    }
+  ]
+}

@@ -112,17 +112,10 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
     } else {
         // count == 1
         // two cases:
-        // 1.- EASY -DARCH=zenX uses zenX
-        // 2.- HARD -DARCH=native highjacks "generic" so arch and ns don't matchup
-        //          arch can be also "generic" so this case merges into the 1 easy case
-        bool ok = std::string(ns) == "da_dynamic_dispatch_"s + std::string(arch);
-        if (!ok) {
-            // try the hard case
-            EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "generic", 1));
-            EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
-            ok = std::string(ns) == "da_dynamic_dispatch_generic"s;
-        }
-        EXPECT_TRUE(ok);
+        // 1. -DARCH=zenX uses zenX
+        // 2. -DARCH=native
+        // In both cases arch and ns should match
+        EXPECT_EQ(std::string(ns), "da_dynamic_dispatch_"s + std::string(arch));
     }
 
     EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", ok_arch.c_str(), 1));
@@ -180,5 +173,69 @@ TEST(UtilitiesTest, DynamicDispatchTryArch) {
 }
 
 } // namespace dynamic_dispatch
+
+// setter / getter for hidden context setting, this is used to pass
+// hidden options to the solvers, i.e. to force a certain ISA and
+// bypass auto-tuning for full code coverage, benchmarks, etc.
+TEST(UtilitiesTest, ContextHiddenSettings) {
+    // Exersize getter and setter
+    std::string skey = "Unit   Test";
+    const char charvalue[]{" Foo   Bar"};
+    char charans[100]{""};
+    EXPECT_EQ(da_debug_get(nullptr, -1, nullptr), da_status_success);
+    EXPECT_EQ(da_debug_set(" unit Test ", "Bar Foo BAZ "), da_status_success);
+    EXPECT_EQ(da_debug_get(skey.c_str(), 100, charans), da_status_success);
+    EXPECT_THAT(std::string(charans), testing::StrCaseEq("bar foo baz"));
+    EXPECT_EQ(da_debug_set(skey.c_str(), charvalue), da_status_success);
+    EXPECT_EQ(da_debug_get(skey.c_str(), 100, charans), da_status_success);
+    EXPECT_THAT(std::string(charans), testing::StrCaseEq("foo bar"));
+    EXPECT_EQ(da_debug_set(" new key", " new value "), da_status_success);
+    EXPECT_EQ(da_debug_get(nullptr, -1, nullptr), da_status_success);
+
+    // erase "Unit Test" key
+    EXPECT_EQ(da_debug_set(" unit Test ", ""), da_status_success);
+    EXPECT_EQ(da_debug_get(" unit Test ", 100, charans), da_status_option_not_found);
+    EXPECT_EQ(da_debug_get("new key", 100, charans), da_status_success);
+    EXPECT_THAT(std::string(charans), testing::StrCaseEq("new value"));
+
+    // Error returns
+    EXPECT_EQ(da_debug_set("    ", "Foo"), da_status_invalid_input);
+    EXPECT_EQ(da_debug_set(nullptr, "Foo"), da_status_invalid_input);
+    EXPECT_EQ(da_debug_set(charvalue, nullptr), da_status_invalid_input);
+    EXPECT_EQ(da_debug_get(skey.c_str(), 10, charans), da_status_invalid_input);
+    EXPECT_EQ(da_debug_get(skey.c_str(), -1, charans), da_status_invalid_input);
+    EXPECT_EQ(da_debug_get(nullptr, -1, charans), da_status_success);
+    EXPECT_EQ(da_debug_get(charvalue, -1, nullptr), da_status_success);
+
+    EXPECT_EQ(da_debug_get("NonExisting!", 100, charans), da_status_option_not_found);
+}
+
+TEST(UtilitiesTest, intInfo) {
+    std::string int_lib = INT_LIB;
+    std::string expected_int_str;
+    if (int_lib == "LP64")
+        expected_int_str = "32";
+    else if (int_lib == "ILP64")
+        expected_int_str = "64";
+    else
+        expected_int_str = "?";
+
+    // Valid call
+    size_t len = 3;
+    char int_type[3];
+    EXPECT_EQ(da_get_int_info(&len, int_type), da_status_success);
+    EXPECT_EQ(expected_int_str, std::string(int_type));
+
+    // wrong length
+    len = 0;
+    EXPECT_EQ(da_get_int_info(&len, int_type), da_status_invalid_array_dimension);
+    // Second call has valid length
+    EXPECT_EQ(da_get_int_info(&len, int_type), da_status_success);
+    EXPECT_EQ(expected_int_str, std::string(int_type));
+
+    // wrong pointer
+    len = 3;
+    EXPECT_EQ(da_get_int_info(&len, nullptr), da_status_invalid_input);
+}
 
 } // namespace

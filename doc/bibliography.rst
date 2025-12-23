@@ -31,3 +31,4 @@ References
 ************
 
 .. bibliography::
+   :filter: key % "da_"
