@@ -35,15 +35,9 @@ function(extract_native_namespace NATIVE_NAMESPACE)
       "generic"
       PARENT_SCOPE)
 
-  if(WIN32)
-    set(DEV_NULL "nul")
-  else()
-    set(DEV_NULL "/dev/null")
-  endif()
-
   execute_process(
     COMMAND ${CMAKE_CXX_COMPILER} -E -dM -march=native -v
-            ${CMAKE_CURRENT_BINARY_DIR}/tmp_compile_test.cpp -o ${DEV_NULL}
+            ${CMAKE_CURRENT_BINARY_DIR}/tmp_compile_test.cpp
     OUTPUT_VARIABLE output_var
     ERROR_VARIABLE error_var)
 

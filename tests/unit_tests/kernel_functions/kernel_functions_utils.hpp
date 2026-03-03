@@ -28,7 +28,7 @@
 #include <numeric>
 
 template <typename T> struct test_math_func_vec_type {
-    std::vector<T> input;
+    std::vector<T> input, X_norm, Y_norm;
     da_int power, first_dim, second_dim, size;
     T coef0, multiplier;
 };
@@ -43,6 +43,8 @@ template <typename T> void set_zero_data(test_math_func_vec_type<T> &data) {
     data.coef0 = 1.0;
     data.multiplier = 10.0;
     data.input = std::vector<T>(data.size, 0);
+    data.X_norm.resize(data.size);
+    data.Y_norm.resize(data.size);
 }
 template <typename T> void set_iota_data(test_math_func_vec_type<T> &data) {
     data.first_dim = 16;
@@ -53,6 +55,8 @@ template <typename T> void set_iota_data(test_math_func_vec_type<T> &data) {
     data.multiplier = 2.5;
     data.input.resize(data.size);
     std::iota(data.input.begin(), data.input.end(), 1);
+    data.X_norm.resize(data.size);
+    data.Y_norm.resize(data.size);
 }
 template <typename T> void set_large_numbers_data(test_math_func_vec_type<T> &data) {
     data.first_dim = 16;
@@ -65,6 +69,8 @@ template <typename T> void set_large_numbers_data(test_math_func_vec_type<T> &da
                   55.55, -33.33, 10.01, -90.90, 42.42,  -58.58, 7.77,   -21.21,
                   64.64, -3.03,  81.81, -46.46, 2.22,   -37.37, 48.48,  -59.59,
                   15.15, -80.80, 29.29, -11.11, 66.66,  -44.44, 3.14,   -5.67};
+    data.X_norm.resize(data.size);
+    data.Y_norm.resize(data.size);
 }
 template <typename T> void set_very_large_numbers_data(test_math_func_vec_type<T> &data) {
     data.first_dim = 16;
@@ -77,4 +83,22 @@ template <typename T> void set_very_large_numbers_data(test_math_func_vec_type<T
                   1.8e15, 1.9e15, 2e15,   2.1e15, 2.2e15, 2.3e15, 2.4e15, 2.5e15,
                   2.6e15, 2.7e15, 2.8e15, 2.9e15, 3e15,   3.1e15, 3.2e15, 3.3e15,
                   3.4e15, 3.5e15, 3.6e15, 3.7e15, 3.8e15, 3.9e15, 4e15,   4.1e15};
+    data.X_norm.resize(data.size);
+    data.Y_norm.resize(data.size);
+}
+
+template <typename T>
+void set_very_large_negative_numbers_data(test_math_func_vec_type<T> &data) {
+    data.first_dim = 16;
+    data.second_dim = 2;
+    data.size = data.first_dim * data.second_dim;
+    data.power = 10;
+    data.coef0 = -1e10;
+    data.multiplier = 1;
+    data.input = {23.45, -76.32, 0.56,  89.10,  -67.89, 45.67,  -12.34, 99.99,
+                  55.55, -33.33, 10.01, -90.90, 42.42,  -58.58, 7.77,   -21.21,
+                  64.64, -3.03,  81.81, -46.46, 2.22,   -37.37, 48.48,  -59.59,
+                  15.15, -80.80, 29.29, -11.11, 66.66,  -44.44, 3.14,   -5.67};
+    data.X_norm.resize(data.size);
+    data.Y_norm.resize(data.size);
 }

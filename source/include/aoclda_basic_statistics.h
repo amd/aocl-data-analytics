@@ -90,7 +90,7 @@ typedef enum da_quantile_type_ da_quantile_type;
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
  * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows if \p order = \p column_major, or \p ldx @f$\ge@f$ \p n_cols if \p order = \p row_major.
- * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size @f$p@f$. If \p axis = \ref da_axis_row the array must be at least of size @f$n@f$. If \p axis = \ref da_axis_all the array must be at least of size 1.
+ * \param[out] mean the array which will hold the computed means. If \p axis = \ref da_axis_col the array must be at least of size @f$n_cols@f$. If \p axis = \ref da_axis_row the array must be at least of size @f$n_rows@f$. If \p axis = \ref da_axis_all the array must be at least of size 1.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx was violated.

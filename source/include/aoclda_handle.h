@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -66,11 +66,17 @@ enum da_handle_type_ {
                      ///< the handle is to be used with functions from the :ref:`nonlinear data fitting chapter <chapter_nlls>`.
                      ///< @endrst
     da_handle_nn, ///< @rst
-                  ///< the handle is to be used with functions from the :ref:`k-nearest neighbors for classification <knn_intro>`.
+                  ///< the handle is to be used with functions from the :ref:`nearest neighbors chapter <chapter_nearest_neighbors>`.
                   ///< @endrst
     da_handle_svm ,  ///< @rst
                      ///< the handle is to be used with functions for computing the :ref:`svm <chapter_svm>`.
                      ///< @endrst
+    da_handle_interpolation, ///< @rst
+                             ///< the handle is to be used with functions for interpolation from the :ref:`interpolation chapter <chapter_interpolation>`.
+                             ///< @endrst
+    da_handle_approx_nn, ///< @rst
+                         ///< the handle is to be used with functions for computing :ref:`approximate nearest neighbors <ann_intro>`.
+                         ///< @endrst
 };
 // clang-format on
 

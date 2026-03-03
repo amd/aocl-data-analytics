@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -24,7 +24,7 @@
 
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 
-project(AOCL-DA VERSION 5.1.1)
+project(AOCL-DA VERSION 5.2.2)
 
 set(AOCLDA_VERSION
     "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
@@ -268,6 +268,9 @@ if(BUILD_ILP64)
 else()
   set(INT_LIB "LP64")
 endif()
+
+# Use -fPIC always
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Check for CL compatibility layer of clang
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)

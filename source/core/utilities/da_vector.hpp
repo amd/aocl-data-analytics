@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 
 #include "aoclda.h"
 #include <stdexcept>
+#include <type_traits>
 
 #define INIT_CAPACITY 64
 
@@ -52,6 +53,8 @@ namespace da_vector {
  */
 
 template <typename T> class da_vector {
+    static_assert(std::is_scalar_v<T>, "da_vector only supports scalar types");
+
   public:
     size_t size() const { return _size; }
     size_t capacity() const { return _capacity; }
@@ -73,6 +76,53 @@ template <typename T> class da_vector {
         if (!_data) {
             throw std::bad_alloc(); // LCOV_EXCL_LINE
         }
+    }
+
+    // Move constructor
+    da_vector(da_vector &&other) noexcept
+        : _data(other._data), _size(other._size), _capacity(other._capacity) {
+        other._data = nullptr;
+        other._size = 0;
+        other._capacity = 0;
+    }
+
+    // Move assignment operator
+    da_vector &operator=(da_vector &&other) noexcept {
+        if (this != &other) {
+            free(_data);
+            _data = other._data;
+            _size = other._size;
+            _capacity = other._capacity;
+            other._data = nullptr;
+            other._size = 0;
+            other._capacity = 0;
+        }
+        return *this;
+    }
+
+    // Copy assignment operator
+    da_vector &operator=(const da_vector &other) {
+        if (this != &other) { // Self-assignment check
+            // Free existing data
+            if (_data) {
+                free(_data);
+                _data = nullptr;
+            }
+
+            // Copy size and capacity
+            _size = other._size;
+            _capacity = other._capacity;
+
+            // Allocate new memory and copy data
+            if (_capacity > 0) {
+                _data = (T *)malloc(_capacity * sizeof(T));
+                if (!_data) {
+                    throw std::bad_alloc();
+                }
+                memcpy(_data, other._data, _size * sizeof(T));
+            }
+        }
+        return *this;
     }
 
     ~da_vector() {
@@ -139,6 +189,48 @@ template <typename T> class da_vector {
         }
         memcpy(_data + _size, vec.data(), vec.size() * sizeof(T));
         _size += vec.size();
+    }
+
+    void resize(size_t new_size) {
+        if (new_size > _capacity) {
+            // Need to grow capacity
+            while (_capacity < new_size)
+                _capacity <<= 1;
+            T *new_data = (T *)malloc(_capacity * sizeof(T));
+            if (!new_data) {
+                throw std::bad_alloc(); // LCOV_EXCL_LINE
+            }
+            if (_data && _size > 0) {
+                memcpy(new_data, _data, _size * sizeof(T));
+            }
+            if (_data) {
+                free(_data);
+            }
+            _data = new_data;
+        }
+
+        // Simply update size - no need to initialize new elements for basic types
+        _size = new_size;
+    }
+
+    // Reserve capacity without changing size
+    void reserve(size_t new_capacity) {
+        if (new_capacity > _capacity) {
+            while (_capacity < new_capacity)
+                _capacity <<= 1;
+            T *new_data = (T *)malloc(_capacity * sizeof(T));
+            if (!new_data) {
+                throw std::bad_alloc(); // LCOV_EXCL_LINE
+            }
+            if (_data && _size > 0) {
+                memcpy(new_data, _data, _size * sizeof(T));
+            }
+            if (_data) {
+                free(_data);
+            }
+            _data = new_data;
+        }
+        // Note: size remains unchanged, only capacity may increase
     }
 
   private:

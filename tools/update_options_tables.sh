@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright (c) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ if [[ "$1" =~ --db=.* ]] ; then
   shift
 fi
 
-if [ ! -f ${DB:=options/all_table.rst} ] ; then
+if [ ! -f ${DB:=C/options/all_table.rst} ] ; then
   echo "Error: Options database file all_table.rst not found in $DB, set the correct path using --db=path/to/all_table.rst"
   exit 1
 fi

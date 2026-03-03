@@ -27,6 +27,7 @@
 #include "da_utils.hpp"
 #include "dynamic_dispatch.hpp"
 #include "macros.h"
+#include "train_test_split.hpp"
 
 da_errors::error_bypass_t *nosave_utils(nullptr);
 

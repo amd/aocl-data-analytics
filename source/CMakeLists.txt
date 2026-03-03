@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -44,6 +44,8 @@ function(aoclda_add_dependencies OBJ_NAME)
             core/nearest_neighbors
             core/svm
             core/kernel_functions
+            core/interpolation
+            core/approximate_neighbors
             ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
             ${CMAKE_SOURCE_DIR}/external/RALFit
             ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
@@ -85,7 +87,7 @@ set(DA_CLUSTERING_PUBLIC
     core/clustering/kmeans_public.cpp core/clustering/dbscan_public.cpp
     core/clustering/kmeans_select_simd.cpp)
 set(DA_DECISION_FOREST_PUBLIC core/decision_forest/decision_tree_public.cpp
-                              core/decision_forest/random_forest_public.cpp)
+                              core/decision_forest/decision_forest_public.cpp)
 set(DA_NLLS_PUBLIC core/nlls/nlls_public.cpp)
 set(DA_NLLS_INTERNAL core/nlls/nlls.cpp)
 set(DA_HANDLE_PUBLIC core/utilities/da_handle.cpp
@@ -96,6 +98,10 @@ set(DA_SVM_PUBLIC core/svm/svm_public.cpp core/svm/svm_select_simd.cpp
 set(DA_KERNEL_FUNCTIONS_PUBLIC
     core/kernel_functions/kernel_functions_public.cpp
     core/kernel_functions/kernel_functions_select_simd.cpp)
+set(DA_INTERPOLATION_PUBLIC
+    core/interpolation/interpolation_public.cpp)
+set(DA_APPROXIMATE_NEIGHBORS_PUBLIC
+    core/approximate_neighbors/approximate_neighbors_public.cpp)
 
 # Internal APIs require multi-compilation for different zen architectures
 set(DA_BASIC_STATISTICS_INTERNAL
@@ -106,9 +112,11 @@ set(DA_BASIC_STATISTICS_INTERNAL
     core/basic_statistics/row_to_col_major.cpp)
 set(DA_FACTORIZATION_INTERNAL core/factorization/pca.cpp)
 set(DA_DECISION_FOREST_INTERNAL
-    core/decision_forest/histogram.cpp core/decision_forest/decision_tree.cpp
-    core/decision_forest/random_forest.cpp
-    core/decision_forest/decision_tree_misc.cpp)
+    core/decision_forest/common/histogram.cpp
+    core/decision_forest/common/scoring.cpp
+    core/decision_forest/common/idx_sorting.cpp
+    core/decision_forest/tree/decision_tree.cpp
+    core/decision_forest/forest/decision_forest.cpp)
 set(DA_NEAREST_NEIGHBORS_INTERNAL
     core/nearest_neighbors/nearest_neighbors.cpp
     core/nearest_neighbors/radius_neighbors.cpp
@@ -118,7 +126,9 @@ set(DA_NEAREST_NEIGHBORS_INTERNAL
 set(DA_CLUSTERING_INTERNAL
     core/clustering/kmeans.cpp core/clustering/dbscan.cpp
     core/clustering/kmeans_kernels.cpp)
-set(DA_UTILS_INTERNAL core/utilities/da_utils.cpp)
+set(DA_UTILS_INTERNAL
+    core/utilities/da_utils.cpp
+    core/utilities/train_test_split.cpp)
 set(DA_OPTIMIZATION_INTERNAL core/optimization/optimization.cpp)
 set(DA_SVM_INTERNAL core/svm/svm.cpp core/svm/base_svm.cpp core/svm/c_svm.cpp
                     core/svm/nu_svm.cpp core/svm/svm_kernels.cpp)
@@ -140,6 +150,11 @@ set(DA_METRICS_INTERNAL
     core/metrics/euclidean_gemm_distance.cpp
     core/metrics/kernels_avx2.cpp
     core/metrics/kernels_avx512.cpp)
+set(DA_INTERPOLATION_INTERNAL
+    core/interpolation/interpolation.cpp
+    core/interpolation/cubic_spline/cubic_spline.cpp)
+set(DA_APPROXIMATE_NEIGHBORS_INTERNAL
+    core/approximate_neighbors/approximate_neighbors.cpp)
 
 set(DA_CORE_PUBLIC
     ${DA_LINMOD_PUBLIC}
@@ -158,7 +173,9 @@ set(DA_CORE_PUBLIC
     ${DA_UTILS_PUBLIC}
     ${DA_NEAREST_NEIGHBORS_PUBLIC}
     ${DA_SVM_PUBLIC}
-    ${DA_KERNEL_FUNCTIONS_PUBLIC})
+    ${DA_KERNEL_FUNCTIONS_PUBLIC}
+    ${DA_INTERPOLATION_PUBLIC}
+    ${DA_APPROXIMATE_NEIGHBORS_PUBLIC})
 
 set(DA_CORE_DYNAMIC_DISPATCH
     ${DA_FACTORIZATION_INTERNAL}
@@ -173,7 +190,9 @@ set(DA_CORE_DYNAMIC_DISPATCH
     ${DA_OPTIMIZATION_INTERNAL}
     ${DA_BASIC_STATISTICS_INTERNAL}
     ${DA_KERNEL_FUNCTIONS_INTERNAL}
-    ${DA_METRICS_INTERNAL})
+    ${DA_METRICS_INTERNAL}
+    ${DA_INTERPOLATION_INTERNAL}
+    ${DA_APPROXIMATE_NEIGHBORS_INTERNAL})
 
 if(ARCH STREQUAL "dynamic")
   # Build archs list
@@ -261,7 +280,6 @@ foreach(ARCHITECTURE IN LISTS ARCHITECTURES)
 
   set(ARCH_OBJECTS ${ARCHITECTURE}_OBJECTS)
   add_library(${ARCH_OBJECTS} OBJECT ${DA_CORE_DYNAMIC_DISPATCH})
-
 
   # Set the compile definitions for the architecture
   if(ARCHITECTURE STREQUAL "generic"
@@ -361,6 +379,12 @@ if(BUILD_SMP)
   if(WIN32)
     target_link_libraries(da_core PRIVATE OpenMP::OpenMP_CXX)
     target_link_libraries(da_core_public PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+else()
+  if(UNIX)
+   # BLIS and flame always depend on some pthread utilities, even in sequential builds
+    find_package(Threads REQUIRED)
+    target_link_libraries(aocl-da PRIVATE Threads::Threads)
   endif()
 endif()
 

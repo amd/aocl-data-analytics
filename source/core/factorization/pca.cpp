@@ -251,10 +251,29 @@ da_status pca<T>::init(da_int n, da_int p, const T *A_in, da_int lda_in) {
         A = nullptr;
     }
 
-    da_status status = this->store_2D_array(n, p, A_in, lda_in, &A_temp, &A, this->lda,
-                                            "n_samples", "n_features", "A", "lda");
+    // Read in data storage option
+    std::string opt_order;
+    da_int iorder;
+    this->opts.get("storage order", opt_order, iorder);
+    this->order = da_order(iorder);
+
+    // Check for illegal arguments
+    da_status status = this->check_2D_array(this->order, n, p, A_in, lda_in, "n_samples",
+                                            "n_features", "A", "lda", 1, 1);
     if (status != da_status_success)
         return status;
+
+    // We'll always store A in column-major format internally
+    if (this->order == row_major) {
+        A_temp = new T[n * p];
+        ARCH::da_utils::copy_transpose_2D_array_row_to_column_major<T>(n, p, A_in, lda_in,
+                                                                       A_temp, n);
+        A = A_temp;
+        this->lda = n;
+    } else {
+        A = A_in;
+        this->lda = lda_in;
+    }
 
     // Store dimensions of A
     this->n = n;
@@ -741,19 +760,11 @@ template <typename T> da_status pca<T>::compute() {
 template <typename T>
 da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_transform,
                             da_int ldx_transform) {
-
     if (!iscomputed) {
         return da_warn(this->err, da_status_no_data,
                        "The PCA has not been computed. Please call da_pca_compute_s or "
                        "da_pca_compute_d.");
     }
-
-    const T *X_temp;
-    T *utility_ptr1 = nullptr;
-    T *utility_ptr2 = nullptr;
-    da_int ldx_temp;
-    T *X_transform_temp;
-    da_int ldx_transform_temp;
 
     if (p != this->p)
         return da_error(this->err, da_status_invalid_input,
@@ -761,16 +772,16 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
                             " but the PCA has been computed with " +
                             std::to_string(this->p) + " features.");
 
-    da_status status =
-        this->store_2D_array(m, p, X, ldx, &utility_ptr1, &X_temp, ldx_temp, "m_samples",
-                             "m_features", "X", "ldx");
+    // Check for illegal arguments
+
+    da_status status = this->check_2D_array(this->order, m, p, X, ldx, "m_samples",
+                                            "m_features", "X", "ldx");
     if (status != da_status_success)
         return status;
 
-    status = this->store_2D_array(m, ns, X_transform, ldx_transform, &utility_ptr2,
-                                  const_cast<const T **>(&X_transform_temp),
-                                  ldx_transform_temp, "m_samples", "n_components",
-                                  "X_transform", "ldx_transform", 1);
+    status =
+        this->check_2D_array(this->order, m, ns, X_transform, ldx_transform, "m_samples",
+                             "n_components", "X_transform", "ldx_transform");
     if (status != da_status_success)
         return status;
 
@@ -778,7 +789,7 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
     da_int ldv;
     try {
         v.resize(p * npc);
-        ldv = p;
+        ldv = (this->order == column_major) ? p : npc;
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error,
                         "Memory allocation failed."); // LCOV_EXCL_LINE
@@ -786,6 +797,10 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
 
     T sdev_factor;
     // If whitening, transform V -> V * S^-1 * sqrt(div)
+
+    // vt is stored internally in column major order, but if the user has requested row major
+    // order we need to take that into account when accessing elements
+
     if (whiten) {
         // check smallest singular value is not zero
         bool sigma_contains_zero = false;
@@ -799,9 +814,16 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
                 sdev_factor = (method == pca_method_corr)
                                   ? sqrt_div / column_sdevs_nonzero[j]
                                   : sqrt_div;
-                for (da_int i = 0; i < npc; i++) {
-                    v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor /
-                                     ((sigma[i] > 0) ? sigma[i] : eps);
+                if (this->order == column_major) {
+                    for (da_int i = 0; i < npc; i++) {
+                        v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor /
+                                         ((sigma[i] > 0) ? sigma[i] : eps);
+                    }
+                } else {
+                    for (da_int i = 0; i < npc; i++) {
+                        v[i + ldv * j] = vt[i + ldvt * j] * sdev_factor /
+                                         ((sigma[i] > 0) ? sigma[i] : eps);
+                    }
                 }
             }
         } else {
@@ -809,9 +831,16 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
                 sdev_factor = (method == pca_method_corr)
                                   ? sqrt_div / column_sdevs_nonzero[j]
                                   : sqrt_div;
+                if (this->order == column_major) {
 #pragma omp simd
-                for (da_int i = 0; i < npc; i++) {
-                    v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor / sigma[i];
+                    for (da_int i = 0; i < npc; i++) {
+                        v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor / sigma[i];
+                    }
+                } else {
+#pragma omp simd
+                    for (da_int i = 0; i < npc; i++) {
+                        v[i + ldv * j] = vt[i + ldvt * j] * sdev_factor / sigma[i];
+                    }
                 }
             }
         }
@@ -819,18 +848,26 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
         for (da_int j = 0; j < p; j++) {
             sdev_factor =
                 (method == pca_method_corr) ? (T)1.0 / column_sdevs_nonzero[j] : (T)1.0;
+            if (this->order == column_major) {
 #pragma omp simd
-            for (da_int i = 0; i < npc; i++) {
-                v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor;
+                for (da_int i = 0; i < npc; i++) {
+                    v[j + ldv * i] = vt[i + ldvt * j] * sdev_factor;
+                }
+            } else {
+#pragma omp simd
+                for (da_int i = 0; i < npc; i++) {
+                    v[i + ldv * j] = vt[i + ldvt * j] * sdev_factor;
+                }
             }
         }
     }
 
     // Transform is (X - \mu) * V
     // Compute X * V and store in transformed_data
-    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, m, npc, p, 1.0, X_temp,
-                        ldx_temp, v.data(), ldv, 0.0, X_transform_temp,
-                        ldx_transform_temp);
+
+    auto cblas_storage = (this->order == column_major) ? CblasColMajor : CblasRowMajor;
+    da_blas::cblas_gemm(cblas_storage, CblasNoTrans, CblasNoTrans, m, npc, p, 1.0, X, ldx,
+                        v.data(), ldv, 0.0, X_transform, ldx_transform);
 
     if (method == pca_method_cov || method == pca_method_corr) {
         // Get mean correction \mu
@@ -843,28 +880,27 @@ da_status pca<T>::transform(da_int m, da_int p, const T *X, da_int ldx, T *X_tra
                             "Memory allocation failed."); // LCOV_EXCL_LINE
         }
 
-        da_blas::cblas_gemv(CblasColMajor, CblasTrans, p, npc, (T)1.0, v.data(), ldv,
+        da_blas::cblas_gemv(cblas_storage, CblasTrans, p, npc, (T)1.0, v.data(), ldv,
                             column_means.data(), 1, (T)0.0, mean_correction.data(), 1);
 
+        if (this->order == column_major) {
 #pragma omp parallel for collapse(2)                                                     \
-    shared(npc, m, X_transform_temp, ldx_transform_temp, mean_correction) default(none)
-        for (da_int j = 0; j < npc; j++) {
-            for (da_int i = 0; i < m; i++) {
-                X_transform_temp[i + ldx_transform_temp * j] -= mean_correction[j];
+    shared(npc, m, X_transform, ldx_transform, mean_correction) default(none)
+            for (da_int j = 0; j < npc; j++) {
+                for (da_int i = 0; i < m; i++) {
+                    X_transform[i + ldx_transform * j] -= mean_correction[j];
+                }
+            }
+        } else {
+#pragma omp parallel for collapse(2)                                                     \
+    shared(npc, m, X_transform, ldx_transform, mean_correction) default(none)
+            for (da_int j = 0; j < m; j++) {
+                for (da_int i = 0; i < npc; i++) {
+                    X_transform[i + ldx_transform * j] -= mean_correction[i];
+                }
             }
         }
     }
-
-    if (this->order == row_major) {
-
-        da_utils::copy_transpose_2D_array_column_to_row_major(
-            m, ns, X_transform_temp, ldx_transform_temp, X_transform, ldx_transform);
-    }
-
-    if (utility_ptr1)
-        delete[] (utility_ptr1);
-    if (utility_ptr2)
-        delete[] (utility_ptr2);
 
     return da_status_success;
 }
@@ -879,29 +915,20 @@ da_status pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ldx,
                        "da_pca_compute_d.");
     }
 
-    const T *X_temp;
-    T *utility_ptr1 = nullptr;
-    T *utility_ptr2 = nullptr;
-    da_int ldx_temp;
-    T *X_inv_transform_temp;
-    da_int ldx_inv_transform_temp;
-
     if (r != ns)
         return da_error(this->err, da_status_invalid_input,
                         "The function was called with k_features = " + std::to_string(r) +
                             " but the PCA has been computed with " + std::to_string(ns) +
                             " components.");
 
-    da_status status =
-        this->store_2D_array(k, ns, X, ldx, &utility_ptr1, &X_temp, ldx_temp, "k_samples",
-                             "k_features", "Y", "ldy");
+    // Check for illegal arguments
+    da_status status = this->check_2D_array(this->order, k, ns, X, ldx, "k_samples",
+                                            "n_features", "Y", "ldy");
     if (status != da_status_success)
         return status;
-
-    status = this->store_2D_array(k, p, X_inv_transform, ldx_inv_transform, &utility_ptr2,
-                                  const_cast<const T **>(&X_inv_transform_temp),
-                                  ldx_inv_transform_temp, "k_samples", "n_features",
-                                  "Y_transform", "ldy_transform", 1);
+    status =
+        this->check_2D_array(this->order, k, p, X_inv_transform, ldx_inv_transform,
+                             "k_samples", "n_features", "Y_transform", "ldy_transform");
     if (status != da_status_success)
         return status;
 
@@ -911,59 +938,75 @@ da_status pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ldx,
 
     // If whitening inverse transform operation is X * V^T * S / sqrt(div)
     // Else it's simply X*V^T
+    // Either way, VT is stored internally in column major format, but we may need to account for row major here
+
     if (whiten) {
         try {
             inv_transform_operator_temp.resize(p * npc);
-            ld_inv_transform_operator = npc;
+            ld_inv_transform_operator = (this->order == column_major) ? npc : p;
         } catch (std::bad_alloc const &) {
             return da_error(this->err, da_status_memory_error,
                             "Memory allocation failed."); // LCOV_EXCL_LINE
         }
-        for (da_int j = 0; j < p; j++) {
+        if (this->order == column_major) {
+            for (da_int j = 0; j < p; j++) {
 #pragma omp simd
-            for (da_int i = 0; i < npc; i++) {
-                inv_transform_operator_temp[i + ld_inv_transform_operator * j] =
-                    vt[i + ldvt * j] * sigma[i] / sqrt_div;
+                for (da_int i = 0; i < npc; i++) {
+                    inv_transform_operator_temp[i + ld_inv_transform_operator * j] =
+                        vt[i + ldvt * j] * sigma[i] / sqrt_div;
+                }
+            }
+        } else {
+            for (da_int j = 0; j < p; j++) {
+#pragma omp simd
+                for (da_int i = 0; i < npc; i++) {
+                    inv_transform_operator_temp[j + ld_inv_transform_operator * i] =
+                        vt[i + ldvt * j] * sigma[i] / sqrt_div;
+                }
             }
         }
         inv_transform_operator = inv_transform_operator_temp.data();
     } else {
-        inv_transform_operator = vt.data();
-        ld_inv_transform_operator = ldvt;
+        if (this->order == column_major) {
+            inv_transform_operator = vt.data();
+            ld_inv_transform_operator = ldvt;
+        } else {
+            try {
+                inv_transform_operator_temp.resize(p * npc);
+            } catch (std::bad_alloc const &) {
+                return da_error(this->err, da_status_memory_error,
+                                "Memory allocation failed."); // LCOV_EXCL_LINE
+            }
+            ld_inv_transform_operator = p;
+            da_utils::copy_transpose_2D_array_column_to_row_major(
+                npc, p, vt.data(), ldvt, inv_transform_operator_temp.data(),
+                ld_inv_transform_operator);
+            inv_transform_operator = inv_transform_operator_temp.data();
+        }
     }
 
     // Compute X * VT and store
-    da_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X_temp,
-                        ldx_temp, inv_transform_operator, ld_inv_transform_operator, 0.0,
-                        X_inv_transform_temp, ldx_inv_transform_temp);
+    auto cblas_storage = (this->order == column_major) ? CblasColMajor : CblasRowMajor;
+    da_blas::cblas_gemm(cblas_storage, CblasNoTrans, CblasNoTrans, k, p, r, 1.0, X, ldx,
+                        inv_transform_operator, ld_inv_transform_operator, 0.0,
+                        X_inv_transform, ldx_inv_transform);
 
     // Undo the standardization used in the PCA computation
     switch (method) {
     case pca_method_cov:
-        ARCH::da_basic_statistics::standardize(
-            column_major, da_axis_col, k, p, X_inv_transform_temp, ldx_inv_transform_temp,
-            dof, 1, column_means.data(), (T *)nullptr);
+        ARCH::da_basic_statistics::standardize(this->order, da_axis_col, k, p,
+                                               X_inv_transform, ldx_inv_transform, dof, 1,
+                                               column_means.data(), (T *)nullptr);
         break;
     case pca_method_corr:
-        ARCH::da_basic_statistics::standardize(
-            column_major, da_axis_col, k, p, X_inv_transform_temp, ldx_inv_transform_temp,
-            dof, 1, column_means.data(), column_sdevs.data());
+        ARCH::da_basic_statistics::standardize(this->order, da_axis_col, k, p,
+                                               X_inv_transform, ldx_inv_transform, dof, 1,
+                                               column_means.data(), column_sdevs.data());
         break;
     default:
         // No standardization is required
         break;
     }
-
-    if (this->order == row_major) {
-
-        da_utils::copy_transpose_2D_array_column_to_row_major(
-            k, p, X_inv_transform_temp, ldx_inv_transform_temp, X_inv_transform,
-            ldx_inv_transform);
-    }
-    if (utility_ptr1)
-        delete[] (utility_ptr1);
-    if (utility_ptr2)
-        delete[] (utility_ptr2);
 
     return da_status_success;
 }

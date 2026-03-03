@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -636,37 +636,29 @@ inline da_status da_pairwise_distances(da_order order, da_int m, da_int n, da_in
 }
 
 /* k-NN for classification and regression functions */
-inline da_status da_nn_classifier_set_training_data(da_handle handle, da_int n_samples,
-                                                    da_int n_features,
-                                                    const double *X_train,
-                                                    da_int ldx_train,
-                                                    const da_int *y_train) {
-    return da_nn_classifier_set_training_data_d(handle, n_samples, n_features, X_train,
-                                                ldx_train, y_train);
+inline da_status da_nn_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                const float *X_train, da_int ldx_train) {
+    return da_nn_set_data_s(handle, n_samples, n_features, X_train, ldx_train);
 }
-inline da_status da_nn_classifier_set_training_data(da_handle handle, da_int n_samples,
-                                                    da_int n_features,
-                                                    const float *X_train,
-                                                    da_int ldx_train,
-                                                    const da_int *y_train) {
-    return da_nn_classifier_set_training_data_s(handle, n_samples, n_features, X_train,
-                                                ldx_train, y_train);
+
+inline da_status da_nn_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                                const double *X_train, da_int ldx_train) {
+    return da_nn_set_data_d(handle, n_samples, n_features, X_train, ldx_train);
 }
-inline da_status da_nn_regressor_set_training_data(da_handle handle, da_int n_samples,
-                                                   da_int n_features,
-                                                   const double *X_train,
-                                                   da_int ldx_train,
-                                                   const double *y_train) {
-    return da_nn_regressor_set_training_data_d(handle, n_samples, n_features, X_train,
-                                               ldx_train, y_train);
+
+template <class T>
+da_status da_nn_set_labels(da_handle handle, da_int n_samples, const da_int *y_train);
+
+inline da_status da_nn_set_targets(da_handle handle, da_int n_samples,
+                                   const float *y_train) {
+    return da_nn_set_targets_s(handle, n_samples, y_train);
 }
-inline da_status da_nn_regressor_set_training_data(da_handle handle, da_int n_samples,
-                                                   da_int n_features,
-                                                   const float *X_train, da_int ldx_train,
-                                                   const float *y_train) {
-    return da_nn_regressor_set_training_data_s(handle, n_samples, n_features, X_train,
-                                               ldx_train, y_train);
+
+inline da_status da_nn_set_targets(da_handle handle, da_int n_samples,
+                                   const double *y_train) {
+    return da_nn_set_targets_d(handle, n_samples, y_train);
 }
+
 inline da_status da_nn_kneighbors(da_handle handle, da_int n_queries, da_int n_features,
                                   const double *X_test, da_int ldx_test, da_int *n_ind,
                                   double *n_dist, da_int k, da_int return_distance) {
@@ -686,43 +678,65 @@ da_status da_nn_classes(da_handle handle, da_int *n_classes, da_int *classes);
 
 inline da_status da_nn_classifier_predict_proba(da_handle handle, da_int n_queries,
                                                 da_int n_features, const double *X_test,
-                                                da_int ldx_test, double *proba) {
+                                                da_int ldx_test, double *proba,
+                                                da_nn_search_mode search_mode) {
     return da_nn_classifier_predict_proba_d(handle, n_queries, n_features, X_test,
-                                            ldx_test, proba);
+                                            ldx_test, proba, search_mode);
 }
 
 inline da_status da_nn_classifier_predict_proba(da_handle handle, da_int n_queries,
                                                 da_int n_features, const float *X_test,
-                                                da_int ldx_test, float *proba) {
+                                                da_int ldx_test, float *proba,
+                                                da_nn_search_mode search_mode) {
     return da_nn_classifier_predict_proba_s(handle, n_queries, n_features, X_test,
-                                            ldx_test, proba);
+                                            ldx_test, proba, search_mode);
 }
 
 inline da_status da_nn_classifier_predict(da_handle handle, da_int n_queries,
                                           da_int n_features, const double *X_test,
-                                          da_int ldx_test, da_int *y_test) {
+                                          da_int ldx_test, da_int *y_test,
+                                          da_nn_search_mode search_mode) {
     return da_nn_classifier_predict_d(handle, n_queries, n_features, X_test, ldx_test,
-                                      y_test);
+                                      y_test, search_mode);
 }
 
 inline da_status da_nn_classifier_predict(da_handle handle, da_int n_queries,
                                           da_int n_features, const float *X_test,
-                                          da_int ldx_test, da_int *y_test) {
+                                          da_int ldx_test, da_int *y_test,
+                                          da_nn_search_mode search_mode) {
     return da_nn_classifier_predict_s(handle, n_queries, n_features, X_test, ldx_test,
-                                      y_test);
+                                      y_test, search_mode);
 }
 inline da_status da_nn_regressor_predict(da_handle handle, da_int n_queries,
                                          da_int n_features, const double *X_test,
-                                         da_int ldx_test, double *y_test) {
+                                         da_int ldx_test, double *y_test,
+                                         da_nn_search_mode search_mode) {
     return da_nn_regressor_predict_d(handle, n_queries, n_features, X_test, ldx_test,
-                                     y_test);
+                                     y_test, search_mode);
 }
 
 inline da_status da_nn_regressor_predict(da_handle handle, da_int n_queries,
                                          da_int n_features, const float *X_test,
-                                         da_int ldx_test, float *y_test) {
+                                         da_int ldx_test, float *y_test,
+                                         da_nn_search_mode search_mode) {
     return da_nn_regressor_predict_s(handle, n_queries, n_features, X_test, ldx_test,
-                                     y_test);
+                                     y_test, search_mode);
+}
+
+inline da_status da_nn_radius_neighbors(da_handle handle, da_int n_queries,
+                                        da_int n_features, const double *X_test,
+                                        da_int ldx_test, double radius,
+                                        da_int return_distance, da_int sort_results) {
+    return da_nn_radius_neighbors_d(handle, n_queries, n_features, X_test, ldx_test,
+                                    radius, return_distance, sort_results);
+}
+
+inline da_status da_nn_radius_neighbors(da_handle handle, da_int n_queries,
+                                        da_int n_features, const float *X_test,
+                                        da_int ldx_test, float radius,
+                                        da_int return_distance, da_int sort_results) {
+    return da_nn_radius_neighbors_s(handle, n_queries, n_features, X_test, ldx_test,
+                                    radius, return_distance, sort_results);
 }
 
 /* Utility overloaded functions */
@@ -928,6 +942,129 @@ inline da_status da_svm_predict_log_proba(da_handle handle, da_int n_samples,
                                           da_int ldy) {
     return da_svm_predict_log_proba_s(handle, n_samples, n_features, X_test, ldx_test,
                                       y_log_proba, ldy);
+}
+
+/* Interpolation overloaded functions */
+template <typename T>
+da_status da_interpolation_select_model(da_handle handle, da_interpolation_model model);
+
+inline da_status da_interpolation_set_sites(da_handle handle, da_int n_sites,
+                                            const double *x) {
+    return da_interpolation_set_sites_d(handle, n_sites, x);
+}
+
+inline da_status da_interpolation_set_sites(da_handle handle, da_int n_sites,
+                                            const float *x) {
+    return da_interpolation_set_sites_s(handle, n_sites, x);
+}
+
+inline da_status da_interpolation_set_sites_uniform(da_handle handle, da_int n_sites,
+                                                    double x_start, double x_end) {
+    return da_interpolation_set_sites_uniform_d(handle, n_sites, x_start, x_end);
+}
+
+inline da_status da_interpolation_set_sites_uniform(da_handle handle, da_int n_sites,
+                                                    float x_start, float x_end) {
+    return da_interpolation_set_sites_uniform_s(handle, n_sites, x_start, x_end);
+}
+
+inline da_status da_interpolation_set_values(da_handle handle, da_int n, da_int dim,
+                                             const double *y_data, da_int ldy_data,
+                                             da_int order) {
+    return da_interpolation_set_values_d(handle, n, dim, y_data, ldy_data, order);
+}
+
+inline da_status da_interpolation_set_values(da_handle handle, da_int n, da_int dim,
+                                             const float *y_data, da_int ldy_data,
+                                             da_int order) {
+    return da_interpolation_set_values_s(handle, n, dim, y_data, ldy_data, order);
+}
+
+inline da_status da_interpolation_search_cells(da_handle handle, da_int n_eval,
+                                               const double *x_eval, da_int *cells) {
+    return da_interpolation_search_cells_d(handle, n_eval, x_eval, cells);
+}
+
+inline da_status da_interpolation_search_cells(da_handle handle, da_int n_eval,
+                                               const float *x_eval, da_int *cells) {
+    return da_interpolation_search_cells_s(handle, n_eval, x_eval, cells);
+}
+
+template <typename T> da_status da_interpolation_interpolate(da_handle handle);
+
+inline da_status da_interpolation_set_boundary_conditions(da_handle handle, da_int dim,
+                                                          da_int left_order,
+                                                          const double *left_values,
+                                                          da_int right_order,
+                                                          const double *right_values) {
+    return da_interpolation_set_boundary_conditions_d(
+        handle, dim, left_order, left_values, right_order, right_values);
+}
+
+inline da_status da_interpolation_set_boundary_conditions(da_handle handle, da_int dim,
+                                                          da_int left_order,
+                                                          const float *left_values,
+                                                          da_int right_order,
+                                                          const float *right_values) {
+    return da_interpolation_set_boundary_conditions_s(
+        handle, dim, left_order, left_values, right_order, right_values);
+}
+
+inline da_status da_interpolation_evaluate(da_handle handle, da_int n_eval,
+                                           const double *x_eval, double *y_eval,
+                                           da_int n_orders, da_int *orders) {
+    return da_interpolation_evaluate_d(handle, n_eval, x_eval, y_eval, n_orders, orders);
+}
+
+inline da_status da_interpolation_evaluate(da_handle handle, da_int n_eval,
+                                           const float *x_eval, float *y_eval,
+                                           da_int n_orders, da_int *orders) {
+    return da_interpolation_evaluate_s(handle, n_eval, x_eval, y_eval, n_orders, orders);
+}
+/* Approximate Neighbors functions*/
+inline da_status da_approx_nn_set_training_data(da_handle handle, da_int n_samples,
+                                                da_int n_features, const double *X_train,
+                                                da_int ldx_train) {
+    return da_approx_nn_set_training_data_d(handle, n_samples, n_features, X_train,
+                                            ldx_train);
+}
+
+inline da_status da_approx_nn_set_training_data(da_handle handle, da_int n_samples,
+                                                da_int n_features, const float *X_train,
+                                                da_int ldx_train) {
+    return da_approx_nn_set_training_data_s(handle, n_samples, n_features, X_train,
+                                            ldx_train);
+}
+
+template <class T> da_status da_approx_nn_train(da_handle handle);
+
+inline da_status da_approx_nn_add(da_handle handle, da_int n_samples_add,
+                                  da_int n_features, const double *X_add,
+                                  da_int ldx_add) {
+    return da_approx_nn_add_d(handle, n_samples_add, n_features, X_add, ldx_add);
+}
+
+inline da_status da_approx_nn_add(da_handle handle, da_int n_samples_add,
+                                  da_int n_features, const float *X_add, da_int ldx_add) {
+    return da_approx_nn_add_s(handle, n_samples_add, n_features, X_add, ldx_add);
+}
+
+template <class T> da_status da_approx_nn_train_and_add(da_handle handle);
+
+inline da_status da_approx_nn_kneighbors(da_handle handle, da_int n_queries,
+                                         da_int n_features, const double *X_test,
+                                         da_int ldx_test, da_int *n_ind, double *n_dist,
+                                         da_int k = 0, bool return_distance = 0) {
+    return da_approx_nn_kneighbors_d(handle, n_queries, n_features, X_test, ldx_test,
+                                     n_ind, n_dist, k, return_distance);
+}
+
+inline da_status da_approx_nn_kneighbors(da_handle handle, da_int n_queries,
+                                         da_int n_features, const float *X_test,
+                                         da_int ldx_test, da_int *n_ind, float *n_dist,
+                                         da_int k = 0, bool return_distance = 0) {
+    return da_approx_nn_kneighbors_s(handle, n_queries, n_features, X_test, ldx_test,
+                                     n_ind, n_dist, k, return_distance);
 }
 
 #endif // AOCLDA_CPP_OVERLOADS

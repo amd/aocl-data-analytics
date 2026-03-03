@@ -84,6 +84,32 @@ template <typename T> class basic_handle {
                              const std::string &data_name, da_int n_min = 1);
 
     /**
+     * @brief Argument checking for a 2D input array, including NaN check if option is set
+     *
+     * This function performs checks for invalid dimensions, null pointers, and NaN values (if enabled).
+     * It is intended to be used for validating 2D arrays passed to the handle for those routines which
+     * will handle row or column major storage internally. Functionally it is equivalent to store_2D_array
+     * with mode = 3, which is ultimately intended to be deprecated.
+     *
+     * @param order The storage order of the input data (row-major or column-major).
+     * @param n_rows The number of rows in the 2D array.
+     * @param n_cols The number of columns in the 2D array.
+     * @param data A pointer to the input data.
+     * @param lddata The leading dimension of the input data.
+     * @param n_rows_name The name of the variable representing the number of rows (for error messages).
+     * @param n_cols_name The name of the variable representing the number of columns (for error messages).
+     * @param data_name The name of the variable representing the data (for error messages).
+     * @param lddata_name The name of the variable representing the leading dimension (for error messages).
+     * @param n_rows_min The minimum allowed value for the number of rows.
+     * @param n_cols_min The minimum allowed value for the number of columns.
+     */
+    da_status check_2D_array(da_order order, da_int n_rows, da_int n_cols, const T *data,
+                             da_int lddata, const std::string &n_rows_name,
+                             const std::string &n_cols_name, const std::string &data_name,
+                             const std::string &lddata_name, da_int n_rows_min = 1,
+                             da_int n_cols_min = 1);
+
+    /**
      * @brief Stores a 2D array into the handle, performing necessary checks and transformations.
      *
      * This function stores/checks a 2D array into the handle, based on the specified storage order

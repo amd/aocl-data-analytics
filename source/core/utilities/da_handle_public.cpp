@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -101,9 +101,10 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
             }
             break;
         case da_handle_decision_forest:
-            DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
-                                           new da_decision_forest::random_forest<double>(
-                                               *(*handle)->err));
+            DISPATCHER(
+                (*handle)->err,
+                (*handle)->alg_handle_d =
+                    new da_decision_forest::decision_forest<double>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_d = nullptr;
@@ -138,6 +139,27 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
         case da_handle_svm:
             DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
                                            new da_svm::svm<double>(*(*handle)->err));
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_d = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_interpolation:
+            DISPATCHER((*handle)->err, (*handle)->alg_handle_d =
+                                           new da_interpolation::interpolation_p<double>(
+                                               *(*handle)->err));
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_d = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_approx_nn:
+            DISPATCHER(
+                (*handle)->err,
+                (*handle)->alg_handle_d =
+                    new da_approx_nn::approximate_neighbors<double>(*(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_d = nullptr;
@@ -221,9 +243,9 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
             }
             break;
         case da_handle_decision_forest:
-            DISPATCHER((*handle)->err,
-                       (*handle)->alg_handle_s =
-                           new da_decision_forest::random_forest<float>(*(*handle)->err));
+            DISPATCHER((*handle)->err, (*handle)->alg_handle_s =
+                                           new da_decision_forest::decision_forest<float>(
+                                               *(*handle)->err));
             status = (*handle)->err->get_status();
             if (status != da_status_success) {
                 (*handle)->alg_handle_s = nullptr;
@@ -258,6 +280,27 @@ da_status da_handle_init_s(da_handle *handle, da_handle_type handle_type) {
                 return status;
             }
             break;
+        case da_handle_interpolation:
+            DISPATCHER((*handle)->err,
+                       (*handle)->alg_handle_s =
+                           new da_interpolation::interpolation_p<float>(*(*handle)->err));
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_s = nullptr;
+                return status;
+            }
+            break;
+        case da_handle_approx_nn:
+            DISPATCHER((*handle)->err, (*handle)->alg_handle_s =
+                                           new da_approx_nn::approximate_neighbors<float>(
+                                               *(*handle)->err));
+            status = (*handle)->err->get_status();
+            if (status != da_status_success) {
+                (*handle)->alg_handle_s = nullptr;
+                return status;
+            }
+            break;
+
         default:
             break;
         }

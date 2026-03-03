@@ -35,14 +35,14 @@
 #include <list>
 #include <string>
 
-template <typename T> class random_forest_test : public testing::Test {
+template <typename T> class decision_forest_test : public testing::Test {
   public:
     using List = std::list<T>;
     static T shared_;
     T value_;
 };
 using FloatTypes = ::testing::Types<float, double>;
-TYPED_TEST_SUITE(random_forest_test, FloatTypes);
+TYPED_TEST_SUITE(decision_forest_test, FloatTypes);
 
 template <typename T> struct test_data_type {
     std::vector<T> X_train;
@@ -149,7 +149,7 @@ template <typename T> void set_test_data_6x2_categorical(test_data_type<T> &data
     data.categorical_feat = {2, 3};
 }
 
-TYPED_TEST(random_forest_test, trivial_forests) {
+TYPED_TEST(decision_forest_test, trivial_forests) {
     std::function<void(test_data_type<TypeParam> & data)> set_test_data[] = {
         set_test_data_8x2_unique<TypeParam>};
     test_data_type<TypeParam> data;
@@ -190,7 +190,7 @@ TYPED_TEST(random_forest_test, trivial_forests) {
     }
 }
 
-TYPED_TEST(random_forest_test, categorical_features) {
+TYPED_TEST(decision_forest_test, categorical_features) {
     test_data_type<TypeParam> data;
     set_test_data_6x2_categorical(data);
     da_handle forest_handle = nullptr;
@@ -219,7 +219,7 @@ TYPED_TEST(random_forest_test, categorical_features) {
     da_handle_destroy(&forest_handle);
 }
 
-TYPED_TEST(random_forest_test, small_bins) {
+TYPED_TEST(decision_forest_test, small_bins) {
     using T = TypeParam;
     std::vector<T> X_train = {(T)0,   (T)1,   (T)2,  (T)3, (T)4,   (T)0.5, (T)1.5, (T)2.5,
                               (T)3.5, (T)4.5, (T)6,  (T)7, (T)8,   (T)9,   (T)5.5, (T)4,
@@ -281,7 +281,7 @@ TYPED_TEST(random_forest_test, small_bins) {
     da_handle_destroy(&forest_handle);
 }
 
-TYPED_TEST(random_forest_test, onevall) {
+TYPED_TEST(decision_forest_test, onevall) {
     using T = TypeParam;
     // Simple 2 features, tree should train in 2 splits
     std::vector<T> X_train = {(T)0, (T)0, (T)0, (T)0, (T)1, (T)1, (T)1, (T)1,
@@ -329,7 +329,7 @@ TYPED_TEST(random_forest_test, onevall) {
     da_handle_destroy(&forest_handle);
 }
 
-TYPED_TEST(random_forest_test, get_results) {
+TYPED_TEST(decision_forest_test, get_results) {
 
     test_data_type<TypeParam> data;
     set_test_data_8x2_nonunique<TypeParam>(data);
@@ -388,7 +388,7 @@ TYPED_TEST(random_forest_test, get_results) {
     da_handle_destroy(&forest_handle);
 }
 
-TYPED_TEST(random_forest_test, invalid_input) {
+TYPED_TEST(decision_forest_test, invalid_input) {
 
     std::vector<TypeParam> X{0.0, 1.0, 0.0, 2.0};
     std::vector<da_int> y{0, 1};

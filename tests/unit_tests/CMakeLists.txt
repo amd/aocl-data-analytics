@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -63,13 +63,16 @@ set(INTERNAL_INC_DIRS
     ${CMAKE_SOURCE_DIR}/source/core/nearest_neighbors
     ${CMAKE_SOURCE_DIR}/source/core/utilities
     ${CMAKE_SOURCE_DIR}/source/core/decision_forest
+    ${CMAKE_SOURCE_DIR}/source/core/decision_forest/tree
     ${CMAKE_SOURCE_DIR}/source/core/metrics
     ${CMAKE_SOURCE_DIR}/source/core/linear_model
     ${CMAKE_SOURCE_DIR}/source/core/basic_statistics
     ${CMAKE_SOURCE_DIR}/source/core/dynamic_dispatch
     ${CMAKE_SOURCE_DIR}/source/core/kernel_functions
+    ${CMAKE_SOURCE_DIR}/source/core/svm
+    ${CMAKE_SOURCE_DIR}/source/core/interpolation
     ${CMAKE_SOURCE_DIR}/source/core/train_test_split
-    ${CMAKE_SOURCE_DIR}/source/core/svm)
+    ${CMAKE_SOURCE_DIR}/source/core/approximate_neighbors)
 
 set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
@@ -82,9 +85,14 @@ target_link_libraries(basic_stats_public PRIVATE ${BLAS})
 # ##############################################################################
 # ########## Train Test Split #############
 # ##############################################################################
+add_executable(train_test_split_internal train_test_split/train_test_split_internal.cpp)
+target_link_libraries(train_test_split_internal PRIVATE ${BLAS})
+
 add_executable(train_test_split_public
                train_test_split/train_test_split_public.cpp)
+target_compile_definitions(train_test_split_public PRIVATE DATA_DIR="${DATA_PATH}")
 target_link_libraries(train_test_split_public PRIVATE ${BLAS})
+
 add_executable(shuffle_indices_public
                train_test_split/shuffle_indices_public.cpp)
 target_link_libraries(shuffle_indices_public PRIVATE ${BLAS})
@@ -226,9 +234,9 @@ add_executable(interval_set_internal data_management/interval_set_internal.cpp)
 # ##############################################################################
 # ############# nearest neighbors ##################
 # ##############################################################################
-add_executable(knn_public nearest_neighbors/knn_public.cpp)
-target_link_libraries(knn_public PRIVATE aocl-da ${BLAS})
-target_compile_definitions(knn_public PRIVATE DATA_DIR="${DATA_PATH}")
+add_executable(nearest_neighbors_public nearest_neighbors/nearest_neighbors_public.cpp)
+target_link_libraries(nearest_neighbors_public PRIVATE aocl-da ${BLAS})
+target_compile_definitions(nearest_neighbors_public PRIVATE DATA_DIR="${DATA_PATH}")
 add_executable(trees_internal nearest_neighbors/trees_internal.cpp)
 add_executable(radius_neighbors_internal
                nearest_neighbors/radius_neighbors_internal.cpp)
@@ -254,6 +262,19 @@ add_executable(svm_public svm/svm_public.cpp)
 target_compile_definitions(svm_public PRIVATE DATA_DIR="${DATA_PATH}")
 target_link_libraries(svm_public PRIVATE ${BLAS})
 
+# ##############################################################################
+# ############## Interpolation #################
+# ##############################################################################
+add_executable(cubic_spline_public interpolation/cubic_spline_public.cpp)
+target_compile_definitions(cubic_spline_public PRIVATE DATA_DIR="${DATA_PATH}")
+target_link_libraries(cubic_spline_public PRIVATE aocl-da)
+
+# ############## ANN #################
+# ##############################################################################
+add_executable(ann_public approximate_neighbors/ann_public.cpp)
+target_link_libraries(ann_public PRIVATE aocl-da ${BLAS})
+target_compile_definitions(ann_public PRIVATE DATA_DIR="${DATA_PATH}")
+
 set(GTEST_INTERNAL
     csv_internal
     linmod_internal
@@ -268,6 +289,7 @@ set(GTEST_INTERNAL
     coord_internal
     nlls_internal
     svm_internal
+    train_test_split_internal
     kernel_functions_internal
     miscellaneous_internal
     da_vector_internal
@@ -303,9 +325,11 @@ set(GTEST_PUBLIC
     parallel_public
     utilities_public
     nlls_public
-    knn_public
+    nearest_neighbors_public
     kernel_functions_public
-    svm_public)
+    svm_public
+    cubic_spline_public
+    ann_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)
 set(PUBLIC_UTESTS ${GTEST_PUBLIC} ${INDEP_PUBLIC})
 
@@ -355,9 +379,6 @@ foreach(target ${UTESTS})
   # empty string. This is what AOCL-DA users will need to do explicitly to get
   # the correct symbols, otherwise they will get linking errors or aborts.
   target_compile_definitions(${target} PRIVATE ${AOCLDA_ILP64})
-  if (NOT BUILD_SHARED_LIBS)
-    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
-  endif()
 endforeach()
 
 if(WIN32 AND BUILD_SHARED_LIBS)

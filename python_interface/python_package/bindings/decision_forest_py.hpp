@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -96,6 +96,14 @@ class decision_tree : public pyda_handle {
         da_status status;
         status = da_options_set(handle, "maximum features", max_features);
         exception_check(status);
+    }
+
+    da_int get_max_features_opt() {
+        da_int max_features;
+        da_status status;
+        status = da_options_get(handle, "maximum features", &max_features);
+        exception_check(status);
+        return max_features;
     }
 
     template <typename T>
@@ -335,6 +343,23 @@ class decision_forest : public pyda_handle {
         da_status status;
         status = da_options_set(handle, "maximum features", max_features);
         exception_check(status);
+    }
+
+    da_int get_max_features_opt() {
+        da_int max_features;
+        da_status status;
+        status = da_options_get(handle, "maximum features", &max_features);
+        exception_check(status);
+        return max_features;
+    }
+
+    std::string get_features_selection_opt() {
+        char feat_sel[20];
+        da_int lval = 20;
+        da_status status;
+        status = da_options_get(handle, "features selection", feat_sel, &lval);
+        exception_check(status);
+        return std::string(feat_sel);
     }
 
     template <typename T>

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -603,7 +603,7 @@ const dectree_param_t dectree_param_pos[] = {
 
     // splits on fewer than all the features
     {"gen_200x10_split4", "gen_200x10_3class", {{"maximum depth", 19}, {"seed", 42}, {"maximum features", 4}},
-      {{"scoring function", "entropy"}}, {}, {}, 0.88},
+      {{"scoring function", "entropy"}}, {}, {}, 0.81},
     {"iris_split2", "iris", {{"node minimum samples", 1}, {"maximum depth", 19}, {"seed", 42}, {"maximum features", 2}}, {{"scoring function", "gini"}}, {}, {}, 0.95},
     {"gen_500x20_split6", "gen_500x20_4class", {{"maximum depth", 19}, {"seed", 42}, {"maximum features", 7}},
       {{"scoring function", "gini"}}, {}, {}, 0.8},

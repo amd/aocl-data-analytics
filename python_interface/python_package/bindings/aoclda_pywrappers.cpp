@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,6 +27,7 @@
 
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
+#include "approximate_neighbors_py.hpp"
 #include "basic_stats_py.hpp"
 #include "dbscan_py.hpp"
 #include "decision_forest_py.hpp"
@@ -335,7 +336,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("pybind_get_model_info", &decision_tree::get_model_info,
              "Get model information")
         .def("set_max_features_opt", &decision_tree::set_max_features_opt,
-             "Set options for feature selection", py::arg("max_features") = 0);
+             "Set option for feature selection", py::arg("max_features") = 0)
+        .def("get_max_features_opt", &decision_tree::get_max_features_opt,
+             "Get option for feature selection");
 
     /**********************************/
     /*       Decision Forests         */
@@ -385,7 +388,11 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("set_max_features_opt", &decision_forest::set_max_features_opt,
              "Set options for feature selection", py::arg("max_features") = 0)
         .def("set_features_selection_opt", &decision_forest::set_features_selection_opt,
-             "Set options for feature selection", py::arg("features_selection") = "sqrt");
+             "Set options for feature selection", py::arg("features_selection") = "sqrt")
+        .def("get_max_features_opt", &decision_forest::get_max_features_opt,
+             "Get option for feature selection")
+        .def("get_features_selection_opt", &decision_forest::get_features_selection_opt,
+             "Get option for feature selection");
 
     /**********************************/
     /*     Nonlinear Data Fitting     */
@@ -433,60 +440,28 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_info_optim", &nlls::get_info_optim); // -> dict
 
     /**********************************/
-    /*         kNN Classifier         */
-    /**********************************/
-    auto m_knn_classifier =
-        m.def_submodule("nearest_neighbors", "k-Nearest Neighbors for classification");
-    py::class_<knn_classifier, pyda_handle>(m_knn_classifier, "pybind_knn_classifier")
-        .def(py::init<da_int, std::string, std::string, da_int, std::string,
-                      std::string &, bool>(),
-             py::arg("n_neighbors") = (da_int)5, py::arg("weights") = "uniform",
-             py::arg("algorithm") = "auto", py::arg("leaf_size") = (da_int)30,
-             py::arg("metric") = "euclidean", py::arg("precision") = "double",
-             py::arg("check_data") = false)
-        .def("pybind_fit", &knn_classifier::fit<float>, "Fit the knn classifier", "X"_a,
-             "y"_a, py::arg("p") = (float)2.0)
-        .def("pybind_fit", &knn_classifier::fit<double>, "Fit the knn classifier", "X"_a,
-             "y"_a, py::arg("p") = (double)2.0)
-        .def("pybind_kneighbors_indices", &knn_classifier::kneighbors_indices<float>,
-             "Compute the indices of the k-nearest neighbors", "X"_a,
-             py::arg("n_neighbors") = (da_int)0)
-        .def("pybind_kneighbors_indices", &knn_classifier::kneighbors_indices<double>,
-             "Compute the indices of the k-nearest neighbors", "X"_a,
-             py::arg("n_neighbors") = (da_int)0)
-        .def("pybind_kneighbors", &knn_classifier::kneighbors<float>,
-             "Compute the indices of the k-nearest neighbors and the corresponding "
-             "distances",
-             "X"_a, py::arg("n_neighbors") = (da_int)0)
-        .def("pybind_kneighbors", &knn_classifier::kneighbors<double>,
-             "Compute the indices of the k-nearest neighbors and the corresponding "
-             "distances",
-             "X"_a, py::arg("n_neighbors") = (da_int)0)
-        // Definition for float type needs to be before double type, otherwise this gives
-        // "RuntimeError: The handle was initialized with a different precision type than double."
-        .def("pybind_predict_proba", &knn_classifier::predict_proba<float>,
-             "Compute the probabilities estimates for the test data", "X"_a)
-        .def("pybind_predict_proba", &knn_classifier::predict_proba<double>,
-             "Compute the probabilities estimates for the test data", "X"_a)
-        .def("pybind_predict", &knn_classifier::predict<float>,
-             "Compute the predicted labels for the test data", "X"_a)
-        .def("pybind_predict", &knn_classifier::predict<double>,
-             "Compute the predicted labels for the test data", "X"_a);
-
-    /**********************************/
     /*        Nearest Neighbors       */
     /**********************************/
-    auto m_nearest_neighbors = m.def_submodule("nearest_neighbors", "Nearest Neighbors");
-    py::class_<nearest_neighbors, pyda_handle>(m_nearest_neighbors,
-                                               "pybind_nearest_neighbors")
-        .def(py::init<da_int, std::string, da_int, std::string, std::string &, bool>(),
+    auto m_neighbors = m.def_submodule("neighbors", "Nearest Neighbors");
+    py::class_<nearest_neighbors, pyda_handle>(m_neighbors, "pybind_nearest_neighbors")
+        .def(py::init<da_int, std::string, da_int, std::string, std::string, std::string,
+                      bool>(),
              py::arg("n_neighbors") = (da_int)5, py::arg("algorithm") = "auto",
              py::arg("leaf_size") = (da_int)30, py::arg("metric") = "euclidean",
-             py::arg("precision") = "double", py::arg("check_data") = false)
+             py::arg("weights") = "uniform", py::arg("precision") = "double",
+             py::arg("check_data") = false)
         .def("pybind_fit", &nearest_neighbors::fit<float>, "Fit the nearest neighbors",
              "X"_a, py::arg("p") = (float)2.0, py::arg("radius") = (float)1.0)
         .def("pybind_fit", &nearest_neighbors::fit<double>, "Fit the nearest neighbors",
              "X"_a, py::arg("p") = (double)2.0, py::arg("radius") = (double)1.0)
+        .def("pybind_set_labels", &nearest_neighbors::set_labels<float>,
+             "Set the labels for the fitted data", "y"_a)
+        .def("pybind_set_labels", &nearest_neighbors::set_labels<double>,
+             "Set the labels for the fitted data", "y"_a)
+        .def("pybind_set_targets", &nearest_neighbors::set_targets<float>,
+             "Set the targets for the fitted data", "y"_a)
+        .def("pybind_set_targets", &nearest_neighbors::set_targets<double>,
+             "Set the targets for the fitted data", "y"_a)
         .def("pybind_kneighbors_indices", &nearest_neighbors::kneighbors_indices<float>,
              "Compute the indices of the k-nearest neighbors", "X"_a,
              py::arg("n_neighbors") = (da_int)0)
@@ -500,43 +475,100 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("pybind_kneighbors", &nearest_neighbors::kneighbors<double>,
              "Compute the indices of the k-nearest neighbors and the corresponding "
              "distances",
-             "X"_a, py::arg("n_neighbors") = (da_int)0);
-    /**********************************/
-    /*         kNN Regressor         */
-    /**********************************/
-    auto m_knn_regressor =
-        m.def_submodule("nearest_neighbors", "k-Nearest Neighbors for regression");
-    py::class_<knn_regressor, pyda_handle>(m_knn_regressor, "pybind_knn_regressor")
-        .def(py::init<da_int, std::string, std::string, da_int, std::string,
-                      std::string &, bool>(),
-             py::arg("n_neighbors") = (da_int)5, py::arg("weights") = "uniform",
-             py::arg("algorithm") = "auto", py::arg("leaf_size") = (da_int)30,
-             py::arg("metric") = "euclidean", py::arg("precision") = "double",
+             "X"_a, py::arg("n_neighbors") = (da_int)0)
+        // Classifier methods
+        .def("pybind_classifier_predict_proba",
+             &nearest_neighbors::classifier_predict_proba<float>,
+             "Compute the probability estimates for the test data", "X"_a,
+             py::arg("search_mode") = "knn")
+        .def("pybind_classifier_predict_proba",
+             &nearest_neighbors::classifier_predict_proba<double>,
+             "Compute the probability estimates for the test data", "X"_a,
+             py::arg("search_mode") = "knn")
+        .def("pybind_classifier_predict", &nearest_neighbors::classifier_predict<float>,
+             "Compute the predicted labels for the test data", "X"_a,
+             py::arg("search_mode") = "knn")
+        .def("pybind_classifier_predict", &nearest_neighbors::classifier_predict<double>,
+             "Compute the predicted labels for the test data", "X"_a,
+             py::arg("search_mode") = "knn")
+        // Regressor methods
+        .def("pybind_regressor_predict", &nearest_neighbors::regressor_predict<float>,
+             "Compute the predicted values for the test data", "X"_a,
+             py::arg("search_mode") = "knn")
+        .def("pybind_regressor_predict", &nearest_neighbors::regressor_predict<double>,
+             "Compute the predicted values for the test data", "X"_a,
+             py::arg("search_mode") = "knn")
+        // Radius neighbors methods
+        .def("pybind_radius_neighbors_indices",
+             &nearest_neighbors::radius_neighbors_indices<float>,
+             "Compute the indices of the radius neighbors", "X"_a,
+             py::arg("radius") = (float)1.0)
+        .def("pybind_radius_neighbors_indices",
+             &nearest_neighbors::radius_neighbors_indices<double>,
+             "Compute the indices of the radius neighbors", "X"_a,
+             py::arg("radius") = (double)1.0)
+        .def("pybind_radius_neighbors", &nearest_neighbors::radius_neighbors<float>,
+             "Compute the indices of the radius neighbors and the corresponding "
+             "distances",
+             "X"_a, py::arg("radius") = (float)1.0, py::arg("sort_results") = false)
+        .def("pybind_radius_neighbors", &nearest_neighbors::radius_neighbors<double>,
+             "Compute the indices of the radius neighbors and the corresponding "
+             "distances",
+             "X"_a, py::arg("radius") = (double)1.0, py::arg("sort_results") = false);
+
+    /***************************************/
+    /*     Approximate Nearest Neighbors   */
+    /***************************************/
+    py::class_<approximate_neighbors, pyda_handle>(m_neighbors,
+                                                   "pybind_approximate_neighbors")
+        .def(py::init<da_int, std::string, std::string, da_int, da_int, da_int, da_int,
+                      std::string, bool>(),
+             py::arg("n_neighbors") = (da_int)5, py::arg("algorithm") = "ivfflat",
+             py::arg("metric") = "sqeuclidean", py::arg("n_list") = (da_int)1,
+             py::arg("n_probe") = (da_int)1, py::arg("kmeans_iter") = (da_int)10,
+             py::arg("seed") = (da_int)0, py::arg("precision") = "double",
              py::arg("check_data") = false)
-        .def("pybind_fit", &knn_regressor::fit<float>, "Fit the knn classifier", "X"_a,
-             "y"_a, py::arg("p") = (float)2.0)
-        .def("pybind_fit", &knn_regressor::fit<double>, "Fit the knn classifier", "X"_a,
-             "y"_a, py::arg("p") = (double)2.0)
-        .def("pybind_kneighbors_indices", &knn_regressor::kneighbors_indices<float>,
+        .def("pybind_train", &approximate_neighbors::train<float>,
+             "Train the approximate nearest neighbors", "X"_a,
+             py::arg("train_fraction") = (float)1.0)
+        .def("pybind_train", &approximate_neighbors::train<double>,
+             "Train the approximate nearest neighbors", "X"_a,
+             py::arg("train_fraction") = (double)1.0)
+        .def("pybind_train_and_add", &approximate_neighbors::train_and_add<float>,
+             "Train the approximate nearest neighbors and add data to index", "X"_a,
+             py::arg("train_fraction") = (float)1.0)
+        .def("pybind_train_and_add", &approximate_neighbors::train_and_add<double>,
+             "Train the approximate nearest neighbors and add data to index", "X"_a,
+             py::arg("train_fraction") = (double)1.0)
+        .def("pybind_add", &approximate_neighbors::add<float>,
+             "Add data points to the index", "X"_a)
+        .def("pybind_add", &approximate_neighbors::add<double>,
+             "Add data points to the index", "X"_a)
+        .def("pybind_kneighbors_indices",
+             &approximate_neighbors::kneighbors_indices<float>,
              "Compute the indices of the k-nearest neighbors", "X"_a,
              py::arg("n_neighbors") = (da_int)0)
-        .def("pybind_kneighbors_indices", &knn_regressor::kneighbors_indices<double>,
+        .def("pybind_kneighbors_indices",
+             &approximate_neighbors::kneighbors_indices<double>,
              "Compute the indices of the k-nearest neighbors", "X"_a,
              py::arg("n_neighbors") = (da_int)0)
-        .def("pybind_kneighbors", &knn_regressor::kneighbors<float>,
+        .def("pybind_kneighbors", &approximate_neighbors::kneighbors<float>,
              "Compute the indices of the k-nearest neighbors and the corresponding "
              "distances",
              "X"_a, py::arg("n_neighbors") = (da_int)0)
-        .def("pybind_kneighbors", &knn_regressor::kneighbors<double>,
+        .def("pybind_kneighbors", &approximate_neighbors::kneighbors<double>,
              "Compute the indices of the k-nearest neighbors and the corresponding "
              "distances",
              "X"_a, py::arg("n_neighbors") = (da_int)0)
-        // Definition for float type needs to be before double type, otherwise this gives
-        // "RuntimeError: The handle was initialized with a different precision type than double."
-        .def("pybind_predict", &knn_regressor::predict<float>,
-             "Compute the predicted labels for the test data", "X"_a)
-        .def("pybind_predict", &knn_regressor::predict<double>,
-             "Compute the predicted labels for the test data", "X"_a);
+        .def("set_n_probe_opt", &approximate_neighbors::set_n_probe_opt,
+             "Set the number of lists to probe at search time",
+             py::arg("n_probe") = (da_int)1)
+        .def("get_cluster_centroids", &approximate_neighbors::get_cluster_centroids)
+        .def("get_list_sizes", &approximate_neighbors::get_list_sizes)
+        .def("get_n_list", &approximate_neighbors::get_n_list)
+        .def("get_n_index", &approximate_neighbors::get_n_index)
+        .def("get_n_features", &approximate_neighbors::get_n_features)
+        .def("get_kmeans_iter", &approximate_neighbors::get_kmeans_iter);
 
     /**********************************/
     /*         Pairwise Distances     */

@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -54,10 +54,10 @@ add_executable(decision_tree decision_tree.cpp)
 target_compile_definitions(
   decision_tree PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/df_data")
 
-add_executable(random_forest random_forest.cpp)
+add_executable(decision_forest decision_forest.cpp)
 
 target_compile_definitions(
-  random_forest PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/df_data")
+  decision_forest PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/df_data")
 
 add_executable(pca pca.cpp)
 target_link_libraries(pca PRIVATE aocl-da)
@@ -79,11 +79,21 @@ add_executable(knn_classification knn_classification.cpp)
 
 add_executable(knn_regression knn_regression.cpp)
 
+add_executable(radius_neighbors radius_neighbors.cpp)
+
+add_executable(radius_neighbors_classification radius_neighbors_classification.cpp)
+
+add_executable(radius_neighbors_regression radius_neighbors_regression.cpp)
+
 add_executable(kernel_functions kernel_functions.cpp)
 
 add_executable(svc svc.cpp)
 
 add_executable(nusvr nusvr.cpp)
+
+add_executable(ann ann.cpp)
+
+add_executable(cubic_spline cubic_spline.cpp)
 
 set(EXAMPLE_EXES
     linear_model
@@ -96,13 +106,18 @@ set(EXAMPLE_EXES
     dbscan
     datastore
     decision_tree
-    random_forest
+    decision_forest
     metrics
     knn_classification
     knn_regression
+    radius_neighbors
+    radius_neighbors_classification
+    radius_neighbors_regression
     svc
     nusvr
-    kernel_functions)
+    kernel_functions
+    ann
+    cubic_spline)
 
 if(BUILD_FORTRAN)
   list(APPEND EXAMPLE_EXES nlls nlls_single nlls_lanczos_fd reglinear_model)
@@ -120,9 +135,6 @@ foreach(target ${EXAMPLE_EXES})
   target_link_directories(${target} PRIVATE ${IFORT_LIBS})
   target_link_directories(${target} PRIVATE ${FLANG_LIBS})
   target_link_libraries(${target} PRIVATE ${FORTRAN_RUNTIME})
-  if (NOT BUILD_SHARED_LIBS)
-    target_link_libraries(${target} PRIVATE OpenMP::OpenMP_CXX)
-  endif()
 endforeach()
 
 # For Windows shared library builds, copying the relevant DLLs into the examples

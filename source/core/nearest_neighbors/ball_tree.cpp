@@ -434,7 +434,8 @@ ball_tree<T>::check_ball(T *X, T eps, std::vector<T> &centroid, T radius, T &dis
 template <typename T>
 da_status ball_tree<T>::radius_neighbors_recursive(
     std::shared_ptr<ball_node<T>> current_node, T *X, T eps, T eps_internal,
-    da_vector::da_vector<da_int> &neighbors, bool X_is_A, da_int index_X, T X_norm) {
+    da_vector::da_vector<da_int> &neighbors, da_vector::da_vector<T> &distances,
+    bool return_distances, bool X_is_A, da_int index_X, T X_norm) {
 
     da_status status = da_status_success;
 
@@ -456,6 +457,15 @@ da_status ball_tree<T>::radius_neighbors_recursive(
                 continue;
             }
             neighbors.push_back(index_A);
+            if (return_distances) {
+                // If we are returning distances, we need to compute the distance from X to the point
+                // For Euclidean distance this stores the squared distance
+                status = this->compute_distance(dist, index_A, X, X_norm);
+                if (status != da_status_success) {
+                    return status; // LCOV_EXCL_LINE
+                }
+                distances.push_back(dist);
+            }
         }
         return da_status_success;
     }
@@ -480,6 +490,9 @@ da_status ball_tree<T>::radius_neighbors_recursive(
             if (dist <= eps_internal) {
                 // If the distance is less than or equal to eps_internal, add the point to the neighbors list
                 neighbors.push_back(index_A);
+                if (return_distances) {
+                    distances.push_back(dist);
+                }
             }
         }
 
@@ -488,11 +501,13 @@ da_status ball_tree<T>::radius_neighbors_recursive(
 
         // Check the left child
         radius_neighbors_recursive(current_node->left_child, X, eps, eps_internal,
-                                   neighbors, X_is_A, index_X, X_norm);
+                                   neighbors, distances, return_distances, X_is_A,
+                                   index_X, X_norm);
 
         // Check the right child
         radius_neighbors_recursive(current_node->right_child, X, eps, eps_internal,
-                                   neighbors, X_is_A, index_X, X_norm);
+                                   neighbors, distances, return_distances, X_is_A,
+                                   index_X, X_norm);
     }
     return da_status_success;
 }

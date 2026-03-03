@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "da_vector.hpp"
 #include "kernel_functions.hpp"
 #include "macros.h"
 #include "miscellaneous.hpp"
@@ -127,8 +128,8 @@ template <typename T> da_status base_svm<T>::compute() {
     std::vector<T *> ptr_kernel_col;
     std::vector<T> gradient_threads;
     // Used at local_smo
-    std::vector<T> kernel_matrix, local_kernel_matrix, local_kernel_matrix_row_major,
-        kernel_diagonal;
+    da_vector::da_vector<T> kernel_matrix;
+    std::vector<T> local_kernel_matrix_row_major, kernel_diagonal;
     std::vector<da_int> real_indices;
     std::vector<T> X_temp; // Contain relevant slices of X for kernel computation
 
@@ -200,8 +201,8 @@ template <typename T> da_status base_svm<T>::compute() {
     case rbf:
         kernel_f = &rbf_wrapper<T>;
         try {
-            x_norm_aux.resize(n);
-            y_norm_aux.resize(ws_size);
+            x_norm_aux.resize(n + padding);
+            y_norm_aux.resize(ws_size + padding);
         } catch (std::bad_alloc &) {
             return da_error(err, da_status_memory_error, "Memory allocation error");
         }
@@ -234,6 +235,7 @@ template <typename T> da_status base_svm<T>::compute() {
         // Compute kernel
         ws_indexes.resize(ws_size);
         ptr_kernel_col.resize(ws_size);
+        // Large matrix, don't initialise (performance)
         kernel_matrix.resize(ws_size * n);
         X_temp.resize(ws_size * p);
         // Local SMO
@@ -247,7 +249,6 @@ template <typename T> da_status base_svm<T>::compute() {
         local_alpha.resize(ws_size);
         local_gradient.resize(ws_size + padding);
         local_response.resize(ws_size);
-        local_kernel_matrix.resize(ws_size * ws_size);
         local_kernel_matrix_row_major.resize(ws_size * (ws_size + padding));
         kernel_diagonal.resize(ws_size + padding);
         real_indices.resize(ws_size);
@@ -267,7 +268,6 @@ template <typename T> da_status base_svm<T>::compute() {
     if (status != da_status_success)
         return status;
     for (; iter < max_iter; iter++) {
-
         ////////// Outer WSS
         da_std::fill(ws_indicator.begin(), ws_indicator.end(), false);
         if (iter == 0) {
@@ -287,10 +287,10 @@ template <typename T> da_status base_svm<T>::compute() {
         // Compute kernel matrix using working set indexes
         kernel_compute(ws_indexes, ws_size, X_temp, kernel_matrix, ptr_kernel_col, cache);
         // Use kernel matrix to perform local SMO (as a result alpha, alpha_diff and first_diff are updated)
-        local_smo(ws_size, ws_indexes, ptr_kernel_col, local_kernel_matrix,
-                  local_kernel_matrix_row_major, kernel_diagonal, real_indices, alpha,
-                  local_alpha, gradient, local_gradient, response, local_response,
-                  I_low_p, I_up_p, I_low_n, I_up_n, first_diff, alpha_diff, std::nullopt);
+        local_smo(ws_size, ws_indexes, ptr_kernel_col, local_kernel_matrix_row_major,
+                  kernel_diagonal, real_indices, alpha, local_alpha, gradient,
+                  local_gradient, response, local_response, I_low_p, I_up_p, I_low_n,
+                  I_up_n, first_diff, alpha_diff, std::nullopt);
         // Global gradient update based on alpha_diff
         update_gradient(gradient.data(), gradient_threads, alpha_diff, n, ws_size,
                         ptr_kernel_col);
@@ -355,23 +355,20 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
     // Block size for kernel function
     da_int block_size = std::min(n_support, SVM_MAX_BLOCK_SIZE);
     da_int n_blocks = n_support / block_size, residual = n_support % block_size;
-    std::vector<T> x_aux, y_aux, kernel_matrix, block_support_vectors;
+    da_vector::da_vector<T> kernel_matrix, block_support_vectors;
+    std::vector<T> x_aux, y_aux;
     // Variable used in euclidean_distance interface, 2 means compute norms into aux arrays
     da_int compute_norms = 2;
     try {
         x_aux.resize(block_size);
         y_aux.resize(nsamples);
+        // Allocate but not initialise (performance)
         kernel_matrix.resize(block_size * nsamples);
         block_support_vectors.resize(block_size * nfeat);
     } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
-#pragma omp parallel for schedule(dynamic) if (n_blocks > 1) default(none)               \
-    firstprivate(x_aux, y_aux, kernel_matrix, block_support_vectors)                     \
-    shared(n_blocks, residual, block_size, X_test, sv_idx, nfeat, nsamples, ldx_test,    \
-               kernel_f, gamma, degree, coef0, compute_norms)                            \
-    reduction(+ : decision_values[ : nsamples])
     for (da_int i = 0; i <= n_blocks; i++) {
         da_int current_block_size = (i < n_blocks) ? block_size : residual;
         if (current_block_size == 0) {
@@ -383,7 +380,9 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
         else // we are in residual
             offset = n_blocks * block_size;
 
-        // Get the relevant slices of support vectors
+            // Get the relevant slices of support vectors
+#pragma omp parallel for if (current_block_size > 64) default(none)                      \
+    shared(sv_idx, current_block_size, block_support_vectors, XUSR, ldx, nfeat, offset)
         for (da_int j = 0; j < current_block_size; j++) {
             da_int current_idx = sv_idx[offset + j];
             for (da_int k = 0; k < nfeat; k++) {
@@ -425,7 +424,8 @@ void base_svm<T>::compute_ws_size(da_int &ws_size, da_int max_ws_size) {
    Only the columns, that are not stored in cache will be computed. Results are ultimately stored in ptr_kernel_col. */
 template <typename T>
 void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
-                                 std::vector<T> &X_temp, std::vector<T> &kernel_temp,
+                                 std::vector<T> &X_temp,
+                                 da_vector::da_vector<T> &kernel_temp,
                                  std::vector<T *> &ptr_kernel_col,
                                  da_cache::LRUCache<T> &cache) {
     // Vector to store indexes that are not in cache
@@ -495,18 +495,16 @@ void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
 
         // Update cache with idx_computed_count new columns of kernel matrix, otherwise just fill result array
         if (cache.active_) {
-            // Get pointers to first values of each column, to later pass into cache.put()
-            std::vector<T *> ptr_kernel_col_temp(idx_to_compute_count);
+            // Build index array and call cache.put once to store all computed columns and update the LRU list
             std::vector<da_int> idx_temp(idx_to_compute_count);
-            // Call put for each computed index, this will update list that tracks LRU columns in the cache
             for (da_int i = 0; i < idx_to_compute_count; i++) {
                 da_int current_idx = idx_to_compute[i];
                 idx_temp[i] = idx[current_idx] % n;
-                ptr_kernel_col_temp[i] = &kernel_temp[i * n];
                 // Fill result array
                 ptr_kernel_col[current_idx] = &kernel_temp[i * n];
             }
-            cache.put(idx_temp, ptr_kernel_col_temp);
+            // Pass raw data pointer and stride to cache - avoids storing pointers to local data
+            cache.put(idx_temp, kernel_temp.data(), n);
         } else {
             for (da_int i = 0; i < idx_to_compute_count; i++) {
                 da_int current_idx = idx_to_compute[i];
@@ -519,22 +517,24 @@ void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
 // Formula for global gradient update is:   gradient = gradient + sum_over_columns(alpha_diff[i] * i_th_column_kernel_matrix)
 // Here we benefit from column-major order of kernel matrix
 // alpha_diff is of length ws_size, kernel_matrix is nrow by ncol, gradient is of length nrow
+// get_kernel_col: callable that takes da_int i and returns const T* to the i-th kernel column
 template <typename T>
-void base_svm<T>::update_gradient(T *gradient, std::vector<T> &gradient_threads,
-                                  std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
-                                  std::vector<T *> &ptr_kernel_col) {
+void base_svm<T>::update_gradient_impl(T *gradient, std::vector<T> &gradient_threads,
+                                       std::vector<T> &alpha_diff, da_int &nrow,
+                                       da_int &ncol,
+                                       std::function<const T *(da_int)> get_kernel_col) {
     std::vector<T> gradient_temp(nrow, 0);
     da_int n_threads = da_utils::get_n_threads_loop(32);
     gradient_threads.resize(nrow * n_threads);
 
-#pragma omp parallel shared(alpha_diff, ptr_kernel_col, nrow, ncol,                      \
-                                gradient_threads) default(none) num_threads(n_threads)
+#pragma omp parallel shared(alpha_diff, nrow, ncol, gradient_threads) default(none)      \
+    num_threads(n_threads) firstprivate(get_kernel_col)
     {
         da_int thread_id = omp_get_thread_num();
         T *local_grad = &gradient_threads[thread_id * nrow];
 #pragma omp for schedule(static)
         for (da_int i = 0; i < ncol; i++) {
-            const T *const_kernel = ptr_kernel_col[i];
+            const T *const_kernel = get_kernel_col(i);
             // Accumulate into the thread-local buffer
             da_blas::cblas_axpy(nrow, alpha_diff[i], const_kernel, 1, local_grad, 1);
         }
@@ -561,7 +561,24 @@ void base_svm<T>::update_gradient(T *gradient, std::vector<T> &gradient_threads,
             gradient[i] += gradient_temp[i];
         }
     }
-};
+}
+
+template <typename T>
+void base_svm<T>::update_gradient(T *gradient, std::vector<T> &gradient_threads,
+                                  std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
+                                  std::vector<T *> &ptr_kernel_col) {
+    update_gradient_impl(gradient, gradient_threads, alpha_diff, nrow, ncol,
+                         [&ptr_kernel_col](da_int i) { return ptr_kernel_col[i]; });
+}
+
+template <typename T>
+void base_svm<T>::update_gradient(T *gradient, std::vector<T> &gradient_threads,
+                                  std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
+                                  const T *kernel_data, da_int stride) {
+    update_gradient_impl(
+        gradient, gradient_threads, alpha_diff, nrow, ncol,
+        [kernel_data, stride](da_int i) { return kernel_data + i * stride; });
+}
 
 // This function calculates highest power of 2, that is smaller or equal to n (number of rows in data)
 template <typename T> da_int base_svm<T>::maxpowtwo(da_int &n) {
@@ -627,6 +644,7 @@ void base_svm<T>::wssj(std::vector<da_int> &I_low, std::vector<T> &gradient, da_
 
     T *K_ith_row = &kernel_matrix_row_major[i * ws_size];
     T K_ii = K_ith_row[i];
+
     switch (wssj_vec_type) {
     case vectorization_type::avx:
         wssj_kernel<T, avx>(I_low.data(), gradient.data(), K_ith_row,
@@ -659,37 +677,24 @@ void base_svm<T>::wssj(std::vector<da_int> &I_low, std::vector<T> &gradient, da_
 
 template <typename T>
 void base_svm<T>::prepare_kernel_matrix(std::vector<T *> &ptr_kernel_col, da_int ws_size,
-                                        std::vector<T> &local_kernel_matrix,
                                         std::vector<T> &local_kernel_matrix_row_major,
                                         std::vector<T> &kernel_diagonal,
                                         std::vector<da_int> &real_indices) {
     // Based on experiments, using more threads does not improve performance
     [[maybe_unused]] da_int n_threads = std::min(omp_get_max_threads(), 64);
-#pragma omp parallel for default(none) num_threads(n_threads)                            \
-    shared(local_kernel_matrix, ptr_kernel_col, real_indices, ws_size)
-    // Second loop: Copy only relevant kernel matrix values to local_kernel_matrix
-    // Most efficient storage: local_kernel_matrix - square matrix of size ws_size (column major)
-    //                         kernel_matrix - original kernel matrix of size n by ws_size (column major)
+#pragma omp parallel for schedule(dynamic) default(none) num_threads(n_threads)          \
+    shared(local_kernel_matrix_row_major, kernel_diagonal, ptr_kernel_col, real_indices, \
+               ws_size)
+    // Copy relevant kernel values once, populate diagonal, and materialise the transpose
     for (da_int j = 0; j < ws_size; j++) {
-        const da_int local_kernel_offset = j * ws_size;
-        T *kernel_col_j = ptr_kernel_col[j];
-#pragma omp simd
+        T *const row_major_row = &local_kernel_matrix_row_major[j * ws_size];
+        const T *const kernel_col_j = ptr_kernel_col[j];
         for (da_int iter = 0; iter < ws_size; iter++) {
-            local_kernel_matrix[local_kernel_offset + iter] =
-                *(kernel_col_j + real_indices[iter]);
+            const da_int real_idx = real_indices[iter];
+            const T value = kernel_col_j[real_idx];
+            row_major_row[iter] = value;
         }
-    }
-
-// Third loop: Transpose local kernel matrix to local_kernel_matrix_row_major and get diagonal values
-#pragma omp simd collapse(2)
-    for (da_int i = 0; i < ws_size; i++) {
-        for (da_int j = 0; j < ws_size; j++) {
-            local_kernel_matrix_row_major[j * ws_size + i] =
-                local_kernel_matrix[i * ws_size + j];
-        }
-    }
-    for (da_int i = 0; i < ws_size; i++) {
-        kernel_diagonal[i] = local_kernel_matrix[i * ws_size + i];
+        kernel_diagonal[j] = row_major_row[j];
     }
 };
 

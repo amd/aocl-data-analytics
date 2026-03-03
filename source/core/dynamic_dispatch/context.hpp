@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -211,6 +211,11 @@ max target arch can be:
 local arch can be:
   generic, generic_avx512, zen2, zen3, zen4, zen5
 */
+
+        // Deal with the special case of Zen 4+ with AVX-512 support disabled by treating it as Zen 3
+        if ((local_arch >= zen4) && (has_avx512 == false)) {
+            local_arch = zen3;
+        }
 
         if (local_arch <= max_target_arch) {
             // For dynamic dispatch, there is a build that matches local arch

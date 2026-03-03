@@ -65,6 +65,10 @@ inline da_status register_neighbors_options(da_options::OptionRegistry &opts,
                              0.0, da_options::lbound_t::greaterthan, fpmax,
                              da_options::ubound_t::p_inf, 2.0));
         opts.register_opt(ofp);
+        ofp = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "radius", "Maximum distance for the radius neighbors computation.", 0.0,
+            da_options::lbound_t::greaterequal, fpmax, da_options::ubound_t::p_inf, 1.0));
+        opts.register_opt(ofp);
         // String options
         std::shared_ptr<OptionString> os;
         os = std::make_shared<OptionString>(OptionString(

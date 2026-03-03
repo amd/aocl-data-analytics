@@ -53,59 +53,34 @@ You can also install AOCL-DA using the AOCL spack recipe: https://www.amd.com/en
 .. AOCL-DA is developed and maintained by AMD (https://www.amd.com/). For support or queries, you can e-mail us on
    toolchainsupport@amd.com.
 
-AOCL-DA for Python
-------------------
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+
+   Python/index
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
-   python_intro
-   sklearn
-
-AOCL-DA for C
--------------
+   C/index
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
-   C_intro
-   data_management/data
-   da_handle/handle
-   options/option
-   errors/error
-   results/results
-
-Algorithms
-----------
+   Algorithms/index
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
+   :maxdepth: 2
 
-   basic_statistics/basic_stats
-   clustering/clustering
-   factorization/factorization
-   linear_models/linear_models
-   nonlinear_models/nldf
-   trees_forests/trees_forest
-   metrics/metrics
-   nearest_neighbors/knn
-   kernel_functions/kernel_functions
-   svm/svm
-
-Appendices
-----------
-
-.. toctree::
-    :maxdepth: 1
-
-    options/all_table
-    bibliography
-    genindex
-    search
+   Appendices/index
 
 .. only:: internal
 
    .. toctree::
-      :maxdepth: 1
+      :hidden:
+      :maxdepth: 2
 
-      doc_utilities/utils
+      doc_utilities/index

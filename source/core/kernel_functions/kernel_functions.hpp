@@ -121,12 +121,15 @@ Helper function to compute gemm/syrk
 template <typename T>
 inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *X,
                          da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma,
-                         bool X_is_Y);
+                         T coef0, da_int degree, bool X_is_Y,
+                         da_kernel_functions_types::math_type math_func =
+                             da_kernel_functions_types::math_type::none);
 
 // Declare the kernel functions for the various SIMD implementations and a generic function for
 // choosing the SIMD size and associated padding requirement
 template <class T, vectorization_type U>
-void exp_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T multiplier);
+void exp_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T multiplier,
+                const T *first_dim_norms, const T *second_dim_norms);
 template <class T, vectorization_type U>
 void pow_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T coef0,
                 da_int degree);
@@ -136,9 +139,18 @@ void tanh_kernel(da_int first_dim, da_int second_dim, T *data, da_int ldd, T coe
 template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type);
 
 // Exposed here for internal unit test, to correctly dispatch vectorisation
-template <typename T> using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
+template <typename T>
+using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, const T *);
+template <typename T>
+using pow_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, da_int);
+template <typename T> using tanh_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
+
 template <typename T>
 exp_kernel_func_t<T> select_exp_kernel_function(vectorization_type vec_enum);
+template <typename T>
+pow_kernel_func_t<T> select_pow_kernel_function(vectorization_type vec_enum);
+template <typename T>
+tanh_kernel_func_t<T> select_tanh_kernel_function(vectorization_type vec_enum);
 
 } // namespace da_kernel_functions
 

@@ -331,7 +331,9 @@ template <typename T>
 da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> current_node,
                                                  T *X, T eps, T eps_internal,
                                                  da_vector::da_vector<da_int> &neighbors,
-                                                 bool X_is_A, da_int index_X, T X_norm) {
+                                                 da_vector::da_vector<T> &distances,
+                                                 bool return_distance, bool X_is_A,
+                                                 da_int index_X, T X_norm) {
 
     da_status status = da_status_success;
 
@@ -343,6 +345,7 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
         return da_status_success;
     }
 
+    T dist;
     if (proximity == da_neighbors_types::region_within_eps) {
         // The entire bounding box is inside the search radius, so we can add all points in the node
         for (da_int i = 0; i < current_node->n_indices; i++) {
@@ -352,11 +355,16 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
                 continue;
             }
             neighbors.push_back(index_A);
+            if (return_distance) {
+                status = this->compute_distance(dist, index_A, X, X_norm);
+                if (status != da_status_success) {
+                    return status; // LCOV_EXCL_LINE
+                }
+                distances.push_back(dist);
+            }
         }
         return da_status_success;
     }
-
-    T dist;
 
     if (current_node->is_leaf) {
         // Check all the points in the node
@@ -378,6 +386,9 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
             if (dist <= eps_internal) {
                 // If the distance is less than or equal to eps_internal, add the point to the neighbors list
                 neighbors.push_back(index_A);
+                if (return_distance) {
+                    distances.push_back(dist);
+                }
             }
         }
 
@@ -396,6 +407,9 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
             if (dist <= eps_internal) {
                 // If the distance is less than or equal to eps_internal, add the point to the neighbors list
                 neighbors.push_back(index_A);
+                if (return_distance) {
+                    distances.push_back(dist);
+                }
             }
         }
 
@@ -406,12 +420,14 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
         if (diff <= eps) {
             // Check the left child
             radius_neighbors_recursive(current_node->left_child, X, eps, eps_internal,
-                                       neighbors, X_is_A, index_X, X_norm);
+                                       neighbors, distances, return_distance, X_is_A,
+                                       index_X, X_norm);
         }
         if (diff >= -eps) {
             // Check the right child
             radius_neighbors_recursive(current_node->right_child, X, eps, eps_internal,
-                                       neighbors, X_is_A, index_X, X_norm);
+                                       neighbors, distances, return_distance, X_is_A,
+                                       index_X, X_norm);
         }
     }
     return da_status_success;

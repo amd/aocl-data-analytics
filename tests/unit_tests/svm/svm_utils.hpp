@@ -45,7 +45,7 @@ template <typename T> struct test_probabilities_type {
 };
 
 template <typename T> struct test_local_smo_type {
-    std::vector<T> kernel_data, local_kernel_data;
+    std::vector<T> kernel_data;
     std::vector<T> local_alpha;
     std::vector<T> svc_alpha_expected, nusvc_alpha_expected;
     std::vector<T> gradient, local_gradient;
@@ -330,7 +330,6 @@ void set_rbf_kernel_data(std::vector<test_local_smo_type<T>> &params) {
 
     data.n = 24;
     data.local_alpha.resize(data.n);
-    data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
     data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};
@@ -565,7 +564,6 @@ void set_linear_kernel_data(std::vector<test_local_smo_type<T>> &params) {
 
     data.n = 24;
     data.local_alpha.resize(data.n);
-    data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
     data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};
@@ -799,7 +797,6 @@ void set_polynomial_kernel_data(std::vector<test_local_smo_type<T>> &params) {
 
     data.n = 24;
     data.local_alpha.resize(data.n);
-    data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
     data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};
@@ -1034,7 +1031,6 @@ void set_sigmoid_kernel_data(std::vector<test_local_smo_type<T>> &params) {
 
     data.n = 24;
     data.local_alpha.resize(data.n);
-    data.local_kernel_data.resize(data.kernel_data.size());
     data.local_response.resize(data.n);
     data.local_gradient.resize(data.n + 16); // add padding
     data.y = {1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0};

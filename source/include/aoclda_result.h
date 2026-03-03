@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -68,6 +68,14 @@ enum da_result_ {
     da_dbscan_n_clusters,     ///< The number of clusters found in DBSCAN clustering.
     da_dbscan_n_core_samples, ///< The number of core samples found in DBSCAN clustering.
     da_dbscan_core_sample_indices, ///< Indices of core samples in the data matrix used to compute DBSCAN clustering.
+    // Nearest Neighbors 601..700
+    da_nn_radius_neighbors_count =
+        601, ///< Array containing the number of radius neighbors for each query point. The last element contains the total number of radius neighbors found for all query points.
+    da_nn_radius_neighbors_offsets, ///< Array containing the offsets to the arrays of indices or the array of distances used to locate the radius neighbors for each query point. For query points where no radius neighbors were found, the offsets will be the same.
+    da_nn_radius_neighbors_indices, ///< Array containing the indices of the radius neighbors for each query point. The offsets are required to locate the neighbors for each query point.
+    da_nn_radius_neighbors_distances, ///< Array containing the distances of the radius neighbors for each query point. The offsets are required to locate the neighbors for each query point.
+    da_nn_radius_neighbors_indices_index, ///< Index of the radius neighbors for a given query point. The query is passed as the first element of the array on input.
+    da_nn_radius_neighbors_distances_index, ///< Index of the radius neighbors distances for a given query point. The query is passed as the first element of the array on input.
     // SVM 701..800
     da_svm_n_support_vectors = 701,     ///< Overall number of support vectors
     da_svm_n_support_vectors_per_class, ///< Number of support vectors per each class
@@ -78,6 +86,12 @@ enum da_result_ {
     da_svm_probaA, ///< Array of parameters A for each binary classifier when probability estimates are enabled.
     da_svm_probaB, ///< Array of parameters B for each binary classifier when probability estimates are enabled.
     da_svm_dual_coef, ///< Weights assigned to each support vector, reflecting their importance in defining the optimal decision boundary.
+    // ANN 801...900
+    da_approx_nn_cluster_centroids =
+        801,                 ///< Values of each centroid vector after training
+    da_approx_nn_list_sizes, ///< Number of vectors added to each centroid
+    // Interpolation 901..1000
+    da_cubic_spline_coefficients = 901,
     // ...
 };
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -24,12 +24,12 @@
 #
 
 """
-k-nearest neighbors classification example Python script
+k-nearest neighbors regression example Python script
 """
 
 import sys
 import numpy as np
-from aoclda.nearest_neighbors import knn_regressor
+from aoclda.neighbors import nearest_neighbors
 
 
 def knn_regressor_example():
@@ -52,11 +52,11 @@ def knn_regressor_example():
                        [2, 1, -3]], dtype=np.float64)
 
     print("\nk-nearest neighbors for a small data matrix\n")
-    knn = knn_regressor()
+    knn = nearest_neighbors()
     knn.fit(x_train, y_train)
     print(x_train)
     k_dist, k_ind = knn.kneighbors(x_test, n_neighbors=3, return_distance=True)
-    y_test = knn.predict(x_test)
+    y_test = knn.regressor_predict(x_test, search_mode='knn')
 
     # Print results
     print("\nIndices of the nearest neighbors:\n")
@@ -73,22 +73,22 @@ def knn_regressor_example():
     expected_dist = np.array([[3., 3.31662479, 3.74165739],
                               [2., 3.16227766, 4.24264069],
                               [4.58257569, 5.47722558, 5.65685425]])
-    expected_labels = np.array([1.64, 2.12, 2.22])
+    expected_targets = np.array([1.64, 2.12, 2.22])
 
     norm_dist = np.linalg.norm(k_dist - expected_dist)
     incorrect_indices = np.any(k_ind - expected_ind)
-    incorrect_labels = np.linalg.norm(y_test - expected_labels)
+    incorrect_targets = np.linalg.norm(y_test - expected_targets)
 
     tol = 1.0e-8
 
-    if norm_dist > tol or incorrect_indices or incorrect_labels > tol:
+    if norm_dist > tol or incorrect_indices or incorrect_targets > tol:
         print("\nSolution is not within expected tolerance\n")
         print("norm_dist = ", norm_dist)
         print("incorrect_indices = ", incorrect_indices)
-        print("incorrect_labels = ", incorrect_labels)
+        print("incorrect_targets = ", incorrect_targets)
         sys.exit(1)
 
-    print("\nk-nearest neighbors successfully computed\n")
+    print("\nk-nearest neighbors regression successfully computed\n")
 
 
 if __name__ == "__main__":

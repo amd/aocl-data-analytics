@@ -100,8 +100,9 @@ TYPED_TEST(RNTest, radius_neighbors_small) {
     auto tree = TEST_ARCH::da_binary_tree::kd_tree<TypeParam>(
         n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)2.0);
 
+    std::vector<da_vector::da_vector<TypeParam>> distances;
     EXPECT_EQ(tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                    neighbors_kd_tree, err),
+                                    neighbors_kd_tree, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -117,7 +118,7 @@ TYPED_TEST(RNTest, radius_neighbors_small) {
         n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)2.0);
 
     EXPECT_EQ(tree2.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                     neighbors_ball_tree, err),
+                                     neighbors_ball_tree, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -222,8 +223,9 @@ TYPED_TEST(RNTest, radius_neighbors_large) {
     auto tree = TEST_ARCH::da_binary_tree::kd_tree<TypeParam>(
         n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
 
+    std::vector<da_vector::da_vector<TypeParam>> distances;
     EXPECT_EQ(tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                    neighbors_kd_tree_euc, err),
+                                    neighbors_kd_tree_euc, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -240,7 +242,7 @@ TYPED_TEST(RNTest, radius_neighbors_large) {
         (TypeParam)2.00001);
 
     EXPECT_EQ(tree2.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                     neighbors_kd_tree_mink, err),
+                                     neighbors_kd_tree_mink, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -256,7 +258,7 @@ TYPED_TEST(RNTest, radius_neighbors_large) {
         n_samples, n_features, A.data(), lda, leaf_size, da_manhattan, (TypeParam)0.0);
 
     EXPECT_EQ(tree3.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                     neighbors_kd_tree_man, err),
+                                     neighbors_kd_tree_man, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -272,7 +274,7 @@ TYPED_TEST(RNTest, radius_neighbors_large) {
         n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
 
     EXPECT_EQ(tree4.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                     neighbors_ball_tree_euc, err),
+                                     neighbors_ball_tree_euc, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -288,7 +290,7 @@ TYPED_TEST(RNTest, radius_neighbors_large) {
         n_samples, n_features, A.data(), lda, leaf_size, da_minkowski, (TypeParam)2.0001);
 
     EXPECT_EQ(tree5.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                     neighbors_ball_tree_mink, err),
+                                     neighbors_ball_tree_mink, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -305,7 +307,7 @@ TYPED_TEST(RNTest, radius_neighbors_large) {
         n_samples, n_features, A.data(), lda, leaf_size, da_manhattan, (TypeParam)0.0);
 
     EXPECT_EQ(tree6.radius_neighbors(n_samples, n_features, nullptr, 0, eps,
-                                     neighbors_ball_tree_man, err),
+                                     neighbors_ball_tree_man, distances, false, err),
               da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
@@ -332,6 +334,7 @@ TYPED_TEST(RNTest, radius_neighbors_large_eps) {
     std::iota(A.begin(), A.end(), 0);
 
     std::vector<da_vector::da_vector<da_int>> neighbors(n_samples);
+    std::vector<da_vector::da_vector<TypeParam>> distances;
 
     std::vector<da_vector::da_vector<da_int>> neighbors_exp(n_samples);
     for (da_int i = 0; i < n_samples; i++) {
@@ -350,9 +353,9 @@ TYPED_TEST(RNTest, radius_neighbors_large_eps) {
     auto tree = TEST_ARCH::da_binary_tree::ball_tree<TypeParam>(
         n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
 
-    EXPECT_EQ(
-        tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps, neighbors, err),
-        da_status_success);
+    EXPECT_EQ(tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps, neighbors,
+                                    distances, false, err),
+              da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
         std::sort(neighbors[i].data(), neighbors[i].data() + neighbors[i].size());
@@ -377,6 +380,7 @@ TYPED_TEST(RNTest, radius_neighbors_tiny_eps) {
     std::iota(A.begin(), A.end(), 0);
 
     std::vector<da_vector::da_vector<da_int>> neighbors(n_samples);
+    std::vector<da_vector::da_vector<TypeParam>> distances;
 
     da_errors::da_error_t *err =
         new da_errors::da_error_t(da_errors::action_t::DA_RECORD);
@@ -386,9 +390,9 @@ TYPED_TEST(RNTest, radius_neighbors_tiny_eps) {
     auto tree = TEST_ARCH::da_binary_tree::ball_tree<TypeParam>(
         n_samples, n_features, A.data(), lda, leaf_size, da_euclidean, (TypeParam)0.0);
 
-    EXPECT_EQ(
-        tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps, neighbors, err),
-        da_status_success);
+    EXPECT_EQ(tree.radius_neighbors(n_samples, n_features, nullptr, 0, eps, neighbors,
+                                    distances, false, err),
+              da_status_success);
 
     for (da_int i = 0; i < n_samples; i++) {
         EXPECT_EQ(neighbors[i].size(), 0);

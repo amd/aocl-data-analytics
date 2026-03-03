@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -108,8 +108,7 @@ class py_svm : public pyda_handle {
         }
         exception_check(status);
 
-        status = da_svm_set_data(handle, n_samples, n_feat, X.mutable_data(), ldx,
-                                 y.mutable_data());
+        status = da_svm_set_data(handle, n_samples, n_feat, X.data(), ldx, y.data());
         exception_check(status);
         status = da_svm_compute<T>(handle);
         exception_check(status);
@@ -123,7 +122,7 @@ class py_svm : public pyda_handle {
         size_t shape[1]{(size_t)n_samples};
         size_t strides[1]{sizeof(T)};
         auto predictions = py::array_t<T>(shape, strides);
-        status = da_svm_predict(handle, n_samples, n_features, X.mutable_data(), ldx,
+        status = da_svm_predict(handle, n_samples, n_features, X.data(), ldx,
                                 predictions.mutable_data());
         exception_check(status);
         return predictions;

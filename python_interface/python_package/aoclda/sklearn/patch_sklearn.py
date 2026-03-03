@@ -53,9 +53,11 @@ from ._decision_tree import DecisionTreeClassifier as DecisionTreeClassifier_da
 from ._decision_forest import RandomForestClassifier as RandomForestClassifier_da
 from ._metrics import pairwise_distances as pairwise_distances_da
 from ._utils import train_test_split as train_test_split_da
-from ._nearest_neighbors import KNeighborsClassifier as KNeighborsClassifier_da
-from ._nearest_neighbors import KNeighborsRegressor as KNeighborsRegressor_da
-from ._nearest_neighbors import NearestNeighbors as NearestNeighbors_da
+from ._neighbors import KNeighborsClassifier as KNeighborsClassifier_da
+from ._neighbors import KNeighborsRegressor as KNeighborsRegressor_da
+from ._neighbors import NearestNeighbors as NearestNeighbors_da
+from ._neighbors import RadiusNeighborsClassifier as RadiusNeighborsClassifier_da
+from ._neighbors import RadiusNeighborsRegressor as RadiusNeighborsRegressor_da
 from ._svm import SVC as SVC_da, SVR as SVR_da, NuSVC as NuSVC_da, NuSVR as NuSVR_da
 
 # Now on a case-by-case basis, overwrite with AMD symbols where we have
@@ -115,6 +117,12 @@ AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
                'NearestNeighbors': {'pack': nearest_neighbors_sklearn,
                                     'sk_sym': getattr(nearest_neighbors_sklearn, 'NearestNeighbors'),
                                     'da_sym': NearestNeighbors_da},
+               'RadiusNeighborsClassifier': {'pack': nearest_neighbors_sklearn,
+                                             'sk_sym': getattr(nearest_neighbors_sklearn, 'RadiusNeighborsClassifier'),
+                                             'da_sym': RadiusNeighborsClassifier_da},
+               'RadiusNeighborsRegressor': {'pack': nearest_neighbors_sklearn,
+                                            'sk_sym': getattr(nearest_neighbors_sklearn, 'RadiusNeighborsRegressor'),
+                                            'da_sym': RadiusNeighborsRegressor_da},
                'SVC': {'pack': svm_sklearn,
                        'sk_sym': getattr(svm_sklearn, 'SVC'),
                        'da_sym': SVC_da},
@@ -128,6 +136,7 @@ AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
                          'sk_sym': getattr(svm_sklearn, 'NuSVR'),
                          'da_sym': NuSVR_da},
                }
+
 
 def skpatch(*args, print_patched=True):
     """

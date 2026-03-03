@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -172,6 +172,7 @@ class decision_forest():
     @max_features.setter
     def max_features(self, value):
         self._decision_forest.set_max_features_opt(max_features=value)
+        self._max_features = value
 
     @property
     def features_selection(self):
@@ -181,6 +182,7 @@ class decision_forest():
     def features_selection(self, value):
         self._decision_forest.set_features_selection_opt(
             features_selection=value)
+        self._features_selection = value
 
     @property
     def samples_factor(self):
@@ -191,19 +193,19 @@ class decision_forest():
         self._samples_factor = value
 
     def fit(self, X, y, categorical_features=None):
-        """
+        r"""
         Computes the decision forest on the feature matrix ``X`` and response vector ``y``
 
         Args:
             X (array-like): The feature matrix on which to compute the model.
-                Its shape is (n_samples, n_features).
+                Its shape is (:nref:`n_samples`, :nref:`n_features`).
 
-            y (array-like): The response vector. Its shape is (n_samples).
+            y (array-like): The response vector. Its shape is (:nref:`n_samples`).
 
             categorical_features (array-like, optional): Integer vector. categorical_features[i]
                 should be set to a negative value if feature i is continuous or to the number of
                 different categories if feature i if it is categorical. If None, all features are
-                considered continuous. Its shape is (n_features).
+                considered continuous. Its shape is (:nref:`n_features`).
 
         Returns:
             self (object): Returns the instance itself.
@@ -233,15 +235,15 @@ class decision_forest():
             categorical_features)
 
     def score(self, X, y):
-        """
+        r"""
         Calculates score (prediction accuracy) by comparing predicted labels and actual
         labels on a new set of data.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on.
-                It must have n_features columns.
+                It must have :nref:`n_features` columns.
 
-            y (array-like): The response vector.  It must have shape (n_samples).
+            y (array-like): The response vector.  It must have shape (:nref:`n_samples`).
 
         Returns:
             float: The mean accuracy of the model on the test data.
@@ -256,16 +258,16 @@ class decision_forest():
         return self._decision_forest.pybind_score(X, y)
 
     def predict(self, X):
-        """
+        r"""
         Generate labels using fitted decision forest on a new set of data ``X``.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on.
-                It must have n_features columns.
+                It must have :nref:`n_features` columns.
 
         Returns:
-            numpy.ndarray of length n_samples: The prediction vector,
-                where n_samples is the number of rows of X.
+            numpy.ndarray of length :nref:`n_samples`: The prediction vector,
+            where :nref:`n_samples` is the number of rows of X.
         """
         X, _, _ = check_convert_data(
             X, order=self._order, dtype=self._dtype, force_dtype=True
@@ -274,16 +276,16 @@ class decision_forest():
         return self._decision_forest.pybind_predict(X)
 
     def predict_proba(self, X):
-        """
+        r"""
         Generate class probabilities using fitted decision forest on a new set of data ``X``.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on.
-                It must have n_features columns.
+                It must have :nref:`n_features` columns.
 
         Returns:
-            numpy.ndarray of length n_samples: The prediction vector,
-                where n_samples is the number of rows of X.
+            numpy.ndarray of length :nref:`n_samples`: The prediction vector,
+            where :nref:`n_samples` is the number of rows of X.
         """
         X, _, _ = check_convert_data(
             X, order=self._order, dtype=self._dtype, force_dtype=True
@@ -292,19 +294,27 @@ class decision_forest():
         return self._decision_forest.pybind_predict_proba(X)
 
     def predict_log_proba(self, X):
-        """
+        r"""
         Generate class log probabilities using fitted decision forest on a new set of data ``X``.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on.
-                It must have n_features columns.
+                It must have :nref:`n_features` columns.
 
         Returns:
-            numpy.ndarray of length n_samples: The prediction vector,
-                where n_samples is the number of rows of X.
+            numpy.ndarray of length :nref:`n_samples`: The prediction vector,
+            where :nref:`n_samples` is the number of rows of X.
         """
         X, _, _ = check_convert_data(
             X, order=self._order, dtype=self._dtype, force_dtype=True
         )
 
         return self._decision_forest.pybind_predict_log_proba(X)
+
+    def _get_max_features_opt(self):
+        """getter for the C++ internal option value - purely for internal use"""
+        return self._decision_forest.get_max_features_opt()
+
+    def _get_features_selection_opt(self):
+        """getter for the C++ internal option value - purely for internal use"""
+        return self._decision_forest.get_features_selection_opt()

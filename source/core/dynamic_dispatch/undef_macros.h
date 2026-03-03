@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,4 +32,25 @@
  *
  */
 
+#undef ANN_HPP
+#undef DA_STD_HPP
 #undef KMEANS_HPP
+#undef NN_UTILS_HPP
+#undef PCA_HPP
+#undef TTS_INTERNAL_HPP
+#undef TTS_HPP
+#undef INTERPOLATION_HPP
+#undef CUBIC_SPLINE_HPP
+#undef INTERPOLATION_GENERIC_HPP
+
+// Decision forest headers
+#undef DECISION_TREE_HPP
+#undef HISTOGRAM_HPP
+#undef TREE_SCORING_HPP
+#undef TREE_UTILITIES_HPP
+#undef TREE_TRAINING_HPP
+#undef TREE_INFERENCE_HPP
+#undef DECISION_FOREST_HPP
+#undef FOREST_UTILITIES_HPP
+#undef FOREST_TRAINING_HPP
+#undef FOREST_INFERENCE_HPP

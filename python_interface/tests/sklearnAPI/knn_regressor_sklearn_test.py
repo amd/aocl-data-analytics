@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -152,8 +152,11 @@ def test_knn_regressor_errors():
     skpatch()
     from sklearn import neighbors
 
-    with pytest.raises(RuntimeError):
+    # Check KNeighborsRegressor constructor errors
+    with pytest.raises(ValueError):
         knn = neighbors.KNeighborsRegressor(n_neighbors=-1)
+    with pytest.raises(ValueError):
+        knn = neighbors.KNeighborsRegressor(n_neighbors=1.5)
     with pytest.raises(ValueError):
         knn = neighbors.KNeighborsRegressor(weights="ones")
     with pytest.raises(ValueError):
@@ -161,13 +164,49 @@ def test_knn_regressor_errors():
     with pytest.raises(ValueError):
         knn = neighbors.KNeighborsRegressor(algorithm="nonexistent")
 
+    knn = neighbors.KNeighborsRegressor()
     x_train = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.float64)
-    y_train = np.array([[1, 2, 3]], dtype=np.float64)
-    x_test = np.array([[1, 2, 3], [3, 2, 1]], dtype=np.float64)
-    y_test = np.array([[1, 1]], dtype=np.float64)
+    x_test = np.array([[1, 1, 1], [2, 2, 2]], dtype=np.float64)
+    # Errors when input dimension is wrong
+    y_train = np.array([[1, 2]], dtype=np.float64)
+    knn.fit(x_train, y_train)
+    with pytest.raises(RuntimeError):
+        knn.predict(X=x_test)
 
+    # Reset with correct y_train and wrong x_test
+    y_train = np.array([1, 2, 3], dtype=np.float64)
+    x_test = np.array([[1, 1], [2, 2], [3, 3]], dtype=np.float64)
+    knn.fit(x_train, y_train)
+    # Errors in KNeighborsRegressor methods when input dimension is wrong
+    with pytest.raises(RuntimeError):
+        knn.predict(X=x_test)
+
+    # Set up valid data
+    x_test = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.float64)
+
+    # Error in KNeighborsRegressor methods when n_neighbors=None
+    # for both the constructor and kneighbors call
+    knn = neighbors.KNeighborsRegressor(n_neighbors=None)
+    knn.fit(x_train, y_train)
+    with pytest.raises(ValueError):
+        knn.kneighbors(x_test, n_neighbors=None)
+
+    # Check other KNeighborsRegressor method errors
     knn = neighbors.KNeighborsRegressor()
     knn.fit(x_train, y_train)
+    with pytest.raises(ValueError):
+        knn.kneighbors(X=None)
+    with pytest.raises(ValueError):
+        knn.kneighbors(x_test, n_neighbors=-1)
+    with pytest.raises(ValueError):
+        knn.kneighbors(x_test, n_neighbors=1.5)
+    with pytest.raises(ValueError):
+        knn.predict(X=None)
+
+    # Check unimplemented KNeighborsRegressor methods
+    knn = neighbors.KNeighborsRegressor()
+    knn.fit(x_train, y_train)
+    y_test = np.array([[1, 1]], dtype=np.float64)
     with pytest.raises(RuntimeError):
         knn.score(x_test, y_test)
     with pytest.raises(RuntimeError):

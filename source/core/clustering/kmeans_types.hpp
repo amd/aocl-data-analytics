@@ -24,9 +24,17 @@
 #ifndef KMEANS_TYPES_HPP
 #define KMEANS_TYPES_HPP
 
-#define KMEANS_LLOYD_BLOCK_SIZE da_int(256)
-#define KMEANS_ELKAN_BLOCK_SIZE da_int(512)
-#define KMEANS_MACQUEEN_BLOCK_SIZE da_int(128)
+template <typename T>
+inline constexpr da_int KMEANS_LLOYD_BLOCK_SIZE =
+    std::is_same<T, double>::value ? 256 : 512;
+
+template <typename T>
+inline constexpr da_int KMEANS_ELKAN_BLOCK_SIZE =
+    std::is_same<T, double>::value ? 256 : 512;
+
+template <typename T>
+inline constexpr da_int KMEANS_MACQUEEN_BLOCK_SIZE =
+    std::is_same<T, double>::value ? 128 : 256;
 
 namespace da_kmeans_types {
 

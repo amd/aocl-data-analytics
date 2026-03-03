@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -501,14 +501,21 @@ template <typename T> void Get1by1Data(std::vector<KMeansParamType<T>> &params) 
     Get1by1BaseData(param);
     params.push_back(param);
     param.initialization_method = "random";
+    param.test_name += " with random initialization";
     params.push_back(param);
     param.algorithm = "lloyd";
+    param.test_name += " and lloyd algorithm";
     params.push_back(param);
     param.initialization_method = "random partitions";
+    param.test_name =
+        "1 x 1 data matrix with random partitions initialization and lloyd algorithm";
     params.push_back(param);
     param.algorithm = "macqueen";
+    param.test_name = "1 x 1 data matrix and macqueen algorithm";
     params.push_back(param);
     param.initialization_method = "supplied";
+    param.test_name =
+        "1 x 1 data matrix with supplied initialization and macqueen algorithm";
     params.push_back(param);
 }
 
@@ -518,51 +525,72 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     Get3ClustersBaseData(param);
     // Three cluster tests
     params.push_back(param);
+    param.test_name += " with lloyd algorithm";
     param.algorithm = "lloyd";
     param.expected_rinfo[3] = (T)1.0;
     params.push_back(param);
     param.algorithm = "macqueen";
     param.expected_rinfo[3] = (T)0.0;
+    param.test_name = "Data matrix in three distinct clusters with macqueen algorithm";
     params.push_back(param);
     param.expected_rinfo[3] = (T)1.0;
     param.algorithm = "elkan";
+    param.test_name = "Data matrix in three distinct clusters with elkan algorithm";
     params.push_back(param);
     // Tests with some inherent randomness
     param.max_iter = 30;
     param.is_random = true;
     param.initialization_method = "k-means++";
     param.n_init = 10;
+    param.test_name = "Data matrix in three distinct clusters with k-means++ "
+                      "initialization and Elkan algorithm";
     params.push_back(param);
     param.initialization_method = "random";
+    param.test_name = "Data matrix in three distinct clusters with random initialization "
+                      "and Elkan algorithm";
     params.push_back(param);
     param.initialization_method = "random partitions";
+    param.test_name = "Data matrix in three distinct clusters with random partitions "
+                      "initialization and Elkan algorithm";
     params.push_back(param);
     // Tests looking for n or 1 clusters
     param.n_init = 1;
     param.n_clusters = 1;
     param.max_allowed_inertia = (T)34.89176;
+    param.test_name = "Data matrix in three distinct clusters looking for 1 cluster with "
+                      "k-means++ initialization and Elkan algorithm";
     params.push_back(param);
     param.initialization_method = "k-means++";
     param.algorithm = "lloyd";
     param.expected_rinfo[3] = (T)1.0;
+    param.test_name = "Data matrix in three distinct clusters looking for 1 cluster with "
+                      "k-means++ initialization and Lloyd algorithm";
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "macqueen";
     param.max_iter = 30;
+    param.test_name = "Data matrix in three distinct clusters looking for 1 cluster with "
+                      "random initialization and MacQueen algorithm";
     params.push_back(param);
     param.n_clusters = 10;
     param.initialization_method = "k-means++";
     param.algorithm = "lloyd";
     param.max_allowed_inertia = 0.11;
+    param.test_name = "Data matrix in three distinct clusters looking for 10 clusters "
+                      "with k-means++ initialization and Lloyd algorithm";
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "macqueen";
+    param.test_name = "Data matrix in three distinct clusters looking for 10 clusters "
+                      "with random initialization and MacQueen algorithm";
     params.push_back(param);
     param.n_init = 5;
     param.max_allowed_inertia = (T)0.11;
     param.max_iter = 30;
     param.initialization_method = "random partitions";
     param.algorithm = "elkan";
+    param.test_name = "Data matrix in three distinct clusters looking for 10 clusters "
+                      "with random partitions initialization and Elkan algorithm";
     params.push_back(param);
     // Tests looking for 2 or 5 clusters, comparing against Scikit-learn inertia
     param.n_init = 10;
@@ -570,31 +598,47 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.max_allowed_inertia = (T)15.7915238095238;
     param.initialization_method = "k-means++";
     param.algorithm = "lloyd";
+    param.test_name = "Data matrix in three distinct clusters looking for 2 clusters "
+                      "with k-means++ initialization and Lloyd algorithm";
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "elkan";
+    param.test_name = "Data matrix in three distinct clusters looking for 2 clusters "
+                      "with random initialization and Elkan algorithm";
     params.push_back(param);
     param.algorithm = "hartigan-wong";
+    param.test_name = "Data matrix in three distinct clusters looking for 2 clusters "
+                      "with random initialization and Hartigan-Wong algorithm";
     params.push_back(param);
     param.initialization_method = "random partitions";
     param.algorithm = "macqueen";
+    param.test_name = "Data matrix in three distinct clusters looking for 2 clusters "
+                      "with random partitions initialization and MacQueen algorithm";
     params.push_back(param);
     param.n_clusters = 5;
     param.max_allowed_inertia = (T)0.076;
     param.initialization_method = "k-means++";
     param.algorithm = "lloyd";
+    param.test_name = "Data matrix in three distinct clusters looking for 5 clusters "
+                      "with k-means++ initialization and Lloyd algorithm";
     params.push_back(param);
     param.initialization_method = "random";
     param.max_allowed_inertia = (T)0.11;
     param.algorithm = "elkan";
+    param.test_name = "Data matrix in three distinct clusters looking for 5 clusters "
+                      "with random initialization and Elkan algorithm";
     params.push_back(param);
     param.algorithm = "hartigan-wong";
+    param.test_name = "Data matrix in three distinct clusters looking for 5 clusters "
+                      "with random initialization and Hartigan-Wong algorithm";
     params.push_back(param);
     param.n_init = 100;
     param.max_allowed_inertia = (T)0.12;
     param.initialization_method = "random partitions";
     param.algorithm = "macqueen";
     param.max_iter = 30;
+    param.test_name = "Data matrix in three distinct clusters looking for 5 clusters "
+                      "with random partitions initialization and MacQueen algorithm";
     params.push_back(param);
 }
 
@@ -609,12 +653,17 @@ template <typename T> void GetZeroData(std::vector<KMeansParamType<T>> &params) 
     std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 2.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     param.expected_status = da_status_success;
+    param.test_name += " with k-means++ initialization and Elkan algorithm";
     params.push_back(param);
+    param.test_name = "Zero data matrix with random initialization and Elkan algorithm";
     param.algorithm = "lloyd";
     param.initialization_method = "random";
+    param.test_name = "Zero data matrix with random initialization and Lloyd algorithm";
     params.push_back(param);
     param.algorithm = "macqueen";
     param.initialization_method = "random partitions";
+    param.test_name =
+        "Zero data matrix with random partitions initialization and MacQueen algorithm";
     params.push_back(param);
 }
 
@@ -625,6 +674,7 @@ template <typename T> void GetPseudoRandomData(std::vector<KMeansParamType<T>> &
     // Start with Hartigan-Wong for comparison and to get 'correct' answer
     params.push_back(param);
     param.algorithm = "elkan";
+    param.test_name += " with Elkan algorithm";
     params.push_back(param);
 }
 
@@ -635,6 +685,58 @@ template <typename T> void GetLargeData(std::vector<KMeansParamType<T>> &params)
     // Start with Hartigan-Wong for comparison and to get 'correct' answer
     params.push_back(param);
     param.algorithm = "elkan";
+    param.test_name += " with Elkan algorithm";
+    params.push_back(param);
+}
+
+template <typename T> void GetManyClustersData(std::vector<KMeansParamType<T>> &params) {
+    // This test exercises the many cluster code path in Lloyd's algorithm
+    KMeansParamType<T> param;
+    param.test_name = "Data matrix with many clusters";
+    param.algorithm = "lloyd";
+    param.n_samples = 2000;
+    param.n_features = 2;
+    param.n_clusters = 1000;
+    param.order = "column-major";
+
+    std::vector<double> A(param.n_samples * param.n_features);
+    std::vector<double> centres(param.n_clusters * param.n_features);
+
+    for (da_int i = 0; i < param.n_samples; i += 2) {
+        for (da_int j = 0; j < param.n_features; j++) {
+            A[i + j * param.n_samples] = (double)i + j * 0.00001;
+            A[i + j * param.n_samples + 1] = (double)(i) + 0.00001 + j * 0.00001;
+        }
+    }
+
+    for (da_int i = 0; i < param.n_clusters; i++) {
+        for (da_int j = 0; j < param.n_features; j++) {
+            centres[i + j * param.n_clusters] = (double)(2 * i) + j * 0.00001;
+        }
+    }
+
+    param.A = convert_vector<double, T>(A);
+    param.C = convert_vector<double, T>(centres);
+
+    param.lda = param.n_samples;
+    param.ldc = param.n_clusters;
+
+    std::vector<double> expected_rinfo{(T)param.n_samples, (T)param.n_features,
+                                       (T)param.n_clusters, 2.0, 0.01};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+
+    param.n_init = 1;
+    param.max_iter = 50;
+    param.seed = 592128;
+    param.convergence_tolerance = (T)1.0e-4;
+    param.initialization_method = "supplied";
+    param.is_random = true;
+
+    param.tol = 1000 * std::sqrt(std::numeric_limits<T>::epsilon());
+    param.max_allowed_inertia = (T)0.01;
+
+    param.expected_status = da_status_success;
+
     params.push_back(param);
 }
 
@@ -646,22 +748,33 @@ template <typename T> void GetSubarrayData(std::vector<KMeansParamType<T>> &para
     params.push_back(param);
     param.expected_rinfo[3] = (T)1.0;
     param.algorithm = "lloyd";
+    param.test_name += " with Lloyd algorithm";
     params.push_back(param);
     param.algorithm = "macqueen";
     param.expected_rinfo[3] = (T)0.0;
+    param.test_name = "Data matrix in three distinct clusters stored in subarrays with "
+                      "MacQueen algorithm";
     params.push_back(param);
     param.algorithm = "elkan";
     param.expected_rinfo[3] = (T)1.0;
+    param.test_name =
+        "Data matrix in three distinct clusters stored in subarrays with Elkan algorithm";
     params.push_back(param);
     param.max_iter = 30;
     // Tests with some inherent randomness
     param.is_random = true;
     param.initialization_method = "k-means++";
     param.n_init = 10;
+    param.test_name = "Data matrix in three distinct clusters stored in subarrays with "
+                      "k-means++ initialization and Elkan algorithm";
     params.push_back(param);
     param.initialization_method = "random";
+    param.test_name = "Data matrix in three distinct clusters stored in subarrays with "
+                      "random initialization and Elkan algorithm";
     params.push_back(param);
     param.initialization_method = "random partitions";
+    param.test_name = "Data matrix in three distinct clusters stored in subarrays with "
+                      "random partitions initialization and Elkan algorithm";
     params.push_back(param);
 }
 
@@ -669,6 +782,36 @@ template <typename T> void GetRowMajorData(std::vector<KMeansParamType<T>> &para
     // Tests with a data matrix in 3 distinct clusters
     KMeansParamType<T> param;
     GetRowMajorBaseData(param);
+    params.push_back(param);
+    param.algorithm = "lloyd";
+    param.expected_rinfo[3] = (T)1.0;
+    param.test_name = "Data matrix in three distinct clusters stored in row major format "
+                      "with Lloyd algorithm";
+    params.push_back(param);
+    param.algorithm = "macqueen";
+    param.expected_rinfo[3] = (T)0.0;
+    param.test_name = "Data matrix in three distinct clusters stored in row major format "
+                      "with MacQueen algorithm";
+    params.push_back(param);
+    param.algorithm = "elkan";
+    param.expected_rinfo[3] = (T)1.0;
+    param.test_name = "Data matrix in three distinct clusters stored in row major format "
+                      "with Elkan algorithm";
+    params.push_back(param);
+    param.initialization_method = "k-means++";
+    param.test_name = "Data matrix in three distinct clusters stored in row major format "
+                      "with k-means++ initialization and Elkan algorithm";
+    param.is_random = true;
+    params.push_back(param);
+    param.seed = 12345;
+    param.is_random = true;
+    param.initialization_method = "random";
+    param.test_name = "Data matrix in three distinct clusters stored in row major format "
+                      "with random initialization and Elkan algorithm";
+    params.push_back(param);
+    param.initialization_method = "random partitions";
+    param.test_name = "Data matrix in three distinct clusters stored in row major format "
+                      "with random partitions initialization and Elkan algorithm";
     params.push_back(param);
 }
 
@@ -680,4 +823,5 @@ template <typename T> void GetKMeansData(std::vector<KMeansParamType<T>> &params
     GetPseudoRandomData(params);
     GetRowMajorData(params);
     GetLargeData(params);
+    GetManyClustersData(params);
 }

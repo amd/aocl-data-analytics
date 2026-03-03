@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,10 +20,8 @@
  * THE SOFTWARE.
  *
  * ************************************************************************ */
-
-#include "aoclda.h"
-#include "basic_handle.hpp"
 #include "da_error.hpp"
+#include "da_utils.hpp"
 #include "da_vector.hpp"
 #include "nearest_neighbors_types.hpp"
 #include <algorithm>
@@ -136,7 +134,8 @@ template <typename Derived, typename NodeType> class binary_tree {
     da_status radius_neighbors(da_int m_samples_in, da_int m_features_in, const T *X_in,
                                da_int ldx_in, T eps,
                                std::vector<da_vector::da_vector<da_int>> &neighbors,
-                               da_errors::da_error_t *err);
+                               std::vector<da_vector::da_vector<T>> &distances,
+                               bool return_distance, da_errors::da_error_t *err);
 
     da_status k_neighbors(da_int m_samples_in, da_int m_features_in, const T *X_in,
                           da_int ldx_in, da_int k, da_int *k_ind, T *k_dist,
@@ -182,6 +181,14 @@ template <typename Derived, typename NodeType> class binary_tree {
 
     // Root node of the tree
     std::shared_ptr<NodeType> root = nullptr;
+
+  private:
+    template <bool ReturnDistances>
+    da_status radius_neighbors_loop(da_int m_samples, const T *X, da_int ldx, T eps,
+                                    T eps_internal,
+                                    std::vector<da_vector::da_vector<da_int>> &neighbors,
+                                    std::vector<da_vector::da_vector<T>> &distances,
+                                    bool X_is_A, std::vector<T> &X_row);
 };
 
 template <typename T>
@@ -200,7 +207,9 @@ template <typename T> class kd_tree : public binary_tree<kd_tree<T>, kd_node<T>>
     da_status radius_neighbors_recursive(std::shared_ptr<kd_node<T>> current_node, T *X,
                                          T eps, T eps_internal,
                                          da_vector::da_vector<da_int> &neighbors,
-                                         bool X_is_A, da_int index_X, T X_norm);
+                                         da_vector::da_vector<T> &distances,
+                                         bool return_distance, bool X_is_A,
+                                         da_int index_X, T X_norm);
 
     da_status k_neighbors_recursive(std::shared_ptr<kd_node<T>> current_node, T *X,
                                     da_int k, bool X_is_A, da_int index_X, T X_norm,
@@ -235,7 +244,9 @@ template <typename T> class ball_tree : public binary_tree<ball_tree<T>, ball_no
     da_status radius_neighbors_recursive(std::shared_ptr<ball_node<T>> current_node, T *X,
                                          T eps, T eps_internal,
                                          da_vector::da_vector<da_int> &neighbors,
-                                         bool X_is_A, da_int index_X, T X_norm);
+                                         da_vector::da_vector<T> &distances,
+                                         bool return_distance, bool X_is_A,
+                                         da_int index_X, T X_norm);
 
     da_status k_neighbors_recursive(std::shared_ptr<ball_node<T>> current_node, T *X,
                                     da_int k, bool X_is_A, da_int index_X, T X_norm,

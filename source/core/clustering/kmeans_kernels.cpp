@@ -38,48 +38,24 @@ using namespace kernel_templates;
 
 // KT variants of elkan_reduce_kernel
 template <bsz SZ, typename T>
-inline __attribute__((__always_inline__)) T
-elkan_reduction_kt(da_int m, const T *x, da_int incx, T *y,
-                   da_int incy) { // why isnt' y also const * T ?? FIXME also add noexcept
+inline __attribute__((__always_inline__)) T elkan_reduction_kt(da_int m, const T *x,
+                                                               T *y) {
     using SUF = T;
     avxvector_t<SZ, SUF> vsum{kt_setzero_p<SZ, SUF>()};
 
     const da_int simd_length{tsz_v<SZ, SUF>}; // type pack size given vector length
     const da_int simd_loop_size{m - m % simd_length};
-    const da_int prefetch_condition{simd_loop_size - simd_length};
-
-    da_int indx[simd_length]; // vector containing all the increments
-    da_int indy[simd_length]; // vector containing all the increments
-    for (da_int i = 0; i < simd_length; ++i) {
-        indx[i] = incx * i;
-        indy[i] = incy * i;
-    }
-
-    const da_int simd_incx{incx * simd_length};
-    const da_int simd_incy{incy * simd_length};
 
     for (da_int k = 0; k < simd_loop_size; k += simd_length) {
 
-        da_int kincx = k * incx;
-        da_int kincy = k * incy;
-        const T *x_ptr = &x[kincx];
-        const T *y_ptr = &y[kincy];
+        const T *x_ptr = &x[k];
+        const T *y_ptr = &y[k];
 
-        if (k < prefetch_condition) {
-            da_int x_ptr_index = simd_incx;
-            da_int y_ptr_index = simd_incy;
-            // Prefetch the elements for the next iteration to help with cache misses
-            for (da_int j = 0; j < simd_length; j++) {
-                _mm_prefetch((const char *)&x_ptr[x_ptr_index], _MM_HINT_T0);
-                _mm_prefetch((const char *)&y_ptr[y_ptr_index], _MM_HINT_T0);
-                x_ptr_index += incx;
-                y_ptr_index += incy;
-            }
-        }
         // load elements with incx stride
-        avxvector_t<SZ, SUF> vx = kt_set_p<SZ, SUF>(x_ptr, indx);
+        avxvector_t<SZ, SUF> vx = kt_loadu_p<SZ, SUF>(x_ptr);
+
         // load elements with incy stride
-        avxvector_t<SZ, SUF> vy = kt_set_p<SZ, SUF>(y_ptr, indy);
+        avxvector_t<SZ, SUF> vy = kt_loadu_p<SZ, SUF>(y_ptr);
         avxvector_t<SZ, SUF> diff{kt_sub_p<SZ, SUF>(vx, vy)};
         vsum = kt_fmadd_p<SZ, SUF>(diff, diff, vsum);
     }
@@ -88,7 +64,7 @@ elkan_reduction_kt(da_int m, const T *x, da_int incx, T *y,
     T sum{kt_hsum_p<SZ, SUF>(vsum)};
     // Handle the remainder
     for (da_int k = simd_loop_size; k < m; k++) {
-        T tmp = x[k * incx] - y[k * incy];
+        T tmp = x[k] - y[k];
         sum += tmp * tmp;
     }
 
@@ -96,8 +72,7 @@ elkan_reduction_kt(da_int m, const T *x, da_int incx, T *y,
 }
 
 #define ELKAN_REDUCTION_KT_INSTANTIATE(SZ, SUF)                                          \
-    template SUF elkan_reduction_kt<SZ, SUF>(da_int m, const SUF *x, da_int incx,        \
-                                             SUF *y, da_int incy);
+    template SUF elkan_reduction_kt<SZ, SUF>(da_int m, const SUF *x, SUF *y);
 
 DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b128)
 DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b256)
@@ -106,12 +81,11 @@ DA_KT_INSTANTIATE(ELKAN_REDUCTION_KT_INSTANTIATE, bsz::b512)
 #endif
 
 /* Reduction part of the elkan iteration, on a pair of scattered vectors */
-template <typename T>
-T elkan_reduction_kernel_scalar(da_int m, const T *x, da_int incx, T *y, da_int incy) {
+template <typename T> T elkan_reduction_kernel_scalar(da_int m, const T *x, T *y) {
     T sum = (T)0.0;
 #pragma omp simd reduction(+ : sum)
     for (da_int k = 0; k < m; k++) {
-        T tmp = x[k * incx] - y[k * incy];
+        T tmp = x[k] - y[k];
         sum += tmp * tmp;
     }
     return sum;
@@ -119,63 +93,54 @@ T elkan_reduction_kernel_scalar(da_int m, const T *x, da_int incx, T *y, da_int 
 
 template <>
 float elkan_reduction_kernel<float, vectorization_type::scalar>(da_int m, const float *x,
-                                                                da_int incx, float *y,
-                                                                da_int incy) {
-    return elkan_reduction_kernel_scalar(m, x, incx, y, incy);
+                                                                float *y) {
+    return elkan_reduction_kernel_scalar(m, x, y);
 }
 
 template <>
 double elkan_reduction_kernel<double, vectorization_type::scalar>(da_int m,
                                                                   const double *x,
-                                                                  da_int incx, double *y,
-                                                                  da_int incy) {
-    return elkan_reduction_kernel_scalar(m, x, incx, y, incy);
+                                                                  double *y) {
+    return elkan_reduction_kernel_scalar(m, x, y);
 }
 
 template <>
 float elkan_reduction_kernel<float, vectorization_type::avx>(da_int m, const float *x,
-                                                             da_int incx, float *y,
-                                                             da_int incy) {
-
-    return elkan_reduction_kt<bsz::b128, float>(m, x, incx, y, incy);
+                                                             float *y) {
+    return elkan_reduction_kt<bsz::b128, float>(m, x, y);
 }
 
 template <>
 double elkan_reduction_kernel<double, vectorization_type::avx>(da_int m, const double *x,
-                                                               da_int incx, double *y,
-                                                               da_int incy) {
-    return elkan_reduction_kt<bsz::b128, double>(m, x, incx, y, incy);
+                                                               double *y) {
+    return elkan_reduction_kt<bsz::b128, double>(m, x, y);
 }
 
 template <>
 float elkan_reduction_kernel<float, vectorization_type::avx2>(da_int m, const float *x,
-                                                              da_int incx, float *y,
-                                                              da_int incy) {
-    return elkan_reduction_kt<bsz::b256, float>(m, x, incx, y, incy);
+                                                              float *y) {
+    return elkan_reduction_kt<bsz::b256, float>(m, x, y);
 }
 
 template <>
 double elkan_reduction_kernel<double, vectorization_type::avx2>(da_int m, const double *x,
-                                                                da_int incx, double *y,
-                                                                da_int incy) {
+                                                                double *y) {
 
-    return elkan_reduction_kt<bsz::b256, double>(m, x, incx, y, incy);
+    return elkan_reduction_kt<bsz::b256, double>(m, x, y);
 }
 
 #if defined(__AVX512F__)
 template <>
 double elkan_reduction_kernel<double, vectorization_type::avx512>(da_int m,
                                                                   const double *x,
-                                                                  da_int incx, double *y,
-                                                                  da_int incy) {
-    return elkan_reduction_kt<bsz::b256, double>(m, x, incx, y, incy);
+                                                                  double *y) {
+    return elkan_reduction_kt<bsz::b256, double>(m, x, y);
 }
 
 template <>
 float elkan_reduction_kernel<float, vectorization_type::avx512>(da_int m, const float *x,
-                                                                da_int incx, float *y,
-                                                                da_int incy) {
-    return elkan_reduction_kt<bsz::b256, float>(m, x, incx, y, incy);
+                                                                float *y) {
+    return elkan_reduction_kt<bsz::b256, float>(m, x, y);
 }
 #endif
 

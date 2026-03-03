@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -327,7 +327,9 @@ da_status binary_tree<Derived, NodeType>::k_neighbors(da_int m_samples_in,
 template <typename Derived, typename NodeType>
 da_status binary_tree<Derived, NodeType>::radius_neighbors(
     da_int m_samples_in, da_int m_features_in, const T *X_in, da_int ldx_in, T eps,
-    std::vector<da_vector::da_vector<da_int>> &neighbors, da_errors::da_error_t *err) {
+    std::vector<da_vector::da_vector<da_int>> &neighbors,
+    std::vector<da_vector::da_vector<T>> &distances, bool return_distances,
+    da_errors::da_error_t *err) {
     // We assume here that the tree is already built and that m_samples, m_features and ldx are
     // valid and da_metric is valid (not cosine distance)
     da_status status = da_status_success;
@@ -359,9 +361,35 @@ da_status binary_tree<Derived, NodeType>::radius_neighbors(
                         "Memory allocation failed.");
     }
 
+    if (return_distances)
+        status = radius_neighbors_loop<true>(m_samples, X, ldx, eps, eps_internal,
+                                             neighbors, distances, X_is_A, X_row);
+    else
+        status = radius_neighbors_loop<false>(m_samples, X, ldx, eps, eps_internal,
+                                              neighbors, distances, X_is_A, X_row);
+
+    if (status != da_status_success) {
+        return da_error(err, status, // LCOV_EXCL_LINE
+                        "Failed to compute radius neighbors.");
+    }
+    return da_status_success;
+}
+
+template <typename Derived, typename NodeType>
+template <bool ReturnDistances>
+da_status binary_tree<Derived, NodeType>::radius_neighbors_loop(
+    da_int m_samples, const T *X, da_int ldx, T eps, T eps_internal,
+    std::vector<da_vector::da_vector<da_int>> &neighbors,
+    std::vector<da_vector::da_vector<T>> &distances, bool X_is_A, std::vector<T> &X_row) {
+
+    da_status status = da_status_success;
+
 // Loop over the samples in X and find the radius neighbors - careful use of default shared needed because we can't use this-> in OpenMP directives
 #pragma omp parallel default(shared)
     {
+        // Thread-local dummy distances vector, only used when ReturnDistances is false
+        da_vector::da_vector<T> dummy_dist;
+
 #pragma omp for schedule(dynamic, 128)
         for (da_int i = 0; i < m_samples; i++) {
             da_int X_row_index = this->n_features * omp_get_thread_num();
@@ -383,10 +411,16 @@ da_status binary_tree<Derived, NodeType>::radius_neighbors(
             }
 
             // Find the epsilon radius neighbors of the ith point in X by recursively searching the tree
-            da_status tmp_status =
-                static_cast<Derived *>(this)->radius_neighbors_recursive(
+            da_status tmp_status;
+            if constexpr (ReturnDistances) {
+                tmp_status = static_cast<Derived *>(this)->radius_neighbors_recursive(
                     this->root, &X_row[X_row_index], eps, eps_internal, neighbors[i],
-                    X_is_A, i, X_norm);
+                    distances[i], true, X_is_A, i, X_norm);
+            } else {
+                tmp_status = static_cast<Derived *>(this)->radius_neighbors_recursive(
+                    this->root, &X_row[X_row_index], eps, eps_internal, neighbors[i],
+                    dummy_dist, false, X_is_A, i, X_norm);
+            }
             if (tmp_status != da_status_success) {
 // If there was an error, set the status and break out of the loop
 #pragma omp atomic write
@@ -395,11 +429,7 @@ da_status binary_tree<Derived, NodeType>::radius_neighbors(
         }
     }
 
-    if (status != da_status_success) {
-        return da_error(err, status, // LCOV_EXCL_LINE
-                        "Failed to compute radius neighbors.");
-    }
-    return da_status_success;
+    return status;
 }
 
 template <typename Derived, typename NodeType>

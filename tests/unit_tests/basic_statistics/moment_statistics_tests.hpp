@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -51,28 +51,28 @@ template <typename T> struct MomentsParamType {
     std::vector<T> x;
     std::vector<T> expected_column_means;
     std::vector<T> expected_row_means;
-    T expected_overall_mean;
+    T expected_overall_mean = 0.;
     std::vector<T> expected_column_harmonic_means;
     std::vector<T> expected_row_harmonic_means;
-    T expected_overall_harmonic_mean;
+    T expected_overall_harmonic_mean = 0.;
     std::vector<T> expected_column_geometric_means;
     std::vector<T> expected_row_geometric_means;
-    T expected_overall_geometric_mean;
+    T expected_overall_geometric_mean = 0.;
     std::vector<T> expected_column_variances;
     std::vector<T> expected_row_variances;
-    T expected_overall_variance;
+    T expected_overall_variance = 0.;
     std::vector<T> expected_column_skewnesses;
     std::vector<T> expected_row_skewnesses;
-    T expected_overall_skewness;
+    T expected_overall_skewness = 0.;
     std::vector<T> expected_column_kurtoses;
     std::vector<T> expected_row_kurtoses;
-    T expected_overall_kurtosis;
+    T expected_overall_kurtosis = 0.;
     std::vector<T> expected_biased_column_variances;
     std::vector<T> expected_biased_row_variances;
-    T expected_biased_overall_variance;
+    T expected_biased_overall_variance = 0.;
     std::vector<T> expected_column_moments;
     std::vector<T> expected_row_moments;
-    T expected_overall_moment;
+    T expected_overall_moment = 0.;
     da_status expected_status;
     T epsilon;
 };
@@ -201,6 +201,62 @@ template <typename T> void GetOnesData(std::vector<MomentsParamType<T>> &params)
 
     param.expected_status = da_status_success;
     param.epsilon = 0;
+    params.push_back(param);
+}
+
+template <typename T>
+void GetCustomDataMean(std::vector<MomentsParamType<T>> &params, da_order order,
+                       int64_t m, int64_t n, int64_t ldx) {
+    MomentsParamType<T> param;
+
+    std::vector<int64_t> x;
+    if (order == column_major) {
+        x.resize(ldx * n);
+        for (da_int i = 0; i < n; ++i) {
+            for (da_int j = 0; j < m; ++j) {
+                x[i * ldx + j] = j;
+            }
+        }
+        for (da_int i = 0; i < n; ++i) {
+            for (da_int j = m; j < ldx; ++j) {
+                x[i * ldx + j] = -10000;
+            }
+        }
+    } else {
+        x.resize(m * ldx);
+        for (da_int i = 0; i < m; ++i) {
+            for (da_int j = 0; j < n; ++j) {
+                x[i * ldx + j] = i;
+            }
+        }
+        for (da_int i = 0; i < m; ++i) {
+            for (da_int j = n; j < ldx; ++j) {
+                x[i * ldx + j] = -10000;
+            }
+        }
+    }
+
+    param.x = convert_vector<int64_t, T>(x);
+    param.n = m;
+    param.p = n;
+    param.order = order;
+    param.ldx = ldx;
+
+    std::vector<double> expected_column_means(n);
+    for (da_int i = 0; i < n; ++i) {
+        expected_column_means[i] = (double(m * (m - 1)) / 2) / m;
+    }
+    std::vector<int64_t> expected_row_means(m);
+    for (int64_t i = 0; i < m; ++i) {
+        expected_row_means[i] = i;
+    }
+    param.expected_overall_mean = (T(m * (m - 1)) / 2) / m;
+
+    param.expected_column_means = convert_vector<double, T>(expected_column_means);
+    param.expected_row_means = convert_vector<int64_t, T>(expected_row_means);
+
+    param.expected_status = da_status_success;
+    param.epsilon = 100 * sqrt(std::numeric_limits<T>::epsilon());
     params.push_back(param);
 }
 
@@ -741,8 +797,52 @@ template <typename T> void GetMomentsData(std::vector<MomentsParamType<T>> &para
     GetRowMajorData(params);
 }
 
+template <typename T> void GetRecursionData(std::vector<MomentsParamType<T>> &params) {
+
+    std::vector<int64_t> ldxs{0, 1, 2000, 7000};
+    for (da_int i = 0; i < (da_int)ldxs.size(); ++i) {
+        GetCustomDataMean(params, column_major, 7000, 10, ldxs[i] + 7000);
+        GetCustomDataMean(params, column_major, 10, 7000, ldxs[i] + 10);
+        GetCustomDataMean(params, column_major, 7000, 3000, ldxs[i] + 7000);
+        GetCustomDataMean(params, column_major, 3000, 7000, ldxs[i] + 3000);
+        GetCustomDataMean(params, column_major, 7000, 7000, ldxs[i] + 7000);
+        GetCustomDataMean(params, row_major, 7000, 10, ldxs[i] + 10);
+        GetCustomDataMean(params, row_major, 10, 7000, ldxs[i] + 7000);
+        GetCustomDataMean(params, row_major, 7000, 3000, ldxs[i] + 3000);
+        GetCustomDataMean(params, row_major, 3000, 7000, ldxs[i] + 7000);
+        GetCustomDataMean(params, row_major, 7000, 7000, ldxs[i] + 7000);
+    }
+}
+
 using FloatTypes = ::testing::Types<float, double>;
 TYPED_TEST_SUITE(MomentStatisticsTest, FloatTypes);
+TYPED_TEST(MomentStatisticsTest, RecursionFunctionality) {
+
+    std::vector<MomentsParamType<TypeParam>> params;
+    GetRecursionData(params);
+
+    for (auto &param : params) {
+        std::vector<TypeParam> column_stat(param.p);
+        std::vector<TypeParam> row_stat(param.n);
+        TypeParam overall_stat[1];
+
+        EXPECT_EQ(da_mean(param.order, da_axis_col, param.n, param.p, param.x.data(),
+                          param.ldx, column_stat.data()),
+                  param.expected_status);
+        EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
+                        param.epsilon);
+        EXPECT_EQ(da_mean(param.order, da_axis_row, param.n, param.p, param.x.data(),
+                          param.ldx, row_stat.data()),
+                  param.expected_status);
+        EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
+                        param.epsilon);
+        EXPECT_EQ(da_mean(param.order, da_axis_all, param.n, param.p, param.x.data(),
+                          param.ldx, overall_stat),
+                  param.expected_status);
+        EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
+    }
+}
+
 TYPED_TEST(MomentStatisticsTest, MomentsFunctionality) {
 
     std::vector<MomentsParamType<TypeParam>> params;

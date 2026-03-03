@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,10 +21,12 @@
  *
  * ************************************************************************ */
 
+#include "approximate_neighbors.hpp"
 #include "basic_statistics.hpp"
 #include "da_utils.hpp"
 #include "dbscan.hpp"
-#include "decision_forest.hpp"
+#include "forest/decision_forest.hpp"
+#include "interpolation.hpp"
 #include "kernel_functions.hpp"
 #include "kmeans.hpp"
 #include "linear_model.hpp"
@@ -34,6 +36,8 @@
 #include "pca.hpp"
 #include "radius_neighbors.hpp"
 #include "svm.hpp"
+#include "train_test_split.hpp"
+#include "tree/decision_tree.hpp"
 
 //clang-format off
 #include "undef_macros.h"

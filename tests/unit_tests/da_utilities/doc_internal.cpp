@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -58,7 +58,8 @@ const static std::map<da_handle_type, std::string> htypes{
     {da_handle_nlls, "Nonlinear Least Squares"},
 #endif
     {da_handle_svm, "Support Vector Machines"},
-};
+    {da_handle_approx_nn, "Approximate Nearest Neighbors"},
+    {da_handle_interpolation, "Interpolation"}};
 
 void options_print(da_handle_type htype) {
     da_handle handle = nullptr;

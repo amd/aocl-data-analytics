@@ -116,7 +116,7 @@ find_package(Sphinx REQUIRED)
 set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
 set(SPHINX_BUILD ${CMAKE_CURRENT_BINARY_DIR}/sphinx)
 set(PDF_DOC_NAME AOCL-DA_Documentation_${AOCLDA_VERSION})
-option(INTERNAL_DOC "Build internal documentation" ON)
+option(INTERNAL_DOC "Build internal documentation" OFF)
 if(INTERNAL_DOC)
   set(SPHINX_TAG "-t" "internal")
 else()
@@ -143,8 +143,8 @@ add_custom_target(
     COMMAND doc_internal ARGS --gtest_filter=DocOptions*.RST*
       --gtest_print_time=0 --gtest_brief=1 --gtest_color=no
     | ${AWK} -f ${CMAKE_CURRENT_BINARY_DIR}/process.awk
-    > ${SPHINX_SOURCE}/options/all_table.rst
-    COMMAND ${CMAKE_SOURCE_DIR}/tools/insert_license_info.py ${SPHINX_SOURCE}/options/all_table.rst
+    > ${SPHINX_SOURCE}/C/options/all_table.rst
+    COMMAND ${CMAKE_SOURCE_DIR}/tools/insert_license_info.py ${SPHINX_SOURCE}/C/options/all_table.rst
     DEPENDS doc_internal
     COMMENT "Running unit-test for doc options tables"
     VERBATIM
@@ -160,7 +160,7 @@ add_custom_target(
     update_options_tables
     WORKING_DIRECTORY ${AOCL-DA_SOURCE_DIR}
     COMMAND tools/update_options_tables.sh
-    --db=${PROJECT_SOURCE_DIR}/options/all_table.rst ${REST_FILES}
+    --db=${PROJECT_SOURCE_DIR}/C/options/all_table.rst ${REST_FILES}
     COMMENT "Search and update ReSt files doc/*.rst"
     DEPENDS gen_options_tables
 )

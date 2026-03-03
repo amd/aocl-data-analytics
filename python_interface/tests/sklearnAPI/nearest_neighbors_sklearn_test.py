@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -49,14 +49,14 @@ from sklearn.model_selection import train_test_split
                           'minkowski',
                           'euclidean_gemm',
                           'sqeuclidean_gemm'])
-@pytest.mark.parametrize("neigh_constructor", [3, 5])
-@pytest.mark.parametrize("neigh_compute", [3])
+@pytest.mark.parametrize("neigh_radius_constructor", [(3, 1.0), (5, 3.0)])
+@pytest.mark.parametrize("neigh_radius_compute", [(3, 1.0), (2, 3.0)])
 @pytest.mark.parametrize("algorithm", ['auto', 'kd_tree', 'ball_tree', 'brute'])
 def test_nearest_neighbors(
         precision,
         metric,
-        neigh_constructor,
-        neigh_compute,
+        neigh_radius_constructor,
+        neigh_radius_compute,
         algorithm):
 
     # Solve a small problem
@@ -84,6 +84,9 @@ def test_nearest_neighbors(
 
     p = 3.2
 
+    neigh_constructor, radius_constructor = neigh_radius_constructor
+    neigh_compute, radius_compute = neigh_radius_compute
+
     # patch and import scikit-learn
     skpatch()
     from sklearn import neighbors
@@ -91,12 +94,14 @@ def test_nearest_neighbors(
     # Check NearestNeighbors API
     if metric == "minkowski":
         nn_da = neighbors.NearestNeighbors(n_neighbors=neigh_constructor,
+                                           radius=radius_constructor,
                                            algorithm=algorithm,
                                            leaf_size=3,
                                            metric=metric,
                                            p=p)
     else:
         nn_da = neighbors.NearestNeighbors(n_neighbors=neigh_constructor,
+                                           radius=radius_constructor,
                                            algorithm=algorithm,
                                            leaf_size=3,
                                            metric=metric)
@@ -105,6 +110,9 @@ def test_nearest_neighbors(
     # Call kneighbors()
     kn_dist_da, kn_ind_da = nn_da.kneighbors(
         x_test, n_neighbors=neigh_compute, return_distance=True)
+    # Call radius_neighbors()
+    rn_dist_da, rn_ind_da = nn_da.radius_neighbors(
+        x_test, radius=radius_compute, return_distance=True, sort_results=True)
     # Get parameters
     da_params = nn_da.get_params()
     # Check that the AOCL patch was applied
@@ -123,6 +131,7 @@ def test_nearest_neighbors(
     if sk_metric == "minkowski":
         nn_sk = neighbors.NearestNeighbors(
             n_neighbors=neigh_constructor,
+            radius=radius_constructor,
             algorithm=algorithm,
             leaf_size=3,
             metric=sk_metric,
@@ -130,6 +139,7 @@ def test_nearest_neighbors(
     else:
         nn_sk = neighbors.NearestNeighbors(
             n_neighbors=neigh_constructor,
+            radius=radius_constructor,
             algorithm=algorithm,
             leaf_size=3,
             metric=sk_metric)
@@ -138,6 +148,9 @@ def test_nearest_neighbors(
     # Call kneighbors()
     kn_dist_sk, kn_ind_sk = nn_sk.kneighbors(
         x_test, n_neighbors=neigh_compute, return_distance=True)
+    # Call radius_neighbors()
+    rn_dist_sk, rn_ind_sk = nn_sk.radius_neighbors(
+        x_test, radius=radius_compute, return_distance=True, sort_results=True)
     # Get parameters
     sk_params = nn_sk.get_params()
     # Check that the AOCL patch was not applied
@@ -152,6 +165,8 @@ def test_nearest_neighbors(
     # Check shapes
     assert kn_dist_da.shape == kn_dist_sk.shape
     assert kn_ind_da.shape == kn_ind_sk.shape
+    assert rn_dist_da.shape == rn_dist_sk.shape
+    assert rn_ind_da.shape == rn_ind_sk.shape
 
     # Check results
     assert kn_dist_da == pytest.approx(kn_dist_sk, tol)
@@ -159,6 +174,33 @@ def test_nearest_neighbors(
     if kn_ind_da.size > 0:  # kneighbors always returns fixed-size arrays
         assert not np.any(kn_ind_da - kn_ind_sk)
 
+    # For radius neighbors, first check shapes match
+    assert rn_dist_da.shape == rn_dist_sk.shape
+    assert rn_ind_da.shape == rn_ind_sk.shape
+
+    # Check if any arrays have elements before comparing values
+    has_radius_neighbors = any(
+        arr.size > 0 for arr in rn_dist_da) and any(
+        arr.size > 0 for arr in rn_dist_sk)
+
+    if has_radius_neighbors:
+        # Compare distances element by element
+        for da_arr, sk_arr in zip(rn_dist_da, rn_dist_sk):
+            assert da_arr == pytest.approx(sk_arr, tol)
+
+        # Compare indices element by element
+        for da_arr, sk_arr in zip(rn_ind_da, rn_ind_sk):
+            # Convert da_arr to int64 to match sk_arr dtype
+            da_arr_int64 = da_arr.astype(np.int64)
+            assert np.array_equal(da_arr_int64, sk_arr)
+    else:
+        # Both should be empty - verify all individual arrays are empty
+        for r_dist_da, sk_dist in zip(rn_dist_da, rn_dist_sk):
+            assert r_dist_da.shape == (0,) and sk_dist.shape == (0,)
+        for r_ind_da, sk_ind in zip(rn_ind_da, rn_ind_sk):
+            assert r_ind_da.shape == (0,) and sk_ind.shape == (0,)
+
+    # Check parameters
     assert da_params == sk_params
 
     # print the results if pytest is invoked with the -rA option
@@ -168,6 +210,12 @@ def test_nearest_neighbors(
     print("Distances to k-nearest neighbors")
     print("     aoclda: \n", kn_dist_da)
     print("    sklearn: \n", kn_dist_sk)
+    print("Indices of r neighbors")
+    print("     aoclda: \n", rn_ind_da)
+    print("    sklearn: \n", rn_ind_sk)
+    print("Distances to r neighbors")
+    print("     aoclda: \n", rn_dist_da)
+    print("    sklearn: \n", rn_dist_sk)
     print("Parameters")
     print("     aoclda: \n", da_params)
     print("    sklearn: \n", sk_params)
@@ -181,22 +229,50 @@ def test_nearest_neighbors_errors():
     skpatch()
     from sklearn import neighbors
 
-    with pytest.raises(RuntimeError):
+    # Check NearestNeighbors constructor errors
+    with pytest.raises(ValueError):
         nn = neighbors.NearestNeighbors(n_neighbors=-1)
+    with pytest.raises(ValueError):
+        nn = neighbors.NearestNeighbors(n_neighbors=1.5)
     with pytest.raises(ValueError):
         nn = neighbors.NearestNeighbors(metric="nonexistent")
     with pytest.raises(ValueError):
         nn = neighbors.NearestNeighbors(algorithm="nonexistent")
+    with pytest.raises(ValueError):
+        nn = neighbors.NearestNeighbors(radius=-1.0)
+    with pytest.raises(ValueError):
+        nn = neighbors.NearestNeighbors(radius="k")
 
     x_train = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]], dtype=np.float64)
     y_train = np.array([[1, 2, 3]], dtype=np.float64)
     x_test = np.array([[1, 2, 3], [3, 2, 1]], dtype=np.float64)
     y_test = np.array([[1, 1]], dtype=np.float64)
 
-    nn = neighbors.NearestNeighbors()
+    # Check NearestNeighbors cannot have n_neighbors=None
+    # for both the constructor and kneighbors()
+    nn = neighbors.NearestNeighbors(n_neighbors=None)
     nn.fit(x_train, y_train)
-    with pytest.raises(RuntimeError):
-        nn.radius_neighbors(x_test)
+    with pytest.raises(ValueError):
+        nn.kneighbors(n_neighbors=None)
+
+    # Check other NearestNeighbors method errors
+    nn = neighbors.NearestNeighbors()
+    nn.fit(x_train)
+    with pytest.raises(ValueError):
+        nn.kneighbors(X=None)
+    with pytest.raises(ValueError):
+        nn.kneighbors(x_test, n_neighbors=-1)
+    with pytest.raises(ValueError):
+        nn.kneighbors(x_test, n_neighbors=1.5)
+    with pytest.raises(ValueError):
+        nn.radius_neighbors(X=None)
+    with pytest.raises(ValueError):
+        nn.radius_neighbors(x_test, radius=-1.0)
+    with pytest.raises(ValueError):
+        nn.radius_neighbors(x_test, radius='k')
+    with pytest.raises(ValueError):
+        nn.radius_neighbors(x_test, return_distance=False, sort_results=True)
+    # Check non-implemented methods raise RuntimeError
     with pytest.raises(RuntimeError):
         nn.get_metadata_routing()
     with pytest.raises(RuntimeError):

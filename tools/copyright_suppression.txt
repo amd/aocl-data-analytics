@@ -41,5 +41,4 @@ source/core/csv/char_to_num.hpp
 'python_interface/.pep8'
 'License'
 'Notices'
-'\./github/.*'
-'\./github/workflows/.*'
+'\.github/.*'

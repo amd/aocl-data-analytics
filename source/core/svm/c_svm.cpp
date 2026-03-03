@@ -30,13 +30,12 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "da_utils.hpp"
 #include "macros.h"
 #include "svm.hpp"
 #include <algorithm>
-#include <boost/sort/spreadsort/float_sort.hpp>
 #include <cstdlib>
 #include <cstring>
-#include <iostream>
 #include <numeric>
 #include <utility>
 #include <vector>
@@ -99,19 +98,8 @@ void csvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
     da_int current_index;
     // Fill index_aux with numbers from 0, 1, ..., n
     da_std::iota(this->index_aux.begin(), this->index_aux.end(), 0);
-    // Perform argsort
-    auto rightshift = [this](const da_int &idx, const unsigned offset) {
-        using sort_type =
-            std::conditional_t<std::is_same<T, double>::value, int64_t, int32_t>;
-        return boost::sort::spreadsort::float_mem_cast<T, sort_type>(
-                   this->gradient[idx]) >>
-               offset;
-    };
-    boost::sort::spreadsort::float_sort(this->index_aux.begin(), this->index_aux.end(),
-                                        rightshift, [&](da_int &i, da_int &j) {
-                                            // Compare the gradient values at the indices i and j
-                                            return this->gradient[i] < this->gradient[j];
-                                        });
+    da_utils::parallel_argsort(this->gradient, this->index_aux);
+
     // Here index_aux is where we get indexes from, it contains argsorted gradient array
     // Select first ws_size/2 indices that are in I_up
     // Select last ws_size/2 indices that are in I_low
@@ -163,10 +151,9 @@ void csvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
 template <typename T>
 void csvm<T>::local_smo(
     da_int &ws_size, std::vector<da_int> &idx, std::vector<T *> &ptr_kernel_col,
-    std::vector<T> &local_kernel_matrix, std::vector<T> &local_kernel_matrix_row_major,
-    std::vector<T> &kernel_diagonal, std::vector<da_int> &real_indices,
-    std::vector<T> &alpha, std::vector<T> &local_alpha, std::vector<T> &gradient,
-    std::vector<T> &local_gradient, std::vector<T> &response,
+    std::vector<T> &local_kernel_matrix_row_major, std::vector<T> &kernel_diagonal,
+    std::vector<da_int> &real_indices, std::vector<T> &alpha, std::vector<T> &local_alpha,
+    std::vector<T> &gradient, std::vector<T> &local_gradient, std::vector<T> &response,
     std::vector<T> &local_response, std::vector<da_int> &I_low_p,
     std::vector<da_int> &I_up_p, [[maybe_unused]] std::vector<da_int> &I_low_n,
     [[maybe_unused]] std::vector<da_int> &I_up_n, T &first_diff,
@@ -183,9 +170,8 @@ void csvm<T>::local_smo(
         real_indices[iter] = idx[iter] % this->n;
     }
 
-    this->prepare_kernel_matrix(ptr_kernel_col, ws_size, local_kernel_matrix,
-                                local_kernel_matrix_row_major, kernel_diagonal,
-                                real_indices);
+    this->prepare_kernel_matrix(ptr_kernel_col, ws_size, local_kernel_matrix_row_major,
+                                kernel_diagonal, real_indices);
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
     da_int i, j;
     da_int max_iter_inner = ws_size * 100;
@@ -226,11 +212,11 @@ void csvm<T>::local_smo(
         I_up_p[i] = is_upper(local_alpha[i], local_response[i], this->C);
         I_low_p[j] = is_lower(local_alpha[j], local_response[j], this->C);
         I_up_p[j] = is_upper(local_alpha[j], local_response[j], this->C);
-        // Update gradient (local_kernel_matrix is square at this point so row/column major does not matter here)
+        // Update gradient (local_kernel_matrix_row_major is square at this point so row/column major does not matter here)
         // Formula: gradient[k] += delta * (Q_ki - Q_kj) (section 4.1.4 in libsvm paper)
         // We need to obtain two columns from kernel matrix
-        T *kernel_matrix_ith = local_kernel_matrix.data() + (i * ws_size);
-        T *kernel_matrix_jth = local_kernel_matrix.data() + (j * ws_size);
+        T *kernel_matrix_ith = local_kernel_matrix_row_major.data() + (i * ws_size);
+        T *kernel_matrix_jth = local_kernel_matrix_row_major.data() + (j * ws_size);
 #pragma omp simd
         for (da_int iter = 0; iter < ws_size; iter++) {
             local_gradient[iter] +=
