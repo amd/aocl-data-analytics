@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 #include <vector>
 
 /*
- * Basic k-nearest neighbors (kNN) example
+ * Basic k-nearest neighbors (k-NN) example
  *
  * This example computes k-nearest neighbors classification for a small data matrix.
  */
@@ -60,20 +60,24 @@ int main() {
 
     // Set up and train the kNN
     da_handle knn_handle = nullptr;
-    pass = da_handle_init_d(&knn_handle, da_handle_knn) == da_status_success;
+    pass = da_handle_init_d(&knn_handle, da_handle_nn) == da_status_success;
     // Set options
     pass &= da_options_set_int(knn_handle, "number of neighbors", n_neigh) ==
             da_status_success;
     pass &= da_options_set_string(knn_handle, "metric", "euclidean") == da_status_success;
     pass &= da_options_set_string(knn_handle, "weights", "uniform") == da_status_success;
     pass &= da_options_set_string(knn_handle, "algorithm", "auto") == da_status_success;
-
-    pass &= da_knn_classifier_set_training_data_d(knn_handle, n_samples, n_features,
-                                                  X_train.data(), n_samples,
-                                                  y_train.data()) == da_status_success;
     if (!pass) {
-        std::cout << "Something went wrong setting up the knn data and "
-                     "optional parameters.\n";
+        std::cout << "Failure while setting up the optional parameters.\n";
+        da_handle_print_error_message(knn_handle);
+        return 1;
+    }
+
+    status =
+        da_nn_set_data_d(knn_handle, n_samples, n_features, X_train.data(), n_samples);
+    if (status != da_status_success) {
+        std::cout << "Failure while setting up the knn data.\n";
+        da_handle_print_error_message(knn_handle);
         return 1;
     }
 
@@ -82,11 +86,10 @@ int main() {
     // Compute the k-nearest neighbors and return the distances
     std::vector<double> k_dist(n_neigh * n_queries);
     std::vector<da_int> k_ind(n_neigh * n_queries);
-    status = da_knn_kneighbors_d(knn_handle, n_queries, n_features, X_test.data(),
-                                 n_queries, k_ind.data(), k_dist.data(), n_neigh, 1);
-
+    status = da_nn_kneighbors_d(knn_handle, n_queries, n_features, X_test.data(),
+                                n_queries, k_ind.data(), k_dist.data(), n_neigh, 1);
     if (status != da_status_success) {
-        std::cout << "Failure while computing the neighbors\n";
+        std::cout << "Failure while computing the neighbors.\n";
         da_handle_print_error_message(knn_handle);
         return 1;
     }
@@ -108,24 +111,43 @@ int main() {
     }
     std::cout << std::endl;
 
+    status = da_nn_set_labels_d(knn_handle, n_samples, y_train.data());
+    if (status != da_status_success) {
+        std::cout << "Failure while setting up the labels.\n";
+        da_handle_print_error_message(knn_handle);
+        return 1;
+    }
+
     da_int n_classes = 0; // Set n_classes to zero to do query for the required memory
-    status = da_knn_classes_d(knn_handle, &n_classes, nullptr);
+    status = da_nn_classes_d(knn_handle, &n_classes, nullptr);
+    if (status != da_status_success) {
+        std::cout << "Failure while requesting the number of classes.\n";
+        da_handle_print_error_message(knn_handle);
+        return 1;
+    }
     std::cout << "\n\nThe number of available classes\n";
     std::cout << n_classes << std::endl;
 
     // Allocate required memory for classes
     std::vector<da_int> classes(n_classes);
-    status = da_knn_classes_d(knn_handle, &n_classes, classes.data());
+    status = da_nn_classes_d(knn_handle, &n_classes, classes.data());
+    if (status != da_status_success) {
+        std::cout << "Failure while retrieving the classes.\n";
+        da_handle_print_error_message(knn_handle);
+        return 1;
+    }
     std::cout << "\n\nThe corresponding classes, sorted in ascending order\n";
     for (auto &ic : classes)
         std::cout << ic << std::endl;
 
     // Allocate required memory for classes
     std::vector<double> proba(n_queries * n_classes);
-    status = da_knn_classifier_predict_proba_d(knn_handle, n_queries, n_features,
-                                               X_test.data(), n_queries, proba.data());
+    status =
+        da_nn_classifier_predict_proba_d(knn_handle, n_queries, n_features, X_test.data(),
+                                         n_queries, proba.data(), knn_search_mode);
     if (status != da_status_success) {
-        std::cout << "Failure while computing the probabilities\n";
+        std::cout << "Failure while computing the probabilities.\n";
+        da_handle_print_error_message(knn_handle);
         return 1;
     }
 
@@ -140,10 +162,11 @@ int main() {
 
     // Allocate memory for predicted labels for test data
     std::vector<da_int> y_test(n_queries);
-    status = da_knn_classifier_predict_d(knn_handle, n_queries, n_features, X_test.data(),
-                                         n_queries, y_test.data());
+    status = da_nn_classifier_predict_d(knn_handle, n_queries, n_features, X_test.data(),
+                                        n_queries, y_test.data(), knn_search_mode);
     if (status != da_status_success) {
-        std::cout << "Failure while computing the predicted labels\n";
+        std::cout << "Failure while computing the predicted labels.\n";
+        da_handle_print_error_message(knn_handle);
         return 1;
     }
     std::cout << "\n\nThe label estimates\n";

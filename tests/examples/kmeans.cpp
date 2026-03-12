@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -59,14 +59,15 @@ int main() {
     // Create the handle and pass it the data matrix
     pass = pass && (da_handle_init_d(&handle, da_handle_kmeans) == da_status_success);
 
-    pass = pass && (da_kmeans_set_data_d(handle, n_samples, n_features, A, lda) ==
-                    da_status_success);
-
     // Set options
     pass = pass &&
            (da_options_set_int(handle, "n_clusters", n_clusters) == da_status_success);
     pass = pass && (da_options_set_int(handle, "n_init", 1) == da_status_success);
     pass = pass && (da_options_set_string(handle, "initialization method", "supplied") ==
+                    da_status_success);
+
+    // Set the data matrix
+    pass = pass && (da_kmeans_set_data_d(handle, n_samples, n_features, A, lda) ==
                     da_status_success);
 
     // Set the initial cluster centres

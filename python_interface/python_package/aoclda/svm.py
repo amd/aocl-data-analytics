@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -120,7 +120,7 @@ class BaseSVM:
         return preds
 
     def score(self, X, y):
-        """
+        r"""
         Compute a model performance score.
 
         The score metric depends on the specific SVM variant:
@@ -128,8 +128,8 @@ class BaseSVM:
         - For regression models (SVR, NuSVR): returns coefficient of determination (R²)
 
         Args:
-            X (array-like): Test samples of shape (n_samples, n_features).
-            y (array-like): True target values of shape (n_samples,).
+            X (array-like): Test samples of shape (:nref:`n_samples`, :nref:`n_features`).
+            y (array-like): True target values of shape (:nref:`n_samples`,).
 
         Returns:
             float: Performance score. Higher values indicate better model performance.
@@ -170,30 +170,31 @@ class BaseSVM:
 
     @property
     def n_support_per_class(self):
-        """
-        numpy.ndarray of shape (n_classes,): The number of support vectors for each class.
+        r"""
+        numpy.ndarray of shape (:nref:`n_classes`,): The number of support vectors for each class.
         """
         return self._model.get_n_sv_per_class()
 
     @property
     def dual_coef(self):
-        """
-        numpy.ndarray of shape (n_classes-1, n_support): The dual coefficients of the support
-        vectors.
+        r"""
+        numpy.ndarray of shape (:nref:`n_classes`-1, :nref:`n_support`): The dual coefficients of
+        the support vectors.
         """
         return self._model.get_dual_coef()
 
     @property
     def support_vectors_idx(self):
-        """
-        numpy.ndarray of shape (n_support,): The indices of the support vectors.
+        r"""
+        numpy.ndarray of shape (:nref:`n_support`,): The indices of the support vectors.
         """
         return self._model.get_support_vectors_idx()
 
     @property
     def support_vectors(self):
-        """
-        numpy.ndarray of shape (n_support, n_features): The support vectors used by the model.
+        r"""
+        numpy.ndarray of shape (:nref:`n_support`, :nref:`n_features`): The support vectors used by
+        the model.
         """
         return self._model.get_sv()
 
@@ -223,7 +224,7 @@ class SVC(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+            :math:`1/(Var(X) \\times \\text{n\\_features})`. Default=-1.0.
         coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
             functions <aoclda.kernel_functions.polynomial_kernel>` for more details). It is only \
             used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
@@ -294,13 +295,13 @@ class SVC(BaseSVM):
         self.C = C
 
     def fit(self, X, y):
-        """
+        r"""
         Fit the SVC model according to the given training data.
 
         Args:
-            X (array-like): Training vectors of shape (n_samples, n_features).
-            y (array-like): Target values of shape (n_samples,). They are expected to range from 0
-              to n_class - 1.
+            X (array-like): Training vectors of shape (:nref:`n_samples`, :nref:`n_features`).
+            y (array-like): Target values of shape (:nref:`n_samples`,). They are expected to range
+              from 0 to n_class - 1.
 
         Returns:
             self (object): Returns the instance itself.
@@ -316,11 +317,11 @@ class SVC(BaseSVM):
         return self
 
     def predict(self, X):
-        """
+        r"""
         Perform classification on samples in X.
 
         Args:
-            X (array-like): Input vectors of shape (n_samples, n_features).
+            X (array-like): Input vectors of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
             numpy.ndarray: Predicted class labels for samples in X.
@@ -328,7 +329,7 @@ class SVC(BaseSVM):
         return super().predict(X)
 
     def decision_function(self, X, shape="ovr"):
-        """
+        r"""
         Evaluate the decision function for the samples in X.
 
         In multi-class problems, you can use the 'shape' parameter to choose \
@@ -337,7 +338,7 @@ class SVC(BaseSVM):
         For binary problems, this parameter is ignored.
 
         Args:
-            X (array-like): Input vectors of shape (n_samples, n_features).
+            X (array-like): Input vectors of shape (:nref:`n_samples`, :nref:`n_features`).
             shape (str, optional): Whether to return a one-vs-rest ('ovr') \
             decision function or the original one-vs-one ('ovo'). Default='ovr'.
 
@@ -349,11 +350,11 @@ class SVC(BaseSVM):
         return self._model.pybind_decision_function(X, shape)
 
     def score(self, X, y):
-        """
+        r"""
         Return the mean accuracy on the given test data and labels.
 
         Args:
-            X (array-like): Test samples of shape (n_samples, n_features).
+            X (array-like): Test samples of shape (:nref:`n_samples`, :nref:`n_features`).
             y (array-like): True labels for X.
 
         Returns:
@@ -362,28 +363,30 @@ class SVC(BaseSVM):
         return super().score(X, y)
 
     def predict_proba(self, X):
-        """`
+        r"""
         Predict class probabilities for samples in X.
 
         Args:
-            X (array-like): Input data of shape (n_samples, n_features).
+            X (array-like): Input data of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
-            numpy.ndarray: Array of shape (n_samples, n_classes) with class probability estimates.
+            numpy.ndarray: Array of shape (:nref:`n_samples`, :nref:`n_classes`) with class
+            probability estimates.
         """
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_predict_proba(X)
 
     def predict_log_proba(self, X):
-        """`
+        r"""
         Predict class log probabilities for samples in X.
 
         Args:
-            X (array-like): Input data of shape (n_samples, n_features).
+            X (array-like): Input data of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
-            numpy.ndarray: Array of shape (n_samples, n_classes) with class log probability estimates.
+            numpy.ndarray: Array of shape (:nref:`n_samples`, :nref:`n_classes`) with class log
+            probability estimates.
         """
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True)
@@ -399,14 +402,16 @@ class SVC(BaseSVM):
     @property
     def probA(self):
         """
-        numpy.ndarray or float: The probability parameter A of the model, used in probability estimates.
+        numpy.ndarray or float: The probability parameter A of the model, used in probability
+        estimates.
         """
         return self._model.get_probA()
 
     @property
     def probB(self):
         """
-        numpy.ndarray or float: The probability parameter B of the model, used in probability estimates.
+        numpy.ndarray or float: The probability parameter B of the model, used in probability
+        estimates.
         """
         return self._model.get_probB()
 
@@ -430,7 +435,7 @@ class SVR(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+            :math:`1/(Var(X) \\times \\text{n\\_features})`. Default=-1.0.
         coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
             functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
             It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
@@ -494,12 +499,12 @@ class SVR(BaseSVM):
         self.epsilon = epsilon
 
     def fit(self, X, y):
-        """
+        r"""
         Fit the SVR model according to the given training data.
 
         Args:
-            X (array-like): Training vectors of shape (n_samples, n_features).
-            y (array-like): Target values of shape (n_samples,).
+            X (array-like): Training vectors of shape (:nref:`n_samples`, :nref:`n_features`).
+            y (array-like): Target values of shape (:nref:`n_samples`,).
 
         Returns:
             self (object): Returns the instance itself.
@@ -516,11 +521,11 @@ class SVR(BaseSVM):
         return self
 
     def predict(self, X):
-        """
+        r"""
         Predict regression values for samples in X.
 
         Args:
-            X (array-like): Input vectors of shape (n_samples, n_features).
+            X (array-like): Input vectors of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
             numpy.ndarray: Predicted values.
@@ -528,11 +533,11 @@ class SVR(BaseSVM):
         return super().predict(X)
 
     def score(self, X, y):
-        """
+        r"""
         Return the coefficient of determination :math:`R^2` of the prediction.
 
         Args:
-            X (array-like): Test samples of shape (n_samples, n_features).
+            X (array-like): Test samples of shape (:nref:`n_samples`, :nref:`n_features`).
             y (array-like): True values for X.
 
         Returns:
@@ -557,7 +562,7 @@ class NuSVC(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+            :math:`1/(Var(X) \\times \\text{n\\_features})`. Default=-1.0.
         coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
             functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
             It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
@@ -627,13 +632,13 @@ class NuSVC(BaseSVM):
         self.nu = nu
 
     def fit(self, X, y):
-        """
+        r"""
         Fit the NuSVC model according to the given training data.
 
         Args:
-            X (array-like): Training vectors of shape (n_samples, n_features).
-            y (array-like): Target values of shape (n_samples,). They are expected to range from 0
-            to n_class - 1.
+            X (array-like): Training vectors of shape (:nref:`n_samples`, :nref:`n_features`).
+            y (array-like): Target values of shape (:nref:`n_samples`,). They are expected to range
+            from 0 to n\_class - 1.
 
         Returns:
             self (object): Returns the instance itself.
@@ -649,11 +654,11 @@ class NuSVC(BaseSVM):
         return self
 
     def predict(self, X):
-        """
+        r"""
         Perform classification on samples in X.
 
         Args:
-            X (array-like): Input vectors of shape (n_samples, n_features).
+            X (array-like): Input vectors of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
             numpy.ndarray: Predicted class labels for samples in X.
@@ -661,7 +666,7 @@ class NuSVC(BaseSVM):
         return super().predict(X)
 
     def decision_function(self, X, shape="ovr"):
-        """
+        r"""
         Evaluate the decision function for the samples in X.
 
         In multi-class problems, you can use the 'shape' parameter to choose \
@@ -670,7 +675,7 @@ class NuSVC(BaseSVM):
         For binary problems, this parameter is ignored.
 
         Args:
-            X (array-like): Input vectors of shape (n_samples, n_features).
+            X (array-like): Input vectors of shape (:nref:`n_samples`, :nref:`n_features`).
             shape (str, optional): Whether to return a one-vs-rest ('ovr') \
             decision function or the original one-vs-one ('ovo'). Default='ovr'.
 
@@ -682,11 +687,11 @@ class NuSVC(BaseSVM):
         return self._model.pybind_decision_function(X, shape)
 
     def score(self, X, y):
-        """
+        r"""
         Return the mean accuracy on the given test data and labels.
 
         Args:
-            X (array-like): Test samples of shape (n_samples, n_features).
+            X (array-like): Test samples of shape (:nref:`n_samples`, :nref:`n_features`).
             y (array-like): True labels for X.
 
         Returns:
@@ -695,28 +700,30 @@ class NuSVC(BaseSVM):
         return super().score(X, y)
 
     def predict_proba(self, X):
-        """`
+        r"""
         Predict class probabilities for samples in X.
 
         Args:
-            X (array-like): Input data of shape (n_samples, n_features).
+            X (array-like): Input data of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
-            numpy.ndarray: Array of shape (n_samples, n_classes) with class probability estimates.
+            numpy.ndarray: Array of shape (:nref:`n_samples`, :nref:`n_classes`) with class
+            probability estimates.
         """
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_predict_proba(X)
 
     def predict_log_proba(self, X):
-        """`
+        r"""
         Predict class log probabilities for samples in X.
 
         Args:
-            X (array-like): Input data of shape (n_samples, n_features).
+            X (array-like): Input data of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
-            numpy.ndarray: Array of shape (n_samples, n_classes) with class log probability estimates.
+            numpy.ndarray: Array of shape (:nref:`n_samples`, :nref:`n_classes`) with class log
+            probability estimates.
         """
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True)
@@ -732,14 +739,16 @@ class NuSVC(BaseSVM):
     @property
     def probA(self):
         """
-        numpy.ndarray or float: The probability parameter A of the model, used in probability estimates.
+        numpy.ndarray or float: The probability parameter A of the model, used in probability
+        estimates.
         """
         return self._model.get_probA()
 
     @property
     def probB(self):
         """
-        numpy.ndarray or float: The probability parameter B of the model, used in probability estimates.
+        numpy.ndarray or float: The probability parameter B of the model, used in probability
+        estimates.
         """
         return self._model.get_probB()
 
@@ -762,7 +771,7 @@ class NuSVR(BaseSVM):
         degree (int, optional): Degree of the polynomial kernel function. Ignored by \
             all other kernels. Default=3.
         gamma (float, optional): Kernel coefficient. If set to -1, it is calculated as \
-            :math:`1/(Var(X) * n\\_features)`. Default=-1.0.
+            :math:`1/(Var(X) \\times \\text{n\\_features})`. Default=-1.0.
         coef0 (float, optional): Independent term in kernel function (check :func:`kernel \
             functions <aoclda.kernel_functions.polynomial_kernel>` for more details). \
             It is only used in 'poly' and 'sigmoid' kernel functions. Default=0.0.
@@ -826,12 +835,12 @@ class NuSVR(BaseSVM):
         self.C = C
 
     def fit(self, X, y):
-        """
+        r"""
         Fit the NuSVR model according to the given training data.
 
         Args:
-            X (array-like): Training vectors of shape (n_samples, n_features).
-            y (array-like): Target values of shape (n_samples,).
+            X (array-like): Training vectors of shape (:nref:`n_samples`, :nref:`n_features`).
+            y (array-like): Target values of shape (:nref:`n_samples`,).
 
         Returns:
             self (object): Returns the instance itself.
@@ -848,11 +857,11 @@ class NuSVR(BaseSVM):
         return self
 
     def predict(self, X):
-        """
+        r"""
         Predict regression values for samples in X.
 
         Args:
-            X (array-like): Input vectors of shape (n_samples, n_features).
+            X (array-like): Input vectors of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
             numpy.ndarray: Predicted values.
@@ -860,11 +869,11 @@ class NuSVR(BaseSVM):
         return super().predict(X)
 
     def score(self, X, y):
-        """
+        r"""
         Return the coefficient of determination :math:`R^2` of the prediction.
 
         Args:
-            X (array-like): Test samples of shape (n_samples, n_features).
+            X (array-like): Test samples of shape (:nref:`n_samples`, :nref:`n_features`).
             y (array-like): True values for X.
 
         Returns:

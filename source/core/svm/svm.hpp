@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,10 +30,12 @@
 #include "da_cache.hpp"
 #include "da_error.hpp"
 #include "da_kernel_utils.hpp"
+#include "da_vector.hpp"
 #include "macros.h"
 #include "options.hpp"
 #include "svm_types.hpp"
 #include <algorithm>
+#include <functional>
 #include <optional>
 #include <random>
 #include <utility>
@@ -128,17 +130,17 @@ template <typename T> class base_svm {
     T *X = nullptr;
     // Second ldx is here for case when we have multiclass, X is created internally dense, so we want to proceed with ldx_2 = nsamples
     // However in other cases we use user's pointer where we want ldx_2 = ldx
-    da_int ldx, ldx_2;
+    da_int ldx = 0, ldx_2 = 0;
     T *y = nullptr;
     // actual_size = 2n if (SVR or nuSVR), otherwise n
-    da_int actual_size;
+    da_int actual_size = 0;
 
     // Used in multi-class classification (memory allocated in svm.hpp set_data())
     std::vector<da_int> idx_class; // indexes of observations where class is either i or j
     std::vector<da_int> support_indexes_pos, support_indexes_neg;
     std::vector<bool> idx_is_positive;
     bool ismulticlass = false;
-    da_int pos_class, neg_class;
+    da_int pos_class = 0, neg_class = 0;
 
     // Kernel function to use for computation
     da_int kernel_function = rbf;
@@ -153,9 +155,9 @@ template <typename T> class base_svm {
     T tau = 2 * std::numeric_limits<T>::epsilon();
     // Convergence tolerance
     T tol = 1.0e-3;
-    da_int iter, max_iter, max_ws_size;
-    bool cache_smaller_than_ws;
-    da_int padding;
+    da_int iter = 0, max_iter = 0, max_ws_size = 0;
+    bool cache_smaller_than_ws = false;
+    da_int padding = 0;
     da_int wssi_vec_type = scalar, wssj_vec_type = scalar;
     // Variable is being set at the contructors of spiecialised classes
     da_svm_model mod = svm_undefined;
@@ -165,16 +167,16 @@ template <typename T> class base_svm {
 
     // Variables for result handling
     std::vector<T> gradient, alpha, response;
-    da_int n_support;                    // Number of support vectors
+    da_int n_support = 0;                // Number of support vectors
     std::vector<da_int> support_indexes, // Indexes of support vectors
         n_support_per_class;
     std::vector<T> support_coefficients; // Alphas of support vectors
-    T bias;                              // Constant in decision function
+    T bias = 0;                          // Constant in decision function
 
     // Internal working variables
     std::vector<T> alpha_diff;
-    da_int ws_size; // Size of working set
-    T cache_size;   // Size of cache for each classifier (in MB)
+    da_int ws_size = 0; // Size of working set
+    T cache_size = 0;   // Size of cache for each classifier (in MB)
     std::vector<T> local_alpha, local_gradient, local_response;
     std::vector<T> x_norm_aux, y_norm_aux; // Work array for kernel computation
     std::vector<da_int> I_low_p, I_up_p, I_low_n, I_up_n;
@@ -198,11 +200,17 @@ template <typename T> class base_svm {
                                 da_int ldx_test, T *decision_values);
 
     // General auxiliary functions
+    void update_gradient_impl(T *gradient, std::vector<T> &gradient_threads,
+                              std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
+                              std::function<const T *(da_int)> get_kernel_col);
     void update_gradient(T *gradient, std::vector<T> &gradient_threads,
                          std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
                          std::vector<T *> &ptr_kernel_col);
+    void update_gradient(T *gradient, std::vector<T> &gradient_threads,
+                         std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
+                         const T *kernel_data, da_int stride);
     void kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
-                        std::vector<T> &X_temp, std::vector<T> &kernel_temp,
+                        std::vector<T> &X_temp, da_vector::da_vector<T> &kernel_temp,
                         std::vector<T *> &ptr_kernel_col, da_cache::LRUCache<T> &cache);
     void compute_ws_size(da_int &ws_size, da_int max_ws_size);
     da_int maxpowtwo(da_int &n);
@@ -213,7 +221,6 @@ template <typename T> class base_svm {
               std::vector<T> &kernel_matrix_row_major,
               std::vector<T> &kernel_matrix_diagonal, T &delta, T &max_fun);
     void prepare_kernel_matrix(std::vector<T *> &ptr_kernel_col, da_int ws_size,
-                               std::vector<T> &local_kernel_matrix,
                                std::vector<T> &local_kernel_matrix_row_major,
                                std::vector<T> &kernel_diagonal,
                                std::vector<da_int> &real_indices);
@@ -227,7 +234,6 @@ template <typename T> class base_svm {
                            da_int &n_selected) = 0;
     virtual void local_smo(da_int &ws_size, std::vector<da_int> &idx,
                            std::vector<T *> &ptr_kernel_col,
-                           std::vector<T> &local_kernel_matrix,
                            std::vector<T> &local_kernel_matrix_row_major,
                            std::vector<T> &kernel_diagonal,
                            std::vector<da_int> &real_indices, std::vector<T> &alpha,
@@ -317,7 +323,7 @@ template <typename T> class csvm : public base_svm<T> {
     void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
                    std::vector<bool> &selected_ws_indicator, da_int &n_selected);
     void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                   std::vector<T *> &ptr_kernel_col, std::vector<T> &local_kernel_matrix,
+                   std::vector<T *> &ptr_kernel_col,
                    std::vector<T> &local_kernel_matrix_row_major,
                    std::vector<T> &kernel_diagonal, std::vector<da_int> &real_indices,
                    std::vector<T> &alpha, std::vector<T> &local_alpha,
@@ -369,7 +375,7 @@ template <typename T> class nusvm : public base_svm<T> {
     void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
                    std::vector<bool> &selected_ws_indicator, da_int &n_selected);
     void local_smo(da_int &ws_size, std::vector<da_int> &idx,
-                   std::vector<T *> &ptr_kernel_col, std::vector<T> &local_kernel_matrix,
+                   std::vector<T *> &ptr_kernel_col,
                    std::vector<T> &local_kernel_matrix_row_major,
                    std::vector<T> &kernel_diagonal, std::vector<da_int> &real_indices,
                    std::vector<T> &alpha, std::vector<T> &local_alpha,

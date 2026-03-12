@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -44,10 +44,13 @@ function(aoclda_add_dependencies OBJ_NAME)
             core/nearest_neighbors
             core/svm
             core/kernel_functions
+            core/interpolation
+            core/approximate_neighbors
             ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
             ${CMAKE_SOURCE_DIR}/external/RALFit
             ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
-            ${CMAKE_SOURCE_DIR}/external/kernel-templates
+            ${KT_PATH} # user-provided or defaulted path containing kernel-templates
+            ${CMAKE_SOURCE_DIR}/external/kernel-templates # fallback in-tree copy
             ${UTILS_INCLUDE_DIR})
   target_include_directories(${OBJ_NAME} SYSTEM PRIVATE ${Boost_INCLUDE_DIRS})
 
@@ -78,12 +81,13 @@ set(DA_DATA
 set(DA_MISC core/utilities/miscellaneous.cpp)
 set(DA_CONTEXT core/dynamic_dispatch/context.cpp)
 set(DA_METRICS_PUBLIC core/metrics/pairwise_distances_public.cpp)
-set(DA_NEAREST_NEIGHBORS_PUBLIC core/nearest_neighbors/knn_public.cpp)
+set(DA_NEAREST_NEIGHBORS_PUBLIC
+    core/nearest_neighbors/nearest_neighbors_public.cpp)
 set(DA_CLUSTERING_PUBLIC
     core/clustering/kmeans_public.cpp core/clustering/dbscan_public.cpp
     core/clustering/kmeans_select_simd.cpp)
 set(DA_DECISION_FOREST_PUBLIC core/decision_forest/decision_tree_public.cpp
-                              core/decision_forest/random_forest_public.cpp)
+                              core/decision_forest/decision_forest_public.cpp)
 set(DA_NLLS_PUBLIC core/nlls/nlls_public.cpp)
 set(DA_NLLS_INTERNAL core/nlls/nlls.cpp)
 set(DA_HANDLE_PUBLIC core/utilities/da_handle.cpp
@@ -94,6 +98,10 @@ set(DA_SVM_PUBLIC core/svm/svm_public.cpp core/svm/svm_select_simd.cpp
 set(DA_KERNEL_FUNCTIONS_PUBLIC
     core/kernel_functions/kernel_functions_public.cpp
     core/kernel_functions/kernel_functions_select_simd.cpp)
+set(DA_INTERPOLATION_PUBLIC
+    core/interpolation/interpolation_public.cpp)
+set(DA_APPROXIMATE_NEIGHBORS_PUBLIC
+    core/approximate_neighbors/approximate_neighbors_public.cpp)
 
 # Internal APIs require multi-compilation for different zen architectures
 set(DA_BASIC_STATISTICS_INTERNAL
@@ -104,17 +112,23 @@ set(DA_BASIC_STATISTICS_INTERNAL
     core/basic_statistics/row_to_col_major.cpp)
 set(DA_FACTORIZATION_INTERNAL core/factorization/pca.cpp)
 set(DA_DECISION_FOREST_INTERNAL
-    core/decision_forest/histogram.cpp core/decision_forest/decision_tree.cpp
-    core/decision_forest/random_forest.cpp
-    core/decision_forest/decision_tree_misc.cpp)
+    core/decision_forest/common/histogram.cpp
+    core/decision_forest/common/scoring.cpp
+    core/decision_forest/common/idx_sorting.cpp
+    core/decision_forest/tree/decision_tree.cpp
+    core/decision_forest/forest/decision_forest.cpp)
 set(DA_NEAREST_NEIGHBORS_INTERNAL
-    core/nearest_neighbors/knn.cpp core/nearest_neighbors/radius_neighbors.cpp
-    core/nearest_neighbors/kd_tree.cpp core/nearest_neighbors/ball_tree.cpp
+    core/nearest_neighbors/nearest_neighbors.cpp
+    core/nearest_neighbors/radius_neighbors.cpp
+    core/nearest_neighbors/kd_tree.cpp
+    core/nearest_neighbors/ball_tree.cpp
     core/nearest_neighbors/binary_tree.cpp)
 set(DA_CLUSTERING_INTERNAL
     core/clustering/kmeans.cpp core/clustering/dbscan.cpp
     core/clustering/kmeans_kernels.cpp)
-set(DA_UTILS_INTERNAL core/utilities/da_utils.cpp)
+set(DA_UTILS_INTERNAL
+    core/utilities/da_utils.cpp
+    core/utilities/train_test_split.cpp)
 set(DA_OPTIMIZATION_INTERNAL core/optimization/optimization.cpp)
 set(DA_SVM_INTERNAL core/svm/svm.cpp core/svm/base_svm.cpp core/svm/c_svm.cpp
                     core/svm/nu_svm.cpp core/svm/svm_kernels.cpp)
@@ -136,6 +150,11 @@ set(DA_METRICS_INTERNAL
     core/metrics/euclidean_gemm_distance.cpp
     core/metrics/kernels_avx2.cpp
     core/metrics/kernels_avx512.cpp)
+set(DA_INTERPOLATION_INTERNAL
+    core/interpolation/interpolation.cpp
+    core/interpolation/cubic_spline/cubic_spline.cpp)
+set(DA_APPROXIMATE_NEIGHBORS_INTERNAL
+    core/approximate_neighbors/approximate_neighbors.cpp)
 
 set(DA_CORE_PUBLIC
     ${DA_LINMOD_PUBLIC}
@@ -154,7 +173,9 @@ set(DA_CORE_PUBLIC
     ${DA_UTILS_PUBLIC}
     ${DA_NEAREST_NEIGHBORS_PUBLIC}
     ${DA_SVM_PUBLIC}
-    ${DA_KERNEL_FUNCTIONS_PUBLIC})
+    ${DA_KERNEL_FUNCTIONS_PUBLIC}
+    ${DA_INTERPOLATION_PUBLIC}
+    ${DA_APPROXIMATE_NEIGHBORS_PUBLIC})
 
 set(DA_CORE_DYNAMIC_DISPATCH
     ${DA_FACTORIZATION_INTERNAL}
@@ -169,7 +190,9 @@ set(DA_CORE_DYNAMIC_DISPATCH
     ${DA_OPTIMIZATION_INTERNAL}
     ${DA_BASIC_STATISTICS_INTERNAL}
     ${DA_KERNEL_FUNCTIONS_INTERNAL}
-    ${DA_METRICS_INTERNAL})
+    ${DA_METRICS_INTERNAL}
+    ${DA_INTERPOLATION_INTERNAL}
+    ${DA_APPROXIMATE_NEIGHBORS_INTERNAL})
 
 if(ARCH STREQUAL "dynamic")
   # Build archs list
@@ -205,6 +228,7 @@ add_library(
 
 # Set -mavx2 so generic code will still perform acceptably
 set(GENERIC_FLAGS "-march=x86-64;-mavx2;-mfma")
+set(GENERIC_AVX512_FLAGS "-mavx512f;-mavx512dq;-mavx512vl")
 
 # Add compile definitions
 if(ARCH STREQUAL "dynamic")
@@ -212,6 +236,12 @@ if(ARCH STREQUAL "dynamic")
   # compile definitions
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS})
   target_compile_definitions(da_core_public PRIVATE ${DEFINITIONS})
+elseif(ARCH STREQUAL "generic")
+  target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS})
+  target_compile_definitions(da_core_public PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+elseif(ARCH STREQUAL "generic_avx512")
+  target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS} ${GENERIC_AVX512_FLAGS})
+  target_compile_definitions(da_core_public PRIVATE generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
 elseif(ARCH STREQUAL "native")
   # For native builds we need to extract the architecture corresponding to the
   # -march=native flag in order to use the correct namespace in the source code
@@ -222,6 +252,9 @@ elseif(ARCH STREQUAL "native")
   if(NATIVE_NAMESPACE STREQUAL "generic")
     target_compile_definitions(da_core_public
                                PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+  elseif(NATIVE_NAMESPACE STREQUAL "generic_avx512")
+    target_compile_definitions(
+      da_core_public PRIVATE generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
   else()
     message(NOTICE "Building using znver${NATIVE_NAMESPACE} namespace.")
     target_compile_definitions(
@@ -254,6 +287,11 @@ foreach(ARCHITECTURE IN LISTS ARCHITECTURES)
         ))
     target_compile_definitions(${ARCH_OBJECTS} PRIVATE ARCH_generic
                                                        ZNVER_MAX=generic)
+  elseif(ARCHITECTURE STREQUAL "generic_avx512"
+         OR (ARCHITECTURE STREQUAL "native" AND NATIVE_NAMESPACE STREQUAL
+                                                "generic_avx512"))
+    target_compile_definitions(${ARCH_OBJECTS} PRIVATE ARCH_generic_avx512
+                                                       ZNVER_MAX=generic_avx512)
   elseif(ARCHITECTURE STREQUAL "native")
     target_compile_definitions(
       ${ARCH_OBJECTS} PRIVATE ARCH_znver=${NATIVE_NAMESPACE}
@@ -267,6 +305,8 @@ foreach(ARCHITECTURE IN LISTS ARCHITECTURES)
   # Set the compile options for the architecture
   if(ARCHITECTURE STREQUAL "generic")
     target_compile_options(${ARCH_OBJECTS} PRIVATE ${GENERIC_FLAGS})
+  elseif(ARCHITECTURE STREQUAL "generic_avx512")
+    target_compile_options(${ARCH_OBJECTS} PRIVATE ${GENERIC_FLAGS} ${GENERIC_AVX512_FLAGS})
   else()
     target_compile_options(${ARCH_OBJECTS} PRIVATE -march=${ARCHITECTURE})
   endif()
@@ -339,6 +379,12 @@ if(BUILD_SMP)
   if(WIN32)
     target_link_libraries(da_core PRIVATE OpenMP::OpenMP_CXX)
     target_link_libraries(da_core_public PRIVATE OpenMP::OpenMP_CXX)
+  endif()
+else()
+  if(UNIX)
+   # BLIS and flame always depend on some pthread utilities, even in sequential builds
+    find_package(Threads REQUIRED)
+    target_link_libraries(aocl-da PRIVATE Threads::Threads)
   endif()
 endif()
 

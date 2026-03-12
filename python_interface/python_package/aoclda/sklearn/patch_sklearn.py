@@ -53,24 +53,12 @@ from ._decision_tree import DecisionTreeClassifier as DecisionTreeClassifier_da
 from ._decision_forest import RandomForestClassifier as RandomForestClassifier_da
 from ._metrics import pairwise_distances as pairwise_distances_da
 from ._utils import train_test_split as train_test_split_da
-from ._nearest_neighbors import KNeighborsClassifier as KNeighborsClassifier_da
-from ._nearest_neighbors import KNeighborsRegressor as KNeighborsRegressor_da
-from ._nearest_neighbors import NearestNeighbors as NearestNeighbors_da
+from ._neighbors import KNeighborsClassifier as KNeighborsClassifier_da
+from ._neighbors import KNeighborsRegressor as KNeighborsRegressor_da
+from ._neighbors import NearestNeighbors as NearestNeighbors_da
+from ._neighbors import RadiusNeighborsClassifier as RadiusNeighborsClassifier_da
+from ._neighbors import RadiusNeighborsRegressor as RadiusNeighborsRegressor_da
 from ._svm import SVC as SVC_da, SVR as SVR_da, NuSVC as NuSVC_da, NuSVR as NuSVR_da
-# Check if we should be using Intel's Scikit-learn extension
-try:
-    USE_INTEL_SKLEARNEX = int(os.environ.get('USE_INTEL_SKLEARNEX'))
-except (ValueError, TypeError):
-    USE_INTEL_SKLEARNEX = 0
-
-using_intel = False
-if USE_INTEL_SKLEARNEX:
-    try:
-        from sklearnex import patch_sklearn, unpatch_sklearn
-        using_intel = True
-    except ImportError:
-        warnings.warn(
-            "Intel Extension for scikit-learn not found", category=RuntimeWarning)
 
 # Now on a case-by-case basis, overwrite with AMD symbols where we have
 # performant implementations
@@ -129,6 +117,12 @@ AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
                'NearestNeighbors': {'pack': nearest_neighbors_sklearn,
                                     'sk_sym': getattr(nearest_neighbors_sklearn, 'NearestNeighbors'),
                                     'da_sym': NearestNeighbors_da},
+               'RadiusNeighborsClassifier': {'pack': nearest_neighbors_sklearn,
+                                             'sk_sym': getattr(nearest_neighbors_sklearn, 'RadiusNeighborsClassifier'),
+                                             'da_sym': RadiusNeighborsClassifier_da},
+               'RadiusNeighborsRegressor': {'pack': nearest_neighbors_sklearn,
+                                            'sk_sym': getattr(nearest_neighbors_sklearn, 'RadiusNeighborsRegressor'),
+                                            'da_sym': RadiusNeighborsRegressor_da},
                'SVC': {'pack': svm_sklearn,
                        'sk_sym': getattr(svm_sklearn, 'SVC'),
                        'da_sym': SVC_da},
@@ -143,20 +137,6 @@ AMD_SYMBOLS = {'EmpiricalCovariance': {'pack': cov_sklearn,
                          'da_sym': NuSVR_da},
                }
 
-# List of symbols where AMD is chosen over Intel
-AMD_vs_INTEL = [
-    'EmpiricalCovariance',
-    'KMeans',
-    'LinearRegression',
-    'KNeighborsClassifier',
-    'KNeighborsRegressor',
-    'Ridge',
-    'PCA',
-    'DecisionTreeClassifier',
-    'DBSCAN',
-    'NearestNeighbors',
-    'train_test_split']
-
 
 def skpatch(*args, print_patched=True):
     """
@@ -165,12 +145,6 @@ def skpatch(*args, print_patched=True):
 
     if not args:
         # No arguments specified, so patch everything possible
-        if using_intel:
-            # Patch everything in Intel, but suppress printing to screen
-            with open(os.devnull, 'w', encoding="utf-8") as devnull:
-                with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
-                    patch_sklearn()
-
         packages = AMD_SYMBOLS.keys()
     elif isinstance(args[0], str):
         packages = [args[0]]
@@ -180,25 +154,6 @@ def skpatch(*args, print_patched=True):
         raise TypeError("Unrecognized argument")
 
     # packages is a list of candidate package names to patch
-
-    if using_intel:
-        # Check if we should patch with Intel
-        tmp_list = []
-        intel_patches = []
-        for package in packages:
-            if package in AMD_vs_INTEL:
-                tmp_list.append(package)
-            else:
-                intel_patches.append(package)
-
-        packages = tmp_list
-        for package in intel_patches:
-            try:
-                with open(os.devnull, 'w', encoding="utf-8") as devnull:
-                    with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
-                        patch_sklearn(package)
-            except ValueError:
-                print(f"The package {package} was not found.")
 
     successfully_patched = []
 
@@ -223,13 +178,6 @@ def undo_skpatch(*args, print_patched=True):
     """
     Reinstate scikit-learn packages with their original symbols
     """
-
-    if using_intel:
-        # Unpatch anything that might have been patched with Intel, but suppress
-        # printing to screen
-        with open(os.devnull, 'w', encoding="utf-8") as devnull:
-            with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
-                unpatch_sklearn()
 
     if not args:
         packages = AMD_SYMBOLS.keys()

@@ -47,38 +47,94 @@ template <typename T> class kernel_internal_test : public testing::Test {
 using FloatTypes = ::testing::Types<float, double>;
 TYPED_TEST_SUITE(kernel_internal_test, FloatTypes);
 
+// Helper function to test a kernel across different ISA implementations
+template <typename T, typename KernelSelector, typename KernelExecutor>
+void test_kernel_across_isa(
+    const std::vector<T> &input, const std::vector<T> &expected,
+    const std::unordered_map<std::string, vectorization_type> &isa_list, da_int count,
+    KernelSelector kernel_selector, KernelExecutor kernel_executor) {
+    for (const auto &isa : isa_list) {
+        std::cout << "Dataset: " << std::to_string(count)
+                  << ", vectorisation: " << isa.first << std::endl;
+        auto kernel_func = kernel_selector(isa.second);
+        std::vector<T> outcome = input;
+        kernel_executor(kernel_func, outcome);
+
+        // Check for 4ULP accuracy
+        for (size_t i = 0; i < expected.size(); i++) {
+            if constexpr (std::is_same<T, float>::value)
+                EXPECT_FLOAT_EQ(expected[i], outcome[i]);
+            else
+                EXPECT_DOUBLE_EQ(expected[i], outcome[i]);
+        }
+    }
+}
+
 TYPED_TEST(kernel_internal_test, math_func) {
     std::function<void(test_math_func_vec_type<TypeParam> & data)> set_test_data[] = {
         set_zero_data<TypeParam>, set_iota_data<TypeParam>,
-        set_large_numbers_data<TypeParam>, set_very_large_numbers_data<TypeParam>};
+        set_large_numbers_data<TypeParam>, set_very_large_numbers_data<TypeParam>,
+        set_very_large_negative_numbers_data<TypeParam>};
     test_math_func_vec_type<TypeParam> data;
     da_int count = 0;
     std::vector<test_math_func_vec_type<TypeParam>> params;
+
+    std::unordered_map<std::string, vectorization_type> isa_list = {
+        {"avx", avx},
+        {"avx2", avx2},
+        // will trickle down to AVX2 where is AVX512 not available
+        {"avx512", avx512}};
+
     for (auto &data_fun : set_test_data) {
         data_fun(data);
+
+        // EXP KERNEL TEST
+        std::cout << "EXP TEST" << std::endl;
         std::vector<TypeParam> expected = data.input;
         exp_kernel<TypeParam, scalar>(data.first_dim, data.second_dim, expected.data(),
-                                      data.first_dim, data.multiplier);
-        std::unordered_map<std::string, vectorization_type> isa_list;
-        isa_list = {{"avx", avx},
-                    {"avx2", avx2},
-                    // will trickle down to AVX2 where is AVX512 not available
-                    {"avx512", avx512}};
-        for (const auto &isa : isa_list) {
-            std::cout << "Dataset: " << std::to_string(count)
-                      << ", vectorisation: " << isa.first << std::endl;
-            auto exp_kernel_func = select_exp_kernel_function<TypeParam>(isa.second);
-            std::vector<TypeParam> outcome = data.input;
-            exp_kernel_func(data.first_dim, data.second_dim, outcome.data(),
-                            data.first_dim, data.multiplier);
-            // Check for 4ULP accuracy (this is stated accuracy in LIBM docs), EXPECT_*_EQ does exactly so
-            for (size_t i = 0; i < expected.size(); i++) {
-                if constexpr (std::is_same<TypeParam, float>::value)
-                    EXPECT_FLOAT_EQ(expected[i], outcome[i]);
-                else
-                    EXPECT_DOUBLE_EQ(expected[i], outcome[i]);
-            }
-        }
+                                      data.first_dim, data.multiplier, data.X_norm.data(),
+                                      data.Y_norm.data());
+        test_kernel_across_isa<TypeParam>(
+            data.input, expected, isa_list, count,
+            [](vectorization_type vt) {
+                return select_exp_kernel_function<TypeParam>(vt);
+            },
+            [&data](auto kernel_func, std::vector<TypeParam> &outcome) {
+                kernel_func(data.first_dim, data.second_dim, outcome.data(),
+                            data.first_dim, data.multiplier, data.X_norm.data(),
+                            data.Y_norm.data());
+            });
+
+        // POW KERNEL TEST
+        std::cout << "POW TEST" << std::endl;
+        expected = data.input;
+        pow_kernel<TypeParam, scalar>(data.first_dim, data.second_dim, expected.data(),
+                                      data.first_dim, data.coef0, data.power);
+        test_kernel_across_isa<TypeParam>(
+            data.input, expected, isa_list, count,
+            [](vectorization_type vt) {
+                return select_pow_kernel_function<TypeParam>(vt);
+            },
+            [&data](auto kernel_func, std::vector<TypeParam> &outcome) {
+                kernel_func(data.first_dim, data.second_dim, outcome.data(),
+                            data.first_dim, data.coef0, data.power);
+            });
+
+        // TANH KERNEL TEST
+        std::cout << "TANH TEST" << std::endl;
+        expected = data.input;
+        tanh_kernel<TypeParam, scalar>(data.first_dim, data.second_dim, expected.data(),
+                                       data.first_dim, data.coef0);
+        test_kernel_across_isa<TypeParam>(
+            data.input, expected, isa_list, count,
+            [](vectorization_type vt) {
+                return select_tanh_kernel_function<TypeParam>(vt);
+            },
+            [&data](auto kernel_func, std::vector<TypeParam> &outcome) {
+                kernel_func(data.first_dim, data.second_dim, outcome.data(),
+                            data.first_dim, data.coef0);
+            });
+
         count++;
     }
 }

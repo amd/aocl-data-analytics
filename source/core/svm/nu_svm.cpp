@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "da_utils.hpp"
 #include "kernel_functions.hpp"
 #include "macros.h"
 #include "svm.hpp"
@@ -113,19 +114,8 @@ void nusvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
     da_int current_index;
     // Fill index_aux with numbers from 0, 1, ..., n
     da_std::iota(this->index_aux.begin(), this->index_aux.end(), 0);
-    // Perform argsort
-    auto rightshift = [this](const da_int &idx, const unsigned offset) {
-        using sort_type =
-            std::conditional_t<std::is_same<T, double>::value, int64_t, int32_t>;
-        return boost::sort::spreadsort::float_mem_cast<T, sort_type>(
-                   this->gradient[idx]) >>
-               offset;
-    };
-    boost::sort::spreadsort::float_sort(this->index_aux.begin(), this->index_aux.end(),
-                                        rightshift, [&](da_int &i, da_int &j) {
-                                            // Compare the gradient values at the indices i and j
-                                            return this->gradient[i] < this->gradient[j];
-                                        });
+    da_utils::parallel_argsort(this->gradient, this->index_aux);
+
     // Here index_aux is where we get indexes from, it contains argsorted gradient array
     // Select first ws_size/4 indices that are in I_up and are positive
     // Select first ws_size/4 indices that are in I_up and are negative
@@ -220,7 +210,6 @@ void nusvm<T>::outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
 template <typename T>
 void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
                          std::vector<T *> &ptr_kernel_col,
-                         std::vector<T> &local_kernel_matrix,
                          std::vector<T> &local_kernel_matrix_row_major,
                          std::vector<T> &kernel_diagonal,
                          std::vector<da_int> &real_indices, std::vector<T> &alpha,
@@ -244,9 +233,8 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
         real_indices[iter] = idx[iter] % this->n;
     }
 
-    this->prepare_kernel_matrix(ptr_kernel_col, ws_size, local_kernel_matrix,
-                                local_kernel_matrix_row_major, kernel_diagonal,
-                                real_indices);
+    this->prepare_kernel_matrix(ptr_kernel_col, ws_size, local_kernel_matrix_row_major,
+                                kernel_diagonal, real_indices);
 
     // i, j - indexes for update in the current iteration of SMO, domain = (0, ws_size)
     da_int i, j, i_p, i_n, j_p, j_n;
@@ -304,11 +292,11 @@ void nusvm<T>::local_smo(da_int &ws_size, std::vector<da_int> &idx,
         I_up_n[i] = is_upper_neg(local_alpha[i], local_response[i]);
         I_low_n[j] = is_lower_neg(local_alpha[j], local_response[j], this->C);
         I_up_n[j] = is_upper_neg(local_alpha[j], local_response[j]);
-        // Update gradient (local_kernel_matrix is square at this point so row/column major does not matter here)
+        // Update gradient (local_kernel_matrix_row_major is square at this point so row/column major does not matter here)
         // Formula: gradient[k] += delta * (Q_ki - Q_kj)
         // We need to obtain two columns from kernel matrix
-        T *kernel_matrix_ith = local_kernel_matrix.data() + (i * ws_size);
-        T *kernel_matrix_jth = local_kernel_matrix.data() + (j * ws_size);
+        T *kernel_matrix_ith = local_kernel_matrix_row_major.data() + (i * ws_size);
+        T *kernel_matrix_jth = local_kernel_matrix_row_major.data() + (j * ws_size);
 #pragma omp simd
         for (da_int iter = 0; iter < ws_size; iter++) {
             local_gradient[iter] +=
@@ -376,11 +364,20 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
         return da_status_success;
     }
     da_int gradient_size = gradient.size();
-    da_int block_size = std::min(counter, SVM_MAX_BLOCK_SIZE);
+    da_int block_size;
+    if (counter <= 2048) {
+        block_size = 32;
+    } else if (counter <= 4096) {
+        block_size = 64;
+    } else if (counter <= 8192) {
+        block_size = 128;
+    } else {
+        block_size = 256;
+    }
+    block_size = std::min(block_size, counter);
     da_int n_blocks = counter / block_size, residual = counter % block_size;
     std::vector<T> kernel_matrix, X_temp, gradient_threads, current_alpha_diff,
         gradient_local;
-    std::vector<T *> ptr_kernel_col;
     std::vector<da_int> current_idx;
     [[maybe_unused]] da_int n_threads = da_utils::get_n_threads_loop(n_blocks);
     n_threads = std::min(n_threads, da_int(64));
@@ -388,7 +385,6 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
     try {
         current_idx.resize(block_size);
         current_alpha_diff.resize(block_size);
-        ptr_kernel_col.resize(block_size);
         gradient_local.resize(gradient_size * n_threads);
         kernel_matrix.resize(this->n * block_size);
         X_temp.resize(block_size * this->p);
@@ -403,7 +399,7 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
     T coef0 = this->coef0, gamma = this->gamma;
     da_int degree = this->degree, threading_error = 0;
 #pragma omp parallel for schedule(dynamic) num_threads(n_threads) default(none)          \
-    firstprivate(current_idx, ptr_kernel_col, current_alpha_diff, kernel_matrix, X_temp, \
+    firstprivate(current_idx, current_alpha_diff, kernel_matrix, X_temp,                 \
                      gradient_threads)                                                   \
     shared(n_blocks, block_size, residual, index_aux, cache, n, p, ldx_2, degree, coef0, \
                gamma, kernel_f, X, x_norm_aux, alpha_diff, gradient_local,               \
@@ -449,35 +445,27 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
                  current_block_size, kernel_matrix.data(), n, gamma, degree, coef0, false,
                  (da_int)vectorisation);
 
-        // Update cache with idx_computed_count new columns of kernel matrix, otherwise just fill result array
+        // Update cache with idx_computed_count new columns of kernel matrix
         if (cache.active_) {
-            // Get pointers to first values of each column, to later pass into cache.put()
-            std::vector<T *> ptr_kernel_col_temp(current_block_size);
+            // Build index array for cache keys
             std::vector<da_int> idx_temp(current_block_size);
             try {
-                ptr_kernel_col_temp.resize(current_block_size);
                 idx_temp.resize(current_block_size);
             } catch (std::bad_alloc const &) {
 #pragma omp atomic write
                 threading_error = 1;
             }
-            // Call put for each computed index, this will update list that tracks LRU columns in the cache
             for (da_int j = 0; j < current_block_size; j++) {
                 idx_temp[j] = current_idx[j] % n;
-                ptr_kernel_col_temp[j] = &kernel_matrix[j * n];
-                // Fill result array
-                ptr_kernel_col[j] = &kernel_matrix[j * n];
             }
-#pragma omp critical
-            cache.put(idx_temp, ptr_kernel_col_temp);
-        } else {
-            for (da_int j = 0; j < current_block_size; j++) {
-                ptr_kernel_col[j] = &kernel_matrix[j * n];
-            }
+            // Pass raw data pointer and stride to cache - avoids storing pointers to local kernel_matrix
+            cache.put(idx_temp, kernel_matrix.data(), n);
         }
+        // Use raw kernel data pointer directly - avoids storing pointers to local kernel_matrix
         da_int t_id = omp_get_thread_num();
         this->update_gradient(&gradient_local[t_id * gradient_size], gradient_threads,
-                              current_alpha_diff, n, current_block_size, ptr_kernel_col);
+                              current_alpha_diff, n, current_block_size,
+                              kernel_matrix.data(), n);
         if (this->mod == da_svm_model::nusvr) {
             // alpha_diff is just of size n (when technically it should be 2n) but since
             // second half of alpha_diff is just first half negated, we can just multiply by -1
@@ -486,7 +474,7 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
                           [](T &value) { value = -value; });
             this->update_gradient(&gradient_local[t_id * gradient_size], gradient_threads,
                                   current_alpha_diff, n, current_block_size,
-                                  ptr_kernel_col);
+                                  kernel_matrix.data(), n);
         }
     }
     if (threading_error == 1)

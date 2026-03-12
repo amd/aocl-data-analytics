@@ -1,7 +1,7 @@
 Peer Review Checklist for Pull-Request (PRPR)
 =============================================
 
-*Revision 7/5/2025*
+*Revision 20/10/2025*
 
 See Appendix for the *Peer Review Guide*.
 
@@ -1035,19 +1035,35 @@ merging of the feature branch. It is strongly encouraged that
 development be done in an open manner and to have periodic review
 meetings with the peer reviewer. The process is presented below as a
 flow chart and assumes that development is done using a feature branch
-based off a trunk and that revisions are done using Gerrit. These are
-not mandatory, and the PR process can be adapted to similar setups
-(e.g., GitHub). To aid the peer review process two checklists are
+based off the trunk (`amd-main`) and that Peer Review is done using GitHub
+Pull-Requests. This is not mandatory, and the PR process can be adapted to
+similar setups (e.g., Gerrit). To aid the peer review process two checklists are
 presented. These checklists should be considered as templates which can
 be customized to suit the requirements and processes of specific
 libraries.
+
+### Flow chart of the Peer Review process
+
+```term
+┌────────────────┐   ┌──────────┐   ┌───────────────────┐   ┌──────────────────┐   ┌─────────────┐   ┌──────────┐   ┌───────┐
+│  New project   │ → │ Initial  │ → │ Development cycle │ → │ SR (Self Review) │ → │ Peer Review │ → │ Complete │ → │ Merge │
+│ (API) proposal │   │ analysis │   │                   │   │    checklist     │   │  checklist  │   │          │   │ back  │
+└────────────────┘   └──────────┘   └───────────────────┘   └──────────────────┘   └─────────────┘   └──────────┘   └───────┘
+
+• Designation of     • Requires     • Dev/PR periodic sync  • Done by Developer(s) • Done by the PR  • PR Approves • Post-merge
+  Dev team             PR sign-off  • API                                                                             jobs are OK
+• Designation of     • Agree what   • Doc                                                                           • PR marks as
+  Peer Reviewer        are the API  • Examples                                                                        IMPLEMENTED
+  (PR)                 goals        • Unit tests                                                                      the Jira
+                                                                                                                      ticket
+```
 
 ## Notes
 
 **Full-debug build** refers to either a GCC or AOCC (Clang) target that
 uses -Wall and -Wextra or similar flags and is the default defined by
 CMake build type "Debug." This may also include checks with an address
-sanitizer facility.
+sanitizer facility (ASAN, MEMSAN, ...).
 
 **Suppressions List** is an optional list of source filenames and
 associated compiler/linker warnings that can be safely ignored. Warnings
@@ -1058,7 +1074,8 @@ setup to verify code quality using debug builds on both Linux and
 Windows platforms. These jobs not only build but also run all the
 unit-tests and examples and report compiler, unit-tests and examples
 result logs. It possibly also includes jobs that build a code coverage
-report and compile the documentation.
+report, compile the documentation, or build the package (and wrappers)
+and installs it with subsequent compiling and running the installed examples.
 
 **Unit-tests** refers to all test source codes related to the project.
 These may be a suite in Google Tests/CTests.

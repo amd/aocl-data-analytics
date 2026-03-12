@@ -26,12 +26,13 @@
  */
 
 #include "../utest_utils.hpp"
-#include "decision_forest.hpp"
-#include "decision_tree_misc.hpp"
+#include "common/idx_sorting.hpp"
 #include "dectree_utils.hpp"
+#include "tree/decision_tree.hpp"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <list>
+#include <numeric>
 
 using namespace TEST_ARCH::da_decision_forest;
 

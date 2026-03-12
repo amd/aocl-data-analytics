@@ -35,6 +35,7 @@ from aoclda.basic_stats import (harmonic_mean, mean, variance,
                                 quantile, covariance_matrix, standardize)
 from aoclda._internal_utils import debug as dbg
 from aoclda.factorization import PCA
+from aoclda.utils import get_version, get_git_commit
 
 
 def test_context_getsetters():
@@ -140,3 +141,31 @@ def test_array_slicing(numpy_precision, numpy_order):
 
     assert pca.principal_components == pytest.approx(
         pca_slice.principal_components, tol)
+
+
+def test_get_version():
+    """Test that get_version() returns a valid version string."""
+    version = get_version()
+
+    assert isinstance(version, str)
+    assert len(version) > 0
+    assert version.startswith("AOCL-DA")
+    # Version should have digits
+    assert any(char.isdigit() for char in version)
+
+
+def test_get_git_commit():
+    """Test that get_git_commit() returns a valid date and git commit hash or tag."""
+    git_commit = get_git_commit().split()
+    commit_hash = git_commit[0]
+    # Commit date is in the format YYYY-MM-DD hh:mm:ss, hence remove whitespaces
+    commit_date = "".join(git_commit[1:]) if len(git_commit) > 1 else ""
+    # First part should be the commit hash or tag
+    assert isinstance(commit_hash, str)
+    assert len(commit_hash) > 0
+    # Git commit should be either "unknown" or a valid hash/tag
+    assert commit_hash == "unknown" or all(
+        c.isalnum() or c in ".-_/" for c in commit_hash)
+    # If present, commit date should be a valid date string (basic check)
+    assert commit_date == "" or all(
+        c.isdigit() or c in "-:" for c in commit_date)

@@ -24,12 +24,20 @@
 #ifndef KERNEL_FUNCTIONS_TYPES_HPP
 #define KERNEL_FUNCTIONS_TYPES_HPP
 
-#define MATH_FUNC_MAX_BLOCK_SIZE da_int(16)
-#define EUCLID_MAX_BLOCK_SIZE da_int(16)
+#define KERNEL_FUNCTIONS_MAX_BLOCK_SIZE da_int(256)
+#define SIMD_PADDING da_int(16)
 
 namespace da_kernel_functions_types {
 
-template <typename T> using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
+enum class math_type { none = 0, tanh, power };
+
+template <typename T>
+using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, const T *);
+
+template <typename T>
+using pow_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, da_int);
+
+template <typename T> using tanh_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
 } // namespace da_kernel_functions_types
 
 #endif //KERNEL_FUNCTIONS_TYPES_HPP

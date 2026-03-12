@@ -121,7 +121,7 @@ TYPED_TEST(svm_internal_test, local_smo) {
                 kernel_ptr_data[i] = data.kernel_data.data() + i * data.n;
             }
 
-            svc_obj.local_smo(data.n, data.idx, kernel_ptr_data, data.local_kernel_data,
+            svc_obj.local_smo(data.n, data.idx, kernel_ptr_data,
                               local_kernel_data_row_major, kernel_diagonal, real_indices,
                               alpha, data.local_alpha, gradient, data.local_gradient,
                               response, data.local_response, I_low_p, I_up_p, I_low_n,
@@ -187,12 +187,11 @@ TYPED_TEST(svm_internal_test, local_smo) {
                                       nusvc_obj.n, counter, kernel_matrix_ptr_nusvc);
             ////////
 
-            nusvc_obj.local_smo(data.n, data.idx, kernel_ptr_data, data.local_kernel_data,
-                                local_kernel_data_row_major, kernel_diagonal,
-                                real_indices, alpha, data.local_alpha, gradient,
-                                data.local_gradient, response, data.local_response,
-                                I_low_p, I_up_p, I_low_n, I_up_n, data.first_diff,
-                                alpha_diff, data.tol);
+            nusvc_obj.local_smo(
+                data.n, data.idx, kernel_ptr_data, local_kernel_data_row_major,
+                kernel_diagonal, real_indices, alpha, data.local_alpha, gradient,
+                data.local_gradient, response, data.local_response, I_low_p, I_up_p,
+                I_low_n, I_up_n, data.first_diff, alpha_diff, data.tol);
 
             nusvc_obj.set_bias(alpha, data.local_gradient, response, data.n, bias);
 

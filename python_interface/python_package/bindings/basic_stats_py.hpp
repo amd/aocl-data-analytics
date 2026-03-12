@@ -61,8 +61,11 @@ void get_size_and_axis(std::string axis, da_order &order, da_axis &axis_enum,
     if (X.ndim() == 1) {
         // If user provided 1D array then calculating for example mean over all elements
         // would mean calculation over that one row of data.
-        if (axis_enum == da_axis_all) {
-            axis_enum = da_axis_row;
+        if (axis_enum == da_axis_row || axis_enum == da_axis_col) {
+            axis_enum = da_axis_all;
+            std::string warning =
+                "Axes 'col' and 'row' are undefined for 1D arrays. Defaulting to 'all'.";
+            PyErr_WarnEx(PyExc_RuntimeWarning, warning.c_str(), 1);
         }
     }
 

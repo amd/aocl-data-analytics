@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,11 @@
  *
  * ************************************************************************ */
 
+#ifndef KMEANS_HPP
+#define KMEANS_HPP
+
 #include "aoclda.h"
+#include "approximate_neighbors.hpp"
 #include "basic_handle.hpp"
 #include "da_error.hpp"
 #include "da_kernel_utils.hpp"
@@ -78,6 +82,9 @@ template <typename T> class kmeans : public basic_handle<T> {
     // Do we need to warn the user that the best run of k-means ended after the maximum number of iterations?
     bool warn_maxit_reached = false;
 
+    // Storage order of user's data internally (may be different from overall order requested by user)
+    da_order A_order = column_major;
+
     // This will be used to record the convergence status of the current/latest k-means run
     da_int converged = 0;
 
@@ -94,10 +101,22 @@ template <typename T> class kmeans : public basic_handle<T> {
     // Norm of previous cluster centre array, for use in convergence testing
     T normc = 0.0;
 
+    // friend ANN class so we can do spherical k-means if necessary
+    friend class ARCH::da_approx_nn::approximate_neighbors<T>;
+
+    // Has ANN requested we do spherical kmeans?
+    bool do_spherical = false;
+
+    // If we are calling kmeans through a friended class, we want to skip checking options
+    bool do_options_check = true;
+
     // User's data
-    const T *A = nullptr;
+    const T *A_usr = nullptr; // original pointer to user's data
+    const T *A =
+        nullptr; // pointer to data to be used internally - may be transposed copy
     const T *C = nullptr;
     da_int lda = 0;
+    da_int lda_usr = 0;
     da_int ldc = 0;
 
     //Utility pointers to column major allocated copies of user's data
@@ -115,7 +134,10 @@ template <typename T> class kmeans : public basic_handle<T> {
     // Arrays used internally, and to store results
     T best_inertia = 0.0, current_inertia = 0.0; // Inertia
     std::vector<T> workcc1, workcs1, works1, works2, works3, works4, works5, workc1,
-        workc2, workc3, thread_cluster_centres;
+        workc2, workc3;
+    std::vector<std::vector<T>> thd_cluster_centres, thd_work1, thd_work2, thd_work3,
+        thd_work4;
+    std::vector<std::vector<da_int>> thd_work_int;
     std::vector<da_int> work_int1, work_int2, work_int3, work_int4, cluster_count;
 
     // For multiple runs we want to use pointers to point to the current best results
@@ -139,7 +161,9 @@ template <typename T> class kmeans : public basic_handle<T> {
     void lloyd_iteration(bool update_centres, da_int n_threads);
 
     void lloyd_iteration_update_centres(da_int block_size, const T *data, da_int lddata,
-                                        T *new_cluster_centres, da_int *labels);
+                                        T *new_cluster_centres, da_int *labels,
+                                        T *work1 = nullptr, T *work2 = nullptr,
+                                        T *work3 = nullptr, T *work4 = nullptr);
 
     // Elkan algorithm functions, including various unrolled versions of the blocked part of the iteration
 
@@ -170,17 +194,16 @@ template <typename T> class kmeans : public basic_handle<T> {
     std::function<void(da_int, T *, da_int, T *, T *, da_int *, da_int)>
         elkan_update_kernel;
 
-    std::function<T(da_int, const T *, da_int, T *, da_int)> elkan_reduce_kernel;
+    std::function<T(da_int, const T *, T *)> elkan_reduce_kernel;
 
     void assign_lloyd_kernel(std::function<void(bool, da_int, T *, da_int *, da_int *,
                                                 T *, da_int, da_int)> &kernel,
                              da_int &padding, da_int n_clusters);
 
-    void assign_elkan_kernels(
-        std::function<void(da_int, T *, da_int, T *, T *, da_int *, da_int)>
-            &update_kernel,
-        std::function<T(da_int, const T *, da_int, T *, da_int)> &reduce_kernel,
-        da_int &padding, da_int n_clusters, da_int n_features);
+    void assign_elkan_kernels(std::function<void(da_int, T *, da_int, T *, T *, da_int *,
+                                                 da_int)> &update_kernel,
+                              std::function<T(da_int, const T *, T *)> &reduce_kernel,
+                              da_int &padding, da_int n_clusters, da_int n_features);
 
     // MacQueen algorithm functions
 
@@ -248,7 +271,7 @@ void elkan_iteration_kernel(da_int block_size, T *l_bound, da_int ldl_bound, T *
                             T *centre_shift, da_int *labels, da_int n_clusters);
 
 template <class T, vectorization_type U>
-T elkan_reduction_kernel(da_int m, const T *x, da_int incx, T *y, da_int incy);
+T elkan_reduction_kernel(da_int m, const T *x, T *y);
 
 template <class T>
 void select_simd_size_lloyd(da_int n_clusters, da_int &padding,
@@ -262,3 +285,5 @@ void select_simd_size_elkan(da_int n_clusters, da_int n_features, da_int &paddin
 } // namespace da_kmeans
 
 } // namespace ARCH
+
+#endif // KMEANS_HPP

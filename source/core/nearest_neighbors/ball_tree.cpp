@@ -390,7 +390,7 @@ ball_tree<T>::build_tree(da_int depth, da_int *indices, da_int n_indices,
 *          region_within_eps if the entirety of the ball is within eps of X
 */
 template <typename T>
-da_nn_types::nn_check_region
+da_neighbors_types::nn_check_region
 ball_tree<T>::check_ball(T *X, T eps, std::vector<T> &centroid, T radius, T &dist) {
 
     dist = 0.0;
@@ -420,34 +420,35 @@ ball_tree<T>::check_ball(T *X, T eps, std::vector<T> &centroid, T radius, T &dis
 
     if (dist + radius <= eps) {
         // The entire ball is within eps of X
-        return da_nn_types::region_within_eps;
+        return da_neighbors_types::region_within_eps;
     }
     // If the minimum distance is less than eps, then X is within eps of the edge of the ball
     if (dist - radius <= eps) {
-        return da_nn_types::pt_within_eps;
+        return da_neighbors_types::pt_within_eps;
     }
     // Otherwise, the point is outside the ball by at least eps
-    return da_nn_types::pt_outside_eps;
+    return da_neighbors_types::pt_outside_eps;
 }
 
 // Recursive function to find the radius neighbors of a point (determined by index_X) in X
 template <typename T>
 da_status ball_tree<T>::radius_neighbors_recursive(
     std::shared_ptr<ball_node<T>> current_node, T *X, T eps, T eps_internal,
-    da_vector::da_vector<da_int> &neighbors, bool X_is_A, da_int index_X, T X_norm) {
+    da_vector::da_vector<da_int> &neighbors, da_vector::da_vector<T> &distances,
+    bool return_distances, bool X_is_A, da_int index_X, T X_norm) {
 
     da_status status = da_status_success;
 
     // Check the ball for quick pruning of the search space
     T dist;
-    da_nn_types::nn_check_region proximity =
+    da_neighbors_types::nn_check_region proximity =
         check_ball(X, eps, current_node->centroid, current_node->radius, dist);
-    if (proximity == da_nn_types::pt_outside_eps) {
+    if (proximity == da_neighbors_types::pt_outside_eps) {
         // The point is too far from the bounding ball for this node, we can return and ignore all sub-nodes
         return da_status_success;
     }
 
-    if (proximity == da_nn_types::region_within_eps) {
+    if (proximity == da_neighbors_types::region_within_eps) {
         // The entire ball is inside the search radius, so we can add all points in the node
         for (da_int i = 0; i < current_node->n_indices; i++) {
             da_int index_A = current_node->indices[i];
@@ -456,6 +457,15 @@ da_status ball_tree<T>::radius_neighbors_recursive(
                 continue;
             }
             neighbors.push_back(index_A);
+            if (return_distances) {
+                // If we are returning distances, we need to compute the distance from X to the point
+                // For Euclidean distance this stores the squared distance
+                status = this->compute_distance(dist, index_A, X, X_norm);
+                if (status != da_status_success) {
+                    return status; // LCOV_EXCL_LINE
+                }
+                distances.push_back(dist);
+            }
         }
         return da_status_success;
     }
@@ -480,6 +490,9 @@ da_status ball_tree<T>::radius_neighbors_recursive(
             if (dist <= eps_internal) {
                 // If the distance is less than or equal to eps_internal, add the point to the neighbors list
                 neighbors.push_back(index_A);
+                if (return_distances) {
+                    distances.push_back(dist);
+                }
             }
         }
 
@@ -488,11 +501,13 @@ da_status ball_tree<T>::radius_neighbors_recursive(
 
         // Check the left child
         radius_neighbors_recursive(current_node->left_child, X, eps, eps_internal,
-                                   neighbors, X_is_A, index_X, X_norm);
+                                   neighbors, distances, return_distances, X_is_A,
+                                   index_X, X_norm);
 
         // Check the right child
         radius_neighbors_recursive(current_node->right_child, X, eps, eps_internal,
-                                   neighbors, X_is_A, index_X, X_norm);
+                                   neighbors, distances, return_distances, X_is_A,
+                                   index_X, X_norm);
     }
     return da_status_success;
 }

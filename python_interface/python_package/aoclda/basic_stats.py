@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -36,22 +36,22 @@ from ._internal_utils import check_convert_data
 
 
 def mean(X, axis="col"):
-    """
+    r"""
         Arithmetic mean of a data matrix along the specified axis.
 
-        For a dataset :math:`\\{x_1, ..., x_n\\}`, the arithmetic mean, \
-        :math:`\\bar{x}`, is defined as
+        For a dataset :math:`\{x_1, ..., x_n\}`, the arithmetic mean, \
+        :math:`\bar{x}`, is defined as
 
         .. math::
-            \\bar{x}=\\frac{1}{n}\\sum_{i=1}^{n} x_i.
+            \bar{x}=\frac{1}{n}\sum_{i=1}^{n} x_i.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             axis (str, optional): axis over which means are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated means.
+            numpy.ndarray: Depending on ``axis`` can have shape
+            (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Calculated means.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -59,22 +59,22 @@ def mean(X, axis="col"):
 
 
 def harmonic_mean(X, axis="col"):
-    """
+    r"""
         Harmonic mean of a data matrix along the specified axis.
 
-        For a dataset :math:`\\{x_1, ..., x_n\\}`, the harmonic mean, \
-        :math:`\\bar{x}_{harm}`, is defined as
+        For a dataset :math:`\{x_1, ..., x_n\}`, the harmonic mean, \
+        :math:`\bar{x}_{harm}`, is defined as
 
         .. math::
-            \\bar{x}_{harm}=\\frac{n}{\\sum_{i=1}^{n} \\frac{1}{x_i}}.
+            \bar{x}_{harm}=\frac{n}{\sum_{i=1}^{n} \frac{1}{x_i}}.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             axis (str, optional): axis over which means are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated harmonic means.
+            numpy.ndarray: Depending on ``axis`` can have shape
+            (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Calculated harmonic means.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -82,23 +82,23 @@ def harmonic_mean(X, axis="col"):
 
 
 def geometric_mean(X, axis="col"):
-    """
+    r"""
         Geometric mean of a data matrix along the specified axis.
 
-        For a dataset :math:`\\{x_1, ..., x_n\\}`, the harmonic mean, \
-        :math:`\\bar{x}_{geom}`, is defined as
+        For a dataset :math:`\{x_1, ..., x_n\}`, the geometric mean, \
+        :math:`\bar{x}_{geom}`, is defined as
 
         .. math::
-            \\bar{x}_{geom} = \\left(\\prod_{i=1}^n x_i\\right)^{\\frac{1}{n}}
-            \\equiv \\exp\\left(\\frac{1}{n}\\sum_{i=1}^n\\ln x_i\\right).
+            \bar{x}_{geom} = \left(\prod_{i=1}^n x_i\right)^{\frac{1}{n}}
+            \equiv \exp\left(\frac{1}{n}\sum_{i=1}^n\ln x_i\right).
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             axis (str, optional): axis over which means are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated geometric means.
+            numpy.ndarray: Depending on ``axis`` can have shape
+            (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Calculated geometric means.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -106,36 +106,37 @@ def geometric_mean(X, axis="col"):
 
 
 def variance(X, dof=0, axis="col"):
-    """
+    r"""
         Variance of a data matrix along the specified axis.
 
-        For a dataset :math:`\\{x_1, ..., x_n\\}`, the variance, :math:`s^2`, is defined as
+        For a dataset :math:`\{x_1, ..., x_n\}`, the variance, :math:`s^2`, is defined as
 
         .. math::
-            s^2 = \\frac{1}{\\text{dof}}\\sum_{i=1}^n(x_i-\\bar{x})^2,
+            s^2 = \frac{1}{\text{dof}}\sum_{i=1}^n(x_i-\bar{x})^2,
 
-        where dof is the number of degrees of freedom. Setting :math:`\\text{dof} = n` \
-        gives the sample variance, whereas setting :math:`\\text{dof}=n-1` \
+        where dof is the number of degrees of freedom. Setting :math:`\text{dof} = n` \
+        gives the sample variance, whereas setting :math:`\text{dof}=n-1` \
         gives an unbiased estimate of the population variance.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             dof (int, optional): number of degrees of freedom used to compute the variance
 
                 - If ``dof`` < 0 - the degrees of freedom will be set to the number \
-                of observations, where the number of observations is n_samples for \
-                column-wise variances, n_features for row-wise variances and \
-                n_samples :math:`\\times` n_features for the overall variance
+                  of observations, where the number of observations is :nref:`n_samples` for \
+                  column-wise variances, :nref:`n_features` for row-wise variances and \
+                  :nref:`n_samples` :math:`\times` :nref:`n_features` for the overall variance
 
                 - If ``dof`` = 0 - the degrees of freedom will be set to the number \
-                of observations - 1.
+                  of observations - 1.
 
                 - If ``dof`` > 0 - the degrees of freedom will be set to the specified value.
+
             axis (str, optional): The axis over which variances are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated variances.
+            numpy.ndarray: Depending on ``axis`` can have shape
+            (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Calculated variances.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -143,26 +144,26 @@ def variance(X, dof=0, axis="col"):
 
 
 def skewness(X, axis="col"):
-    """
+    r"""
         Skewness of a data matrix along the specified axis.
 
         The skewness is computed as the Fischer-Pearson coefficient of skewness \
         (that is, with the central moments scaled by the number of \
-        observations, see cite:t:`da_kozw2000`).
+        observations, see :cite:t:`da_kozw2000`).
 
-        For a dataset :math:`\\{x_1, ..., x_n\\}`, the skewness, :math:`g_1`, is defined as
+        For a dataset :math:`\{x_1, ..., x_n\}`, the skewness, :math:`g_1`, is defined as
 
         .. math::
-            g_1 = \\frac{\\frac{1}{n}\\sum_{i=1}^n(x_i-\\bar{x})^3}
-            {\\left[\\frac{1}{n}\\sum_{i=1}^n(x_i-\\bar{x})^2\\right]^{3/2}}.
+            g_1 = \frac{\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^3}
+            {\left[\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^2\right]^{3/2}}.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             axis (str, optional): axis over which skewnesses are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated skewnesses.
+            numpy.ndarray: Depending on ``axis`` can have shape
+            (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Calculated skewnesses.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -170,27 +171,27 @@ def skewness(X, axis="col"):
 
 
 def kurtosis(X, axis="col"):
-    """
+    r"""
         Kurtosis of a data matrix along the specified axis.
 
         The kurtosis is computed using Fischer's coefficient of excess kurtosis \
         (that is, with the central moments scaled by the number of observations \
         and 3 subtracted to ensure normally distributed data gives a value of 0, \
-        see cite:t:`da_kozw2000`).
+        see :cite:t:`da_kozw2000`).
 
-        For a dataset :math:`\\{x_1, ..., x_n\\}`, the kurtosis, :math:`g_2`, is defined as
+        For a dataset :math:`\{x_1, ..., x_n\}`, the kurtosis, :math:`g_2`, is defined as
 
         .. math::
-            g_2 = \\frac{\\frac{1}{n}\\sum_{i=1}^n(x_i-\\bar{x})^4}
-            {\\left[\\frac{1}{n}\\sum_{i=1}^n(x_i-\\bar{x})^2\\right]^{2}}-3.
+            g_2 = \frac{\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^4}
+            {\left[\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^2\right]^{2}}-3.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             axis (str, optional): axis over which kurtoses are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated kurtoses.
+            numpy.ndarray: Depending on ``axis`` can have shape
+            (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Calculated kurtoses.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -198,28 +199,28 @@ def kurtosis(X, axis="col"):
 
 
 def moment(X, k, mean=None, axis="col"):
-    """
+    r"""
         Central moment of a data matrix along the specified axis.
 
-        For a dataset :math:`\\{x_1, ..., x_n\\}`, the :math:`k`-th central moment, \
+        For a dataset :math:`\{x_1, ..., x_n\}`, the :math:`k`-th central moment, \
         :math:`m_k`, is defined as
 
         .. math::
-            m_k=\\frac{1}{n}\\sum_{i=1}^n(x_i-\\bar{x})^k.
+            m_k=\frac{1}{n}\sum_{i=1}^n(x_i-\bar{x})^k.
 
         Here, the moments are scaled by the number of observations along the specified axis. \
         The function gives you the option of supplying precomputed means (via the argument \
         ``mean``) about which the moments are computed. Otherwise it will compute the means itself.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             k (int): the order of the moment to be computed.
             mean (array-like, optional): 1D array with precomputed means
             axis (str, optional): axis over which moments are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-            (n_features, ) or (1, ): Calculated moments.
+            numpy.ndarray: Depending on ``axis`` can have shape
+            (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Calculated moments.
     """
     X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if mean is not None:
@@ -229,7 +230,7 @@ def moment(X, k, mean=None, axis="col"):
 
 
 def quantile(X, q, method="linear", axis="col"):
-    """
+    r"""
         Selected quantile of a data matrix along the specified axis.
 
         Computes the q-th quantiles of a data matrix along the specified axis. \
@@ -242,62 +243,62 @@ def quantile(X, q, method="linear", axis="col"):
         Note:
 
             - Methods ``'inverted_cdf'``, ``'averaged_inverted_cdf'`` and \
-                ``'closest_observation'`` give discontinuous results.
+              ``'closest_observation'`` give discontinuous results.
 
             - Method ``'median_unbiased'`` is recommended if the sample distribution \
-                function is unknown.
+              function is unknown.
 
             - Method ``'normal_unbiased'`` is recommended if the sample distribution \
-                function is known to be normal.
+              function is known to be normal.
 
             - Method ``'closest_observation'`` in contrast to NumPy, R and SAS rounds \
-                to nearest order statistic and NOT nearest even order statistic.
+              to nearest order statistic and NOT nearest even order statistic.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             q (float): the quantile required, must lie in the interval [0,1].
             method (str, optional): specifies the method used to compute the quantiles.
 
-                - If ``method = 'inverted_cdf'`` :math:`h=n\\times q`, return \
-                    :math:`\\texttt{x[i]}` where :math:`i = \\lceil h \\rceil`.
+                - If ``method = 'inverted_cdf'`` :math:`h=n\times q`, return \
+                  :math:`\texttt{x[i]}` where :math:`i = \lceil h \rceil`.
 
-                - If ``method = 'averaged_inverted_cdf'`` :math:`h=n\\times q + 0.5`,\
-                    return :math:`(\\texttt{x[i]}+\\texttt{x[j]})/2` where \
-                    :math:`i = \\lceil h-1/2 \\rceil` and :math:`j = \\lfloor h+1/2 \\rfloor`.
+                - If ``method = 'averaged_inverted_cdf'`` :math:`h=n\times q + 0.5`,\
+                  return :math:`(\texttt{x[i]}+\texttt{x[j]})/2` where \
+                  :math:`i = \lceil h-1/2 \rceil` and :math:`j = \lfloor h+1/2 \rfloor`.
 
-                - If ``method = 'closest_observation'`` :math:`h=n\\times q - 0.5`, return \
-                    :math:`\\texttt{x[i]}` where :math:`i = \\lfloor h \\rceil` is \
-                    the nearest integer to :math:`h`.
+                - If ``method = 'closest_observation'`` :math:`h=n\times q - 0.5`, return \
+                  :math:`\texttt{x[i]}` where :math:`i = \lfloor h \rceil` is \
+                  the nearest integer to :math:`h`.
 
-                - If ``method = 'interpolated_inverted_cdf'`` :math:`h=n\\times q`, return \
-                    :math:`\\texttt{x[i]} + (h-\\lfloor h \\rfloor)(\\texttt{x[j]}-\\texttt{x[i]})` \
-                    where :math:`i = \\lfloor h\\rfloor` and :math:`j = \\lceil h \\rceil`.
+                - If ``method = 'interpolated_inverted_cdf'`` :math:`h=n\times q`, return \
+                  :math:`\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})` \
+                  where :math:`i = \lfloor h\rfloor` and :math:`j = \lceil h \rceil`.
 
-                - If ``method = 'hazen'`` :math:`h=n\\times q + 0.5`, return \
-                    :math:`\\texttt{x[i]} + (h-\\lfloor h \\rfloor)(\\texttt{x[j]}-\\texttt{x[i]})`\
-                    where :math:`i = \\lfloor h\\rfloor` and :math:`j = \\lceil h \\rceil`.
+                - If ``method = 'hazen'`` :math:`h=n\times q + 0.5`, return \
+                  :math:`\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})`\
+                  where :math:`i = \lfloor h\rfloor` and :math:`j = \lceil h \rceil`.
 
-                - If ``method = 'weibull'`` :math:`h=(n + 1)\\times q`, return \
-                    :math:`\\texttt{x[i]} + (h-\\lfloor h \\rfloor)(\\texttt{x[j]}-\\texttt{x[i]})`\
-                    where :math:`i = \\lfloor h\\rfloor` and :math:`j = \\lceil h \\rceil`.
+                - If ``method = 'weibull'`` :math:`h=(n + 1)\times q`, return \
+                  :math:`\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})`\
+                  where :math:`i = \lfloor h\rfloor` and :math:`j = \lceil h \rceil`.
 
-                - If ``method = 'linear'`` :math:`h=(n - 1)\\times q + 1`, return \
-                    :math:`\\texttt{x[i]} + (h-\\lfloor h \\rfloor)(\\texttt{x[j]}-\\texttt{x[i]})`\
-                    where :math:`i = \\lfloor h\\rfloor` and :math:`j = \\lceil h \\rceil`.
+                - If ``method = 'linear'`` :math:`h=(n - 1)\times q + 1`, return \
+                  :math:`\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})`\
+                  where :math:`i = \lfloor h\rfloor` and :math:`j = \lceil h \rceil`.
 
-                - If ``method = 'median_unbiased'`` :math:`h=(n + 1/3)\\times q + 1/3`, return \
-                    :math:`\\texttt{x[i]} + (h-\\lfloor h \\rfloor)(\\texttt{x[j]}-\\texttt{x[i]})` \
-                    where :math:`i = \\lfloor h\\rfloor` and :math:`j = \\lceil h \\rceil`.
+                - If ``method = 'median_unbiased'`` :math:`h=(n + 1/3)\times q + 1/3`, return \
+                  :math:`\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})` \
+                  where :math:`i = \lfloor h\rfloor` and :math:`j = \lceil h \rceil`.
 
-                - If ``method = 'normal_unbiased'`` :math:`h=(n + 1/4)\\times q + 3/8`, return \
-                    :math:`\\texttt{x[i]} + (h-\\lfloor h \\rfloor)(\\texttt{x[j]}-\\texttt{x[i]})`\
-                    where :math:`i = \\lfloor h\\rfloor` and :math:`j = \\lceil h \\rceil`.
+                - If ``method = 'normal_unbiased'`` :math:`h=(n + 1/4)\times q + 3/8`, return \
+                  :math:`\texttt{x[i]} + (h-\lfloor h \rfloor)(\texttt{x[j]}-\texttt{x[i]})`\
+                  where :math:`i = \lfloor h\rfloor` and :math:`j = \lceil h \rceil`.
 
             axis (str, optional): The axis over which quantiles are calculated.
 
         Returns:
-            numpy.ndarray. Depending on ``axis`` can have shape (n_samples, ), \
-                (n_features, ) or (1, ): Calculated quantiles.
+            numpy.ndarray: Depending on ``axis`` can have shape (:nref:`n_samples`, ),
+            (:nref:`n_features`, ) or (1, ): Calculated quantiles.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -305,7 +306,7 @@ def quantile(X, q, method="linear", axis="col"):
 
 
 def five_point_summary(X, axis="col"):
-    """
+    r"""
         Summary statistics of a data matrix along the specified axis.
 
         Computes the maximum, minimum, median and upper/lower hinges of a data array along \
@@ -314,18 +315,18 @@ def five_point_summary(X, axis="col"):
         Note:
 
             - On large datasets, this function is more efficient than calling ``quantile()`` five \
-                times because it uses partly sorted arrays after each stage.
+              times because it uses partly sorted arrays after each stage.
 
             - The ``'weibull'`` definition of quantiles is used to calculate the statistics.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             axis (str, optional): axis over which summary is calculated.
 
         Returns:
-            tuple of numpy.ndarray. Depending on an ``axis`` numpy.ndarray can have shape \
-                (n_samples, ), (n_features, ) or (1, ): Tuple with calculated minimum, lower \
-                hinge, median, upper hinge and maximum, respectively.
+            tuple of numpy.ndarray: Depending on an ``axis``, numpy.ndarray can have shape
+                (:nref:`n_samples`, ), (:nref:`n_features`, ) or (1, ). Returns a tuple with
+                calculated minimum, lower hinge, median, upper hinge and maximum.
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -339,21 +340,21 @@ def standardize(X,
                 reverse=False,
                 inplace=False,
                 axis="col"):
-    """
+    r"""
         Standardize a data matrix along the specified axis.
 
         This function can be called in various different ways
 
-            - If the arrays ``shift`` and ``scale`` are both null, then the mean and standard \
-                deviations will be computed along the appropriate axis and will be \
-                used to shift and scale the data.
+            - If the arrays ``shift`` and ``scale`` are both null, then the mean and standard
+              deviations will be computed along the appropriate axis and will be
+              used to shift and scale the data.
 
-            - If the arrays ``shift`` and ``scale`` are both supplied, then the data matrix ``X`` \
-                will be shifted (by subtracting the values in ``shift``) then scaled (by dividing \
-                by the values in ``scale``) along the selected axis.
+            - If the arrays ``shift`` and ``scale`` are both supplied, then the data matrix ``X``
+              will be shifted (by subtracting the values in ``shift``) then scaled (by dividing
+              by the values in ``scale``) along the selected axis.
 
-            - If one of the arrays ``shift`` or ``scale`` is null then it will be ignored and only \
-                the other will be used (so that the data is only shifted or only scaled).
+            - If one of the arrays ``shift`` or ``scale`` is null then it will be ignored and only
+              the other will be used (so that the data is only shifted or only scaled).
 
             In each case, if a 0 scaling factor is encountered then it will not be used.
 
@@ -365,35 +366,37 @@ def standardize(X,
         Note:
 
             - The ``inplace`` functionality will only work if the supplied ``X`` \
-            array is F-contiguous
+              array is F-contiguous
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
             shift (array-like, optional): 1D array of values used for shifting the data.
             scale (array-like, optional): 1D array of values used for scaling the data.
             dof (int, optional): number of degrees of freedom used to compute standard deviations
 
-                - If ``dof`` < 0 - the degrees of freedom will be set to the number \
-                    of observations in specified axis.
+                - If ``dof`` < 0 the degrees of freedom will be set to the number \
+                  of observations in specified axis.
 
-                - If ``dof`` = 0 - the degrees of freedom will be set to the number \
-                    of observations - 1.
+                - If ``dof`` = 0 the degrees of freedom will be set to the number \
+                  of observations - 1.
 
-                - If ``dof`` > 0 - the degrees of freedom will be set to the \
-                    specified value.
+                - If ``dof`` > 0 the degrees of freedom will be set to the \
+                  specified value.
+
             reverse (bool, optional): determines whether or not the standardization \
                 proceeds in reverse
 
-                - If ``reverse = false`` - the data matrix will be shifted (by subtracting\
-                    the values in ``shift``) then scaled (by dividing by the values in ``scale``).
+                - If ``reverse = false`` the data matrix will be shifted (by subtracting
+                  the values in ``shift``) then scaled (by dividing by the values in ``scale``).
 
-                - If ``reverse = true`` - the data matrix will be scaled (by multiplying \
-                    by the values in ``scale``) then shifted (by adding the values in ``shift``).
+                - If ``reverse = true`` the data matrix will be scaled (by multiplying
+                  by the values in ``scale``) then shifted (by adding the values in ``shift``).
+
             inplace (bool, optional): determines whether the standardization is done without a copy
             axis (str, optional): axis over which matrix is standardized.
 
         Returns:
-            numpy.ndarray of shape (n_samples, n_features): Standardized matrix
+            numpy.ndarray: Standardized matrix of shape (:nref:`n_samples`, :nref:`n_features`)
     """
     X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if shift is not None:
@@ -406,36 +409,36 @@ def standardize(X,
 
 
 def covariance_matrix(X, dof=0, assume_centered=False):
-    """
+    r"""
         Covariance matrix of a data matrix, with the rows treated as observations \
         and the columns treated as variables.
 
-        For a dataset :math:`X = [\\textbf{x}_1, \\dots, \\textbf{x}_{n_{\\text{cols}}}]^T`\
-        with column means :math:`\\{\\bar{x}_1, \\dots, \\bar{x}_{n_{\\text{cols}}}\\}`\
+        For a dataset :math:`X = [\textbf{x}_1, \dots, \textbf{x}_{n_{\text{cols}}}]^T`\
+        with column means :math:`\{\bar{x}_1, \dots, \bar{x}_{n_{\text{cols}}}\}`\
         the :math:`(i,j)` element of the covariance matrix is given by covariance \
-        between :math:`\\textbf{x}_i` and :math:`\\textbf{x}_j`:
+        between :math:`\textbf{x}_i` and :math:`\textbf{x}_j`:
 
         .. math::
-            \\text{cov}(i,j) = \\frac{1}{\\text{dof}}(\\textbf{x}_i-
-            \\bar{x}_i)\\cdot(\\textbf{x}_j-\\bar{x}_j),
+            \text{cov}(i,j) = \frac{1}{\text{dof}}(\textbf{x}_i-
+            \bar{x}_i)\cdot(\textbf{x}_j-\bar{x}_j),
 
         where dof is the number of degrees of freedom. Setting \
-        :math:`\\text{dof} = n_{\\text{cols}}` gives the sample covariances, \
-        whereas setting :math:`\\text{dof} = n_{\\text{cols}} -1` gives unbiased estimates \
+        :math:`\text{dof} = n_{\text{cols}}` gives the sample covariances, \
+        whereas setting :math:`\text{dof} = n_{\text{cols}} -1` gives unbiased estimates \
         of the population covariances. The argument ``dof`` is used to \
         specify the number of degrees of freedom.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
 
             dof (int, optional): number of degrees of freedom used to compute covariances
 
-                - If ``dof`` < 0 - the degrees of freedom will be set to the number of observations.
+                - If ``dof`` < 0 the degrees of freedom will be set to the number of observations.
 
-                - If ``dof`` = 0 - the degrees of freedom will be set to the number of \
-                observations - 1.
+                - If ``dof`` = 0 the degrees of freedom will be set to the number of \
+                  observations - 1.
 
-                - If ``dof`` > 0 - the degrees of freedom will be set to the specified value.
+                - If ``dof`` > 0 the degrees of freedom will be set to the specified value.
 
             assume_centered (bool, optional): If False, centers the input matrix by
                 subtracting the column means. If True, assumes that the input data
@@ -443,7 +446,7 @@ def covariance_matrix(X, dof=0, assume_centered=False):
                 computational efficiency. Default: False.
 
         Returns:
-            numpy.ndarray of shape (n_features, n_features): Covariance matrix
+            numpy.ndarray: Covariance matrix of shape (:nref:`n_features`, :nref:`n_features`)
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 
@@ -451,27 +454,27 @@ def covariance_matrix(X, dof=0, assume_centered=False):
 
 
 def correlation_matrix(X):
-    """
+    r"""
         Correlation matrix of a data matrix, with the rows treated as observations and the \
         columns treated as variables.
 
-        For a dataset :math:`X = [\\textbf{x}_1, \\dots, \\textbf{x}_{n_{\\text{cols}}}]^T` \
-        with column means :math:`\\{\\bar{x}_1, \\dots, \\bar{x}_{n_{\\text{cols}}}\\}` \
-        and column standard deviations :math:`\\{\\sigma_1, \\dots, \\sigma_{n_{\\text{cols}}}\\}` \
+        For a dataset :math:`X = [\textbf{x}_1, \dots, \textbf{x}_{n_{\text{cols}}}]^T` \
+        with column means :math:`\{\bar{x}_1, \dots, \bar{x}_{n_{\text{cols}}}\}` \
+        and column standard deviations :math:`\{\sigma_1, \dots, \sigma_{n_{\text{cols}}}\}` \
         the :math:`(i,j)` element of the correlation matrix is given by correlation \
-        between :math:`\\textbf{x}_i` and :math:`\\textbf{x}_j`:
+        between :math:`\textbf{x}_i` and :math:`\textbf{x}_j`:
 
         .. math::
-            \\text{corr}(i,j) = \\frac{\\text{cov}(i,j)}{\\sigma_i\\sigma_j}.
+            \text{corr}(i,j) = \frac{\text{cov}(i,j)}{\sigma_i\sigma_j}.
 
         Note that the values in the correlation matrix are independent of the number of degrees \
         of freedom used to compute the standard deviations and covariances.
 
         Args:
-            X (array-like): data matrix of shape (n_samples, n_features).
+            X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
-            numpy.ndarray of shape (n_features, n_features): Correlation matrix
+            numpy.ndarray: Correlation matrix of shape (:nref:`n_features`, :nref:`n_features`)
     """
     X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
 

@@ -47,6 +47,11 @@ void spocon_(char *uplo, da_int *n, float *a, da_int *lda, float *anorm, float *
              float *work, da_int *iwork, da_int *info);
 void dpocon_(char *uplo, da_int *n, double *a, da_int *lda, double *anorm, double *rcond,
              double *work, da_int *iwork, da_int *info);
+
+void sgtsv_(da_int *n, da_int *nrhs, float *dl, float *d, float *du, float *b,
+            da_int *ldb, da_int *info);
+void dgtsv_(da_int *n, da_int *nrhs, double *dl, double *d, double *du, double *b,
+            da_int *ldb, da_int *info);
 void sgesdd_(char *jobz, da_int *m, da_int *n, float *a, da_int *lda, float *s, float *u,
              da_int *ldu, float *vt, da_int *ldvt, float *work, da_int *lwork,
              da_int *iwork, da_int *info);
@@ -130,6 +135,15 @@ inline void pocon(char *uplo, da_int *n, float *a, da_int *lda, float *anorm,
 inline void pocon(char *uplo, da_int *n, double *a, da_int *lda, double *anorm,
                   double *rcond, double *work, da_int *iwork, da_int *info) {
     dpocon_(uplo, n, a, lda, anorm, rcond, work, iwork, info);
+}
+// --- Tridiagonal solver ---
+inline void gtsv(da_int *n, da_int *nrhs, float *dl, float *d, float *du, float *b,
+                 da_int *ldb, da_int *info) {
+    sgtsv_(n, nrhs, dl, d, du, b, ldb, info);
+}
+inline void gtsv(da_int *n, da_int *nrhs, double *dl, double *d, double *du, double *b,
+                 da_int *ldb, da_int *info) {
+    dgtsv_(n, nrhs, dl, d, du, b, ldb, info);
 }
 // --- Eigensolvers ---
 inline void syevd(char *job, char *uplo, da_int *n, float *a, da_int *lda, float *w,

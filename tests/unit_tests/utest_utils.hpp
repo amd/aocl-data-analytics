@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -76,6 +76,30 @@
     for (da_int j = 0; j < (n); j++)                                                     \
     ASSERT_NEAR((std::abs(x[j])), (std::abs(y[j])), abs_error)                           \
         << "Vectors " #x " and " #y " different at index j=" << j << "."
+
+#ifdef __COVERITY__
+void __coverity_panic__(void); // modeled as no-return
+#define ASSERT_EQ(ret, sta)                                                              \
+    do {                                                                                 \
+        if (!((ret) == (sta))) {                                                         \
+            __coverity_panic__();                                                        \
+        }                                                                                \
+    } while (0)
+
+#define FAIL()                                                                           \
+    do {                                                                                 \
+        __coverity_panic__();                                                            \
+    } while (0) coverity_null_stream()
+#endif
+
+// return precision as a string literal to set CSV options
+template <typename T> constexpr const char *prec_name();
+template <> constexpr const char *prec_name<float>() { return "single"; }
+template <> constexpr const char *prec_name<double>() { return "double"; }
+
+template <typename T> constexpr const char *type_opt_name();
+template <> constexpr const char *type_opt_name<float>() { return "float"; }
+template <> constexpr const char *type_opt_name<double>() { return "double"; }
 
 namespace da_numeric {
 // Safe numerical tolerances to be used with single and double precision float types

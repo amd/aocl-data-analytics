@@ -35,15 +35,9 @@ function(extract_native_namespace NATIVE_NAMESPACE)
       "generic"
       PARENT_SCOPE)
 
-  if(WIN32)
-    set(DEV_NULL "nul")
-  else()
-    set(DEV_NULL "/dev/null")
-  endif()
-
   execute_process(
-    COMMAND ${CMAKE_CXX_COMPILER} -E -march=native -v
-            ${CMAKE_CURRENT_BINARY_DIR}/tmp_compile_test.cpp -o ${DEV_NULL}
+    COMMAND ${CMAKE_CXX_COMPILER} -E -dM -march=native -v
+            ${CMAKE_CURRENT_BINARY_DIR}/tmp_compile_test.cpp
     OUTPUT_VARIABLE output_var
     ERROR_VARIABLE error_var)
 
@@ -55,10 +49,18 @@ function(extract_native_namespace NATIVE_NAMESPACE)
     set(NATIVE_NAMESPACE
         ${number}
         PARENT_SCOPE)
+  elseif("${output_var}${error_var}" MATCHES "define __AVX512")
+    set(NATIVE_NAMESPACE
+        "generic_AVX512"
+        PARENT_SCOPE)
+    message(
+      WARNING
+        "Unable to find native Zen architecture but AVX-512 detected; using generic AVX-512 build."
+    )
   else()
     message(
       WARNING
-        "Unable to find native Zen architecture, defaulting to generic namespace."
+        "Architecture is either non-AMD or Zen 1 and AVX-512 not detected; defaulting to generic AVX2 build."
     )
   endif()
 
@@ -78,8 +80,8 @@ function(supported_architectures ARCHITECTURES DEFINITIONS)
   # Return a list of architectures associated compile definitions for
   # compilation with dynamic dispatch
 
-  set(ARCH_TEMP generic)
-  set(DEF_TEMP generic_AVAILABLE)
+  set(ARCH_TEMP generic generic_avx512)
+  set(DEF_TEMP generic_AVAILABLE generic_avx512_AVAILABLE)
 
   set(CANDIDATE_ARCHS znver2 znver3 znver4 znver5)
 

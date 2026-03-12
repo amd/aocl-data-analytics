@@ -100,33 +100,22 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
     }
 
     if (!X_is_Y) {
-        // A few different cases to check depending on the boolean inputs
 
-        if (compute_X_norms == 0 && compute_Y_norms == 0) {
+        da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m, n, k, -2.0, X, ldx,
+                            Y, ldy, 0.0, D, ldd);
+
+        // A few different cases to check depending on the boolean inputs
+        if (compute_X_norms > 0 && compute_Y_norms == 0) {
             if (order == column_major) {
                 for (da_int j = 0; j < n; j++) {
                     for (da_int i = 0; i < m; i++) {
-                        D[i + j * ldd] = 0.0;
+                        D[i + j * ldd] += X_norms[i];
                     }
                 }
             } else {
                 for (da_int i = 0; i < m; i++) {
                     for (da_int j = 0; j < n; j++) {
-                        D[i * ldd + j] = 0.0;
-                    }
-                }
-            }
-        } else if (compute_X_norms > 0 && compute_Y_norms == 0) {
-            if (order == column_major) {
-                for (da_int j = 0; j < n; j++) {
-                    for (da_int i = 0; i < m; i++) {
-                        D[i + j * ldd] = X_norms[i];
-                    }
-                }
-            } else {
-                for (da_int i = 0; i < m; i++) {
-                    for (da_int j = 0; j < n; j++) {
-                        D[i * ldd + j] = X_norms[i];
+                        D[i * ldd + j] += X_norms[i];
                     }
                 }
             }
@@ -134,34 +123,31 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
             if (order == column_major) {
                 for (da_int j = 0; j < n; j++) {
                     for (da_int i = 0; i < m; i++) {
-                        D[i + j * ldd] = Y_norms[j];
+                        D[i + j * ldd] += Y_norms[j];
                     }
                 }
             } else {
                 for (da_int i = 0; i < m; i++) {
                     for (da_int j = 0; j < n; j++) {
-                        D[i * ldd + j] = Y_norms[j];
+                        D[i * ldd + j] += Y_norms[j];
                     }
                 }
             }
-        } else {
+        } else if (compute_X_norms != 0 && compute_Y_norms != 0) {
             if (order == column_major) {
                 for (da_int j = 0; j < n; j++) {
                     for (da_int i = 0; i < m; i++) {
-                        D[i + j * ldd] = X_norms[i] + Y_norms[j];
+                        D[i + j * ldd] += X_norms[i] + Y_norms[j];
                     }
                 }
             } else {
                 for (da_int i = 0; i < m; i++) {
                     for (da_int j = 0; j < n; j++) {
-                        D[i * ldd + j] = X_norms[i] + Y_norms[j];
+                        D[i * ldd + j] += X_norms[i] + Y_norms[j];
                     }
                 }
             }
         }
-
-        da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m, n, k, -2.0, X, ldx,
-                            Y, ldy, 1.0, D, ldd);
 
         if (!square) {
             if (order == column_major) {
@@ -180,40 +166,23 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
         }
     } else {
         // Special case when computing upper triangle of symmetric distance matrix
-
-        if (compute_X_norms == 0) {
-            if (order == column_major) {
-                for (da_int j = 0; j < m; j++) {
-                    for (da_int i = 0; i <= j; i++) {
-                        D[i + j * ldd] = 0.0;
-                    }
-                }
-            } else {
-                for (da_int j = 0; j < m; j++) {
-                    for (da_int i = 0; i <= j; i++) {
-                        D[i * ldd + j] = 0.0;
-                    }
-                }
-            }
-        } else {
-            if (order == column_major) {
-                for (da_int j = 0; j < m; j++) {
-                    for (da_int i = 0; i <= j; i++) {
-                        D[i + j * ldd] = X_norms[i] + X_norms[j];
-                    }
-                }
-            } else {
-                for (da_int j = 0; j < m; j++) {
-                    for (da_int i = 0; i <= j; i++) {
-                        D[i * ldd + j] = X_norms[i] + X_norms[j];
-                    }
-                }
-            }
-        }
-
-        da_syrk(order, da_upper, da_no_trans, m, k, (T)-2.0, X, ldx, (T)1.0, D, ldd);
+        da_syrk(order, da_upper, da_no_trans, m, k, (T)-2.0, X, ldx, (T)0.0, D, ldd);
 
         if (compute_X_norms) {
+            if (order == column_major) {
+                for (da_int j = 0; j < m; j++) {
+                    for (da_int i = 0; i <= j; i++) {
+                        D[i + j * ldd] += X_norms[i] + X_norms[j];
+                    }
+                }
+            } else {
+                for (da_int j = 0; j < m; j++) {
+                    for (da_int i = 0; i <= j; i++) {
+                        D[i * ldd + j] += X_norms[i] + X_norms[j];
+                    }
+                }
+            }
+
             // Ensure diagonal entries are precisely zero
 
             if (order == column_major) {

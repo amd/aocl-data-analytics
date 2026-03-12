@@ -24,7 +24,7 @@
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "macros.h"
-#include "nn_types.hpp"
+#include "nearest_neighbors_types.hpp"
 #include "options.hpp"
 
 #include <limits>
@@ -33,7 +33,7 @@ namespace ARCH {
 
 namespace da_dbscan {
 
-using namespace da_nn_types;
+using namespace da_neighbors_types;
 
 template <class T>
 inline da_status register_dbscan_options(da_options::OptionRegistry &opts,

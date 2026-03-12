@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -24,11 +24,51 @@
 
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
 
-project(AOCL-DA VERSION 5.2.0)
+project(AOCL-DA VERSION 5.2.2)
 
 set(AOCLDA_VERSION
     "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
 )
+
+# Capture git commit date and tag if available, otherwise fallback to commit hash, if unavailable then "unknown"
+set(GIT_COMMIT "unknown")
+set(GIT_COMMIT_DATE "")
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
+  # Try to get the current tag
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} describe --tags --exact-match
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_TAG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+  )
+  if(GIT_COMMIT_TAG STREQUAL "")
+    # No tag found, get commit hash
+    execute_process(
+      COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+      OUTPUT_VARIABLE GIT_COMMIT_HASH
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(GIT_COMMIT "${GIT_COMMIT_HASH}")
+  else()
+    set(GIT_COMMIT "${GIT_COMMIT_TAG}")
+  endif()
+  # Try to get the commit date in YYYY-MM-DD hh:mm:ss format
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} show -s "--date=format:%Y-%m-%d %H:%M:%S" --format=%cd HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_DATE_OUT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+  )
+  if(NOT GIT_COMMIT_DATE_OUT STREQUAL "")
+    set(GIT_COMMIT_DATE "${GIT_COMMIT_DATE_OUT}")
+  endif()
+endif()
+set(GIT_DEF -DAOCLDA_GIT_COMMIT="${GIT_COMMIT} ${GIT_COMMIT_DATE}")
+list(APPEND AOCLDA_DEFS ${GIT_DEF})
 
 # Get timestamp.
 string(TIMESTAMP BUILD_DATE "%Y%m%d")
@@ -76,8 +116,10 @@ if(NOT WIN32) # Linux options only
 endif()
 option(BUILD_DOC "Build HTML documentation" OFF)
 option(INTERNAL_DOC "Build interal HTML documentation" OFF)
-# Do not let INTERNAL_DOC appear on cmake-gui
+option(UPDATE_OPTIONS_DOC "Update the option tables in the documentation (triggers UT)" OFF)
+# Do not let INTERNAL_DOC and UPDATE_OPTIONS_DOC appear on cmake-gui
 mark_as_advanced(INTERNAL_DOC)
+mark_as_advanced(UPDATE_OPTIONS_DOC)
 option(BUILD_SMP "Build using OpenMP and link to threaded BLAS and LAPACK" ON)
 option(VECTORIZATION_REPORTS "Generate vectorization reports" OFF)
 option(DA_LOGGING "Compile with debug printing" OFF)
@@ -92,9 +134,17 @@ set(ARCH
     "native"
     CACHE
       STRING
-      "Architecture(s) to build: dynamic, native, znver2, znver3, ... (default: native)"
+      "Architecture(s) to build: generic, generic_avx512, dynamic, native, znver2, znver3, ... (default: native)"
 )
-set(ARCH_LIST "dynamic" "native" "znver2" "znver3" "znver4" "znver5")
+set(ARCH_LIST
+    "generic"
+    "generic_avx512"
+    "dynamic"
+    "native"
+    "znver2"
+    "znver3"
+    "znver4"
+    "znver5")
 if(NOT ARCH IN_LIST ARCH_LIST)
   message(FATAL_ERROR "Invalid ARCH value: \"${ARCH}\"\n"
                       "Valid values are: ${ARCH_LIST}")
@@ -119,6 +169,9 @@ set(SPARSE_INCLUDE_DIR
 set(UTILS_INCLUDE_DIR
     ""
     CACHE STRING "Path to UTILS include directory")
+set(KT_PATH
+  ""
+  CACHE PATH "Path to kernel templates (defaults to SPARSE_INCLUDE_DIR if unset)")
 set(BLAS_LIB
     ""
     CACHE STRING "Path to BLAS library")
@@ -215,6 +268,9 @@ if(BUILD_ILP64)
 else()
   set(INT_LIB "LP64")
 endif()
+
+# Use -fPIC always
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # Check for CL compatibility layer of clang
 cmake_path(GET CMAKE_CXX_COMPILER FILENAME COMPILER_BASENAME)
@@ -319,6 +375,11 @@ endif()
 # Look for linear algebra libraries dependencies
 include(AOCLDependencies)
 
+# If the user did not explicitly provide KT_PATH, default it to SPARSE_INCLUDE_DIR
+if(KT_PATH STREQUAL "")
+  set(KT_PATH "${SPARSE_INCLUDE_DIR}")
+endif()
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC"
    OR (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CLANG_OPTIONS_STYLE STREQUAL
                                                   "MSVC"))
@@ -419,6 +480,18 @@ if(NOT BUILD_DOC AND INTERNAL_DOC)
   set(INTERNAL_DOC Off)
 endif()
 
+if(NOT BUILD_DOC AND UPDATE_OPTIONS_DOC)
+  message(
+    WARNING
+      "Turning off update options in documentation since docs are not being built, set BUILD_DOC=On to enable option table updates"
+  )
+  set(UPDATE_OPTIONS_DOC Off)
+endif()
+
+if (UPDATE_OPTIONS_DOC)
+    set(BUILD_GTEST On)
+endif()
+
 if(NOT USE_EXISTING_DA)
   # Compile external packages
   if(BUILD_FORTRAN)
@@ -443,8 +516,10 @@ if(NOT USE_EXISTING_DA)
         "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
   endif()
 
-  # Build example and unit test programs
-  include(CTest)
+  if (BUILD_EXAMPLES OR BUILD_GTEST)
+    # Build example and unit test programs
+    include(CTest)
+  endif()
 
   # Suppression list file needs to be defined AFTER including ctest
   if(VALGRIND)
@@ -452,7 +527,9 @@ if(NOT USE_EXISTING_DA)
         "${PROJECT_SOURCE_DIR}/tools/valgrind_suppress.txt")
   endif()
 
-  add_subdirectory(tests)
+  if (BUILD_EXAMPLES OR BUILD_GTEST)
+    add_subdirectory(tests)
+  endif()
 endif()
 
 if(BUILD_PYTHON)
@@ -504,9 +581,11 @@ message(
   "Requested architecture(s) ARCH.................: ${ARCH} (${BUILD_ARCHS})")
 message(NOTICE "Building with ASan        ASAN.................: ${ASAN}")
 message(NOTICE "Building docs             BUILD_DOC............: ${BUILD_DOC}")
-if(INTERNAL_DOC)
-  message(NOTICE
-          "Build internal docs       INTERNAL_DOC.........: ${INTERNAL_DOC}")
+if(INTERNAL_DOC OR CMAKE_BUILD_TYPE MATCHES "Debug")
+  message(NOTICE "Build internal docs       INTERNAL_DOC.........: ${INTERNAL_DOC}")
+endif()
+if(UPDATE_OPTIONS_DOC OR CMAKE_BUILD_TYPE MATCHES "Debug")
+  message(NOTICE "Update options in docs    UPDATE_OPTIONS_DOC...: ${UPDATE_OPTIONS_DOC}")
 endif()
 message(NOTICE
         "Building for ILP64        BUILD_ILP64..........: ${BUILD_ILP64}")
@@ -542,12 +621,13 @@ message(NOTICE
 
 message(NOTICE "\nDEPENDENT LIBRARIES")
 message(NOTICE "BLAS             BLAS=${BLAS}")
+message(STATUS "BLAS_INCLUDE_DIR      ${BLAS_INCLUDE_DIR}")
 message(NOTICE "LAPACK           LAPACK=${LAPACK}")
+message(STATUS "LAPACK_INCLUDE_DIR    ${LAPACK_INCLUDE_DIR}")
 message(NOTICE "AOCL-Sparse      SPARSE=${SPARSE}")
+message(NOTICE "Kernel Templates KT_PATH=${KT_PATH}")
 message(NOTICE "AOCL-Utils       UTILS=${UTILS}")
 message(NOTICE "AOCL-Utils/CPUID UTILS_CPUID=${UTILS_CPUID}")
-message(STATUS "LAPACK_INCLUDE_DIR    ${LAPACK_INCLUDE_DIR}")
-message(STATUS "BLAS_INCLUDE_DIR      ${BLAS_INCLUDE_DIR}")
 message(STATUS "UTILS_INCLUDE_DIR     ${UTILS_INCLUDE_DIR}")
 
 message(NOTICE "Boost include path    Boost_INCLUDE_DIRS=${Boost_INCLUDE_DIRS}")

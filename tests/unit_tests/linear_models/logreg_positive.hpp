@@ -44,15 +44,6 @@ template <class T> struct option_t {
     T value;
 };
 
-// Return precision as a string literal to set CSV options
-template <typename T> constexpr const char *prec_name();
-template <> constexpr const char *prec_name<float>() { return "single"; }
-template <> constexpr const char *prec_name<double>() { return "double"; }
-
-template <typename T> constexpr const char *prec_name_float();
-template <> constexpr const char *prec_name_float<float>() { return "float"; }
-template <> constexpr const char *prec_name_float<double>() { return "double"; }
-
 // Helper to define precision to which we expect the results to match
 template <typename T> T expected_precision(T scale = (T)1.0);
 template <> double expected_precision<double>(double scale) { return scale * 1.0e-3; }
@@ -99,9 +90,8 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     EXPECT_EQ(
         da_datastore_options_set_string(csv_store, "datastore precision", prec_name<T>()),
         da_status_success);
-    EXPECT_EQ(
-        da_datastore_options_set_string(csv_store, "datatype", prec_name_float<T>()),
-        da_status_success);
+    EXPECT_EQ(da_datastore_options_set_string(csv_store, "datatype", type_opt_name<T>()),
+              da_status_success);
     EXPECT_EQ(da_data_load_from_csv(csv_store, input_data_fname.c_str()),
               da_status_success);
 
@@ -176,7 +166,7 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
                                                   prec_name<T>()),
                   da_status_success);
         EXPECT_EQ(
-            da_datastore_options_set_string(test_store, "datatype", prec_name_float<T>()),
+            da_datastore_options_set_string(test_store, "datatype", type_opt_name<T>()),
             da_status_success);
         EXPECT_EQ(da_data_load_from_csv(test_store, test_set_fname.c_str()),
                   da_status_success);

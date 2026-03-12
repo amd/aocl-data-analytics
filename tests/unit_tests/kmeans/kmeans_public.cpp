@@ -450,24 +450,47 @@ TYPED_TEST(KMeansTest, ErrorExits) {
               da_status_success);
     EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), da_status_no_data);
 
+    da_handle_destroy(&handle);
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans), da_status_success);
+    EXPECT_EQ(da_kmeans_set_data(handle, param.n_samples, param.n_features,
+                                 param.A.data(), param.lda),
+              da_status_success);
     std::string a = "hartigan-wong";
     EXPECT_EQ(da_options_set_string(handle, "algorithm", a.c_str()), da_status_success);
     EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), da_status_incompatible_options);
 
+    da_handle_destroy(&handle);
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "algorithm", a.c_str()), da_status_success);
+    EXPECT_EQ(da_kmeans_set_data(handle, param.n_samples, param.n_features,
+                                 param.A.data(), param.lda),
+              da_status_success);
+    EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), da_status_incompatible_options);
+
     // Test that check_data works - could do this in any handle type really, so we will do it here
+    da_handle_destroy(&handle);
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans), da_status_success);
     std::string y = "yes";
     EXPECT_EQ(da_options_set(handle, "check data", y.c_str()), da_status_success);
     TypeParam tmp = param.C.data()[0];
     param.C.data()[0] = std::numeric_limits<TypeParam>::quiet_NaN();
+    EXPECT_EQ(da_kmeans_set_data(handle, param.n_samples, param.n_features,
+                                 param.A.data(), param.lda),
+              da_status_success);
     EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
               da_status_invalid_input);
     param.C.data()[0] = tmp;
 
     // Subsequent tests require compute to be done
-    EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
-              da_status_success);
+    da_handle_destroy(&handle);
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans), da_status_success);
     std::string a2 = "lloyd";
     EXPECT_EQ(da_options_set_string(handle, "algorithm", a2.c_str()), da_status_success);
+    EXPECT_EQ(da_kmeans_set_data(handle, param.n_samples, param.n_features,
+                                 param.A.data(), param.lda),
+              da_status_success);
+    EXPECT_EQ(da_kmeans_set_init_centres(handle, param.C.data(), param.ldc),
+              da_status_success);
     EXPECT_EQ(da_kmeans_compute<TypeParam>(handle), da_status_success);
 
     // transform error exits
@@ -502,9 +525,9 @@ TYPED_TEST(KMeansTest, ErrorExits) {
     EXPECT_EQ(da_kmeans_predict(handle, 0, param.k_samples, param.Y.data(), param.ldy,
                                 Y_labels.data()),
               da_status_invalid_array_dimension);
-    EXPECT_EQ(da_kmeans_predict(handle, param.k_features, 0, param.Y.data(), param.ldy,
+    EXPECT_EQ(da_kmeans_predict(handle, param.k_features, 2, param.Y.data(), param.ldy,
                                 Y_labels.data()),
-              da_status_invalid_array_dimension);
+              da_status_invalid_input);
     EXPECT_EQ(da_kmeans_predict(handle, param.k_features, param.k_samples, param.Y.data(),
                                 0, Y_labels.data()),
               da_status_invalid_leading_dimension);

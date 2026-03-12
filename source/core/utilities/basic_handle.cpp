@@ -85,6 +85,23 @@ da_status basic_handle<T>::check_1D_array(da_int n, const da_int *data,
 }
 
 template <typename T>
+da_status basic_handle<T>::check_2D_array(da_order order, da_int n_rows, da_int n_cols,
+                                          const T *data, da_int lddata,
+                                          const std::string &n_rows_name,
+                                          const std::string &n_cols_name,
+                                          const std::string &data_name,
+                                          const std::string &lddata_name,
+                                          da_int n_rows_min, da_int n_cols_min) {
+
+    da_int check_data = 0;
+    std::string check_data_str;
+    opts.get("check data", check_data_str, check_data);
+    return ARCH::da_utils::check_2D_array(check_data != 0, order, this->err, n_rows,
+                                          n_cols, data, lddata, n_rows_name, n_cols_name,
+                                          data_name, lddata_name, n_rows_min, n_cols_min);
+}
+
+template <typename T>
 da_status basic_handle<T>::store_2D_array(
     da_int n_rows, da_int n_cols, const T *data, da_int lddata, T **temp_data,
     const T **data_internal, da_int &lddata_internal, const std::string &n_rows_name,

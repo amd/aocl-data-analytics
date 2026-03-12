@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -45,9 +45,7 @@ else()
     PATTERN "nlls_*.py" EXCLUDE)
 endif()
 install(FILES python_package/setup.py python_package/pyproject.toml python_package/README.rst
-        DESTINATION python_package)
-install(FILES ${CMAKE_SOURCE_DIR}/Notices ${CMAKE_SOURCE_DIR}/License
-        DESTINATION python_package/aoclda)
+        ${CMAKE_SOURCE_DIR}/License DESTINATION python_package)
 
 if(NOT USE_EXISTING_DA)
   # Install aocl-da libraries in a temporary folder
@@ -74,17 +72,6 @@ if(NOT WIN32)
   # Remove libompstub from dependencies
   install(
     CODE "execute_process(COMMAND ${PATCHELF} --remove-needed libompstub.so ${CMAKE_INSTALL_PREFIX}/tmp/libaocl-da.so)"
-  )
-endif()
-
-execute_process(
-  COMMAND ${Python3_EXECUTABLE} -c "from wheel.bdist_wheel import bdist_wheel"
-  RESULT_VARIABLE EXIT_CODE
-  OUTPUT_QUIET)
-if(NOT ${EXIT_CODE} EQUAL 0)
-  message(
-    FATAL_ERROR
-      "Python3 package wheel is required to build the Python bindings\n   Use: ${Python3_EXECUTABLE} -m pip install \"wheel\""
   )
 endif()
 

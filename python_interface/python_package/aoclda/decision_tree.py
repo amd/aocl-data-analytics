@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -80,8 +80,8 @@ class decision_tree():
         category_tolerance (float, optional): How far data can be from an integer to be considered
             not categorical. Default = 1.0e-05
 
-        category_split_strategy (str, optional): The strategy to use for splitting categorical features.
-            It can take the values 'ordered' or 'one-vs-all'. Default = 'ordered'.
+        category_split_strategy (str, optional): The strategy to use for splitting categorical
+            features. It can take the values 'ordered' or 'one-vs-all'. Default = 'ordered'.
 
         histogram (bool, optional): Whether to use histograms for continuous features.
             Default = False.
@@ -144,137 +144,138 @@ class decision_tree():
             check_data=check_data)
         self.decision_tree = self.decision_tree_double
 
-        self.order = 'A'
-        self.dtype = 'float'
-        self.category_tolerance = category_tolerance
-        self.max_features = max_features
-        self.min_impurity_decrease = min_impurity_decrease
-        self.min_split_score = min_split_score
-        self.feat_thresh = feat_thresh
-        self.model_info = None
+        self._order = 'A'
+        self._dtype = 'float'
+        self._category_tolerance = category_tolerance
+        self._max_features = max_features
+        self._min_impurity_decrease = min_impurity_decrease
+        self._min_split_score = min_split_score
+        self._feat_thresh = feat_thresh
+        self._model_info = None
 
     @property
     def max_features(self):
         """Get the maximum number of features to consider when splitting a node."""
-        return self.max_features
+        return self._max_features
 
     @max_features.setter
     def max_features(self, value):
         self.decision_tree.set_max_features_opt(max_features=value)
+        self._max_features = value
 
     def fit(self, X, y, categorical_features=None):
-        """
+        r"""
         Computes the decision tree on the feature matrix ``X`` and response vector ``y``
 
         Args:
             X (array-like): The feature matrix on which to compute the model.
-                Its shape is (n_samples, n_features).
+                Its shape is (:nref:`n_samples`, :nref:`n_features`).
 
-            y (array-like): The response vector. Its shape is (n_samples).
+            y (array-like): The response vector. Its shape is (:nref:`n_samples`).
 
             categorical_features (array-like, optional): Integer vector. categorical_features[i]
                 should be set to a negative value if feature i is continuous or to the number of
                 different categories if feature i if it is categorical. If None, all features are
-                considered continuous. Its shape is (n_features).
+                considered continuous. Its shape is (:nref:`n_features`).
 
 
         Returns:
             self (object): Returns the instance itself.
         """
-        X, self.order, self.dtype = check_convert_data(
-            X, order=self.order, dtype=self.dtype, force_dtype=True
+        X, self._order, self._dtype = check_convert_data(
+            X, order=self._order, dtype=self._dtype, force_dtype=True
         )
         y, _, _ = check_convert_data(
-            y, order=self.order, dtype='da_int', force_dtype=True
+            y, order=self._order, dtype='da_int', force_dtype=True
         )
         if categorical_features is not None:
             categorical_features, _, _ = check_convert_data(
-                categorical_features, order=self.order, dtype='da_int', force_dtype=True
+                categorical_features, order=self._order, dtype='da_int', force_dtype=True
             )
-        if self.dtype == "float32":
+        if self._dtype == "float32":
             self.decision_tree = self.decision_tree_single
             self.decision_tree_double = None
-        self.model_info = None
+        self._model_info = None
         return self.decision_tree.pybind_fit(X, y,
-                                             self.min_impurity_decrease,
-                                             self.min_split_score,
-                                             self.feat_thresh,
-                                             self.category_tolerance,
+                                             self._min_impurity_decrease,
+                                             self._min_split_score,
+                                             self._feat_thresh,
+                                             self._category_tolerance,
                                              categorical_features)
 
     def score(self, X, y):
-        """
+        r"""
         Calculates score (prediction accuracy) by comparing predicted labels and actual
         labels on a new set of data.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on. It must have
-                n_features columns.
+                :nref:`n_features` columns.
 
-            y (array-like): The response vector.  It must have shape (n_samples).
+            y (array-like): The response vector.  It must have shape (:nref:`n_samples`).
 
         Returns:
             float: The mean accuracy of the model on the test data.
         """
         X, _, _ = check_convert_data(
-            X, order=self.order, dtype=self.dtype, force_dtype=True
+            X, order=self._order, dtype=self._dtype, force_dtype=True
         )
         y, _, _ = check_convert_data(
-            y, order=self.order, dtype='da_int', force_dtype=True
+            y, order=self._order, dtype='da_int', force_dtype=True
         )
 
         return self.decision_tree.pybind_score(X, y)
 
     def predict(self, X):
-        """
+        r"""
         Generate labels using fitted decision forest on a new set of data ``X``.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on. It must have
-            n_features columns.
+                :nref:`n_features` columns.
 
         Returns:
-            numpy.ndarray of length n_samples: The prediction vector, where n_samples is
-            the number of rows of ``X``.
+            numpy.ndarray of length :nref:`n_samples`: The prediction vector, where
+            :nref:`n_samples` is the number of rows of ``X``.
         """
         X, _, _ = check_convert_data(
-            X, order=self.order, dtype=self.dtype, force_dtype=True
+            X, order=self._order, dtype=self._dtype, force_dtype=True
         )
 
         return self.decision_tree.pybind_predict(X)
 
     def predict_proba(self, X):
-        """
+        r"""
         Generate class probabilities using fitted decision forest on a new set of data ``X``.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on. It must have
-            n_features columns.
+                :nref:`n_features` columns.
 
         Returns:
-            numpy.ndarray of length n_samples: The prediction vector, where n_samples is
-            the number of rows of ``X``.
+            numpy.ndarray of length :nref:`n_samples`: The prediction vector, where
+            :nref:`n_samples` is the number of rows of ``X``.
         """
         X, _, _ = check_convert_data(
-            X, order=self.order, dtype=self.dtype, force_dtype=True
+            X, order=self._order, dtype=self._dtype, force_dtype=True
         )
 
         return self.decision_tree.pybind_predict_proba(X)
 
     def predict_log_proba(self, X):
-        """
+        r"""
         Generate class log probabilities using fitted decision forest on a new set of data ``X``.
 
         Args:
             X (array-like): The feature matrix to evaluate the model on.
-                It must have n_features columns.
+                It must have :nref:`n_features` columns.
 
         Returns:
-            numpy.ndarray of length n_samples: The prediction vector,
-                where n_samples is the number of rows of X.
+            numpy.ndarray of length :nref:`n_samples`: The prediction vector,
+            where :nref:`n_samples` is the number of rows of X.
         """
         X, _, _ = check_convert_data(
-            X, order=self.order, dtype=self.dtype, force_dtype=True
+            X, order=self._order, dtype=self._dtype, force_dtype=True
         )
 
         return self.decision_tree.pybind_predict_log_proba(X)
@@ -283,46 +284,50 @@ class decision_tree():
         """
         update the model information (content of rinfo from the C interface)
         """
-        self.model_info = self.decision_tree.pybind_get_model_info()
+        self._model_info = self.decision_tree.pybind_get_model_info()
 
     @property
     def n_samples(self):
         """int: The number of samples used in the trained tree"""
-        if self.model_info is None:
+        if self._model_info is None:
             self.update_model_info()
-        return self.model_info["n_samples"]
+        return self._model_info["n_samples"]
 
     @property
     def n_obs(self):
         """int: The number of observations used to the trained tree"""
-        if self.model_info is None:
+        if self._model_info is None:
             self.update_model_info()
-        return self.model_info["n_obs"]
+        return self._model_info["n_obs"]
 
     @property
     def n_features(self):
         """int: The number of features used in the trained tree"""
-        if self.model_info is None:
+        if self._model_info is None:
             self.update_model_info()
-        return self.model_info["n_features"]
+        return self._model_info["n_features"]
 
     @property
     def depth(self):
         """int: The depth of the trained tree"""
-        if self.model_info is None:
+        if self._model_info is None:
             self.update_model_info()
-        return self.model_info["depth"]
+        return self._model_info["depth"]
 
     @property
     def n_nodes(self):
         """int: The number of nodes in the trained tree"""
-        if self.model_info is None:
+        if self._model_info is None:
             self.update_model_info()
-        return self.model_info["n_nodes"]
+        return self._model_info["n_nodes"]
 
     @property
     def n_leaves(self):
         """int: The number of leaves in the trained tree"""
-        if self.model_info is None:
+        if self._model_info is None:
             self.update_model_info()
-        return self.model_info["n_leaves"]
+        return self._model_info["n_leaves"]
+
+    def _get_max_features_opt(self):
+        """getter for the C++ internal option value - purely for internal use"""
+        return self.decision_tree.get_max_features_opt()

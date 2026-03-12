@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -111,22 +111,22 @@ class PCA():
 
     @property
     def principal_components(self):
-        """numpy.ndarray of shape (n_components, n_features): Principal axes in feature space,
-            representing the directions of maximum variance in the data. Equivalently, the right
-            singular vectors of the normalized input data, parallel to its eigenvectors. The
-            components are sorted by decreasing ``variance``."""
+        r"""numpy.ndarray of shape (:nref:`n_components`, :nref:`n_features`): Principal axes in
+            feature space, representing the directions of maximum variance in the data.
+            Equivalently, the right singular vectors of the normalized input data, parallel to its
+            eigenvectors. The components are sorted by decreasing ``variance``."""
         return self.pca.get_principal_components()
 
     @property
     def scores(self):
-        """numpy.ndarray of shape (n_samples, n_components): The principal component scores,
-            :math:`U\\Sigma`."""
+        r"""numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_components`): The principal
+            component scores, :math:`U\Sigma`."""
         return self.pca.get_scores()
 
     @property
     def variance(self):
-        """numpy.ndarray of shape (n_components, ): The amount of variance explained by each of the
-            selected components."""
+        r"""numpy.ndarray of shape (:nref:`n_components`, ): The amount of variance explained by
+            each of the selected components."""
         return self.pca.get_variance()
 
     @property
@@ -136,31 +136,32 @@ class PCA():
 
     @property
     def u(self):
-        """numpy.ndarray of shape (n_samples, n_samples): The matrix :math:`U` from the SVD."""
+        r"""numpy.ndarray of shape (:nref:`n_samples`, :nref:`n_samples`): The matrix :math:`U` from
+            the SVD."""
         return self.pca.get_u()
 
     @property
     def sigma(self):
-        """numpy.ndarray of shape (n_components,): The diagonal values of :math:`\\Sigma` from the
-            SVD."""
+        r"""numpy.ndarray of shape (:nref:`n_components`,): The diagonal values of :math:`\Sigma`
+            from the SVD."""
         return self.pca.get_sigma()
 
     @property
     def vt(self):
-        """numpy.ndarray of shape (n_components, n_features): The matrix :math:`V^T` from the
-            SVD."""
+        r"""numpy.ndarray of shape (:nref:`n_components`, :nref:`n_features`): The matrix
+            :math:`V^T` from the SVD."""
         return self.pca.get_vt()
 
     @property
     def column_means(self):
-        """numpy.ndarray of shape (n_features, ): The column means of the data matrix.
-            These are computed if ``method = 'correlation'`` or ``method = 'correlation'``."""
+        r"""numpy.ndarray of shape (:nref:`n_features`, ): The column means of the data matrix.
+            These are computed if ``method = 'covariance'`` or ``method = 'correlation'``."""
         return self.pca.get_column_means()
 
     @property
     def column_sdevs(self):
-        """numpy.ndarray of shape (n_features, ): The column standard deviations of the data matrix.
-            These are only computed if ``method = 'correlation'``"""
+        r"""numpy.ndarray of shape (:nref:`n_features`, ): The column standard deviations of the
+            data matrix. These are only computed if ``method = 'correlation'``"""
         return self.pca.get_column_sdevs()
 
     @property
@@ -179,12 +180,12 @@ class PCA():
         return self.pca.get_n_components()
 
     def fit(self, A):
-        """
+        r"""
         Computes the principal component analysis on the supplied data matrix.
 
         Args:
             A (array-like): The data matrix with which to compute the PCA. It has shape
-              (n_samples, n_features).
+              (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
             self (object): Returns the instance itself.
@@ -201,7 +202,7 @@ class PCA():
         return self
 
     def transform(self, X):
-        """
+        r"""
         Transform a data matrix into new feature space.
 
         Transforms a data matrix ``X`` from the original coordinate system into the new coordinates
@@ -211,11 +212,11 @@ class PCA():
 
         Args:
             X (array-like): The data matrix to be transformed. It has shape
-              (m_samples, m_features). Note that ``m_features`` must match ``n_features``,
+              (m_samples, m_features). Note that m\_features must match :nref:`n_features`,
               the number of features in the data matrix originally supplied to ``pca.fit``.
 
         Returns:
-            numpy.ndarray of shape (m_samples, n_components): The transformed matrix.
+            numpy.ndarray of shape (m_samples, :nref:`n_components`): The transformed matrix.
         """
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True
@@ -223,7 +224,7 @@ class PCA():
         return self.pca.pybind_transform(X)
 
     def inverse_transform(self, Y):
-        """
+        r"""
         Transform a data matrix into the original coordinate space.
 
         Transforms a data matrix ``Y`` in the new feature space back into the original coordinate
@@ -233,11 +234,11 @@ class PCA():
 
         Args:
             Y (array-like): The data matrix to be transformed. It has shape
-              (k_samples, k_features). Note that ``k_features`` must match ``n_components``,
+              (k_samples, k_features). Note that k\_features must match n\_components,
               the number of principal components computed by ``pca.fit``.
 
         Returns:
-            numpy.ndarray of shape (k_samples, n_features): The transformed matrix.
+            numpy.ndarray of shape (k_samples, :nref:`n_features`): The transformed matrix.
         """
         Y, _, _ = check_convert_data(
             Y, order=self.order, dtype=self.dtype, force_dtype=True

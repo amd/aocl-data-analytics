@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -34,10 +34,20 @@
 #include "da_std.hpp"
 #include "macros.h"
 #include <algorithm>
+#include <boost/sort/spreadsort/float_sort.hpp>
 #include <cmath>
 #include <map>
 #include <random>
 #include <type_traits>
+
+// Conditional includes for parallel sorting
+#if defined(__GLIBCXX__) && defined(_OPENMP)
+#include <parallel/algorithm>
+#elif defined(_MSC_VER) && defined(__cpp_lib_execution) && __cpp_lib_execution >= 201603L
+#include <execution>
+#endif
+
+#define TRANSPOSE_BLOCK_SIZE da_int(64)
 
 namespace ARCH {
 
@@ -72,7 +82,8 @@ template <typename T> T hidden_settings_query(const std::string &key, T default_
         } else if constexpr (std::is_same_v<T, std::string>) {
             return val;
         } else {
-            static_assert(false, "Unsupported type for hidden settings query");
+            static_assert(!std::is_same_v<T, T>,
+                          "Unsupported type for hidden settings query");
         }
     }
     return default_value;
@@ -88,9 +99,9 @@ void blocking_scheme(da_int n_samples, da_int block_size, da_int &n_blocks,
 }
 
 /* Generalisation of blocking_scheme.
-Determines a blocking scheme for partitioning n_samples into blocks, 
+Determines a blocking scheme for partitioning n_samples into blocks,
 ensuring block_size is at least min_block_size and n_blocks does not exceed
-max_blocks. Rounds block_size up to the nearest multiple of 256 if needed, 
+max_blocks. Rounds block_size up to the nearest multiple of 256 if needed,
 and adjusts the final_block_size so it is either its own block, if large enough,
 or merged with the previous block.
 Used in da_qr and da_syrk to compute blocks for tall skinny algs*/
@@ -130,13 +141,37 @@ da_int get_n_threads_loop(da_int loop_size) {
 template <typename T>
 void copy_transpose_2D_array_row_to_column_major(da_int n_rows, da_int n_cols, const T *A,
                                                  da_int lda, T *B, da_int ldb) {
-    da_blas::omatcopy('T', n_cols, n_rows, T(1), A, lda, B, ldb);
+
+#pragma omp parallel for collapse(2) schedule(static)
+    for (da_int i_block = 0; i_block < n_rows; i_block += TRANSPOSE_BLOCK_SIZE) {
+        for (da_int j_block = 0; j_block < n_cols; j_block += TRANSPOSE_BLOCK_SIZE) {
+            const da_int i_end = std::min(i_block + TRANSPOSE_BLOCK_SIZE, n_rows);
+            const da_int j_end = std::min(j_block + TRANSPOSE_BLOCK_SIZE, n_cols);
+            for (da_int i = i_block; i < i_end; ++i) {
+                for (da_int j = j_block; j < j_end; ++j) {
+                    B[j * ldb + i] = A[i * lda + j];
+                }
+            }
+        }
+    }
 }
 
 template <typename T>
 void copy_transpose_2D_array_column_to_row_major(da_int n_rows, da_int n_cols, const T *A,
                                                  da_int lda, T *B, da_int ldb) {
-    da_blas::omatcopy('T', n_rows, n_cols, T(1), A, lda, B, ldb);
+
+#pragma omp parallel for collapse(2) schedule(static)
+    for (da_int j_block = 0; j_block < n_cols; j_block += TRANSPOSE_BLOCK_SIZE) {
+        for (da_int i_block = 0; i_block < n_rows; i_block += TRANSPOSE_BLOCK_SIZE) {
+            const da_int j_end = std::min(j_block + TRANSPOSE_BLOCK_SIZE, n_cols);
+            const da_int i_end = std::min(i_block + TRANSPOSE_BLOCK_SIZE, n_rows);
+            for (da_int j = j_block; j < j_end; ++j) {
+                for (da_int i = i_block; i < i_end; ++i) {
+                    B[j + i * ldb] = A[i + j * lda];
+                }
+            }
+        }
+    }
 }
 
 template <typename T>
@@ -495,216 +530,10 @@ da_status get_shuffled_indices(da_int m, da_int seed, da_int train_size, da_int 
     return status;
 }
 
-template <typename T>
-da_status validate_parameters_train_test_split(da_order order, da_int m, da_int n,
-                                               const T *X, da_int ldx, da_int train_size,
-                                               da_int test_size, T *X_train,
-                                               da_int ldx_train, T *X_test,
-                                               da_int ldx_test) {
-
-    if (X == nullptr || X_train == nullptr || X_test == nullptr) {
-        return da_status_invalid_pointer;
-    }
-
-    if (m < 2 || n < 1) {
-        return da_status_invalid_array_dimension;
-    }
-
-    if (order == row_major) {
-        if (ldx < n || ldx_train < n || ldx_test < n) {
-            return da_status_invalid_leading_dimension;
-        }
-    } else if (order == column_major) {
-        if (ldx < m || ldx_train < train_size || ldx_test < test_size) {
-            return da_status_invalid_leading_dimension;
-        }
-    }
-
-    if (train_size < 1 || test_size < 1) {
-        return da_status_invalid_input;
-    }
-    if ((train_size + test_size) > m) {
-        return da_status_invalid_input;
-    }
-
-    return da_status_success;
-}
-
-template <typename T>
-da_status train_test_split(da_order order, da_int m, da_int n, const T *X, da_int ldx,
-                           da_int train_size, da_int test_size,
-                           const da_int *shuffle_array, T *X_train, da_int ldx_train,
-                           T *X_test, da_int ldx_test) {
-    da_status status = validate_parameters_train_test_split(
-        order, m, n, X, ldx, train_size, test_size, X_train, ldx_train, X_test, ldx_test);
-    if (status != da_status_success) {
-        return status;
-    }
-
-    // When train_size != test_size, one split will be larger than the other.
-    // The larger split requires additional loop iterations to copy the remaining data.
-    // Here we determine which split (train or test) gets the remainder and set up
-    // the corresponding pointers and offsets for the extra copying.
-    da_int ldx_remainder = 0;
-    da_int m_X_addon_remainder = 0;
-    da_int small_split = std::min(train_size, test_size);
-    da_int big_split = std::max(train_size, test_size);
-    T *X_remainder = nullptr;
-
-    if (train_size > test_size) {
-        X_remainder = X_train;
-        ldx_remainder = ldx_train;
-    } else if (test_size > train_size) {
-        X_remainder = X_test;
-        ldx_remainder = ldx_test;
-        m_X_addon_remainder = train_size;
-    }
-
-    if (order == row_major) {
-        if (shuffle_array != nullptr) {
-            // Shuffle, Row major
-
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, n, train_size, test_size, X_train, ldx_train, X_test, ldx_test,  \
-               shuffle_array, X, ldx)
-            for (da_int i = 0; i < small_split; ++i) {
-                da_int i_ldx_train = i * ldx_train;
-                da_int i_ldx_test = i * ldx_test;
-                da_int i_ldx_s = shuffle_array[i] * ldx;
-                da_int i_ldx_st = shuffle_array[i + train_size] * ldx;
-
-#pragma omp simd
-                for (da_int j = 0; j < n; ++j) {
-                    X_train[i_ldx_train + j] = X[i_ldx_s + j];
-                    X_test[i_ldx_test + j] = X[i_ldx_st + j];
-                }
-            }
-
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, big_split, m_X_addon_remainder, n, X_remainder, ldx_remainder,   \
-               shuffle_array, X, ldx)
-            for (da_int i = small_split; i < big_split; ++i) {
-                da_int i_ldx_s = shuffle_array[i + m_X_addon_remainder] * ldx;
-                da_int i_ldx_remainder = i * ldx_remainder;
-
-#pragma omp simd
-                for (da_int j = 0; j < n; ++j) {
-                    X_remainder[i_ldx_remainder + j] = X[i_ldx_s + j];
-                }
-            }
-
-        } else {
-            // No shuffle, Row major
-
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, n, train_size, test_size, X_train, ldx_train, X_test, ldx_test,  \
-               X, ldx)
-            for (da_int i = 0; i < small_split; ++i) {
-                da_int i_ldx = i * ldx;
-                da_int i_ldx_train = i * ldx_train;
-                da_int i_ldx_test = i * ldx_test;
-                da_int i_ldx_test_train = (i + train_size) * ldx;
-
-#pragma omp simd
-                for (da_int j = 0; j < n; ++j) {
-                    X_train[i_ldx_train + j] = X[i_ldx + j];
-                    X_test[i_ldx_test + j] = X[i_ldx_test_train + j];
-                }
-            }
-
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, m_X_addon_remainder, big_split, n, X_remainder, ldx_remainder,   \
-               X, ldx)
-            for (da_int i = small_split; i < big_split; ++i) {
-                da_int i_ldx = (i + m_X_addon_remainder) * ldx;
-                da_int i_ldx_remainder = i * ldx_remainder;
-
-#pragma omp simd
-                for (da_int j = 0; j < n; ++j) {
-                    X_remainder[i_ldx_remainder + j] = X[i_ldx + j];
-                }
-            }
-        }
-    } else if (order == column_major) {
-        if (shuffle_array != nullptr) {
-            // Shuffle, Column major
-
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, n, train_size, test_size, X_train, ldx_train, X_test, ldx_test,  \
-               shuffle_array, X, ldx)                                                    \
-    num_threads(std::min((da_int)omp_get_max_threads(), n))
-            for (da_int i = 0; i < n; ++i) {
-                da_int i_ldx_train = i * ldx_train;
-                da_int i_ldx_test = i * ldx_test;
-                da_int i_ldx = i * ldx;
-
-#pragma omp simd
-                for (da_int j = 0; j < small_split; ++j) {
-                    X_train[i_ldx_train + j] = X[i_ldx + shuffle_array[j]];
-                    X_test[i_ldx_test + j] = X[i_ldx + shuffle_array[train_size + j]];
-                }
-            }
-
-            if (small_split != big_split) {
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, big_split, m_X_addon_remainder, n, X_remainder, ldx_remainder,   \
-               shuffle_array, X, ldx)                                                    \
-    num_threads(std::min((da_int)omp_get_max_threads(), n))
-                for (da_int i = 0; i < n; ++i) {
-                    da_int i_ldx_remainder = i * ldx_remainder;
-                    da_int i_ldx = i * ldx;
-
-#pragma omp simd
-                    for (da_int j = small_split; j < big_split; ++j) {
-                        X_remainder[i_ldx_remainder + j] =
-                            X[i_ldx + shuffle_array[j + m_X_addon_remainder]];
-                    }
-                }
-            }
-        } else {
-            // No shuffle, Column major
-
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, n, train_size, X_train, ldx_train, X_test, ldx_test, X, ldx)     \
-    num_threads(std::min((da_int)omp_get_max_threads(), n))
-            for (da_int i = 0; i < n; ++i) {
-                da_int i_ldx = i * ldx;
-                da_int i_ldx_train = i * ldx_train;
-                da_int i_ldx_test = i * ldx_test;
-                da_int i_ldx_tr = i * ldx + train_size;
-
-#pragma omp simd
-                for (da_int j = 0; j < small_split; ++j) {
-                    X_train[i_ldx_train + j] = X[i_ldx + j];
-                    X_test[i_ldx_test + j] = X[i_ldx_tr + j];
-                }
-            }
-
-            if (small_split != big_split) {
-#pragma omp parallel for schedule(static) default(none)                                  \
-    shared(small_split, big_split, m_X_addon_remainder, n, X_remainder, ldx_remainder,   \
-               X, ldx) num_threads(std::min((da_int)omp_get_max_threads(), n))
-                for (da_int i = 0; i < n; ++i) {
-                    da_int i_ldx = i * ldx + m_X_addon_remainder;
-                    da_int i_ldx_remainder = i * ldx_remainder;
-
-#pragma omp simd
-                    for (da_int j = small_split; j < big_split; ++j) {
-                        X_remainder[i_ldx_remainder + j] = X[i_ldx + j];
-                    }
-                }
-            }
-        }
-    }
-
-    return da_status_success;
-}
-
 /*
 Calling the function will do the following:
-1. Point data_internal to the same data.
-2. Argument checking on the data pointer and the size
-3. Read the `check data` option and accordingly to check for NaNs.
+1. Argument checking on the data pointer and the size
+2. Read the `check data` option and accordingly to check for NaNs.
 */
 template <typename U>
 da_status check_1D_array(bool check_data, da_errors::da_error_t *err, da_int n,
@@ -727,6 +556,81 @@ da_status check_1D_array(bool check_data, da_errors::da_error_t *err, da_int n,
         if (status == da_status_invalid_input)
             return da_error(err, da_status_invalid_input,
                             "The array " + data_name + " contains at least one NaN.");
+    }
+
+    return da_status_success;
+}
+
+/*
+Calling the function will do the following:
+1. Argument checking on the data pointer and the size and leading dimension
+2. Read the `check data` option and accordingly to check for NaNs.
+*/
+template <typename T>
+da_status check_2D_array(bool check_data, da_order order, da_errors::da_error_t *err,
+                         da_int n_rows, da_int n_cols, const T *data, da_int lddata,
+                         const std::string &n_rows_name, const std::string &n_cols_name,
+                         const std::string &data_name, const std::string &lddata_name,
+                         da_int n_rows_min, da_int n_cols_min) {
+
+    da_status status = da_status_success;
+    // Check for illegal rows/columns arguments
+    if (n_rows < n_rows_min)
+        return da_error(err, da_status_invalid_array_dimension,
+                        "The function was called with " + n_rows_name + " = " +
+                            std::to_string(n_rows) + ". Constraint: " + n_rows_name +
+                            " >= " + std::to_string(n_rows_min) + ".");
+    if (n_cols < n_cols_min)
+        return da_error(err, da_status_invalid_array_dimension,
+                        "The function was called with " + n_cols_name + " = " +
+                            std::to_string(n_cols) + ". Constraint: " + n_cols_name +
+                            " >= " + std::to_string(n_cols_min) + ".");
+
+    if (data == nullptr)
+        return da_error(err, da_status_invalid_pointer,
+                        "The array " + data_name + " is null.");
+
+    if (check_data) {
+        status = ARCH::da_utils::check_data(order, n_rows, n_cols, data, lddata);
+        if (status == da_status_invalid_input)
+            return da_error(err, da_status_invalid_input,
+                            "The array " + data_name + " contains at least one NaN.");
+    }
+
+    std::string wrong_order = "";
+
+    switch (order) {
+    case column_major:
+        if (lddata < n_rows) {
+            if (lddata >= n_cols) {
+                wrong_order = "Column-major data was expected. Did you mean to set it to "
+                              "row-major?";
+            }
+            return da_error(err, da_status_invalid_leading_dimension,
+                            "The function was called with " + n_rows_name + " = " +
+                                std::to_string(n_rows) + " and " + lddata_name + " = " +
+                                std::to_string(lddata) + ". Constraint: " + lddata_name +
+                                " >= " + n_rows_name + "." + wrong_order);
+        }
+        break;
+    case row_major: {
+        if (lddata < n_cols) {
+            if (lddata >= n_rows) {
+                wrong_order = "Row-major data was expected. Did you mean to set it to "
+                              "column-major?";
+            }
+            return da_error(err, da_status_invalid_leading_dimension,
+                            "The function was called with " + n_cols_name + " = " +
+                                std::to_string(n_cols) + " and " + lddata_name + " = " +
+                                std::to_string(lddata) + ". Constraint: " + lddata_name +
+                                " >= " + n_cols_name + "." + wrong_order);
+        }
+        break;
+    }
+    default:
+        return da_error(err, da_status_internal_error, // LCOV_EXCL_LINE
+                        "Unexpected storage scheme was requested.");
+        break;
     }
 
     return da_status_success;
@@ -756,6 +660,49 @@ da_status check_categorical_data(da_int n_data, const T *data, da_int &n_categor
 
     return da_status_success;
 }
+
+template <typename T>
+void parallel_argsort(std::vector<T> &values, std::vector<da_int> &indices) {
+    // Perform argsort with automatic algorithm selection based on compiler and threading
+    // Strategy:
+    // SERIAL:
+    // 1. Use boost spreadsort for single-threaded execution (always fast for indirect sorting)
+    // PARALLEL:
+    // 1. Use GNU parallel mode when libstdc++ is present (GCC/Clang on Linux)
+    // 2. Use C++17 parallel execution on MSVC (MSVC has its own implementation of parallel algorithms)
+    // 3. Fall back to boost spreadsort if nothing else is available
+    auto comparator = [&](da_int i, da_int j) { return values[i] < values[j]; };
+
+    auto rightshift = [&](const da_int &idx, const unsigned offset) {
+        using sort_type =
+            std::conditional_t<std::is_same<T, double>::value, int64_t, int32_t>;
+        return boost::sort::spreadsort::float_mem_cast<T, sort_type>(values[idx]) >>
+               offset;
+    };
+
+    // Check thread count to decide between parallel and serial sorting
+    da_int num_threads = omp_get_max_threads();
+
+    if (num_threads == 1) {
+        // Single-threaded: always use boost spreadsort (optimized for indirect sorting)
+        boost::sort::spreadsort::float_sort(indices.begin(), indices.end(), rightshift,
+                                            comparator);
+    } else {
+        // Multi-threaded: dispatch based on compiler/library
+#if defined(__GLIBCXX__) && defined(_OPENMP)
+        // Use GNU parallel algorithms when libstdc++ is present (GCC/Clang on Linux) and OpenMP is available
+        __gnu_parallel::sort(indices.begin(), indices.end(), comparator);
+
+#elif defined(_MSC_VER) && defined(__cpp_lib_execution) && __cpp_lib_execution >= 201603L
+        // Use C++17 parallel execution on MSVC
+        std::sort(std::execution::par, indices.begin(), indices.end(), comparator);
+#else
+        // Fallback: use boost spreadsort
+        boost::sort::spreadsort::float_sort(indices.begin(), indices.end(), rightshift,
+                                            comparator);
+#endif
+    }
+};
 
 // Helper functions for converting between da_ and CBLAS_ enums
 CBLAS_ORDER da_order_to_cblas_order(da_order order) {
@@ -800,6 +747,121 @@ da_transpose cblas_transpose_to_da_transpose(CBLAS_TRANSPOSE transpose) {
     }
 }
 
+/*
+ * Divide rows of matrix by their 2-norm
+ *
+ * For row_major: row_norms_work is not used
+ * For column_major:
+ *   - If row_norms_work is nullptr, memory will be allocated internally
+ *   - If user supplies row_norms_work, array must be zeroed and length >= n_rows
+ */
+template <typename T>
+da_status normalize_rows_inplace(da_order order, da_int n_rows, da_int n_cols, T *X,
+                                 da_int ldx, T *row_norms_work) {
+    if (order == row_major) {
+        for (da_int i = 0; i < n_rows; i++) {
+            T *row_ptr = X + i * ldx;
+            T norm = da_blas::cblas_nrm2(n_cols, row_ptr, 1);
+            T inv_norm = (norm == 0) ? T(1.0) : (T)1.0 / norm;
+            da_blas::cblas_scal(n_cols, inv_norm, row_ptr, 1);
+        }
+    } else {
+        // Column-major case: need work array for row norms
+        std::vector<T> row_norms_alloc;
+        T *row_norms = row_norms_work;
+
+        if (row_norms == nullptr) {
+            try {
+                row_norms_alloc.resize(n_rows, (T)0.0);
+            } catch (std::bad_alloc const &) {
+                return da_status_memory_error;
+            }
+            row_norms = row_norms_alloc.data();
+        }
+
+        // Compute squared norms
+        for (da_int j = 0; j < n_cols; j++) {
+            T *col_ptr = X + j * ldx;
+#pragma omp simd
+            for (da_int i = 0; i < n_rows; i++) {
+                row_norms[i] += col_ptr[i] * col_ptr[i];
+            }
+        }
+
+        // Convert to inverse norms
+        for (da_int i = 0; i < n_rows; i++) {
+            T norm = std::sqrt(row_norms[i]);
+            row_norms[i] = (norm == 0) ? T(1.0) : (T)1.0 / norm;
+        }
+
+        // Normalize in place
+        for (da_int j = 0; j < n_cols; j++) {
+            T *col_ptr = X + j * ldx;
+#pragma omp simd
+            for (da_int i = 0; i < n_rows; i++) {
+                col_ptr[i] *= row_norms[i];
+            }
+        }
+    }
+    return da_status_success;
+}
+
+template <typename T>
+da_status normalize_rows(da_order order, da_int n_rows, da_int n_cols, const T *X_in,
+                         da_int ldx_in, T *X_out, da_int ldx_out, T *row_norms_work) {
+    if (order == row_major) {
+        for (da_int i = 0; i < n_rows; i++) {
+            const T *row_in = X_in + i * ldx_in;
+            T *row_out = X_out + i * ldx_out;
+            T norm = da_blas::cblas_nrm2(n_cols, row_in, 1);
+            T inv_norm = (norm == 0) ? T(1.0) : (T)1.0 / norm;
+#pragma omp simd
+            for (da_int j = 0; j < n_cols; j++) {
+                row_out[j] = row_in[j] * inv_norm;
+            }
+        }
+    } else {
+        // Column-major case: need work array for row norms
+        std::vector<T> row_norms_alloc;
+        T *row_norms = row_norms_work;
+
+        if (row_norms == nullptr) {
+            try {
+                row_norms_alloc.resize(n_rows, (T)0.0);
+            } catch (std::bad_alloc const &) {
+                return da_status_memory_error;
+            }
+            row_norms = row_norms_alloc.data();
+        }
+
+        // Compute squared norms
+        for (da_int j = 0; j < n_cols; j++) {
+            const T *col_in = X_in + j * ldx_in;
+#pragma omp simd
+            for (da_int i = 0; i < n_rows; i++) {
+                row_norms[i] += col_in[i] * col_in[i];
+            }
+        }
+
+        // Convert to inverse norms
+        for (da_int i = 0; i < n_rows; i++) {
+            T norm = std::sqrt(row_norms[i]);
+            row_norms[i] = (norm == 0) ? T(1.0) : (T)1.0 / norm;
+        }
+
+        // Copy and normalize
+        for (da_int j = 0; j < n_cols; j++) {
+            const T *col_in = X_in + j * ldx_in;
+            T *col_out = X_out + j * ldx_out;
+#pragma omp simd
+            for (da_int i = 0; i < n_rows; i++) {
+                col_out[i] = col_in[i] * row_norms[i];
+            }
+        }
+    }
+    return da_status_success;
+}
+
 template size_t hidden_settings_query<size_t>(const std::string &key,
                                               size_t default_value);
 template unsigned int hidden_settings_query<unsigned int>(const std::string &key,
@@ -842,16 +904,6 @@ template da_status switch_order_in_place<double>(da_order order_X_in, da_int n_r
                                                  da_int n_cols, double *X, da_int ldx_in,
                                                  da_int ldx_out);
 
-template da_status validate_parameters_train_test_split<da_int>(
-    da_order order, da_int m, da_int n, const da_int *X, da_int ldx, da_int train_size,
-    da_int test_size, da_int *X_train, da_int ldx_train, da_int *X_test, da_int ldx_test);
-template da_status validate_parameters_train_test_split<float>(
-    da_order order, da_int m, da_int n, const float *X, da_int ldx, da_int train_size,
-    da_int test_size, float *X_train, da_int ldx_train, float *X_test, da_int ldx_test);
-template da_status validate_parameters_train_test_split<double>(
-    da_order order, da_int m, da_int n, const double *X, da_int ldx, da_int train_size,
-    da_int test_size, double *X_train, da_int ldx_train, double *X_test, da_int ldx_test);
-
 template da_status stratified_shuffle<int32_t>(da_int m,
                                                boost::random::mt19937 &rand_engine,
                                                da_int train_size, da_int test_size,
@@ -883,24 +935,6 @@ template da_status get_shuffled_indices<double>(da_int m, da_int seed, da_int tr
                                                 const double *classes,
                                                 da_int *shuffle_array);
 
-template da_status train_test_split<da_int>(da_order order, da_int m, da_int n,
-                                            const da_int *X, da_int ldx,
-                                            da_int train_size, da_int test_size,
-                                            const da_int *shuffle_array, da_int *X_train,
-                                            da_int ldx_train, da_int *X_test,
-                                            da_int ldx_test);
-template da_status train_test_split<float>(da_order order, da_int m, da_int n,
-                                           const float *X, da_int ldx, da_int train_size,
-                                           da_int test_size, const da_int *shuffle_array,
-                                           float *X_train, da_int ldx_train,
-                                           float *X_test, da_int ldx_test);
-template da_status train_test_split<double>(da_order order, da_int m, da_int n,
-                                            const double *X, da_int ldx,
-                                            da_int train_size, da_int test_size,
-                                            const da_int *shuffle_array, double *X_train,
-                                            da_int ldx_train, double *X_test,
-                                            da_int ldx_test);
-
 template da_status check_1D_array<double>(bool check_data, da_errors::da_error_t *err,
                                           da_int n, const double *data,
                                           const std::string &n_name,
@@ -914,6 +948,20 @@ template da_status check_1D_array<da_int>(bool check_data, da_errors::da_error_t
                                           const std::string &n_name,
                                           const std::string &data_name, da_int n_min);
 
+template da_status
+check_2D_array<double>(bool check_data, da_order order, da_errors::da_error_t *err,
+                       da_int n_rows, da_int n_cols, const double *data, da_int lddata,
+                       const std::string &n_rows_name, const std::string &n_cols_name,
+                       const std::string &data_name, const std::string &lddata_name,
+                       da_int n_rows_min, da_int n_cols_min);
+
+template da_status
+check_2D_array<float>(bool check_data, da_order order, da_errors::da_error_t *err,
+                      da_int n_rows, da_int n_cols, const float *data, da_int lddata,
+                      const std::string &n_rows_name, const std::string &n_cols_name,
+                      const std::string &data_name, const std::string &lddata_name,
+                      da_int n_rows_min, da_int n_cols_min);
+
 template da_status check_data<da_int>(da_order order, da_int n_rows, da_int n_cols,
                                       const da_int *X, da_int ldx);
 
@@ -923,6 +971,26 @@ template da_status check_categorical_data<float>(da_int n_data, const float *dat
 template da_status check_categorical_data<double>(da_int n_data, const double *data,
                                                   da_int &n_categories,
                                                   da_int max_categories, double tol);
+
+template void parallel_argsort<float>(std::vector<float> &values,
+                                      std::vector<da_int> &indices);
+template void parallel_argsort<double>(std::vector<double> &values,
+                                       std::vector<da_int> &indices);
+
+template da_status normalize_rows_inplace<float>(da_order order, da_int n_rows,
+                                                 da_int n_cols, float *X, da_int ldx,
+                                                 float *row_norms_work);
+template da_status normalize_rows_inplace<double>(da_order order, da_int n_rows,
+                                                  da_int n_cols, double *X, da_int ldx,
+                                                  double *row_norms_work);
+
+template da_status normalize_rows<float>(da_order order, da_int n_rows, da_int n_cols,
+                                         const float *X_in, da_int ldx_in, float *X_out,
+                                         da_int ldx_out, float *row_norms_work);
+template da_status normalize_rows<double>(da_order order, da_int n_rows, da_int n_cols,
+                                          const double *X_in, da_int ldx_in,
+                                          double *X_out, da_int ldx_out,
+                                          double *row_norms_work);
 
 } // namespace da_utils
 

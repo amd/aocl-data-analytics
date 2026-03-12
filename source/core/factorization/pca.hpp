@@ -29,6 +29,9 @@
 #include "pca_types.hpp"
 #include <vector>
 
+#ifndef PCA_HPP
+#define PCA_HPP
+
 namespace ARCH {
 
 namespace da_pca {
@@ -114,3 +117,5 @@ template <typename T> class pca : public basic_handle<T> {
 };
 } // namespace da_pca
 } // namespace ARCH
+
+#endif // PCA_HPP

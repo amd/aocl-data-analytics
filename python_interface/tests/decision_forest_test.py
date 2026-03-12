@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -259,3 +259,21 @@ def test_small_histograms(numpy_precision, numpy_order):
     forest.fit(X_train, y_train)
     score = forest.score(X_test, y_test)
     assert score > 0.5 and score < 0.9
+
+
+def test_setters():
+    """
+    Test that changing the optional parameters through the setters work as intended
+    """
+    forest = decision_forest(max_features=5, features_selection='all', samples_factor=0.8)
+    assert forest.max_features == 5
+    forest.max_features = 10
+    assert forest.max_features == 10
+    assert forest._get_max_features_opt() == 10
+    assert forest.features_selection == 'all'
+    forest.features_selection = 'log2'
+    assert forest.features_selection == 'log2'
+    assert forest._get_features_selection_opt() == 'log2'
+    assert forest.samples_factor == 0.8
+    forest.samples_factor = 0.5
+    assert forest.samples_factor == 0.5

@@ -28,6 +28,9 @@
 #define ARCHITECTURE generic
 #include "dynamic_dispatch_includes.hpp"
 #undef ARCHITECTURE
+#define ARCHITECTURE generic_avx512
+#include "dynamic_dispatch_includes.hpp"
+#undef ARCHITECTURE
 #define ARCHITECTURE zen2
 #include "dynamic_dispatch_includes.hpp"
 #undef ARCHITECTURE

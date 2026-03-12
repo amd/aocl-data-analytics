@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -168,10 +168,6 @@ def test_decision_tree_functionality(numpy_precision, numpy_order):
     assert clf.n_nodes == 3
     assert clf.n_leaves == 2
 
-    print(f"predictions: [{pred[0]:d}]")
-    print(f"probabilities: [{proba[0, 0]:.3f}, {proba[0, 1]:.3f}]")
-    print(f"score: {score:.3f}")
-
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
@@ -283,7 +279,6 @@ def test_split_options(numpy_precision, numpy_order):
     # min_impurity_decrease
     tree = decision_tree(seed=42, min_impurity_decrease=0.99)
     tree.fit(X_train, y_train)
-    print(tree.depth)
     assert tree.depth == 0
     assert tree.n_leaves == 1
     # min_split_score
@@ -327,3 +322,14 @@ def test_small_histograms(numpy_precision, numpy_order):
     tree.fit(X_train, y_train)
     score = tree.score(X_test, y_test)
     assert score > 0.5 and score < 0.9
+
+
+def test_setters():
+    """
+    Test that changing the optional parameters through the setters work as intended
+    """
+    tree = decision_tree(max_features=5)
+    assert tree.max_features == 5
+    tree.max_features = 10
+    assert tree.max_features == 10
+    assert tree._get_max_features_opt() == 10

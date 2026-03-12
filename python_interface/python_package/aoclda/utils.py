@@ -33,7 +33,7 @@ Utility functions.
 import math
 from aoclda._internal_utils import check_convert_data
 from ._aoclda.utils import (
-    pybind_train_test_split, pybind_get_shuffled_indices)
+    pybind_train_test_split, pybind_get_shuffled_indices, pybind_get_version, pybind_get_git_commit)
 
 
 def train_test_split(
@@ -154,3 +154,21 @@ def train_test_split(
             response.extend([X_train, X_test])
 
     return response
+
+def get_version():
+    """
+    Get the version of the AOCL-DA library.
+
+    Returns:
+        str: The version string of the AOCL-DA library.
+    """
+    return pybind_get_version()
+
+def get_git_commit():
+    """
+    Return the git tag or commit hash identifying the AOCL-DA build.
+
+    Returns:
+        str: Git tag or commit hash for the build.
+    """
+    return pybind_get_git_commit()

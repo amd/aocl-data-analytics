@@ -37,8 +37,8 @@ template <typename T> T power(T a, da_int exponent);
 
 /* Arithmetic mean along specified axis */
 template <typename T>
-da_status mean(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
-               da_int ldx, T *amean);
+da_status mean(da_order order, da_axis axis, da_int n, da_int p, const T *x, da_int ldx,
+               T *amean);
 
 /* Geometric mean computed using log and exp to avoid overflow. Care needed to deal with negative or zero entries */
 template <typename T>

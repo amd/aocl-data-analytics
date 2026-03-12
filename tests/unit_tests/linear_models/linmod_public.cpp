@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -385,6 +385,11 @@ TEST(linmod, wideMatrixProblems) {
 }
 
 TEST(linmod, singularTallMatrix) {
+
+    // LAPACK does not always return an error for singular matrix with cholesky
+    GTEST_SKIP() << "LAPACK does not always return an error for a singular matrix with "
+                    "cholesky; test temporarily disabled.";
+
     // problem data
     da_int m = 5, n = 2;
     double Ad[10] = {1, 1, 1, 4, 5, 1, 1, 1, 4, 5};

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,6 +32,7 @@
 extern "C" {
 #endif
 
+#include "aoclda_approximate_neighbors.h"
 #include "aoclda_basic_statistics.h"
 #include "aoclda_csv.h"
 #include "aoclda_datastore.h"
@@ -39,12 +40,13 @@ extern "C" {
 #include "aoclda_decision_forest.h"
 #include "aoclda_error.h"
 #include "aoclda_handle.h"
+#include "aoclda_interpolation.h"
 #include "aoclda_kernel_functions.h"
 #include "aoclda_kmeans.h"
-#include "aoclda_knn.h"
 #include "aoclda_linmod.h"
 #include "aoclda_metrics.h"
 #include "aoclda_miscellaneous.h"
+#include "aoclda_nearest_neighbors.h"
 #include "aoclda_nlls.h"
 #include "aoclda_options.h"
 #include "aoclda_pca.h"

@@ -43,6 +43,12 @@ TEST(miscellaneous, aocl_da_version_string) {
     ASSERT_THAT(version_string, ::testing::StartsWith(AOCLDA_VERSION_STRING));
 }
 
+TEST(miscellaneous, aocl_da_git_commit) {
+    const char *git_commit = da_get_git_commit();
+    std::cout << "git_commit = " << git_commit << std::endl;
+    ASSERT_THAT(git_commit, ::testing::StartsWith(AOCLDA_GIT_COMMIT));
+}
+
 template <typename T> class misc_test_suite : public testing::Test {
   public:
     using List = std::list<T>;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -82,14 +82,27 @@ template <> da_status da_forest_fit<double>(da_handle handle) {
 template <> da_status da_forest_fit<float>(da_handle handle) {
     return da_forest_fit_s(handle);
 }
+
 template <>
-da_status da_knn_classes<double>(da_handle handle, da_int *n_classes, da_int *classes) {
-    return da_knn_classes_d(handle, n_classes, classes);
+da_status da_nn_set_labels<double>(da_handle handle, da_int n_samples,
+                                   const da_int *y_train) {
+    return da_nn_set_labels_d(handle, n_samples, y_train);
 }
 template <>
-da_status da_knn_classes<float>(da_handle handle, da_int *n_classes, da_int *classes) {
-    return da_knn_classes_s(handle, n_classes, classes);
+da_status da_nn_set_labels<float>(da_handle handle, da_int n_samples,
+                                  const da_int *y_train) {
+    return da_nn_set_labels_s(handle, n_samples, y_train);
 }
+
+template <>
+da_status da_nn_classes<double>(da_handle handle, da_int *n_classes, da_int *classes) {
+    return da_nn_classes_d(handle, n_classes, classes);
+}
+template <>
+da_status da_nn_classes<float>(da_handle handle, da_int *n_classes, da_int *classes) {
+    return da_nn_classes_s(handle, n_classes, classes);
+}
+
 template <> da_status da_dbscan_compute<double>(da_handle handle) {
     return da_dbscan_compute_d(handle);
 }
@@ -109,4 +122,36 @@ template <> da_status da_svm_compute<double>(da_handle handle) {
 }
 template <> da_status da_svm_compute<float>(da_handle handle) {
     return da_svm_compute_s(handle);
+}
+template <> da_status da_interpolation_interpolate<double>(da_handle handle) {
+    return da_interpolation_interpolate_d(handle);
+}
+template <> da_status da_interpolation_interpolate<float>(da_handle handle) {
+    return da_interpolation_interpolate_s(handle);
+}
+template <>
+da_status da_interpolation_select_model<double>(da_handle handle,
+                                                da_interpolation_model model) {
+    return da_interpolation_select_model_d(handle, model);
+}
+template <>
+da_status da_interpolation_select_model<float>(da_handle handle,
+                                               da_interpolation_model model) {
+    return da_interpolation_select_model_s(handle, model);
+}
+
+template <> da_status da_approx_nn_train<double>(da_handle handle) {
+    return da_approx_nn_train_d(handle);
+}
+
+template <> da_status da_approx_nn_train<float>(da_handle handle) {
+    return da_approx_nn_train_s(handle);
+}
+
+template <> da_status da_approx_nn_train_and_add<double>(da_handle handle) {
+    return da_approx_nn_train_and_add_d(handle);
+}
+
+template <> da_status da_approx_nn_train_and_add<float>(da_handle handle) {
+    return da_approx_nn_train_and_add_s(handle);
 }

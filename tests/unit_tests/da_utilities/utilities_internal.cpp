@@ -45,7 +45,8 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
 
     // map of arch found
     std::map<std::string, bool> archs;
-    std::vector<std::string> arch_list{"generic", "zen2", "zen3", "zen4", "zen5"};
+    std::vector<std::string> arch_list{"generic", "generic_avx512", "zen2",
+                                       "zen3",    "zen4",           "zen5"};
 
     // make sure its empty
     EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
@@ -131,8 +132,9 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
     EXPECT_GT(tmp, 0);
 
     // arch needs to be zen* or generic
-    EXPECT_THAT(
-        arch, testing::AnyOf(testing::StartsWith("zen"), testing::StrCaseEq("generic")));
+    EXPECT_THAT(arch,
+                testing::AnyOf(testing::StartsWith("zen"), testing::StrCaseEq("generic"),
+                               testing::StrCaseEq("generic_avx512")));
     // arch needs to match with ns
     std::string ns2arch{"da_dynamic_dispatch_"s + std::string(arch)};
     EXPECT_STREQ(ns2arch.c_str(), ns);
@@ -162,7 +164,7 @@ TEST(UtilitiesTest, DynamicDispatchTryArch) {
     // save
     std::string a{arch};
 
-    if (a == "generic"s || a == "zen2"s || a == "zen3") {
+    if (a == "generic"s || a == "generic_avx512"s || a == "zen2"s || a == "zen3") {
         // assume max_target_arch is at least zen4
         // Request zen4 and arch does not change
         EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "zen4", 1));

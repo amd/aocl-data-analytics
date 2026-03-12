@@ -491,6 +491,7 @@ template <typename T> da_status svm<T>::compute() {
         classifiers[i]->kernel_function = kernel_enum;
         classifiers[i]->cache_size = cache_size;
         classifiers[i]->max_ws_size = max_ws_size;
+        classifiers[i]->err = this->err;
 
         if (predict_proba_opt) {
             status = compute_probabilities(*classifiers[i], n_fold, probaA[i], probaB[i]);
@@ -640,27 +641,43 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation error");
         }
+        bool error_occured = false;
+        omp_set_max_active_levels(2);
+        da_int inner_threads = 2;
+        da_int outer_threads =
+            std::min(n_classifiers, (da_int)omp_get_max_threads()) / inner_threads;
+#pragma omp parallel for default(none)                                                   \
+    shared(votes_array, nsamples, nfeat, n_class, error_occured, ldx_test_temp,          \
+               X_test_temp, status, inner_threads) schedule(static)                      \
+    num_threads(outer_threads)
         for (da_int i = 0; i < n_classifiers; i++) {
+            omp_set_num_threads(inner_threads);
             std::vector<T> votes_temp; // this can technically be int
             try {
                 votes_temp.resize(nsamples);
-            } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
-                return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                                "Memory allocation error");
+            } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
+#pragma omp critical
+                error_occured = true; // LCOV_EXCL_LINE
             }
             status = classifiers[i]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
                                              votes_temp.data());
             if (status != da_status_success)
-                return status;
-            da_int pos_class = classifiers[i]->pos_class,
-                   neg_class = classifiers[i]->neg_class;
+#pragma omp critical
+                error_occured = true;
+            da_int pos_class = classifiers[i]->pos_class;
+            da_int neg_class = classifiers[i]->neg_class;
             for (da_int j = 0; j < nsamples; j++) {
-                if (votes_temp[j] == 1)
-                    votes_array[j * n_class + pos_class]++;
-                else
-                    votes_array[j * n_class + neg_class]++;
+                da_int &target =
+                    votes_array[j * n_class +
+                                (votes_temp[j] == 1 ? pos_class : neg_class)];
+#pragma omp atomic
+                target++;
             }
         }
+        omp_set_max_active_levels(1);
+        if (error_occured)
+            return da_error(this->err, da_status_internal_error,
+                            "An unexpected error occurred during prediction.");
         for (da_int i = 0; i < nsamples; i++) {
             da_int max_votes = 0, max_idx = 0;
             for (da_int j = 0; j < n_class; j++) {

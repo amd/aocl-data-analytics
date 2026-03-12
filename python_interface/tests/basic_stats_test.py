@@ -116,28 +116,61 @@ def test_general_functions_functionality2D(get_data2D, da_func, other_func,
                           (da_stats.kurtosis, kurtosis),
                           (da_stats.skewness, skew)],
                          ids=['mean', 'gmean', 'hmean', 'kurt', 'skew'])
-@pytest.mark.parametrize("da_axis, np_axis", [("row", None), ("all", None)],
-                         ids=['row', 'all'])
-def test_general_functions_functionality1D(get_data1D, da_func, other_func,
-                                           da_axis, np_axis):
+@pytest.mark.parametrize("da_axis, np_axis", [("row", 1), ("col", 0),
+                                              ("all", None)],
+                         ids=['row', 'col', 'all'])
+def test_general_functions_functionality2D_1_sample(get_data1D, da_func, other_func,
+                                                    da_axis, np_axis):
     """
     Testing functionality of functions with similar APIs with 1D data
     """
-    X = get_data1D["data1D"]
     X2D = get_data1D["data2D"]
     tol = get_data1D["tol"]
 
     # Compute mean
-    da_result = da_func(X, axis=da_axis)
-    da_result2 = da_func(X2D, axis=da_axis)
+    da_result = da_func(X2D, axis=da_axis)
+
+    # check expected results
+    ex_result = other_func(X2D, axis=np_axis)
+
+    if other_func.__name__ == "skew":
+        ex_result = np.nan_to_num(ex_result, nan=0.0)
+    if other_func.__name__ == "kurtosis":
+        ex_result = np.nan_to_num(ex_result, nan=-3.0)
+
+    error = np.max(np.abs(da_result - ex_result))
+    assert error < tol
+
+
+@pytest.mark.parametrize("da_func, other_func",
+                         [(da_stats.mean, np.mean),
+                          (da_stats.geometric_mean, gmean),
+                          (da_stats.harmonic_mean, hmean),
+                          (da_stats.kurtosis, kurtosis),
+                          (da_stats.skewness, skew)],
+                         ids=['mean', 'gmean', 'hmean', 'kurt', 'skew'])
+@pytest.mark.parametrize("da_axis, np_axis", [("row", 0), ("col", 0),
+                                              ("all", None)],
+                         ids=['row', 'col', 'all'])
+def test_general_functions_functionality_pure_1D(get_data1D, da_func, other_func,
+                                                 da_axis, np_axis):
+    """
+    Testing functionality of functions with similar APIs with 1D data
+    """
+    X = get_data1D["data1D"]
+    tol = get_data1D["tol"]
+
+    # Compute mean
+    if da_axis != 'all':
+        with pytest.warns(RuntimeWarning):
+            da_result = da_func(X, axis=da_axis)
+    else:
+        da_result = da_func(X, axis=da_axis)
 
     # check expected results
     ex_result = other_func(X, axis=np_axis)
 
     error = np.max(np.abs(da_result - ex_result))
-    assert error < tol
-    # Assert that 1D array passed as 2D array is also correct
-    error = np.max(np.abs(da_result2 - ex_result))
     assert error < tol
 
 
@@ -408,19 +441,23 @@ def test_moment_functionality_1D(get_data1D, da_axis, np_axis):
     tol = get_data1D["tol"]
 
     # Get precomputed means
-    shift = da_stats.mean(X, axis=da_axis)
+    with pytest.warns(RuntimeWarning):
+        shift = da_stats.mean(X, axis=da_axis)
 
     # Compute moments
-    da_moment = da_stats.moment(X, 8, axis=da_axis)
-    da_moment_with_precomputed_mean = da_stats.moment(X,
-                                                      8,
-                                                      mean=shift,
-                                                      axis=da_axis)
+    with pytest.warns(RuntimeWarning):
+        da_moment = da_stats.moment(X, 8, axis=da_axis)
+    with pytest.warns(RuntimeWarning):
+        da_moment_with_precomputed_mean = da_stats.moment(X,
+                                                          8,
+                                                          mean=shift,
+                                                          axis=da_axis)
     da_moment2 = da_stats.moment(X2D, 8, axis=da_axis)
-    da_moment_with_precomputed_mean2 = da_stats.moment(X,
-                                                       8,
-                                                       mean=shift,
-                                                       axis=da_axis)
+    with pytest.warns(RuntimeWarning):
+        da_moment_with_precomputed_mean2 = da_stats.moment(X,
+                                                           8,
+                                                           mean=shift,
+                                                           axis=da_axis)
 
     # check expected results
     ex_moment = moment(X, 8, axis=np_axis)
@@ -778,8 +815,13 @@ def test_error_exits_general(func, da_axis):
     Testing error exits in basic statistics functions
     """
     # Check empty array input
-    with pytest.raises(ValueError):
-        func(np.array([]), axis=da_axis)
+    if da_axis != "all":
+        with pytest.warns(RuntimeWarning):
+            with pytest.raises(ValueError):
+                func(np.array([]), axis=da_axis)
+    else:
+        with pytest.raises(ValueError):
+            func(np.array([]), axis=da_axis)
     # Check wrong input type
     with pytest.raises(ValueError):
         func(np.array([[1, 2, 3], [4, 'a', 6]]), axis=da_axis)
@@ -802,8 +844,14 @@ def test_error_exits_moment(get_data2D, da_axis, wrong_shape_input):
                         axis=da_axis,
                         mean=wrong_shape_input)
     # Check empty array input
-    with pytest.raises(ValueError):
-        da_stats.moment(np.array([]), k=2, axis=da_axis)
+    if da_axis != "all":
+        with pytest.warns(RuntimeWarning):
+            with pytest.raises(ValueError):
+                da_stats.moment(np.array([]), k=2, axis=da_axis)
+    else:
+        with pytest.raises(ValueError):
+            da_stats.moment(np.array([]), k=2, axis=da_axis)
+
     # Check wrong input type
     with pytest.raises(ValueError):
         da_stats.moment(np.array([[1, 2, 3], [4, 'a', 6]]), k=2, axis=da_axis)
@@ -828,8 +876,13 @@ def test_error_exits_quantile(da_axis):
     with pytest.raises(ValueError):
         da_stats.quantile(X, 0.12, axis=da_axis, method='lineear')
     # Check empty array input
-    with pytest.raises(ValueError):
-        da_stats.quantile(np.array([]), 0.2, axis=da_axis)
+    if da_axis != "all":
+        with pytest.warns(RuntimeWarning):
+            with pytest.raises(ValueError):
+                da_stats.quantile(np.array([]), 0.2, axis=da_axis)
+    else:
+        with pytest.raises(ValueError):
+            da_stats.quantile(np.array([]), 0.2, axis=da_axis)
     # Check wrong input type
     with pytest.raises(ValueError):
         da_stats.quantile(np.array([[1, 2, 3], [4, 'a', 6]]), 0.2, axis=da_axis)

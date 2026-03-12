@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,8 @@
 #include <unordered_map>
 
 enum dispatch_architecture {
-    generic = 0, // alias to zen1
+    generic = 0,
+    generic_avx512, // for non-Zen AVX512 enabled machines
     zen2 = 2,
     zen3 = 3,
     zen4 = 4,
@@ -93,6 +94,8 @@ class context {
     dispatch_architecture local_arch = generic;
 
     // Set max_target_arch to the maximum Zen generation that was compiled, set by the ZNVER_MAX compile option
+    // For a dynamic dispatch build, this will likely be zen3, zen4 or zen5 depending on the compiler
+    // For a native or specific build this could be generic, generic_avx512, zen2, zen3, zen4 or zen5
     dispatch_architecture max_target_arch = ZNVER_MAX;
 
     bool cpuflags[static_cast<int>(context_isa_t::LENGTH)];
@@ -109,6 +112,9 @@ class context {
                 // request, avoid illegal cpu instructions
                 if (env_arch == "zen1" || env_arch == "generic") {
                     this->arch = generic;
+                } else if (env_arch == "generic_avx512" &&
+                           (local_arch == generic_avx512 || local_arch >= zen4)) {
+                    this->arch = generic_avx512;
                 } else if (env_arch == "zen2" && local_arch >= zen2) {
                     this->arch = zen2;
                 } else if (env_arch == "zen3" && local_arch >= zen3) {
@@ -167,7 +173,7 @@ class context {
         has_avx512 = this->cpuflags[static_cast<int>(context_isa_t::AVX512F)] &&
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)];
-
+        //LCOV_EXCL_START
         switch (uarch) {
         case Au::EUarch::Zen:
         case Au::EUarch::ZenPlus:
@@ -193,30 +199,35 @@ class context {
                 } else {
                     local_arch = zen3; // Fall-back to latest known avx2 model
                 }
-            } else if (Cpu.isIntel()) {
-                // zen flags should work for Intel machines
-                if (has_avx512)
-                    local_arch = zen4;
-                else
-                    local_arch = zen3;
+            } else if (has_avx512) {
+                local_arch = generic_avx512;
             } else
                 local_arch = generic; // Assume avx2 for non-AMD
         }
 
-        if (local_arch <= max_target_arch) {
-            // there is a build that matches local arch
-            arch = local_arch;
-        } else if (max_target_arch == generic) {
-            // generic catches native/non-dynamic builds using the generic namespace
-            arch = generic;
-        } else if (has_avx512 && max_target_arch >= zen4) {
-            // local arch seems to have AVX512* but is newer than the
-            // library build, set to a AVX512 variant build
-            arch = max_target_arch;
-        } else {
-            // set to last AVX2-only cpu
-            arch = zen3;
+        /*
+max target arch can be:
+  generic, generic_avx512, zen2, zen3, zen4, zen5
+local arch can be:
+  generic, generic_avx512, zen2, zen3, zen4, zen5
+*/
+
+        // Deal with the special case of Zen 4+ with AVX-512 support disabled by treating it as Zen 3
+        if ((local_arch >= zen4) && (has_avx512 == false)) {
+            local_arch = zen3;
         }
+
+        if (local_arch <= max_target_arch) {
+            // For dynamic dispatch, there is a build that matches local arch
+            arch = local_arch;
+        } else if (max_target_arch == generic_avx512 && !has_avx512) {
+            // Special case where the max target architecture has AVX512 but local CPU does not
+            arch = generic;
+        } else {
+            // The maximum target architecture will work fine on this CPU
+            arch = max_target_arch;
+        }
+        //LCOV_EXCL_STOP
         check_env(); // update arch if AOCL_DA_ARCH is set
     }
 

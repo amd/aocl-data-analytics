@@ -27,6 +27,7 @@
 #include "da_utils.hpp"
 #include "dynamic_dispatch.hpp"
 #include "macros.h"
+#include "train_test_split.hpp"
 
 da_errors::error_bypass_t *nosave_utils(nullptr);
 
@@ -98,6 +99,9 @@ da_status da_get_arch_info(da_int *len = nullptr, char *arch = nullptr,
     switch (context::get_context()->arch) {
     case generic:
         Arch = "generic";
+        break;
+    case generic_avx512:
+        Arch = "generic_avx512";
         break;
     case zen2:
     case zen3:

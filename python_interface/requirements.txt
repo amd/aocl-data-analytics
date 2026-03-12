@@ -1,10 +1,9 @@
-pybind11
+pybind11<=3.0.1
 numpy
-wheel
 pytest
 scikit-learn
 pylint
-setuptools
+setuptools>=70.1
 auditwheel
 delvewheel
 pandas

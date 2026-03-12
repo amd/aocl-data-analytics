@@ -49,15 +49,6 @@ template <typename T> T expected_precision(T scale = (T)1.0);
 template <> double expected_precision<double>(double scale) { return scale * 1.0e-3; }
 template <> float expected_precision<float>(float scale) { return scale * 0.5f; }
 
-// return precision as a string literal to set CSV options
-template <typename T> constexpr const char *prec_name();
-template <> constexpr const char *prec_name<float>() { return "single"; }
-template <> constexpr const char *prec_name<double>() { return "double"; }
-
-template <typename T> constexpr const char *type_opt_name();
-template <> constexpr const char *type_opt_name<float>() { return "float"; }
-template <> constexpr const char *type_opt_name<double>() { return "double"; }
-
 template <typename T>
 T objfun_mse(da_int n, da_int m, const T *x, const T *A, const T *b, bool intercept,
              T alpha, T lambda) {

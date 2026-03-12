@@ -27,12 +27,11 @@
 #ifndef DA_KT_HPP
 #define DA_KT_HPP
 
-#include "aoclda.h"
-
-// Set the kt_int
-using kt_int_t = da_int;
-
-#include "kernel_templates.hpp"
+// This header includes the kernel templates and additionally L2 micro-kernel
+// that are specific to AOCL-DA project.
+// ------------------------------------------------------------------------------
+#include "kt_exp.hpp"
+// ------------------------------------------------------------------------------
 
 // Helper functions and macros that assist in instantiation of KT-based functions
 // ------------------------------------------------------------------------------

@@ -331,19 +331,22 @@ template <typename T>
 da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> current_node,
                                                  T *X, T eps, T eps_internal,
                                                  da_vector::da_vector<da_int> &neighbors,
-                                                 bool X_is_A, da_int index_X, T X_norm) {
+                                                 da_vector::da_vector<T> &distances,
+                                                 bool return_distance, bool X_is_A,
+                                                 da_int index_X, T X_norm) {
 
     da_status status = da_status_success;
 
     // Check the bounding box for quick pruning of the search space
-    da_nn_types::nn_check_region proximity = check_bounding_box(
+    da_neighbors_types::nn_check_region proximity = check_bounding_box(
         X, eps_internal, current_node->min_bounds, current_node->max_bounds);
-    if (proximity == da_nn_types::pt_outside_eps) {
+    if (proximity == da_neighbors_types::pt_outside_eps) {
         // The point is too far from the bounding box for this node, we can return and ignore all sub-nodes
         return da_status_success;
     }
 
-    if (proximity == da_nn_types::region_within_eps) {
+    T dist;
+    if (proximity == da_neighbors_types::region_within_eps) {
         // The entire bounding box is inside the search radius, so we can add all points in the node
         for (da_int i = 0; i < current_node->n_indices; i++) {
             da_int index_A = current_node->indices[i];
@@ -352,11 +355,16 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
                 continue;
             }
             neighbors.push_back(index_A);
+            if (return_distance) {
+                status = this->compute_distance(dist, index_A, X, X_norm);
+                if (status != da_status_success) {
+                    return status; // LCOV_EXCL_LINE
+                }
+                distances.push_back(dist);
+            }
         }
         return da_status_success;
     }
-
-    T dist;
 
     if (current_node->is_leaf) {
         // Check all the points in the node
@@ -378,6 +386,9 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
             if (dist <= eps_internal) {
                 // If the distance is less than or equal to eps_internal, add the point to the neighbors list
                 neighbors.push_back(index_A);
+                if (return_distance) {
+                    distances.push_back(dist);
+                }
             }
         }
 
@@ -396,6 +407,9 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
             if (dist <= eps_internal) {
                 // If the distance is less than or equal to eps_internal, add the point to the neighbors list
                 neighbors.push_back(index_A);
+                if (return_distance) {
+                    distances.push_back(dist);
+                }
             }
         }
 
@@ -406,12 +420,14 @@ da_status kd_tree<T>::radius_neighbors_recursive(std::shared_ptr<kd_node<T>> cur
         if (diff <= eps) {
             // Check the left child
             radius_neighbors_recursive(current_node->left_child, X, eps, eps_internal,
-                                       neighbors, X_is_A, index_X, X_norm);
+                                       neighbors, distances, return_distance, X_is_A,
+                                       index_X, X_norm);
         }
         if (diff >= -eps) {
             // Check the right child
             radius_neighbors_recursive(current_node->right_child, X, eps, eps_internal,
-                                       neighbors, X_is_A, index_X, X_norm);
+                                       neighbors, distances, return_distance, X_is_A,
+                                       index_X, X_norm);
         }
     }
     return da_status_success;
@@ -426,14 +442,14 @@ da_status kd_tree<T>::k_neighbors_recursive(std::shared_ptr<kd_node<T>> current_
     da_status status = da_status_success;
 
     // If the heap is full we need to check the bounding box, otherwise we can skip this check
-    da_nn_types::nn_check_region proximity =
+    da_neighbors_types::nn_check_region proximity =
         (heap.GetSize() < k)
-            ? da_nn_types::pt_within_eps
+            ? da_neighbors_types::pt_within_eps
             : check_bounding_box(X, heap.GetMaxDist(), current_node->min_bounds,
                                  current_node->max_bounds);
 
     // If the point is too far from the bounding box for this node, we can return and ignore all sub-nodes
-    if (proximity == da_nn_types::pt_outside_eps) {
+    if (proximity == da_neighbors_types::pt_outside_eps) {
         return da_status_success;
     }
 
@@ -515,9 +531,9 @@ da_status kd_tree<T>::k_neighbors_recursive(std::shared_ptr<kd_node<T>> current_
 *          2 if the entirety of the box is within eps of X
 */
 template <typename T>
-da_nn_types::nn_check_region kd_tree<T>::check_bounding_box(T *X, T eps,
-                                                            std::vector<T> &min_bounds,
-                                                            std::vector<T> &max_bounds) {
+da_neighbors_types::nn_check_region
+kd_tree<T>::check_bounding_box(T *X, T eps, std::vector<T> &min_bounds,
+                               std::vector<T> &max_bounds) {
 
     // Note that if the user specified metric = da_euclidean, eps will have been squared to enable us to avoid taking square roots
 
@@ -547,7 +563,7 @@ da_nn_types::nn_check_region kd_tree<T>::check_bounding_box(T *X, T eps,
             tmp_max_dist *= tmp_max_dist;
             if (tmp_min_dist > eps) {
                 // Quick return here as we know X is further than eps from the bounding box
-                return da_nn_types::pt_outside_eps;
+                return da_neighbors_types::pt_outside_eps;
             }
             min_dist += tmp_min_dist;
             max_dist += tmp_max_dist;
@@ -568,7 +584,7 @@ da_nn_types::nn_check_region kd_tree<T>::check_bounding_box(T *X, T eps,
             }
             if (tmp_min_dist > eps) {
                 // Quick return here as we know X is further than eps from the bounding box
-                return da_nn_types::pt_outside_eps;
+                return da_neighbors_types::pt_outside_eps;
             }
             if (this->metric == da_manhattan) {
                 min_dist += tmp_min_dist;
@@ -586,14 +602,14 @@ da_nn_types::nn_check_region kd_tree<T>::check_bounding_box(T *X, T eps,
 
     if (max_dist <= eps) {
         // If the maximum distance is less than eps, then the entire bounding box is within eps of X
-        return da_nn_types::region_within_eps;
+        return da_neighbors_types::region_within_eps;
     }
     // If the minimum distance is less than eps, then X is within eps of the bounding box
     if (min_dist <= eps) {
-        return da_nn_types::pt_within_eps;
+        return da_neighbors_types::pt_within_eps;
     }
     // Otherwise, the point is outside the bounding box
-    return da_nn_types::pt_outside_eps;
+    return da_neighbors_types::pt_outside_eps;
 }
 
 // Explicit instantiation of the k-d tree class for double and float types

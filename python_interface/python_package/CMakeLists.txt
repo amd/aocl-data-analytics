@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -25,7 +25,7 @@
 # Python bindings
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(py_aoclda VERSION 5.2.0)
+project(py_aoclda VERSION 5.2.2)
 
 set(BUILD_SHARED_LIBS ON)
 option(BUILD_ILP64 "ILP64 Support" OFF)

@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -29,7 +29,7 @@ k-nearest neighbors classification example Python script
 
 import sys
 import numpy as np
-from aoclda.nearest_neighbors import knn_classifier
+from aoclda.neighbors import nearest_neighbors
 
 
 def knn_classifier_example():
@@ -52,12 +52,12 @@ def knn_classifier_example():
                        [2, 1, -3]], dtype=np.float64)
 
     print("\nk-nearest neighbors for a small data matrix\n")
-    knn = knn_classifier()
+    knn = nearest_neighbors()
     knn.fit(x_train, y_train)
     print(x_train)
     k_dist, k_ind = knn.kneighbors(x_test, n_neighbors=3, return_distance=True)
-    proba = knn.predict_proba(x_test)
-    y_test = knn.predict(x_test)
+    proba = knn.classifier_predict_proba(x_test, search_mode='knn')
+    y_test = knn.classifier_predict(x_test, search_mode='knn')
 
     # Print results
     print("\nIndices of the nearest neighbors:\n")
@@ -96,7 +96,7 @@ def knn_classifier_example():
         print("incorrect_labels = ", incorrect_labels)
         sys.exit(1)
 
-    print("\nk-nearest neighbors successfully computed\n")
+    print("\nk-nearest neighbors classification successfully computed\n")
 
 
 if __name__ == "__main__":

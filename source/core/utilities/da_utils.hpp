@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -85,6 +85,13 @@ da_status check_1D_array(bool check_data, da_errors::da_error_t *err, da_int n,
                          const std::string &data_name, da_int n_min);
 
 template <typename T>
+da_status check_2D_array(bool check_data, da_order order, da_errors::da_error_t *err,
+                         da_int n_rows, da_int n_cols, const T *data, da_int lddata,
+                         const std::string &n_rows_name, const std::string &n_cols_name,
+                         const std::string &data_name, const std::string &lddata_name,
+                         da_int n_rows_min, da_int n_cols_min);
+
+template <typename T>
 da_status stratified_shuffle(da_int m, boost::random::mt19937 &rand_engine,
                              da_int train_size, da_int test_size, const T *classes,
                              da_int *shuffled_indices);
@@ -99,21 +106,11 @@ da_status get_shuffled_indices(da_int m, da_int seed, da_int train_size, da_int 
                                da_int *shuffle_array);
 
 template <typename T>
-da_status validate_parameters_train_test_split(da_order order, da_int m, da_int n,
-                                               const T *X, da_int ldx, da_int train_size,
-                                               da_int test_size, T *X_train,
-                                               da_int ldx_train, T *X_test,
-                                               da_int ldx_test);
-
-template <typename T>
-da_status train_test_split(da_order order, da_int m, da_int n, const T *X, da_int ldx,
-                           da_int train_size, da_int test_size,
-                           const da_int *shuffle_array, T *X_train, da_int ldx_train,
-                           T *X_test, da_int ldx_test);
-
-template <typename T>
 da_status check_categorical_data(da_int n_data, const T *data, da_int &n_categories,
                                  da_int max_categories, T tol);
+
+template <typename T>
+void parallel_argsort(std::vector<T> &values, std::vector<da_int> &indices);
 
 CBLAS_ORDER da_order_to_cblas_order(da_order order);
 
@@ -126,6 +123,14 @@ da_uplo cblas_uplo_to_da_uplo(CBLAS_UPLO uplo);
 CBLAS_TRANSPOSE da_transpose_to_cblas_transpose(da_transpose transpose);
 
 da_transpose cblas_transpose_to_da_transpose(CBLAS_TRANSPOSE transpose);
+
+template <typename T>
+da_status normalize_rows_inplace(da_order order, da_int n_rows, da_int n_cols, T *X,
+                                 da_int ldx, T *row_norms_work);
+
+template <typename T>
+da_status normalize_rows(da_order order, da_int n_rows, da_int n_cols, const T *X_in,
+                         da_int ldx_in, T *X_out, da_int ldx_out, T *row_norms_work);
 
 } // namespace da_utils
 

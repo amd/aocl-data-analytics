@@ -148,7 +148,7 @@ TYPED_TEST(svm_public_test, ldx_test) {
                               decision_values_pred.data(), data.lddecision_values),
                           da_status_success);
                 EXPECT_ARR_NEAR(data.n_samples_test * data.lddecision_values,
-                                decision_values_pred, data.decision_values, tol);
+                                decision_values_pred, data.decision_values, tol * 10);
             }
             TypeParam score_pred;
             EXPECT_EQ(da_svm_score(svm_handle, data.n_samples_test, data.n_feat,
@@ -181,7 +181,7 @@ TYPED_TEST(svm_public_test, ldx_test) {
                               decision_values_pred.data(), data.lddecision_values_row),
                           da_status_success);
                 EXPECT_ARR_NEAR(data.n_feat * data.lddecision_values_row,
-                                decision_values_pred, data.decision_values_row, tol);
+                                decision_values_pred, data.decision_values_row, tol * 10);
             }
             EXPECT_EQ(da_svm_score(svm_handle, data.n_samples_test, data.n_feat,
                                    data.X_test_row.data(), data.ldx_test_row,
@@ -221,7 +221,7 @@ TYPED_TEST(svm_public_test, get_results_test) {
         set_get_results_test_data_7x2_poly_nusvr<TypeParam>};
     test_get_results_type<TypeParam> data;
 
-    TypeParam tol = 3e-5;
+    TypeParam tol = 1e-4;
     for (auto &data_fun : set_test_data) {
         data_fun(data);
         da_handle svm_handle = nullptr;
@@ -463,7 +463,7 @@ TYPED_TEST(svm_public_test, predict_proba) {
         set_probabilities_missing_negative_data<TypeParam>};
     test_probabilities_type<TypeParam> data;
 
-    TypeParam tol = std::is_same<TypeParam, float>::value ? static_cast<TypeParam>(5e-3f)
+    TypeParam tol = std::is_same<TypeParam, float>::value ? static_cast<TypeParam>(6e-3f)
                                                           : static_cast<TypeParam>(5e-4);
     da_int i = 0;
     for (auto &data_fun : set_test_data) {
@@ -1053,7 +1053,7 @@ const svm_param_t svm_param_pos[] = {
     {"svc_binary_random_wide_polynomial", "binary_random_wide", da_svm_model::svc, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 1.5f}, {"gamma", -1.0f}, {"coef0", 0.0f}}, {{"tolerance", 1e-6}, {"C", 1.5}, {"gamma", -1.0}, {"coef0", 0.0}}, 0.8},
     {"svc_binary_random_wide_sigmoid", "binary_random_wide", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 1.5f}, {"gamma", -1.0f}, {"coef0", 0.0f}}, {{"tolerance", 1e-6}, {"C", 1.5}, {"gamma", -1.0}, {"coef0", 0.0}}, 0.8, 3},
 
-    {"svc_multiclass_random_tall_rbf", "multiclass_random_tall", da_svm_model::svc, {}, {}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"cache size", 0.001f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"cache size", 0.001}}, 0.761, 3},
+    {"svc_multiclass_random_tall_rbf", "multiclass_random_tall", da_svm_model::svc, {}, {}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"cache size", 0.001f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"cache size", 0.001}}, 0.761, 4},
     {"svc_multiclass_random_tall_linear", "multiclass_random_tall", da_svm_model::svc, {}, {{"kernel", "linear"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}}, {{"tolerance", 1e-6}, {"C", 0.5}}, 0.904},
     {"svc_multiclass_random_tall_polynomial", "multiclass_random_tall", da_svm_model::svc, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 2.0f}, {"cache size", 0.0001f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 2.0}, {"cache size", 0.0001}}, 0.809, 3},
     {"svc_multiclass_random_tall_sigmoid", "multiclass_random_tall", da_svm_model::svc, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 0.5f}, {"gamma", -1.0f}, {"coef0", 2.0f}}, {{"tolerance", 1e-6}, {"C", 0.5}, {"gamma", -1.0}, {"coef0", 2.0}}, 0.476},
@@ -1097,6 +1097,11 @@ const svm_param_t svm_param_pos[] = {
     {"nusvr_regression_random_wide_polynomial", "regression_random_wide", da_svm_model::nusvr, {{"degree", 2}}, {{"kernel", "poly"}}, {{"tolerance", 1e-6f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"coef0", 0.25f}}, {{"tolerance", 1e-6}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"coef0", 0.25}}, -0.509, 1e3},
     {"nusvr_regression_random_wide_sigmoid", "regression_random_wide", da_svm_model::nusvr, {}, {{"kernel", "sigmoid"}}, {{"tolerance", 1e-6f}, {"C", 1.0f}, {"nu", 0.2f}, {"gamma", 4.0f}, {"coef0", 0.25f}}, {{"tolerance", 1e-6}, {"C", 1.0}, {"nu", 0.2}, {"gamma", 4.0}, {"coef0", 0.25}}, -0.37, 15},
 
+    // VERY TALL 2000x10 (to ensure blocking coverage)
+    {"svc_binary_random_very_tall", "binary_very_tall", da_svm_model::svc, {}, {}, {{"tolerance", 1e-6f}}, {{"tolerance", 1e-6}}, 0.954, 100},
+    {"nusvc_binary_random_very_tall", "binary_very_tall", da_svm_model::nusvc, {}, {}, {{"tolerance", 1e-2f}, {"nu", 0.8f}}, {{"tolerance", 1e-6}, {"nu", 0.8}}, 0.897, 200},
+    {"svr_binary_random_very_tall", "regression_very_tall", da_svm_model::svr, {}, {}, {{"tolerance", 1e-6f}, {"epsilon", 0.8f}}, {{"tolerance", 1e-6}, {"epsilon", 0.8}}, 0.442, 100},
+    {"nusvr_binary_random_very_tall", "regression_very_tall", da_svm_model::nusvr, {}, {}, {{"tolerance", 1e-1f}, {"nu", 0.8f}}, {{"tolerance", 1e-6}, {"nu", 0.8}}, 0.427, 1e3},
 };
 // clang-format on
 

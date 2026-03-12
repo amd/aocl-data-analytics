@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -33,7 +33,7 @@ from ._internal_utils import check_convert_data
 
 
 class kmeans():
-    """
+    r"""
     k-means clustering.
 
     Partition a data matrix into clusters using k-means clustering.
@@ -48,9 +48,9 @@ class kmeans():
             point). Default: 'k-means++'.
 
         C (array-like, optional): The matrix of initial cluster centres. It has
-            shape (n_clusters, n_features). If supplied, these centres will be used as the starting
-            point for the first iteration, otherwise the initialization method specified above will
-            be used. Default = None.
+            shape (n_clusters, :nref:`n_features`). If supplied, these centres will be used as the
+            starting point for the first iteration, otherwise the initialization method specified
+            above will be used. Default = None.
 
         n_init (int, optional): Number of runs with different random seeds (ignored if you specify
             initial cluster centres). Default=10.
@@ -100,13 +100,14 @@ class kmeans():
 
     @property
     def cluster_centres(self):
-        """numpy.ndarray of shape (n_clusters, n_features): The coordinates of the cluster centres.
+        r"""numpy.ndarray of shape (n_clusters, :nref:`n_features`): The coordinates of the cluster
+            centres.
         """
         return self.kmeans.get_cluster_centres()
 
     @property
     def labels(self):
-        """numpy.ndarray of shape (n_samples, ): The label (i.e. which cluster) of each sample point
+        r"""numpy.ndarray of shape (:nref:`n_samples`, ): The label (which cluster) of each sample point
            in the data matrix."""
         return self.kmeans.get_labels()
 
@@ -138,13 +139,13 @@ class kmeans():
         return self.kmeans.get_n_clusters()
 
     def fit(self, A):
-        """
+        r"""
         Computes k-means clusters for the supplied data matrix, optionally using the supplied
         centres as the starting point.
 
         Args:
             A (array-like): The data matrix with which to compute the k-means clusters. It has
-              shape (n_samples, n_features).
+              shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
             self (object): Returns the instance itself.
@@ -164,7 +165,7 @@ class kmeans():
         return self
 
     def transform(self, X):
-        """
+        r"""
         Transform a data matrix into cluster distance space.
 
         Transforms a data matrix ``X`` from the original coordinate system into the new coordinates
@@ -173,11 +174,11 @@ class kmeans():
 
         Args:
             X (array-like): The data matrix to be transformed. It has shape
-              (m_samples, m_features). Note that ``m_features`` must match ``n_features``,
+              (m_samples, m_features). Note that :nref:`m_features` must match :nref:`n_features`,
               the number of features in the data matrix originally supplied to ``kmeans.fit``.
 
         Returns:
-            numpy.ndarray of shape (m_samples, n_clusters): The transformed matrix.
+            numpy.ndarray of shape (m_samples, :nref:`n_clusters`): The transformed matrix.
         """
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True
@@ -186,7 +187,7 @@ class kmeans():
         return self.kmeans.pybind_transform(X)
 
     def predict(self, Y):
-        """
+        r"""
         Predict the cluster each sample in a data matrix belongs to.
 
         For each sample in the data matrix ``Y`` find the closest cluster centre out of the clusters
@@ -194,7 +195,7 @@ class kmeans():
 
         Args:
             Y (array-like): The data matrix to be transformed. It has shape
-              (k_samples, k_features). Note that ``k_features`` must match ``n_features``,
+              (k_samples, k_features). Note that :nref:`k_features` must match :nref:`n_features`,
               the number of features in the data matrix used in ``kmeans.fit``.
 
         Returns:
@@ -263,15 +264,15 @@ class DBSCAN():
 
     @property
     def labels(self):
-        """numpy.ndarray of shape (n_samples, ): The label (i.e. which cluster) of each sample point
-           in the data matrix.  A label of -1 indicates that the point has been classified as noise
-           and has not been assigned to a cluster."""
+        r"""numpy.ndarray of shape (:nref:`n_samples`, ): The label (which cluster) of each sample
+           point in the data matrix.  A label of -1 indicates that the point has been classified as
+           noise and has not been assigned to a cluster."""
         return self.DBSCAN.get_labels()
 
     @property
     def core_sample_indices(self):
-        """numpy.ndarray of shape (n_core_samples, ): The indices of the core samples in the data
-           matrix."""
+        """numpy.ndarray of shape (:nref:`n_core_samples`, ): The indices of the core samples in the
+           data matrix."""
         return self.DBSCAN.get_core_sample_indices()
 
     @property
@@ -295,12 +296,12 @@ class DBSCAN():
         return self.DBSCAN.get_n_clusters()
 
     def fit(self, A):
-        """
+        r"""
         Computes DBSCAN clusters for the supplied data matrix.
 
         Args:
             A (array-like): The data matrix with which to compute the DBSCAN clusters. It has
-              shape (n_samples, n_features).
+              shape (:nref:`n_samples`, :nref:`n_features`).
 
         Returns:
             self (object): Returns the instance itself.

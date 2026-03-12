@@ -26,7 +26,7 @@
 #include "da_error.hpp"
 #include "da_vector.hpp"
 #include "macros.h"
-#include "nn_types.hpp"
+#include "nearest_neighbors_types.hpp"
 #include <algorithm>
 #include <random>
 #include <string>
@@ -35,7 +35,7 @@ namespace ARCH {
 
 namespace da_dbscan {
 
-using namespace da_nn_types;
+using namespace da_neighbors_types;
 
 /* DBSCAN class */
 template <typename T> class dbscan : public basic_handle<T> {
@@ -74,13 +74,13 @@ template <typename T> class dbscan : public basic_handle<T> {
     da_int n_clusters = 0;
 
     // Arrays containing output data
-    da_vector::da_vector<da_int>
-        core_sample_indices; // Use da_vector since we will be dynamically expanding this array
     std::vector<da_int> labels;
 
     // Internal arrays
     std::vector<da_vector::da_vector<da_int>>
         neighbors; // Use da_vector since we will be dynamically expanding this array
+    std::vector<bool> is_core_sample;
+    std::vector<da_int> duplicate_labels;
 
     // Miscellaneous variables
     da_int min_samples_m1 = 0;

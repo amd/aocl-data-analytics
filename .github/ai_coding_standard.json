@@ -1,0 +1,268 @@
+{
+    "cpp": [
+        {
+            "Rule ID": 1,
+            "Rule Heading": "General Language Restrictions",
+            "Rule Sub-heading": "Goto statements",
+            "Rule-Details": "goto statements must not be used.",
+            "Priority": "L2",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 2,
+            "Rule Heading": "General Language Restrictions",
+            "Rule Sub-heading": "Non-const references",
+            "Rule-Details": "Non-const references must not be used except where needed in required constructors",
+            "Priority": "L1",
+            "Solvable": "Local"
+        },
+        {
+            "Rule ID": 3,
+            "Rule Heading": "General Language Restrictions",
+            "Rule Sub-heading": "Comparing null pointer values",
+            "Rule-Details": "nullptr must be used instead of 0 or NULL when assigning or comparing null pointer values.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 4,
+            "Rule Heading": "Preprocessor",
+            "Rule Sub-heading": "Use of constants or enumerations",
+            "Rule-Details": "Constants or enumerations should be used instead of #defines.",
+            "Priority": "L1",
+            "Solvable": "Local"
+        },
+        {
+            "Rule ID": 6,
+            "Rule Heading": "Naming Conventions",
+            "Rule Sub-heading": "Short variable names",
+            "Rule-Details": "All variables must have a short, informative and unambiguous name",
+            "Priority": "L1",
+            "Solvable": "Local"
+        },
+        {
+            "Rule ID": 7,
+            "Rule Heading": "Naming Conventions",
+            "Rule Sub-heading": "Handle variables",
+            "Rule-Details": "All handle variables must have the 'handle' in their name",
+            "Priority": "L2",
+            "Solvable": "Local"
+        },
+        {
+            "Rule ID": 16,
+            "Rule Heading": "Types and Declarations",
+            "Rule Sub-heading": "variable type definition",
+            "Rule-Details": "All variable types must end with the `_t` postfix",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 17,
+            "Rule Heading": "Types and Declarations",
+            "Rule Sub-heading": "Use of ampersand for references",
+            "Rule-Details": "All references must be specified with the ampersand immediately following the type.\n```MyFunc(const MyInputStruct& inputInfo);```",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 19,
+            "Rule Heading": "Types and Declarations",
+            "Rule Sub-heading": "Variable assignment",
+            "Rule-Details": "Each source statement must assign a value to no more than one variable. Multiple variable assignments, such as 'a = b = c;' must not be used.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 20,
+            "Rule Heading": "Types and Declarations",
+            "Rule Sub-heading": "Structure initialization",
+            "Rule-Details": "Structures should be initialized completely, either using aggregate initialization or alternative methods.\n```struct SomeStruct {int x; int y; SomeStruct* pNext;} \nSomeStruct someData{}; \nSomeStruct moreData{.x=9,.y=0,.pNext{&someData}};```",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 24,
+            "Rule Heading": "Ifs,Loops,and Switch Statements",
+            "Rule Sub-heading": "Fallthrough-behavior",
+            "Rule-Details": "Any time a case statement is used without a corresponding break by design, the [[fallthrough]] attribute must be used.\n```switch (operation) {case OpGo: break; case OpStop: break; [[fallthrough]]; default: break;}```",
+            "Priority": "L2",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 27,
+            "Rule Heading": "Ifs,Loops,and Switch Statements",
+            "Rule Sub-heading": "Subexpressions in if statements",
+            "Rule-Details": "Subexpressions in if statements that use comparison operators must have explicit bracketing.\n```if ((pResource == nullptr) && (flags.abort == true) && (id >= MinIdToCheck)) {...}```",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 28,
+            "Rule Heading": "Ifs,Loops,and Switch Statements",
+            "Rule Sub-heading": "Yoda conditions",
+            "Rule-Details": "Yoda conditions such as if (nullptr != x) should not be used.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 29,
+            "Rule Heading": "Numbers",
+            "Rule Sub-heading": "Mixing Signed and Unsigned Types",
+            "Rule-Details": "Do not mix signed and unsigned integers in arithmetic or comparison expressions.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 30,
+            "Rule Heading": "Numbers",
+            "Rule Sub-heading": "Mixing Integer Sizes",
+            "Rule-Details": "When expecting a result of a wider type, convert the integer type to a larger size.",
+            "Priority": "L2",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 31,
+            "Rule Heading": "Numbers",
+            "Rule Sub-heading": "Magic Numbers",
+            "Rule-Details": "Magic numbers must not be used. Use enumerations or constants to convey the significance of the value.",
+            "Priority": "L2",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 32,
+            "Rule Heading": "Numbers",
+            "Rule Sub-heading": "Binary Literals, Digit Separators",
+            "Rule-Details": "Use binary literals and digit separators wherever it helps readability.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 33,
+            "Rule Heading": "Constants and Enumerations",
+            "Rule Sub-heading": "Const parameters and methods",
+            "Rule-Details": "If you don't need to change a value, make the parameter or method constant.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 34,
+            "Rule Heading": "Loops",
+            "Rule Sub-heading": "Number of loop variables",
+            "Rule-Details": "A loop should not contain more than one loop variable.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 37,
+            "Rule Heading": "Loops",
+            "Rule Sub-heading": "Loop variable modification",
+            "Rule-Details": "The contents of a for loop must not alter the value of the loop variable.",
+            "Priority": "L2",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 38,
+            "Rule Heading": "Loops",
+            "Rule Sub-heading": "Range-based loops",
+            "Rule-Details": "Use range based loops where suitable, such as iterating through arrays.",
+            "Priority": "L1",
+            "Solvable": "N"
+        },
+        {
+            "Rule ID": 40,
+            "Rule Heading": "Functions and Methods",
+            "Rule Sub-heading": "Local variable declarations",
+            "Rule-Details": "A local variable must be declared in the innermost scope possible.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 41,
+            "Rule Heading": "Functions and Methods",
+            "Rule Sub-heading": "Pointer dereferencing",
+            "Rule-Details": "Perform a null check before dereferencing a pointer if there is a possibility for it to be null.",
+            "Priority": "L2",
+            "Solvable": "N"
+        },
+        {
+            "Rule ID": 42,
+            "Rule Heading": "Functions and Methods",
+            "Rule Sub-heading": "Call by reference",
+            "Rule-Details": "Use call by reference in favor of calls using pointer arguments.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 43,
+            "Rule Heading": "Functions and Methods",
+            "Rule Sub-heading": "Local variable pointer return",
+            "Rule-Details": "Do not return a pointer or reference to a local object.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 44,
+            "Rule Heading": "Functions and Methods",
+            "Rule Sub-heading": "Unused parameters",
+            "Rule-Details": "Remove unused parameters from functions and methods.",
+            "Priority": "L2",
+            "Solvable": "N"
+        },
+        {
+            "Rule ID": 45,
+            "Rule Heading": "Classes,Objects and Structures",
+            "Rule Sub-heading": "Object Initialization",
+            "Rule-Details": "Objects should be initialized when created. Check member variable initialization in constructors.",
+            "Priority": "L1",
+            "Solvable": "N"
+        },
+        {
+            "Rule ID": 46,
+            "Rule Heading": "Classes,Objects and Structures",
+            "Rule Sub-heading": "Implementations in header files",
+            "Rule-Details": "Methods must not be implemented in header files, except inline functions and template definitions.",
+            "Priority": "L2",
+            "Solvable": "Y"
+        },
+        {
+            "Rule ID": 47,
+            "Rule Heading": "Classes,Objects and Structures",
+            "Rule Sub-heading": "In-class member initialization",
+            "Rule-Details": "Initialize non-static member variables during construction, preferably in the header file.",
+            "Priority": "L2",
+            "Solvable": "N"
+        },
+        {
+            "Rule ID": 48,
+            "Rule Heading": "Nomenclature",
+            "Rule Sub-heading": "Boolean variables and methods",
+            "Rule-Details": "Use one of the following prefixes for naming Boolean variables or methods: 'is', 'should', 'has', 'can'.",
+            "Priority": "L1",
+            "Solvable": "N"
+        },
+        {
+            "Rule ID": 50,
+            "Rule Heading": "General Language Rules",
+            "Rule Sub-heading": "auto",
+            "Rule-Details": "Do not use auto unless initializing variables with explicitly declared type values.",
+            "Priority": "L2",
+            "Solvable": "Local"
+        },
+        {
+            "Rule ID": 51,
+            "Rule Heading": "Numbers",
+            "Rule Sub-heading": "Unsigned Types",
+            "Rule-Details": "Use unsigned types where numbers cannot be negative.",
+            "Priority": "L1",
+            "Solvable": "Local"
+        },
+        {
+            "Rule ID": 52,
+            "Rule Heading": "Numbers",
+            "Rule Sub-heading": "Integer Primitives and Fixed Width",
+            "Rule-Details": "Use integer primitive types and fixed width integers, such as int32_t, uint32_t, int64_t, and uint64_t.",
+            "Priority": "L1",
+            "Solvable": "Y"
+        }
+    ],
+}
