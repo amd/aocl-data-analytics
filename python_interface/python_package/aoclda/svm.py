@@ -29,6 +29,7 @@
 aoclda.svm module
 """
 import numpy as np
+import pickle
 from ._aoclda.svm import pybind_svc, pybind_svr, pybind_nusvc, pybind_nusvr
 from ._internal_utils import check_convert_data
 
@@ -139,6 +140,53 @@ class BaseSVM:
         y, _, _ = check_convert_data(
             y, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_score(X, y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self._model),
+            'order': self.order,
+            'dtype': self.dtype,
+            'max_iter': self.max_iter,
+            'kernel': self.kernel,
+            'degree': self.degree,
+            'gamma': self.gamma,
+            'coef0': self.coef0,
+            'tol': self.tol,
+            'cache_size': self.cache_size,
+            'tau': self.tau,
+            'max_ws_size': self.max_ws_size,
+            'check_data': self.check_data
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self._model = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.max_iter = state['max_iter']
+        self.kernel = state['kernel']
+        self.degree = state['degree']
+        self.gamma = state['gamma']
+        self.coef0 = state['coef0']
+        self.tol = state['tol']
+        self.cache_size = state['cache_size']
+        self.tau = state['tau']
+        self.max_ws_size = state['max_ws_size']
+        self.check_data = state['check_data']
+
+        if self.dtype == 'float64':
+            self._model_double = self._model
+            self._model_single = None
+        elif self.dtype == 'float32':
+            self._model_double = None
+            self._model_single = self._model
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
 
     @property
     def n_samples(self):
@@ -392,6 +440,21 @@ class SVC(BaseSVM):
             X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_predict_log_proba(X)
 
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['C'] = self.C
+        state['probability'] = self.probability
+        state['random_state'] = self.random_state
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.C = state['C']
+        self.probability = state['probability']
+        self.random_state = state['random_state']
+        super().__setstate__(state)
+
     @property
     def n_classes(self):
         """
@@ -544,6 +607,19 @@ class SVR(BaseSVM):
             float: :math:`R^2` of self.predict(X) wrt. y.
         """
         return super().score(X, y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['C'] = self.C
+        state['epsilon'] = self.epsilon
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.C = state['C']
+        self.epsilon = state['epsilon']
+        super().__setstate__(state)
 
 
 class NuSVC(BaseSVM):
@@ -729,6 +805,21 @@ class NuSVC(BaseSVM):
             X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_predict_log_proba(X)
 
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['nu'] = self.nu
+        state['probability'] = self.probability
+        state['random_state'] = self.random_state
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.nu = state['nu']
+        self.probability = state['probability']
+        self.random_state = state['random_state']
+        super().__setstate__(state)
+
     @property
     def n_classes(self):
         """
@@ -880,3 +971,16 @@ class NuSVR(BaseSVM):
             float: :math:`R^2` of self.predict(X) wrt. y.
         """
         return super().score(X, y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['nu'] = self.nu
+        state['C'] = self.C
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.nu = state['nu']
+        self.C = state['C']
+        super().__setstate__(state)

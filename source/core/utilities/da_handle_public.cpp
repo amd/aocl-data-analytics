@@ -50,7 +50,6 @@ da_status da_handle_init_d(da_handle *handle, da_handle_type handle_type) {
 
     try {
         switch (handle_type) {
-            break;
         case da_handle_linmod:
             DISPATCHER((*handle)->err,
                        (*handle)->alg_handle_d =
@@ -453,4 +452,56 @@ void da_handle_refresh(da_handle handle) {
         if (handle->alg_handle_d != nullptr)
             handle->alg_handle_d->refresh();
     }
+}
+
+/* Save (serialize) model */
+da_status da_handle_save_model(da_handle handle, const char *file_name) {
+    if (handle == nullptr) {
+        return da_status_invalid_pointer;
+    }
+    if (!file_name) {
+        return da_error(handle->err, da_status_invalid_pointer,
+                        "file_name cannot be null.");
+    }
+    handle->clear(); // Clean up handle logs
+
+    return handle->save_handle(std::string(file_name));
+}
+
+da_status da_handle_save_model(da_handle handle, std::vector<char> &buffer) {
+    if (handle == nullptr) {
+        return da_status_invalid_pointer;
+    }
+    handle->clear(); // Clean up handle logs
+
+    return handle->save_handle(buffer);
+}
+
+/* Load (deserialize) model */
+da_status da_handle_load_model(da_handle *handle, const char *buffer_data,
+                               const size_t data_size) {
+    if (handle == nullptr)
+        return da_status_invalid_pointer;
+    if (*handle != nullptr)
+        return da_status_invalid_pointer;
+
+    if (buffer_data == nullptr)
+        return da_status_invalid_pointer;
+
+    if (data_size == 0)
+        return da_status_invalid_input;
+
+    return _da_handle::load_handle(*handle, buffer_data, data_size);
+}
+
+da_status da_handle_load_model(da_handle *handle, const char *file_name) {
+    if (handle == nullptr)
+        return da_status_invalid_pointer;
+    if (*handle != nullptr)
+        return da_status_invalid_pointer;
+    if (!file_name) {
+        return da_status_invalid_pointer;
+    }
+
+    return _da_handle::load_handle(*handle, std::string(file_name));
 }

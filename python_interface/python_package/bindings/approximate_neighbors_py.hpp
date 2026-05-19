@@ -78,6 +78,8 @@ class approximate_neighbors : public pyda_handle {
             exception_check(status);
         }
     }
+
+    approximate_neighbors(da_precision prec) { this->precision = prec; }
     ~approximate_neighbors() { da_handle_destroy(&handle); }
 
     void set_n_probe_opt(da_int n_probe) {
@@ -320,6 +322,14 @@ class approximate_neighbors : public pyda_handle {
         da_int stride_size;
         get_rinfo(&n_list, &n_index, &n_features, &kmeans_iter, &stride_size);
         return kmeans_iter;
+    }
+
+    void save_data(py::dict &state) override {
+        state["internal_neigh"] = int64_t(this->internal_neigh);
+    }
+
+    void load_data(py::dict &state) override {
+        this->internal_neigh = da_int(state["internal_neigh"].cast<int64_t>());
     }
 };
 

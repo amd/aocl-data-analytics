@@ -53,7 +53,7 @@ int main() {
     da_int n_features = 3;
     da_int n_samples = 6;
     da_int n_queries = 3;
-    double radius = 5.0;
+    double radius = 3.5;
 
     std::vector<double> X_train{-1, -2, -3, 1, 2, 3,  -1, -1, -2,
                                 3,  5,  -1, 2, 3, -1, 1,  1,  2};
@@ -66,6 +66,9 @@ int main() {
     pass &= da_options_set_string(rnn_handle, "metric", "euclidean") == da_status_success;
     pass &= da_options_set_string(rnn_handle, "algorithm", "brute") == da_status_success;
     pass &= da_options_set_real_d(rnn_handle, "radius", radius) == da_status_success;
+    pass &= da_options_set_string(rnn_handle, "outlier handling", "manual") ==
+            da_status_success;
+    pass &= da_options_set_int(rnn_handle, "outlier label", -1) == da_status_success;
     if (!pass) {
         std::cout << "Failure while setting up the optional parameters.\n";
         da_handle_print_error_message(rnn_handle);
@@ -211,7 +214,9 @@ int main() {
     status =
         da_nn_classifier_predict_proba_d(rnn_handle, n_queries, n_features, X_test.data(),
                                          n_queries, proba.data(), radius_search_mode);
-    if (status != da_status_success) {
+    if (status == da_status_outlier_warning) {
+        da_handle_print_error_message(rnn_handle);
+    } else if (status != da_status_success) {
         std::cout << "Failure while computing the probabilities.\n";
         da_handle_print_error_message(rnn_handle);
         return 1;
@@ -229,7 +234,9 @@ int main() {
     std::vector<da_int> y_test(n_queries);
     status = da_nn_classifier_predict_d(rnn_handle, n_queries, n_features, X_test.data(),
                                         n_queries, y_test.data(), radius_search_mode);
-    if (status != da_status_success) {
+    if (status == da_status_outlier_warning) {
+        da_handle_print_error_message(rnn_handle);
+    } else if (status != da_status_success) {
         std::cout << "Failure while computing the predicted labels.\n";
         da_handle_print_error_message(rnn_handle);
         return 1;
@@ -244,10 +251,9 @@ int main() {
     std::vector<da_int> neighbors_indices_exp{1, 2, 0}; // expected result for validation
     std::vector<double> neighbors_distances_exp{
         3.00000, 2.00000, 3.16228}; // expected result for validation
-    std::vector<double> proba_exp{
-        0.0, 0.33333333, 0.0,        0.66666667, 0.33333333,
-        1.0, 0.33333333, 0.33333333, 0.0};   // expected result for validation
-    std::vector<double> labels_exp{1, 0, 1}; // expected result for validation
+    std::vector<double> proba_exp{0.0, 0.5, 0.0, 0.5, 0.5,
+                                  0.0, 0.5, 0.0, 0.0}; // expected result for validation
+    std::vector<double> labels_exp{1, 0, -1};          // expected result for validation
 
     bool incorrect_results = false;
     for (da_int i = 0; i < n_count; i++) {

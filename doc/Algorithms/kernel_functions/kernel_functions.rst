@@ -115,7 +115,7 @@ Kernel Functions APIs
       .. doxygenfunction:: da_rbf_kernel_d
          :project: da
 
-      .. da_linear_kernel:
+      .. _da_linear_kernel:
 
       .. doxygenfunction:: da_linear_kernel_s
          :project: da

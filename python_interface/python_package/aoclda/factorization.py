@@ -27,6 +27,7 @@
 aoclda.factorization module
 """
 
+import pickle
 from ._aoclda.factorization import pybind_PCA
 from ._internal_utils import check_convert_data
 
@@ -244,3 +245,30 @@ class PCA():
             Y, order=self.order, dtype=self.dtype, force_dtype=True
         )
         return self.pca.pybind_inverse_transform(Y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.pca),
+            'order': self.order,
+            'dtype': self.dtype,
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.pca = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+
+        if self.dtype == 'float64':
+            self.pca_double = self.pca
+            self.pca_single = None
+        elif self.dtype == 'float32':
+            self.pca_double = None
+            self.pca_single = self.pca
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return

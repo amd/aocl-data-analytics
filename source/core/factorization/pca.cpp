@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,7 @@
 #include "da_syrk.hpp"
 #include "lapack_templates.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "options.hpp"
 #include "pca_options.hpp"
 #include "pca_types.hpp"
@@ -44,6 +45,7 @@ namespace ARCH {
 namespace da_pca {
 
 using namespace da_pca_types;
+using namespace da_model_persistence;
 
 template <typename T> pca<T>::pca(da_errors::da_error_t &err) : basic_handle<T>(err) {
     // Initialize the options registry
@@ -1009,6 +1011,67 @@ da_status pca<T>::inverse_transform(da_int k, da_int r, const T *X, da_int ldx,
     }
 
     return da_status_success;
+}
+
+template <typename T> da_status pca<T>::serialize(serialization_buffer &buffer) {
+
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->iscomputed);
+    io_dispatch(this->order);
+    io_dispatch(this->n);
+    io_dispatch(this->p);
+    io_dispatch(this->method);
+    io_dispatch(this->store_U);
+    io_dispatch(this->whiten);
+    io_dispatch(this->npc);
+    io_dispatch(this->ns);
+    io_dispatch(this->div);
+    io_dispatch(this->sqrt_div);
+    io_dispatch(this->dof);
+    io_dispatch(this->column_means);
+    io_dispatch(this->column_sdevs);
+    io_dispatch(this->column_sdevs_nonzero);
+    io_dispatch(this->n_components);
+    io_dispatch(this->ldvt);
+    io_dispatch(this->u_size);
+    io_dispatch(this->ldu);
+    io_dispatch(this->u);
+    io_dispatch(this->sigma);
+    io_dispatch(this->vt);
+    io_dispatch(this->total_variance);
+
+    return status;
+}
+
+template <typename T> da_status pca<T>::save_model(serialization_buffer &buffer) {
+
+    if (!this->iscomputed) {
+        return da_error(this->err, da_status_no_data,
+                        "The PCA has not been computed. Please call da_pca_compute_s or "
+                        "da_pca_compute_d.");
+    }
+
+    da_status status = basic_handle<T>::save_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T> da_status pca<T>::load_model(serialization_buffer &buffer) {
+    da_status status = basic_handle<T>::load_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    return status;
 }
 
 template class pca<double>;

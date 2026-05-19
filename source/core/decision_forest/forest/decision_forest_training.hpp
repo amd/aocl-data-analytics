@@ -34,6 +34,10 @@ namespace da_decision_forest {
 
 template <typename T> da_status decision_forest<T>::fit() {
 
+    if (!this->init_done)
+        return da_error_bypass(this->err, da_status_no_data,
+                               "No data has been passed to the handle.");
+
     // Read optional parameters
     bool opt_pass = true, bootstrap;
     da_int max_depth, min_node_sample, method, nfeat_split, bootstrap_opt, feat_select,

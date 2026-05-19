@@ -48,10 +48,11 @@ from aoclda.sklearn import skpatch, undo_skpatch
                           'minkowski',
                           'euclidean_gemm',
                           'sqeuclidean_gemm'])
-@pytest.mark.parametrize("radius_constructor", [30.0])
+@pytest.mark.parametrize("radius_constructor", [30.0, 15.0])
 @pytest.mark.parametrize("radius_compute", [6.0, None])
 @pytest.mark.parametrize("algorithm", ['auto', 'kd_tree', 'ball_tree', 'brute'])
 @pytest.mark.parametrize("sort_res", [True, False])
+@pytest.mark.parametrize("outlier_label", [2, 'most_frequent', None])
 def test_radius_neighbors_classifier(
         precision,
         weights,
@@ -59,7 +60,8 @@ def test_radius_neighbors_classifier(
         radius_constructor,
         radius_compute,
         algorithm,
-        sort_res):
+        sort_res,
+        outlier_label):
     """
     Solve a small problem
     """
@@ -76,7 +78,7 @@ def test_radius_neighbors_classifier(
                         [2, 6, -3],
                         [3, -1, 4]], dtype=precision)
 
-    y_train = np.array([1, 2, 0, 1, 2, 2], dtype=precision)
+    y_train = np.array([1, 2, 0, 1, 2, 2])
 
     x_test = np.array([[-2, 5, 3],
                        [-1, -2, 4],
@@ -93,17 +95,30 @@ def test_radius_neighbors_classifier(
                                                      radius=radius_constructor,
                                                      metric=metric,
                                                      p=p,
-                                                     algorithm=algorithm)
+                                                     algorithm=algorithm,
+                                                     outlier_label=outlier_label)
     else:
         rnn_da = neighbors.RadiusNeighborsClassifier(weights=weights,
                                                      radius=radius_constructor,
                                                      metric=metric,
-                                                     algorithm=algorithm)
+                                                     algorithm=algorithm,
+                                                     outlier_label=outlier_label)
     rnn_da.fit(x_train, y_train)
     rn_dist_da, rn_ind_da = rnn_da.radius_neighbors(
         x_test, radius=radius_compute, return_distance=True, sort_results=sort_res)
-    da_predict_proba = rnn_da.predict_proba(x_test)
-    da_y_test = rnn_da.predict(x_test)
+
+    # Try to get predictions from rnn_da - capture any error
+    # Note: When outlier_label=None, an error may or may not occur depending on
+    # whether any test samples have no neighbors within the specified radius
+    da_error = None
+    da_predict_proba = None
+    da_y_test = None
+    try:
+        da_predict_proba = rnn_da.predict_proba(x_test)
+        da_y_test = rnn_da.predict(x_test)
+    except Exception as e:
+        da_error = e
+
     da_params = rnn_da.get_params()
     assert rnn_da.aocl is True
 
@@ -123,21 +138,43 @@ def test_radius_neighbors_classifier(
             radius=radius_constructor,
             p=p,
             metric=sk_metric,
-            algorithm=algorithm)
+            algorithm=algorithm,
+            outlier_label=outlier_label)
     else:
         rnn_sk = neighbors.RadiusNeighborsClassifier(
             weights=weights,
             radius=radius_constructor,
             metric=sk_metric,
-            algorithm=algorithm)
+            algorithm=algorithm,
+            outlier_label=outlier_label)
 
     rnn_sk.fit(x_train, y_train)
     rn_dist_sk, rn_ind_sk = rnn_sk.radius_neighbors(
         x_test, radius=radius_compute, return_distance=True, sort_results=sort_res)
-    sk_predict_proba = rnn_sk.predict_proba(x_test)
-    sk_y_test = rnn_sk.predict(x_test)
+
+    # Try to get predictions from rnn_sk - capture any error
+    sk_error = None
+    sk_predict_proba = None
+    sk_y_test = None
+    try:
+        sk_predict_proba = rnn_sk.predict_proba(x_test)
+        sk_y_test = rnn_sk.predict(x_test)
+    except Exception as e:
+        sk_error = e
+
     sk_params = rnn_sk.get_params()
     assert not hasattr(rnn_sk, 'aocl')
+
+    # Check consistency: both implementations should behave the same way
+    # (both error or both succeed)
+    if da_error is not None:
+        assert sk_error is not None, \
+            f"rnn_da raised {type(da_error).__name__}: {da_error}, but rnn_sk succeeded"
+        # Both errored consistently - skip remaining comparisons
+        return
+    elif sk_error is not None:
+        assert False, \
+            f"rnn_sk raised {type(sk_error).__name__}: {sk_error}, but rnn_da succeeded"
 
     # Check shapes
     assert rn_dist_da.shape == rn_dist_sk.shape
@@ -165,9 +202,8 @@ def test_radius_neighbors_classifier(
         for r_ind_da, sk_ind in zip(rn_ind_da, rn_ind_sk):
             assert r_ind_da.shape == (0,) and sk_ind.shape == (0,)
 
-    # Check if predict_proba results are close
+    # Both implementations succeeded - check if predict_proba results are close
     assert np.allclose(da_predict_proba, sk_predict_proba, atol=tol)
-
     # Check if predicted labels are identical
     assert np.array_equal(da_y_test, sk_y_test)
 
@@ -271,6 +307,20 @@ def test_radius_neighbors_classifier_errors():
         rnn.set_params()
     with pytest.raises(RuntimeError):
         rnn.set_score_request()
+
+    # Check that classification outlier_label errors are raised for invalid values
+    rnn = neighbors.RadiusNeighborsClassifier(radius=1.0, outlier_label='invalid_string')
+    rnn.fit(x_train, y_train)
+    with pytest.raises(ValueError):
+        rnn.predict(X=x_test)
+    with pytest.raises(ValueError):
+        rnn.predict_proba(X=x_test)
+    rnn = neighbors.RadiusNeighborsClassifier(radius=1.0, outlier_label=1.8)
+    rnn.fit(x_train, y_train)
+    with pytest.raises(ValueError):
+        rnn.predict(X=x_test)
+    with pytest.raises(ValueError):
+        rnn.predict_proba(X=x_test)
 
 
 if __name__ == "__main__":

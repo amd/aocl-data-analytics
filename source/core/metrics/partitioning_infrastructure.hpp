@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,8 +27,8 @@
 
 #include "aoclda.h"
 #include "da_cblas.hh"
-#include "kernels.hpp"
 #include "macros.h"
+#include "metrics_kernels.hpp"
 #include <cstring>
 #include <immintrin.h>
 #include <iostream>

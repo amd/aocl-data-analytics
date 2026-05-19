@@ -384,49 +384,6 @@ TEST(linmod, wideMatrixProblems) {
     da_handle_destroy(&handle_d);
 }
 
-TEST(linmod, singularTallMatrix) {
-
-    // LAPACK does not always return an error for singular matrix with cholesky
-    GTEST_SKIP() << "LAPACK does not always return an error for a singular matrix with "
-                    "cholesky; test temporarily disabled.";
-
-    // problem data
-    da_int m = 5, n = 2;
-    double Ad[10] = {1, 1, 1, 4, 5, 1, 1, 1, 4, 5};
-    double bd[5] = {1, 1, 0, 1, 0};
-    da_handle handle_d = nullptr;
-
-    EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, m, bd), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
-              da_status_success);
-    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
-
-    // Cholesky factorization should not be able to compute on singular matrix
-    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_numerical_difficulties);
-
-    da_handle_destroy(&handle_d);
-}
-
-TEST(linmod, singularWideMatrix) {
-    // problem data
-    da_int m = 2, n = 5;
-    double Ad[10] = {1, 2, 2, 4, 3, 6, 4, 8, 5, 10};
-    double bd[2] = {1, 0};
-    da_handle handle_d = nullptr;
-
-    EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, m, bd), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
-              da_status_success);
-    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
-
-    // Cholesky factorization should not be able to compute on singular matrix
-    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_numerical_difficulties);
-
-    da_handle_destroy(&handle_d);
-}
-
 TEST(linmod, GetResultNegative) {
     // Test public interfaces (under linmod context)
     da_handle handle_d = nullptr;
@@ -1084,6 +1041,184 @@ void test_linmod_ldx_RowMajorShortFat(const params pr) {
     delete[] x_row;
 }
 
+typedef struct fallback_params_t {
+    std::string test_name;
+    da_int m; // number of samples
+    da_int n; // number of features
+    std::string scaling;
+    da_int icnt;
+    bool use_override;
+} fallback_params;
+
+// scaling="none" with intercept=0 triggers natural fallback
+// Other combos use override to ensure consistent fallback testing
+const fallback_params fallback_values_d[]{
+    // Tall matrix tests
+    {"tall/a", 6, 2, "auto", 0, false},
+    {"tall/a", 6, 2, "auto", 1, true},
+    {"tall/n", 6, 2, "none", 0, false},
+    {"tall/n", 6, 2, "none", 1, true},
+    {"tall/c", 6, 2, "centering", 0, true},
+    {"tall/c", 6, 2, "centering", 1, true},
+    {"tall/s", 6, 2, "scale only", 0, true},
+    {"tall/s", 6, 2, "scale only", 1, true},
+    {"tall/z", 6, 2, "standardize", 0, true},
+    {"tall/z", 6, 2, "standardize", 1, true},
+    // Wide matrix tests
+    {"wide/a", 2, 5, "auto", 0, false},
+    {"wide/a", 2, 5, "auto", 1, true},
+    {"wide/n", 2, 5, "none", 0, false},
+    {"wide/c", 2, 5, "centering", 0, true},
+    {"wide/c", 2, 5, "centering", 1, true},
+    {"wide/s", 2, 5, "scale only", 0, true},
+    {"wide/s", 2, 5, "scale only", 1, true},
+    {"wide/z", 2, 5, "standardize", 0, true},
+    {"wide/z", 2, 5, "standardize", 1, true},
+};
+
+const fallback_params fallback_values_f[]{
+    // Tall matrix tests
+    {"tall/a", 6, 2, "auto", 0, true},
+    {"tall/a", 6, 2, "auto", 1, true},
+    {"tall/n", 6, 2, "none", 0, true},
+    {"tall/n", 6, 2, "none", 1, true},
+    {"tall/c", 6, 2, "centering", 0, true},
+    {"tall/c", 6, 2, "centering", 1, true},
+    {"tall/s", 6, 2, "scale only", 0, true},
+    {"tall/s", 6, 2, "scale only", 1, true},
+    {"tall/z", 6, 2, "standardize", 0, true},
+    {"tall/z", 6, 2, "standardize", 1, true},
+    // Wide matrix tests
+    {"wide/a", 2, 5, "auto", 0, true},
+    {"wide/a", 2, 5, "auto", 1, true},
+    {"wide/n", 2, 5, "none", 0, true},
+    {"wide/c", 2, 5, "centering", 0, true},
+    {"wide/c", 2, 5, "centering", 1, true},
+    {"wide/s", 2, 5, "scale only", 0, true},
+    {"wide/s", 2, 5, "scale only", 1, true},
+    {"wide/z", 2, 5, "standardize", 0, true},
+    {"wide/z", 2, 5, "standardize", 1, true},
+};
+
+class linmodCholeskyFallbackDouble : public testing::TestWithParam<fallback_params> {};
+class linmodCholeskyFallbackFloat : public testing::TestWithParam<fallback_params> {};
+
+template <typename T> void test_cholesky_fallback(const fallback_params &pr);
+
+TEST_P(linmodCholeskyFallbackDouble, Fallback) {
+    const fallback_params &pr = GetParam();
+    test_cholesky_fallback<double>(pr);
+}
+
+TEST_P(linmodCholeskyFallbackFloat, Fallback) {
+    const fallback_params &pr = GetParam();
+    test_cholesky_fallback<float>(pr);
+}
+
+template <typename T> void test_cholesky_fallback(const fallback_params &pr) {
+    T tol = 10 * std::numeric_limits<T>::epsilon();
+    // Column-major data (rank-deficient)
+    T Ad_tall_cm[12] = {1, 1, 1, 3, 4, 5, 1, 1, 1, 3, 4, 5};
+    T Ad_wide_cm[10] = {1, 2, 2, 4, 3, 6, 4, 8, 5, 10};
+
+    // Row-major data
+    T Ad_tall_rm[12] = {1, 1, 1, 1, 1, 1, 3, 3, 4, 4, 5, 5};
+    T Ad_wide_rm[10] = {1, 2, 3, 4, 5, 2, 4, 6, 8, 10};
+
+    T bd_tall[6] = {1, 1, 0, 1, 0, 1};
+    T bd_wide[2] = {1, 0};
+
+    const char *storage_orders[] = {"column-major", "row-major"};
+
+    for (const char *order : storage_orders) {
+        bool is_row_major = (std::string(order) == "row-major");
+
+        // Select appropriate data based on dimensions and storage order
+        T *Ad = (pr.m == 6) ? (is_row_major ? Ad_tall_rm : Ad_tall_cm)
+                            : (is_row_major ? Ad_wide_rm : Ad_wide_cm);
+        T *bd = (pr.m == 6) ? bd_tall : bd_wide;
+        da_int ldA = is_row_major ? pr.n : pr.m;
+
+        da_handle handle = nullptr;
+
+        // Set override if needed
+        if (pr.use_override) {
+            EXPECT_EQ(da_debug_set("linmod.force_fallback", "true"), da_status_success);
+        }
+
+        da_int ncoef = pr.icnt ? pr.n + 1 : pr.n;
+        std::vector<T> coef_fallback(ncoef);
+        std::vector<T> coef_svd(ncoef);
+
+        EXPECT_EQ(da_handle_init<T>(&handle, da_handle_linmod), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", order),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_define_features(handle, pr.m, pr.n, Ad, ldA, bd),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "optim method", "cholesky"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "scaling", pr.scaling.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(handle, "intercept", pr.icnt), da_status_success);
+        EXPECT_EQ(da_linmod_select_model<T>(handle, linmod_model_mse), da_status_success);
+
+        // Cholesky should fail and fallback to svd
+        EXPECT_EQ(da_linmod_fit<T>(handle), da_status_success);
+
+        // Check that svd was used
+        char solver[100];
+        da_int buff = 100;
+        EXPECT_EQ(da_options_get_string(handle, "optim method", solver, &buff),
+                  da_status_success);
+        EXPECT_STREQ(solver, "svd");
+
+        // Extract fallback coefs
+        EXPECT_EQ(
+            da_handle_get_result(handle, da_linmod_coef, &ncoef, coef_fallback.data()),
+            da_status_success);
+
+        da_handle_destroy(&handle);
+
+        // reset override to be safe
+        if (pr.use_override) {
+            EXPECT_EQ(da_debug_set("linmod.force_fallback", ""), da_status_success);
+        }
+
+        // Create a fresh handle for explicit SVD solve
+        da_handle handle_svd = nullptr;
+        EXPECT_EQ(da_handle_init<T>(&handle_svd, da_handle_linmod), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle_svd, "storage order", order),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_define_features(handle_svd, pr.m, pr.n, Ad, ldA, bd),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle_svd, "optim method", "svd"),
+                  da_status_success);
+
+        // Need SVD to mimick fallback behaviour for this special case
+        const char *scaling = pr.scaling.c_str();
+        if (pr.scaling == "none" && pr.icnt == 1)
+            scaling = "centering";
+
+        EXPECT_EQ(da_options_set_string(handle_svd, "scaling", scaling),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(handle_svd, "intercept", pr.icnt),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_select_model<T>(handle_svd, linmod_model_mse),
+                  da_status_success);
+
+        // Fit with svd
+        EXPECT_EQ(da_linmod_fit<T>(handle_svd), da_status_success);
+        // Extract svd coefs
+        EXPECT_EQ(
+            da_handle_get_result(handle_svd, da_linmod_coef, &ncoef, coef_svd.data()),
+            da_status_success);
+
+        EXPECT_ARR_NEAR(ncoef, coef_svd.data(), coef_fallback.data(), tol);
+
+        da_handle_destroy(&handle_svd);
+    }
+}
+
 // Test info is updated on partial fit
 TEST(linmod, InfoChkAtStop) {
     da_int m = 2, n = 2;
@@ -1137,6 +1272,10 @@ void PrintTo(const params &param, ::std::ostream *os) {
     *os << param.test_name << "/" << param.icnt;
 }
 
+void PrintTo(const fallback_params &param, ::std::ostream *os) {
+    *os << param.test_name << "/" << param.icnt;
+}
+
 INSTANTIATE_TEST_SUITE_P(WarmStartSuite, linmodWarmStart,
                          testing::ValuesIn(warmstart_values));
 
@@ -1144,4 +1283,9 @@ INSTANTIATE_TEST_SUITE_P(LDXSuite, linmodLDX_TallSkinny,
                          testing::ValuesIn(ldx_values_tallskinny));
 INSTANTIATE_TEST_SUITE_P(LDXSuite, linmodLDX_ShortFat,
                          testing::ValuesIn(ldx_values_shortfat));
+
+INSTANTIATE_TEST_SUITE_P(FallbackSuite, linmodCholeskyFallbackDouble,
+                         testing::ValuesIn(fallback_values_d));
+INSTANTIATE_TEST_SUITE_P(FallbackSuite, linmodCholeskyFallbackFloat,
+                         testing::ValuesIn(fallback_values_f));
 } // namespace

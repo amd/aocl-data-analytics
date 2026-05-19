@@ -30,7 +30,7 @@ Basic Statistics
 
 This chapter contains functions to compute basic statistical quantities such as the mean,
 variance or quantiles of a data matrix. Utility routines for standardizing the data are
-also available, and correlation and covariance matrices can also be computed. For more information on basic statistical quantities, see cite:t:`da_rice`, cite:t:`da_kozw2000`.
+also available, and correlation and covariance matrices can also be computed. For more information on basic statistical quantities, see :cite:t:`da_rice`, :cite:t:`da_kozw2000`.
 These functions operate on a ``n_rows`` :math:`\times`  ``n_cols`` matrix stored in either column- or row-major order.
 
 Choosing an axis

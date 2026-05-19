@@ -101,7 +101,7 @@ classes. The final label is determined by aggregating the results of these binar
    In the one-vs-rest (OvR) approach, :math:`(n_{\mathrm{class}} - 1)` subproblems are defined, each separating a single class from all remaining classes.
    Note that in our case, OvR decision values are derived from OvO, so this setting does not affect the underlying training process.
 
-For regression, a similar formulation is used, minimizing errors within an margin of tolerance :math:`\epsilon` around the regression function.
+For regression, a similar formulation is used, minimizing errors within a margin of tolerance :math:`\epsilon` around the regression function.
 
 Implementation details
 ----------------------

@@ -52,7 +52,7 @@ def radius_neighbors_classifier_example():
                        [2, 1, -3]], dtype=np.float64)
 
     print("\nradius neighbors for a small data matrix\n")
-    rnn = nearest_neighbors(radius=5.0)
+    rnn = nearest_neighbors(radius=4.0, outlier_handling='most_frequent')
     rnn.fit(x_train, y_train)
     print(x_train)
     r_dist, r_ind = rnn.radius_neighbors(
@@ -74,10 +74,10 @@ def radius_neighbors_classifier_example():
     expected_r_dist = [np.array([3.]), np.array([2.]), np.array([])]
     expected_r_ind = [np.array([1]), np.array([2]), np.array([])]
     expected_proba = np.array([[0., 0.66666667, 0.33333333],
-                               [0.33333333, 0.33333333, 0.33333333],
-                               [0., 1., 0.]]
+                               [0.5, 0.5, 0.0],
+                               [0., 0., 1.]]
                               )
-    expected_labels = np.array([1, 0, 1])
+    expected_labels = np.array([1, 0, 2])
 
     norm_proba = np.linalg.norm(proba - expected_proba)
     incorrect_labels = not np.array_equal(y_test, expected_labels)
@@ -112,8 +112,10 @@ def radius_neighbors_classifier_example():
         print("Error: ", e)
         radius_errors = True
 
-    if radius_errors:
+    if radius_errors or norm_proba > tol or incorrect_labels:
         print("\nRadius neighbors solution is not within expected tolerance\n")
+        print("norm_proba = ", norm_proba)
+        print("incorrect_labels = ", incorrect_labels)
         sys.exit(1)
 
     print("\nradius neighbors classification successfully computed\n")
@@ -122,5 +124,6 @@ def radius_neighbors_classifier_example():
 if __name__ == "__main__":
     try:
         radius_neighbors_classifier_example()
-    except RuntimeError:
+    except RuntimeError as e:
+        print(f"\nRuntimeError caught: {e}\n")
         sys.exit(1)

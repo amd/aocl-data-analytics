@@ -44,7 +44,6 @@ class nearest_neighbors : public pyda_handle {
     da_int internal_neigh;
     double internal_radius_d;
     float internal_radius_s;
-    std::string precision_str;
 
   public:
     nearest_neighbors(da_int n_neighbors = 5, std::string algorithm = "auto",
@@ -52,9 +51,9 @@ class nearest_neighbors : public pyda_handle {
                       std::string weights = "uniform", std::string prec = "double",
                       bool check_data = false) {
         da_status status;
-        precision_str = prec;
         if (prec == "double") {
             status = da_handle_init<double>(&handle, da_handle_nn);
+            precision = da_double;
         } else {
             status = da_handle_init<float>(&handle, da_handle_nn);
             precision = da_single;
@@ -83,6 +82,8 @@ class nearest_neighbors : public pyda_handle {
             exception_check(status);
         }
     }
+
+    nearest_neighbors(da_precision prec) { this->precision = prec; }
     ~nearest_neighbors() { da_handle_destroy(&handle); }
 
     template <typename T> void fit(py::array_t<T> X, T p, T radius) {
@@ -119,11 +120,33 @@ class nearest_neighbors : public pyda_handle {
         da_int n_samples, n_features, ldx;
 
         get_numpy_array_properties(y, n_samples, n_features, ldx);
-        if (precision_str == "double")
+        if (precision == da_double)
             status = da_nn_set_labels<double>(handle, n_samples, y.data());
         else
             status = da_nn_set_labels<float>(handle, n_samples, y.data());
         exception_check(status); // throw an exception if status is not success
+    }
+
+    template <typename T>
+    void set_outlier_info(const std::string &outlier_handling = "none",
+                          da_int outlier_label = 0, T outlier_target = T(0.0)) {
+        da_status status;
+        std::string outlier_handling_str = outlier_handling;
+        if (outlier_handling == "most_frequent")
+            outlier_handling_str = "most frequent";
+        status = da_options_set(handle, "outlier handling", outlier_handling_str.c_str());
+        exception_check(status);
+        if (precision == da_double) {
+            status = da_options_set(handle, "outlier label", outlier_label);
+            exception_check(status);
+            status = da_options_set(handle, "outlier target", (double)outlier_target);
+            exception_check(status);
+        } else {
+            status = da_options_set(handle, "outlier label", outlier_label);
+            exception_check(status);
+            status = da_options_set(handle, "outlier target", (float)outlier_target);
+            exception_check(status);
+        }
     }
 
     template <typename T> void set_targets(py::array_t<T> y) {
@@ -411,6 +434,18 @@ class nearest_neighbors : public pyda_handle {
 
         py::tuple k_info = py::make_tuple(my_temp_dist, my_temp_ind);
         return k_info;
+    }
+
+    void save_data(py::dict &state) override {
+        state["internal_neigh"] = int64_t(this->internal_neigh);
+        state["internal_radius_d"] = this->internal_radius_d;
+        state["internal_radius_s"] = this->internal_radius_s;
+    }
+
+    void load_data(py::dict &state) override {
+        this->internal_neigh = da_int(state["internal_neigh"].cast<int64_t>());
+        this->internal_radius_d = state["internal_radius_d"].cast<double>();
+        this->internal_radius_s = state["internal_radius_s"].cast<float>();
     }
 };
 

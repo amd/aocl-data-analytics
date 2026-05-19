@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,6 +32,7 @@
 #include "aoclda_types.h"
 #include "da_error.hpp"
 #include "da_utils.hpp"
+#include "model_persistence.hpp"
 #include "options.hpp"
 
 /*
@@ -42,6 +43,12 @@
  * This handle is inherited by all specialized (internal) handles.
  */
 template <typename T> class basic_handle {
+  protected:
+    // Earliest library version compatible with the current model serialization format.
+    // Library version used to store the model must be equal or greater to this.
+    // Format: Main version * 10'000 + minor version * 100 + patch version
+    da_int min_library_version = 0;
+
   public:
     basic_handle(da_errors::da_error_t *err = nullptr);
     basic_handle(da_errors::da_error_t &err);
@@ -62,6 +69,31 @@ template <typename T> class basic_handle {
      */
     virtual void refresh();
 
+    /*
+     * Model serialization function used to specify all handle-specific members
+     * which will be saved/loaded. This function is called during save_model()/
+     * load_model() and should be overridden by derived classes 
+     * to correctly serialize their internal state.
+     */
+    virtual da_status
+    serialize([[maybe_unused]] da_model_persistence::serialization_buffer &buffer) {
+        return da_status_not_implemented;
+    };
+
+    /*
+     * Functions to facilitate serialization (saving/loading) of the handle state.
+     * Derived classes should override these to verify the model is in the required
+     * state, and perform any additional functionalities to get the model to the 
+     * initial state while also calling the parent function.
+     */
+    virtual da_status save_model(da_model_persistence::serialization_buffer &buffer);
+    virtual da_status load_model(da_model_persistence::serialization_buffer &buffer);
+
+    /*
+     * Calculates the total buffer size required for serialization and preallocates the memory.
+     */
+    da_status preallocate_buffer(da_model_persistence::serialization_buffer &buffer);
+
     // user's data storage: row or column major order
     // all 2d arrays passed from/to user are in this order, internally
     // these arrays can and are converted. But when passing data back to user
@@ -75,6 +107,9 @@ template <typename T> class basic_handle {
     da_options::OptionRegistry opts;
 
     da_options::OptionRegistry &get_opts();
+
+    // Whether model was loaded from memory
+    bool model_loaded = false;
 
     // Argument checking for a 1D input array, including NaN check if option is set
     // @tparam T Type of the data array: float, double, da_int

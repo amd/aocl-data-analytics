@@ -77,6 +77,7 @@ class py_svm : public pyda_handle {
             exception_check(status);
         }
     }
+    py_svm(da_precision prec) { this->precision = prec; }
     ~py_svm() { da_handle_destroy(&handle); }
 
     template <typename T>
@@ -492,6 +493,16 @@ class py_svm : public pyda_handle {
         py::array ret = py::reinterpret_borrow<py::array>(support_vectors_idx);
         return ret;
     }
+
+    void save_data(py::dict &state) override {
+        state["n_samples"] = int64_t(this->n_samples);
+        state["n_feat"] = int64_t(this->n_feat);
+    }
+
+    void load_data(py::dict &state) override {
+        this->n_samples = da_int(state["n_samples"].cast<int64_t>());
+        this->n_feat = da_int(state["n_feat"].cast<int64_t>());
+    }
 };
 
 /*******************/
@@ -505,6 +516,7 @@ class py_svc : public py_svm {
            std::string prec = "double", bool check_data = false)
         : py_svm(svc, kernel, degree, max_iter, probability, seed, max_ws_size, prec,
                  check_data) {}
+    py_svc(da_precision prec) : py_svm(prec) {}
     ~py_svc() {}
 
     template <typename T>
@@ -528,6 +540,7 @@ class py_svr : public py_svm {
     py_svr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
            da_int max_ws_size = -1, std::string prec = "double", bool check_data = false)
         : py_svm(svr, kernel, degree, max_iter, 0, 0, max_ws_size, prec, check_data) {}
+    py_svr(da_precision prec) : py_svm(prec) {}
     ~py_svr() {}
 
     template <typename T>
@@ -558,6 +571,7 @@ class py_nusvc : public py_svm {
              bool check_data = false)
         : py_svm(nusvc, kernel, degree, max_iter, probability, seed, max_ws_size, prec,
                  check_data) {}
+    py_nusvc(da_precision prec) : py_svm(prec) {}
     ~py_nusvc() {}
 
     template <typename T>
@@ -582,6 +596,7 @@ class py_nusvr : public py_svm {
              da_int max_ws_size = -1, std::string prec = "double",
              bool check_data = false)
         : py_svm(nusvr, kernel, degree, max_iter, 0, 0, max_ws_size, prec, check_data) {}
+    py_nusvr(da_precision prec) : py_svm(prec) {}
     ~py_nusvr() {}
 
     template <typename T>

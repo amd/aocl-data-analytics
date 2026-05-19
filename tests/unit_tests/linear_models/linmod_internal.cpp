@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -26,13 +26,111 @@
  */
 
 #include "../utest_utils.hpp"
+#include "context.hpp"
+#include "da_handle.hpp"
 #include "linear_model.hpp"
+#include "macros.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <type_traits>
 
-using namespace TEST_ARCH;
+// Test for solver-changeable settings
+// Uses internal APIs directly to avoid dynamic_cast namespace mismatch
+// that occurs in dynamic dispatch builds (TEST_ARCH != runtime arch).
+TEST(linmod, saveOptions) {
+    using namespace da_linmod_types;
+    using T = double;
+    // problem data
+    da_int m = 5, n = 2;
+    double Ad[10] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1};
+    double bd[5] = {1, 1, 1, 1, 1};
+    da_handle h = nullptr, h2 = nullptr;
+    [[maybe_unused]] auto const expect_scaling{scaling_t::automatic};
+    [[maybe_unused]] scaling_t user_scaling{scaling_t::standardize};
+    da_int len{100};
+    char arch[100], ns[100];
+
+    EXPECT_EQ(da_get_arch_info(&len, arch, ns), da_status_success);
+    std::cout << "Version: " << da_get_version() << '\n';
+    std::cout << "ARCH: " << arch << "   NS: " << ns << '\n';
+
+    // clang-format off
+    auto check_user_option = [&]([[maybe_unused]] da_handle &handle,[[maybe_unused]] bool eq = true) -> da_status {
+        DISPATCHER(handle->err,
+            da_linmod::linear_model<T> * h_lm{nullptr};
+            h_lm = dynamic_cast<da_linmod::linear_model<T> *>(handle->get_alg_handle<T>());
+            if (!h_lm)
+                return da_error_bypass(handle->err, da_status_internal_error, "dynamic_cast<handle> failed?");
+            h_lm->get_user_options(user_scaling);
+            std::cout << "SCALINGINT expect: " << expect_scaling << "    user: " << user_scaling<< '\n';
+            if (eq) {
+                EXPECT_EQ(expect_scaling, user_scaling);
+            } else {
+                EXPECT_NE(expect_scaling, user_scaling);
+            }
+            return da_status_success;
+        )
+        // clang-format on
+    };
+
+    ASSERT_EQ(da_handle_init<T>(&h, da_handle_linmod), da_status_success);
+    ASSERT_EQ(da_handle_init<T>(&h2, da_handle_linmod), da_status_success);
+
+    EXPECT_EQ(da_linmod_define_features_d(h, m, n, Ad, m, bd), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(h, linmod_model_mse), da_status_success);
+
+    EXPECT_EQ(check_user_option(h), da_status_success); // [user] Options same as expected
+
+    EXPECT_EQ(da_options_set_string(h, "scaling", "auto"), da_status_success);
+    EXPECT_EQ(da_options_set_string(h, "print options", "no"), da_status_success);
+
+    da_int expect_key_scaling, key;
+    char value[100];
+    len = 100;
+    EXPECT_EQ(da_options_get_string_key(h, "scaling", value, &len, &expect_key_scaling),
+              da_status_success);
+
+    EXPECT_EQ(check_user_option(h), da_status_success); // [user] Options same as expected
+
+    // stores the actual user settings
+    EXPECT_EQ(da_linmod_fit_d(h), da_status_success);
+    EXPECT_EQ(check_user_option(h), da_status_success); // [user] Options same as expected
+
+    // Check that solver did change the "auto" settings
+    len = 100;
+    EXPECT_EQ(da_options_get_string_key(h, "scaling", value, &len, &key),
+              da_status_success);
+    // [solver] changed the options
+    EXPECT_NE(expect_key_scaling, key);
+    // check that the [user] options didn't change
+    EXPECT_EQ(check_user_option(h), da_status_success);
+
+    // Overwrites new user settings that were set by the solver (and user didn't set again)
+    // Force to refit (set any option)
+    EXPECT_EQ(da_options_set_string(h, "print options", "no"), da_status_success);
+    // set [user] options to the user-passed option values
+    EXPECT_EQ(da_linmod_fit_d(h), da_status_success);
+    EXPECT_EQ(check_user_option(h, false),
+              da_status_success); // [user] options not the same as the defaults
+
+    // Check that new handle in same thread does not change the settings
+    EXPECT_EQ(da_linmod_define_features_d(h2, m, n, Ad, m, bd), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(h2, linmod_model_mse), da_status_success);
+    EXPECT_EQ(check_user_option(h, false),
+              da_status_success); // h2 should not interfere with the values in h
+
+    EXPECT_EQ(da_linmod_fit_d(h2), da_status_success);
+    // [user] options for h2 are the defaults so matches with expected*
+    EXPECT_EQ(check_user_option(h2), da_status_success);
+    // h2 should not interfere with h1 [user] values, they remain different from defaults
+    EXPECT_EQ(check_user_option(h, false), da_status_success);
+
+    da_handle_destroy(&h);
+    da_handle_destroy(&h2);
+}
 
 TEST(linmod_internal, methodType) {
+    using namespace TEST_ARCH;
     using namespace da_linmod;
 
     EXPECT_FALSE(linmod_method_type::is_iterative((linmod_method)0));
@@ -51,6 +149,7 @@ TEST(linmod_internal, methodType) {
 }
 
 TEST(linmod_internal, eval_feature_matrix) {
+    using namespace TEST_ARCH;
     using namespace da_linmod;
 
     const double NA = std::numeric_limits<double>::quiet_NaN();

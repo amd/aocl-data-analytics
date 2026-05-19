@@ -42,6 +42,7 @@
 #undef INTERPOLATION_HPP
 #undef CUBIC_SPLINE_HPP
 #undef INTERPOLATION_GENERIC_HPP
+#undef METRICS_KERNELS_HPP
 
 // Decision forest headers
 #undef DECISION_TREE_HPP

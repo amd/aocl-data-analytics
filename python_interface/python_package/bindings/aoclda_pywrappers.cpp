@@ -204,7 +204,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_loss", &linmod::get_loss)
         .def("get_norm_gradient_loss", &linmod::get_norm_gradient_loss)
         .def("get_n_iter", &linmod::get_n_iter)
-        .def("get_time", &linmod::get_time);
+        .def("get_time", &linmod::get_time)
+        .def(py::pickle([](linmod &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<linmod>(t); }));
 
     /**********************************/
     /*  Principal Component Analysis  */
@@ -240,7 +242,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_column_sdevs", &pca::get_column_sdevs)
         .def("get_n_samples", &pca::get_n_samples)
         .def("get_n_features", &pca::get_n_features)
-        .def("get_n_components", &pca::get_n_components);
+        .def("get_n_components", &pca::get_n_components)
+        .def(py::pickle([](pca &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<pca>(t); }));
 
     /**********************************/
     /*       k-means clustering       */
@@ -271,7 +275,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_samples", &kmeans::get_n_samples)
         .def("get_n_features", &kmeans::get_n_features)
         .def("get_n_clusters", &kmeans::get_n_clusters)
-        .def("get_n_iter", &kmeans::get_n_iter);
+        .def("get_n_iter", &kmeans::get_n_iter)
+        .def(py::pickle([](kmeans &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<kmeans>(t); }));
 
     /**********************************/
     /*       DBSCAN clustering        */
@@ -338,7 +344,10 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("set_max_features_opt", &decision_tree::set_max_features_opt,
              "Set option for feature selection", py::arg("max_features") = 0)
         .def("get_max_features_opt", &decision_tree::get_max_features_opt,
-             "Get option for feature selection");
+             "Get option for feature selection")
+        .def(py::pickle(
+            [](decision_tree &p) { return p.save_model(); },
+            [](py::dict t) { return pyda_handle::load_model<decision_tree>(t); }));
 
     /**********************************/
     /*       Decision Forests         */
@@ -392,7 +401,10 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_max_features_opt", &decision_forest::get_max_features_opt,
              "Get option for feature selection")
         .def("get_features_selection_opt", &decision_forest::get_features_selection_opt,
-             "Get option for feature selection");
+             "Get option for feature selection")
+        .def(py::pickle(
+            [](decision_forest &p) { return p.save_model(); },
+            [](py::dict t) { return pyda_handle::load_model<decision_forest>(t); }));
 
     /**********************************/
     /*     Nonlinear Data Fitting     */
@@ -462,6 +474,13 @@ PYBIND11_MODULE(_aoclda, m) {
              "Set the targets for the fitted data", "y"_a)
         .def("pybind_set_targets", &nearest_neighbors::set_targets<double>,
              "Set the targets for the fitted data", "y"_a)
+        .def("pybind_set_outlier_info", &nearest_neighbors::set_outlier_info<float>,
+             "Set the outlier information", py::arg("outlier_handling") = "none",
+             py::arg("outlier_label") = (da_int)0, py::arg("outlier_target") = (float)0.0)
+        .def("pybind_set_outlier_info", &nearest_neighbors::set_outlier_info<double>,
+             "Set the outlier information", py::arg("outlier_handling") = "none",
+             py::arg("outlier_label") = (da_int)0,
+             py::arg("outlier_target") = (double)0.0)
         .def("pybind_kneighbors_indices", &nearest_neighbors::kneighbors_indices<float>,
              "Compute the indices of the k-nearest neighbors", "X"_a,
              py::arg("n_neighbors") = (da_int)0)
@@ -514,7 +533,10 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("pybind_radius_neighbors", &nearest_neighbors::radius_neighbors<double>,
              "Compute the indices of the radius neighbors and the corresponding "
              "distances",
-             "X"_a, py::arg("radius") = (double)1.0, py::arg("sort_results") = false);
+             "X"_a, py::arg("radius") = (double)1.0, py::arg("sort_results") = false)
+        .def(py::pickle(
+            [](nearest_neighbors &p) { return p.save_model(); },
+            [](py::dict t) { return pyda_handle::load_model<nearest_neighbors>(t); }));
 
     /***************************************/
     /*     Approximate Nearest Neighbors   */
@@ -568,7 +590,11 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_list", &approximate_neighbors::get_n_list)
         .def("get_n_index", &approximate_neighbors::get_n_index)
         .def("get_n_features", &approximate_neighbors::get_n_features)
-        .def("get_kmeans_iter", &approximate_neighbors::get_kmeans_iter);
+        .def("get_kmeans_iter", &approximate_neighbors::get_kmeans_iter)
+        .def(py::pickle([](approximate_neighbors &p) { return p.save_model(); },
+                        [](py::dict t) {
+                            return pyda_handle::load_model<approximate_neighbors>(t);
+                        }));
 
     /**********************************/
     /*         Pairwise Distances     */
@@ -657,7 +683,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_probA", &py_svm::get_probA)
         .def("get_probB", &py_svm::get_probB)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_svc &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_svc>(t); }));
     // SVR
     py::class_<py_svr, pyda_handle>(m_svm, "pybind_svr")
         .def(py::init<std::string, da_int, da_int, da_int, std::string, bool &>(),
@@ -688,7 +716,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_svr &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_svr>(t); }));
     // nuSVC
     py::class_<py_nusvc, pyda_handle>(m_svm, "pybind_nusvc")
         .def(py::init<std::string, da_int, da_int, da_int, da_int, da_int, std::string,
@@ -737,7 +767,9 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_probA", &py_svm::get_probA)
         .def("get_probB", &py_svm::get_probB)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_nusvc &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_nusvc>(t); }));
     // nuSVR
     py::class_<py_nusvr, pyda_handle>(m_svm, "pybind_nusvr")
         .def(py::init<std::string, da_int, da_int, da_int, std::string, bool &>(),
@@ -768,5 +800,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_nusvr &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_nusvr>(t); }));
 }

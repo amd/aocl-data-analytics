@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -205,8 +205,7 @@ template <typename T> void GetOnesData(std::vector<MomentsParamType<T>> &params)
 }
 
 template <typename T>
-void GetCustomDataMean(std::vector<MomentsParamType<T>> &params, da_order order,
-                       int64_t m, int64_t n, int64_t ldx) {
+MomentsParamType<T> GetCustomDataMean(da_order order, int64_t m, int64_t n, int64_t ldx) {
     MomentsParamType<T> param;
 
     std::vector<int64_t> x;
@@ -257,7 +256,7 @@ void GetCustomDataMean(std::vector<MomentsParamType<T>> &params, da_order order,
 
     param.expected_status = da_status_success;
     param.epsilon = 100 * sqrt(std::numeric_limits<T>::epsilon());
-    params.push_back(param);
+    return param;
 }
 
 template <typename T> void GetTallThinData(std::vector<MomentsParamType<T>> &params) {
@@ -797,49 +796,56 @@ template <typename T> void GetMomentsData(std::vector<MomentsParamType<T>> &para
     GetRowMajorData(params);
 }
 
-template <typename T> void GetRecursionData(std::vector<MomentsParamType<T>> &params) {
-
-    std::vector<int64_t> ldxs{0, 1, 2000, 7000};
-    for (da_int i = 0; i < (da_int)ldxs.size(); ++i) {
-        GetCustomDataMean(params, column_major, 7000, 10, ldxs[i] + 7000);
-        GetCustomDataMean(params, column_major, 10, 7000, ldxs[i] + 10);
-        GetCustomDataMean(params, column_major, 7000, 3000, ldxs[i] + 7000);
-        GetCustomDataMean(params, column_major, 3000, 7000, ldxs[i] + 3000);
-        GetCustomDataMean(params, column_major, 7000, 7000, ldxs[i] + 7000);
-        GetCustomDataMean(params, row_major, 7000, 10, ldxs[i] + 10);
-        GetCustomDataMean(params, row_major, 10, 7000, ldxs[i] + 7000);
-        GetCustomDataMean(params, row_major, 7000, 3000, ldxs[i] + 3000);
-        GetCustomDataMean(params, row_major, 3000, 7000, ldxs[i] + 7000);
-        GetCustomDataMean(params, row_major, 7000, 7000, ldxs[i] + 7000);
-    }
-}
-
 using FloatTypes = ::testing::Types<float, double>;
 TYPED_TEST_SUITE(MomentStatisticsTest, FloatTypes);
 TYPED_TEST(MomentStatisticsTest, RecursionFunctionality) {
 
-    std::vector<MomentsParamType<TypeParam>> params;
-    GetRecursionData(params);
+    // Test each configuration one at a time to limit peak memory.
+    // The largest single case (7000x7000, ldx=14000) needs ~1.6 GB for double
+    // during construction (int64_t temp + converted T vector). Holding all 40 cases
+    // simultaneously would need ~9.3 GB and cause OOM kills on CI nodes.
+    struct RecursionConfig {
+        da_order order;
+        int64_t m, n, ldx;
+    };
 
-    for (auto &param : params) {
-        std::vector<TypeParam> column_stat(param.p);
-        std::vector<TypeParam> row_stat(param.n);
-        TypeParam overall_stat[1];
+    std::vector<int64_t> ldxs{0, 1, 2000, 7000};
+    for (da_int i = 0; i < (da_int)ldxs.size(); ++i) {
+        RecursionConfig configs[] = {
+            {column_major, 7000, 10, ldxs[i] + 7000},
+            {column_major, 10, 7000, ldxs[i] + 10},
+            {column_major, 7000, 3000, ldxs[i] + 7000},
+            {column_major, 3000, 7000, ldxs[i] + 3000},
+            {column_major, 7000, 7000, ldxs[i] + 7000},
+            {row_major, 7000, 10, ldxs[i] + 10},
+            {row_major, 10, 7000, ldxs[i] + 7000},
+            {row_major, 7000, 3000, ldxs[i] + 3000},
+            {row_major, 3000, 7000, ldxs[i] + 7000},
+            {row_major, 7000, 7000, ldxs[i] + 7000},
+        };
 
-        EXPECT_EQ(da_mean(param.order, da_axis_col, param.n, param.p, param.x.data(),
-                          param.ldx, column_stat.data()),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(), column_stat.data(),
-                        param.epsilon);
-        EXPECT_EQ(da_mean(param.order, da_axis_row, param.n, param.p, param.x.data(),
-                          param.ldx, row_stat.data()),
-                  param.expected_status);
-        EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
-                        param.epsilon);
-        EXPECT_EQ(da_mean(param.order, da_axis_all, param.n, param.p, param.x.data(),
-                          param.ldx, overall_stat),
-                  param.expected_status);
-        EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
+        for (auto &cfg : configs) {
+            auto param = GetCustomDataMean<TypeParam>(cfg.order, cfg.m, cfg.n, cfg.ldx);
+
+            std::vector<TypeParam> column_stat(param.p);
+            std::vector<TypeParam> row_stat(param.n);
+            TypeParam overall_stat[1];
+
+            EXPECT_EQ(da_mean(param.order, da_axis_col, param.n, param.p, param.x.data(),
+                              param.ldx, column_stat.data()),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.p, param.expected_column_means.data(),
+                            column_stat.data(), param.epsilon);
+            EXPECT_EQ(da_mean(param.order, da_axis_row, param.n, param.p, param.x.data(),
+                              param.ldx, row_stat.data()),
+                      param.expected_status);
+            EXPECT_ARR_NEAR(param.n, param.expected_row_means.data(), row_stat.data(),
+                            param.epsilon);
+            EXPECT_EQ(da_mean(param.order, da_axis_all, param.n, param.p, param.x.data(),
+                              param.ldx, overall_stat),
+                      param.expected_status);
+            EXPECT_NEAR(param.expected_overall_mean, overall_stat[0], param.epsilon);
+        } // param freed here before next config is created
     }
 }
 

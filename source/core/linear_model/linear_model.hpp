@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -33,6 +33,7 @@
 #include "lapack_templates.hpp"
 #include "linmod_types.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "nln_optim_callbacks.hpp"
 #include "options.hpp"
 #include "sparse_overloads.hpp"
@@ -129,11 +130,12 @@ template <typename T> class linear_model : public basic_handle<T> {
   private:
     // Type of the model, has to be set at initialization phase
     linmod_model mod = linmod_model_undefined;
-    da_int method_id = linmod_method::undefined;
+    linmod_method method_id = linmod_method::undefined;
     logistic_constraint logistic_constraint_model = logistic_constraint::no;
 
     // True if the model has been successfully trained
     bool model_trained = false;
+    bool init_done = false;
     bool is_well_determined;
     bool copycoefs = false;
     bool use_dual_coefs = false;
@@ -169,11 +171,14 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_order Xorder;   // storage order of X
     T time = 0;        // Computation time
 
+    /* save state of options that the API can change */
+    da_linmod_types::scaling_t user_scaling = da_linmod_types::scaling_t::automatic;
+
     /* Parameters used during the standardization of the problem
      * these are only defined if "scaling" is not "none" and populated
      * on the call to ::preprocess_data(...)
      */
-    scaling_t scaling = scaling_t::none;
+    scaling_t scaling = scaling_t::automatic; // What scaling was applied
     std::vector<T> std_shifts; // column-wise means [ X | y ], size nfeat + 1
     std::vector<T> std_scales; // column-wise scales stored as [ X | y ] size nfeat + 1
     // column-wise X (variance) "proportions" of size nfeat (or norm squared of X)
@@ -210,7 +215,13 @@ template <typename T> class linear_model : public basic_handle<T> {
      * validate_options: check that the options chosen by the user are compatible
      */
     da_status choose_method();
-    da_status validate_options(da_int method);
+    da_status validate_options(linmod_method method);
+
+    // Preprocessing helpers - single source of truth for method requirements
+    scaling_t get_required_scaling(linmod_method method, bool in_fallback);
+    bool requires_column_major(linmod_method method) const;
+    bool requires_transpose(linmod_method method) const;
+    bool do_preprocessing(linmod_method next_method, linmod_method previous_method);
 
   public:
     linear_model(da_errors::da_error_t &err);
@@ -220,17 +231,25 @@ template <typename T> class linear_model : public basic_handle<T> {
      * changed. We mark the model untrained and prepare the handle in a way that
      * it is suitable to solve again.
      */
-    void refresh();
+
+    // Reset data/solvers state without touching user option tracking
+    // Used in refresh and internally during fallback
+    void reset_data();
+    void reset_solvers();
+
+    void refresh() override;
 
     da_status define_features(da_int nfeat, da_int nsamples, const T *X, da_int ldX,
                               const T *y);
     da_status select_model(linmod_model mod);
     da_status prep_matrix_x(da_int &nrow, da_int &ncol, da_axis &axis, bool &transpose);
-    da_status preprocess_data(da_int method_id);
+    da_status preprocess_data(linmod_method method);
     void revert_scaling();
     void setup_xtx_xty(std::vector<T> &A, std::vector<T> &b);
     void scale_warmstart();
+    linmod_method fallback_oracle(da_status status, bool &force_fallback);
     da_status fit(da_int usr_ncoefs, const T *coefs);
+    da_status fit_impl(da_int usr_ncoefs, const T *coefs, bool do_prep);
     da_status fit_linreg_lbfgs();
     da_status fit_linreg_coord();
     da_status fit_linreg_svd();
@@ -239,15 +258,20 @@ template <typename T> class linear_model : public basic_handle<T> {
     da_status fit_linreg_qr();
     da_status fit_logreg_lbfgs();
     da_status get_coef(da_int &nx, T *coef, da_coef_type ctype);
-    da_status evaluate_model(da_int nfeat, da_int nsamples, const T *X, da_int ldX,
-                             T *predictions, T *observations, T *loss);
+    da_status evaluate_model(da_int nfeat, da_int nsamples, const T *Xeval,
+                             da_int ldXeval, T *predictions, T *observations, T *loss);
 
-    da_status get_result(da_result query, da_int *dim, T *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result);
+                         [[maybe_unused]] da_int *result) override;
 
     // Testing getters
     bool get_model_trained();
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
+    void get_user_options(scaling_t &scaling);
 };
 
 } // namespace da_linmod

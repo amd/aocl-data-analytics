@@ -1,6 +1,7 @@
 # Vscode temporary files
 .vscode
 .vs
+.cline*
 # build artifacts
 build*
 tags

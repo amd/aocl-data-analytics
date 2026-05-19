@@ -143,7 +143,7 @@ The following options are supported.
    
    "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
    "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
-   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
+   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
    "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
@@ -185,7 +185,7 @@ The following options are supported.
    "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
    "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
-   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
+   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i`"
    "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split. 'custom' reads the 'maximum features' option, proportion reads the 'proportion features' option. 'all', 'sqrt' and 'log2' select respectively all, the square root or the base-2 logarithm of the total number of features.", ":math:`s=` `all`, `custom`, `log2`, `proportion`, or `sqrt`."
    "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
    "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
@@ -239,14 +239,14 @@ The following options are supported.
    "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
 
 
-.. _opts_k-nearestneighbors:
+.. _opts_nearestneighbors:
 
-k-Nearest Neighbors
+Nearest Neighbors
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of Options for k-Nearest Neighbors.`
+.. csv-table:: :strong:`Table of Options for Nearest Neighbors.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -254,7 +254,10 @@ The following options are supported.
    "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`."
    "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
    "radius", "real", ":math:`r=1`", "Maximum distance for the radius neighbors computation.", ":math:`0 \le r`"
-   "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of k-nearest neighbors.", ":math:`0 < r`"
+   "outlier target", "real", ":math:`r=0`", "Regression target for queries with no neighbors within the specified radius.", "There are no constraints on :math:`r`."
+   "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of nearest neighbors.", ":math:`0 < r`"
+   "outlier handling", "string", ":math:`s=` `none`", "How to handle samples with no neighbors within the specified radius.", ":math:`s=` `manual`, `most frequent`, or `none`."
+   "outlier label", "integer", ":math:`i=0`", "Classification label for queries with no neighbors within the specified radius.", "There are no constraints on :math:`i`."
    "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`"
    "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."

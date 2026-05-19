@@ -82,7 +82,7 @@ typedef enum da_data_types_ da_data_types;
  * \param[in] ldy the leading dimension of the matrix \p Y. Constraint: \p ldy @f$\ge@f$ \p n if \p order = \p column_major, or \p ldy @f$\ge@f$ \p k if \p order = \p row_major.
  * \param[out] D if Y is nullptr, the \p m @f$\times @f$ \p m distance matrix, and the \p m @f$\times @f$ \p n distance matrix, otherwise.
  * \param[in] ldd the leading dimension of the matrix D. Constraint: \p ldd @f$\ge@f$ \p m, if \p Y is nullptr or \p order = \p column_major, and \p ldd @f$\ge@f$ \p n, otherwise.
- * \param[in] p the order of the Minkowski metric used to compute the distance matrix. For p = 1.0, this defaults to Manhattan metric and for p = 2.0 this defaults to Euclidean metric.
+ * \param[in] p the order of the Minkowski metric used to compute the distance matrix. For p = 1.0, this defaults to the Manhattan metric and for p = 2.0 this defaults to the Euclidean metric.
             \p p is only used for Minkowski distance and will be ignored otherwise.
  * \param[in] metric enum that specifies the metric to use to compute the distance matrix. The default value is \ref da_euclidean.
  * \return \ref da_status. The function returns:

@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met: 1.
@@ -51,7 +51,7 @@ function(extract_native_namespace NATIVE_NAMESPACE)
         PARENT_SCOPE)
   elseif("${output_var}${error_var}" MATCHES "define __AVX512")
     set(NATIVE_NAMESPACE
-        "generic_AVX512"
+        "generic_avx512"
         PARENT_SCOPE)
     message(
       WARNING

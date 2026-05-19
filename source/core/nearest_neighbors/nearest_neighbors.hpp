@@ -31,6 +31,7 @@
 #include "da_error.hpp"
 #include "da_std.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "nearest_neighbors_options.hpp"
 
 namespace ARCH {
@@ -51,7 +52,17 @@ template <typename T> class neighbors : public basic_handle<T> {
     bool radius_neighbors_computed = false;
     bool sort_results = false;
     bool rnn_return_distances = false;
-
+    // Set true if most_frequent_label has been computed
+    bool most_frequent_label_computed = false;
+    da_int most_frequent_label = -1;
+    // Set true if we have checked whether the manually set outlier label is present in the training labels
+    bool manual_outlier_label_checked = false;
+    da_int manual_label_index = -1;
+    da_int manual_label = -1;
+    // Set true is the mean of the targets has been computed
+    bool mean_target_computed = false;
+    T mean_target = 0;
+    T manual_target = -1.0;
     // Number of neighbors to be considered
     da_int n_neighbors = 5;
     // Algorithm to be used for the knn computation
@@ -70,6 +81,8 @@ template <typename T> class neighbors : public basic_handle<T> {
     T p = 2.0;
     // Weight function used to compute the k-nearest neighbors
     da_int weights = ::da_neighbors_types::nn_weights::uniform;
+    // Outlier label handling for radius neighbors with no neighbors
+    da_int outlier_handling = ::da_neighbors_types::nn_outlier_handling::none;
     // User's data
     da_int n_samples = 0, n_features = 0, ldx_train = 0;
     const T *X_train = nullptr /*n_samples-by-n_features*/;
@@ -86,6 +99,11 @@ template <typename T> class neighbors : public basic_handle<T> {
     std::vector<da_vector::da_vector<da_int>> radius_neighbors_indices;
     std::vector<da_vector::da_vector<T>> radius_neighbors_distances;
 
+    // Internal data storage of loaded models.
+    std::vector<T> X_int;
+    std::vector<da_int> y_train_class_int;
+    std::vector<T> y_train_reg_int;
+
   public:
     std::vector<da_int> classes;
     da_int n_classes = -1;
@@ -95,9 +113,9 @@ template <typename T> class neighbors : public basic_handle<T> {
     neighbors(da_errors::da_error_t &err);
 
     /* get_result (required to be defined by basic_handle) */
-    da_status get_result(da_result query, da_int *dim, T *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result);
+                         [[maybe_unused]] da_int *result) override;
     // Set input parameters
     da_status set_params();
     // Chose the appropriate algorithm for kNN if auto is selected
@@ -177,7 +195,7 @@ template <typename T> class neighbors : public basic_handle<T> {
     da_status available_classes();
 
     // Implementing refresh
-    void refresh();
+    void refresh() override;
 
     // Radius neighbors functions
     // Compute the radius nearest neighbors and optionally the corresponding distances
@@ -224,6 +242,11 @@ template <typename T> class neighbors : public basic_handle<T> {
     // Extract the radius neighbors for the sample point query_index
     da_status extract_radius_neighbors_distances(da_int query_index, da_int n_neighbors,
                                                  T *neighbors_distances);
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
+
     // Compute probability estimates based on radius neighbors.
     // Assumes column-major order.
     da_status predict_proba_compute_rnn(da_int n_queries, da_int n_features,

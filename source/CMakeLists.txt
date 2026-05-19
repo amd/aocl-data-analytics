@@ -102,6 +102,7 @@ set(DA_INTERPOLATION_PUBLIC
     core/interpolation/interpolation_public.cpp)
 set(DA_APPROXIMATE_NEIGHBORS_PUBLIC
     core/approximate_neighbors/approximate_neighbors_public.cpp)
+set(DA_MODEL_PERSISTENCE core/utilities/model_persistence.cpp)
 
 # Internal APIs require multi-compilation for different zen architectures
 set(DA_BASIC_STATISTICS_INTERNAL
@@ -175,7 +176,8 @@ set(DA_CORE_PUBLIC
     ${DA_SVM_PUBLIC}
     ${DA_KERNEL_FUNCTIONS_PUBLIC}
     ${DA_INTERPOLATION_PUBLIC}
-    ${DA_APPROXIMATE_NEIGHBORS_PUBLIC})
+    ${DA_APPROXIMATE_NEIGHBORS_PUBLIC}
+    ${DA_MODEL_PERSISTENCE})
 
 set(DA_CORE_DYNAMIC_DISPATCH
     ${DA_FACTORIZATION_INTERNAL}
@@ -235,13 +237,13 @@ if(ARCH STREQUAL "dynamic")
   # Dynamic dispatch: get a list of compilation architectures and associated
   # compile definitions
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS})
-  target_compile_definitions(da_core_public PRIVATE ${DEFINITIONS})
+  set(ARCH_DEFS ${DEFINITIONS})
 elseif(ARCH STREQUAL "generic")
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS})
-  target_compile_definitions(da_core_public PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+  set(ARCH_DEFS generic_AVAILABLE;ZNVER_MAX=generic)
 elseif(ARCH STREQUAL "generic_avx512")
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS} ${GENERIC_AVX512_FLAGS})
-  target_compile_definitions(da_core_public PRIVATE generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
+  set(ARCH_DEFS generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
 elseif(ARCH STREQUAL "native")
   # For native builds we need to extract the architecture corresponding to the
   # -march=native flag in order to use the correct namespace in the source code
@@ -249,17 +251,14 @@ elseif(ARCH STREQUAL "native")
   set(NATIVE_NAMESPACE
       ${NATIVE_NAMESPACE}
       PARENT_SCOPE)
+  target_compile_options(da_core_public PRIVATE -march=native)
   if(NATIVE_NAMESPACE STREQUAL "generic")
-    target_compile_definitions(da_core_public
-                               PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+    set(ARCH_DEFS generic_AVAILABLE;ZNVER_MAX=generic)
   elseif(NATIVE_NAMESPACE STREQUAL "generic_avx512")
-    target_compile_definitions(
-      da_core_public PRIVATE generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
+    set(ARCH_DEFS generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
   else()
     message(NOTICE "Building using znver${NATIVE_NAMESPACE} namespace.")
-    target_compile_definitions(
-      da_core_public
-      PRIVATE
+    set(ARCH_DEFS
         znver${NATIVE_NAMESPACE}_AVAILABLE;ZNVER_MAX=zen${NATIVE_NAMESPACE})
   endif()
 else()
@@ -267,9 +266,12 @@ else()
   # appropriate compile options
   target_compile_options(da_core_public PRIVATE -march=${ARCH})
   extract_znver_generation(ARCH MAX_ZNVER)
-  target_compile_definitions(
-    da_core_public PRIVATE ${ARCH}_AVAILABLE;ZNVER_MAX=zen${MAX_ZNVER})
+  set(ARCH_DEFS ${ARCH}_AVAILABLE;ZNVER_MAX=zen${MAX_ZNVER})
 endif()
+target_compile_definitions(da_core_public PRIVATE ${ARCH_DEFS})
+set(ARCH_DEFS
+    ${ARCH_DEFS}
+    PARENT_SCOPE)
 
 # Store for display purposes
 set(BUILD_ARCHS

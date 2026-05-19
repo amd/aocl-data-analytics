@@ -25,7 +25,7 @@
 # Python bindings
 cmake_minimum_required(VERSION 3.22 FATAL_ERROR)
 
-project(py_aoclda VERSION 5.2.2)
+project(py_aoclda VERSION 5.3.0)
 
 set(BUILD_SHARED_LIBS ON)
 option(BUILD_ILP64 "ILP64 Support" OFF)

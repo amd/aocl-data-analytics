@@ -84,6 +84,7 @@ da_status decision_tree<T>::set_training_data(da_int n_samples, da_int n_feature
 
     // Store pointer to the user defined categorical features array
     usr_categorical_feat = usr_cat_feat;
+    this->init_done = true;
 
     return da_status_success;
 }

@@ -40,6 +40,7 @@
 #include "svm_options.hpp"
 #include "svm_types.hpp"
 #include <climits>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -113,6 +114,7 @@ static void polynomial_wrapper(da_order order, da_int m, da_int n, da_int k, con
 namespace da_svm {
 
 using namespace da_svm_types;
+using namespace da_model_persistence;
 
 // This forward declaration is here to allow for "friending" it with base_svm few lines below
 template <typename T>
@@ -309,6 +311,24 @@ template <typename T> da_status base_svm<T>::compute() {
     if (status != da_status_success)
         return status;
     status = set_sv(alpha, n_support);
+    if (status != da_status_success)
+        return status;
+
+    // Build a contiguous column-major support vector matrix (n_support x p)
+    // so that prediction can use direct pointer arithmetic instead of scattered gathers
+    try {
+        sv_matrix.resize(n_support * p);
+    } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
+        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation error");
+    }
+    for (da_int i = 0; i < n_support; i++) {
+        da_int src_idx = support_indexes[i];
+        for (da_int j = 0; j < p; j++) {
+            sv_matrix[i + j * n_support] = X[src_idx + j * ldx_2];
+        }
+    }
+
     if (ismulticlass) {
         delete[] X;
         delete[] y;
@@ -331,84 +351,149 @@ da_status base_svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test,
     return status;
 }
 
+/* Parallel loop for decision function, templated on norm precomputation */
+template <typename T>
+template <bool PrecomputedNorms>
+void base_svm<T>::decision_function_loop(
+    da_int nfeat, const T *X_test, da_int ldx_test, T *decision_values,
+    da_int total_blocks, [[maybe_unused]] da_int active_threads, da_int inner_block_size,
+    da_int outer_block_size, da_int inner_block_count, da_int outer_block_count,
+    da_int inner_block_remainder, da_int outer_block_remainder,
+    std::vector<T> &kernel_matrices, std::vector<T> &local_decisions,
+    std::vector<T> &sv_norms, std::vector<T> &test_norms,
+    vectorization_type vectorisation_full) {
+    constexpr da_int compute_norms = PrecomputedNorms ? 1 : 0;
+#pragma omp parallel for schedule(dynamic) num_threads(active_threads) default(none)     \
+    shared(total_blocks, nfeat, X_test, ldx_test, decision_values, inner_block_size,     \
+               outer_block_size, inner_block_count, outer_block_count,                   \
+               inner_block_remainder, outer_block_remainder, n_support, kernel_matrices, \
+               local_decisions, sv_norms, test_norms, sv_matrix, support_coefficients,   \
+               gamma, degree, coef0, kernel_f, vectorisation_full)
+    for (da_int block_idx = 0; block_idx < total_blocks; block_idx++) {
+        da_int outer_sample_block_idx = block_idx / inner_block_count;
+        da_int inner_block_idx = block_idx % inner_block_count;
+        da_int tid = omp_get_thread_num();
+        T *my_kernel = kernel_matrices.data() + tid * inner_block_size * outer_block_size;
+        T *my_decision = local_decisions.data() + tid * outer_block_size;
+
+        bool last_inner =
+            inner_block_remainder > 0 && inner_block_idx == inner_block_count - 1;
+        bool last_outer =
+            outer_block_remainder > 0 && outer_sample_block_idx == outer_block_count - 1;
+        da_int cur_inner = last_inner ? inner_block_remainder : inner_block_size;
+        da_int cur_outer = last_outer ? outer_block_remainder : outer_block_size;
+        vectorization_type vectorisation = vectorisation_full;
+        if (last_inner || last_outer)
+            da_kernel_functions::select_simd_size<T>(std::max(cur_inner, cur_outer),
+                                                     vectorisation);
+
+        da_int sample_start = outer_sample_block_idx * outer_block_size;
+        const T *X_test_block = X_test + sample_start;
+        da_int inner_offset = inner_block_idx * inner_block_size;
+        const T *sv_data = sv_matrix.data() + inner_offset;
+        T *x_norm_ptr = nullptr;
+        T *y_norm_ptr = nullptr;
+        if constexpr (PrecomputedNorms) {
+            x_norm_ptr = sv_norms.data() + inner_offset;
+            y_norm_ptr = test_norms.data() + sample_start;
+        }
+        kernel_f(column_major, cur_inner, cur_outer, nfeat, sv_data, x_norm_ptr,
+                 compute_norms, n_support, X_test_block, y_norm_ptr, compute_norms,
+                 ldx_test, my_kernel, cur_inner, gamma, degree, coef0, false,
+                 (da_int)vectorisation);
+        da_blas::cblas_gemv(
+            CblasColMajor, CblasTrans, cur_inner, cur_outer, (T)1.0, my_kernel, cur_inner,
+            support_coefficients.data() + inner_offset, 1, (T)0.0, my_decision, 1);
+        T *decision_block = decision_values + sample_start;
+        for (da_int i = 0; i < cur_outer; i++) {
+#pragma omp atomic
+            decision_block[i] += my_decision[i];
+        }
+    }
+}
+
 /* Calculate decision function */
 template <typename T>
 da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_test,
                                          da_int ldx_test, T *decision_values) {
-    da_status status = da_status_success;
-    // Initialise decision values to constant (bias)
     for (da_int i = 0; i < nsamples; i++)
         decision_values[i] = bias;
-    // Stop early if there are no support vectors
-    if (n_support == 0)
-        return status;
-    // Perform blocked decision function evaluation (n_support can be up to n_samples and
-    // then kernel_matrix (n_support by n_samples) can be too large)
-    std::vector<da_int> sv_idx(n_support);
-    if (ismulticlass) {
-        for (da_int i = 0; i < n_support; i++) {
-            sv_idx[i] = idx_class[support_indexes[i]];
-        }
-    } else {
-        sv_idx = support_indexes;
-    }
-    // Block size for kernel function
-    da_int block_size = std::min(n_support, SVM_MAX_BLOCK_SIZE);
-    da_int n_blocks = n_support / block_size, residual = n_support % block_size;
-    da_vector::da_vector<T> kernel_matrix, block_support_vectors;
-    std::vector<T> x_aux, y_aux;
-    // Variable used in euclidean_distance interface, 2 means compute norms into aux arrays
-    da_int compute_norms = 2;
+    if (n_support == 0 || nsamples == 0)
+        return da_status_success;
+    bool use_precomputed_norms = (kernel_function == rbf);
+
+    // Threading and blocking parameters.
+    da_int thread_count = omp_get_max_threads();
+    constexpr da_int max_outer_block_size = 192;
+    constexpr da_int max_inner_block_size = 256;
+
+    // Outer (sample) blocking
+    da_int outer_block_size =
+        std::min((da_int)std::ceil((T)nsamples / thread_count), max_outer_block_size);
+    da_int outer_block_count, outer_block_remainder;
+    da_utils::blocking_scheme(nsamples, outer_block_size, outer_block_count,
+                              outer_block_remainder);
+    // Inner (support vector) blocking
+    da_int inner_block_size = std::min(n_support, max_inner_block_size);
+    da_int inner_block_count, inner_block_remainder;
+    da_utils::blocking_scheme(n_support, inner_block_size, inner_block_count,
+                              inner_block_remainder);
+
+    // 2D parallelism over (outer, inner) block pairs
+    da_int total_blocks = outer_block_count * inner_block_count;
+    da_int active_threads = std::min(thread_count, total_blocks);
+
+    // Per-thread buffers
+    std::vector<T> kernel_matrices;
+    std::vector<T> sv_norms, test_norms;
+    std::vector<T> local_decisions;
     try {
-        x_aux.resize(block_size);
-        y_aux.resize(nsamples);
-        // Allocate but not initialise (performance)
-        kernel_matrix.resize(block_size * nsamples);
-        block_support_vectors.resize(block_size * nfeat);
+        kernel_matrices.resize(active_threads * inner_block_size * outer_block_size);
+        local_decisions.resize(active_threads * outer_block_size);
+        if (use_precomputed_norms) {
+            sv_norms.resize(n_support);
+            test_norms.resize(nsamples);
+        }
     } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
         return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
-    for (da_int i = 0; i <= n_blocks; i++) {
-        da_int current_block_size = (i < n_blocks) ? block_size : residual;
-        if (current_block_size == 0) {
-            continue;
-        }
-        da_int offset;
-        if (i < n_blocks) // we are in block
-            offset = i * block_size;
-        else // we are in residual
-            offset = n_blocks * block_size;
-
-            // Get the relevant slices of support vectors
-#pragma omp parallel for if (current_block_size > 64) default(none)                      \
-    shared(sv_idx, current_block_size, block_support_vectors, XUSR, ldx, nfeat, offset)
-        for (da_int j = 0; j < current_block_size; j++) {
-            da_int current_idx = sv_idx[offset + j];
-            for (da_int k = 0; k < nfeat; k++) {
-                block_support_vectors[j + k * current_block_size] =
-                    XUSR[current_idx + k * ldx];
+    if (use_precomputed_norms) {
+        da_std::fill(sv_norms.begin(), sv_norms.end(), (T)0.0);
+        for (da_int j = 0; j < nfeat; j++) {
+            const T *sv_col = sv_matrix.data() + j * n_support;
+            for (da_int i = 0; i < n_support; i++) {
+                T v = sv_col[i];
+                sv_norms[i] += v * v;
             }
         }
-
-        // Get vectorisation
-        vectorization_type vectorisation;
-        da_kernel_functions::select_simd_size<T>(current_block_size, vectorisation);
-
-        // Compute kernel matrix K between support vectors and test data
-        kernel_f(column_major, current_block_size, nsamples, nfeat,
-                 block_support_vectors.data(), x_aux.data(), compute_norms,
-                 current_block_size, X_test, y_aux.data(), compute_norms, ldx_test,
-                 kernel_matrix.data(), current_block_size, gamma, degree, coef0, false,
-                 (da_int)vectorisation);
-
-        // Compute decision_values = K'*alpha + bias
-        da_blas::cblas_gemv(CblasColMajor, CblasTrans, current_block_size, nsamples,
-                            (T)1.0, kernel_matrix.data(), current_block_size,
-                            support_coefficients.data() + offset, 1, (T)1.0,
-                            decision_values, 1);
+        da_std::fill(test_norms.begin(), test_norms.end(), (T)0.0);
+        for (da_int j = 0; j < nfeat; j++) {
+            const T *test_col = X_test + j * ldx_test;
+            for (da_int i = 0; i < nsamples; i++) {
+                T v = test_col[i];
+                test_norms[i] += v * v;
+            }
+        }
     }
-    return status;
+    // Precompute SIMD type for the common (full-size) blocks
+    vectorization_type vectorisation_full;
+    da_kernel_functions::select_simd_size<T>(std::max(inner_block_size, outer_block_size),
+                                             vectorisation_full);
+
+    if (use_precomputed_norms)
+        decision_function_loop<true>(
+            nfeat, X_test, ldx_test, decision_values, total_blocks, active_threads,
+            inner_block_size, outer_block_size, inner_block_count, outer_block_count,
+            inner_block_remainder, outer_block_remainder, kernel_matrices,
+            local_decisions, sv_norms, test_norms, vectorisation_full);
+    else
+        decision_function_loop<false>(
+            nfeat, X_test, ldx_test, decision_values, total_blocks, active_threads,
+            inner_block_size, outer_block_size, inner_block_count, outer_block_count,
+            inner_block_remainder, outer_block_remainder, kernel_matrices,
+            local_decisions, sv_norms, test_norms, vectorisation_full);
+    return da_status_success;
 }
 
 /* Compute size of the outer working set */
@@ -696,6 +781,62 @@ void base_svm<T>::prepare_kernel_matrix(std::vector<T *> &ptr_kernel_col, da_int
         }
         kernel_diagonal[j] = row_major_row[j];
     }
+};
+
+template <typename T> da_status base_svm<T>::deserialize_kernel_f() {
+    switch (kernel_function) {
+    case rbf:
+        kernel_f = &rbf_wrapper<T>;
+        break;
+    case linear:
+        kernel_f = &linear_wrapper<T>;
+        break;
+    case polynomial:
+        kernel_f = &polynomial_wrapper<T>;
+        break;
+    case sigmoid:
+        kernel_f = &sigmoid_wrapper<T>;
+        break;
+    default:
+        return da_error(err, da_status_invalid_file_data,
+                        "Unknown kernel function during deserialization.");
+    }
+    return da_status_success;
+}
+
+template <typename T> da_status base_svm<T>::serialize(serialization_buffer &buffer) {
+
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->pos_class);
+    io_dispatch(this->neg_class);
+    io_dispatch(this->kernel_function);
+    io_dispatch(this->gamma);
+    io_dispatch(this->degree);
+    io_dispatch(this->coef0);
+    io_dispatch(this->mod);
+    io_dispatch(this->n_support);
+    io_dispatch(this->support_indexes);
+    io_dispatch(this->n_support_per_class);
+    io_dispatch(this->support_coefficients);
+    io_dispatch(this->bias);
+    io_dispatch(this->sv_matrix);
+
+    if (status != da_status_success)
+        return status;
+
+    if (buffer.get_mode() == buffer_mode::deserialize) {
+        status = this->deserialize_kernel_f();
+    }
+
+    return status;
 };
 
 template class base_svm<float>;

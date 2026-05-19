@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -65,6 +65,21 @@ struct _da_handle {
     da_status get_current_opts(da_options::OptionRegistry **opts, bool refresh = false);
 
     template <typename T> basic_handle<T> *get_alg_handle();
+
+    // Serialize and save the complete handle state (model and options).
+    // The buffer overload is the main implementation.
+    // The file_name overload is a wrapper that calls the buffer version
+    // and writes the result to disk.
+    da_status save_handle(std::vector<char> &buffer);
+    da_status save_handle(const std::string &file_name);
+
+    // Deserialize and load the complete handle state (model and options).
+    // The buffer overload is the main implementation.
+    // The file_name overload is a wrapper that reads from disk
+    // and calls the buffer version.
+    static da_status load_handle(da_handle &handle, const char *buffer_data,
+                                 const size_t data_size);
+    static da_status load_handle(da_handle &handle, const std::string &file_name);
 };
 
 #endif

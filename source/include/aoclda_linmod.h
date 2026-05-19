@@ -84,7 +84,7 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples the number of observations (rows) of the data matrix @p X. Constraint: @p n_samples @f$\ge@f$ 1.
  * @param[in] n_features the number of features (columns) of the data matrix, @p X. Constraint: @p n_features @f$\ge@f$ 1.
- * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. For best performance store in column-major order, can be changed by setting <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] X the @p n_samples @f$\times@f$ @p n_features data matrix. For best performance store in column-major order, can be changed by setting the <em>storage order</em> option to <em>row-major</em>.
  * @param[in] ldx the leading dimension of the data matrix @p X. Constraint: @p ldx @f$\ge@f$ @p n_samples if the data is stored in column-major order, or @p ldx @f$\ge@f$ @p n_features if the data is stored in row-major order.
  * @param[in] y the response vector, of size @p n_samples.
  * @return @ref da_status. The function returns:
@@ -161,7 +161,7 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, const float *c
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples number of rows of \p X or equivalently the number of samples to estimate the model on.
  * @param[in] n_features number of columns of \p X or equivalently the number of features of the test data. It must match the number features of the data defined in the \p handle.
- * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. For best performance store in column-major order, can be changed by setting <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] X the @p n_samples @f$\times@f$ @p n_features data matrix. For best performance store in column-major order, can be changed by setting the <em>storage order</em> option to <em>row-major</em>.
  * @param[in] ldx the leading dimension of the data matrix @p X. Constraint: @p ldx @f$\ge@f$ @p n_samples if the data is stored in column-major order, or @p ldx @f$\ge@f$ @p n_features if the data is stored in row-major order.
  * @param[out] predictions vector of size \p n_samples containing the model's prediction.
  * @param[in] observations vector of size \p n_samples containing new observations; may be \p NULL if none are provided.

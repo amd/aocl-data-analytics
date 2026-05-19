@@ -841,6 +841,10 @@ void decision_tree<T>::split_raw_continuous(const node<T> &current_node, split<T
 template <typename T> da_status decision_tree<T>::fit() {
     da_status status = da_status_success;
 
+    if (!this->init_done)
+        return da_error_bypass(this->err, da_status_no_data,
+                               "No data has been passed to the handle.");
+
     if (model_trained)
         // Nothing to do, exit
         return da_status_success;

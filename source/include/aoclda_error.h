@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -63,6 +63,7 @@ enum da_status_ {
     da_status_numerical_difficulties, ///< Numerical difficulties
     da_status_bad_derivatives, ///< Likely errors are detected in the user-supplied derivatives
     da_status_arch_not_supported, ///< The architecture is not supported
+    da_status_io_error,           ///< Input/Output errors
 
     // CSV errors 100-199
     da_status_file_reading_error = 100, ///< An error occurred when reading a CSV file
@@ -88,6 +89,17 @@ enum da_status_ {
     da_status_missing_block =
         600, ///< The store is missing a block, the requested operation cannot be performed
     da_status_full_extraction, ///< No selection was defined, the full store is being extracted
+
+    // Nearest neighbors 700-799
+    da_status_outlier_warning =
+        700, ///< The specified manual label provided is not part of the training labels.
+
+    // Model persistence errors 800-899
+    da_status_serialization_error =
+        800, ///< Serialization/deserialization failed (buffer operations)
+    da_status_invalid_file_data, ///< File data is invalid or corrupted (bad magic, too small)
+    da_status_version_mismatch, ///< Model file version is incompatible (future-proofing)
+
 };
 
 /** @brief Alias for the \ref da_status_ enum. */

@@ -76,7 +76,7 @@ inline da_status register_forest_options(da_options::OptionRegistry &opts,
 
         oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
             "block size", "Set the size of the blocks for parallel computations.", 1,
-            lbound_t::greaterequal, max_da_int, ubound_t::lessequal, DF_BLOCK_SIZE));
+            lbound_t::greaterequal, max_da_int, ubound_t::p_inf, DF_BLOCK_SIZE));
         status = opts.register_opt(oi);
 
         // Bootstrap options

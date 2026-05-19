@@ -34,7 +34,7 @@ project = 'AOCL-DA'
 copyright = '2026, Advanced Micro Devices, Inc'
 author = 'Advanced Micro Devices, Inc'
 version = ''
-release = '5.2.2'
+release = '5.3.0'
 
 # -- Get doc working for Python ----------------------------------------------
 # Add to PYTHONPATH

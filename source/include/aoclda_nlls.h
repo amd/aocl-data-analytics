@@ -95,8 +95,8 @@ typedef da_int da_resfun_t_d(da_int n_coef, da_int n_res, void *data, const doub
  * \param[inout] data user data pointer; the solver does not touch this pointer and
  *            passes it on to the call-back.
  * \param[in] x the vector of coefficients (at the current iteration) of size \p n_coef.
- * \param[out] jac Jacobian matrix (\p n_res by \p n_coef), first derivatives of the residual function.
- *             evaluated at \p x. This matrix expects to be stored in the format
+ * \param[out] jac Jacobian matrix (\p n_res by \p n_coef), first derivatives of the residual function
+ *             evaluated at \p x. This matrix is expected to be stored in the format
  *             defined by the optional parameter \p storage_scheme and defaults to
  *             row-major; this can be changed to column-major (Fortran format).
  * \return flag indicating whether evaluation of the model was successful: zero to

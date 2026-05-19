@@ -29,6 +29,7 @@
 aoclda.neighbors module - contains nearest_neighbors and approximate_neighbors classes
 """
 
+import pickle
 import numpy as np
 from ._aoclda.neighbors import pybind_nearest_neighbors
 from ._aoclda.neighbors import pybind_approximate_neighbors
@@ -68,6 +69,13 @@ class nearest_neighbors():
         radius (float, optional): The radius of the neighborhood to consider for
             :meth:`~nearest_neighbors.radius_neighbors` queries. Default = 1.0.
 
+        outlier_handling (None, str, int, or float, optional): How to handle outliers (samples with
+            no neighbors within the search radius). Available options are None, 'most_frequent' or a manual
+            value that must be an integer in case of classification or a float in case of regression.
+            None throws an error, manual value fills output with the specified label or target,
+            and 'most_frequent' assigns to outliers the most frequent class label for classification
+            or the mean of the target values for regression. Default = None.
+
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
@@ -80,6 +88,7 @@ class nearest_neighbors():
             metric='euclidean',
             p=2.0,
             radius=1.0,
+            outlier_handling=None,
             check_data=False):
 
         # Check number of neighbors
@@ -93,6 +102,9 @@ class nearest_neighbors():
             n_neighbors = 1
 
         self.radius = radius
+        # Save outlier_handling for use in classifier/regressor predict methods when
+        # search_mode='radius_neighbors'
+        self.outlier_handling = outlier_handling
 
         if not isinstance(self.radius, (int, float)) and self.radius is not None:
             raise ValueError(
@@ -103,9 +115,21 @@ class nearest_neighbors():
             raise ValueError("Radius must be positive. Got radius=" + str(self.radius))
 
         self.nearest_neighbors_double = pybind_nearest_neighbors(
-            n_neighbors, algorithm, leaf_size, metric, weights, "double", check_data)
+            n_neighbors,
+            algorithm,
+            leaf_size,
+            metric,
+            weights,
+            "double",
+            check_data)
         self.nearest_neighbors_single = pybind_nearest_neighbors(
-            n_neighbors, algorithm, leaf_size, metric, weights, "single", check_data)
+            n_neighbors,
+            algorithm,
+            leaf_size,
+            metric,
+            weights,
+            "single",
+            check_data)
         self.nearest_neighbors = self.nearest_neighbors_double
         self.order = 'A'
         self.dtype = 'float'
@@ -340,6 +364,40 @@ class nearest_neighbors():
 
         self.nearest_neighbors.pybind_set_labels(y)
 
+        outlier_label = 0
+        outlier_handling = "none"
+        # Set outlier_handling if search mode is radius_neighbors
+        if search_mode == "radius_neighbors":
+            if self.outlier_handling is None:
+                outlier_handling = "none"
+            elif self.outlier_handling == "most_frequent":
+                outlier_handling = "most_frequent"
+            else:
+                outlier_handling = "manual"
+                # Ensure outlier_handling is an integer for classification
+                if not isinstance(self.outlier_handling, (int, np.integer)):
+                    raise ValueError(
+                        "outlier_handling must be None, 'most_frequent', or an integer for classification. " +
+                        "Got outlier_handling=" + str(self.outlier_handling) + " of type " + str(type(self.outlier_handling)))
+
+                # Convert to y.dtype
+                try:
+                    outlier_label = np.array(
+                        int(self.outlier_handling), dtype=y.dtype).item()
+                except (ValueError, OverflowError) as e:
+                    raise ValueError(
+                        "outlier_handling could not be converted to y.dtype. Got outlier_handling=" + str(
+                            self.outlier_handling) + " and y.dtype=" + str(y.dtype)) from e
+
+            # Convert outlier_target to the correct precision type to help pybind11
+            # select the correct overload
+            if self.dtype == "float32":
+                outlier_target = np.float32(0.0)
+            else:
+                outlier_target = np.float64(0.0)
+            self.nearest_neighbors.pybind_set_outlier_info(
+                outlier_handling, outlier_label, outlier_target)
+
         return self.nearest_neighbors.pybind_classifier_predict_proba(
             X, search_mode=search_mode)
 
@@ -374,6 +432,42 @@ class nearest_neighbors():
                 "radius was None in the constructor."
             )
         self.nearest_neighbors.pybind_set_labels(y)
+
+        outlier_label = 0
+        outlier_handling = "none"
+        # Set outlier_handling if search mode is radius_neighbors
+        if search_mode == "radius_neighbors":
+            if self.outlier_handling is None:
+                outlier_handling = "none"
+            elif self.outlier_handling == "most_frequent":
+                outlier_handling = "most_frequent"
+            else:
+                outlier_handling = "manual"
+                # Ensure outlier_handling is an integer for classification
+                if not isinstance(self.outlier_handling, (int, np.integer)):
+                    raise ValueError(
+                        "outlier_handling must be None, 'most_frequent', or an integer for classification. " +
+                        "Got outlier_handling=" + str(self.outlier_handling) + " of type " + str(type(self.outlier_handling)))
+
+                # Convert to y.dtype
+                try:
+                    outlier_label = np.array(
+                        int(self.outlier_handling), dtype=y.dtype).item()
+                except (ValueError, OverflowError) as e:
+                    raise ValueError(
+                        "outlier_handling could not be converted to y.dtype. Got outlier_handling=" + str(
+                            self.outlier_handling) + " and y.dtype=" + str(y.dtype)) from e
+
+            # Convert outlier_target to the correct precision type to help pybind11
+            # select the correct overload
+            if self.dtype == "float32":
+                outlier_target = np.float32(0.0)
+            else:
+                outlier_target = np.float64(0.0)
+
+            self.nearest_neighbors.pybind_set_outlier_info(
+                outlier_handling, outlier_label, outlier_target)
+
         return self.nearest_neighbors.pybind_classifier_predict(
             X, search_mode=search_mode)
 
@@ -408,7 +502,72 @@ class nearest_neighbors():
                 "radius was None in the constructor."
             )
         self.nearest_neighbors.pybind_set_targets(y)
+
+        outlier_label = 0
+        outlier_handling = "none"
+        outlier_target = 0.0
+        # Set outlier_label if search mode is radius_neighbors
+        if search_mode == "radius_neighbors":
+            if self.outlier_handling is None:
+                outlier_handling = "none"
+            elif self.outlier_handling == "most_frequent":
+                outlier_handling = "most_frequent"
+            else:
+                outlier_handling = "manual"
+                # check that manual target can be safely converted to the same type as the
+                # targets in y
+                try:
+                    outlier_target = np.array(self.outlier_handling, dtype=y.dtype).item()
+                except Exception as e:
+                    raise ValueError(
+                        "outlier_handling could not be converted to the same type as the targets in y. Got outlier_handling=" +
+                        str(
+                            self.outlier_handling) +
+                        " and y.dtype=" +
+                        str(
+                            y.dtype)) from e
+
+            self.nearest_neighbors.pybind_set_outlier_info(
+                outlier_handling, outlier_label, outlier_target)
+
         return self.nearest_neighbors.pybind_regressor_predict(X, search_mode=search_mode)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.nearest_neighbors),
+            'order': self.order,
+            'dtype': self.dtype,
+            'n_neighbors': self.n_neighbors,
+            'radius': self.radius,
+            'p': self.p,
+            'y': self.y,
+            'outlier_handling': self.outlier_handling,
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.nearest_neighbors = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.n_neighbors = state['n_neighbors']
+        self.radius = state["radius"]
+        self.p = state["p"]
+        self.y = state["y"]
+        self.outlier_handling = state["outlier_handling"]
+
+        if self.dtype == 'float64':
+            self.nearest_neighbors_double = self.nearest_neighbors
+            self.nearest_neighbors_single = None
+        elif self.dtype == 'float32':
+            self.nearest_neighbors_double = None
+            self.nearest_neighbors_single = self.nearest_neighbors
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading model." +
+                f" Expected 'float32' or 'float64'."
+            )
+        return
 
 
 class approximate_neighbors():
@@ -567,6 +726,37 @@ class approximate_neighbors():
             return self._approx_nn.pybind_kneighbors(X_test, n_neighbors)
 
         return self._approx_nn.pybind_kneighbors_indices(X_test, n_neighbors)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self._approx_nn),
+            'order': self._order,
+            'dtype': self._dtype,
+            'train_fraction': self._train_fraction,
+            'n_probe': self._n_probe
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self._order = state['order']
+        self._dtype = state['dtype']
+        self._train_fraction = state['train_fraction']
+        self._n_probe = state["n_probe"]
+        self._approx_nn = pickle.loads(state['pybind_state'])
+
+        if self._dtype == 'float64':
+            self._approx_nn_double = self._approx_nn
+            self._approx_nn_single = None
+        elif self._dtype == 'float32':
+            self._approx_nn_double = None
+            self._approx_nn_single = self._approx_nn
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self._dtype}' when loading" +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
 
     @property
     def cluster_centroids(self):

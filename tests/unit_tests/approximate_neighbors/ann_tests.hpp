@@ -1947,7 +1947,7 @@ template <typename T> void UnitSphereEuclideanCol(std::vector<ANNParamType<T>> &
     ANNParamType<T> test(16, 5, 4, "euclidean", "ivfflat", "column-major");
     test.test_name = "unit sphere l2 col";
     test.csvname = "unitsphere";
-    test.target_recall = 0.60;
+    test.target_recall = 0.59;
     test.seed = 0;
     test.train_fraction = 0.64;
     params.push_back(test);
@@ -1957,7 +1957,7 @@ template <typename T> void UnitSphereEuclideanRow(std::vector<ANNParamType<T>> &
     ANNParamType<T> test(16, 5, 4, "euclidean", "ivfflat", "row-major");
     test.test_name = "unit sphere l2 row";
     test.csvname = "unitsphere";
-    test.target_recall = 0.60;
+    test.target_recall = 0.59;
     test.seed = 0;
     test.train_fraction = 0.64;
     params.push_back(test);

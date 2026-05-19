@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -73,6 +73,9 @@ class kmeans : public pyda_handle {
             exception_check(status);
         }
     }
+
+    kmeans(da_precision prec) { this->precision = prec; }
+
     ~kmeans() { da_handle_destroy(&handle); }
 
     template <typename T>

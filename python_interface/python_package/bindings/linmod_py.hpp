@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -91,6 +91,8 @@ class linmod : public pyda_handle {
             exception_check(status);
         }
     }
+
+    linmod(da_precision prec) { this->precision = prec; }
     ~linmod() { da_handle_destroy(&handle); }
 
     template <typename T>
@@ -497,6 +499,28 @@ class linmod : public pyda_handle {
         }
 
         return n_iter;
+    }
+
+    void save_data(py::dict &state) override {
+        state["n_samples"] = int64_t(this->n_samples);
+        state["n_feat"] = int64_t(this->n_feat);
+        state["intercept"] = int8_t(this->intercept);
+        state["warm_start"] = int8_t(this->warm_start);
+        state["fitted"] = int8_t(this->fitted);
+        state["logreg_constraint_str"] = this->logreg_constraint_str;
+        state["solver_str"] = this->solver_str;
+        state["mod_enum"] = int64_t(this->mod_enum);
+    }
+
+    void load_data(py::dict &state) override {
+        this->n_samples = da_int(state["n_samples"].cast<int64_t>());
+        this->n_feat = da_int(state["n_feat"].cast<int64_t>());
+        this->intercept = bool(state["intercept"].cast<int8_t>());
+        this->warm_start = bool(state["warm_start"].cast<int8_t>());
+        this->fitted = bool(state["fitted"].cast<int8_t>());
+        this->logreg_constraint_str = state["logreg_constraint_str"].cast<std::string>();
+        this->solver_str = state["solver_str"].cast<std::string>();
+        this->mod_enum = linmod_model(state["mod_enum"].cast<int64_t>());
     }
 };
 

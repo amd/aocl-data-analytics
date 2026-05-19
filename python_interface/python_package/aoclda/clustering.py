@@ -27,6 +27,7 @@
 aoclda.factorization module
 """
 
+import pickle
 import numpy as np
 from ._aoclda.clustering import pybind_kmeans, pybind_DBSCAN
 from ._internal_utils import check_convert_data
@@ -206,6 +207,37 @@ class kmeans():
         )
 
         return self.kmeans.pybind_predict(Y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.kmeans),
+            'order': self.order,
+            'dtype': self.dtype,
+            'C': self.C,
+            'tol': self.tol
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.kmeans = pickle.loads(state['pybind_state'])
+        self.C = state['C']
+        self.tol = state['tol']
+
+        if self.dtype == 'float64':
+            self.kmeans_double = self.kmeans
+            self.kmeans_single = None
+        elif self.dtype == 'float32':
+            self.kmeans_double = None
+            self.kmeans_single = self.kmeans
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
 
 
 class DBSCAN():

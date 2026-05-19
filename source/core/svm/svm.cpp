@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #include "aoclda.h"
 #include "basic_statistics.hpp"
 #include "da_error.hpp"
+#include "da_omp.hpp"
 #include "da_std.hpp"
 #include "macros.h"
 #include "options.hpp"
@@ -54,6 +55,7 @@ namespace ARCH {
 namespace da_svm {
 
 using namespace da_svm_types;
+using namespace da_model_persistence;
 
 template <typename T> svm<T>::svm(da_errors::da_error_t &err) : basic_handle<T>(err) {
     // Initialize the options registry
@@ -634,55 +636,43 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
         return status;
 
     if (ismulticlass) {
-        std::vector<da_int> votes_array;
+        std::vector<da_int> votes;
+        std::vector<T> classifier_predictions;
         try {
-            votes_array.resize(n_class * nsamples);
-        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+            votes.resize(n_class * nsamples);
+            classifier_predictions.resize(nsamples);
+        } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
+            if (utility_ptr1)
+                delete[] (utility_ptr1);
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation error");
         }
-        bool error_occured = false;
-        omp_set_max_active_levels(2);
-        da_int inner_threads = 2;
-        da_int outer_threads =
-            std::min(n_classifiers, (da_int)omp_get_max_threads()) / inner_threads;
-#pragma omp parallel for default(none)                                                   \
-    shared(votes_array, nsamples, nfeat, n_class, error_occured, ldx_test_temp,          \
-               X_test_temp, status, inner_threads) schedule(static)                      \
-    num_threads(outer_threads)
         for (da_int i = 0; i < n_classifiers; i++) {
-            omp_set_num_threads(inner_threads);
-            std::vector<T> votes_temp; // this can technically be int
-            try {
-                votes_temp.resize(nsamples);
-            } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
-#pragma omp critical
-                error_occured = true; // LCOV_EXCL_LINE
+            da_status status =
+                classifiers[i]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
+                                        classifier_predictions.data());
+            if (status != da_status_success) {
+                if (utility_ptr1)
+                    delete[] (utility_ptr1);
+                return da_error(this->err, da_status_internal_error,
+                                "An unexpected error occurred during prediction.");
             }
-            status = classifiers[i]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
-                                             votes_temp.data());
-            if (status != da_status_success)
-#pragma omp critical
-                error_occured = true;
             da_int pos_class = classifiers[i]->pos_class;
             da_int neg_class = classifiers[i]->neg_class;
             for (da_int j = 0; j < nsamples; j++) {
-                da_int &target =
-                    votes_array[j * n_class +
-                                (votes_temp[j] == 1 ? pos_class : neg_class)];
-#pragma omp atomic
-                target++;
+                da_int vote_idx =
+                    j * n_class +
+                    (classifier_predictions[j] == 1 ? pos_class : neg_class);
+                votes[vote_idx]++;
             }
         }
-        omp_set_max_active_levels(1);
-        if (error_occured)
-            return da_error(this->err, da_status_internal_error,
-                            "An unexpected error occurred during prediction.");
+        // Compute argmax from global votes
         for (da_int i = 0; i < nsamples; i++) {
             da_int max_votes = 0, max_idx = 0;
+            const da_int *sample_votes = votes.data() + i * n_class;
             for (da_int j = 0; j < n_class; j++) {
-                if (votes_array[i * n_class + j] > max_votes) {
-                    max_votes = votes_array[i * n_class + j];
+                if (sample_votes[j] > max_votes) {
+                    max_votes = sample_votes[j];
                     max_idx = j;
                 }
             }
@@ -751,11 +741,16 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
     }
     // Obtain OVO decision function values
     for (da_int i = 0; i < n_classifiers; i++) {
-        status =
+        da_status status =
             classifiers[i]->decision_function(nsamples, nfeat, X_test_temp, ldx_test_temp,
                                               decision_values_ovo.data() + i * nsamples);
-        if (status != da_status_success)
+        if (status != da_status_success) {
+            if (utility_ptr1)
+                delete[] (utility_ptr1);
+            if (utility_ptr2)
+                delete[] (utility_ptr2);
             return status;
+        }
     }
 
     // Path where decision values are 1D - binary classification (have to be OVO)
@@ -946,11 +941,16 @@ da_status svm<T>::predict_proba(da_int nsamples, da_int nfeat, const T *X_test,
     }
     // Obtain OVO decision function values
     for (da_int i = 0; i < n_classifiers; i++) {
-        status =
+        da_status status =
             classifiers[i]->decision_function(nsamples, nfeat, X_test_temp, ldx_test_temp,
                                               dec_values.data() + i * nsamples);
-        if (status != da_status_success)
+        if (status != da_status_success) {
+            if (utility_ptr1)
+                delete[] (utility_ptr1);
+            if (utility_ptr2)
+                delete[] (utility_ptr2);
             return status;
+        }
     }
     // To match sklearn convention we need to flip the sign in binary case
     if (!ismulticlass)
@@ -1333,6 +1333,110 @@ da_status svm<T>::compute_probabilities(base_svm<T> &classifier, da_int n_fold, 
     }
 
     return da_status_success;
+}
+
+template <typename T>
+da_status svm<T>::serialize_classifiers(serialization_buffer &buffer) {
+    da_status status = da_status_success;
+
+    if (buffer.get_mode() == deserialize) {
+        try {
+            this->classifiers.resize(this->n_classifiers);
+            for (da_int i = 0; i < this->n_classifiers; ++i) {
+                switch (this->mod) {
+                case da_svm_model::svc:
+                    classifiers[i] = std::make_unique<svc<T>>();
+                    break;
+                case da_svm_model::svr:
+                    classifiers[i] = std::make_unique<svr<T>>();
+                    break;
+                case da_svm_model::nusvc:
+                    classifiers[i] = std::make_unique<nusvc<T>>();
+                    break;
+                case da_svm_model::nusvr:
+                    classifiers[i] = std::make_unique<nusvr<T>>();
+                    break;
+                default:
+                    return da_error(this->err, da_status_unknown_query,
+                                    "Unknown SVM model during deserialization.");
+                }
+                classifiers[i]->err = this->err;
+            }
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error,
+                            "Failing to allocate enough memory."); // LCOV_EXCL_LINE
+        }
+    }
+
+    for (da_int i = 0; i < this->n_classifiers; ++i) {
+        if (status != da_status_success)
+            return status;
+        status = this->classifiers[i]->serialize(buffer);
+    }
+    return status;
+}
+
+template <typename T> da_status svm<T>::serialize(serialization_buffer &buffer) {
+
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->n_class);
+    io_dispatch(this->n_classifiers);
+    io_dispatch(this->class_sizes);
+    io_dispatch(this->nrow);
+    io_dispatch(this->ncol);
+    io_dispatch(this->ldx_train);
+    io_dispatch(this->seed);
+    io_dispatch(this->iscomputed);
+    io_dispatch(this->ismulticlass);
+    io_dispatch(this->predict_proba_opt);
+    io_dispatch(this->mod);
+    io_dispatch(this->is_sv);
+    io_dispatch(this->n_sv);
+    io_dispatch(this->support_coefficients);
+    io_dispatch(this->support_vectors);
+    io_dispatch(this->bias);
+    io_dispatch(this->probaA);
+    io_dispatch(this->probaB);
+    io_dispatch(this->support_indexes);
+    io_dispatch(this->n_sv_per_class);
+    io_dispatch(this->n_iteration);
+
+    if (status == da_status_success) {
+        status = serialize_classifiers(buffer);
+    }
+
+    return status;
+}
+
+template <typename T> da_status svm<T>::save_model(serialization_buffer &buffer) {
+
+    if (!this->iscomputed) {
+        return da_error(this->err, da_status_no_data,
+                        "SVM has not yet been computed. Please call da_svm_compute_s "
+                        "or da_svm_compute_d before extracting results.");
+    }
+
+    da_status status = basic_handle<T>::save_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T> da_status svm<T>::load_model(serialization_buffer &buffer) {
+    da_status status = basic_handle<T>::load_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    return status;
 }
 
 template class svm<float>;

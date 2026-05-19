@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 aoclda.linear_model module
 """
 
+import pickle
 import numpy as np
 from ._aoclda.linear_model import pybind_linmod
 from ._internal_utils import check_convert_data
@@ -226,6 +227,43 @@ class linmod():
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self.linmod.pybind_predict(X)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.linmod),
+            'order': self.order,
+            'dtype': self.dtype,
+            'reg_lambda': self.reg_lambda,
+            'reg_alpha': self.reg_alpha,
+            'tol': self.tol,
+            'progress_factor': self.progress_factor,
+            "x0": self.x0
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.linmod = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.reg_lambda = state['reg_lambda']
+        self.reg_alpha = state['reg_alpha']
+        self.tol = state['tol']
+        self.progress_factor = state['progress_factor']
+        self.x0 = state["x0"]
+
+        if self.dtype == 'float64':
+            self.linmod_double = self.linmod
+            self.linmod_single = None
+        elif self.dtype == 'float32':
+            self.linmod_double = None
+            self.linmod_single = self.linmod
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
 
     @property
     def coef(self):

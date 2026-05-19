@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -339,6 +339,35 @@ TEST(OpOptionInternal, OpClsStringAll) {
     EXPECT_EQ(::opt_string.set("invalid"), da_status_option_invalid_value);
 }
 
+TEST(OpOptionInternal, OpClsStringQueryMap) {
+    OptionString categorical("query option", "Categorical Option",
+                             {{"yes", 1}, {"no", 0}, {"maybe", 2}}, "yes");
+    string value{"no"};
+    da_int id{-1};
+
+    EXPECT_EQ(categorical.query_map(value, id, true), da_status_success);
+    EXPECT_EQ(id, 0);
+
+    value = "unknown";
+    id = -1;
+    EXPECT_EQ(categorical.query_map(value, id, true), da_status_option_not_found);
+
+    value = "";
+    id = 2;
+    EXPECT_EQ(categorical.query_map(value, id, false), da_status_success);
+    EXPECT_EQ(value, "maybe");
+
+    value = "";
+    id = 99;
+    EXPECT_EQ(categorical.query_map(value, id, false), da_status_option_not_found);
+
+    OptionString free_form("free-form", "Free-Form Option", {}, "anything", true);
+    value = "anything";
+    id = 0;
+    EXPECT_EQ(free_form.query_map(value, id, true), da_status_option_not_found);
+    EXPECT_EQ(free_form.query_map(value, id, false), da_status_option_not_found);
+}
+
 TEST(OpRegistryInternal, OpRegALL) {
     da_options::OptionRegistry reg;
     EXPECT_EQ(preload(reg), da_status_success);
@@ -384,6 +413,44 @@ TEST(OpRegistryInternal, OpRegALL) {
     reg.print_details(false, false);
     reg.print_details(false, true);
     reg.print_options();
+}
+
+TEST(OpRegistryInternal, OpRegQueryMap) {
+    da_options::OptionRegistry reg;
+    EXPECT_EQ(preload(reg), da_status_success);
+
+    string value;
+    da_int id;
+
+    value = "maybe";
+    id = -1;
+    EXPECT_EQ(reg.query_map("string option", value, id, true), da_status_success);
+    EXPECT_EQ(id, 2);
+
+    value = "";
+    id = 1;
+    EXPECT_EQ(reg.query_map("string option", value, id, false), da_status_success);
+    EXPECT_EQ(value, "yes");
+
+    value = "no";
+    id = -1;
+    EXPECT_EQ(reg.query_map("  StrIng   OPTion  ", value, id, true), da_status_success);
+    EXPECT_EQ(id, 0);
+
+    value = "yes";
+    id = -1;
+    EXPECT_EQ(reg.query_map("nonexistent option", value, id, true),
+              da_status_option_not_found);
+
+    value = "yes";
+    id = -1;
+    EXPECT_EQ(reg.query_map("integer option", value, id, true),
+              da_status_option_wrong_type);
+
+    value = "new value";
+    id = -1;
+    EXPECT_EQ(reg.query_map("free-form string option", value, id, true),
+              da_status_option_not_found);
 }
 
 // Public API Unit-tests

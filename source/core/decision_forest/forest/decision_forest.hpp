@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 
 #include "common/histogram.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "options.hpp"
 #include "tree/decision_tree.hpp"
 
@@ -54,6 +55,7 @@ using namespace da_errors;
 template <typename T> class decision_forest : public basic_handle<T> {
 
     bool model_trained = false;
+    bool init_done = false;
 
     // User data. Never modified by the classifier
     // X[n_samples X n_features]: features -- floating point matrix, column major
@@ -86,6 +88,8 @@ template <typename T> class decision_forest : public basic_handle<T> {
     // Model data
     std::vector<std::unique_ptr<decision_tree<T>>> forest;
 
+    da_status forest_serialization(da_model_persistence::serialization_buffer &buffer);
+
   public:
     decision_forest(da_errors::da_error_t &err);
     ~decision_forest();
@@ -107,9 +111,13 @@ template <typename T> class decision_forest : public basic_handle<T> {
     da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx_test,
                     const da_int *y_test, T *score);
 
-    da_status get_result(da_result query, da_int *dim, T *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result);
+                         [[maybe_unused]] da_int *result) override;
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
 };
 
 } // namespace da_decision_forest

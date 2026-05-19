@@ -126,6 +126,7 @@ da_status decision_forest<T>::set_training_data(da_int n_samples, da_int n_featu
         this->n_class = *std::max_element(y, y + n_samples) + 1;
 
     usr_categorical_feat = usr_cat_feat;
+    this->init_done = true;
 
     return da_status_success;
 }

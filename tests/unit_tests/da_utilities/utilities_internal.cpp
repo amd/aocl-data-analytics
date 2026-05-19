@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,9 +38,9 @@ using namespace std::string_literals;
 namespace dynamic_dispatch {
 TEST(UtilitiesTest, DynamicDispatchEnv) {
 
-    char arch[30]{""};
-    char ns[30]{""};
-    da_int len{30};
+    char arch[64]{""};
+    char ns[64]{""};
+    da_int len{64};
     da_int tmp{0};
 
     // map of arch found
@@ -74,10 +74,8 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
             if (archs[arch_env]) {
                 std::cout << "   AVAILABLE";
                 ++count;
-                if (ok_arch == "") {
-                    ok_arch = arch_env;
-                    std::cout << " selected";
-                }
+                ok_arch = arch_env;
+                std::cout << " selected";
             } else {
                 std::cout << "   (unavailable/ignored ns da_dynamic_dispatch_" << arch_env
                           << ")";
@@ -97,7 +95,7 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
 
     // Try to set the highest returned arch (for the previous loop)
     // and check the codepath (namespace)
-    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", arch, 1));
+    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", ok_arch.c_str(), 1));
     EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
     if (count > 1) {
         // -DARCH=dynamic, so we know the highest Zen version string is of the form zenX
@@ -112,9 +110,9 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
         }
     } else {
         // count == 1
-        // two cases:
         // 1. -DARCH=zenX uses zenX
         // 2. -DARCH=native
+        // 3. -DARCH=generic or generic_avx512
         // In both cases arch and ns should match
         EXPECT_EQ(std::string(ns), "da_dynamic_dispatch_"s + std::string(arch));
     }
@@ -150,27 +148,41 @@ TEST(UtilitiesTest, DynamicDispatchEnv) {
     }
 }
 
-// Try to set an architecture that is newer than the local cpu
+// Try to set an architecture that is newer than the local cpu.
+// This test is only meaningful for dynamic dispatch builds where zen4
+// code was actually compiled into the library.
 TEST(UtilitiesTest, DynamicDispatchTryArch) {
 
-    char arch[30]{""};
-    char ns[30]{""};
-    da_int len{30};
+    // Check if this is a dynamic dispatch build by looking for multiple
+    // architecture entries in the version string (format: "... [arch1 arch2 ...]")
+    const char *version = da_get_version();
+    std::string version_str(version);
+    auto open = version_str.find('[');
+    auto close = version_str.find(']');
+    bool is_dynamic =
+        (open != std::string::npos && close != std::string::npos &&
+         version_str.substr(open + 1, close - open - 1).find(' ') != std::string::npos);
+    if (is_dynamic) {
 
-    // make sure its empty
-    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
-    // get the architecture
-    EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
-    // save
-    std::string a{arch};
+        char arch[64]{""};
+        char ns[64]{""};
+        da_int len{64};
 
-    if (a == "generic"s || a == "generic_avx512"s || a == "zen2"s || a == "zen3") {
-        // assume max_target_arch is at least zen4
-        // Request zen4 and arch does not change
-        EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "zen4", 1));
+        // make sure its empty
+        EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
+        // get the architecture
         EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
-        // verify
-        EXPECT_EQ(std::string(arch), a);
+        // save
+        std::string a{arch};
+
+        if (a == "zen2"s || a == "zen3"s) {
+            // assume max_target_arch is at least zen4
+            // Request zen4 and arch does not change
+            EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "zen4", 1));
+            EXPECT_EQ(da_status_success, da_get_arch_info(&len, arch, ns));
+            // verify
+            EXPECT_EQ(std::string(arch), a);
+        }
     }
 }
 

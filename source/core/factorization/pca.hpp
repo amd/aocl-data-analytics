@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 #include "basic_handle.hpp"
 #include "da_error.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "pca_types.hpp"
 #include <vector>
 
@@ -101,9 +102,9 @@ template <typename T> class pca : public basic_handle<T> {
 
     ~pca();
 
-    da_status get_result(da_result query, da_int *dim, T *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
 
-    da_status get_result(da_result query, da_int *dim, da_int *result);
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
 
     da_status init(da_int n, da_int p, const T *A, da_int lda);
 
@@ -114,6 +115,10 @@ template <typename T> class pca : public basic_handle<T> {
 
     da_status inverse_transform(da_int k, da_int r, const T *X, da_int ldx,
                                 T *X_inv_transform, da_int ldx_inv_transform);
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
 };
 } // namespace da_pca
 } // namespace ARCH

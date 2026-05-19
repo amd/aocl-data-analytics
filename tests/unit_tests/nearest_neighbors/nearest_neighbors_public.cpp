@@ -443,6 +443,152 @@ TYPED_TEST(NearestNeighborsTest, AccuracyTestingZeroData_radius) {
     da_handle_destroy(&handle);
 }
 
+// Check outliers in prediction when radius neighbors are used.
+// We only test the prediction functionality.
+TYPED_TEST(NearestNeighborsTest, OutlierTesting) {
+    da_handle handle = nullptr;
+    da_int n_samples = 6;
+    da_int n_features = 3;
+    da_int n_queries = 3;
+    std::vector<TypeParam> X_train{-1., -2., -3., 1., 2., 3.,  -1., -1., -2.,
+                                   3.,  5.,  -1., 2., 3., -1., 1.,  1.,  2.};
+    std::vector<da_int> y_train_class{1, 2, 0, 1, 2, 2};
+    std::vector<TypeParam> y_train_regression{1.5, 2.2, 0.5, 1, 2.8, 5.2};
+    std::vector<TypeParam> X_test{-2., -1., 2., 2., -2., 1., 3., -1., -3.};
+    TypeParam tol = 10 * std::numeric_limits<TypeParam>::epsilon();
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_nn), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set_string(handle, "weights", "distance"), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set(handle, "radius", TypeParam(4.0)), da_status_success)
+        << da_handle_print_error_message(handle);
+    // Start testing with "most frequent" option
+    EXPECT_EQ(da_options_set_string(handle, "outlier handling", "most frequent"),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_nn_set_labels<TypeParam>(handle, n_samples, y_train_class.data()),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_nn_set_targets(handle, n_samples, y_train_regression.data()),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    // Test Regression
+    EXPECT_EQ(da_nn_set_data(handle, n_samples, n_features, X_train.data(), n_samples),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    std::vector<TypeParam> targets(n_queries);
+    EXPECT_EQ(da_nn_regressor_predict(handle, n_queries, n_features, X_test.data(),
+                                      n_queries, targets.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    std::vector<TypeParam> expected_targets = {1.6105221794760263, 0.887425886722793,
+                                               2.2};
+    EXPECT_ARR_NEAR(n_queries, targets.data(), expected_targets.data(), tol);
+
+    // Test Classification
+    da_int n_classes = 0; // Set n_classes to zero to do query for the required memory
+    EXPECT_EQ(da_nn_classes<TypeParam>(handle, &n_classes, nullptr), da_status_success)
+        << da_handle_print_error_message(handle);
+
+    std::vector<TypeParam> expected_proba{0.0,
+                                          0.6125741132772068,
+                                          0.0,
+                                          0.6304942401901729,
+                                          0.3874258867227931,
+                                          0.0,
+                                          0.36950575980982725,
+                                          0.0,
+                                          1.0};
+    std::vector<TypeParam> proba(n_classes * n_queries);
+    EXPECT_EQ(da_nn_classifier_predict_proba(handle, n_queries, n_features, X_test.data(),
+                                             n_queries, proba.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_ARR_NEAR(n_classes * n_queries, proba.data(), expected_proba.data(), tol);
+
+    std::vector<da_int> labels(n_queries);
+    EXPECT_EQ(da_nn_classifier_predict(handle, n_queries, n_features, X_test.data(),
+                                       n_queries, labels.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    std::vector<da_int> expected_labels{1, 0, 2};
+    EXPECT_ARR_NEAR(n_queries, labels.data(), expected_labels.data(), 0);
+
+    // Now test with "manual" option
+    EXPECT_EQ(da_options_set_string(handle, "outlier handling", "manual"),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set_int(handle, "outlier label", -999), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set(handle, "outlier target", TypeParam(-123)),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    EXPECT_EQ(da_nn_regressor_predict(handle, n_queries, n_features, X_test.data(),
+                                      n_queries, targets.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+
+    expected_targets =
+        std::vector<TypeParam>({1.6105221794760263, 0.887425886722793, -123.0});
+    EXPECT_ARR_NEAR(n_queries, targets.data(), expected_targets.data(), tol);
+
+    expected_proba =
+        std::vector<TypeParam>({0.0, 0.6125741132772068, 0.0, 0.6304942401901729,
+                                0.3874258867227931, 0.0, 0.36950575980982725, 0.0, 0.0});
+    EXPECT_EQ(da_nn_classifier_predict_proba(handle, n_queries, n_features, X_test.data(),
+                                             n_queries, proba.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+    EXPECT_ARR_NEAR(n_classes * n_queries, proba.data(), expected_proba.data(), tol);
+
+    EXPECT_EQ(da_nn_classifier_predict(handle, n_queries, n_features, X_test.data(),
+                                       n_queries, labels.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+    expected_labels = std::vector<da_int>({1, 0, -999});
+    EXPECT_ARR_NEAR(n_queries, labels.data(), expected_labels.data(), 0);
+
+    // Test again with different values for the outlier label and target
+    EXPECT_EQ(da_options_set_int(handle, "outlier label", 1), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set(handle, "outlier target",
+                             std::numeric_limits<TypeParam>::quiet_NaN()),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    EXPECT_EQ(da_nn_regressor_predict(handle, n_queries, n_features, X_test.data(),
+                                      n_queries, targets.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+
+    expected_targets =
+        std::vector<TypeParam>({1.6105221794760263, 0.887425886722793,
+                                std::numeric_limits<TypeParam>::quiet_NaN()});
+    EXPECT_ARR_NEAR(n_queries - 1, targets.data(), expected_targets.data(), tol);
+    EXPECT_TRUE(std::isnan(targets[2]));
+
+    expected_proba =
+        std::vector<TypeParam>({0.0, 0.6125741132772068, 0.0, 0.6304942401901729,
+                                0.3874258867227931, 1.0, 0.36950575980982725, 0.0, 0.0});
+    EXPECT_EQ(da_nn_classifier_predict_proba(handle, n_queries, n_features, X_test.data(),
+                                             n_queries, proba.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_ARR_NEAR(n_classes * n_queries, proba.data(), expected_proba.data(), tol);
+
+    EXPECT_EQ(da_nn_classifier_predict(handle, n_queries, n_features, X_test.data(),
+                                       n_queries, labels.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    expected_labels = std::vector<da_int>({1, 0, 1});
+    EXPECT_ARR_NEAR(n_queries, labels.data(), expected_labels.data(), 0);
+
+    da_handle_destroy(&handle);
+}
+
 std::string ErrorExits_print(std::string param) {
     std::string ss = "Test for invalid value of " + param + " failed.";
     return ss;

@@ -124,6 +124,9 @@ To compile and link to dynamic AOCL libraries using ``clang++``:
 Note that for dynamic linking you will need to update your ``LD_LIBRARY_PATH`` environment
 variable, e.g. ``export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:<AOCL_ROOT>/lib_<INT_LIB>``.
 
+If you are using serial libraries, then ``-lomp`` should be replaced with ``-lpthread`` and ``-mt``
+should be omitted from the BLIS library name.
+
 If you wish to call AOCL-DA from a C code, then you should compile using your C compiler
 (e.g. ``gcc``), but link separately, using a C++ linker (e.g. ``g++``).
 
@@ -143,6 +146,9 @@ for 32 and 64 bit integers respectively.
        \<path to amd-utils>\lib\libaoclutils.lib /openmp:llvm
 
 The same command will work with ``cl`` replaced by ``clang-cl`` (in which case, simply use ``/openmp``) and linking statically using ``/MT``.
+
+If you are using serial libraries, then the OpenMP flag is not required and ``-MT`` should be
+omitted from the BLIS and libFLAME library names.
 
 .. note::
    You should ensure the folders containing the libraries to be linked are on your

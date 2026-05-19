@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -33,6 +33,7 @@ import pytest
 from aoclda._internal_utils import check_convert_data, get_int_info
 
 int_type = "int" + get_int_info()
+
 
 @pytest.mark.parametrize('force_float, da_dtype, np_dtype', [
     (True, 'float32', 'float32'), (True, 'float64', 'float64'),

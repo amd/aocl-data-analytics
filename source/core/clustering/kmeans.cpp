@@ -33,6 +33,7 @@
 #include "lapack_templates.hpp"
 #include "macros.h"
 #include "miscellaneous.hpp"
+#include "model_persistence.hpp"
 #include "pairwise_distances.hpp"
 #include <cstdlib>
 #include <numeric>
@@ -44,6 +45,7 @@ namespace ARCH {
 
 namespace da_kmeans {
 
+using namespace da_model_persistence;
 using namespace da_kmeans_types;
 using namespace std::literals::string_literals;
 
@@ -2004,6 +2006,60 @@ template <typename T> void kmeans<T>::initialize_rng() {
         }
         mt_gen.seed(seed);
     }
+}
+
+template <typename T> da_status kmeans<T>::serialize(serialization_buffer &buffer) {
+
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->iscomputed);
+    io_dispatch(this->order);
+    io_dispatch(this->algorithm);
+    io_dispatch(this->n_samples);
+    io_dispatch(this->n_features);
+    io_dispatch(this->best_n_iter);
+    io_dispatch(this->best_inertia);
+    io_dispatch(this->seed);
+    io_dispatch(this->n_clusters);
+    io_dispatch(this->tol);
+    io_dispatch(this->max_iter);
+    io_dispatch(this->n_init);
+    io_dispatch(*this->best_labels);
+    io_dispatch(*this->best_cluster_centres);
+    io_dispatch(this->workc1);
+
+    return status;
+}
+
+template <typename T> da_status kmeans<T>::save_model(serialization_buffer &buffer) {
+
+    if (!this->iscomputed) {
+        return da_error(this->err, da_status_no_data,
+                        "k-means clustering has not yet been computed. Please call "
+                        "da_kmeans_compute_s "
+                        "or da_kmeans_compute_d before saving the model.");
+    }
+
+    da_status status = basic_handle<T>::save_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T> da_status kmeans<T>::load_model(serialization_buffer &buffer) {
+    da_status status = basic_handle<T>::load_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    return status;
 }
 
 template class kmeans<double>;

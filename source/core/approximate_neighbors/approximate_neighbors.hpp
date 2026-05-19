@@ -33,6 +33,7 @@
 #include "da_error.hpp"
 #include "da_vector.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 
 #include <cmath>
 #include <random>
@@ -68,6 +69,8 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     // User train data
     da_int n_samples_train = 0, n_samples = 0, n_features = 0, ldx_train = 0;
     const T *X_train = nullptr;
+    // Vector used to store user data after model has been loaded
+    std::vector<T> X_int;
     // Fraction of training data to use for k-means clustering
     T train_fraction = 1.0;
 
@@ -105,9 +108,9 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
 
     approximate_neighbors(da_errors::da_error_t &err);
 
-    da_status get_result(da_result query, da_int *dim, T *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result);
+                         [[maybe_unused]] da_int *result) override;
     // Set input parameters
     da_status set_params();
 
@@ -159,6 +162,11 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     da_status kneighbors_compute_ivfflat(da_int n_queries, da_int n_features,
                                          const T *X_test, da_int ldx_test, da_int *n_ind,
                                          T *n_dist, da_int n_neigh, bool return_distance);
+
+    // Model storage
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
 };
 
 } // namespace da_approx_nn

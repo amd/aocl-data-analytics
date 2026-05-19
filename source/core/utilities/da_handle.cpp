@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -58,6 +58,116 @@ da_status _da_handle::get_current_opts(da_options::OptionRegistry **opts, bool r
         break;
     }
     return da_status_success;
+}
+
+da_status _da_handle::save_handle(std::vector<char> &buffer_data) {
+    da_model_persistence::serialization_buffer buffer(this->handle_type);
+    da_status status = buffer.set_buffer_data(&buffer_data);
+    if (status != da_status_success)
+        return status;
+
+    if (this->precision == da_single) {
+        status = this->alg_handle_s->save_model(buffer);
+    } else if (this->precision == da_double) {
+        status = this->alg_handle_d->save_model(buffer);
+    }
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing handle.");
+
+    return status;
+}
+
+da_status _da_handle::save_handle(const std::string &file_name) {
+    da_status status = da_status_success;
+    std::vector<char> buffer_data;
+
+    status = this->save_handle(buffer_data);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing handle.");
+
+    std::ofstream file;
+    file.open(file_name, std::ios::binary | std::ios::trunc);
+    if (!file.is_open()) {
+        return da_error(this->err, da_status_io_error,              // LCOV_EXCL_LINE
+                        "Error while opening/creating save file."); // LCOV_EXCL_LINE
+    }
+    file.write(buffer_data.data(), buffer_data.size());
+    if (!file) {
+        return da_error(this->err, da_status_io_error, // LCOV_EXCL_LINE
+                        "Failed to write to file.");   // LCOV_EXCL_LINE
+    }
+    file.close();
+
+    return status;
+}
+
+da_status _da_handle::load_handle(da_handle &handle, const char *buffer_data,
+                                  const size_t data_size) {
+    da_int precision;
+    da_model_persistence::serialization_buffer buffer(da_handle_uninitialized);
+    da_status status = buffer.set_buffer_data(buffer_data, data_size);
+    if (status != da_status_success)
+        return status;
+
+    status = buffer.deserialize_metadata(precision);
+    if (status != da_status_success)
+        return status;
+
+    if (precision == (da_int)sizeof(float)) {
+        status = da_handle_init_s(&handle, buffer.get_handle_type());
+        if (status != da_status_success)
+            return status;
+
+        status = handle->alg_handle_s->load_model(buffer);
+    } else if (precision == (da_int)sizeof(double)) {
+        status = da_handle_init_d(&handle, buffer.get_handle_type());
+        if (status != da_status_success)
+            return status;
+
+        status = handle->alg_handle_d->load_model(buffer);
+    }
+    if (status != da_status_success ||
+        (handle->alg_handle_s == nullptr && handle->alg_handle_d == nullptr)) {
+        da_status return_status =
+            status != da_status_success ? status : da_status_invalid_file_data;
+        return da_error_trace(handle->err, return_status, "Failure deserializing model.");
+    }
+
+    return status;
+}
+
+da_status _da_handle::load_handle(da_handle &handle, const std::string &file_name) {
+    std::ifstream file(file_name, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        return da_status_io_error; // LCOV_EXCL_LINE
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    if (size <= 0) {
+        return da_status_io_error;
+    }
+
+    std::vector<char> buffer_data;
+    try {
+        buffer_data.resize(size);
+    } catch (std::bad_alloc const &) {
+        return da_status_memory_error; // LCOV_EXCL_LINE
+    }
+
+    if (!file.read(buffer_data.data(), size))
+        return da_status_io_error;
+
+    file.close();
+
+    da_status status = load_handle(handle, buffer_data.data(), (size_t)size);
+    if (status != da_status_success && handle) {
+        return da_error_trace(handle->err, status,
+                              "Failure deserializing handle from file.");
+    }
+
+    return status;
 }
 
 template <> basic_handle<double> *_da_handle::get_alg_handle<double>() {

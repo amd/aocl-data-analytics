@@ -34,7 +34,7 @@ Split a dataset into training and test sets, which can optionally be shuffled an
 Stratify
 --------
 
-If stratification is enabled, ``train_test_split`` will try to ensure that the relative proportions of classes in the training and test sets is the same as in the original dataset. This is particularly useful for classification tasks where you want to ensure that both sets have a representative distribution of classes.
+If stratification is enabled, ``train_test_split`` will try to ensure that the relative proportions of classes in the training and test sets are the same as in the original dataset. This is particularly useful for classification tasks where you want to ensure that both sets have a representative distribution of classes.
 
 Examples
 --------

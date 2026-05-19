@@ -127,8 +127,8 @@ As an example, if :math:`K=2`, the loss function simplifies to,
 As in the linear regression model, :math:`\ell_1` or :math:`\ell_2` regularization can be applied by adding the corresponding
 penalty term to the cost function.
 
-When the model uses :math:`\ell_1` regularization is it also known by the name of lasso, while
-when using :math:`\ell_2` is it also called a ridge model. When both regularization terms are present then it is termed an
+When the model uses :math:`\ell_1` regularization, it is also known by the name of lasso, while
+when using :math:`\ell_2`, it is also called a ridge model. When both regularization terms are present then it is termed an
 elastic-net model.
 
 .. only:: internal
@@ -383,12 +383,12 @@ The standard way of computing a linear model using AOCL-DA is as follows.
    .. tab-item:: C
       :sync: C
 
-      4. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
-      5. Pass data to the handle using :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
-      6. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
-      7. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
-      8. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
-      9. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`. The following results are available:
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
+      2. Pass data to the handle using :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
+      3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
+      4. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
+      5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
+      6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`. The following results are available:
 
          * Coefficients (:cpp:enumerator:`da_linmod_coef`): the optimal coefficients of the fitted model.
 

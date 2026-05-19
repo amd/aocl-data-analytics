@@ -213,7 +213,7 @@ Options
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
-Note that k-d trees are likely to be fastest for lower dimensional datasets, and ball trees may be preferred when data is not aligned along the coordinate axes, but trees cannot not be used with the cosine distance, the squared Euclidean distance, or the Minkowski distance with power less than 1.0.
+Note that k-d trees are likely to be fastest for lower dimensional datasets, and ball trees may be preferred when data is not aligned along the coordinate axes, but trees cannot be used with the cosine distance, the squared Euclidean distance, or the Minkowski distance with power less than 1.0.
 
 Examples (clustering)
 ========================

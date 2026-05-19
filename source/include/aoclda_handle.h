@@ -148,4 +148,52 @@ da_status da_handle_get_error_severity(da_handle handle, da_severity *severity);
 /* Expose the refresh functionality for benchmark purposes */
 void da_handle_refresh(da_handle handle);
 
+/**
+ * @brief Save a trained model to a binary file.
+ *
+ * Serialize the trained model and its internal state to disk for later use.
+ * This allows the model to be reused without retraining.
+ *
+ * @rst
+ * For more information, see :ref:`model persistence <model_persistence>`.
+ * @endrst
+ *
+ * @param[in] handle the @ref da_handle structure containing the trained model.
+ * @param[in] file_name path to the output file where the model will be saved.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_internal_error - an unexpected internal error occurred.
+ * - @ref da_status_memory_error - a memory allocation error occurred.
+ * - @ref da_status_invalid_pointer - the handle, file_name, or supplied data pointer is invalid.
+ * - @ref da_status_invalid_input - invalid input argument or the model is not in a valid state to be saved.
+ * - @ref da_status_invalid_option - an option is set to an incompatible value.
+ * - @ref da_status_no_data - the model has not been trained yet (no data to save).
+ * - @ref da_status_io_error - an I/O error occurred while writing to the file.
+ */
+da_status da_handle_save_model(da_handle handle, const char *file_name);
+
+/**
+ * @brief Load a trained model from a binary file.
+ *
+ * Deserialize a previously saved model from disk and reconstruct the handle
+ * with all trained parameters and internal state.
+ *
+ * @rst
+ * For more information, see :ref:`model persistence <model_persistence>`.
+ * @endrst
+ *
+ * @param[out] handle pointer to the @ref da_handle structure to be initialized with the loaded model.
+ * @param[in] file_name path to the input file containing the saved model.
+ * @return @ref da_status. The function returns:
+ * - @ref da_status_success - the operation was successfully completed.
+ * - @ref da_status_internal_error - an unexpected internal error occurred while initializing handle.
+ * - @ref da_status_memory_error - a memory allocation error occurred.
+ * - @ref da_status_invalid_pointer - the handle, file_name or supplied data pointer is invalid.
+ * - @ref da_status_invalid_input - an option value in the file is invalid.
+ * - @ref da_status_io_error - an I/O error occurred while reading from the file.
+ * - @ref da_status_invalid_file_data - the file format is invalid or corrupted.
+ * - @ref da_status_version_mismatch - the file was saved with an incompatible library version.
+ */
+da_status da_handle_load_model(da_handle *handle, const char *file_name);
+
 #endif

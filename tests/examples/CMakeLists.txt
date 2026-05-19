@@ -54,6 +54,9 @@ add_executable(decision_tree decision_tree.cpp)
 target_compile_definitions(
   decision_tree PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/df_data")
 
+add_executable(model_persistence_decision_tree model_persistence_decision_tree.cpp)
+target_link_libraries(model_persistence_decision_tree PRIVATE aocl-da)
+
 add_executable(decision_forest decision_forest.cpp)
 
 target_compile_definitions(
@@ -61,6 +64,9 @@ target_compile_definitions(
 
 add_executable(pca pca.cpp)
 target_link_libraries(pca PRIVATE aocl-da)
+
+add_executable(model_persistence_pca model_persistence_pca.cpp)
+target_link_libraries(model_persistence_pca PRIVATE aocl-da)
 
 add_executable(pca_cancer pca_cancer.cpp)
 target_link_libraries(pca_cancer PRIVATE aocl-da)
@@ -108,6 +114,8 @@ set(EXAMPLE_EXES
     decision_tree
     decision_forest
     metrics
+    model_persistence_decision_tree
+    model_persistence_pca
     knn_classification
     knn_regression
     radius_neighbors

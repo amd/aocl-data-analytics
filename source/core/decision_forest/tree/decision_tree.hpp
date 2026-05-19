@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -35,6 +35,7 @@
 #include "common/tree_options_types.hpp"
 #include "da_omp.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "options.hpp"
 
 #include <deque>
@@ -82,6 +83,8 @@ template <typename T> class node {
     da_int const_feat_idx = std::numeric_limits<da_int>::max();
     da_int children_const_idx = std::numeric_limits<da_int>::max();
     void dummy();
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
 
 template <typename T> struct split {
@@ -122,6 +125,7 @@ using score_fun_t = typename std::function<T(da_int, da_int, std::vector<da_int>
 template <typename T> class decision_tree : public basic_handle<T> {
 
     bool model_trained = false;
+    bool init_done = false;
     da_int predict_proba_opt = true;
 
     // user data. Never modified by the classifier
@@ -222,9 +226,13 @@ template <typename T> class decision_tree : public basic_handle<T> {
     T cat_tol;
     da_int cat_split_strat;
 
+    da_status tree_serialization(da_model_persistence::serialization_buffer &buffer);
+
   public:
     // Constructor for public interfaces
     decision_tree(da_errors::da_error_t &err);
+    // Constructor for forest model loading
+    decision_tree() = default;
     // Constructor bypassing the optional parameters for internal forest use
     // Values will NOT be checked
     decision_tree(bins<T> *X_binned, da_int max_depth, da_int min_node_sample,
@@ -241,7 +249,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_status init_working_memory_hist();
     da_status resize_tree(size_t new_size);
     void clear_working_memory();
-    void refresh();
+    void refresh() override;
 
     // Public training
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
@@ -307,9 +315,9 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx,
                     const da_int *y_test, T *accuracy);
 
-    da_status get_result(da_result query, da_int *dim, T *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
     da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result);
+                         [[maybe_unused]] da_int *result) override;
 
     // Getters for testing purposes
     std::vector<da_int> const &get_samples_idx();
@@ -325,6 +333,10 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_int get_n_leaves() { return n_leaves; }
     // Setters for testing purposes
     void set_bootstrap(bool bs);
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
 };
 
 } // namespace da_decision_forest

@@ -31,14 +31,21 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "nearest_neighbors_options.hpp"
 #include "nearest_neighbors_utils.hpp"
 #include "pairwise_distances.hpp"
+#include <algorithm>
+#include <cmath>
+#include <map>
 #include <numeric>
+#include <set>
 
 namespace ARCH {
 
 namespace da_neighbors {
+
+using namespace da_model_persistence;
 
 #define KNN_BLOCK_FLOAT 2048
 #define KNN_BLOCK_DOUBLE 1024
@@ -294,6 +301,10 @@ template <typename T> da_status neighbors<T>::set_params() {
     opt_pass &= this->opts.get("algorithm", opt_val, algo) == da_status_success;
     opt_pass &= this->opts.get("metric", opt_val, metric) == da_status_success;
     opt_pass &= this->opts.get("weights", opt_val, weights) == da_status_success;
+    opt_pass &= this->opts.get("outlier handling", opt_val, outlier_handling) ==
+                da_status_success;
+    opt_pass &= this->opts.get("outlier label", manual_label) == da_status_success;
+    opt_pass &= this->opts.get("outlier target", manual_target) == da_status_success;
     opt_pass &= this->opts.get("minkowski parameter", p) == da_status_success;
     opt_pass &= this->opts.get("leaf size", leaf_size) == da_status_success;
     opt_pass &= this->opts.get("radius", radius) == da_status_success;
@@ -393,6 +404,24 @@ template <typename T> da_status neighbors<T>::check_options_update() {
     T local_p;
     opt_pass &= this->opts.get("algorithm", opt_val, local_algo) == da_status_success;
     opt_pass &= this->opts.get("radius", radius) == da_status_success;
+    opt_pass &= this->opts.get("outlier handling", opt_val, outlier_handling) ==
+                da_status_success;
+    if (outlier_handling == da_neighbors_types::nn_outlier_handling::manual) {
+        da_int local_manual_label;
+        T local_manual_target;
+        opt_pass &=
+            this->opts.get("outlier label", local_manual_label) == da_status_success;
+        opt_pass &=
+            this->opts.get("outlier target", local_manual_target) == da_status_success;
+        // In case the manual outlier values change, update the booleans so that they get recomputed.
+        if (local_manual_label != this->manual_label) {
+            this->manual_label = local_manual_label;
+            manual_outlier_label_checked = false;
+        }
+        if (local_manual_target != this->manual_target) {
+            this->manual_target = local_manual_target;
+        }
+    }
     if (!opt_pass)
         return da_error_bypass(this->err, da_status_internal_error, // LCOV_EXCL_LINE
                                "Unexpected error while reading the optional parameters.");
@@ -968,6 +997,31 @@ template <typename T> void get_weights(std::vector<T> &weights, da_int weight_de
     }
 }
 
+// Given a vector x of length n, this function returns
+// the most frequent element in x. In case of ties, it returns the smallest one.
+inline __attribute__((__always_inline__)) da_int most_frequent_element(da_int n,
+                                                                       const da_int *x) {
+    // Insert all elements of x into the map and count their frequencies.
+    // Using std::map for deterministic iteration order.
+    std::map<da_int, da_int> freq_map;
+    for (da_int i = 0; i < n; i++) {
+        freq_map[x[i]]++;
+    }
+    // Find the maximum frequency and the corresponding element(s).
+    da_int max_freq = 0;
+    da_int most_freq_element = x[0];
+    for (const auto &freq : freq_map) {
+        da_int val = freq.first;
+        da_int count = freq.second;
+        // Update if frequency is higher, or if equal frequency but smaller value (tie-breaking)
+        if (count > max_freq || (count == max_freq && val < most_freq_element)) {
+            max_freq = count;
+            most_freq_element = val;
+        }
+    }
+    return most_freq_element;
+}
+
 template <typename T> da_status neighbors<T>::available_classes() {
     // Return if set_data() has not been called
     if (!istrained_Xtrain)
@@ -981,12 +1035,11 @@ template <typename T> da_status neighbors<T>::available_classes() {
                                "da_nn_set_labels_s or da_nn_set_labels_d.");
     // From the input data y_train_class, find the available classes.
     try {
-        std::vector<da_int> temp_classes(this->y_train_class,
-                                         this->y_train_class + this->n_samples);
-        std::sort(temp_classes.begin(), temp_classes.end());
-        std::vector<da_int>::iterator ip;
-        ip = std::unique(temp_classes.begin(), temp_classes.end());
-        temp_classes.resize(std::distance(temp_classes.begin(), ip));
+        // std::set will automatically sort and remove duplicates.
+        std::set<da_int> temp_classes_set(this->y_train_class,
+                                          this->y_train_class + this->n_samples);
+        std::vector<da_int> temp_classes(temp_classes_set.begin(),
+                                         temp_classes_set.end());
         this->classes = std::move(temp_classes);
         this->n_classes = da_int(this->classes.size());
         this->classes_computed = true;
@@ -1194,11 +1247,30 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
         return da_error_bypass(this->err, status,
                                "Failed to compute probabilities due to an internal error "
                                "of the available classes computation.");
+    if ((this->outlier_handling ==
+         da_neighbors_types::nn_outlier_handling::most_frequent) &&
+        (!this->most_frequent_label_computed)) {
+        // Compute the most frequent label if needed
+        this->most_frequent_label =
+            most_frequent_element(this->n_samples, this->y_train_class);
+        this->most_frequent_label_computed = true;
+    }
+
+    if ((this->outlier_handling == da_neighbors_types::nn_outlier_handling::manual) &&
+        (!this->manual_outlier_label_checked)) {
+        // Check if the manually set outlier label is present in the training labels.
+        auto it =
+            std::find(this->classes.begin(), this->classes.end(), this->manual_label);
+        this->manual_label_index =
+            (it != this->classes.end()) ? std::distance(this->classes.begin(), it) : -1;
+        this->manual_outlier_label_checked = true;
+    }
 
     std::vector<da_int> temp_radius_neighbors_count;
     std::vector<da_vector::da_vector<da_int>> temp_radius_neighbors_indices;
     std::vector<da_vector::da_vector<T>> temp_radius_neighbors_distances;
 
+    bool has_outliers = false;
     // Allocate memory to store radius neighbors results for each query
     try {
         bool compute_distances = false;
@@ -1226,16 +1298,38 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
             // use this info to compute the probability for each of the class labels.
             for (da_int j = 0; j < n_queries; j++) {
                 da_int n_neigh = temp_radius_neighbors_count[j];
+                da_int j_local = j * num_classes;
                 if (n_neigh == 0) {
-                    return da_error_bypass(this->err, da_status_operation_failed,
-                                           "Failed to compute probabilities for query " +
-                                               std::to_string(j) +
-                                               " since it does not have any neighbors "
-                                               "within the specified radius.");
+                    if (this->outlier_handling ==
+                        da_neighbors_types::nn_outlier_handling::none) {
+                        return da_error_bypass(
+                            this->err, da_status_operation_failed,
+                            "Failed to compute probabilities for query " +
+                                std::to_string(j) +
+                                " since it does not have any neighbors "
+                                "within the specified radius.");
+                    } else if (this->outlier_handling ==
+                               da_neighbors_types::nn_outlier_handling::manual) {
+                        has_outliers = true;
+                        // Fill probabilities with 0.0 for samples with no neighbors
+                        da_std::fill(proba + j_local, proba + j_local + num_classes, 0.0);
+                        // If the manually set outlier label is present in the training labels, set its probability to 1.0
+                        if (this->manual_label_index != -1) {
+                            proba[classes[this->manual_label_index] + j_local] = 1.0;
+                        }
+                    } else if (this->outlier_handling ==
+                               da_neighbors_types::nn_outlier_handling::most_frequent) {
+                        // Fill probabilities with 1.0 for most frequent class, 0.0 for others
+                        for (da_int i = 0; i < num_classes; i++) {
+                            proba[i + j_local] =
+                                (this->classes[i] == this->most_frequent_label) ? 1.0
+                                                                                : 0.0;
+                        }
+                    }
+                    continue;
                 }
                 denominator = 0.0;
                 // Count neighbors for each class
-                da_int j_local = j * num_classes;
                 for (da_int i = 0; i < num_classes; i++) {
                     proba[i + j_local] = 0.0;
                     for (da_int neig = 0; neig < n_neigh; neig++) {
@@ -1256,12 +1350,35 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
             for (da_int j = 0; j < n_queries; j++) {
                 denominator = 0.0;
                 da_int n_neigh = temp_radius_neighbors_count[j];
+                da_int j_local = j * num_classes;
                 if (n_neigh == 0) {
-                    return da_error_bypass(this->err, da_status_operation_failed,
-                                           "Failed to compute probabilities for query " +
-                                               std::to_string(j) +
-                                               " since it does not have any neighbors "
-                                               "within the specified radius.");
+                    if (this->outlier_handling ==
+                        da_neighbors_types::nn_outlier_handling::none) {
+                        return da_error_bypass(
+                            this->err, da_status_operation_failed,
+                            "Failed to compute probabilities for query " +
+                                std::to_string(j) +
+                                " since it does not have any neighbors "
+                                "within the specified radius.");
+                    } else if (this->outlier_handling ==
+                               da_neighbors_types::nn_outlier_handling::manual) {
+                        has_outliers = true;
+                        // Fill probabilities with 0.0 for samples with no neighbors
+                        da_std::fill(proba + j_local, proba + j_local + num_classes, 0.0);
+                        // If the manually set outlier label is present in the training labels, set its probability to 1.0
+                        if (this->manual_label_index != -1) {
+                            proba[classes[this->manual_label_index] + j_local] = 1.0;
+                        }
+                    } else if (this->outlier_handling ==
+                               da_neighbors_types::nn_outlier_handling::most_frequent) {
+                        // Fill probabilities with 1.0 for most frequent class, 0.0 for others
+                        for (da_int i = 0; i < num_classes; i++) {
+                            proba[i + j_local] =
+                                (this->classes[i] == this->most_frequent_label) ? 1.0
+                                                                                : 0.0;
+                        }
+                    }
+                    continue;
                 }
                 // Copy distances to weight vector, converting from squared to actual distances if needed
                 std::vector<T> weight_vector(n_neigh);
@@ -1278,7 +1395,6 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
 
                 get_weights(weight_vector, this->weights);
 
-                da_int j_local = j * num_classes;
                 for (da_int i = 0; i < num_classes; i++) {
                     proba[i + j_local] = 0.0;
                     for (da_int neig = 0; neig < n_neigh; neig++) {
@@ -1298,6 +1414,15 @@ da_status neighbors<T>::predict_proba_compute_rnn(da_int n_queries, da_int n_fea
     } catch (std::bad_alloc const &) {
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation failed.");
+    }
+
+    if (this->outlier_handling == da_neighbors_types::nn_outlier_handling::manual) {
+        if (has_outliers && this->manual_label_index == -1) {
+            return da_warn(
+                this->err, da_status_outlier_warning,
+                "The manually set outlier label is not present in the training labels. "
+                "Setting probabilities to 0.0.");
+        }
     }
 
     return status;
@@ -1380,7 +1505,7 @@ da_status neighbors<T>::predict(da_int n_queries, da_int n_features, const T *X_
             da_error_bypass(this->err, da_status_invalid_input,
                             "Unknown search mode: " + std::to_string(search_mode) + ".");
     }
-    if (status != da_status_success)
+    if (status != da_status_success && status != da_status_outlier_warning)
         return da_error_bypass(this->err, status,
                                "Failed to compute predicted labels due to an internal "
                                "error of predicting the probabilities.");
@@ -1388,10 +1513,35 @@ da_status neighbors<T>::predict(da_int n_queries, da_int n_features, const T *X_
     // For each column of proba, check which label appears the most times.
     // In case of a tie, return the first label.
     da_int max_index;
-    for (da_int i = 0; i < n_queries; i++) {
-        max_index =
-            da_blas::cblas_iamax(this->n_classes, proba.data() + i * this->n_classes, 1);
-        y_test[i] = this->classes[max_index];
+    if (search_mode == knn_search_mode ||
+        this->outlier_handling == da_neighbors_types::nn_outlier_handling::none) {
+        for (da_int i = 0; i < n_queries; i++) {
+            max_index = da_blas::cblas_iamax(this->n_classes,
+                                             proba.data() + i * this->n_classes, 1);
+            y_test[i] = this->classes[max_index];
+        }
+    } else if (this->outlier_handling ==
+               da_neighbors_types::nn_outlier_handling::manual) {
+        for (da_int i = 0; i < n_queries; i++) {
+            max_index = da_blas::cblas_iamax(this->n_classes,
+                                             proba.data() + i * this->n_classes, 1);
+            if (proba[max_index + i * this->n_classes] == 0.0) {
+                y_test[i] = this->manual_label;
+            } else {
+                y_test[i] = this->classes[max_index];
+            }
+        }
+    } else if (this->outlier_handling ==
+               da_neighbors_types::nn_outlier_handling::most_frequent) {
+        for (da_int i = 0; i < n_queries; i++) {
+            max_index = da_blas::cblas_iamax(this->n_classes,
+                                             proba.data() + i * this->n_classes, 1);
+            if (proba[max_index + i * this->n_classes] == 0.0) {
+                y_test[i] = this->most_frequent_label;
+            } else {
+                y_test[i] = this->classes[max_index];
+            }
+        }
     }
 
     if (this->order == row_major) {
@@ -1556,10 +1706,25 @@ neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *
 
     da_status status = da_status_success;
 
+    if (this->outlier_handling ==
+            da_neighbors_types::nn_outlier_handling::most_frequent &&
+        !this->mean_target_computed) {
+        status = da_basic_statistics::mean(column_major, da_axis_col, this->n_samples, 1,
+                                           this->y_train_reg, this->n_samples,
+                                           &this->mean_target);
+        if (status != da_status_success)
+            return da_error_bypass(
+                this->err, status,
+                "Failed to compute mean target due to an internal error "
+                "of the mean computation.");
+        this->mean_target_computed = true;
+    }
+
     std::vector<da_int> temp_radius_neighbors_count;
     std::vector<da_vector::da_vector<da_int>> temp_radius_neighbors_indices;
     std::vector<da_vector::da_vector<T>> temp_radius_neighbors_distances;
 
+    bool has_outliers = false;
     try {
         bool compute_distances = false;
         if (this->weights == da_neighbors_types::nn_weights::distance)
@@ -1572,9 +1737,8 @@ neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *
 
         if (status != da_status_success)
             return da_error_bypass(this->err, status,
-                                   "Failed to compute probabilities due to an internal "
+                                   "Failed to predict targets due to an internal "
                                    "error of the radius neighbors computation.");
-
         // Depending on the weights, compute the predicted target for each test data point
         // using the targets of the neighbors.
         if (this->weights == da_neighbors_types::nn_weights::uniform) {
@@ -1590,11 +1754,21 @@ neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *
             for (da_int j = 0; j < n_queries; j++) {
                 da_int n_neigh = temp_radius_neighbors_count[j];
                 if (n_neigh == 0) {
-                    return da_error_bypass(this->err, da_status_operation_failed,
-                                           "Failed to compute probabilities for query " +
-                                               std::to_string(j) +
-                                               " since it does not have any neighbors "
-                                               "within the specified radius.");
+                    if (this->outlier_handling ==
+                        da_neighbors_types::nn_outlier_handling::none) {
+                        return da_error_bypass(
+                            this->err, da_status_operation_failed,
+                            "Failed to compute targets for query " + std::to_string(j) +
+                                " since it does not have any neighbors "
+                                "within the specified radius.");
+                    } else if (this->outlier_handling ==
+                               da_neighbors_types::nn_outlier_handling::most_frequent) {
+                        y_test[j] = this->mean_target;
+                    } else {
+                        has_outliers = true;
+                        y_test[j] = this->manual_target;
+                    }
+                    continue;
                 }
                 for (da_int i = 0; i < n_neigh; i++) {
                     da_int neighbor_idx = temp_radius_neighbors_indices[j][i];
@@ -1611,11 +1785,21 @@ neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *
                 denominator = 0.0;
                 da_int n_neigh = temp_radius_neighbors_count[j];
                 if (n_neigh == 0) {
-                    return da_error_bypass(this->err, da_status_operation_failed,
-                                           "Failed to compute probabilities for query " +
-                                               std::to_string(j) +
-                                               " since it does not have any neighbors "
-                                               "within the specified radius.");
+                    if (this->outlier_handling ==
+                        da_neighbors_types::nn_outlier_handling::none) {
+                        return da_error_bypass(
+                            this->err, da_status_operation_failed,
+                            "Failed to predict targets for query " + std::to_string(j) +
+                                " since it does not have any neighbors "
+                                "within the specified radius.");
+                    } else if (this->outlier_handling ==
+                               da_neighbors_types::nn_outlier_handling::most_frequent) {
+                        y_test[j] = this->mean_target;
+                    } else {
+                        has_outliers = true;
+                        y_test[j] = this->manual_target;
+                    }
+                    continue;
                 }
                 // Copy distances to weight vector, converting from squared to actual distances if needed
                 std::vector<T> weight_vector(n_neigh);
@@ -1647,6 +1831,14 @@ neighbors<T>::predict_targets_rnn(da_int n_queries, da_int n_features, const T *
                         "Memory allocation failed.");
     }
 
+    if ((this->outlier_handling == da_neighbors_types::nn_outlier_handling::manual) &&
+        has_outliers) {
+        return da_warn(
+            this->err, da_status_outlier_warning,
+            "One or more samples have no neighbors within the specified radius. "
+            "Setting the corresponding targets to " +
+                std::to_string(this->manual_target) + ".");
+    }
     return status;
 }
 
@@ -2053,6 +2245,149 @@ da_status neighbors<T>::extract_radius_neighbors_distances(da_int query_index,
     }
 
     return da_status_success;
+}
+
+template <typename T> da_status neighbors<T>::serialize(serialization_buffer &buffer) {
+
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->order);
+    io_dispatch(this->n_samples);
+    io_dispatch(this->n_features);
+    io_dispatch(this->istrained_labels);
+    io_dispatch(this->istrained_targets);
+    io_dispatch(this->is_up_to_date);
+    io_dispatch(this->classes_computed);
+    io_dispatch(this->classes);
+    io_dispatch(this->sort_results);
+    io_dispatch(this->radius_neighbors_computed);
+    io_dispatch(this->rnn_return_distances);
+    io_dispatch(this->n_neighbors);
+    io_dispatch(this->algo);
+    io_dispatch(this->working_algo);
+    io_dispatch(this->metric);
+    io_dispatch(this->internal_metric);
+    io_dispatch(this->leaf_size);
+    io_dispatch(this->get_squares);
+    io_dispatch(this->p);
+    io_dispatch(this->weights);
+    io_dispatch(this->outlier_handling);
+    io_dispatch(this->n_classes);
+    io_dispatch(this->radius);
+    io_dispatch(this->radius_neighbors_count);
+    io_dispatch(this->radius_neighbors_indices);
+    io_dispatch(this->radius_neighbors_distances);
+    io_dispatch(this->istrained_Xtrain);
+    io_dispatch(this->most_frequent_label_computed);
+    io_dispatch(this->most_frequent_label);
+    io_dispatch(this->manual_outlier_label_checked);
+    io_dispatch(this->manual_label_index);
+    io_dispatch(this->manual_label);
+    io_dispatch(this->mean_target_computed);
+    io_dispatch(this->mean_target);
+    io_dispatch(this->manual_target);
+
+    if (status != da_status_success)
+        return status;
+
+    if (buffer.get_mode() != deserialize) {
+        // Model always transposes data to use column major
+        status = buffer.serialize_user_data(this->X_train, column_major, this->n_samples,
+                                            this->n_features, this->ldx_train);
+        if (status != da_status_success)
+            return status;
+        status = buffer.serialize_user_data(this->y_train_class, this->order,
+                                            this->n_samples, 1, this->n_samples);
+        if (status != da_status_success)
+            return status;
+        status = buffer.serialize_user_data(this->y_train_reg, this->order,
+                                            this->n_samples, 1, this->n_samples);
+        if (status != da_status_success)
+            return status;
+
+    } else {
+        io_dispatch(this->X_int);
+        // Set X_train here as it might be needed for tree
+        // deserialization below
+        this->X_train = this->X_int.data();
+
+        io_dispatch(this->y_train_class_int);
+        io_dispatch(this->y_train_reg_int);
+        if (status != da_status_success)
+            return status;
+        // Model always transposes data to use column major
+        this->ldx_train = this->n_samples;
+    }
+
+    if (this->working_algo == da_neighbors_types::nn_algorithm::kd_tree) {
+        if (buffer.get_mode() == deserialize) {
+            try {
+                this->internal_kd_tree =
+                    std::make_unique<ARCH::da_binary_tree::kd_tree<T>>(this->X_train,
+                                                                       this->ldx_train);
+            } catch (std::bad_alloc const &) {
+                return da_error(this->err, da_status_memory_error,
+                                "Failing to allocate enough memory."); // LCOV_EXCL_LINE
+            }
+        }
+        status = this->internal_kd_tree->serialize(buffer);
+        if (status != da_status_success)
+            return status;
+    }
+
+    if (this->working_algo == da_neighbors_types::nn_algorithm::ball_tree) {
+        if (buffer.get_mode() == deserialize) {
+            try {
+                this->internal_ball_tree =
+                    std::make_unique<ARCH::da_binary_tree::ball_tree<T>>(this->X_train,
+                                                                         this->ldx_train);
+            } catch (std::bad_alloc const &) {
+                return da_error(this->err, da_status_memory_error,
+                                "Failing to allocate enough memory."); // LCOV_EXCL_LINE
+            }
+        }
+        status = this->internal_ball_tree->serialize(buffer);
+        if (status != da_status_success)
+            return status;
+    }
+    return status;
+}
+
+template <typename T> da_status neighbors<T>::save_model(serialization_buffer &buffer) {
+
+    if (!this->istrained_Xtrain) {
+        return da_error(this->err, da_status_no_data,
+                        "No training data have been set. Please call "
+                        "da_nn_set_data_s or da_nn_set_data_d.");
+    }
+
+    da_status status = basic_handle<T>::save_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T> da_status neighbors<T>::load_model(serialization_buffer &buffer) {
+    da_status status = basic_handle<T>::load_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    if (this->y_train_class_int.size() > 0) {
+        this->y_train_class = this->y_train_class_int.data();
+    }
+    if (this->y_train_reg_int.size() > 0) {
+        this->y_train_reg = this->y_train_reg_int.data();
+    }
+
+    return status;
 }
 
 // Force specific template instantiations

@@ -21,10 +21,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD) # FindBoost
+endif()
 
-project(AOCL-DA VERSION 5.2.2)
+project(AOCL-DA VERSION 5.3.0)
 
 set(AOCLDA_VERSION
     "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
@@ -81,6 +83,12 @@ set(VERS_DEF -DAOCLDA_VERSION_STRING="${AOCLDA_VERSION_STR}")
 # Add version string in the variable that holds all definitions required to
 # build da_core.
 list(APPEND AOCLDA_DEFS ${VERS_DEF})
+
+math(EXPR AOCLDA_VERSION_INT
+    "${CMAKE_PROJECT_VERSION_MAJOR} * 10000 + \
+     ${CMAKE_PROJECT_VERSION_MINOR} * 100 + \
+     ${CMAKE_PROJECT_VERSION_PATCH}")
+list(APPEND AOCLDA_DEFS -DAOCLDA_VERSION_INT=${AOCLDA_VERSION_INT})
 
 # Export Release Information automatically
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -217,6 +225,10 @@ else()
     WARNING
       "Building without OpenMP may cause linking issues with threaded BLAS/LAPACK/Sparse libraries"
   )
+  # Suppress warnings about unrecognized #pragma omp directives in serial builds
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wno-unknown-pragmas)
+  endif()
 endif()
 
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
@@ -545,7 +557,6 @@ if(NOT USE_EXISTING_DA)
     DESTINATION examples
     FILES_MATCHING
     PATTERN "*.cpp"
-    PATTERN "*tree*" EXCLUDE
     PATTERN "*.csv")
   install(
     FILES tools/CMakeLists_examples.cmake

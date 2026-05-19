@@ -43,6 +43,12 @@ if(NOT WIN32)
   include(Suppressions_tests)
 endif()
 
+# Some tests need *_AVAILABLE arch defs but not the whole ARCH_DEFS, so
+# define a separate variable for just the ARCH_*_AVAILABLE defs
+set(AVAILABLE_ARCH_DEFS ${ARCH_DEFS})
+list(FILTER AVAILABLE_ARCH_DEFS INCLUDE REGEX "_AVAILABLE")
+message(DEBUG "Available arch defs: ${AVAILABLE_ARCH_DEFS}")
+
 include(GoogleTest)
 include_directories(
   ${CMAKE_SOURCE_DIR}/source/include
@@ -72,7 +78,8 @@ set(INTERNAL_INC_DIRS
     ${CMAKE_SOURCE_DIR}/source/core/svm
     ${CMAKE_SOURCE_DIR}/source/core/interpolation
     ${CMAKE_SOURCE_DIR}/source/core/train_test_split
-    ${CMAKE_SOURCE_DIR}/source/core/approximate_neighbors)
+    ${CMAKE_SOURCE_DIR}/source/core/approximate_neighbors
+    )
 
 set(DATA_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../data/")
 
@@ -119,6 +126,7 @@ add_executable(csv_internal csv/csv_utils.cpp csv/csv_internal.cpp)
 # ##############################################################################
 add_executable(linmod_public linear_models/linmod_public.cpp)
 add_executable(linmod_internal linear_models/linmod_internal.cpp)
+target_compile_definitions(linmod_internal PRIVATE ${AVAILABLE_ARCH_DEFS})
 
 add_executable(logreg_public linear_models/logreg_public.cpp)
 target_compile_definitions(logreg_public PRIVATE DATA_DIR="${DATA_PATH}")
@@ -188,7 +196,7 @@ set_target_properties(c_compatibility_nog_public PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(c_compatibility_nog_public PRIVATE aocl-da)
 
 add_executable(miscellaneous_internal da_utilities/miscellaneous_internal.cpp)
-target_compile_definitions(miscellaneous_internal PRIVATE ${AOCLDA_DEFS})
+target_compile_definitions(miscellaneous_internal PRIVATE ${AOCLDA_DEFS} ${AVAILABLE_ARCH_DEFS})
 
 # ##############################################################################
 # ############ kmeans ################
@@ -275,6 +283,61 @@ add_executable(ann_public approximate_neighbors/ann_public.cpp)
 target_link_libraries(ann_public PRIVATE aocl-da ${BLAS})
 target_compile_definitions(ann_public PRIVATE DATA_DIR="${DATA_PATH}")
 
+# ##############################################################################
+# ############## Model Persistence #################
+# ##############################################################################
+set(TEST_OUTPUT_DIR "${CMAKE_BINARY_DIR}/tests/unit_tests/tmp_test_files")
+
+add_executable(serialization_kernel_internal model_persistence/kernel_tests_internal.cpp)
+target_compile_definitions(serialization_kernel_internal PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+
+add_executable(serialization_kernel_errors_internal model_persistence/kernel_error_tests_internal.cpp)
+target_compile_definitions(serialization_kernel_errors_internal PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+
+add_executable(ann_persistence_public model_persistence/algorithms/approximate_neighbors_persistence_public.cpp)
+target_compile_definitions(ann_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(ann_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(dforest_persistence_public model_persistence/algorithms/decision_forest_persistence_public.cpp)
+target_compile_definitions(dforest_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(dforest_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(dtree_persistence_public model_persistence/algorithms/decision_tree_persistence_public.cpp)
+target_compile_definitions(dtree_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(dtree_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(kmeans_persistence_public model_persistence/algorithms/kmeans_persistence_public.cpp)
+target_compile_definitions(kmeans_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(kmeans_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(linmod_persistence_public model_persistence/algorithms/lin_mod_persistence_public.cpp)
+target_compile_definitions(linmod_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(linmod_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(pca_persistence_public model_persistence/algorithms/pca_persistence_public.cpp)
+target_compile_definitions(pca_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(pca_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(knn_class_persistence_public model_persistence/algorithms/knn_class_persistence_public.cpp)
+target_compile_definitions(knn_class_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(knn_class_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(knn_reg_persistence_public model_persistence/algorithms/knn_reg_persistence_public.cpp)
+target_compile_definitions(knn_reg_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(knn_reg_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(radius_nn_persistence_public model_persistence/algorithms/radius_neighbors_persistence_public.cpp)
+target_compile_definitions(radius_nn_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(radius_nn_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(svm_persistence_public model_persistence/algorithms/svm_persistence_public.cpp)
+target_compile_definitions(svm_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(svm_persistence_public PRIVATE aocl-da ${BLAS})
+
+add_executable(handle_persistence_public model_persistence/handle_errors_public.cpp)
+target_compile_definitions(handle_persistence_public PRIVATE TEST_OUTPUT_DIR="${TEST_OUTPUT_DIR}")
+target_link_libraries(handle_persistence_public PRIVATE aocl-da ${BLAS})
+
 set(GTEST_INTERNAL
     csv_internal
     linmod_internal
@@ -298,7 +361,9 @@ set(GTEST_INTERNAL
     k_neighbors_internal
     trees_internal
     utilities_internal
-    da_syrk_internal)
+    da_syrk_internal
+    serialization_kernel_internal
+    serialization_kernel_errors_internal)
 set(INDEP_INTERNAL printf_debug_internal lbfgsb_rc_internal
                    lbfgsb_fcomm_internal)
 set(INTERNAL_UTESTS ${GTEST_INTERNAL} ${INDEP_INTERNAL})
@@ -329,7 +394,18 @@ set(GTEST_PUBLIC
     kernel_functions_public
     svm_public
     cubic_spline_public
-    ann_public)
+    ann_public
+    ann_persistence_public
+    dforest_persistence_public
+    dtree_persistence_public
+    kmeans_persistence_public
+    linmod_persistence_public
+    pca_persistence_public
+    knn_class_persistence_public
+    knn_reg_persistence_public
+    radius_nn_persistence_public
+    svm_persistence_public
+    handle_persistence_public)
 set(INDEP_PUBLIC c_compatibility_nog_public)
 set(PUBLIC_UTESTS ${GTEST_PUBLIC} ${INDEP_PUBLIC})
 
@@ -353,6 +429,10 @@ foreach(internal_test ${INTERNAL_UTESTS})
     if(NATIVE_NAMESPACE STREQUAL "generic")
       target_compile_definitions(${internal_test}
                                  PRIVATE ARCH_generic;ZNVER_MAX=generic)
+    elseif(NATIVE_NAMESPACE STREQUAL "generic_avx512")
+      target_compile_definitions(
+        ${internal_test}
+        PRIVATE ARCH_generic_avx512;ZNVER_MAX=generic_avx512)
     else()
       target_compile_definitions(
         ${internal_test}

@@ -44,7 +44,7 @@ enum da_interpolation_model_ {
     interpolation_cubic_spline, ///< Cubic spline interpolation.
 };
 
-/** @brief Alias for the \ref interpolation_model_ enum. */
+/** @brief Alias for the \ref da_interpolation_model_ enum. */
 typedef enum da_interpolation_model_ da_interpolation_model;
 
 /** \{
@@ -56,7 +56,7 @@ typedef enum da_interpolation_model_ da_interpolation_model;
  * The interpolation model can only be set once. After calling this function, the model cannot be changed.
  *
  * \param[inout] handle a \ref da_handle object, initialized using \ref da_handle_init_s "da_handle_init_?" with type \ref da_handle_interpolation.
- * \param[in] model an @ref da_interpolation_model enum type to select the interpolation model (only \ref da_interpolation_cubic_spline is supported).
+ * \param[in] model an @ref da_interpolation_model enum type to select the interpolation model (only \ref interpolation_cubic_spline is supported).
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_handle_type - the handle was not initialized with da_handle_interpolation.

@@ -30,6 +30,7 @@
 
 #include "aoclda.h"
 #include <iostream>
+#include <vector>
 
 /* da_handle overloaded functions */
 template <class T>
@@ -46,6 +47,11 @@ inline da_status da_handle_get_result(da_handle handle, da_result query, da_int 
                                       da_int *result) {
     return da_handle_get_result_int(handle, query, dim, result);
 }
+
+/* Save and Load overloads */
+da_status da_handle_save_model(da_handle handle, std::vector<char> &buffer);
+da_status da_handle_load_model(da_handle *handle, const char *buffer_data,
+                               const size_t data_size);
 
 /* Options overloaded functions */
 inline da_status da_options_set(da_handle handle, const char *option, float value) {

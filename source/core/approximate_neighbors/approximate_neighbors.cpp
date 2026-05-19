@@ -34,6 +34,7 @@
 #include "da_omp.hpp"
 #include "da_utils.hpp"
 #include "kmeans.hpp"
+#include "model_persistence.hpp"
 #include "nearest_neighbors_utils.hpp"
 #include "pairwise_distances.hpp"
 
@@ -42,6 +43,8 @@
 namespace ARCH {
 
 namespace da_approx_nn {
+
+using namespace da_model_persistence;
 
 template <typename T>
 approximate_neighbors<T>::approximate_neighbors(da_errors::da_error_t &err)
@@ -240,7 +243,7 @@ template <typename T> da_status approximate_neighbors<T>::read_training_options(
     // string options
     opt_pass &= this->opts.get("algorithm", opt_val, algo) == da_status_success;
     this->internal_algo = (this->algo == approx_nn_algorithm::automatic)
-                              ? approx_nn_algorithm::ivfflat
+                              ? static_cast<da_int>(approx_nn_algorithm::ivfflat)
                               : this->algo;
 
     opt_pass &= this->opts.get("metric", opt_val, imetric) == da_status_success;
@@ -288,7 +291,7 @@ approximate_neighbors<T>::subsample_training_data(std::vector<T> &X_train_sample
     da_std::sample(indices.begin(), indices.end(), perm.begin(), this->n_samples_train,
                    this->mt_engine);
 
-    da_int n_threads = omp_get_max_threads();
+    [[maybe_unused]] da_int n_threads = omp_get_max_threads();
 
     // Grab random subset of train data
     if (this->order == column_major) {
@@ -324,7 +327,7 @@ template <typename T> da_status approximate_neighbors<T>::train_ivfflat() {
     Overview:
     1. Potentially subsample training data.
     2. Set up k-means model and perform clustering.
-    3. Extract k-means cluster centers to centroids.               
+    3. Extract k-means cluster centers to centroids.
     */
     da_status status = da_status_success;
 
@@ -480,9 +483,7 @@ template <typename T> da_status approximate_neighbors<T>::train() {
     if (this->internal_algo == da_approx_nn_types::approx_nn_algorithm::ivfflat) {
         status = this->train_ivfflat();
     } else {
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "Unknown algorithm: " + std::to_string(internal_algo) +
-                                   ".");
+        return da_error_bypass(this->err, da_status_invalid_input, "Unknown algorithm.");
     }
     if (status != da_status_success)
         return status;
@@ -523,9 +524,7 @@ da_status approximate_neighbors<T>::add(da_int n_samples_add, da_int n_features,
     if (this->internal_algo == da_approx_nn_types::approx_nn_algorithm::ivfflat) {
         status = this->add_ivfflat(n_samples_add, n_features, X_add, ldx_add);
     } else {
-        return da_error_bypass(this->err, da_status_invalid_input,
-                               "Unknown algorithm: " + std::to_string(internal_algo) +
-                                   ".");
+        return da_error_bypass(this->err, da_status_invalid_input, "Unknown algorithm.");
     }
     if (status != da_status_success)
         return status;
@@ -542,8 +541,8 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
     1. For cosine metric, normalize X_add upfront
     2. Compute distance from each row of X_add to each centroid
     3. Identify closest centroid for each row.
-    4. Iterate over indexed_vectors, adding the appropriate rows of X_add to 
-    the appropriate list of indexed_vectors.                                                    
+    4. Iterate over indexed_vectors, adding the appropriate rows of X_add to
+    the appropriate list of indexed_vectors.
     */
 
     // For cosine metric, normalize X_add before computing distances
@@ -664,7 +663,8 @@ da_status approximate_neighbors<T>::add_ivfflat(da_int n_samples_add, da_int n_f
     }
 
     // n_threads is at most n_list
-    da_int n_threads = std::min((da_int)omp_get_max_threads(), this->n_list);
+    [[maybe_unused]] da_int n_threads =
+        std::min((da_int)omp_get_max_threads(), this->n_list);
     da_int sizeof_T = sizeof(T);
     da_int row_bytes = sizeof_T * this->n_features;
 
@@ -824,13 +824,13 @@ da_status approximate_neighbors<T>::euclidean_search(da_int n_queries, da_int n_
                                                      da_int *n_ind, T *n_dist,
                                                      da_int k_neigh,
                                                      bool return_distance) {
-    /*  
+    /*
         Overview:
         1. Compute distance from each row of X_test to each centroid
         2. Iterate over queries (rows of X_test).
-        3. Per query: identify n_probe closest centroids. Iterate over n_probe lists corresponding 
+        3. Per query: identify n_probe closest centroids. Iterate over n_probe lists corresponding
         to each centroid. Compute k_neigh closest indexed_vectors seen for each query.
-    
+
         coarse_distances - query to centroid distances
         fine_distances - query to indexed vector distances
         centroid_top_k_distances - best k distances for a query <-> list search
@@ -839,7 +839,7 @@ da_status approximate_neighbors<T>::euclidean_search(da_int n_queries, da_int n_
         lists_to_probe - which lists to search per query
         heap_distances, heap_indices - arrays for per thread heaps
         list_norms - precomputed norms of all indexed vectors
-        norms_prefix_sum - used to determine per list boundaries in list_norms 
+        norms_prefix_sum - used to determine per list boundaries in list_norms
         query - in case of column major, we will gather individual queries to be a contiguous vector
     */
 
@@ -915,7 +915,8 @@ da_status approximate_neighbors<T>::euclidean_search(da_int n_queries, da_int n_
     }
 
     // Loop over queries
-    da_int n_threads = std::min((da_int)omp_get_max_threads(), n_queries);
+    [[maybe_unused]] da_int n_threads =
+        std::min((da_int)omp_get_max_threads(), n_queries);
     const T *query_ptr;
 
 #pragma omp parallel for schedule(static) num_threads(n_threads) default(none)           \
@@ -1023,13 +1024,13 @@ template <typename T>
 da_status approximate_neighbors<T>::inner_product_search(
     da_int n_queries, da_int n_features, const T *X_test, da_int ldx_test, da_int *n_ind,
     T *n_dist, da_int k_neigh, bool return_distance) {
-    /*  
+    /*
         Overview:
         1. Compute distance from each row of X_test to each centroid
         2. Iterate over queries (rows of X_test).
-        3. Per query: identify n_probe closest centroids. Iterate over n_probe lists corresponding 
+        3. Per query: identify n_probe closest centroids. Iterate over n_probe lists corresponding
         to each centroid. Compute k_neigh closest indexed_vectors seen for each query.
-    
+
         coarse_distances - query to centroid distances
         fine_distances - query to indexed vector distances
         centroid_top_k_distances - best k distances for a query <-> list search
@@ -1082,7 +1083,8 @@ da_status approximate_neighbors<T>::inner_product_search(
     }
 
     // Step 2: Loop over queries
-    da_int n_threads = std::min((da_int)omp_get_max_threads(), n_queries);
+    [[maybe_unused]] da_int n_threads =
+        std::min((da_int)omp_get_max_threads(), n_queries);
     const T *query_ptr;
 
 #pragma omp parallel for schedule(static) num_threads(n_threads) default(none)           \
@@ -1226,7 +1228,93 @@ da_status approximate_neighbors<T>::kneighbors_compute_ivfflat(
     }
 
     return da_status_success;
-} // namespace da_approx_nn
+}
+
+template <typename T>
+da_status approximate_neighbors<T>::serialize(serialization_buffer &buffer) {
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->train_data_is_set);
+    io_dispatch(this->index_is_trained);
+    io_dispatch(this->data_is_added);
+    io_dispatch(this->n_neighbors);
+    io_dispatch(this->algo);
+    io_dispatch(this->internal_algo);
+    io_dispatch(this->internal_metric);
+    io_dispatch(this->metric);
+    io_dispatch(this->internal_seed);
+    io_dispatch(this->seed);
+    io_dispatch(this->n_samples_train);
+    io_dispatch(this->order);
+    io_dispatch(this->n_samples);
+    io_dispatch(this->n_features);
+    io_dispatch(this->train_fraction);
+    io_dispatch(this->n_list);
+    io_dispatch(this->n_probe);
+    io_dispatch(this->max_iter);
+    io_dispatch(this->kmeans_iter);
+    io_dispatch(this->n_init);
+    io_dispatch(this->kmeans_tol);
+    io_dispatch(this->centroids);
+    io_dispatch(this->ld_centroids);
+    io_dispatch(this->n_index);
+    io_dispatch(this->indexed_vectors);
+    io_dispatch(this->global_indices);
+    io_dispatch(this->list_sizes);
+    io_dispatch(this->old_list_sizes);
+
+    if (status != da_status_success)
+        return status;
+
+    if (buffer.get_mode() == deserialize) {
+        status = buffer.deserialize_data(this->X_int);
+    } else {
+        status = buffer.serialize_user_data(this->X_train, this->order, this->n_samples,
+                                            this->n_features, this->ldx_train);
+    }
+
+    return status;
+}
+
+template <typename T>
+da_status approximate_neighbors<T>::save_model(serialization_buffer &buffer) {
+    if (!this->train_data_is_set || !this->index_is_trained) {
+        return da_error(
+            this->err, da_status_no_data,
+            "Index has not yet been trained. Please call da_approx_nn_train_d "
+            "or da_approx_nn_train_s before saving the model.");
+    }
+
+    da_status status = basic_handle<T>::save_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T>
+da_status approximate_neighbors<T>::load_model(serialization_buffer &buffer) {
+
+    da_status status = basic_handle<T>::load_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    this->X_train = this->X_int.data();
+    if (this->order == column_major) {
+        this->ldx_train = this->n_samples;
+    } else {
+        this->ldx_train = this->n_features;
+    }
+
+    return status;
+}
 
 template class approximate_neighbors<double>;
 template class approximate_neighbors<float>;

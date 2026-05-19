@@ -238,9 +238,9 @@ template <typename T> class kmeans : public basic_handle<T> {
   public:
     kmeans(da_errors::da_error_t &err);
 
-    da_status get_result(da_result query, da_int *dim, T *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
 
-    da_status get_result(da_result query, da_int *dim, da_int *result);
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
 
     /* Store details about user's data matrix in preparation for k-means computation */
     da_status set_data(da_int n_samples, da_int n_features, const T *A_in, da_int lda_in);
@@ -256,7 +256,11 @@ template <typename T> class kmeans : public basic_handle<T> {
     da_status predict(da_int k_samples, da_int k_features, const T *Y, da_int ldy,
                       da_int *Y_labels);
 
-    void refresh();
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
+
+    void refresh() override;
 };
 
 // Declare the kernel functions for the various SIMD implementations and a generic function for

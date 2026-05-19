@@ -90,6 +90,7 @@ class decision_tree : public pyda_handle {
             exception_check(status);
         }
     }
+    decision_tree(da_precision prec) { this->precision = prec; }
     ~decision_tree() { da_handle_destroy(&handle); }
 
     void set_max_features_opt(da_int max_features = 0) {
@@ -277,6 +278,14 @@ class decision_tree : public pyda_handle {
 
         return model_info;
     }
+
+    void save_data(py::dict &state) override {
+        state["n_class"] = int64_t(this->n_class);
+    }
+
+    void load_data(py::dict &state) override {
+        this->n_class = da_int(state["n_class"].cast<int64_t>());
+    }
 };
 
 class decision_forest : public pyda_handle {
@@ -331,6 +340,8 @@ class decision_forest : public pyda_handle {
             exception_check(status);
         }
     }
+
+    decision_forest(da_precision prec) { this->precision = prec; }
     ~decision_forest() { da_handle_destroy(&handle); }
 
     void set_features_selection_opt(std::string features_selection = "sqrt") {
@@ -497,6 +508,14 @@ class decision_forest : public pyda_handle {
                                              proba.mutable_data(), n_class, ldy);
         exception_check(status);
         return proba;
+    }
+
+    void save_data(py::dict &state) override {
+        state["n_class"] = int64_t(this->n_class);
+    }
+
+    void load_data(py::dict &state) override {
+        this->n_class = da_int(state["n_class"].cast<int64_t>());
     }
 };
 

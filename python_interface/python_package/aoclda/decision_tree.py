@@ -30,6 +30,7 @@
 aoclda.decision_tree module
 """
 
+import pickle
 from ._aoclda.decision_tree import pybind_decision_tree
 from ._internal_utils import check_convert_data, get_int_info
 
@@ -285,6 +286,45 @@ class decision_tree():
         update the model information (content of rinfo from the C interface)
         """
         self._model_info = self.decision_tree.pybind_get_model_info()
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.decision_tree),
+            'order': self._order,
+            'dtype': self._dtype,
+            'category_tolerance': self._category_tolerance,
+            'max_features': self._max_features,
+            'min_impurity_decrease': self._min_impurity_decrease,
+            'min_split_score': self._min_split_score,
+            'feat_thresh': self._feat_thresh,
+            'model_info': self._model_info
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.decision_tree = pickle.loads(state['pybind_state'])
+        self._order = state['order']
+        self._dtype = state['dtype']
+        self._category_tolerance = state['category_tolerance']
+        self._max_features = state['max_features']
+        self._min_impurity_decrease = state['min_impurity_decrease']
+        self._min_split_score = state['min_split_score']
+        self._feat_thresh = state['feat_thresh']
+        self._model_info = state['model_info']
+
+        if self._dtype == 'float64':
+            self.decision_tree_double = self.decision_tree
+            self.decision_tree_single = None
+        elif self._dtype == 'float32':
+            self.decision_tree_double = None
+            self.decision_tree_single = self.decision_tree
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self._dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
 
     @property
     def n_samples(self):

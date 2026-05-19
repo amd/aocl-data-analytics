@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,8 +64,8 @@ da_status linmod_fit_start(da_handle handle, da_int ncoefs, const T *coefs) {
 
 template <typename linmod_class, typename T>
 da_status linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
-                                const T *X, da_int ldX, T *predictions, T *observations,
-                                T *loss) {
+                                const T *Xeval, da_int ldXeval, T *predictions,
+                                T *observations, T *loss) {
     linmod_class *linmod = dynamic_cast<linmod_class *>(handle->get_alg_handle<T>());
     if (linmod == nullptr)
         return da_error(handle->err, da_status_invalid_handle_type,
@@ -73,11 +73,11 @@ da_status linmod_evaluate_model(da_handle handle, da_int nsamples, da_int nfeat,
                         "handle is invalid.");
 
     if (observations && loss)
-        return linmod->evaluate_model(nfeat, nsamples, X, ldX, predictions, observations,
-                                      loss);
-    else if (!observations || !loss) {
-        return linmod->evaluate_model(nfeat, nsamples, X, ldX, predictions, nullptr,
-                                      nullptr);
+        return linmod->evaluate_model(nfeat, nsamples, Xeval, ldXeval, predictions,
+                                      observations, loss);
+    else if (!observations && !loss) {
+        return linmod->evaluate_model(nfeat, nsamples, Xeval, ldXeval, predictions,
+                                      nullptr, nullptr);
     }
     return da_error(handle->err, da_status_invalid_input,
                     "Parameter `observations` should contain at least one single "
