@@ -45,6 +45,9 @@ with default value {\tt 30}, it will print the column header every 30 iterations
 \scalarinteger{maxit}
 of iterations the algorithm is allowed to take before being stopped.  The default value is {\tt 100}.  This is not accessed if {\tt nlls\_iterate} is used.
 
+\scalarreal{maxtime}
+of time (in seconds) the algorithm is allowed to take before being stopped.  The default value is {\tt 1.0e6}.  This is not enforced if {\tt nlls\_iterate} is used.
+
 \scalarinteger{model}
 that specifies the model, $m_k(\cdot)$, used.  Possible values are
 \begin{description}

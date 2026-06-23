@@ -65,7 +65,7 @@ class decision_tree : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "maximum features", max_features);
         exception_check(status);
-        status = da_options_set(handle, "scoring function", criterion.data());
+        status = da_options_set(handle, "scoring function", criterion.c_str());
         exception_check(status);
         status = da_options_set(handle, "node minimum samples", min_samples_split);
         exception_check(status);
@@ -82,14 +82,15 @@ class decision_tree : public pyda_handle {
             da_options_set(handle, "predict probabilities", predict_proba ? "yes" : "no");
         exception_check(status);
         status = da_options_set(handle, "category split strategy",
-                                category_split_strategy.data());
+                                category_split_strategy.c_str());
         exception_check(status);
         if (check_data == true) {
             std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }
+    decision_tree(da_precision prec) { this->precision = prec; }
     ~decision_tree() { da_handle_destroy(&handle); }
 
     void set_max_features_opt(da_int max_features = 0) {
@@ -239,7 +240,7 @@ class decision_tree : public pyda_handle {
     py::dict get_model_info() {
         da_status status;
 
-        da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves;
+        da_int n_samples, n_features, n_obs, seed, depth, n_nodes, n_leaves, n_threads;
         da_int dim = 10;
 
         if (precision == da_single) {
@@ -253,6 +254,7 @@ class decision_tree : public pyda_handle {
             depth = (da_int)rinfo[4];
             n_nodes = (da_int)rinfo[5];
             n_leaves = (da_int)rinfo[6];
+            n_threads = (da_int)rinfo[7];
         } else {
             double rinfo[10];
             status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
@@ -264,6 +266,7 @@ class decision_tree : public pyda_handle {
             depth = (da_int)rinfo[4];
             n_nodes = (da_int)rinfo[5];
             n_leaves = (da_int)rinfo[6];
+            n_threads = (da_int)rinfo[7];
         }
 
         py::dict model_info;
@@ -274,8 +277,17 @@ class decision_tree : public pyda_handle {
         model_info["depth"] = depth;
         model_info["n_nodes"] = n_nodes;
         model_info["n_leaves"] = n_leaves;
+        model_info["n_threads"] = n_threads;
 
         return model_info;
+    }
+
+    void save_data(py::dict &state) override {
+        state["n_class"] = int64_t(this->n_class);
+    }
+
+    void load_data(py::dict &state) override {
+        this->n_class = da_int(state["n_class"].cast<int64_t>());
     }
 };
 
@@ -291,7 +303,7 @@ class decision_forest : public pyda_handle {
                     bool histogram = false, da_int maximum_bins = 256,
                     da_int block_size = 256,
                     std::string category_split_strategy = "ordered",
-                    bool check_data = false) {
+                    da_int max_tree_threads = 0, bool check_data = false) {
         da_status status;
         if (prec == "double") {
             da_handle_init<double>(&handle, da_handle_decision_forest);
@@ -304,7 +316,7 @@ class decision_forest : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "number of trees", n_trees);
         exception_check(status);
-        status = da_options_set_string(handle, "scoring function", criterion.data());
+        status = da_options_set_string(handle, "scoring function", criterion.c_str());
         exception_check(status);
         status = da_options_set(handle, "maximum depth", max_depth);
         exception_check(status);
@@ -312,7 +324,7 @@ class decision_forest : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "bootstrap", bootstrap ? "yes" : "no");
         exception_check(status);
-        status = da_options_set(handle, "features selection", features_selection.data());
+        status = da_options_set(handle, "features selection", features_selection.c_str());
         exception_check(status);
         status = da_options_set(handle, "maximum features", max_features);
         exception_check(status);
@@ -323,19 +335,23 @@ class decision_forest : public pyda_handle {
         status = da_options_set(handle, "block size", block_size);
         exception_check(status);
         status = da_options_set(handle, "category split strategy",
-                                category_split_strategy.data());
+                                category_split_strategy.c_str());
+        exception_check(status);
+        status = da_options_set(handle, "maximum tree threads", max_tree_threads);
         exception_check(status);
         if (check_data == true) {
             std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }
+
+    decision_forest(da_precision prec) { this->precision = prec; }
     ~decision_forest() { da_handle_destroy(&handle); }
 
     void set_features_selection_opt(std::string features_selection = "sqrt") {
         da_status status;
-        status = da_options_set(handle, "features selection", features_selection.data());
+        status = da_options_set(handle, "features selection", features_selection.c_str());
         exception_check(status);
     }
 
@@ -497,6 +513,14 @@ class decision_forest : public pyda_handle {
                                              proba.mutable_data(), n_class, ldy);
         exception_check(status);
         return proba;
+    }
+
+    void save_data(py::dict &state) override {
+        state["n_class"] = int64_t(this->n_class);
+    }
+
+    void load_data(py::dict &state) override {
+        this->n_class = da_int(state["n_class"].cast<int64_t>());
     }
 };
 

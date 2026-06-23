@@ -1,5 +1,5 @@
 ..
-    Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+    Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,
     are permitted provided that the following conditions are met:
@@ -36,9 +36,15 @@ This section contains general instructions for calling AOCL-DA using the Python 
 Installation
 =============
 
-AOCL-DA is available as a Python wheel, ``aoclda-*.whl``, where ``*`` depends on your particular system.
-To install the AOCL-DA Python API simply use the command ``pip install aoclda-*.whl``. This will install the necessary libraries and dependencies.
-For Linux users, if you find that your system is incompatible with the supplied wheel, you can instead install the Python package using the Spack recipe at the following link: https://www.amd.com/en/developer/zen-software-studio/applications/spack/spack-aocl.html
+The easiest way to install AOCL-DA is using ``pip``:
+
+.. code-block::
+
+   pip install aoclda
+
+AOCL-DA Python wheels can also be downloaded from https://www.amd.com/en/developer/aocl.html.
+To install wheels downloaded in this manner, simply use the command ``pip install aoclda-*.whl``, where ``*`` in the wheel name will depend on your particular system. This will install the necessary libraries and dependencies.
+For Linux users, if you find that your system is incompatible with the supplied wheel, you can instead install the Python package using the Spack recipe at the following link: https://www.amd.com/en/developer/zen-software-studio/applications/spack/spack-aocl.html.
 
 .. note::
    Python support on Windows is currently experimental.
@@ -57,7 +63,7 @@ If supported, the data objects can be supplied either with ``order='C'`` or ``or
 For best performance, it is generally recommended to use ``order='F'`` when supplying NumPy arrays to AOCL-DA functions since row-major arrays may be copied and transposed internally.
 
 In order to provide the best possible performance, the algorithmic functions will not automatically check for
-``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behaviour is undefined.
+``NaN`` data. If a ``NaN`` is passed into an algorithmic function, its behavior is undefined.
 It is therefore the user's responsibility to ensure data is sanitized (this can be done in Python, or by setting the ``check_data`` optional argument in the appropriate algorithmic APIs).
 
 .. _python_examples:
@@ -95,3 +101,57 @@ You can also inspect and run the examples from a Python interpreter. For example
     >>> print(''.join(inspect.getsourcelines(pca_ex)[0]))
     >>> pca_ex.pca_example()
 
+
+Model Persistence
+==========================
+
+Once a model has been trained using AOCL-DA, it can be saved to disk for later 
+reuse without needing to retrain. This is particularly useful for computationally 
+expensive models or when deploying models in production environments.
+
+The recommended way to save and load AOCL-DA models is using `joblib <https://joblib.readthedocs.io/>`_. 
+Under the hood, joblib uses Python's pickle protocol for the Python layer objects, 
+which wraps AOCL-DA's custom binary serialization format for the underlying C/C++ 
+algorithm implementations. This ensures efficient storage while preserving all 
+trained parameters and internal state.
+
+Supported Models
+----------------
+
+The following AOCL-DA models support serialization (saving and loading):
+
+- **Approximate Nearest Neighbors**
+- **Decision Forest**
+- **Decision Tree**
+- **K-Means Clustering**
+- **Linear Models**
+- **Nearest Neighbors**
+- **Principal Component Analysis**
+- **Support Vector Machines**
+
+The saved models preserve only the essential trained parameters and internal state needed for inference, 
+such as model coefficients, cluster centers, or trained hyperparameters. Original training data is only 
+saved if necessary, ensuring efficient storage and faster loading times.
+
+.. note::
+   For information on compatibility requirements and limitations (endianness, integer type compatibility, 
+   and library version requirements), please refer to the :ref:`C API serialization documentation <model_persistence>`.
+
+Example: Saving and Loading a K-Means Model
+--------------------------------------------
+
+.. literalinclude:: ../../python_interface/python_package/aoclda/examples/model_persistence_kmeans_ex.py
+   :language: Python
+   :linenos:
+
+
+Example: Using sklearn Patching with Model Persistence
+-------------------------------------------------------
+
+AOCL-DA provides a patching mechanism that allows you to use AOCL-DA's optimized 
+implementations while maintaining compatibility with scikit-learn's API. This is 
+particularly useful for existing codebases that use scikit-learn.
+
+.. literalinclude:: ../../python_interface/python_package/aoclda/examples/model_persistence_skpatch_pca_ex.py
+   :language: Python
+   :linenos:

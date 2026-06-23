@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -33,6 +33,10 @@
 #include "da_error.hpp"
 #include "options.hpp"
 
+#ifndef AOCLDA_VERSION_INT
+#define AOCLDA_VERSION_INT 0
+#endif
+
 /*
  * Base handle class (basic_handle) that contains members that
  * are common for all specialized handle types, pca, linear
@@ -43,11 +47,13 @@
 
 template <typename T> basic_handle<T>::basic_handle(da_errors::da_error_t *err) {
     this->err = err;
+    this->min_library_version = (da_int)AOCLDA_VERSION_INT;
 }
 
 template <typename T> basic_handle<T>::basic_handle(da_errors::da_error_t &err) {
     // Assumes that err is valid
     this->err = &err;
+    this->min_library_version = (da_int)AOCLDA_VERSION_INT;
     // Initialize the options registry with common options to all handles
     register_common_options<T>(this->opts, *this->err);
 }
@@ -242,6 +248,99 @@ void basic_handle<T>::copy_2D_results_array(da_int n_rows, da_int n_cols, T *dat
                 results_arr[i * n_cols + j] = data[i + lddata * j];
             }
         }
+    }
+}
+
+template <typename T>
+da_status
+basic_handle<T>::preallocate_buffer(da_model_persistence::serialization_buffer &buffer) {
+    buffer.set_mode(da_model_persistence::buffer_mode::reserve);
+
+    da_status status = this->serialize(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure while getting model size.");
+
+    try {
+        status = buffer.add_size(this->opts.compute_serialized_size());
+    } catch (...) {
+        return da_error(this->err, da_status_internal_error,
+                        "Failure while adding registry size.");
+    }
+    status = buffer.reserve();
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure while resizing buffer.");
+
+    return status;
+}
+
+template <typename T>
+da_status
+basic_handle<T>::save_model(da_model_persistence::serialization_buffer &buffer) {
+    // Clear vector data so serialization starts at the beginning of it.
+    da_status status = buffer.clear_data();
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure clearing buffer.");
+
+    status = preallocate_buffer(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure resizing buffer.");
+
+    buffer.set_mode(da_model_persistence::buffer_mode::serialize);
+
+    status = buffer.serialize_metadata(sizeof(T), this->min_library_version);
+    if (status != da_status_success)
+        return da_error(this->err, status, "Failure serializing metadata.");
+
+    status = this->opts.save_registry(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing registry.");
+
+    status = this->serialize(buffer);
+    if (status != da_status_success)
+        return da_error(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T>
+da_status
+basic_handle<T>::load_model(da_model_persistence::serialization_buffer &buffer) {
+
+    da_status status = this->opts.load_registry(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing registry.");
+
+    status = this->serialize(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    this->model_loaded = true;
+
+    return status;
+}
+
+// Return data that is common across the handle types this function should
+// be called at the beginning of the get_result function of the derived classes
+// If the query is not handled by this function, it returns da_status_unknown_query
+template <typename T>
+da_status basic_handle<T>::get_result_common(da_result query, da_int *dim,
+                                             da_int *result) {
+    switch (query) {
+    case da_result::da_trained:
+        if (*dim < 1) {
+            *dim = 1;
+            return da_warn(
+                this->err, da_status_invalid_array_dimension,
+                "Size of the result array is too small, provide an array of at "
+                "least size: 1.");
+        }
+        result[0] = da_int(this->model_trained);
+        return da_status_success;
+    // case da_...
+    default:
+        // Inform the caller that the query was not handled by this function;
+        // it is expected that the caller fills in correctly the error stack
+        return da_status_unknown_query; // No error stack registry
     }
 }
 

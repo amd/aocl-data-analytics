@@ -20,7 +20,7 @@ C++ example programs can be found in the `examples` folder of your installation.
 Full API documentation is available at https://docs.amd.com/r/en-US/68552-AOCL-api-guide/AOCL-Data-Analytics
 
 AOCL-DA is developed and maintained by [AMD](https://www.amd.com/). For support or queries, you can email us on
-[toolchainsupport@amd.com](toolchainsupport@amd.com).
+[toolchainsupport@amd.com](mailto:toolchainsupport@amd.com).
 
 Building the Library
 ====================

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -137,7 +137,7 @@ inline da_status register_decision_tree_options(da_options::OptionRegistry &opts
             OptionString("category split strategy",
                          "Strategy to split categorical features. For a given "
                          "categorical feature, 'one-vs-all' tries to "
-                         "split each categorical value from all the the others while "
+                         "split each categorical value from all the others while "
                          "'ordered' will try "
                          "to split the smaller categories from the bigger ones.",
                          {{"one-vs-all", (da_int)categorical_onevall},

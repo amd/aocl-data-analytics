@@ -32,7 +32,9 @@
 #include "da_kernel_utils.hpp"
 #include "da_vector.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "options.hpp"
+#include "svm_tuning_tables.hpp"
 #include "svm_types.hpp"
 #include <algorithm>
 #include <functional>
@@ -97,6 +99,7 @@ static void polynomial_wrapper(da_order order, da_int m, da_int n, da_int k, con
 namespace da_svm {
 
 using namespace da_svm_types;
+using namespace da_svm_tuning_tables;
 
 // This forward declaration is here to allow for "friending" it with base_svm few lines below
 template <typename T> class svm;
@@ -119,10 +122,13 @@ template <typename T> class svm;
   */
 
 template <typename T> class base_svm {
+  private:
+    da_status deserialize_kernel_f();
+
   public:
     // User's data
-    const T *XUSR;
-    const T *yusr;
+    const T *XUSR = nullptr;
+    const T *yusr = nullptr;
     // n x p (samples x features)
     da_int n = 0;
     da_int p = 0;
@@ -143,7 +149,7 @@ template <typename T> class base_svm {
     da_int pos_class = 0, neg_class = 0;
 
     // Kernel function to use for computation
-    da_int kernel_function = rbf;
+    da_int kernel_function = svm_kernel::rbf;
     kernel_f_type<T> kernel_f = nullptr;
     // Kernel specific parameters
     T gamma = 1.0;
@@ -167,11 +173,21 @@ template <typename T> class base_svm {
 
     // Variables for result handling
     std::vector<T> gradient, alpha, response;
+
+    // Raw alpha saved after the Thunder loop, before set_bias/set_sv modify it.
+    // Used for extracting warm-start alpha in iterative refinement.
+    std::vector<T> raw_alpha;
+    bool save_raw_alpha = false;
+    bool has_warm_start = false;
+
     da_int n_support = 0;                // Number of support vectors
     std::vector<da_int> support_indexes, // Indexes of support vectors
         n_support_per_class;
     std::vector<T> support_coefficients; // Alphas of support vectors
     T bias = 0;                          // Constant in decision function
+    // Contiguous support vector matrix (column-major, n_support x p)
+    // Built once after training to avoid scattered gathers during prediction
+    std::vector<T> sv_matrix;
 
     // Internal working variables
     std::vector<T> alpha_diff;
@@ -188,16 +204,31 @@ template <typename T> class base_svm {
 
   public:
     // This friend is here to allow following "svm" class to set protected members of "base_svm" class, such as kernel_function, X or y.
-    friend class svm<T>;
+    template <class> friend class svm;
+    template <class> friend class base_svm;
+
     base_svm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
+    base_svm() = default;
     virtual ~base_svm(); // Virtual to remove warnings
 
     // Main functions
     da_status compute();
+    da_status compute_warm_start(std::vector<T> &initial_alpha);
     da_status predict(da_int nsamples, da_int nfeat, const T *X_test, da_int ldx_test,
                       T *decision_values);
     da_status decision_function(da_int nsamples, da_int nfeat, const T *X_test,
                                 da_int ldx_test, T *decision_values);
+    template <bool PrecomputedNorms>
+    void decision_function_loop(da_int nfeat, const T *X_test, da_int ldx_test,
+                                T *decision_values, da_int total_blocks,
+                                da_int active_threads, da_int inner_block_size,
+                                da_int outer_block_size, da_int inner_block_count,
+                                da_int outer_block_count, da_int inner_block_remainder,
+                                da_int outer_block_remainder,
+                                std::vector<T> &kernel_matrices,
+                                std::vector<T> &local_decisions, std::vector<T> &sv_norms,
+                                std::vector<T> &test_norms,
+                                vectorization_type vectorisation_full);
 
     // General auxiliary functions
     void update_gradient_impl(T *gradient, std::vector<T> &gradient_threads,
@@ -209,6 +240,8 @@ template <typename T> class base_svm {
     void update_gradient(T *gradient, std::vector<T> &gradient_threads,
                          std::vector<T> &alpha_diff, da_int &nrow, da_int &ncol,
                          const T *kernel_data, da_int stride);
+    da_status recompute_gradient(std::vector<T> &alpha, std::vector<T> &response,
+                                 std::vector<T> &gradient, da_cache::LRUCache<T> &cache);
     void kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
                         std::vector<T> &X_temp, da_vector::da_vector<T> &kernel_temp,
                         std::vector<T *> &ptr_kernel_col, da_cache::LRUCache<T> &cache);
@@ -246,10 +279,24 @@ template <typename T> class base_svm {
     virtual da_status set_bias(std::vector<T> &alpha, std::vector<T> &gradient,
                                std::vector<T> &response, da_int &size, T &bias) = 0;
     virtual da_status set_sv(std::vector<T> &alpha, da_int &n_support) = 0;
+
+  protected:
+    da_status compute_impl(const std::vector<T> *initial_alpha);
+    virtual da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
 
 template <typename T> class svm : public basic_handle<T> {
+
+    // Lower precision data members (int16 is a proxy for bfloat16, though we don't use it yet)
+    using lp_type =
+        typename std::conditional<std::is_same_v<T, double>, float, int16_t>::type;
+
   private:
+    std::unique_ptr<base_svm<lp_type>>
+    create_low_precision_classifier(const lp_type *X_lp, const lp_type *y_lp, da_int n,
+                                    da_int p, da_int ldx);
+    void copy_classifier_metadata(const base_svm<T> &src, base_svm<lp_type> &dst);
+
     // Pointers to SVM problem class that will be specialised
     std::vector<std::unique_ptr<base_svm<T>>> classifiers;
 
@@ -271,15 +318,14 @@ template <typename T> class svm : public basic_handle<T> {
 
     // Set true when user data is loaded
     bool loadingdone = false;
-    // Set true when SVM is computed successfully
-    bool iscomputed = false;
+
     bool ismulticlass = false;
     da_int predict_proba_opt = false;
 
     da_svm_model mod = svm_undefined;
 
     // Results
-    std::vector<bool> is_sv; // only used for multiclass
+    std::vector<da_int> is_sv; // only used for multiclass (boolean type)
     da_int n_sv = 0;
     std::vector<T> support_coefficients, support_vectors, bias, probaA, probaB;
     std::vector<da_int> support_indexes, n_sv_per_class, n_iteration;
@@ -307,17 +353,26 @@ template <typename T> class svm : public basic_handle<T> {
     da_status predict_log_proba(da_int nsamples, da_int nfeat, const T *X_test,
                                 da_int ldx_test, T *y_log_proba, da_int ldy);
 
-    void refresh();
+    void refresh() override;
 
     /* get_result (required to be defined by basic_handle) */
-    da_status get_result(da_result query, da_int *dim, T *result);
-    da_status get_result(da_result query, da_int *dim, da_int *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
+
+    /* Serialization of base_svm classifiers. */
+    da_status serialize_classifiers(da_model_persistence::serialization_buffer &buffer);
+
+    /* Model serialization. */
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
 };
 
 template <typename T> class csvm : public base_svm<T> {
   private:
   public:
     csvm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
+    csvm() = default;
     virtual ~csvm(); // Make the destructor virtual to remove warnings
     // Specialised functions
     void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
@@ -346,6 +401,7 @@ template <typename T> class svc : public csvm<T> {
   private:
   public:
     svc(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
+    svc() = default;
     virtual ~svc(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
@@ -358,6 +414,7 @@ template <typename T> class svr : public csvm<T> {
   private:
   public:
     svr(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
+    svr() = default;
     virtual ~svr(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
@@ -370,6 +427,7 @@ template <typename T> class nusvm : public base_svm<T> {
   private:
   public:
     nusvm(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
+    nusvm() = default;
     virtual ~nusvm(); // Make the destructor virtual to remove warnings
     // Important functions
     void outer_wss(da_int &size, std::vector<da_int> &selected_ws_idx,
@@ -402,6 +460,7 @@ template <typename T> class nusvc : public nusvm<T> {
   private:
   public:
     nusvc(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
+    nusvc() = default;
     virtual ~nusvc(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
@@ -414,6 +473,7 @@ template <typename T> class nusvr : public nusvm<T> {
   private:
   public:
     nusvr(const T *XUSR, const T *yusr, da_int n, da_int p, da_int ldx_train);
+    nusvr() = default;
     virtual ~nusvr(); // Make the destructor virtual to remove warnings
     // Specialised functions
     da_status initialisation(da_int &size, std::vector<T> &gradient,
@@ -431,12 +491,6 @@ template <class T, vectorization_type U>
 void wssj_kernel(da_int *I_low, T *gradient, T *K_ith_row, T *K_diagonal, T &K_ii,
                  da_int &max_grad_idx, T &max_grad_value, T &min_grad, T &max_fun,
                  T &delta, T &tau, da_int ws_size);
-
-template <class T>
-void select_simd_size_wss(da_int ws_size, da_int &padding,
-                          vectorization_type &kernel_type_wssi,
-                          vectorization_type &kernel_type_wssj);
-void select_ws_size(da_int n, da_svm_types::svm_kernel kernel, da_int &ws_size);
 
 } // namespace da_svm
 

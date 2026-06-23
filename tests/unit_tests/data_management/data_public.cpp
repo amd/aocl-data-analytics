@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -839,6 +839,100 @@ TEST(datastore, selectInvalid) {
     EXPECT_EQ(
         da_data_extract_selection_int(store, "Non valid", column_major, &extract, 1),
         da_status_invalid_input);
+
+    da_datastore_destroy(&store);
+}
+
+TEST(dataStore, loadExtractCStrColMajor) {
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
+    // 3x2 block, column major: col0 = {"a","b","c"}, col1 = {"d","e","f"}
+    const char *block[6] = {"a", "b", "c", "d", "e", "f"};
+    EXPECT_EQ(da_data_load_col_str(store, 3, 2, block, column_major), da_status_success);
+
+    char *col[3];
+    da_int dim = 3;
+    EXPECT_EQ(da_data_extract_column_str(store, 0, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "a");
+    EXPECT_STREQ(col[1], "b");
+    EXPECT_STREQ(col[2], "c");
+
+    EXPECT_EQ(da_data_extract_column_str(store, 1, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "d");
+    EXPECT_STREQ(col[1], "e");
+    EXPECT_STREQ(col[2], "f");
+
+    da_datastore_destroy(&store);
+}
+
+TEST(dataStore, loadExtractCStrRowMajor) {
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
+    // 3x2 block, row major: row0 = {"aa","bb"}, row1 = {"cc","dd"}, row2 = {"ee","ff"}
+    const char *block[6] = {"aa", "bb", "cc", "dd", "ee", "ff"};
+    EXPECT_EQ(da_data_load_col_str(store, 3, 2, block, row_major), da_status_success);
+
+    char *col[3];
+    da_int dim = 3;
+    EXPECT_EQ(da_data_extract_column_str(store, 0, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "aa");
+    EXPECT_STREQ(col[1], "cc");
+    EXPECT_STREQ(col[2], "ee");
+
+    EXPECT_EQ(da_data_extract_column_str(store, 1, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "bb");
+    EXPECT_STREQ(col[1], "dd");
+    EXPECT_STREQ(col[2], "ff");
+
+    da_datastore_destroy(&store);
+}
+
+TEST(dataStore, loadExtractCStrMultiColBlocks) {
+    da_datastore store = nullptr;
+    EXPECT_EQ(da_datastore_init(&store), da_status_success);
+
+    // First block: 2x1 column major
+    const char *b1[2] = {"x1", "x2"};
+    EXPECT_EQ(da_data_load_col_str(store, 2, 1, b1, column_major), da_status_success);
+
+    // Second block: 2x2 row major
+    const char *b2[4] = {"y1", "y2", "y3", "y4"};
+    EXPECT_EQ(da_data_load_col_str(store, 2, 2, b2, row_major), da_status_success);
+
+    char *col[3];
+    da_int dim = 2;
+    EXPECT_EQ(da_data_extract_column_str(store, 0, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "x1");
+    EXPECT_STREQ(col[1], "x2");
+
+    EXPECT_EQ(da_data_extract_column_str(store, 1, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "y1");
+    EXPECT_STREQ(col[1], "y3");
+
+    EXPECT_EQ(da_data_extract_column_str(store, 2, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "y2");
+    EXPECT_STREQ(col[1], "y4");
+
+    // Add row block: 1x3 row major
+    const char *br1[3] = {"r1c1", "r1c2", "r1c3"};
+    dim = 3;
+    EXPECT_EQ(da_data_load_row_str(store, 1, 3, br1, row_major), da_status_success);
+    EXPECT_EQ(da_data_extract_column_str(store, 0, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "x1");
+    EXPECT_STREQ(col[1], "x2");
+    EXPECT_STREQ(col[2], "r1c1");
+
+    EXPECT_EQ(da_data_extract_column_str(store, 1, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "y1");
+    EXPECT_STREQ(col[1], "y3");
+    EXPECT_STREQ(col[2], "r1c2");
+
+    EXPECT_EQ(da_data_extract_column_str(store, 2, dim, col), da_status_success);
+    EXPECT_STREQ(col[0], "y2");
+    EXPECT_STREQ(col[1], "y4");
+    EXPECT_STREQ(col[2], "r1c3");
 
     da_datastore_destroy(&store);
 }

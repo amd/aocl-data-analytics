@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -64,7 +64,6 @@ void wssi_kernel<double, vectorization_type::scalar>(da_int *I_up, double *gradi
     wssi_kernel_scalar(I_up, gradient, min_grad_idx, min_grad_value, ws_size);
 }
 
-// LCOV_EXCL_START
 template <>
 void wssi_kernel<double, vectorization_type::avx>(da_int *I_up, double *gradient,
                                                   da_int &min_grad_idx,

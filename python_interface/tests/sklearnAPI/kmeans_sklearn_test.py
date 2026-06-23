@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -27,7 +27,8 @@
 KMeans tests, check output of skpatch versus sklearn
 """
 
-# pylint: disable = import-outside-toplevel, reimported, no-member
+# pylint: disable = import-outside-toplevel, reimported, too-many-function-args
+# pylint: disable = invalid-name,consider-using-in, unexpected-keyword-arg, no-member
 
 import warnings
 import numpy as np
@@ -65,7 +66,7 @@ def test_kmeans(precision):
     # patch and import scikit-learn
     skpatch()
     from sklearn.cluster import KMeans
-    kmeans_da = KMeans(n_clusters=2, init=c)
+    kmeans_da = KMeans(n_clusters=2, init=c, empty_clusters="split")
     kmeans_da = kmeans_da.fit(a)
     da_centres = kmeans_da.cluster_centers_
     da_labels = kmeans_da.labels_
@@ -133,7 +134,13 @@ def test_double_solve(precision):
                   [1., 2.]], dtype=precision)
     skpatch()
     from sklearn.cluster import KMeans
-    kmeans_da = KMeans(n_clusters=2, random_state=34)
+    mixed_precision = (precision == np.float64)
+    kmeans_da = KMeans(
+        n_clusters=2,
+        random_state=34,
+        n_init=3,
+        mixed_precision=mixed_precision,
+        afk_mcmc_samples=10)
     kmeans_da = kmeans_da.fit(a)
     inertia_pre = kmeans_da.inertia_
     kmeans_da = kmeans_da.fit(a)
@@ -190,6 +197,32 @@ def test_kmeans_errors():
         kmeans.set_fit_request()
 
     assert kmeans.feature_names_in_ is None
+
+
+@pytest.mark.parametrize("precision", [np.float64, np.float32])
+@pytest.mark.parametrize("algorithm", ["lloyd", "elkan", "macqueen"])
+def test_kmeans_spherical(precision, algorithm):
+    """
+    Test spherical k-means via sklearn patch: centres should be unit-normalized
+    """
+    a = np.array([[1.2, 0.5, -0.3],
+                  [-0.5, 1.3, 0.9],
+                  [0.3, -0.8, 1.4],
+                  [2.1, 0.2, -0.7],
+                  [-1.8, 1.6, 0.1],
+                  [0.7, -1.0, 0.5]], dtype=precision)
+
+    skpatch()
+    from sklearn.cluster import KMeans
+    km = KMeans(n_clusters=2, algorithm=algorithm, distance="cosine",
+                random_state=42, n_init=1)
+    km.fit(a)
+
+    centres = km.cluster_centers_
+    norms = np.linalg.norm(centres, axis=1)
+    tol = 1e-6 if precision == np.float32 else 1e-12
+    np.testing.assert_allclose(norms, 1.0, atol=tol,
+                               err_msg=f"Centres not unit-normalized for {algorithm}")
 
 
 if __name__ == "__main__":

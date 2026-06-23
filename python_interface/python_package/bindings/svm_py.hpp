@@ -40,13 +40,13 @@
 
 class py_svm : public pyda_handle {
   protected:
-    da_precision precision = da_double;
     da_int n_samples, n_feat;
 
   public:
     py_svm(da_svm_model model, std::string kernel = "rbf", da_int degree = 3,
            da_int max_iter = -1, da_int probability = 0, da_int seed = 0,
-           da_int max_ws_size = -1, std::string prec = "double",
+           da_int max_ws_size = -1, bool mixed_precision = false,
+           da_int low_precision_max_iter = -1, std::string prec = "double",
            bool check_data = false) {
         da_status status;
         if (prec == "double") {
@@ -71,17 +71,26 @@ class py_svm : public pyda_handle {
         exception_check(status);
         status = da_options_set(handle, "max_ws_size", max_ws_size);
         exception_check(status);
+        status =
+            da_options_set_int(handle, "low precision max_iter", low_precision_max_iter);
+        exception_check(status);
+        if (mixed_precision == true) {
+            std::string yes_str = "yes";
+            status = da_options_set(handle, "mixed precision", yes_str.c_str());
+            exception_check(status);
+        }
         if (check_data == true) {
             std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }
+    py_svm(da_precision prec) { this->precision = prec; }
     ~py_svm() { da_handle_destroy(&handle); }
 
     template <typename T>
     void common_fit(py::array_t<T> &X, py::array_t<T> &y, T gamma, T coef0, T tol,
-                    T cache_size, std::optional<T> tau) {
+                    T low_precision_tol, T cache_size, std::optional<T> tau) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
         da_int ldx;
@@ -91,6 +100,9 @@ class py_svm : public pyda_handle {
         status = da_options_set(handle, "coef0", coef0);
         exception_check(status);
         status = da_options_set(handle, "tolerance", tol);
+        exception_check(status);
+        status = da_options_set(handle, "low precision convergence tolerance",
+                                low_precision_tol);
         exception_check(status);
         status = da_options_set(handle, "cache size", cache_size);
         exception_check(status);
@@ -492,6 +504,16 @@ class py_svm : public pyda_handle {
         py::array ret = py::reinterpret_borrow<py::array>(support_vectors_idx);
         return ret;
     }
+
+    void save_data(py::dict &state) override {
+        state["n_samples"] = int64_t(this->n_samples);
+        state["n_feat"] = int64_t(this->n_feat);
+    }
+
+    void load_data(py::dict &state) override {
+        this->n_samples = da_int(state["n_samples"].cast<int64_t>());
+        this->n_feat = da_int(state["n_feat"].cast<int64_t>());
+    }
 };
 
 /*******************/
@@ -502,20 +524,23 @@ class py_svc : public py_svm {
   public:
     py_svc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
            da_int probability = 0, da_int seed = 0, da_int max_ws_size = -1,
+           bool use_mixed_precision = false, da_int low_precision_max_iter = -1,
            std::string prec = "double", bool check_data = false)
-        : py_svm(svc, kernel, degree, max_iter, probability, seed, max_ws_size, prec,
-                 check_data) {}
+        : py_svm(svc, kernel, degree, max_iter, probability, seed, max_ws_size,
+                 use_mixed_precision, low_precision_max_iter, prec, check_data) {}
+    py_svc(da_precision prec) : py_svm(prec) {}
     ~py_svc() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T C = 1.0,
-             T gamma = 1, T coef0 = 0.0, T tol = 0.001, T cache_size = 200) {
+             T gamma = 1, T coef0 = 0.0, T tol = 0.001, T low_precision_tol = 0.01,
+             T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
         status = da_options_set(handle, "C", C);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
+        common_fit(X, y, gamma, coef0, tol, low_precision_tol, cache_size, tau);
     }
 };
 
@@ -526,14 +551,18 @@ class py_svr : public py_svm {
 
   public:
     py_svr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
-           da_int max_ws_size = -1, std::string prec = "double", bool check_data = false)
-        : py_svm(svr, kernel, degree, max_iter, 0, 0, max_ws_size, prec, check_data) {}
+           da_int max_ws_size = -1, bool use_mixed_precision = false,
+           da_int low_precision_max_iter = -1, std::string prec = "double",
+           bool check_data = false)
+        : py_svm(svr, kernel, degree, max_iter, 0, 0, max_ws_size, use_mixed_precision,
+                 low_precision_max_iter, prec, check_data) {}
+    py_svr(da_precision prec) : py_svm(prec) {}
     ~py_svr() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T C = 1.0,
              T epsilon = 0.1, T gamma = 1, T coef0 = 0.0, T tol = 0.001,
-             T cache_size = 200) {
+             T low_precision_tol = 0.01, T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
@@ -541,7 +570,7 @@ class py_svr : public py_svm {
         exception_check(status);
         status = da_options_set(handle, "epsilon", epsilon);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
+        common_fit(X, y, gamma, coef0, tol, low_precision_tol, cache_size, tau);
     }
 };
 
@@ -553,22 +582,25 @@ class py_nusvc : public py_svm {
   public:
     py_nusvc(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
              da_int probability = 0, da_int seed = 0, da_int max_ws_size = -1,
+             bool use_mixed_precision = false, da_int low_precision_max_iter = -1,
              std::string prec = "double",
 
              bool check_data = false)
-        : py_svm(nusvc, kernel, degree, max_iter, probability, seed, max_ws_size, prec,
-                 check_data) {}
+        : py_svm(nusvc, kernel, degree, max_iter, probability, seed, max_ws_size,
+                 use_mixed_precision, low_precision_max_iter, prec, check_data) {}
+    py_nusvc(da_precision prec) : py_svm(prec) {}
     ~py_nusvc() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T nu = 0.5,
-             T gamma = 1, T coef0 = 0.0, T tol = 0.001, T cache_size = 200) {
+             T gamma = 1, T coef0 = 0.0, T tol = 0.001, T low_precision_tol = 0.01,
+             T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
         status = da_options_set(handle, "nu", nu);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
+        common_fit(X, y, gamma, coef0, tol, low_precision_tol, cache_size, tau);
     }
 };
 
@@ -579,14 +611,18 @@ class py_nusvr : public py_svm {
 
   public:
     py_nusvr(std::string kernel = "rbf", da_int degree = 3, da_int max_iter = -1,
-             da_int max_ws_size = -1, std::string prec = "double",
+             da_int max_ws_size = -1, bool use_mixed_precision = false,
+             da_int low_precision_max_iter = -1, std::string prec = "double",
              bool check_data = false)
-        : py_svm(nusvr, kernel, degree, max_iter, 0, 0, max_ws_size, prec, check_data) {}
+        : py_svm(nusvr, kernel, degree, max_iter, 0, 0, max_ws_size, use_mixed_precision,
+                 low_precision_max_iter, prec, check_data) {}
+    py_nusvr(da_precision prec) : py_svm(prec) {}
     ~py_nusvr() {}
 
     template <typename T>
     void fit(py::array_t<T> X, py::array_t<T> y, std::optional<T> tau, T nu = 0.5,
-             T C = 1.0, T gamma = 1, T coef0 = 0.0, T tol = 0.001, T cache_size = 200) {
+             T C = 1.0, T gamma = 1, T coef0 = 0.0, T tol = 0.001,
+             T low_precision_tol = 0.01, T cache_size = 200) {
         // floating point optional parameters are defined here since we cannot define those in the constructor (no template param)
         da_status status;
 
@@ -594,7 +630,7 @@ class py_nusvr : public py_svm {
         exception_check(status);
         status = da_options_set(handle, "C", C);
         exception_check(status);
-        common_fit(X, y, gamma, coef0, tol, cache_size, tau);
+        common_fit(X, y, gamma, coef0, tol, low_precision_tol, cache_size, tau);
     }
 };
 #endif

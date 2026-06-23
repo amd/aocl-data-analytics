@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,8 @@ namespace da_neighbors_types {
 enum nn_algorithm { brute = 0, kd_tree, ball_tree, automatic };
 
 enum nn_weights { uniform = 0, distance };
+
+enum nn_outlier_handling { none = 0, manual, most_frequent };
 
 enum nn_check_region { pt_outside_eps = 0, pt_within_eps, region_within_eps };
 

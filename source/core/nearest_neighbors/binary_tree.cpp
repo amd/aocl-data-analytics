@@ -27,6 +27,7 @@
 #include "da_omp.hpp"
 #include "da_std.hpp"
 #include "da_vector.hpp"
+#include "model_persistence.hpp"
 #include "pairwise_distances.hpp"
 #include <algorithm>
 #include <memory>
@@ -43,6 +44,24 @@ template <typename T>
 node<T>::node(da_int depth, da_int *indices, da_int n_indices)
     : depth(depth), indices(indices), n_indices(n_indices){};
 
+template <typename T>
+da_status node<T>::serialize(da_model_persistence::serialization_buffer &buffer) {
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->depth);
+    io_dispatch(this->n_indices);
+    io_dispatch(this->is_leaf);
+
+    return status;
+}
+
 //Constructors for a node of the ball tree
 template <typename T>
 ball_node<T>::ball_node(da_int depth, da_int *indices, da_int n_indices,
@@ -52,6 +71,26 @@ ball_node<T>::ball_node(da_int depth, da_int *indices, da_int n_indices,
 template <typename T>
 ball_node<T>::ball_node(da_int depth, da_int *indices, da_int n_indices)
     : node<T>(depth, indices, n_indices), centroid(std::vector<T>()), radius((T)0.0) {}
+
+template <typename T>
+da_status ball_node<T>::serialize(da_model_persistence::serialization_buffer &buffer) {
+    da_status status = this->node<T>::serialize(buffer);
+    if (status != da_status_success)
+        return status;
+
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->centroid);
+    io_dispatch(this->radius);
+
+    return status;
+};
 
 // Constructors for a node of the k-d tree
 template <typename T>
@@ -64,6 +103,28 @@ template <typename T>
 kd_node<T>::kd_node(da_int dim, da_int depth, da_int *indices, da_int n_indices)
     : node<T>(depth, indices, n_indices), dim(dim), min_bounds(std::vector<T>()),
       max_bounds(std::vector<T>()) {}
+
+template <typename T>
+da_status kd_node<T>::serialize(da_model_persistence::serialization_buffer &buffer) {
+    da_status status = this->node<T>::serialize(buffer);
+    if (status != da_status_success)
+        return status;
+
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->dim);
+    io_dispatch(this->point);
+    io_dispatch(this->min_bounds);
+    io_dispatch(this->max_bounds);
+
+    return status;
+}
 
 // Lightweight partial MaxHeap implementation to keep track of k-NN k-d tree searches
 template <typename T>
@@ -278,8 +339,7 @@ da_status binary_tree<Derived, NodeType>::k_neighbors(da_int m_samples_in,
     try {
         X_row.resize(this->n_features * omp_get_max_threads());
     } catch (std::bad_alloc const &) {
-        return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
-                        "Memory allocation failed.");
+        return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
     // Loop over the samples in X and find the neighbors - careful use of default shared needed because we can't use this-> in OpenMP directives
@@ -435,6 +495,88 @@ da_status binary_tree<Derived, NodeType>::radius_neighbors_loop(
 template <typename Derived, typename NodeType>
 const std::vector<da_int> &binary_tree<Derived, NodeType>::get_indices() {
     return this->indices;
+}
+
+template <typename Derived, typename NodeType>
+da_status binary_tree<Derived, NodeType>::tree_serialization(
+    da_model_persistence::serialization_buffer &buffer, std::shared_ptr<NodeType> &node) {
+    da_status status = da_status_success;
+    bool node_exists = (node != nullptr);
+
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(node_exists);
+    if (!node_exists) {
+        if (buffer.get_mode() == da_model_persistence::buffer_mode::deserialize) {
+            node = nullptr;
+        }
+        return status;
+    }
+
+    da_int offset = buffer.get_mode() == da_model_persistence::buffer_mode::serialize
+                        ? node->indices - this->indices.data()
+                        : 0;
+    io_dispatch(offset);
+
+    // Only create a new node if one wasn't passed in (e.g. for child nodes)
+    if (node == nullptr &&
+        buffer.get_mode() == da_model_persistence::buffer_mode::deserialize) {
+        try {
+            node = std::make_shared<NodeType>();
+        } catch (std::bad_alloc const &) {
+            return da_status_memory_error; // LCOV_EXCL_LINE
+        }
+    }
+
+    if (buffer.get_mode() == da_model_persistence::buffer_mode::deserialize) {
+        // Validate offset bounds to prevent out-of-bounds pointer arithmetic
+        if (offset < 0 || static_cast<size_t>(offset) >= this->indices.size())
+            return da_status_invalid_file_data;
+        node->indices = this->indices.data() + offset;
+    }
+
+    status = node->serialize(buffer);
+    if (status != da_status_success)
+        return status;
+
+    status = tree_serialization(buffer, node->left_child);
+    if (status != da_status_success)
+        return status;
+
+    return tree_serialization(buffer, node->right_child);
+}
+
+template <typename Derived, typename NodeType>
+da_status binary_tree<Derived, NodeType>::serialize(
+    da_model_persistence::serialization_buffer &buffer) {
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->leaf_size);
+    io_dispatch(this->indices);
+    io_dispatch(this->metric);
+    io_dispatch(this->metric_internal);
+    io_dispatch(this->p);
+    io_dispatch(this->p_inv);
+    io_dispatch(this->A_norms);
+    io_dispatch(this->n_features);
+    io_dispatch(this->n_samples);
+
+    status = this->tree_serialization(buffer, this->root);
+
+    return status;
 }
 
 template struct node<double>;

@@ -48,10 +48,18 @@ from aoclda.sklearn import skpatch, undo_skpatch
                           'minkowski',
                           'euclidean_gemm',
                           'sqeuclidean_gemm'])
-@pytest.mark.parametrize("radius_constructor", [30.0])
+@pytest.mark.parametrize("radius_constructor", [30.0, 15.0])
 @pytest.mark.parametrize("radius_compute", [6.0, None])
 @pytest.mark.parametrize("algorithm", ['auto', 'kd_tree', 'ball_tree', 'brute'])
 @pytest.mark.parametrize("sorted", [True, False])
+# Some parameter combinations exercise small radii where one or more query
+# points have no neighbours; both AOCL-DA and sklearn correctly warn and fill
+# with NaN in that case. The behaviour is intentional, so silence the warnings
+# here rather than clutter the test log.
+@pytest.mark.filterwarnings(
+    "ignore:One or more samples have no neighbors within.*:RuntimeWarning")
+@pytest.mark.filterwarnings(
+    "ignore:One or more samples have no neighbors within.*:UserWarning")
 def test_radius_neighbors_regressor(
         precision,
         weights,
@@ -163,8 +171,10 @@ def test_radius_neighbors_regressor(
         for r_ind_da, sk_ind in zip(rn_ind_da, rn_ind_sk):
             assert r_ind_da.shape == (0,) and sk_ind.shape == (0,)
 
-    # Check if predicted targets are close (using allclose for float precision tolerance)
-    assert np.allclose(da_y_test, sk_y_test, rtol=tol, atol=tol)
+    # Check if predicted targets are close
+    # NaN values are expected when queries have no neighbors within the radius
+    # Use equal_nan=True to treat NaN values as equal
+    assert np.allclose(da_y_test, sk_y_test, rtol=tol, atol=tol, equal_nan=True)
 
     # Normalize metric names for comparison
     if da_params.get('metric') == 'euclidean_gemm':

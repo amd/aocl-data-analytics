@@ -2,14 +2,14 @@
 ! All rights reserved.
 ! Copyright (c) 2020, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
-! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+! Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 ! ral_nlls_workspaces :: module to keep all the workspaces
 
 #include "preprocessor.FPP"
 
 module MODULE_PREC(ral_nlls_workspaces)
 
-  Use MODULE_PREC(ral_nlls_types), Only: wp, np, lp, params_base_type,         &
+  Use MODULE_PREC(ral_nlls_types), Only: wp, np, lp, ktimer, params_base_type, &
                                          eval_f_type, eval_j_type,             &
                                          eval_hf_type, eval_hp_type
 
@@ -48,6 +48,7 @@ module MODULE_PREC(ral_nlls_workspaces)
   Integer, Parameter, Public :: NLLS_ERROR_BAD_BOX_BOUNDS           =  -18
   Integer, Parameter, Public :: NLLS_ERROR_BAD_JACOBIAN             =  -19
   Integer, Parameter, Public :: NLLS_ERROR_BAD_WEIGHTS              =  -20
+  Integer, Parameter, Public :: NLLS_ERROR_MAXTIME                  =  -21
 
   ! dogleg errors
   Integer, Parameter, Public :: NLLS_ERROR_DOGLEG_MODEL             = -101
@@ -113,6 +114,10 @@ module MODULE_PREC(ral_nlls_workspaces)
 !   the maximum number of iterations performed
 
      INTEGER :: maxit = 100
+
+!   the maximum time allowance
+
+     Real(kind=wp) :: maxtime = 1.0e6_wp
 
 !   specify the model used. Possible values are
 !
@@ -730,7 +735,7 @@ module MODULE_PREC(ral_nlls_workspaces)
      type (NLLS_workspace), Pointer :: iw_ptr => NULL()
   end type NLLS_workspace
 
-  public :: lp, np, wp
+  public :: lp, np, wp, ktimer
   Public :: params_base_type
   Public :: eval_f_type, eval_j_type, eval_hf_type, eval_hp_type
   public :: setup_workspaces, remove_workspaces

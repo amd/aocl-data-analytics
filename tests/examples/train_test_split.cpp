@@ -31,7 +31,7 @@ Train test split example
 This example demonstrates how to use train_test_split to perform K-fold cross-validation.
 */
 
-#include "aoclda_cpp_overloads.hpp"
+#include "aoclda.h"
 #include <algorithm>
 #include <iostream>
 #include <numeric>
@@ -107,7 +107,7 @@ int main() {
         std::vector<double> X_train((m - test_fold_size) * n);
         std::vector<double> X_test((test_fold_size)*n, 0.0);
 
-        da_status status_split = da_train_test_split(
+        da_status status_split = da_train_test_split_d(
             order, m, n, X.data(), ldx, m - test_fold_size, test_fold_size,
             indices_kfold.data(), X_train.data(), ldx_train, X_test.data(), ldx_test);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -247,8 +247,8 @@ TYPED_TEST(PCATest, TallSkinny) {
         auto uniform_real_dist = std::uniform_real_distribution<TypeParam>(-1.0, 1.0);
         std::generate(A.begin(), A.end(), [&]() { return uniform_real_dist(gen); });
 
-        EXPECT_EQ(da_standardize(column_major, da_axis_col, m, n, A.data(), m, 0, 0,
-                                 nullptr, nullptr),
+        EXPECT_EQ(da_standardize<TypeParam>(column_major, da_axis_col, m, n, A.data(), m,
+                                            0, 0, nullptr, nullptr),
                   da_status_success);
         std::vector<TypeParam> A_copy;
         A_copy = A;
@@ -556,12 +556,21 @@ TYPED_TEST(PCATest, ErrorExits) {
 
     EXPECT_EQ(da_options_set_int(handle, "n_components", params[0].components_required),
               da_status_success);
+    // Check da_trained before compute
+    da_int tr_dim = 1, tr_val = -1;
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 0);
     EXPECT_EQ(da_options_set_int(handle, "store U", params[0].store_U),
               da_status_success);
     EXPECT_EQ(da_pca_set_data(handle, params[0].n, params[0].p, params[0].A.data(),
                               params[0].lda),
               da_status_success);
     EXPECT_EQ(da_pca_compute<TypeParam>(handle), da_status_success);
+    // Check da_trained after compute
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 1);
 
     // Check da_pca_transform and da_pca_inverse_transform error exits
     EXPECT_EQ(da_pca_transform(handle, params[0].m, params[0].p, params[0].X.data(),
@@ -853,6 +862,148 @@ TYPED_TEST(PCATest, RecoverOriginalData) {
         EXPECT_ARR_NEAR(size_A_reconstructed, A.data(), A_reconstructed.data(), epsilon);
 
         da_handle_destroy(&handle);
+    }
+}
+
+template <typename T> void check_randomized_vs_gesdd(const PCAParamType<T> &param) {
+    da_int n_comp = 2;
+    da_int size_sigma = n_comp;
+    da_int size_variance = n_comp;
+    da_int size_vt = param.p * n_comp;
+    da_int size_u = param.n * n_comp;
+
+    // --- gesdd reference ---
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_pca), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
+              da_status_success);
+    if (param.method.size() != 0) {
+        EXPECT_EQ(da_options_set_string(handle, "PCA method", param.method.c_str()),
+                  da_status_success);
+    }
+
+    EXPECT_EQ(da_pca_set_data(handle, param.n, param.p, param.A.data(), param.lda),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_components", n_comp), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "store U", 1), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "svd solver", "gesdd"), da_status_success);
+    EXPECT_EQ(da_pca_compute<T>(handle), da_status_success);
+
+    std::vector<T> ref_sigma(size_sigma), ref_variance(size_variance), ref_vt(size_vt),
+        ref_u(size_u);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_sigma, &size_sigma, ref_sigma.data()),
+              da_status_success);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_variance, &size_variance,
+                                   ref_variance.data()),
+              da_status_success);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &size_vt, ref_vt.data()),
+              da_status_success);
+    EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &size_u, ref_u.data()),
+              da_status_success);
+    da_handle_destroy(&handle);
+
+    // --- randomized solver ---
+
+    // test all normalization approaches
+    std::vector<std::string> normalization = {"qr", "lu", "none"};
+    // check it plays nicely with store_u option
+    std::vector<bool> store_u = {true, false};
+    da_int q;
+    T tol;
+    for (const auto &norm : normalization) {
+        for (const auto &u : store_u) {
+            std::cout << "RandomizedSolver test: " << param.test_name << std::endl;
+            std::cout << "Normalization: " << norm << std::endl;
+            if (norm == "none") {
+                // no norm causes numerical instability
+                // don't do too many its and just check results are reasonable
+                q = 2;
+                tol = 1e-3;
+            } else {
+                // otherwise set q to a large value so results match closely to gesdd
+                q = 10;
+                tol = 1e3 * std::numeric_limits<T>::epsilon();
+            }
+
+            EXPECT_EQ(da_handle_init<T>(&handle, da_handle_pca), da_status_success);
+            EXPECT_EQ(da_options_set_string(handle, "storage order", param.order.c_str()),
+                      da_status_success);
+            if (param.method.size() != 0) {
+                EXPECT_EQ(
+                    da_options_set_string(handle, "PCA method", param.method.c_str()),
+                    da_status_success);
+            }
+
+            EXPECT_EQ(
+                da_pca_set_data(handle, param.n, param.p, param.A.data(), param.lda),
+                da_status_success);
+            EXPECT_EQ(da_options_set_int(handle, "n_components", n_comp),
+                      da_status_success);
+            EXPECT_EQ(da_options_set_int(handle, "store U", u), da_status_success);
+            EXPECT_EQ(da_options_set_string(handle, "svd solver", "randomized"),
+                      da_status_success);
+            EXPECT_EQ(da_options_set_int(handle, "n_oversamples", 3), da_status_success);
+            EXPECT_EQ(da_options_set_int(handle, "power iterations", q),
+                      da_status_success);
+            EXPECT_EQ(da_options_set_string(handle, "power normalization", norm.c_str()),
+                      da_status_success);
+            EXPECT_EQ(da_options_set_int(handle, "seed", 42), da_status_success);
+            EXPECT_EQ(da_pca_compute<T>(handle), da_status_success);
+
+            std::vector<T> rand_sigma(size_sigma), rand_variance(size_variance),
+                rand_vt(size_vt), rand_u(size_u);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_sigma, &size_sigma,
+                                           rand_sigma.data()),
+                      da_status_success);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_variance, &size_variance,
+                                           rand_variance.data()),
+                      da_status_success);
+            EXPECT_EQ(da_handle_get_result(handle, da_pca_vt, &size_vt, rand_vt.data()),
+                      da_status_success);
+            if (u) {
+                EXPECT_EQ(da_handle_get_result(handle, da_pca_u, &size_u, rand_u.data()),
+                          da_status_success);
+            }
+
+            da_handle_destroy(&handle);
+
+            // sigma and variance: direct comparison
+            EXPECT_ARR_NEAR(size_sigma, ref_sigma.data(), rand_sigma.data(), tol);
+            EXPECT_ARR_NEAR(size_variance, ref_variance.data(), rand_variance.data(),
+                            tol);
+
+            // vt and u: compare abs values element-wise (sign per row/column may flip)
+            for (da_int i = 0; i < size_vt; i++) {
+                ref_vt[i] = std::abs(ref_vt[i]);
+                rand_vt[i] = std::abs(rand_vt[i]);
+            }
+            EXPECT_ARR_NEAR(size_vt, ref_vt.data(), rand_vt.data(), tol);
+
+            if (u) {
+                for (da_int i = 0; i < size_u; i++) {
+                    ref_u[i] = std::abs(ref_u[i]);
+                    rand_u[i] = std::abs(rand_u[i]);
+                }
+                EXPECT_ARR_NEAR(size_u, ref_u.data(), rand_u.data(), tol);
+            }
+        }
+    }
+}
+
+TYPED_TEST(PCATest, RandomizedSolver) {
+    std::vector<PCAParamType<TypeParam>> params;
+    // Column-major, tall, unpadded (n=8, p=5, lda=8)
+    GetTallThinData1(params);
+    // Row-major, tall (n=8, p=5, lda=5)
+    GetRowMajorData(params);
+    // Column-major, wide, unpadded (n=6, p=9, lda=6)
+    GetShortFatData(params);
+    // Column-major, wide, padded (n=6, p=9, lda=8)
+    GetSubarrayData1(params);
+
+    for (const PCAParamType<TypeParam> &param : params) {
+        std::cout << "RandomizedSolver test: " << param.test_name << std::endl;
+        check_randomized_vs_gesdd(param);
     }
 }
 

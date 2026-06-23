@@ -21,10 +21,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
 cmake_minimum_required(VERSION 3.26 FATAL_ERROR)
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD) # FindBoost
+endif()
 
-project(AOCL-DA VERSION 5.2.2)
+project(AOCL-DA VERSION 5.3.1)
 
 set(AOCLDA_VERSION
     "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}"
@@ -81,6 +83,12 @@ set(VERS_DEF -DAOCLDA_VERSION_STRING="${AOCLDA_VERSION_STR}")
 # Add version string in the variable that holds all definitions required to
 # build da_core.
 list(APPEND AOCLDA_DEFS ${VERS_DEF})
+
+math(EXPR AOCLDA_VERSION_INT
+    "${CMAKE_PROJECT_VERSION_MAJOR} * 10000 + \
+     ${CMAKE_PROJECT_VERSION_MINOR} * 100 + \
+     ${CMAKE_PROJECT_VERSION_PATCH}")
+list(APPEND AOCLDA_DEFS -DAOCLDA_VERSION_INT=${AOCLDA_VERSION_INT})
 
 # Export Release Information automatically
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -144,7 +152,8 @@ set(ARCH_LIST
     "znver2"
     "znver3"
     "znver4"
-    "znver5")
+    "znver5"
+    "znver6")
 if(NOT ARCH IN_LIST ARCH_LIST)
   message(FATAL_ERROR "Invalid ARCH value: \"${ARCH}\"\n"
                       "Valid values are: ${ARCH_LIST}")
@@ -217,6 +226,10 @@ else()
     WARNING
       "Building without OpenMP may cause linking issues with threaded BLAS/LAPACK/Sparse libraries"
   )
+  # Suppress warnings about unrecognized #pragma omp directives in serial builds
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wno-unknown-pragmas)
+  endif()
 endif()
 
 # Quick checks to disable requested features Disable *SAN & VALGRIND if running
@@ -407,7 +420,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
                                                       STREQUAL "GNU"))
   # GNU style compiler flags
   set(COMPILER_FLAGS_CXX
-      "${COMPILER_FLAGS_CXX};-Wno-macro-redefined;-Wno-sign-conversion;-Wall;-Wextra;"
+      "${COMPILER_FLAGS_CXX};-Wno-macro-redefined;-Wno-sign-conversion;-Wall;-Wextra;-Wpedantic;-Wunused;-Wunused-parameter;-Wunused-function;-Wunused-variable;-Wunused-but-set-variable;-Wno-gnu-zero-variadic-macro-arguments"
   )
   if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION
                                                 VERSION_GREATER_EQUAL "18.0.0")
@@ -418,8 +431,9 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU"
   endif()
 
   # Release flags
+  # -falign-loops=32 improves i-cache alignment for more stable benchmark performance
   set(COMPILER_FLAGS_RELEASE
-      "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;-fno-fast-math")
+      "${COMPILER_FLAGS_RELEASE};-DNDEBUG;-fopenmp-simd;-fno-fast-math;-falign-loops=32")
   if(WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(COMPILER_FLAGS_DEBUG "${COMPILER_FLAGS_DEBUG};-O0")
   else()
@@ -444,7 +458,17 @@ endif()
 add_custom_target(cleanall COMMAND ${CMAKE_MAKE_PROGRAM} clean)
 
 if(ASAN)
-  list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
+  if(BUILD_FORTRAN AND CMAKE_Fortran_COMPILER_ID MATCHES "Flang")
+    message(WARNING
+      "Flang does not support -fsanitize=address; applying ASan to C/CXX only. "
+      "Fortran sources will be built without AddressSanitizer instrumentation.")
+    # Apply -fsanitize=address only to C and C++ compile lines
+    add_compile_options(
+      $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-fsanitize=address>)
+  else()
+    list(APPEND COMPILER_FLAGS_COMMON "-fsanitize=address")
+  endif()
+  # The ASan runtime must still be linked into final executables/shared libs
   link_libraries("-fsanitize=address")
 endif()
 
@@ -545,7 +569,6 @@ if(NOT USE_EXISTING_DA)
     DESTINATION examples
     FILES_MATCHING
     PATTERN "*.cpp"
-    PATTERN "*tree*" EXCLUDE
     PATTERN "*.csv")
   install(
     FILES tools/CMakeLists_examples.cmake

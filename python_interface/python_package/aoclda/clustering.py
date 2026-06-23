@@ -27,6 +27,7 @@
 aoclda.factorization module
 """
 
+import pickle
 import numpy as np
 from ._aoclda.clustering import pybind_kmeans, pybind_DBSCAN
 from ._internal_utils import check_convert_data
@@ -43,9 +44,10 @@ class kmeans():
 
         initialization_method (str, optional): The method used to find the initial cluster centres.
             It can take the values 'k-means++', 'random' (initial clusters are chosen randomly from
-            the sample data points) or 'random partitions' (sample points are assigned to a random
+            the sample data points), 'random partitions' (sample points are assigned to a random
             cluster and the corresponding cluster centres are computed and used as the starting
-            point). Default: 'k-means++'.
+            point), or 'afk-mc2' (initial cluster centres are chosen using the AFK-MC^2
+            algorithm of Bachem et al. (2016)). Default: 'k-means++'.
 
         C (array-like, optional): The matrix of initial cluster centres. It has
             shape (n_clusters, :nref:`n_features`). If supplied, these centres will be used as the
@@ -64,14 +66,60 @@ class kmeans():
         algorithm (str, optional): The algorithm used to compute the clusters. It can take the
             values 'elkan', 'lloyd', 'macqueen' or 'hartigan-wong'. Default = 'lloyd'.
 
+        distance (str, optional): The distance metric used for clustering. It can take the
+            values 'euclidean' or 'cosine'. If 'cosine' is selected, spherical k-means
+            is performed, which optimizes cosine similarity between data points and cluster
+            centres. Note that cosine distance is not compatible with the Hartigan-Wong
+            algorithm. Default = 'euclidean'.
+
+        normalize_data (bool, optional): Whether to normalize the input data before clustering.
+            Only used if distance is set to cosine. Default = False.
+
         tol (float, optional): The convergence tolerance for the iterations. Default = 1.0-e-4.
+
+        empty_clusters (str, optional): Determines behaviour in the case that all sample points have
+            been assigned to fewer than k clusters. If set to 'ignore' then empty clusters are
+            allowed and the algorithm proceeds as normal. If set to 'error' then an error is raised
+            when an empty cluster is encountered (if 'n_init' > 1 then the next initialization is
+            attempted, so an error will only be returned to the calling program if all
+            initializations led to empty clusters). If set to 'split' then the point farthest from
+            its closest cluster centre is chosen and assigned to the empty cluster. Note that if the
+            Hartigan-Wong algorithm is used then 'empty clusters' will be set to 'error' internally.
+
+        afk_mcmc_samples (int, optional): If the AFK-MC^2 initialization method is used, the number
+            of MCMC samples to use in the algorithm. Default = 50.
+
+        mixed_precision (bool, optional): Whether to use mixed precision iterative refinement,
+            in which lower precision arithmetic is used before switching to the working precision
+            for the final iterations. Default = False.
+
+        low_precision_max_iter (int, optional): If mixed precision iterative refinement is enabled,
+            maximum number of iterations for the low precision phase. Default = 200.
+
+        low_precision_tol (float, optional): If mixed precision iterative refinement is enabled,
+            convergence tolerance for the low precision phase. Default = 1.0-e-2.
 
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
 
     """
 
-    def __init__(self, n_clusters=1, initialization_method='k-means++', C=None, n_init=10,
-                 max_iter=300, seed=-1, algorithm='lloyd', tol=1.0e-4, check_data=False):
+    def __init__(
+            self,
+            n_clusters=1,
+            initialization_method='k-means++',
+            C=None, n_init=10,
+            max_iter=300,
+            seed=-1,
+            algorithm='lloyd',
+            distance='euclidean',
+            normalize_data=False,
+            tol=1.0e-4,
+            empty_clusters='ignore',
+            afk_mcmc_samples=50,
+            mixed_precision=False,
+            low_precision_max_iter=200,
+            low_precision_tol=1.0e-2,
+            check_data=False):
 
         self.kmeans_double = pybind_kmeans(
             n_clusters,
@@ -80,6 +128,12 @@ class kmeans():
             max_iter,
             seed,
             algorithm,
+            distance,
+            normalize_data,
+            empty_clusters,
+            afk_mcmc_samples,
+            mixed_precision,
+            low_precision_max_iter,
             'double',
             check_data)
         self.kmeans_single = pybind_kmeans(
@@ -89,6 +143,12 @@ class kmeans():
             max_iter,
             seed,
             algorithm,
+            distance,
+            normalize_data,
+            empty_clusters,
+            afk_mcmc_samples,
+            mixed_precision,
+            low_precision_max_iter,
             'single',
             check_data)
 
@@ -96,7 +156,13 @@ class kmeans():
         self.order = 'A'
         self.C = C
         self.tol = tol
+        self.low_precision_tol = low_precision_tol
+        self.low_precision_max_iter = low_precision_max_iter
+        self.mixed_precision = mixed_precision
+        self.afk_mcmc_samples = afk_mcmc_samples
+        self.normalize_data = normalize_data
         self.kmeans = self.kmeans_double
+        self.distance = distance
 
     @property
     def cluster_centres(self):
@@ -161,7 +227,7 @@ class kmeans():
             self.kmeans = self.kmeans_single
             self.kmeans_double = None
 
-        self.kmeans.pybind_fit(A, self.C, self.tol)
+        self.kmeans.pybind_fit(A, self.C, self.tol, self.low_precision_tol)
         return self
 
     def transform(self, X):
@@ -206,6 +272,49 @@ class kmeans():
         )
 
         return self.kmeans.pybind_predict(Y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.kmeans),
+            'order': self.order,
+            'dtype': self.dtype,
+            'C': self.C,
+            'tol': self.tol,
+            'low_precision_tol': self.low_precision_tol,
+            'low_precision_max_iter': self.low_precision_max_iter,
+            'mixed_precision': self.mixed_precision,
+            'afk_mcmc_samples': self.afk_mcmc_samples,
+            'normalize_data': self.normalize_data,
+            'distance': self.distance
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.kmeans = pickle.loads(state['pybind_state'])
+        self.C = state['C']
+        self.tol = state['tol']
+        self.low_precision_tol = state['low_precision_tol']
+        self.low_precision_max_iter = state['low_precision_max_iter']
+        self.mixed_precision = state['mixed_precision']
+        self.afk_mcmc_samples = state['afk_mcmc_samples']
+        self.normalize_data = state.get('normalize_data', False)
+        self.distance = state.get('distance', 'euclidean')
+
+        if self.dtype == 'float64':
+            self.kmeans_double = self.kmeans
+            self.kmeans_single = None
+        elif self.dtype == 'float32':
+            self.kmeans_double = None
+            self.kmeans_single = self.kmeans
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
 
 
 class DBSCAN():

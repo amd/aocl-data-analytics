@@ -34,6 +34,8 @@ if(BUILD_FORTRAN)
 
   add_executable(reglinear_model reglinear_model.cpp)
 
+  add_executable(logit_classifier logit_classifier.cpp)
+
 endif()
 
 add_executable(basic_statistics basic_statistics.cpp)
@@ -44,15 +46,18 @@ add_executable(linear_model linear_model.cpp)
 
 add_executable(linmod_diabetes linmod_diabetes.cpp)
 target_compile_definitions(linmod_diabetes
-                           PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(datastore datastore.cpp)
 target_compile_definitions(datastore
-                           PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(decision_tree decision_tree.cpp)
 target_compile_definitions(
   decision_tree PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/df_data")
+
+add_executable(model_persistence_decision_tree model_persistence_decision_tree.cpp)
+target_link_libraries(model_persistence_decision_tree PRIVATE aocl-da)
 
 add_executable(decision_forest decision_forest.cpp)
 
@@ -62,13 +67,19 @@ target_compile_definitions(
 add_executable(pca pca.cpp)
 target_link_libraries(pca PRIVATE aocl-da)
 
+add_executable(model_persistence_pca model_persistence_pca.cpp)
+target_link_libraries(model_persistence_pca PRIVATE aocl-da)
+
 add_executable(pca_cancer pca_cancer.cpp)
 target_link_libraries(pca_cancer PRIVATE aocl-da)
 target_compile_definitions(pca_cancer
-                           PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
+  PRIVATE DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data")
 
 add_executable(kmeans kmeans.cpp)
 target_link_libraries(kmeans PRIVATE aocl-da)
+
+add_executable(tsne tsne.cpp)
+target_link_libraries(tsne PRIVATE aocl-da)
 
 add_executable(dbscan dbscan.cpp)
 target_link_libraries(dbscan PRIVATE aocl-da)
@@ -87,6 +98,9 @@ add_executable(radius_neighbors_regression radius_neighbors_regression.cpp)
 
 add_executable(kernel_functions kernel_functions.cpp)
 
+add_executable(kernel_pca kernel_pca.cpp)
+target_link_libraries(kernel_pca PRIVATE aocl-da)
+
 add_executable(svc svc.cpp)
 
 add_executable(nusvr nusvr.cpp)
@@ -96,31 +110,35 @@ add_executable(ann ann.cpp)
 add_executable(cubic_spline cubic_spline.cpp)
 
 set(EXAMPLE_EXES
-    linear_model
-    linmod_diabetes
-    basic_statistics
-    train_test_split
-    pca
-    pca_cancer
-    kmeans
-    dbscan
-    datastore
-    decision_tree
-    decision_forest
-    metrics
-    knn_classification
-    knn_regression
-    radius_neighbors
-    radius_neighbors_classification
-    radius_neighbors_regression
-    svc
-    nusvr
-    kernel_functions
-    ann
-    cubic_spline)
+  linear_model
+  linmod_diabetes
+  basic_statistics
+  train_test_split
+  pca
+  pca_cancer
+  kmeans
+  tsne
+  dbscan
+  datastore
+  decision_tree
+  decision_forest
+  metrics
+  model_persistence_decision_tree
+  model_persistence_pca
+  knn_classification
+  knn_regression
+  radius_neighbors
+  radius_neighbors_classification
+  radius_neighbors_regression
+  svc
+  nusvr
+  kernel_functions
+  ann
+  cubic_spline
+  kernel_pca)
 
 if(BUILD_FORTRAN)
-  list(APPEND EXAMPLE_EXES nlls nlls_single nlls_lanczos_fd reglinear_model)
+  list(APPEND EXAMPLE_EXES nlls nlls_single nlls_lanczos_fd reglinear_model logit_classifier)
 endif()
 
 foreach(target ${EXAMPLE_EXES})
@@ -139,16 +157,24 @@ endforeach()
 
 # For Windows shared library builds, copying the relevant DLLs into the examples
 # bin folder enables ctest to run without needing to update PATH.
+#
+# We do this via a single custom target rather than a per-executable POST_BUILD
+# command, because every example writes the same DLLs to the same destination
+# directory; running N parallel `cmake -E copy_if_different` invocations on
+# Windows causes sporadic sharing-violation failures ("Error copying file (if
+# different)"). Using one ALL target gated on all example exes guarantees the
+# copy runs exactly once after all examples have linked.
 if(WIN32 AND BUILD_SHARED_LIBS)
-  foreach(EXAMPLE_EXE ${EXAMPLE_EXES})
-    add_custom_command(
-      TARGET ${EXAMPLE_EXE}
-      POST_BUILD
-      COMMAND
-        ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_RUNTIME_DLLS:${EXAMPLE_EXE}> $<TARGET_FILE_DIR:${EXAMPLE_EXE}>
-      COMMAND_EXPAND_LISTS)
-  endforeach()
+  list(GET EXAMPLE_EXES 0 EXAMPLE_EXE)
+
+  add_custom_target(copy_example_runtime_dlls ALL
+    COMMAND
+    ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_RUNTIME_DLLS:${EXAMPLE_EXE}>
+    $<TARGET_FILE_DIR:${EXAMPLE_EXE}>
+    COMMAND_EXPAND_LISTS
+    VERBATIM)
+  add_dependencies(copy_example_runtime_dlls ${EXAMPLE_EXES})
 endif()
 
 # Add all example programs to CTEST

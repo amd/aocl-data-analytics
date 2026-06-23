@@ -1,7 +1,7 @@
 ! Copyright (c) 2020, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
 ! Copyright (C) 2020 Numerical Algorithms Group (NAG). All rights reserved.
-! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+! Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 ! ral_nlls_internal :: internal subroutines for ral_nlls
 
 #include "preprocessor.FPP"
@@ -80,6 +80,11 @@ contains
     ! internal envelope params
     Type ( params_internal_type ) :: iparams
 
+    Integer(kind=ktimer) :: timer
+    Real(kind=np) :: elapsed_time
+    timer = 0
+    call get_elapsed_time(timer, elapsed_time) ! initialize timer
+
 !   Link the inner_workspace to the main workspace
     w%iw_ptr => inner_workspace
 !   Self reference inner workspace so recursive call does not fail
@@ -115,6 +120,7 @@ contains
             eval_HP=eval_HP,                                          &
             lower_bounds=lower_bounds, upper_bounds=upper_bounds)
 
+       call get_elapsed_time(timer, elapsed_time)
        ! test the returns to see if we've converged
        if (inform%status /= 0) then
           ! error -- exit
@@ -123,6 +129,9 @@ contains
                (inform%convergence_normg == 1).or.&
                (inform%convergence_norms == 1)) then
           ! converged -- exit
+          goto 100
+        elseif (elapsed_time > options%maxtime) then
+          inform%status = NLLS_ERROR_MAXTIME
           goto 100
        end if
      end do main_loop
@@ -1265,6 +1274,8 @@ lp: do while (.not. success)
        inform%error_message = 'Unexpected error occured'
     elseif ( inform%status == NLLS_ERROR_BAD_WEIGHTS ) then
        inform%error_message = 'Weights vector must be sufficiently positive'
+    elseif ( inform%status == NLLS_ERROR_MAXTIME ) then
+       inform%error_message = 'Time limit exceeded'
     else
        inform%error_message = 'Unknown error number'
     end if
@@ -4980,6 +4991,27 @@ armijo: Do
 99996   Format ('Linesearch exit code=',I0)
 
       End Subroutine nmls_pg
+
+      subroutine get_elapsed_time(time, elapsed_time)
+        implicit none
+        real(kind=np), Intent(Out) :: elapsed_time
+        integer(kind=ktimer), intent(InOut) :: time ! Starting time from system_clock
+        integer(kind=ktimer) :: t, count_rate, count_max
+    
+        elapsed_time = 0.0_np
+        ! Get current system clock
+        call system_clock(t, count_rate, count_max)
+
+        if (time <= 0) then
+            ! Second call to get the actual t
+            call system_clock(t, count_rate, count_max)
+            ! initialize timer
+            time = t
+        elseif (count_rate > 0) then
+            ! Calculate elapsed time in seconds
+            elapsed_time = real(t - time, kind=np) / real(count_rate, kind=np)
+        end if
+      end subroutine get_elapsed_time
 
    end module MODULE_PREC(ral_nlls_internal)
 

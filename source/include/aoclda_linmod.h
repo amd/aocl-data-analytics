@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -84,7 +84,7 @@ da_status da_linmod_select_model_d(da_handle handle, linmod_model mod);
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples the number of observations (rows) of the data matrix @p X. Constraint: @p n_samples @f$\ge@f$ 1.
  * @param[in] n_features the number of features (columns) of the data matrix, @p X. Constraint: @p n_features @f$\ge@f$ 1.
- * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. For best performance store in column-major order, can be changed by setting <em>storage order</em> option to <em>row-major</em>.
+ * @param[in] X the @p n_samples @f$\times@f$ @p n_features data matrix. For best performance store in column-major order, can be changed by setting the <em>storage order</em> option to <em>row-major</em>.
  * @param[in] ldx the leading dimension of the data matrix @p X. Constraint: @p ldx @f$\ge@f$ @p n_samples if the data is stored in column-major order, or @p ldx @f$\ge@f$ @p n_features if the data is stored in row-major order.
  * @param[in] y the response vector, of size @p n_samples.
  * @return @ref da_status. The function returns:
@@ -151,21 +151,26 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, const float *c
  *
  * After a model has been fitted using \ref da_linmod_fit_s "da_linmod_fit_?", it can be evaluated on
  * a new set of data and observations.
- * This function returns the model evaluation (loss) in the array @p loss and the predictions in @p predictions.
-
+ * 
+ * For regression problems, this function returns the model predictions in @p predictions.
+ * If additionally the observations are provided, then the function also returns the loss function value in @p loss.
+ * 
  * @rst
  * In the case where the model chosen solves a classification problem (e.g., logistic regression), the predictions computed will be categorical.
  * For each data point ``i``, ``prediction[i]`` will contain the index of the most likely class according to the model.
  * @endrst
+ * Additionally,  if the observations are also provided, then this function returns the classification accuracy in @p loss.
  *
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_linmod.
  * @param[in] n_samples number of rows of \p X or equivalently the number of samples to estimate the model on.
- * @param[in] n_features number of columns of \p X or equivalently the number of features of the test data. It must match the number features of the data defined in the \p handle.
- * @param[in] X the @p n_samples @f$\times@f$ @p n_feat data matrix. For best performance store in column-major order, can be changed by setting <em>storage order</em> option to <em>row-major</em>.
- * @param[in] ldx the leading dimension of the data matrix @p X. Constraint: @p ldx @f$\ge@f$ @p n_samples if the data is stored in column-major order, or @p ldx @f$\ge@f$ @p n_features if the data is stored in row-major order.
+ * @param[in] n_features number of columns of \p X or equivalently the number of features of the test data. It must match
+ *            the number features of the data defined in the \p handle.
+ * @param[in] X the @p n_samples @f$\times@f$ @p n_features data matrix.
+ * @param[in] ldx the leading dimension of the data matrix @p X. Constraint: @p ldx @f$\ge@f$ @p n_samples if the data is
+ *            stored in column-major order, or @p ldx @f$\ge@f$ @p n_features if the data is stored in row-major order.
  * @param[out] predictions vector of size \p n_samples containing the model's prediction.
  * @param[in] observations vector of size \p n_samples containing new observations; may be \p NULL if none are provided.
- * @param[out] loss scalar containing the model's loss given the new data \p X and the new observations \p y; may be \p NULL if
+ * @param[out] loss scalar containing the model's loss (accuracy) given the new data \p X and the new observations \p y; may be \p NULL if
  *        no observations are provided. Note that either both \p  observations and \p loss parameters are \p NULL or both
  *        must contain a valid address.
  * @return da_status
@@ -179,12 +184,12 @@ da_status da_linmod_fit_start_s(da_handle handle, da_int n_coefs, const float *c
  */
 da_status da_linmod_evaluate_model_d(da_handle handle, da_int n_samples,
                                      da_int n_features, const double *X, da_int ldx,
-                                     double *predictions, double *observations,
+                                     double *predictions, const double *observations,
                                      double *loss);
 
 da_status da_linmod_evaluate_model_s(da_handle handle, da_int n_samples,
                                      da_int n_features, const float *X, da_int ldx,
-                                     float *predictions, float *observations,
+                                     float *predictions, const float *observations,
                                      float *loss);
 /** \} */
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -359,129 +359,35 @@ py::array_t<T> py_da_standardize(py::array_t<T> X, std::optional<py::array_t<T>>
 
     get_size_and_axis(axis, order, axis_enum, X, standardize_sz, m, n, ldx);
 
-    da_int ldx_copy = (order == column_major) ? m : n;
-    T *dummy = nullptr;
-
-    if (shift.has_value() && scale.has_value()) {
-        if ((size_t)shift->shape()[0] != standardize_sz ||
-            (size_t)scale->shape()[0] != standardize_sz) {
-            throw std::length_error(
-                "The size of shift or scale array does not match the expected size.");
-        }
-        if (reverse) {
-            if (inplace) {
-                status =
-                    da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx, dof, 1,
-                                   shift->mutable_data(), scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 1, shift->mutable_data(),
-                                        scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        } else {
-            if (inplace) {
-                status =
-                    da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx, dof, 0,
-                                   shift->mutable_data(), scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, shift->mutable_data(),
-                                        scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
-    } else if (shift.has_value()) {
-        if ((size_t)shift->shape()[0] != standardize_sz) {
-            throw std::length_error(
-                "The size of shift array does not match the expected size.");
-        }
-        if (reverse) {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 1, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 1, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return copy_X;
-            }
-        } else {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 0, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, shift->mutable_data(), dummy);
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
-    } else if (scale.has_value()) {
-        if ((size_t)scale->shape()[0] != standardize_sz) {
-            throw std::length_error(
-                "The size of scale array does not match the expected size.");
-        }
-        if (reverse) {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), m, dof,
-                                        1, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 1, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        } else {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 0, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, dummy, scale->mutable_data());
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
+    T *output_ptr = nullptr;
+    da_int ldx_output;
+    py::array_t<T> copy_X;
+    if (!inplace) {
+        copy_X = copy_numpy_array(X);
+        output_ptr = copy_X.mutable_data();
+        ldx_output = (order == column_major) ? m : n;
     } else {
-        if (reverse) {
-            throw std::invalid_argument(
-                "Reverse standardization only works with supplied both shift and scale.");
-        } else {
-            if (inplace) {
-                status = da_standardize(order, axis_enum, m, n, X.mutable_data(), ldx,
-                                        dof, 0, dummy, dummy);
-                status_to_exception(status);
-                return X;
-            } else {
-                py::array_t<T> copy_X = copy_numpy_array(X);
-                status = da_standardize(order, axis_enum, m, n, copy_X.mutable_data(),
-                                        ldx_copy, dof, 0, dummy, dummy);
-                status_to_exception(status);
-                return copy_X;
-            }
-        }
+        output_ptr = X.mutable_data();
+        ldx_output = ldx;
     }
+
+    T *shift_ptr = shift.has_value() ? shift->mutable_data() : nullptr;
+    T *scale_ptr = scale.has_value() ? scale->mutable_data() : nullptr;
+
+    if ((shift_ptr != nullptr && (size_t)shift->shape()[0] != standardize_sz) ||
+        (scale_ptr != nullptr && (size_t)scale->shape()[0] != standardize_sz)) {
+        throw std::length_error(
+            "The size of shift or scale array does not match the expected size.");
+    } else if ((shift_ptr == nullptr && scale_ptr == nullptr) && reverse) {
+        throw std::invalid_argument("Reverse standardization only works if either shift "
+                                    "or scale (or both) is (are) supplied.");
+    }
+
+    status = da_standardize(order, axis_enum, m, n, output_ptr, ldx_output, dof,
+                            (da_int)reverse, shift_ptr, scale_ptr);
+    status_to_exception(status);
+
+    return inplace ? X : copy_X;
 }
 
 template <typename T>

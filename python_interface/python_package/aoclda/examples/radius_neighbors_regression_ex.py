@@ -52,7 +52,7 @@ def radius_neighbors_regressor_example():
                        [2, 1, -3]], dtype=np.float64)
 
     print("\nradius neighbors for a small data matrix\n")
-    rnn = nearest_neighbors(radius=5.0)
+    rnn = nearest_neighbors(radius=3.0, outlier_handling=-1.0)
     rnn.fit(x_train, y_train)
     print(x_train)
     r_dist, r_ind = rnn.radius_neighbors(
@@ -70,7 +70,7 @@ def radius_neighbors_regressor_example():
     # Check against expected results
     expected_r_dist = [np.array([]), np.array([2.]), np.array([])]
     expected_r_ind = [np.array([]), np.array([2]), np.array([])]
-    expected_targets = np.array([1.6, 1.46666667, 1.])
+    expected_targets = np.array([2.3, 0.6, -1.])
 
     incorrect_targets = np.linalg.norm(y_test - expected_targets)
 

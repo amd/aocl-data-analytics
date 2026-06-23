@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -214,6 +214,12 @@ kd_tree<T>::kd_tree(da_int n_samples_in, da_int n_features_in, const T *A_in,
                                     &max_bounds, root_dim);
         }
     }
+}
+
+// Special constructor for when being loaded from memory.
+template <typename T> kd_tree<T>::kd_tree(const T *A_in, da_int lda_in) {
+    this->A = A_in;
+    this->lda = lda_in;
 }
 
 // Use Welford's online single pass algorithm to compute the variance of the entries in A given by indices in dimension dim

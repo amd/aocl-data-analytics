@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -35,8 +35,15 @@
 #include <iostream>
 #include <list>
 #include <string>
-// taken from  "svm_types.hpp"
-enum vectorization_type { scalar = 0, avx = 2, avx2 = 5, avx512 = 11 };
+// taken from  "da_kernel_utils.hpp"
+enum vectorization_type : da_int {
+    undefined = -1,
+    scalar = 1,
+    avx = 2,
+    avx2 = 3,
+    avx512 = 4,
+    count = 5
+};
 
 // Test kernel overrides
 TEST(SVMKernelOverride, SetAndGet) {
@@ -237,7 +244,18 @@ TYPED_TEST(svm_public_test, get_results_test) {
                   da_status_success);
         EXPECT_EQ(da_options_set(svm_handle, "tolerance", (TypeParam)1e-5),
                   da_status_success);
+        // Check da_trained before compute
+        da_int tr_dim = 1, tr_val = -1;
+        EXPECT_EQ(
+            da_handle_get_result(svm_handle, da_result::da_trained, &tr_dim, &tr_val),
+            da_status_success);
+        EXPECT_EQ(tr_val, 0);
         EXPECT_EQ(da_svm_compute<TypeParam>(svm_handle), da_status_success);
+        // Check da_trained after compute
+        EXPECT_EQ(
+            da_handle_get_result(svm_handle, da_result::da_trained, &tr_dim, &tr_val),
+            da_status_success);
+        EXPECT_EQ(tr_val, 1);
 
         ////////// COLUMN MAJOR
         // Get the rinfo results and check the values
@@ -844,11 +862,11 @@ TYPED_TEST(svm_public_test, invalid_input) {
     EXPECT_EQ(da_svm_score(svm_handle, n_samples, n_features, X.data(), n_samples,
                            y_invalid, &score),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_svm_score(svm_handle, n_samples, n_features, X.data(), n_samples,
-                           y.data(), nullptr),
+    EXPECT_EQ(da_svm_score<TypeParam>(svm_handle, n_samples, n_features, X.data(),
+                                      n_samples, y.data(), nullptr),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_svm_score(nullptr, n_samples, n_features, X.data(), n_samples, y.data(),
-                           &score),
+    EXPECT_EQ(da_svm_score<TypeParam>(nullptr, n_samples, n_features, X.data(), n_samples,
+                                      y.data(), &score),
               da_status_handle_not_initialized);
     // Wrong dimensions
     EXPECT_EQ(
@@ -968,6 +986,123 @@ TYPED_TEST(svm_public_test, bad_handle_tests) {
               da_status_invalid_handle_type);
 
     da_handle_destroy(&handle);
+}
+
+TYPED_TEST(svm_public_test, mixed_precision_svc) {
+    // Well-separated binary classification dataset (row-major, 10 samples, 2 features)
+    // Class 0: cluster near (0,0);  Class 1: cluster near (10,10)
+    std::vector<TypeParam> X_train = {
+        // row 1 (sample 0)                 // row 2 (sample 1)
+        0.1, 0.3,  -0.2, 0.5, -0.1, 0.2,  -0.1, 0.4,  0.0, 0.3,
+        9.8, 10.1, 10.3, 9.7, 10.0, 10.1, 9.9,  10.2, 9.8, 10.4};
+    // clang-format on
+    std::vector<TypeParam> y_train = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1};
+    da_int n_train = 10, n_feat = 2, ldx_train = n_feat;
+
+    std::vector<TypeParam> X_test = {0.0, 0.0, 10.0, 10.0};
+    std::vector<TypeParam> y_test = {0.0, 1.0};
+    da_int n_test = 2;
+
+    // Baseline: standard precision
+    da_handle baseline = nullptr;
+    ASSERT_EQ(da_handle_init<TypeParam>(&baseline, da_handle_svm), da_status_success);
+    ASSERT_EQ(da_options_set(baseline, "kernel", "linear"), da_status_success);
+    ASSERT_EQ(da_options_set(baseline, "storage order", "row-major"), da_status_success);
+    ASSERT_EQ(da_svm_select_model<TypeParam>(baseline, svc), da_status_success);
+    ASSERT_EQ(da_svm_set_data(baseline, n_train, n_feat, X_train.data(), n_feat,
+                              y_train.data()),
+              da_status_success);
+    ASSERT_EQ(da_svm_compute<TypeParam>(baseline), da_status_success);
+
+    std::vector<TypeParam> y_pred_base(n_test);
+    ASSERT_EQ(da_svm_predict(baseline, n_test, n_feat, X_test.data(), n_feat,
+                             y_pred_base.data()),
+              da_status_success);
+    TypeParam score_base = 0.0;
+    ASSERT_EQ(da_svm_score(baseline, n_test, n_feat, X_test.data(), n_test, y_test.data(),
+                           &score_base),
+              da_status_success);
+
+    // Iterative refinement: float first pass, double second pass
+    da_handle refined = nullptr;
+    ASSERT_EQ(da_handle_init<TypeParam>(&refined, da_handle_svm), da_status_success);
+    ASSERT_EQ(da_options_set(refined, "kernel", "linear"), da_status_success);
+    ASSERT_EQ(da_options_set(refined, "storage order", "row-major"), da_status_success);
+    ASSERT_EQ(da_options_set(refined, "mixed precision", "yes"), da_status_success);
+    ASSERT_EQ(da_svm_select_model<TypeParam>(refined, svc), da_status_success);
+    ASSERT_EQ(da_svm_set_data(refined, n_train, n_feat, X_train.data(), ldx_train,
+                              y_train.data()),
+              da_status_success);
+    ASSERT_EQ(da_svm_compute<TypeParam>(refined), da_status_success);
+
+    std::vector<TypeParam> y_pred_ref(n_test);
+    ASSERT_EQ(
+        da_svm_predict(refined, n_test, n_feat, X_test.data(), n_feat, y_pred_ref.data()),
+        da_status_success);
+    TypeParam score_ref = 0.0;
+    ASSERT_EQ(da_svm_score(refined, n_test, n_feat, X_test.data(), n_test, y_test.data(),
+                           &score_ref),
+              da_status_success);
+
+    // Both must produce the same predictions on this well-separated data
+    EXPECT_ARR_NEAR(n_test, y_pred_ref, y_pred_base,
+                    10 * std::numeric_limits<TypeParam>::epsilon());
+    EXPECT_NEAR(score_ref, score_base, 10 * std::numeric_limits<TypeParam>::epsilon());
+    // Perfect accuracy expected on this trivial dataset
+    EXPECT_NEAR(score_base, 1.0, 1.0e-10);
+
+    da_handle_destroy(&baseline);
+    da_handle_destroy(&refined);
+}
+
+TYPED_TEST(svm_public_test, mixed_precision_svr) {
+    // Simple regression: y = x, samples along a line
+    // clang-format off
+    std::vector<TypeParam> X_train = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+    // clang-format on
+    std::vector<TypeParam> y_train = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};
+    da_int n_train = 8, n_feat = 1;
+
+    std::vector<TypeParam> X_test = {2.5, 5.5};
+    da_int n_test = 2;
+
+    // Baseline
+    da_handle baseline = nullptr;
+    ASSERT_EQ(da_handle_init<TypeParam>(&baseline, da_handle_svm), da_status_success);
+    ASSERT_EQ(da_options_set(baseline, "kernel", "linear"), da_status_success);
+    ASSERT_EQ(da_svm_select_model<TypeParam>(baseline, nusvr), da_status_success);
+    ASSERT_EQ(da_svm_set_data(baseline, n_train, n_feat, X_train.data(), n_train,
+                              y_train.data()),
+              da_status_success);
+    ASSERT_EQ(da_svm_compute<TypeParam>(baseline), da_status_success);
+
+    std::vector<TypeParam> y_pred_base(n_test);
+    ASSERT_EQ(da_svm_predict(baseline, n_test, n_feat, X_test.data(), n_test,
+                             y_pred_base.data()),
+              da_status_success);
+
+    // Iterative refinement
+    da_handle refined = nullptr;
+    ASSERT_EQ(da_handle_init<TypeParam>(&refined, da_handle_svm), da_status_success);
+    ASSERT_EQ(da_options_set(refined, "kernel", "linear"), da_status_success);
+    ASSERT_EQ(da_options_set(refined, "mixed precision", "yes"), da_status_success);
+    ASSERT_EQ(da_svm_select_model<TypeParam>(refined, nusvr), da_status_success);
+    ASSERT_EQ(da_svm_set_data(refined, n_train, n_feat, X_train.data(), n_train,
+                              y_train.data()),
+              da_status_success);
+    ASSERT_EQ(da_svm_compute<TypeParam>(refined), da_status_success);
+
+    std::vector<TypeParam> y_pred_ref(n_test);
+    ASSERT_EQ(
+        da_svm_predict(refined, n_test, n_feat, X_test.data(), n_test, y_pred_ref.data()),
+        da_status_success);
+
+    // Both should produce similar predictions
+    const TypeParam tol = 0.5;
+    EXPECT_ARR_NEAR(n_test, y_pred_ref, y_pred_base, tol);
+
+    da_handle_destroy(&baseline);
+    da_handle_destroy(&refined);
 }
 
 TEST(svm_public_test, incorrect_handle_precision) {

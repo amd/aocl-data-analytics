@@ -31,6 +31,8 @@
 #include "aoclda_types.h"
 #include "boost/random/uniform_int_distribution.hpp"
 #include "macros.h"
+#include <cmath>
+#include <immintrin.h>
 #include <random>
 
 /* These functions are AOCL-DA specific implementations of common STL functions. They exist because
@@ -48,6 +50,15 @@ void fill(ForwardIt first, ForwardIt last, const T &value) {
     for (; first != last; ++first) {
         *first = value;
     }
+}
+
+// std::copy equivalent
+template <class InputIt, class OutputIt>
+OutputIt copy(InputIt first, InputIt last, OutputIt d_first) {
+    for (; first != last; ++first, ++d_first) {
+        *d_first = *first;
+    }
+    return d_first;
 }
 
 // std::iota equivalent

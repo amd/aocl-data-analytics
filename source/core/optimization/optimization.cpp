@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -45,7 +45,7 @@ namespace ARCH {
 
 namespace da_optim {
 
-template <typename T> void da_optimization<T>::refresh() { model_trained = false; }
+template <typename T> void da_optimization<T>::refresh() { this->model_trained = false; }
 
 template <typename T> da_status da_optimization<T>::set_info(da_int idx, const T value) {
     if (0 <= idx && idx < (da_int)info.size()) {
@@ -56,9 +56,7 @@ template <typename T> da_status da_optimization<T>::set_info(da_int idx, const T
 }
 
 template <typename T>
-da_status da_optimization<T>::get_result([[maybe_unused]] da_result query,
-                                         [[maybe_unused]] da_int *dim,
-                                         [[maybe_unused]] T *result) {
+da_status da_optimization<T>::get_result(da_result query, da_int *dim, T *result) {
     if (!this->model_trained)
         return da_warn(this->err, da_status_unknown_query,
                        "Handle does not contain data relevant to this query. Was the "
@@ -74,9 +72,12 @@ da_status da_optimization<T>::get_result([[maybe_unused]] da_result query,
 }
 
 template <typename T>
-da_status da_optimization<T>::get_result([[maybe_unused]] da_result query,
-                                         [[maybe_unused]] da_int *dim,
-                                         [[maybe_unused]] da_int *result) {
+da_status da_optimization<T>::get_result(da_result query, da_int *dim, da_int *result) {
+    // check to see if user needs common stuff from the basic handle first
+    da_status status = this->get_result_common(query, dim, result);
+    if (status != da_status_unknown_query) {
+        return status; // either got requested info or error
+    }
     return da_error( // LCOV_EXCL_LINE
         this->err, da_status_unknown_query,
         "Handle does not contain data relevant to this query.");

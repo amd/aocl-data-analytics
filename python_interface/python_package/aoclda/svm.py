@@ -29,6 +29,7 @@
 aoclda.svm module
 """
 import numpy as np
+import pickle
 from ._aoclda.svm import pybind_svc, pybind_svr, pybind_nusvc, pybind_nusvr
 from ._internal_utils import check_convert_data
 
@@ -52,10 +53,15 @@ class BaseSVM:
         max_iter=0,
         tau=None,
         max_ws_size=-1,
+        mixed_precision=False,
+        low_precision_max_iter=0,
+        low_precision_tol=0.01,
         check_data=False,
     ):
         if max_iter == -1:
             max_iter = 0
+        if low_precision_max_iter == -1:
+            low_precision_max_iter = 0
         self.order = 'A'
         self.dtype = 'float'
         self.kernel = kernel
@@ -68,6 +74,9 @@ class BaseSVM:
         self.tau = tau
         self.max_ws_size = max_ws_size
         self.check_data = check_data
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
         # Objects to bind with C++ backend (assigned by subclasses)
         self._model_double = None
         self._model_single = None
@@ -139,6 +148,59 @@ class BaseSVM:
         y, _, _ = check_convert_data(
             y, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_score(X, y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self._model),
+            'order': self.order,
+            'dtype': self.dtype,
+            'max_iter': self.max_iter,
+            'kernel': self.kernel,
+            'degree': self.degree,
+            'gamma': self.gamma,
+            'coef0': self.coef0,
+            'tol': self.tol,
+            'low_precision_tol': self.low_precision_tol,
+            'mixed_precision': self.mixed_precision,
+            'low_precision_max_iter': self.low_precision_max_iter,
+            'cache_size': self.cache_size,
+            'tau': self.tau,
+            'max_ws_size': self.max_ws_size,
+            'check_data': self.check_data
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self._model = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.max_iter = state['max_iter']
+        self.kernel = state['kernel']
+        self.degree = state['degree']
+        self.gamma = state['gamma']
+        self.coef0 = state['coef0']
+        self.tol = state['tol']
+        self.low_precision_tol = state['low_precision_tol']
+        self.mixed_precision = state['mixed_precision']
+        self.low_precision_max_iter = state['low_precision_max_iter']
+        self.cache_size = state['cache_size']
+        self.tau = state['tau']
+        self.max_ws_size = state['max_ws_size']
+        self.check_data = state['check_data']
+
+        if self.dtype == 'float64':
+            self._model_double = self._model
+            self._model_single = None
+        elif self.dtype == 'float32':
+            self._model_double = None
+            self._model_single = self._model
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return
 
     @property
     def n_samples(self):
@@ -237,6 +299,13 @@ class SVC(BaseSVM):
             Use -1 for non deterministic behavior. Default=0.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
+        mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \
+            in which lower precision arithmetic is used before switching to the working precision \
+            for the final iterations. Default = False.
+        low_precision_max_iter (int, optional): If mixed precision iterative refinement is \
+            enabled, maximum number of iterations for the low precision phase. Default = 0.
+        low_precision_tol (float, optional): If mixed precision iterative refinement is enabled, \
+            convergence tolerance for the low precision phase. Default = 1.0e-2.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
@@ -254,6 +323,9 @@ class SVC(BaseSVM):
         random_state=0,
         tau=None,
         max_ws_size=-1,
+        mixed_precision=False,
+        low_precision_max_iter=0,
+        low_precision_tol=0.01,
         check_data=False,
     ):
         super().__init__(
@@ -266,6 +338,9 @@ class SVC(BaseSVM):
             max_iter=max_iter,
             tau=tau,
             max_ws_size=max_ws_size,
+            mixed_precision=mixed_precision,
+            low_precision_max_iter=low_precision_max_iter,
+            low_precision_tol=low_precision_tol,
             check_data=check_data,
         )
         self.probability = probability
@@ -278,6 +353,8 @@ class SVC(BaseSVM):
             probability=self.probability,
             seed=self.random_state,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="double",
             check_data=self.check_data,
         )
@@ -288,6 +365,8 @@ class SVC(BaseSVM):
             probability=self.probability,
             seed=self.random_state,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="single",
             check_data=self.check_data,
         )
@@ -311,6 +390,7 @@ class SVC(BaseSVM):
             "gamma": self.gamma,
             "coef0": self.coef0,
             "tol": self.tol,
+            "low_precision_tol": self.low_precision_tol,
             "tau": self.tau,
             "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
@@ -391,6 +471,21 @@ class SVC(BaseSVM):
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_predict_log_proba(X)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['C'] = self.C
+        state['probability'] = self.probability
+        state['random_state'] = self.random_state
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.C = state['C']
+        self.probability = state['probability']
+        self.random_state = state['random_state']
+        super().__setstate__(state)
 
     @property
     def n_classes(self):
@@ -447,6 +542,13 @@ class SVR(BaseSVM):
             Default=0.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
+        mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \
+            in which lower precision arithmetic is used before switching to the working precision \
+            for the final iterations. Default = False.
+        low_precision_max_iter (int, optional): If mixed precision iterative refinement is \
+            enabled, maximum number of iterations for the low precision phase. Default = 0.
+        low_precision_tol (float, optional): If mixed precision iterative refinement is enabled, \
+            convergence tolerance for the low precision phase. Default = 1.0e-2.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
@@ -464,6 +566,9 @@ class SVR(BaseSVM):
         max_ws_size=-1,
         tau=None,
         check_data=False,
+        mixed_precision=False,
+        low_precision_max_iter=0,
+        low_precision_tol=0.01,
     ):
         super().__init__(
             kernel=kernel,
@@ -475,6 +580,9 @@ class SVR(BaseSVM):
             max_iter=max_iter,
             max_ws_size=max_ws_size,
             tau=tau,
+            mixed_precision=mixed_precision,
+            low_precision_max_iter=low_precision_max_iter,
+            low_precision_tol=low_precision_tol,
             check_data=check_data,
         )
         self._model_double = pybind_svr(
@@ -482,6 +590,8 @@ class SVR(BaseSVM):
             degree=self.degree,
             max_iter=self.max_iter,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="double",
             check_data=self.check_data,
         )
@@ -490,6 +600,8 @@ class SVR(BaseSVM):
             degree=self.degree,
             max_iter=self.max_iter,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="single",
             check_data=self.check_data,
         )
@@ -515,6 +627,7 @@ class SVR(BaseSVM):
             "gamma": self.gamma,
             "coef0": self.coef0,
             "tol": self.tol,
+            "low_precision_tol": self.low_precision_tol,
             "tau": self.tau,
             "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
@@ -544,6 +657,19 @@ class SVR(BaseSVM):
             float: :math:`R^2` of self.predict(X) wrt. y.
         """
         return super().score(X, y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['C'] = self.C
+        state['epsilon'] = self.epsilon
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.C = state['C']
+        self.epsilon = state['epsilon']
+        super().__setstate__(state)
 
 
 class NuSVC(BaseSVM):
@@ -575,6 +701,13 @@ class NuSVC(BaseSVM):
             Use -1 for non deterministic behavior. Default=0.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
+        mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \
+            in which lower precision arithmetic is used before switching to the working precision \
+            for the final iterations. Default = False.
+        low_precision_max_iter (int, optional): If mixed precision iterative refinement is \
+            enabled, maximum number of iterations for the low precision phase. Default = 0.
+        low_precision_tol (float, optional): If mixed precision iterative refinement is enabled, \
+            convergence tolerance for the low precision phase. Default = 1.0e-2.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
@@ -592,6 +725,9 @@ class NuSVC(BaseSVM):
         random_state=0,
         max_ws_size=-1,
         tau=None,
+        mixed_precision=False,
+        low_precision_max_iter=0,
+        low_precision_tol=0.01,
         check_data=False,
     ):
         self.probability = probability
@@ -607,6 +743,9 @@ class NuSVC(BaseSVM):
             max_ws_size=max_ws_size,
             tau=tau,
             check_data=check_data,
+            mixed_precision=mixed_precision,
+            low_precision_max_iter=low_precision_max_iter,
+            low_precision_tol=low_precision_tol,
         )
         self._model_double = pybind_nusvc(
             kernel=self.kernel,
@@ -615,6 +754,8 @@ class NuSVC(BaseSVM):
             probability=self.probability,
             seed=self.random_state,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="double",
             check_data=self.check_data,
         )
@@ -625,6 +766,8 @@ class NuSVC(BaseSVM):
             probability=self.probability,
             seed=self.random_state,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="single",
             check_data=self.check_data,
         )
@@ -648,6 +791,7 @@ class NuSVC(BaseSVM):
             "gamma": self.gamma,
             "coef0": self.coef0,
             "tol": self.tol,
+            "low_precision_tol": self.low_precision_tol,
             "tau": self.tau,
             "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
@@ -729,6 +873,21 @@ class NuSVC(BaseSVM):
             X, order=self.order, dtype=self.dtype, force_dtype=True)
         return self._model.pybind_predict_log_proba(X)
 
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['nu'] = self.nu
+        state['probability'] = self.probability
+        state['random_state'] = self.random_state
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.nu = state['nu']
+        self.probability = state['probability']
+        self.random_state = state['random_state']
+        super().__setstate__(state)
+
     @property
     def n_classes(self):
         """
@@ -783,6 +942,13 @@ class NuSVR(BaseSVM):
             Default=0.
         tau (float, optional): Numerical stability parameter. If it is None then machine \
             epsilon is used. Default=None.
+        mixed_precision (bool, optional): Whether to use mixed precision iterative refinement, \
+            in which lower precision arithmetic is used before switching to the working precision \
+            for the final iterations. Default = False.
+        low_precision_max_iter (int, optional): If mixed precision iterative refinement is \
+            enabled, maximum number of iterations for the low precision phase. Default = 0.
+        low_precision_tol (float, optional): If mixed precision iterative refinement is enabled, \
+            convergence tolerance for the low precision phase. Default = 1.0e-2.
         check_data (bool, optional): Whether to check data for NaNs. Default=False.
     """
 
@@ -799,6 +965,9 @@ class NuSVR(BaseSVM):
         max_iter=0,
         max_ws_size=-1,
         tau=None,
+        mixed_precision=False,
+        low_precision_max_iter=0,
+        low_precision_tol=1.0e-2,
         check_data=False,
     ):
         super().__init__(
@@ -811,6 +980,9 @@ class NuSVR(BaseSVM):
             max_iter=max_iter,
             max_ws_size=max_ws_size,
             tau=tau,
+            mixed_precision=mixed_precision,
+            low_precision_max_iter=low_precision_max_iter,
+            low_precision_tol=low_precision_tol,
             check_data=check_data,
         )
         self._model_double = pybind_nusvr(
@@ -818,6 +990,8 @@ class NuSVR(BaseSVM):
             degree=self.degree,
             max_iter=self.max_iter,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="double",
             check_data=self.check_data,
         )
@@ -826,6 +1000,8 @@ class NuSVR(BaseSVM):
             degree=self.degree,
             max_iter=self.max_iter,
             max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
             precision="single",
             check_data=self.check_data,
         )
@@ -851,6 +1027,7 @@ class NuSVR(BaseSVM):
             "gamma": self.gamma,
             "coef0": self.coef0,
             "tol": self.tol,
+            "low_precision_tol": self.low_precision_tol,
             "tau": self.tau,
             "cache_size": self.cache_size}
         super().fit(X, y, **parameters)
@@ -880,3 +1057,16 @@ class NuSVR(BaseSVM):
             float: :math:`R^2` of self.predict(X) wrt. y.
         """
         return super().score(X, y)
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        state = super().__getstate__()
+        state['nu'] = self.nu
+        state['C'] = self.C
+        return state
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.nu = state['nu']
+        self.C = state['C']
+        super().__setstate__(state)

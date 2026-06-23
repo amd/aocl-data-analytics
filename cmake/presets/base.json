@@ -141,6 +141,13 @@
       }
     },
     {
+      "name": "znver6",
+      "hidden": true,
+      "cacheVariables": {
+        "ARCH": "znver6"
+      }
+    },
+    {
       "name": "asan",
       "hidden": true,
       "cacheVariables": {

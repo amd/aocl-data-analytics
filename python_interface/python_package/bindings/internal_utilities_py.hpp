@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -91,7 +91,12 @@ class pyda_handle {
     da_precision precision = da_double;
     numpy_order order = undetermined;
 
+    virtual void save_data([[maybe_unused]] py::dict &state){};
+    virtual void load_data([[maybe_unused]] py::dict &state){};
+
   public:
+    virtual ~pyda_handle() = default;
+
     void print_error_message() { da_handle_print_error_message(handle); };
     void exception_check(da_status status, std::string mesg = "") {
         if (status == da_status_success)
@@ -177,6 +182,64 @@ class pyda_handle {
         }
 
         return;
+    }
+
+    py::dict save_model() {
+        da_status status;
+        std::vector<char> buffer_data;
+
+        status = da_handle_save_model(handle, buffer_data);
+        exception_check(status);
+
+        py::dict state;
+        state["precision"] = int32_t(this->precision);
+        state["order"] = int32_t(this->order);
+        state["data"] = py::bytes(buffer_data.data(), buffer_data.size());
+        this->save_data(state);
+        return state;
+    }
+
+    template <typename HANDLE_T> static HANDLE_T *load_model(py::dict state) {
+        if (!state.contains("precision") || !state.contains("order") ||
+            !state.contains("data")) {
+            PyErr_SetString(PyExc_RuntimeError,
+                            "Invalid or incomplete model state dictionary.");
+            throw py::error_already_set();
+        }
+
+        da_precision prec = da_precision(state["precision"].cast<int32_t>());
+        numpy_order loaded_order = numpy_order(state["order"].cast<int32_t>());
+        std::string_view raw_bytes = state["data"].cast<std::string_view>();
+
+        if (raw_bytes.empty()) {
+            PyErr_SetString(PyExc_RuntimeError,
+                            "Model state contains empty data buffer.");
+            throw py::error_already_set();
+        }
+
+        std::unique_ptr<HANDLE_T> obj;
+        try {
+            obj.reset(new HANDLE_T(prec));
+        } catch (std::bad_alloc const &) {
+            std::string err_message = "Failure initialize pybind handle.";
+            PyErr_SetString(PyExc_RuntimeError, std::string(err_message).c_str());
+            throw py::error_already_set();
+        }
+
+        obj->order = loaded_order;
+        obj->load_data(state);
+
+        da_status status =
+            da_handle_load_model(&obj->handle, raw_bytes.data(), raw_bytes.size());
+
+        // Handle may still be nullptr if da_handle_load_model failed to create it
+        if (obj->handle == nullptr) {
+            PyErr_SetString(PyExc_RuntimeError, "Failed to load model.");
+            throw py::error_already_set();
+        }
+
+        obj->exception_check(status);
+        return obj.release();
     }
 };
 

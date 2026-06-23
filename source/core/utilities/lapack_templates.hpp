@@ -98,6 +98,12 @@ void dtrtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, doubl
              da_int *lda, double *b, da_int *ldb, da_int *info);
 void strtrs_(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, float *a,
              da_int *lda, float *b, da_int *ldb, da_int *info);
+void sgetrf_(da_int *m, da_int *n, float *a, da_int *lda, da_int *ipiv, da_int *info);
+void dgetrf_(da_int *m, da_int *n, double *a, da_int *lda, da_int *ipiv, da_int *info);
+void sgetrs_(char *trans, da_int *n, da_int *nrhs, float *a, da_int *lda, da_int *ipiv,
+             float *b, da_int *ldb, da_int *info);
+void dgetrs_(char *trans, da_int *n, da_int *nrhs, double *a, da_int *lda, da_int *ipiv,
+             double *b, da_int *ldb, da_int *info);
 double dlange_(char const *norm, da_int const *m, da_int const *n, double const *A,
                da_int const *lda, double *work);
 float slange_(char const *norm, da_int const *m, da_int const *n, float const *A,
@@ -242,6 +248,25 @@ inline void trtrs(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, 
 inline void trtrs(char *uplo, char *trans, char *diag, da_int *n, da_int *nrhs, double *a,
                   da_int *lda, double *b, da_int *ldb, da_int *info) {
     dtrtrs_(uplo, trans, diag, n, nrhs, a, lda, b, ldb, info);
+}
+
+// --- LU factorization ---
+inline void getrf(da_int *m, da_int *n, float *a, da_int *lda, da_int *ipiv,
+                  da_int *info) {
+    sgetrf_(m, n, a, lda, ipiv, info);
+}
+inline void getrf(da_int *m, da_int *n, double *a, da_int *lda, da_int *ipiv,
+                  da_int *info) {
+    dgetrf_(m, n, a, lda, ipiv, info);
+}
+// --- LU solve (uses factorization from getrf) ---
+inline void getrs(char *trans, da_int *n, da_int *nrhs, float *a, da_int *lda,
+                  da_int *ipiv, float *b, da_int *ldb, da_int *info) {
+    sgetrs_(trans, n, nrhs, a, lda, ipiv, b, ldb, info);
+}
+inline void getrs(char *trans, da_int *n, da_int *nrhs, double *a, da_int *lda,
+                  da_int *ipiv, double *b, da_int *ldb, da_int *info) {
+    dgetrs_(trans, n, nrhs, a, lda, ipiv, b, ldb, info);
 }
 
 // --- Compute norm of a real matrix ---

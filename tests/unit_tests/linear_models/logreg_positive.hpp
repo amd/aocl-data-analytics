@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -75,6 +75,14 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
               da_status_success);
     bool intercept = (bool)intercept_int;
 
+    // Get storage order to pass to data storage handle
+    da_int order_int, order_str_len{64};
+    char order_str[64];
+    EXPECT_EQ(da_options_get_string_key(linmod_handle, "storage order", order_str,
+                                        &order_str_len, &order_int),
+              da_status_success);
+    da_order order = static_cast<da_order>(order_int);
+
     // No regularization
     T alpha = 0, lambda = 0;
     EXPECT_EQ(da_options_set(linmod_handle, "alpha", alpha), da_status_success);
@@ -108,11 +116,14 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
 
     // Extract the selections
     T *A = nullptr, *b = nullptr;
-    A = new T[(ncols - 1) * nrows];
+    A = new T[nrows * (ncols - 1)];
+    da_int ldA = order == da_order::column_major ? nrows : ncols - 1;
+    // b is a column-vector
     b = new T[nrows];
-    EXPECT_EQ(da_data_extract_selection(csv_store, "features", column_major, A, nrows),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "features", order, A, ldA),
               da_status_success);
-    EXPECT_EQ(da_data_extract_selection(csv_store, "response", column_major, b, nrows),
+    EXPECT_EQ(da_data_extract_selection(csv_store, "response", da_order::column_major, b,
+                                        nrows),
               da_status_success);
 
     ///////////////////
@@ -120,8 +131,15 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     ///////////////////
     EXPECT_EQ(da_linmod_select_model<T>(linmod_handle, linmod_model_logistic),
               da_status_success);
-    EXPECT_EQ(da_linmod_define_features(linmod_handle, nrows, ncols - 1, A, nrows, b),
+    EXPECT_EQ(da_linmod_define_features(linmod_handle, nrows, ncols - 1, A, ldA, b),
               da_status_success);
+
+    // Check that the model is not trained before fitting
+    da_int dim = 1;
+    da_int trained = 0;
+    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_trained, &dim, &trained),
+              da_status_success);
+    EXPECT_EQ(trained, 0);
 
     // Compute regression
     EXPECT_EQ(da_linmod_fit<T>(linmod_handle), da_status_success);
@@ -129,6 +147,10 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
     ////////////////////
     // Check the results
     ////////////////////
+    // check that the model is trained
+    EXPECT_EQ(da_handle_get_result(linmod_handle, da_result::da_trained, &dim, &trained),
+              da_status_success);
+    EXPECT_EQ(trained, 1);
     // Check the coefficients if reference file is present
     std::string intercept_suff = "";
     if (!intercept)
@@ -154,6 +176,20 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
         delete[] coef;
         free(coef_exp);
     }
+
+    // Check score and predictions
+    T *b_pred = new T[nrows];
+    T score{0};
+    EXPECT_EQ(da_linmod_evaluate_model(linmod_handle, nrows, ncols - 1, A, ldA, b_pred, b,
+                                       &score),
+              da_status_success);
+    T score_pred{0};
+    for (da_int i = 0; i < nrows; ++i) {
+        score_pred += b[i] == b_pred[i];
+    }
+    score_pred /= nrows;
+    EXPECT_NEAR(score, score_pred, 2 * std::numeric_limits<T>::epsilon());
+    delete[] b_pred;
 
     // Check predictions if test data is present
     std::string test_set_fname =
@@ -184,19 +220,21 @@ void test_logreg_positive(std::string csvname, std::vector<option_t<da_int>> iop
                   da_status_success);
 
         // Extract the selections
-        T *A_test = new T[(ncols_test - 1) * nrows_test];
+        T *A_test = new T[nrows_test * (ncols_test - 1)];
+        da_int ldA_test = order == da_order::column_major ? nrows_test : ncols_test - 1;
+        // b is a column-vector
         T *b_test = new T[nrows_test];
-        EXPECT_EQ(da_data_extract_selection(test_store, "features", column_major, A_test,
-                                            nrows_test),
-                  da_status_success);
-        EXPECT_EQ(da_data_extract_selection(test_store, "response", column_major, b_test,
-                                            nrows_test),
+        EXPECT_EQ(
+            da_data_extract_selection(test_store, "features", order, A_test, ldA_test),
+            da_status_success);
+        EXPECT_EQ(da_data_extract_selection(test_store, "response",
+                                            da_order::column_major, b_test, nrows_test),
                   da_status_success);
 
         // Check that the model evaluates the classes correctly
         T *predictions = new T[nrows_test];
         da_linmod_evaluate_model(linmod_handle, nrows_test, ncols_test - 1, A_test,
-                                 nrows_test, predictions);
+                                 ldA_test, predictions);
         std::cout << "Predictions: " << std::endl;
         for (da_int i = 0; i < nrows_test; i++)
             std::cout << predictions[i] << " ";

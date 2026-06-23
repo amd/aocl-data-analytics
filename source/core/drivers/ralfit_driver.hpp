@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -143,6 +143,9 @@ da_status get_exit_status(ral_nlls_inform_t<T> &inform, da_errors::da_error_t &e
         return da_status_success;
 
     std::string errmsg{inform.error_message};
+    // Trim trailing whitespace
+    auto from_pos = std::min(errmsg.size(), errmsg.find_last_not_of(" ") + 1);
+    errmsg.erase(from_pos);
     std::string msg;
     bool warn{false}; // Exit status is a warning or error?
     da_status status{da_status_internal_error};
@@ -155,6 +158,10 @@ da_status get_exit_status(ral_nlls_inform_t<T> &inform, da_errors::da_error_t &e
     case -2:
     case -4:
         status = da_status_optimization_usrstop;
+        warn = true;
+        break;
+    case -21:
+        status = da_status_maxtime;
         warn = true;
         break;
     case -7:
@@ -332,6 +339,14 @@ da_status copy_options_to_ralfit(da_options::OptionRegistry &opts,
                         "<regularization term>"s + msg_suffix);
     }
     options.regularization_term = reg_term;
+
+    T maxtime;
+    status = opts.get("time limit", maxtime);
+    if (status != da_status_success) {
+        return da_error(&err, da_status_option_not_found, // LCOV_EXCL_LINE
+                        "<time limit>"s + msg_suffix);
+    }
+    options.maxtime = maxtime;
 
     // ===========================================================================
     // STRING OPTIONS

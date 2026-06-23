@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #include "aoclda.h"
 #include "basic_statistics.hpp"
 #include "da_error.hpp"
+#include "da_omp.hpp"
 #include "da_std.hpp"
 #include "macros.h"
 #include "options.hpp"
@@ -54,6 +55,7 @@ namespace ARCH {
 namespace da_svm {
 
 using namespace da_svm_types;
+using namespace da_model_persistence;
 
 template <typename T> svm<T>::svm(da_errors::da_error_t &err) : basic_handle<T>(err) {
     // Initialize the options registry
@@ -68,13 +70,13 @@ template <typename T> svm<T>::~svm() {
         delete[] (X_temp);
 };
 
-template <typename T> void svm<T>::refresh() { iscomputed = false; }
+template <typename T> void svm<T>::refresh() { this->model_trained = false; }
 
 /* get_result (required to be defined by basic_handle) */
 template <typename T>
 da_status svm<T>::get_result(da_result query, da_int *dim, T *result) {
     // Don't return anything if SVM has not been computed
-    if (!iscomputed) {
+    if (!this->model_trained) {
         return da_warn(this->err, da_status_unknown_query,
                        "SVM has not yet been computed. Please call da_svm_compute_s "
                        "or da_svm_compute_d before extracting results.");
@@ -118,19 +120,7 @@ da_status svm<T>::get_result(da_result query, da_int *dim, T *result) {
                            "least size: " +
                                std::to_string(size) + ".");
         }
-        try {
-            support_vectors.resize(size);
-        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
-            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
-                            "Memory allocation error");
-        }
-        // Construct a matrix consisting of only support vectors (can be optimised in row major)
-        for (da_int i = 0; i < n_sv; i++) {
-            da_int current_idx = support_indexes[i];
-            for (da_int j = 0; j < ncol; j++) {
-                support_vectors[i + j * n_sv] = X[current_idx + j * nrow];
-            }
-        }
+
         this->copy_2D_results_array(n_sv, ncol, support_vectors.data(), n_sv, result);
         break;
     case da_result::da_svm_bias:
@@ -196,8 +186,13 @@ da_status svm<T>::get_result(da_result query, da_int *dim, T *result) {
 
 template <typename T>
 da_status svm<T>::get_result(da_result query, da_int *dim, da_int *result) {
+    // check to see if user needs common stuff from the basic handle first
+    da_status status = this->get_result_common(query, dim, result);
+    if (status != da_status_unknown_query) {
+        return status; // either got requested info or error
+    }
     // Don't return anything if SVM has not been computed
-    if (!iscomputed) {
+    if (!this->model_trained) {
         return da_warn(this->err, da_status_unknown_query,
                        "SVM has not yet been computed. Please call da_svm_compute_s "
                        "or da_svm_compute_d before extracting results.");
@@ -392,7 +387,7 @@ da_status svm<T>::set_data(da_int n_samples, da_int n_features, const T *X_in,
     }
     // Record that initialization is complete but computation has not yet been performed
     loadingdone = true;
-    iscomputed = false;
+    this->model_trained = false;
 
     return da_status_success;
 }
@@ -404,7 +399,7 @@ template <typename T> da_status svm<T>::select_model(da_svm_model mod) {
         if (mod == da_svm_model::svc || mod == da_svm_model::svr ||
             mod == da_svm_model::nusvc || mod == da_svm_model::nusvr) {
             this->mod = mod;
-            iscomputed = false;
+            this->model_trained = false;
             loadingdone = false;
         } else {
             return da_error(this->err, da_status_unknown_query,
@@ -412,6 +407,36 @@ template <typename T> da_status svm<T>::select_model(da_svm_model mod) {
         }
     }
     return da_status_success;
+}
+
+template <>
+std::unique_ptr<base_svm<float>>
+svm<double>::create_low_precision_classifier(const float *X_lp, const float *y_lp,
+                                             da_int n, da_int p, da_int ldx) {
+    if (mod == da_svm_model::svc)
+        return std::make_unique<svc<float>>(X_lp, y_lp, n, p, ldx);
+    if (mod == da_svm_model::nusvc)
+        return std::make_unique<nusvc<float>>(X_lp, y_lp, n, p, ldx);
+    if (mod == da_svm_model::svr)
+        return std::make_unique<svr<float>>(X_lp, y_lp, n, p, ldx);
+    return std::make_unique<nusvr<float>>(X_lp, y_lp, n, p, ldx);
+}
+
+template <>
+std::unique_ptr<base_svm<int16_t>> svm<float>::create_low_precision_classifier(
+    [[maybe_unused]] const int16_t *X_lp, [[maybe_unused]] const int16_t *y_lp,
+    [[maybe_unused]] da_int n, [[maybe_unused]] da_int p, [[maybe_unused]] da_int ldx) {
+    return nullptr; // We don't support lower precision classifiers for single precision SVM
+}
+
+template <typename T>
+void svm<T>::copy_classifier_metadata(const base_svm<T> &src, base_svm<lp_type> &dst) {
+    dst.ismulticlass = src.ismulticlass;
+    dst.pos_class = src.pos_class;
+    dst.neg_class = src.neg_class;
+    dst.idx_class = src.idx_class;
+    dst.idx_is_positive = src.idx_is_positive;
+    dst.n = src.n;
 }
 
 /* Compute SVM */
@@ -428,7 +453,8 @@ template <typename T> da_status svm<T>::compute() {
     // Here is logic to get default gamma 1/(ncol*var(X)), we only do that for kernels that use gamma
     T gamma_temp = 1;
     this->opts.get("kernel", kernel_string, kernel_enum);
-    if (kernel_enum == rbf || kernel_enum == polynomial || kernel_enum == sigmoid) {
+    if (kernel_enum == svm_kernel::rbf || kernel_enum == svm_kernel::polynomial ||
+        kernel_enum == svm_kernel::sigmoid) {
         this->opts.get("gamma", gamma_temp);
         if (gamma_temp < 0) {
             T mean, variance = 1;
@@ -454,8 +480,9 @@ template <typename T> da_status svm<T>::compute() {
     da_std::fill(n_sv_per_class.begin(), n_sv_per_class.end(), 0);
 
     // Get the options set by user
-    T C, epsilon, nu, tolerance, coef0, tau, cache_size;
-    da_int degree, max_iter, n_fold, max_ws_size;
+    T C, epsilon, nu, tolerance, coef0, tau, cache_size, lp_tol;
+    da_int degree, max_iter, n_fold, max_ws_size, lp_max_iter;
+    bool use_mixed_precision;
     this->opts.get("C", C);
     this->opts.get("epsilon", epsilon);
     this->opts.get("nu", nu);
@@ -469,6 +496,28 @@ template <typename T> da_status svm<T>::compute() {
     this->opts.get("predict probabilities", predict_proba_opt);
     this->opts.get("n_folds", n_fold);
     this->opts.get("seed", seed);
+
+    std::string opt_mp;
+    da_int int_mp;
+    this->opts.get("mixed precision", opt_mp, int_mp);
+    use_mixed_precision = (int_mp == 1);
+    // Lower precision data members (int16 is a proxy for bfloat16, though we don't use it yet)
+    std::vector<lp_type> X_lp, y_lp;
+    if (use_mixed_precision) {
+        this->opts.get("low precision convergence tolerance", lp_tol);
+        this->opts.get("low precision max_iter", lp_max_iter);
+        try {
+            X_lp.resize(nrow * ncol);
+            y_lp.resize(nrow);
+        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+            return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                            "Memory allocation error");
+        }
+        da_utils::copy_array_convert_precision(column_major, nrow, ncol, X, ldx_train,
+                                               X_lp.data(), nrow);
+        da_utils::copy_array_convert_precision(column_major, nrow, 1, y, nrow,
+                                               y_lp.data(), nrow);
+    }
 
     if (predict_proba_opt) {
         if (seed == -1) {
@@ -497,7 +546,45 @@ template <typename T> da_status svm<T>::compute() {
             status = compute_probabilities(*classifiers[i], n_fold, probaA[i], probaB[i]);
         }
 
-        status = classifiers[i]->compute();
+        if constexpr (std::is_same_v<T, double>) {
+            // Currently only available for double precision SVM, as we don't support lower precision classifiers for single precision SVM
+            if (use_mixed_precision) {
+                auto lp_classifier = create_low_precision_classifier(
+                    X_lp.data(), y_lp.data(), nrow, ncol, nrow);
+                copy_classifier_metadata(*classifiers[i], *lp_classifier);
+                lp_classifier->C = static_cast<lp_type>(C);
+                lp_classifier->eps = static_cast<lp_type>(epsilon);
+                lp_classifier->nu = static_cast<lp_type>(nu);
+                lp_classifier->coef0 = static_cast<lp_type>(coef0);
+                lp_classifier->degree = degree;
+                lp_classifier->tol = static_cast<lp_type>(lp_tol);
+                lp_classifier->max_iter = lp_max_iter;
+                lp_classifier->tau = static_cast<lp_type>(tau);
+                lp_classifier->gamma = static_cast<lp_type>(gamma_temp);
+                lp_classifier->kernel_function = kernel_enum;
+                lp_classifier->cache_size = static_cast<lp_type>(cache_size);
+                lp_classifier->max_ws_size = max_ws_size;
+                lp_classifier->err = this->err;
+                lp_classifier->save_raw_alpha = true;
+
+                status = lp_classifier->compute();
+                if (status != da_status_success)
+                    return status;
+
+                // Use raw_alpha which is saved before set_bias/set_sv modify it.
+                std::vector<T> promoted_alpha(lp_classifier->raw_alpha.size());
+                da_utils::copy_array_convert_precision(
+                    column_major, (da_int)promoted_alpha.size(), 1,
+                    lp_classifier->raw_alpha.data(),
+                    (da_int)lp_classifier->raw_alpha.size(), promoted_alpha.data(),
+                    (da_int)promoted_alpha.size());
+                status = classifiers[i]->compute_warm_start(promoted_alpha);
+            } else {
+                status = classifiers[i]->compute();
+            }
+        } else {
+            status = classifiers[i]->compute();
+        }
 
         if (status != da_status_success)
             return status; // Error message already loaded
@@ -599,7 +686,22 @@ template <typename T> da_status svm<T>::compute() {
         }
     }
 
-    iscomputed = true;
+    // Create support_vectors
+    try {
+        support_vectors.resize(n_sv * ncol);
+    } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+        return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
+                        "Memory allocation error");
+    }
+
+    for (da_int i = 0; i < n_sv; i++) {
+        da_int current_idx = support_indexes[i];
+        for (da_int j = 0; j < ncol; j++) {
+            support_vectors[i + j * n_sv] = X[current_idx + j * nrow];
+        }
+    }
+
+    this->model_trained = true;
     return status;
 }
 
@@ -623,7 +725,7 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
                                    std::to_string(ncol) + ".");
     }
 
-    if (!iscomputed)
+    if (!this->model_trained)
         return da_error(this->err, da_status_out_of_date,
                         "The model has not been trained yet.");
 
@@ -634,55 +736,43 @@ da_status svm<T>::predict(da_int nsamples, da_int nfeat, const T *X_test, da_int
         return status;
 
     if (ismulticlass) {
-        std::vector<da_int> votes_array;
+        std::vector<da_int> votes;
+        std::vector<T> classifier_predictions;
         try {
-            votes_array.resize(n_class * nsamples);
-        } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
+            votes.resize(n_class * nsamples);
+            classifier_predictions.resize(nsamples);
+        } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
+            if (utility_ptr1)
+                delete[] (utility_ptr1);
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation error");
         }
-        bool error_occured = false;
-        omp_set_max_active_levels(2);
-        da_int inner_threads = 2;
-        da_int outer_threads =
-            std::min(n_classifiers, (da_int)omp_get_max_threads()) / inner_threads;
-#pragma omp parallel for default(none)                                                   \
-    shared(votes_array, nsamples, nfeat, n_class, error_occured, ldx_test_temp,          \
-               X_test_temp, status, inner_threads) schedule(static)                      \
-    num_threads(outer_threads)
         for (da_int i = 0; i < n_classifiers; i++) {
-            omp_set_num_threads(inner_threads);
-            std::vector<T> votes_temp; // this can technically be int
-            try {
-                votes_temp.resize(nsamples);
-            } catch (std::bad_alloc &) { // LCOV_EXCL_LINE
-#pragma omp critical
-                error_occured = true; // LCOV_EXCL_LINE
+            da_status status =
+                classifiers[i]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
+                                        classifier_predictions.data());
+            if (status != da_status_success) {
+                if (utility_ptr1)
+                    delete[] (utility_ptr1);
+                return da_error(this->err, da_status_internal_error,
+                                "An unexpected error occurred during prediction.");
             }
-            status = classifiers[i]->predict(nsamples, nfeat, X_test_temp, ldx_test_temp,
-                                             votes_temp.data());
-            if (status != da_status_success)
-#pragma omp critical
-                error_occured = true;
             da_int pos_class = classifiers[i]->pos_class;
             da_int neg_class = classifiers[i]->neg_class;
             for (da_int j = 0; j < nsamples; j++) {
-                da_int &target =
-                    votes_array[j * n_class +
-                                (votes_temp[j] == 1 ? pos_class : neg_class)];
-#pragma omp atomic
-                target++;
+                da_int vote_idx =
+                    j * n_class +
+                    (classifier_predictions[j] == 1 ? pos_class : neg_class);
+                votes[vote_idx]++;
             }
         }
-        omp_set_max_active_levels(1);
-        if (error_occured)
-            return da_error(this->err, da_status_internal_error,
-                            "An unexpected error occurred during prediction.");
+        // Compute argmax from global votes
         for (da_int i = 0; i < nsamples; i++) {
             da_int max_votes = 0, max_idx = 0;
+            const da_int *sample_votes = votes.data() + i * n_class;
             for (da_int j = 0; j < n_class; j++) {
-                if (votes_array[i * n_class + j] > max_votes) {
-                    max_votes = votes_array[i * n_class + j];
+                if (sample_votes[j] > max_votes) {
+                    max_votes = sample_votes[j];
                     max_idx = j;
                 }
             }
@@ -717,7 +807,7 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
                                    " doesn't match the expected value " +
                                    std::to_string(ncol) + ".");
     }
-    if (!iscomputed)
+    if (!this->model_trained)
         return da_error(this->err, da_status_out_of_date,
                         "The model has not been trained yet.");
     // We do OVR only for multi-class classification and when requested
@@ -751,11 +841,16 @@ da_status svm<T>::decision_function(da_int nsamples, da_int nfeat, const T *X_te
     }
     // Obtain OVO decision function values
     for (da_int i = 0; i < n_classifiers; i++) {
-        status =
+        da_status status =
             classifiers[i]->decision_function(nsamples, nfeat, X_test_temp, ldx_test_temp,
                                               decision_values_ovo.data() + i * nsamples);
-        if (status != da_status_success)
+        if (status != da_status_success) {
+            if (utility_ptr1)
+                delete[] (utility_ptr1);
+            if (utility_ptr2)
+                delete[] (utility_ptr2);
             return status;
+        }
     }
 
     // Path where decision values are 1D - binary classification (have to be OVO)
@@ -841,7 +936,7 @@ da_status svm<T>::score(da_int nsamples, da_int nfeat, const T *X_test, da_int l
                                    " doesn't match the expected value " +
                                    std::to_string(ncol) + ".");
     }
-    if (!iscomputed)
+    if (!this->model_trained)
         return da_error(this->err, da_status_out_of_date,
                         "The model has not been trained yet.");
 
@@ -913,7 +1008,7 @@ da_status svm<T>::predict_proba(da_int nsamples, da_int nfeat, const T *X_test,
                                    " doesn't match the expected value " +
                                    std::to_string(ncol) + ".");
     }
-    if (!iscomputed)
+    if (!this->model_trained)
         return da_error(this->err, da_status_out_of_date,
                         "The model has not been trained yet.");
     if (!predict_proba_opt)
@@ -946,11 +1041,16 @@ da_status svm<T>::predict_proba(da_int nsamples, da_int nfeat, const T *X_test,
     }
     // Obtain OVO decision function values
     for (da_int i = 0; i < n_classifiers; i++) {
-        status =
+        da_status status =
             classifiers[i]->decision_function(nsamples, nfeat, X_test_temp, ldx_test_temp,
                                               dec_values.data() + i * nsamples);
-        if (status != da_status_success)
+        if (status != da_status_success) {
+            if (utility_ptr1)
+                delete[] (utility_ptr1);
+            if (utility_ptr2)
+                delete[] (utility_ptr2);
             return status;
+        }
     }
     // To match sklearn convention we need to flip the sign in binary case
     if (!ismulticlass)
@@ -1333,6 +1433,111 @@ da_status svm<T>::compute_probabilities(base_svm<T> &classifier, da_int n_fold, 
     }
 
     return da_status_success;
+}
+
+template <typename T>
+da_status svm<T>::serialize_classifiers(serialization_buffer &buffer) {
+    da_status status = da_status_success;
+
+    if (buffer.get_mode() == deserialize) {
+        try {
+            this->classifiers.resize(this->n_classifiers);
+            for (da_int i = 0; i < this->n_classifiers; ++i) {
+                switch (this->mod) {
+                case da_svm_model::svc:
+                    classifiers[i] = std::make_unique<svc<T>>();
+                    break;
+                case da_svm_model::svr:
+                    classifiers[i] = std::make_unique<svr<T>>();
+                    break;
+                case da_svm_model::nusvc:
+                    classifiers[i] = std::make_unique<nusvc<T>>();
+                    break;
+                case da_svm_model::nusvr:
+                    classifiers[i] = std::make_unique<nusvr<T>>();
+                    break;
+                default:
+                    return da_error(this->err, da_status_unknown_query,
+                                    "Unknown SVM model during deserialization.");
+                }
+                classifiers[i]->err = this->err;
+            }
+        } catch (std::bad_alloc const &) {
+            return da_error(this->err, da_status_memory_error,
+                            "Failing to allocate enough memory."); // LCOV_EXCL_LINE
+        }
+    }
+
+    for (da_int i = 0; i < this->n_classifiers; ++i) {
+        if (status != da_status_success)
+            return status;
+        status = this->classifiers[i]->serialize(buffer);
+    }
+    return status;
+}
+
+template <typename T> da_status svm<T>::serialize(serialization_buffer &buffer) {
+
+    da_status status = da_status_success;
+    auto io_dispatch = [&buffer, &status](auto &data) -> void {
+        if (status != da_status_success) {
+            return;
+        }
+        status = buffer.dispatch_buffer_io(data);
+        return;
+    };
+
+    io_dispatch(this->order);
+    io_dispatch(this->n_class);
+    io_dispatch(this->n_classifiers);
+    io_dispatch(this->class_sizes);
+    io_dispatch(this->nrow);
+    io_dispatch(this->ncol);
+    io_dispatch(this->ldx_train);
+    io_dispatch(this->seed);
+    io_dispatch(this->model_trained);
+    io_dispatch(this->ismulticlass);
+    io_dispatch(this->predict_proba_opt);
+    io_dispatch(this->mod);
+    io_dispatch(this->is_sv);
+    io_dispatch(this->n_sv);
+    io_dispatch(this->support_coefficients);
+    io_dispatch(this->support_vectors);
+    io_dispatch(this->bias);
+    io_dispatch(this->probaA);
+    io_dispatch(this->probaB);
+    io_dispatch(this->support_indexes);
+    io_dispatch(this->n_sv_per_class);
+    io_dispatch(this->n_iteration);
+
+    if (status == da_status_success) {
+        status = serialize_classifiers(buffer);
+    }
+
+    return status;
+}
+
+template <typename T> da_status svm<T>::save_model(serialization_buffer &buffer) {
+
+    if (!this->model_trained) {
+        return da_error(this->err, da_status_no_data,
+                        "SVM has not yet been computed. Please call da_svm_compute_s "
+                        "or da_svm_compute_d before extracting results.");
+    }
+
+    da_status status = basic_handle<T>::save_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure serializing model.");
+
+    return status;
+}
+
+template <typename T> da_status svm<T>::load_model(serialization_buffer &buffer) {
+    da_status status = basic_handle<T>::load_model(buffer);
+    if (status != da_status_success)
+        return da_error_trace(this->err, status, "Failure deserializing model.");
+
+    return status;
 }
 
 template class svm<float>;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,11 +27,14 @@
 
 #include "decision_tree.hpp"
 #include "aoclda.h"
-#include "macros.h"
-
 #include "decision_tree_handle_utilities.hpp"
 #include "decision_tree_inference.hpp"
-#include "decision_tree_training.hpp"
+#include "decision_tree_training_fit.hpp"
+#include "decision_tree_training_memory.hpp"
+#include "decision_tree_training_partition.hpp"
+#include "decision_tree_training_split.hpp"
+#include "macros.h"
+#include "model_persistence.hpp"
 
 namespace ARCH {
 

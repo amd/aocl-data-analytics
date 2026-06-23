@@ -105,6 +105,23 @@ The following results can be computed with this algorithm:
 - **predicted labels** - the predicted label for each of the queries in :math:`X_{test}` in classification problems.
 - **predicted target values** - the predicted target value for each of the queries in :math:`X_{test}` in regression problems.
 
+Handling outliers
+-----------------
+
+In radius neighbors, outliers are query points that have no neighbors within the specified radius. The behavior when encountering such outliers is controlled
+by the ``outlier handling`` option, which provides three different strategies:
+- **none** - An error will be thrown when a query point has no neighbors within the radius.
+- **manual** - A specific value will be used for outlier predictions. This value can be customized:
+
+  - For classification problems, use the ``outlier label`` option to specify the label that will be assigned to outlier query points.
+  - For regression problems, use the ``outlier target`` option to specify the target value that will be assigned to outlier query points.
+
+- **most frequent** - A default value computed from the training data will be used:
+
+  - For classification problems, the most frequent label among all labels in :math:`y_{train}` will be assigned to outlier query points.
+  - For regression problems, the mean of all target values in :math:`y_{train}` will be assigned to outlier query points.
+
+
 Typical workflow for radius neighbors
 -------------------------------------
 
@@ -205,9 +222,9 @@ Options
 
       The following options can be set using :ref:`da_options_set_? <da_options_set>`:
 
-      .. update options using table _opts_k-nearestneighbors
+      .. update options using table _opts_nearestneighbors
 
-      .. csv-table:: :strong:`Table of options for k-Nearest Neighbors.`
+      .. csv-table:: :strong:`Table of Options for Nearest Neighbors.`
          :escape: ~
          :header: "Option name", "Type", "Default", "Description", "Constraints"
 
@@ -215,7 +232,11 @@ Options
          "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`."
          "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
          "radius", "real", ":math:`r=1`", "Maximum distance for the radius neighbors computation.", ":math:`0 \le r`"
-         "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of k-nearest neighbors.", ":math:`0 < r`"
+         "outlier target", "real", ":math:`r=0`", "Regression target for queries with no neighbors within the specified radius.", "There are no constraints on :math:`r`."
+         "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of nearest neighbors.", ":math:`0 < r`"
+         "outlier handling", "string", ":math:`s=` `none`", "How to handle samples with no neighbors within the specified radius.", ":math:`s=` `manual`, `most frequent`, or `none`."
+         "outlier label", "integer", ":math:`i=0`", "Classification label for queries with no neighbors within the specified radius.", "There are no constraints on :math:`i`."
+         "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`"
          "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."

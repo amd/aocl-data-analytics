@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,55 +32,61 @@
 #include "macros.h"
 
 da_errors::error_bypass_t *nosave_kernel(nullptr);
-da_status da_rbf_kernel_d(da_order order, da_int m, da_int n, da_int k, const double *X,
-                          da_int ldx, const double *Y, da_int ldy, double *D, da_int ldd,
-                          double gamma) {
+
+template <typename T>
+da_status da_rbf_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,
+                        da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma) {
     DISPATCHER(nosave_kernel, return (da_kernel_functions::rbf_kernel(
                                   order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma)));
 }
-da_status da_rbf_kernel_s(da_order order, da_int m, da_int n, da_int k, const float *X,
-                          da_int ldx, const float *Y, da_int ldy, float *D, da_int ldd,
-                          float gamma) {
-    DISPATCHER(nosave_kernel, return (da_kernel_functions::rbf_kernel(
-                                  order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma)));
-}
-da_status da_linear_kernel_d(da_order order, da_int m, da_int n, da_int k,
-                             const double *X, da_int ldx, const double *Y, da_int ldy,
-                             double *D, da_int ldd) {
+
+template <typename T>
+da_status da_linear_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,
+                           da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd) {
     DISPATCHER(nosave_kernel, return (da_kernel_functions::linear_kernel(
                                   order, m, n, k, X, ldx, Y, ldy, D, ldd)));
 }
-da_status da_linear_kernel_s(da_order order, da_int m, da_int n, da_int k, const float *X,
-                             da_int ldx, const float *Y, da_int ldy, float *D,
-                             da_int ldd) {
-    DISPATCHER(nosave_kernel, return (da_kernel_functions::linear_kernel(
-                                  order, m, n, k, X, ldx, Y, ldy, D, ldd)));
-}
-da_status da_polynomial_kernel_d(da_order order, da_int m, da_int n, da_int k,
-                                 const double *X, da_int ldx, const double *Y, da_int ldy,
-                                 double *D, da_int ldd, double gamma, da_int degree,
-                                 double coef0) {
+
+template <typename T>
+da_status da_polynomial_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,
+                               da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd,
+                               T gamma, da_int degree, T coef0) {
     DISPATCHER(nosave_kernel,
                return (da_kernel_functions::polynomial_kernel(
                    order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, degree, coef0)));
 }
-da_status da_polynomial_kernel_s(da_order order, da_int m, da_int n, da_int k,
-                                 const float *X, da_int ldx, const float *Y, da_int ldy,
-                                 float *D, da_int ldd, float gamma, da_int degree,
-                                 float coef0) {
-    DISPATCHER(nosave_kernel,
-               return (da_kernel_functions::polynomial_kernel(
-                   order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, degree, coef0)));
-}
-da_status da_sigmoid_kernel_d(da_order order, da_int m, da_int n, da_int k,
-                              const double *X, da_int ldx, const double *Y, da_int ldy,
-                              double *D, da_int ldd, double gamma, double coef0) {
+
+template <typename T>
+da_status da_sigmoid_kernel(da_order order, da_int m, da_int n, da_int k, const T *X,
+                            da_int ldx, const T *Y, da_int ldy, T *D, da_int ldd, T gamma,
+                            T coef0) {
     DISPATCHER(nosave_kernel, return (da_kernel_functions::sigmoid_kernel(
                                   order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, coef0)));
 }
-da_status da_sigmoid_kernel_s(da_order order, da_int m, da_int n, da_int k,
-                              const float *X, da_int ldx, const float *Y, da_int ldy,
-                              float *D, da_int ldd, float gamma, float coef0) {
-    DISPATCHER(nosave_kernel, return (da_kernel_functions::sigmoid_kernel(
-                                  order, m, n, k, X, ldx, Y, ldy, D, ldd, gamma, coef0)));
-}
+
+template da_status da_rbf_kernel<float>(da_order, da_int, da_int, da_int, const float *,
+                                        da_int, const float *, da_int, float *, da_int,
+                                        float);
+template da_status da_rbf_kernel<double>(da_order, da_int, da_int, da_int, const double *,
+                                         da_int, const double *, da_int, double *, da_int,
+                                         double);
+template da_status da_linear_kernel<float>(da_order, da_int, da_int, da_int,
+                                           const float *, da_int, const float *, da_int,
+                                           float *, da_int);
+template da_status da_linear_kernel<double>(da_order, da_int, da_int, da_int,
+                                            const double *, da_int, const double *,
+                                            da_int, double *, da_int);
+template da_status da_polynomial_kernel<float>(da_order, da_int, da_int, da_int,
+                                               const float *, da_int, const float *,
+                                               da_int, float *, da_int, float, da_int,
+                                               float);
+template da_status da_polynomial_kernel<double>(da_order, da_int, da_int, da_int,
+                                                const double *, da_int, const double *,
+                                                da_int, double *, da_int, double, da_int,
+                                                double);
+template da_status da_sigmoid_kernel<float>(da_order, da_int, da_int, da_int,
+                                            const float *, da_int, const float *, da_int,
+                                            float *, da_int, float, float);
+template da_status da_sigmoid_kernel<double>(da_order, da_int, da_int, da_int,
+                                             const double *, da_int, const double *,
+                                             da_int, double *, da_int, double, double);

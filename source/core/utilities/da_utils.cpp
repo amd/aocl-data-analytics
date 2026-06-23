@@ -747,6 +747,31 @@ da_transpose cblas_transpose_to_da_transpose(CBLAS_TRANSPOSE transpose) {
     }
 }
 
+// Compute squared L2 norms of rows of a 2D matrix: norms[i] = sum_j data[i,j]^2
+template <typename T>
+void compute_squared_row_norms(da_order order, da_int n_rows, da_int n_cols,
+                               const T *data, da_int ld, T *norms) {
+    for (da_int i = 0; i < n_rows; i++)
+        norms[i] = (T)0.0;
+    if (order == column_major) {
+        for (da_int j = 0; j < n_cols; j++) {
+            da_int idx = j * ld;
+            for (da_int i = 0; i < n_rows; i++) {
+                T val = data[i + idx];
+                norms[i] += val * val;
+            }
+        }
+    } else {
+        for (da_int i = 0; i < n_rows; i++) {
+            da_int idx = i * ld;
+            for (da_int j = 0; j < n_cols; j++) {
+                T val = data[idx + j];
+                norms[i] += val * val;
+            }
+        }
+    }
+}
+
 /*
  * Divide rows of matrix by their 2-norm
  *
@@ -860,6 +885,24 @@ da_status normalize_rows(da_order order, da_int n_rows, da_int n_cols, const T *
         }
     }
     return da_status_success;
+}
+
+template <typename T_in, typename T_out>
+void copy_array_convert_precision(da_order order, da_int n_rows, da_int n_cols,
+                                  const T_in *A, da_int lda, T_out *B, da_int ldb) {
+    if (order == column_major) {
+        for (da_int j = 0; j < n_cols; j++) {
+            for (da_int i = 0; i < n_rows; i++) {
+                B[i + j * ldb] = static_cast<T_out>(A[i + j * lda]);
+            }
+        }
+    } else {
+        for (da_int i = 0; i < n_rows; i++) {
+            for (da_int j = 0; j < n_cols; j++) {
+                B[i * ldb + j] = static_cast<T_out>(A[i * lda + j]);
+            }
+        }
+    }
 }
 
 template size_t hidden_settings_query<size_t>(const std::string &key,
@@ -977,6 +1020,13 @@ template void parallel_argsort<float>(std::vector<float> &values,
 template void parallel_argsort<double>(std::vector<double> &values,
                                        std::vector<da_int> &indices);
 
+template void compute_squared_row_norms<float>(da_order order, da_int n_rows,
+                                               da_int n_cols, const float *data,
+                                               da_int ld, float *norms);
+template void compute_squared_row_norms<double>(da_order order, da_int n_rows,
+                                                da_int n_cols, const double *data,
+                                                da_int ld, double *norms);
+
 template da_status normalize_rows_inplace<float>(da_order order, da_int n_rows,
                                                  da_int n_cols, float *X, da_int ldx,
                                                  float *row_norms_work);
@@ -991,6 +1041,21 @@ template da_status normalize_rows<double>(da_order order, da_int n_rows, da_int 
                                           const double *X_in, da_int ldx_in,
                                           double *X_out, da_int ldx_out,
                                           double *row_norms_work);
+
+template void copy_array_convert_precision<double, float>(da_order order, da_int n_rows,
+                                                          da_int n_cols, const double *A,
+                                                          da_int lda, float *B,
+                                                          da_int ldb);
+
+template void copy_array_convert_precision<float, double>(da_order order, da_int n_rows,
+                                                          da_int n_cols, const float *A,
+                                                          da_int lda, double *B,
+                                                          da_int ldb);
+
+template void copy_array_convert_precision<float, short>(da_order order, da_int n_rows,
+                                                         da_int n_cols, const float *A,
+                                                         da_int lda, short *B,
+                                                         da_int ldb);
 
 } // namespace da_utils
 

@@ -30,6 +30,7 @@
 aoclda.decision_forest module
 """
 
+import pickle
 from ._aoclda.decision_forest import pybind_decision_forest
 from ._internal_utils import check_convert_data
 
@@ -98,6 +99,9 @@ class decision_forest():
             from all the others while 'ordered' will try to split the smaller categorical from the
             bigger ones. Can be set to "one-vs-all" or "ordered". Default = "ordered".
 
+        max_tree_threads (int, optional): Maximum number of threads allocated to each
+            tree for parallel feature evaluation. 0 means no cap. Default = 0.
+
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
 
@@ -120,6 +124,7 @@ class decision_forest():
             maximum_bins=256,
             block_size=256,
             category_split_strategy="ordered",
+            max_tree_threads=0,
             check_data=False):
 
         self._samples_factor = samples_factor
@@ -143,6 +148,7 @@ class decision_forest():
             maximum_bins=maximum_bins,
             block_size=block_size,
             category_split_strategy=category_split_strategy,
+            max_tree_threads=max_tree_threads,
             check_data=check_data)
         self._decision_forest_single = pybind_decision_forest(
             n_trees=n_trees,
@@ -158,12 +164,14 @@ class decision_forest():
             maximum_bins=maximum_bins,
             block_size=block_size,
             category_split_strategy=category_split_strategy,
+            max_tree_threads=max_tree_threads,
             check_data=check_data)
 
         self._decision_forest = self._decision_forest_double
         self._max_features = max_features
         self._features_selection = features_selection
         self._proportion_features = proportion_features
+        self._max_tree_threads = max_tree_threads
 
     @property
     def max_features(self):
@@ -318,3 +326,46 @@ class decision_forest():
     def _get_features_selection_opt(self):
         """getter for the C++ internal option value - purely for internal use"""
         return self._decision_forest.get_features_selection_opt()
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self._decision_forest),
+            'order': self._order,
+            'dtype': self._dtype,
+            'max_features': self._max_features,
+            'min_impurity_decrease': self._min_impurity_decrease,
+            'min_split_score': self._min_split_score,
+            'feat_thresh': self._feat_thresh,
+            'features_selection': self._features_selection,
+            'proportion_features': self._proportion_features,
+            'samples_factor': self._samples_factor,
+            'max_tree_threads': self._max_tree_threads,
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self._decision_forest = pickle.loads(state['pybind_state'])
+        self._order = state['order']
+        self._dtype = state['dtype']
+        self._max_features = state['max_features']
+        self._min_impurity_decrease = state['min_impurity_decrease']
+        self._min_split_score = state['min_split_score']
+        self._feat_thresh = state['feat_thresh']
+        self._features_selection = state['features_selection']
+        self._proportion_features = state['proportion_features']
+        self._samples_factor = state['samples_factor']
+        self._max_tree_threads = state['max_tree_threads']
+
+        if self._dtype == 'float64':
+            self._decision_forest_double = self._decision_forest
+            self._decision_forest_single = None
+        elif self._dtype == 'float32':
+            self._decision_forest_double = None
+            self._decision_forest_single = self._decision_forest
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self._dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+        return

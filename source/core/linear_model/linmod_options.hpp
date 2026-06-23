@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -61,7 +61,13 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts,
             1, da_options::lbound_t::greaterequal, max_da_int,
             da_options::ubound_t::p_inf, 10000));
         opts.register_opt(oi);
-
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "low precision iteration limit",
+            "If mixed precision iterative refinement is enabled, maximum number of "
+            "iterations for the low precision phase.",
+            1, da_options::lbound_t::greaterequal, max_da_int,
+            da_options::ubound_t::p_inf, 5000));
+        opts.register_opt(oi);
         oi = std::make_shared<OptionNumeric<da_int>>(
             OptionNumeric<da_int>("optim coord skip min",
                                   "Minimum times a coordinate change is smaller than "
@@ -116,6 +122,13 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts,
             1.e-4, "10^{-4}"));
         opts.register_opt(oT);
         oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "low precision convergence tol",
+            "If mixed precision iterative refinement is enabled, convergence tolerance "
+            "for the low precision phase.",
+            0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
+            static_cast<T>(1.0e-3), "10^{-3}"));
+        opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "optim progress factor",
             "Factor used to detect convergence of the iterative optimization step. See "
             "option in the corresponding optimization solver documentation.",
@@ -148,6 +161,13 @@ inline da_status register_linmod_options(da_options::OptionRegistry &opts,
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
             "print options", "Print options.", {{"no", 0}, {"yes", 2}}, "no"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "mixed precision",
+            "Whether to use mixed precision iterative refinement, in which "
+            "lower precision arithmetic is used before switching to the working "
+            "precision for the final iterations.",
+            {{"yes", 1}, {"no", 0}}, "no"));
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
             "scaling",

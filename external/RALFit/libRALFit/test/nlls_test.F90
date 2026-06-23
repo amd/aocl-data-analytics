@@ -2,7 +2,7 @@
 ! All rights reserved.
 ! Copyright (c) 2019, The Science and Technology Facilities Council (STFC)
 ! All rights reserved.
-! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+! Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 
 #include "../src/preprocessor.FPP"
 
@@ -26,14 +26,93 @@ program nlls_test
 
   integer :: number_of_models
   integer, allocatable :: model_to_test(:)
-!  character*40 :: details
+
+  character(len=100) :: arg
+  integer :: num_args, iarg
+  character(len=20) :: test_type, tol_type
+
+  Continue
+
+  ! Print welcome banner
+  write(*,'(A)') repeat('=', 70)
+  write(*,'(A)') '                       RALFit Unit Test Suite'
+  write(*,'(A)') repeat('=', 70)
+  write(*,'(A)') ''
+
+  ! Initialize default values
+  test_all = .true.
+  test_subs = .true.
+  test_type = 'all'
+  tol_type = 'abs'
+
+  ! Parse command line arguments
+  num_args = command_argument_count()
+  do iarg = 1, num_args
+      call get_command_argument(iarg, arg)
+      
+      if (trim(arg) == '-h' .or. trim(arg) == '--help') then
+          write(*,'(A)') 'Usage: nlls_test [OPTIONS]'
+          write(*,'(A)') ''
+          write(*,'(A)') 'Options:'
+          write(*,'(A)') '  --test=TYPE     Specify test type to run'
+          write(*,'(A)') '                   all    - Run all tests (default)'
+          write(*,'(A)') '                   solver - Run solver tests only'
+          write(*,'(A)') '                   aux    - Run auxiliary tests only'
+          write(*,'(A)') ''
+          write(*,'(A)') '  --tol=TYPE      Specify tolerance type'
+          write(*,'(A)') '                   abs    - Use absolute tolerance check (default)'
+          write(*,'(A)') '                   both   - Use absolute first then relative tolerance checks'
+          write(*,'(A)') ''
+          write(*,'(A)') '  -h, --help      Display this help message'
+          write(*,'(A)') ''
+          stop 0
+      else if (index(arg, '--test=') == 1) then
+          test_type = trim(adjustl(arg(8:)))
+      else if (index(arg, '--tol=') == 1) then
+          tol_type = trim(adjustl(arg(7:)))
+      else
+          write(*,*) 'Warning: unknown argument: ', trim(arg)
+          write(*,*) 'Use -h or --help for usage information.'
+          stop 1
+      end if
+  end do
+
+  ! Set test flags based on test_type
+  select case (trim(test_type))
+  case ('all')
+      ! Default - run all tests
+      ! nothing to do
+  case ('solver')
+      test_subs = .false.
+  case ('aux')
+      test_all = .false.
+  case default
+      write(*,*) 'Warning: unknown test type: ', trim(test_type)
+      write(*,*) 'Using default (all)'
+      test_type = 'all'
+   end select
+
+   ! Handle tolerance type (can be used to set options later if needed)
+   select case (trim(tol_type))
+   case ('both', 'abs')
+       ! Valid tolerance type - could be used to modify options
+       continue
+   case default
+       write(*,*) 'Warning: unknown tolerance type: ', trim(tol_type)
+       write(*,*) 'Using default (abs)'
+       tol_type = 'abs'
+   end select
+
+   write(*,*) 'Configuration'
+   write(*,*) '  Test type      : ', trim(test_type)
+   write(*,*) '  Tolerance type : ', trim(tol_type)
+   write(*,*) '  Output log file: nlls_test.out'
+   write(*,*)
 
   options%out   = 17
   options%print_level = 0
   open(unit = options%out, file="nlls_test.out")
 
-  test_all = .true.
-  test_subs = .true.
   exp_status = 0
   no_errors_main = 0
 
@@ -75,19 +154,20 @@ program nlls_test
               options%exact_second_derivatives = .true.
               options%output_progress_vectors = .true.
               call print_line(options%out)
-              write(options%out,*) "tr_update_strategy = ", options%tr_update_strategy
-              write(options%out,*) "nlls_method        = ", options%nlls_method
-              write(options%out,*) "model              = ", options%model
+              write(options%out,*) "tr_update_strategy        = ", options%tr_update_strategy
+              write(options%out,*) "nlls_method               = ", options%nlls_method
+              write(options%out,*) "model                     = ", options%model
+              write(options%out,*) "Tolerance type for resvec = ", tol_type
               call print_line(options%out)
               if (nlls_method == 4) then
                  do inner_method = 1,3
                     ! check the tests with c and fortran jacobians
                     ! pass individually, and give consistent results.
                     options%inner_method = inner_method
-                    call c_fortran_tests(options,no_errors_main)
+                    call c_fortran_tests(options,no_errors_main, tol_type)
                  end do
               else
-                 call c_fortran_tests(options,no_errors_main)
+                 call c_fortran_tests(options,no_errors_main, tol_type)
               end if
            end do
         end do
@@ -445,6 +525,22 @@ program nlls_test
      end if
      status%status = 0
      options%maxit = 100
+
+     ! Let's get to maxtime
+     call print_line(options%out)
+     write(options%out,*) "Reach maxtime"
+     call print_line(options%out)
+
+     X(1) = 1.0_wp
+     X(2) = 2.0_wp
+     options%maxtime = 0.00001
+     call solve_basic(X,params,options,status)
+     if ( status%status .ne. NLLS_ERROR_MAXTIME) then
+        write(*,*) 'Error: incorrect error return when maxtime expected to be reached'
+        write(*,*) 'status%status = ', status%status
+        no_errors_main = no_errors_main + 1
+     end if
+     status%status = 0
 
      ! Let's get save the arrays
      call reset_default_options(options)
@@ -1106,7 +1202,7 @@ program nlls_test
 
      call solve_basic(X,params,options,status,blx=blx,bux=bux)
      if ( .Not. ( status%status == -1 ) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:1] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1116,14 +1212,14 @@ program nlls_test
           eval_F, eval_J_bad, ral_nlls_eval_hf_dummy, params,  &
           options, status )
      if ( .Not. ( status%status == -19 ) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:2] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
      options%print_level = 0
 
      call solve_basic(X,params,options,status,blx=blx,bux=bux)
      if ( .Not. ( status%status == -1 ) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:3] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1131,7 +1227,7 @@ program nlls_test
      w(1:m) = 1.5
      call solve_basic(X,params,options,status,blx=blx,bux=bux,weights=w)
      if ( .Not. ( status%status == -1 ) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:4] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1139,7 +1235,7 @@ program nlls_test
      options%Fortran_Jacobian = .False.
      call solve_basic(X,params,options,status,blx=blx,bux=bux)
      if ( .Not. ( status%status == -19) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:5] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
      options%Fortran_Jacobian = .True.
@@ -1149,7 +1245,11 @@ program nlls_test
      bux(1:n) = 1.0
      call solve_basic(X,params,options,status,blx=blx,bux=bux)
      if ( .Not. ( status%status == 0 ) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:6] check_derivatives: unexpected status value: ', status%status
+        if ( status%status == NLLS_ERROR_FROM_EXTERNAL ) then
+            write(*,*) 'external name: ', status%external_name
+            write(*,*) 'external return: ', status%external_return
+        end if
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1158,7 +1258,7 @@ program nlls_test
      options%print_level = 1
      call solve_basic(X,params,options,status)
      if ( .Not. ( status%status == -19 ) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:7] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
      options%derivative_test_tol = 1.0e-4_wp
@@ -1179,7 +1279,9 @@ program nlls_test
      write(options%out,*) 'Solution (F): ', x(1:n)
      write(options%out,*) 'Expected: ', (/0.319978704257563_wp, 0.2752509146444680E-1_wp/)
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve: unexpected status value or wrong solution'
+        write(*,*) 'Error: [id:1] FD solve: unexpected status value or wrong solution (Status = ', status%status,')'
+        write(*,*) 'Solution (F): ', x(1:n)
+        write(*,*) 'Expected: ', (/0.3199787042575630E+00, 0.2752509146444680E-01/)
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1191,15 +1293,18 @@ program nlls_test
      write(options%out,*) 'Solution (C): ', x(1:n)
      write(options%out,*) 'Expected: ', (/0.3199787042575630E+00, 0.2752509146444680E-01/)
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve: unexpected status value or wrong solution'
+        write(*,*) 'Error: [id:2] FD solve: unexpected status value or wrong solution (Status = ', status%status,')'
+        write(*,*) 'Solution (C): ', x(1:n)
+        write(*,*) 'Expected: ', (/0.3199787042575630E+00, 0.2752509146444680E-01/)
         no_errors_main = no_errors_main + 1
      end if
 
-     ! Solve with one fixed variable
+     ! Solve with one fixed variable and solution is active
      options%Fortran_Jacobian = .False.
-     options%print_options = .True.
-     blx(:) = (/0.0, 0.0/)
-     bux(:) = (/0.0, 1.0/)
+     options%print_level = 0
+     options%check_derivatives = 0
+     options%maxit = 100
+     options%fd_step = 5.0e-7
      if (wp == np) then
         tol = 1.e-6_wp
         ! options%box_gamma = 0.99999_wp
@@ -1207,17 +1312,18 @@ program nlls_test
         ! Relax tolerance for lower precision
         tol = 2e-3_wp
      end if
+     blx(:) = (/0.0, 0.0/)
+     bux(:) = (/0.0, 0.9244/)
+     X(1:2) = (/1.0, 0.92/)
+     options%box_gamma = 0.99999 ! discourage any linesearch
      call solve_basic(X,params,options,status,use_fd=.True.,blx=blx,bux=bux)
-     oki = x(1) == 0.0 .And. abs(x(2)-0.923618046017) < tol
+     oki = abs(x(1) - 0.0) == 0.0_wp .And. abs(x(2)-0.9244) == 0.0_wp
      write(options%out,*) 'Solution (C): ', x(1:n)
-     write(options%out,*) 'Expected: ', (/0.0, 0.92361804601/)
-     write(options%out,*) 'DIFF: ', abs(x(2)-0.92361804601), '(',tol,')'
+     write(options%out,*) 'Expected: ', (/0.0, 0.9244/)
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve 3: unexpected status value or wrong solution'
-        write(*,*) '       status = ', status%status, "(expected 0)"
-        write(*,*) '       Solution (C): ', x(1:n)
-        write(*,*) '       Expected: ', (/0.0, 0.92361804601/)
-        write(*,*) '       DIFF: ', abs(x(2)-0.92361804601), '(',tol,')'
+        write(*,*) 'Error: [id:3] FD solve: unexpected status value or wrong solution (Status = ', status%status,')'
+        write(*,*) 'Solution (C): ', x(1:n)
+        write(*,*) 'Expected: ', (/0.0, 0.9244/)
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1227,8 +1333,8 @@ program nlls_test
      options%Fortran_Jacobian = .True.
      options%print_level = 3
      options%check_derivatives = 0
-     blx(:) = (/0.32, 0.0/)
-     bux(:) = (/1.0, 1.0/)
+     blx(:) = (/0.32_wp, 0.0_wp/)
+     bux(:) = (/1.0_wp, 1.0_wp/)
      if (wp == np) then
         tol = 1.e-6_wp
         options%maxit = 100
@@ -1239,11 +1345,14 @@ program nlls_test
         options%maxit = 200
      end if
      call solve_basic(X,params,options,status,use_fd=.True.,blx=blx,bux=bux)
-     oki = abs(x(1) - 0.32) <= tol .And. abs(x(2)-2.7447762174312485E-2) < tol
-     write(options%out,*) 'Solution (F): ', x(1:n)
-     write(options%out,*) 'Expected: ', (/0.32, 2.7447762174312485E-2/)
+     oki = abs(x(1) - 0.32_wp) <= tol .And. abs(x(2)-2.7447762174312485E-2_wp) <= tol
+     write(options%out,Fmt=99999) 'Solution (F): ', x(1:n)
+     write(options%out,Fmt=99999) 'Expected    : ', (/0.32_wp, 2.7447762174312485E-2_wp/)
      if ( .Not. ( status%status == 0 .And. oki) ) then
-        write(*,*) 'Error: FD solve: unexpected status value or wrong solution'
+        write(*,*) 'Error: [id:4] FD solve: unexpected status value or wrong solution (Status = ', status%status,')'
+        write(*,Fmt=99999) 'Solution (F): ', x(1:n)
+        write(*,Fmt=99999) 'Expected    : ', (/0.32_wp, 2.7447762174312485E-2_wp/)
+        write(options%out,Fmt=99999) 'Diff        : ', abs(x(1) - 0.32_wp), abs(x(2) - 2.7447762174312485E-2_wp)
         no_errors_main = no_errors_main + 1
      end if
 
@@ -1254,7 +1363,7 @@ program nlls_test
           eval_F_one_error, eval_J, ral_nlls_eval_hf_dummy, params,  &
           options, status )
      if ( .Not. ( status%status == -4 .And. status%external_return==2101) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:8] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
      ! try now with rubbish eval_f residual - no recovery
@@ -1263,7 +1372,7 @@ program nlls_test
           eval_F_one_NaN, eval_J, ral_nlls_eval_hf_dummy, params,  &
           options, status )
      if ( .Not. ( status%status == -4 .And. status%external_return==2031) ) then
-        write(*,*) 'Error: check_derivatives: unexpected status value'
+        write(*,*) 'Error: [id:9] check_derivatives: unexpected status value'
         no_errors_main = no_errors_main + 1
      end if
      options%check_derivatives = 0
@@ -1420,5 +1529,6 @@ close(unit = 17)
   end if
 
 
+99999 Format (1X,A,2X,2(Es14.8e1,1X))
 
 end program nlls_test

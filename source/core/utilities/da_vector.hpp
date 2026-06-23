@@ -31,6 +31,7 @@
 #include "aoclda.h"
 #include <stdexcept>
 #include <type_traits>
+#include <vector>
 
 #define INIT_CAPACITY 64
 
@@ -56,11 +57,14 @@ template <typename T> class da_vector {
     static_assert(std::is_scalar_v<T>, "da_vector only supports scalar types");
 
   public:
+    using value_type = T;
+
     size_t size() const { return _size; }
     size_t capacity() const { return _capacity; }
     T *data() { return _data; }
     const T *data() const { return _data; }
     T &operator[](size_t i) { return _data[i]; }
+    const T &operator[](size_t i) const { return _data[i]; }
 
     da_vector() : _data(nullptr), _size(0), _capacity(INIT_CAPACITY) {
         _data = (T *)malloc(_capacity * sizeof(T));

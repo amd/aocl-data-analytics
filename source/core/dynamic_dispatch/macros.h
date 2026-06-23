@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -119,6 +119,18 @@
                            "Zen 5 architecture not supported.");
 #endif
 
+#if defined(znver6_AVAILABLE)
+#define DYNAMIC_DISPATCH_ZEN6(err_buffer, code)                                          \
+    {                                                                                    \
+        using namespace da_dynamic_dispatch_zen6;                                        \
+        code;                                                                            \
+    }
+#else
+#define DYNAMIC_DISPATCH_ZEN6(err_buffer, code)                                          \
+    return da_error_bypass(err_buffer, da_status_arch_not_supported,                     \
+                           "Zen 6 architecture not supported.");
+#endif
+
 #define DISPATCHER(err_buffer, code)                                                     \
     {                                                                                    \
         switch (context::get_context()->arch) {                                          \
@@ -139,6 +151,9 @@
             break;                                                                       \
         case zen5:                                                                       \
             DYNAMIC_DISPATCH_ZEN5(err_buffer, code)                                      \
+            break;                                                                       \
+        case zen6:                                                                       \
+            DYNAMIC_DISPATCH_ZEN6(err_buffer, code)                                      \
             break;                                                                       \
         default:                                                                         \
             return da_error_bypass(                                                      \

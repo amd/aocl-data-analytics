@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,9 @@ inline da_status register_neighbors_options(da_options::OptionRegistry &opts,
                                             da_errors::da_error_t &err) {
     using namespace da_options;
     da_int imax = std::numeric_limits<da_int>::max();
+    da_int imin = std::numeric_limits<da_int>::min();
     T fpmax = std::numeric_limits<T>::max();
+    T fpmin = std::numeric_limits<T>::lowest();
     try {
         // Integer options
         std::shared_ptr<OptionNumeric<da_int>> oi;
@@ -56,18 +58,30 @@ inline da_status register_neighbors_options(da_options::OptionRegistry &opts,
             "leaf size", "Leaf size for k-d tree.", 1, da_options::lbound_t::greaterequal,
             imax, da_options::ubound_t::p_inf, 30));
         opts.register_opt(oi);
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "outlier label",
+            "Classification label for queries with no neighbors within the specified "
+            "radius.",
+            imin, da_options::lbound_t::m_inf, imax, da_options::ubound_t::p_inf, 0));
+        opts.register_opt(oi);
         // fp options
         std::shared_ptr<OptionNumeric<T>> ofp;
         ofp = std::make_shared<OptionNumeric<T>>(
             OptionNumeric<T>("minkowski parameter",
                              "Minkowski parameter for metric used for the computation of "
-                             "k-nearest neighbors.",
+                             "nearest neighbors.",
                              0.0, da_options::lbound_t::greaterthan, fpmax,
                              da_options::ubound_t::p_inf, 2.0));
         opts.register_opt(ofp);
         ofp = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
             "radius", "Maximum distance for the radius neighbors computation.", 0.0,
             da_options::lbound_t::greaterequal, fpmax, da_options::ubound_t::p_inf, 1.0));
+        opts.register_opt(ofp);
+        ofp = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "outlier target",
+            "Regression target for queries with no neighbors within the specified "
+            "radius.",
+            fpmin, da_options::lbound_t::m_inf, fpmax, da_options::ubound_t::p_inf, 0.0));
         opts.register_opt(ofp);
         // String options
         std::shared_ptr<OptionString> os;
@@ -95,7 +109,17 @@ inline da_status register_neighbors_options(da_options::OptionRegistry &opts,
         opts.register_opt(os);
         os = std::make_shared<OptionString>(OptionString(
             "weights", "Weight function used to compute the k-nearest neighbors.",
-            {{"uniform", uniform}, {"distance", distance}}, "uniform"));
+            {{"uniform", da_neighbors_types::uniform},
+             {"distance", da_neighbors_types::distance}},
+            "uniform"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "outlier handling",
+            "How to handle samples with no neighbors within the specified radius.",
+            {{"none", da_neighbors_types::none},
+             {"manual", da_neighbors_types::manual},
+             {"most frequent", da_neighbors_types::most_frequent}},
+            "none"));
         opts.register_opt(os);
     } catch (std::bad_alloc &) {
         return da_error(&err, da_status_memory_error, // LCOV_EXCL_LINE

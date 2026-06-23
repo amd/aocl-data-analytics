@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -26,6 +26,7 @@
  */
 
 #pragma once
+#include "../utest_utils.hpp"
 #include "aoclda.h"
 #include "aoclda_cpp_overloads.hpp"
 #include "gmock/gmock.h"
@@ -65,6 +66,9 @@ da_int eval_r([[maybe_unused]] da_int n, [[maybe_unused]] da_int m,
     if (fcnt >= 0) {
         count_down = fcnt;
         ((struct params_type<T> *)params)->fcnt = -1;
+    } else if (fcnt == -2) {
+        count_down = 10;
+        da_test::sleep(2); // delay
     }
     if (count_down-- <= 0) {
         return 1;
@@ -171,8 +175,8 @@ template <typename T> void driver(void) {
     // Initialize handle for nonlinear regression
     da_handle handle = nullptr;
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_nlls), da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n_coef, n_res, eval_r<T>, nullptr, nullptr,
-                                       nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n_coef, n_res, eval_r<T>, nullptr,
+                                          nullptr, nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_define_bounds(handle, n_coef, blx, bux), da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "print options", "yes"), da_status_success);
@@ -329,7 +333,7 @@ template <typename T> void driver(void) {
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
         da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit model", "gauss-newton"), da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit nlls method", "more-sorensen"),
@@ -381,7 +385,7 @@ template <typename T> void driver(void) {
 
     // solve again using fd
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
         da_status_success);
     if constexpr (std::is_same_v<T, float>) {
         x[0] = 4.0f;
@@ -420,7 +424,7 @@ template <typename T> void driver(void) {
     // solve again using fd (with Fortran storage scheme)
     std::cout << "\nsolve again using fd (with Fortran storage scheme)\n";
     EXPECT_EQ(
-        da_nlls_define_residuals(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, nullptr, nullptr, nullptr),
         da_status_success);
     EXPECT_EQ(da_options_set(handle, "storage order", "Fortran"), da_status_success);
     if constexpr (std::is_same_v<T, float>) {
@@ -459,8 +463,8 @@ template <typename T> void driver(void) {
 
     // Check for errors in eval_j
     EXPECT_EQ(da_options_set(handle, "check derivatives", "yes"), da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J_bad<T>, nullptr,
-                                       nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J_bad<T>, nullptr,
+                                          nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_bad_derivatives);
 

@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -24,12 +24,15 @@
 #
 
 # pylint: disable = import-error, anomalous-backslash-in-string,
-# invalid-name, too-many-arguments
+# pylint: disable = invalid-name, too-many-arguments, too-many-instance-attributes,
+# pylint: disable = too-many-positional-arguments, too-many-locals
+
 
 """
 aoclda.linear_model module
 """
 
+import pickle
 import numpy as np
 from ._aoclda.linear_model import pybind_linmod
 from ._internal_utils import check_convert_data
@@ -38,9 +41,6 @@ from ._internal_utils import check_convert_data
 class linmod():
     """
     Linear models.
-
-    Note that linear models currently do not accept array slices (e.g. ``X[0:2, 0:3]``) as input.
-    Please use copies (e.g. ``X[0:2, 0:3].copy()``) instead.
 
     Args:
 
@@ -105,7 +105,7 @@ class linmod():
             regularization. Default=0.0.
 
         warm_start (bool, optional): Reuse coefficients from the previous run when using the \
-            same object to compute coefficients on the new data. Applies only to iterative solvers. \
+            same object to compute coefficients on the new data. Applies only to iterative solvers.\
             For more details refer to initial coefficients section of linear models documentation.
 
         tol (float, optional): Convergence tolerance for iterative solvers. Applies only to
@@ -113,6 +113,16 @@ class linmod():
 
         progress_factor (float, optional): Applies only to 'lbfgs' and 'coord' solver. Factor used
             to detect convergence of the iterative optimization step. Default=None.
+
+        mixed_precision (bool, optional): Whether to use mixed precision iterative refinement,
+            in which lower precision arithmetic is used before switching to the working precision
+            for the final iterations. Default = False.
+
+        low_precision_max_iter (int, optional): If mixed precision iterative refinement is enabled,
+            maximum number of iterations for the low precision phase. Default = None.
+
+        low_precision_tol (float, optional): If mixed precision iterative refinement is enabled,
+            convergence tolerance for the low precision phase. Default = None.
 
         check_data (bool, optional): Whether to check the data for NaNs. Default = False.
     """
@@ -130,6 +140,9 @@ class linmod():
             warm_start=False,
             tol=1.0e-4,
             progress_factor=None,
+            mixed_precision=False,
+            low_precision_max_iter=5000,
+            low_precision_tol=1e-3,
             check_data=False):
         self.linmod_double = pybind_linmod(
             mod=mod,
@@ -140,6 +153,8 @@ class linmod():
             constraint=constraint,
             warm_start=warm_start,
             precision="double",
+            mixed_precision=mixed_precision,
+            low_precision_max_iter=low_precision_max_iter,
             check_data=check_data)
         self.linmod_single = pybind_linmod(
             mod=mod,
@@ -150,6 +165,8 @@ class linmod():
             constraint=constraint,
             warm_start=warm_start,
             precision="single",
+            mixed_precision=mixed_precision,
+            low_precision_max_iter=low_precision_max_iter,
             check_data=check_data)
         self.order = 'A'
         self.dtype = 'float'
@@ -157,6 +174,7 @@ class linmod():
         self.reg_alpha = reg_alpha
         self.x0 = None
         self.tol = tol
+        self.low_precision_tol = low_precision_tol
         self.progress_factor = progress_factor
         self.linmod = self.linmod_double
 
@@ -170,9 +188,9 @@ class linmod():
 
             y (array-like): The response vector. Its shape is (n_samples).
 
-            x0 (array-like, optional): Initial guess for solution. Applies only to iterative solvers. \
-                The required shape depends on the problem that is being solved (look at coef attribute). \
-                If None then x0 is set to a vector of 0. Default=None.
+            x0 (array-like, optional): Initial guess for solution. Applies only to iterative \
+                solvers. The required shape depends on the problem that is being solved (look \
+                at coef attribute). If None then x0 is set to a vector of 0. Default=None.
 
         Returns:
             self (object): Returns the instance itself.
@@ -194,12 +212,22 @@ class linmod():
             self.tol = np.float32(self.tol)
             if self.progress_factor is not None:
                 self.progress_factor = np.float32(self.progress_factor)
+            # Ensure low_precision_tol is never None for pybind compatibility
+            if self.low_precision_tol is None:
+                self.low_precision_tol = np.float32(0.01)
+            else:
+                self.low_precision_tol = np.float32(self.low_precision_tol)
         else:
             self.reg_alpha = np.float64(self.reg_alpha)
             self.reg_lambda = np.float64(self.reg_lambda)
             self.tol = np.float64(self.tol)
             if self.progress_factor is not None:
                 self.progress_factor = np.float64(self.progress_factor)
+            # Ensure low_precision_tol is never None for pybind compatibility
+            if self.low_precision_tol is None:
+                self.low_precision_tol = np.float64(0.01)
+            else:
+                self.low_precision_tol = np.float64(self.low_precision_tol)
 
         self.linmod.pybind_fit(
             X,
@@ -208,7 +236,8 @@ class linmod():
             progress_factor=self.progress_factor,
             reg_lambda=self.reg_lambda,
             reg_alpha=self.reg_alpha,
-            tol=self.tol)
+            tol=self.tol,
+            low_precision_tol=self.low_precision_tol)
         return self
 
     def predict(self, X):
@@ -225,7 +254,79 @@ class linmod():
         """
         X, _, _ = check_convert_data(
             X, order=self.order, dtype=self.dtype, force_dtype=True)
-        return self.linmod.pybind_predict(X)
+        p, _ = self.linmod.pybind_predict(X)
+        return p
+
+    def score(self, X, y):
+        """
+        Compute the score of the model on a data set ``X`` with response vector ``y``.
+
+        Args:
+            X (array-like): The feature matrix to evaluate the model on. It must have \
+                n_features columns.
+
+            y (array-like): The response vector. Its shape is (n_samples).
+
+        Returns:
+            float: The score of the model on the given data.
+        """
+        X, _, _ = check_convert_data(
+            X, order=self.order, dtype=self.dtype, force_dtype=True)
+        y, _, _ = check_convert_data(
+            y, order=self.order, dtype=self.dtype, force_dtype=True)
+        # for MSE p: predictions l: loss
+        # for logit: p: predictions l: score
+        _p, l = self.linmod.pybind_predict(X, y)
+        return l
+
+    def __getstate__(self):
+        """Support for pickle serialization."""
+        return {
+            'pybind_state': pickle.dumps(self.linmod),
+            'order': self.order,
+            'dtype': self.dtype,
+            'reg_lambda': self.reg_lambda,
+            'reg_alpha': self.reg_alpha,
+            'tol': self.tol,
+            'progress_factor': self.progress_factor,
+            'x0': self.x0,
+            'low_precision_tol': self.low_precision_tol
+        }
+
+    def __setstate__(self, state):
+        """Support for pickle deserialization."""
+        self.linmod = pickle.loads(state['pybind_state'])
+        self.order = state['order']
+        self.dtype = state['dtype']
+        self.reg_lambda = state['reg_lambda']
+        self.reg_alpha = state['reg_alpha']
+        self.tol = state['tol']
+        self.progress_factor = state['progress_factor']
+        self.x0 = state["x0"]
+        self.low_precision_tol = state['low_precision_tol']
+
+        if self.dtype == 'float64':
+            self.linmod_double = self.linmod
+            self.linmod_single = None
+        elif self.dtype == 'float32':
+            self.linmod_double = None
+            self.linmod_single = self.linmod
+        else:
+            raise ValueError(
+                f"Invalid dtype '{self.dtype}' when loading " +
+                "model. Expected 'float32' or 'float64'."
+            )
+
+    @property
+    def trained(self):
+        """
+        Check if the linear model has been trained.
+
+        Returns
+        -------
+        bool: True if the linear model has been trained, False otherwise.
+        """
+        return self.linmod.get_model_trained()
 
     @property
     def coef(self):

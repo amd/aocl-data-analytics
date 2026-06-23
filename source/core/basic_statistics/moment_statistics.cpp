@@ -207,7 +207,7 @@ da_status full_sum(da_int outer_dim_size, da_int inner_dim_size, const T *x, da_
 
     // full_sum splits the matrix as if it is a 1D array. Thus, for small matrices
     // (par_threshold > m*n) parallelization is not always beneficial.
-    da_int par_threshold = 32768;
+    [[maybe_unused]] da_int par_threshold = 32768;
 
     std::optional<T> opt_param1_val = std::nullopt;
     if (opt_param1.has_value()) {
@@ -297,7 +297,8 @@ da_status sum_axis_misaligned(da_int outer_dim_size, da_int inner_dim_size, cons
         inner_block_size = inner_dim_size / n_inner_blocks;
     }
 
-    da_int n_threads = std::min(max_threads, (n_inner_blocks * n_outer_blocks));
+    [[maybe_unused]] da_int n_threads =
+        std::min(max_threads, (n_inner_blocks * n_outer_blocks));
 
     da_int threading_error = 0;
 

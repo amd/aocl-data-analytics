@@ -82,6 +82,10 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
        * brute force algorithm and ``euclidean`` distance only
    * - ``sklearn.decomposition.PCA``
      - ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes
+   * - ``sklearn.decomposition.KernelPCA``
+     - * ``fit``, ``transform``, ``inverse_transform`` and ``fit_transform`` methods and various class attributes
+       * user-callable and ``cosine`` kernels are not supported
+       * ``randomized`` and ``arpack`` eigen solvers are not supported
    * - ``sklearn.linear_model.LinearRegression``
      - ``fit``, ``predict`` and ``score`` methods. LBFGSB solver is not available in precompiled Windows wheels.
    * - ``sklearn.linear_model.Ridge``
@@ -92,6 +96,11 @@ The following scikit-learn classes are currently available in the AOCL-DA extens
      - ``fit`` and ``predict`` methods
    * - ``sklearn.linear_model.LogisticRegression``
      - ``fit`` and ``predict`` methods. Not available in precompiled Windows wheels.
+   * - ``sklearn.manifold.TSNE``
+     - * ``fit``, ``fit_transform`` and ``get_params`` methods and ``embedding_``, ``kl_divergence_``, ``n_iter_``, ``n_features_in_`` attributes are supported.
+       * ``barnes_hut`` and ``exact`` methods are supported.
+       * ``euclidean`` distance metric only.
+       * ``set_params``, ``set_output`` methods and ``metric_params``, ``n_jobs``, ``verbose`` parameters are not supported.
    * - ``sklearn.metrics.pairwise``
      - * ``pairwise_distances`` method with ``cityblock``, ``cosine``, ``euclidean``, ``sqeuclidean``, ``l1``, ``l2``, ``manhattan`` and ``minkowski`` distances
        * ``ensure_all_finite`` option is not supported

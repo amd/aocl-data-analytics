@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,11 +32,33 @@
 #include "gtest/gtest.h"
 
 #ifndef NO_FORTRAN
+#define STRINGIFY_(X) #X
+#define STRINGIFY(X) STRINGIFY_(X)
 
 using namespace TEST_ARCH;
+namespace {
+const char *znver{STRINGIFY(ZNVER_MAX)};
+}
+#undef STRINGIFY
+#undef STRINGIFY_
 
 TEST(nlls, tamperNllsHandle) {
     using namespace template_nlls_example_box_c;
+    char archs[100], ns[100];
+    da_int len{100};
+
+    // Request that context->arch matches with TEST_ARCH that uses ZNVER_MAX
+    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", znver, 1));
+
+    EXPECT_EQ(da_get_arch_info(&len, archs, ns), da_status_success);
+
+    // Skip test if test arch and lib build are not aligned.
+    if (strcmp(archs, znver) != 0) {
+        GTEST_SKIP() << "Skipping test since requested architecture " << znver
+                     << " does not match library architecture " << archs;
+        return;
+    }
+
     da_handle handle_s{nullptr};
     da_handle handle_d{nullptr};
     EXPECT_EQ(da_handle_init<float>(&handle_s, da_handle_type::da_handle_nlls),
@@ -54,17 +76,17 @@ TEST(nlls, tamperNllsHandle) {
     handle_d->alg_handle_d = nullptr;
 
     da_int n{2}, m{5};
-    EXPECT_EQ(da_nlls_define_residuals(handle_s, n, m, eval_r<float>, eval_J<float>,
-                                       nullptr, nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<float>(handle_s, n, m, eval_r<float>,
+                                              eval_J<float>, nullptr, nullptr),
               da_status_invalid_handle_type);
-    EXPECT_EQ(da_nlls_define_residuals(handle_d, n, m, eval_r<double>, eval_J<double>,
-                                       nullptr, nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<double>(handle_d, n, m, eval_r<double>,
+                                               eval_J<double>, nullptr, nullptr),
               da_status_invalid_handle_type);
     float lower_s[2]{0};
     double lower_d[2]{0};
-    EXPECT_EQ(da_nlls_define_bounds(handle_s, n, lower_s, nullptr),
+    EXPECT_EQ(da_nlls_define_bounds<float>(handle_s, n, lower_s, nullptr),
               da_status_invalid_handle_type);
-    EXPECT_EQ(da_nlls_define_bounds(handle_d, n, lower_d, nullptr),
+    EXPECT_EQ(da_nlls_define_bounds<double>(handle_d, n, lower_d, nullptr),
               da_status_invalid_handle_type);
     float w_s[5]{0};
     double w_d[5]{0};
@@ -72,13 +94,17 @@ TEST(nlls, tamperNllsHandle) {
     EXPECT_EQ(da_nlls_define_weights(handle_d, m, w_d), da_status_invalid_handle_type);
     float x_s[2]{0};
     double x_d[2]{0};
-    EXPECT_EQ(da_nlls_fit(handle_s, n, x_s, nullptr), da_status_invalid_handle_type);
-    EXPECT_EQ(da_nlls_fit(handle_d, n, x_d, nullptr), da_status_invalid_handle_type);
+    EXPECT_EQ(da_nlls_fit<float>(handle_s, n, x_s, nullptr),
+              da_status_invalid_handle_type);
+    EXPECT_EQ(da_nlls_fit<double>(handle_d, n, x_d, nullptr),
+              da_status_invalid_handle_type);
     // restore...
     handle_s->alg_handle_s = nlls_s;
     handle_d->alg_handle_d = nlls_d;
     da_handle_destroy(&handle_s);
     da_handle_destroy(&handle_d);
+    // Reset env
+    EXPECT_EQ(0, da_test::da_setenv("AOCL_DA_ARCH", "", 1));
 }
 
 #endif

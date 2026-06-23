@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,15 +27,16 @@
 
 #include "../utest_utils.hpp"
 #include "aoclda.h"
-#include "aoclda_cpp_overloads.hpp"
+#include "context.hpp"
 #include "da_handle.hpp"
 #include "linear_model.hpp"
+#include "linmod_public.hpp"
+#include "macros.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <iostream>
 #include <list>
-
-using namespace TEST_ARCH;
+#include <type_traits>
 
 TEST(miscellaneous, aocl_da_version_string) {
     const char *version_string = da_get_version();
@@ -64,7 +65,7 @@ TYPED_TEST(misc_test_suite, refresh) {
     TypeParam bd[5] = {1, 1, 1, 1, 1};
     da_handle handle = nullptr;
 
-    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
+    ASSERT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
     EXPECT_EQ(da_linmod_define_features(handle, nsamples, nfeat, Ad, nsamples, bd),
               da_status_success);
     EXPECT_EQ(da_options_set_string(handle, "optim method", "QR"), da_status_success);
@@ -72,23 +73,27 @@ TYPED_TEST(misc_test_suite, refresh) {
               da_status_success);
     EXPECT_EQ(da_linmod_fit<TypeParam>(handle), da_status_success);
 
-    da_linmod::linear_model<double> *linreg_d =
-        dynamic_cast<da_linmod::linear_model<double> *>(handle->alg_handle_d);
-    da_linmod::linear_model<float> *linreg_s =
-        dynamic_cast<da_linmod::linear_model<float> *>(handle->alg_handle_s);
-    if (linreg_d != nullptr) {
-        EXPECT_TRUE(linreg_d->get_model_trained());
-    }
-    if (linreg_s != nullptr) {
-        EXPECT_TRUE(linreg_s->get_model_trained());
-    }
-    da_handle_refresh(handle);
-    if (linreg_d != nullptr) {
-        EXPECT_FALSE(linreg_d->get_model_trained());
-    }
-    if (linreg_s != nullptr) {
-        EXPECT_FALSE(linreg_s->get_model_trained());
-    }
+    // clang-format off
+    auto check_refresh = [&]() -> da_status {
+        DISPATCHER(handle->err, 
+            da_linmod::linear_model<TypeParam> * linmod{nullptr};
+            if constexpr (std::is_same_v<TypeParam, float>) {
+                linmod = dynamic_cast<da_linmod::linear_model<TypeParam> *>(handle->alg_handle_s);
+            }
+            if constexpr (std::is_same_v<TypeParam, double>) {
+                linmod = dynamic_cast<da_linmod::linear_model<TypeParam> *>(handle->alg_handle_d);
+            }
+            if (!linmod)
+                return da_error_bypass(handle->err, da_status_internal_error, "dynamic_cast<handle> failed?");
+            EXPECT_TRUE(linmod->get_model_trained());
+            da_handle_refresh(handle);
+            EXPECT_FALSE(linmod->get_model_trained());
+            return da_status_success;
+        )
+    };
+    // clang-format on
+
+    EXPECT_EQ(check_refresh(), da_status_success);
 
     da_handle_destroy(&handle);
 }

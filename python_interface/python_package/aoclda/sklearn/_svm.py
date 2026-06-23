@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -69,7 +69,10 @@ class SVC(SVC_sklearn):
             decision_function_shape='ovr',
             break_ties=False,
             random_state=None,
-            max_ws_size=-1):
+            max_ws_size=-1,
+            mixed_precision=False,
+            low_precision_max_iter=-1,
+            low_precision_tol=0.01):
         # Supported attributes
         self.C = C
         self.kernel = kernel
@@ -82,6 +85,9 @@ class SVC(SVC_sklearn):
         self.cache_size = cache_size
         self.probability = probability
         self.random_state = random_state
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
         # Check for unsupported attributes
         self.shrinking = shrinking
@@ -131,7 +137,10 @@ class SVC(SVC_sklearn):
             random_state=self.seed,
             cache_size=self.cache_size,
             max_iter=self.max_iter,
-            max_ws_size=self.max_ws_size)
+            max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -274,7 +283,10 @@ class SVR(SVR_sklearn):
             cache_size=200.0,
             verbose=False,
             max_iter=-1,
-            max_ws_size=-1):
+            max_ws_size=-1,
+            mixed_precision=False,
+            low_precision_max_iter=-1,
+            low_precision_tol=0.01):
         # Supported attributes
         self.epsilon = epsilon
         self.C = C
@@ -285,6 +297,9 @@ class SVR(SVR_sklearn):
         self.tol = tol
         self.max_iter = max_iter
         self.cache_size = cache_size
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
         # Check for unsupported attributes
         self.shrinking = shrinking
@@ -317,7 +332,10 @@ class SVR(SVR_sklearn):
             tol=self.tol,
             cache_size=self.cache_size,
             max_iter=self.max_iter,
-            max_ws_size=self.max_ws_size)
+            max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -433,7 +451,10 @@ class NuSVC(NuSVC_sklearn):
             decision_function_shape='ovr',
             break_ties=False,
             random_state=None,
-            max_ws_size=-1):
+            max_ws_size=-1,
+            mixed_precision=False,
+            low_precision_max_iter=-1,
+            low_precision_tol=0.01):
         # Supported attributes
         self.nu = nu
         self.kernel = kernel
@@ -446,6 +467,9 @@ class NuSVC(NuSVC_sklearn):
         self.cache_size = cache_size
         self.probability = probability
         self.random_state = random_state
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
         # Check for unsupported attributes
         self.shrinking = shrinking
@@ -495,7 +519,10 @@ class NuSVC(NuSVC_sklearn):
             cache_size=self.cache_size,
             max_iter=self.max_iter,
             random_state=self.seed,
-            max_ws_size=self.max_ws_size)
+            max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):
@@ -638,7 +665,10 @@ class NuSVR(NuSVR_sklearn):
             cache_size=200.0,
             verbose=False,
             max_iter=-1,
-            max_ws_size=-1):
+            max_ws_size=-1,
+            mixed_precision=False,
+            low_precision_max_iter=-1,
+            low_precision_tol=0.01):
         # Supported attributes
         self.nu = nu
         self.C = C
@@ -649,6 +679,9 @@ class NuSVR(NuSVR_sklearn):
         self.gamma = gamma
         self.max_iter = max_iter
         self.cache_size = cache_size
+        self.mixed_precision = mixed_precision
+        self.low_precision_max_iter = low_precision_max_iter
+        self.low_precision_tol = low_precision_tol
 
         # Check for unsupported attributes
         self.shrinking = shrinking
@@ -681,7 +714,10 @@ class NuSVR(NuSVR_sklearn):
             tol=self.tol,
             cache_size=self.cache_size,
             max_iter=self.max_iter,
-            max_ws_size=self.max_ws_size)
+            max_ws_size=self.max_ws_size,
+            mixed_precision=self.mixed_precision,
+            low_precision_max_iter=self.low_precision_max_iter,
+            low_precision_tol=self.low_precision_tol)
 
     def fit(self, X, y):
         if isinstance(self.gamma, str):

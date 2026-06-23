@@ -127,8 +127,8 @@ As an example, if :math:`K=2`, the loss function simplifies to,
 As in the linear regression model, :math:`\ell_1` or :math:`\ell_2` regularization can be applied by adding the corresponding
 penalty term to the cost function.
 
-When the model uses :math:`\ell_1` regularization is it also known by the name of lasso, while
-when using :math:`\ell_2` is it also called a ridge model. When both regularization terms are present then it is termed an
+When the model uses :math:`\ell_1` regularization, it is also known by the name of lasso, while
+when using :math:`\ell_2`, it is also called a ridge model. When both regularization terms are present then it is termed an
 elastic-net model.
 
 .. only:: internal
@@ -254,9 +254,9 @@ columns of the predictor matrix :math:`X`.
     :code:`centering`  , yes,   :math:`\mu_Y`,:math:`1`,                                                            :math:`Y - \mu_Y`,                                   :math:`\mu_{X_j}`,:math:`1`,           :math:`X_j - \mu_{X_j}`
     :code:`centering`  , no,    :math:`0`,    :math:`1`,                                                            :math:`Y`,                                           :math:`0`,        :math:`1`,           :math:`X_j`
     :code:`scale only` , yes,   :math:`\mu_Y`,:math:`\sigma_Y`,                                                     :math:`\frac{\frac{1}{\sqrt{N}}(Y-\mu_Y)}{\sigma_Y}`,:math:`\mu_{X_j}`,:math:`1`,           :math:`\frac{1}{\sqrt{N}}(X_j-\mu_{X_j})`
-    :code:`scale only` , no,    :math:`0`,    :math:`\lVert\frac{1}{\sqrt{N}} Y\rVert`,                             :math:`\frac{\frac{1}{\sqrt{N}} Y}{s_Y}`,            :math:`0`,        :math:`1`,           :math:`\frac{1}{\sqrt{N}} X_j`
+    :code:`scale only` , no,    :math:`0`,    :math:`\left\lVert\frac{1}{\sqrt{N}} Y\right\rVert`,                             :math:`\frac{\frac{1}{\sqrt{N}} Y}{s_Y}`,            :math:`0`,        :math:`1`,           :math:`\frac{1}{\sqrt{N}} X_j`
     :code:`standardize`, yes,   :math:`\mu_Y`,:math:`\sigma_Y`,                                                     :math:`\frac{\frac{1}{\sqrt{N}}(Y-\mu_Y)}{\sigma_Y}`,:math:`\mu_{X_j}`,:math:`\sigma_{X_j}`,:math:`\frac{\frac{1}{\sqrt{N}} (X_j-\mu_{X_j})}{\sigma_{X_j}}`
-    :code:`standardize`, no ,   :math:`0`,    :math:`\lVert\frac{1}{\sqrt{N}} Y\rVert`,                             :math:`\frac{\frac{1}{\sqrt{N}} Y}{s_Y}`,            :math:`0`,        :math:`\sigma_{X_j}`,:math:`\frac{\frac{1}{\sqrt{N}} X_j}{\sigma_{X_j}}`
+    :code:`standardize`, no ,   :math:`0`,    :math:`\left\lVert\frac{1}{\sqrt{N}} Y\right\rVert`,                             :math:`\frac{\frac{1}{\sqrt{N}} Y}{s_Y}`,            :math:`0`,        :math:`\sigma_{X_j}`,:math:`\frac{\frac{1}{\sqrt{N}} X_j}{\sigma_{X_j}}`
 
 .. only:: internal
 
@@ -383,12 +383,12 @@ The standard way of computing a linear model using AOCL-DA is as follows.
    .. tab-item:: C
       :sync: C
 
-      4. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
-      5. Pass data to the handle using :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
-      6. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
-      7. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
-      8. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
-      9. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`. The following results are available:
+      1. Initialize a :cpp:type:`da_handle` with :cpp:type:`da_handle_type` ``da_handle_linmod``.
+      2. Pass data to the handle using :ref:`da_linmod_define_features_? <da_linmod_define_features>`.
+      3. Customize the model using :ref:`da_options_set_? <da_options_set>` (see :ref:`below <linmod_options>` for a list of the available options).
+      4. Compute the linear model using :ref:`da_linmod_fit_? <da_linmod_fit>`.
+      5. Evaluate the model on new data using :ref:`da_linmod_evaluate_model_? <da_linmod_evaluate_model>`.
+      6. Extract results using :ref:`da_handle_get_result_? <da_handle_get_result>`. The following results are available:
 
          * Coefficients (:cpp:enumerator:`da_linmod_coef`): the optimal coefficients of the fitted model.
 
@@ -451,8 +451,15 @@ Linear model options
          "print level", "integer", ":math:`i=0`", "Set level of verbosity for the solver.", ":math:`0 \le i \le 5`"
          "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
          "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+         "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
+         "low precision convergence tol", "real", ":math:`r=10^{-3}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`"
+         "low precision iteration limit", "integer", ":math:`i=5000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`"
+
 
       For the complete list of optional parameters see :ref:`linear model options <opts_linearmodels>`.
+
+      The option ``mixed precision`` switches on an experimental mode for iterative methods (such as L-BFGS-B, coordinate descent and conjugate gradient) in which early iterations are performed in lower precision before refining the result in the working precision.
+      The option ``low precision iteration limit`` sets the maximum number of iterations for the low-precision phase, and ``low precision convergence tol`` sets the convergence tolerance for the low-precision phase.
 
 Examples
 ========
@@ -467,6 +474,12 @@ Examples
       .. dropdown:: Linear Model Example
 
           .. literalinclude:: ../../../python_interface/python_package/aoclda/examples/linmod_ex.py
+              :language: Python
+              :linenos:
+
+      .. dropdown:: Linear Logistic Model Classifier Example
+
+          .. literalinclude:: ../../../python_interface/python_package/aoclda/examples/logit_cls.py
               :language: Python
               :linenos:
 
@@ -487,6 +500,11 @@ Examples
               :language: C++
               :linenos:
 
+      .. dropdown:: Linear Logistic Model Classifier Example
+
+          .. literalinclude:: ../../../tests/examples/logit_classifier.cpp
+              :language: C++
+              :linenos:
 
 
 Further reading
@@ -503,7 +521,7 @@ Linear Model APIs
 
    .. tab-item:: Python
 
-      .. autoclass:: aoclda.linear_model.linmod(mod, intercept=False, solver='auto', scaling='auto', max_iter=None, constraint='ssc', reg_lambda=0.0, reg_alpha=0.0, warm_start=False, tol=1.0e-4, progress_factor=None, check_data=False)
+      .. autoclass:: aoclda.linear_model.linmod(mod, intercept=False, solver='auto', scaling='auto', max_iter=None, constraint='ssc', reg_lambda=0.0, reg_alpha=0.0, warm_start=False, tol=1.0e-4, progress_factor=None, mixed_precision=False, low_precision_max_iter=None, low_precision_tol=None, check_data=False)
          :members:
 
    .. tab-item:: C

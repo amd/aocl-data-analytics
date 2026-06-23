@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -61,7 +61,17 @@ y_test_reg = np.array([-175.52, -33.13, -116.49, -97.43, 162.99])
 @pytest.mark.parametrize("kernel", ["rbf", "linear", "poly", "sigmoid"])
 @pytest.mark.parametrize("gamma", [1, "scale", "auto"])
 @pytest.mark.parametrize("precision", [np.float64, np.float32])
-def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_test):
+@pytest.mark.parametrize("mixed_precision", [True, False])
+def test_svm(
+        svm_problem,
+        kernel,
+        gamma,
+        precision,
+        mixed_precision,
+        X_train,
+        X_test,
+        y_train,
+        y_test):
     """
     Basic datasets defined above
     """
@@ -76,7 +86,8 @@ def test_svm(svm_problem, kernel, gamma, precision, X_train, X_test, y_train, y_
     skpatch()
     SVM_module = importlib.import_module('sklearn.svm')
     SVM_model = getattr(SVM_module, svm_problem)
-    svm_da = SVM_model(kernel=kernel, gamma=gamma, tol=1e-6)
+    svm_da = SVM_model(kernel=kernel, gamma=gamma, tol=1e-6,
+                       mixed_precision=mixed_precision)
     svm_da.fit(X_train, y_train)
     da_pred = svm_da.predict(X_test)
     da_score = svm_da.score(X_test, y_test)

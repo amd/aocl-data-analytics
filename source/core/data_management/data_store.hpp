@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -511,7 +511,8 @@ class data_store {
 
     template <class T>
     da_status concatenate_rows(da_int mr, da_int nr, T *data, da_order order,
-                               bool copy_data = false, bool C_data = false) {
+                               bool copy_data = false, bool own_data = false,
+                               bool C_data = false) {
         da_status status = da_status_success;
         bool found;
         da_int lb, ub, idx_start;
@@ -519,8 +520,8 @@ class data_store {
 
         if (n <= 0) {
             // First block, columns need to be concatenated instead.
-            status =
-                this->concatenate_columns(mr, nr, data, order, copy_data, false, C_data);
+            status = this->concatenate_columns(mr, nr, data, order, copy_data, own_data,
+                                               C_data);
         } else {
             bool cleanup = false;
             idx_start = 0;
@@ -542,6 +543,8 @@ class data_store {
                 new_block = std::make_shared<block_id>(block_id());
                 new_block->b =
                     new block_dense<T>(mr, nr, data, *err, order, copy_data, C_data);
+                block_dense<T> *bd = static_cast<block_dense<T> *>(new_block->b);
+                bd->set_own_data(own_data || copy_data);
             } catch (std::bad_alloc &) {                     // LCOV_EXCL_LINE
                 return da_error(err, da_status_memory_error, // LCOV_EXCL_LINE
                                 "Memory allocation error");

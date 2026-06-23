@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -140,7 +140,8 @@ def test_svc_multiple_dtypes(numpy_precisions, numpy_order):
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_svc_functionality(numpy_precision, numpy_order):
+@pytest.mark.parametrize("mixed_precision", [True, False])
+def test_svc_functionality(numpy_precision, numpy_order, mixed_precision):
     """
     Test the functionality of the Python wrapper
     """
@@ -159,7 +160,7 @@ def test_svc_functionality(numpy_precision, numpy_order):
     y_test = np.array([1, 2],
                       dtype=numpy_precision, order=numpy_order)
 
-    svc = SVC(kernel='rbf', gamma=1, tol=1e-6)
+    svc = SVC(kernel='rbf', gamma=1, tol=1e-6, mixed_precision=mixed_precision)
     svc.fit(X_train, y_train)
 
     expected_bias = np.array([0.6614310488724978, 0.5365371320535124, 0.0])
@@ -224,7 +225,8 @@ def test_svc_functionality(numpy_precision, numpy_order):
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_svr_functionality(numpy_precision, numpy_order):
+@pytest.mark.parametrize("mixed_precision", [True, False])
+def test_svr_functionality(numpy_precision, numpy_order, mixed_precision):
     """
     Test the functionality of the Python wrapper
     """
@@ -243,7 +245,7 @@ def test_svr_functionality(numpy_precision, numpy_order):
     y_test = np.array([12.5, 27.19],
                       dtype=numpy_precision, order=numpy_order)
 
-    svr = SVR(kernel='linear', epsilon=0.1, tol=1e-6)
+    svr = SVR(kernel='linear', epsilon=0.1, tol=1e-6, mixed_precision=mixed_precision)
     svr.fit(X_train, y_train)
 
     expected_bias = -3.664383850678176

@@ -23,6 +23,7 @@
 #include "da_error.hpp"
 #include "da_utils.hpp"
 #include "da_vector.hpp"
+#include "model_persistence.hpp"
 #include "nearest_neighbors_types.hpp"
 #include <algorithm>
 #include <memory>
@@ -50,6 +51,10 @@ template <typename T> struct node {
 
     // Constructor
     node(da_int depth, da_int *indices, da_int n_indices);
+    // Constructor for when loaded from memory
+    node() = default;
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
 
 /* Node structure for the k-d tree class - needs to be here to enable instantiation*/
@@ -74,6 +79,10 @@ template <typename T> struct kd_node : public node<T> {
     kd_node(da_int dim, da_int depth, da_int *indices, da_int n_indices,
             std::vector<T> min_bounds, std::vector<T> max_bounds);
     kd_node(da_int dim, da_int depth, da_int *indices, da_int n_indices);
+    // Constructor for when loaded from memory
+    kd_node() = default;
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
 
 /* Node structure for the ball tree class - needs to be here to enable instantiation */
@@ -92,6 +101,10 @@ template <typename T> struct ball_node : public node<T> {
     ball_node(da_int depth, da_int *indices, da_int n_indices);
     ball_node(da_int depth, da_int *indices, da_int n_indices, std::vector<T> centroid,
               T radius);
+    // Constructor for when loaded from memory
+    ball_node() = default;
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
 
 // Lightweight partial MaxHeap implementation to keep track of tree searches
@@ -144,6 +157,8 @@ template <typename Derived, typename NodeType> class binary_tree {
     // Get the indices, for testing purposes
     const std::vector<da_int> &get_indices();
 
+    da_status serialize(da_model_persistence::serialization_buffer &buffer);
+
   protected:
     // Internal functions used in tree construction and tree traversal to find neighbors
 
@@ -183,6 +198,8 @@ template <typename Derived, typename NodeType> class binary_tree {
     std::shared_ptr<NodeType> root = nullptr;
 
   private:
+    da_status tree_serialization(da_model_persistence::serialization_buffer &buffer,
+                                 std::shared_ptr<NodeType> &node);
     template <bool ReturnDistances>
     da_status radius_neighbors_loop(da_int m_samples, const T *X, da_int ldx, T eps,
                                     T eps_internal,
@@ -200,6 +217,8 @@ template <typename T> class kd_tree : public binary_tree<kd_tree<T>, kd_node<T>>
   public:
     kd_tree(da_int n_samples_in, da_int n_features_in, const T *A_in, da_int lda_in,
             da_int leaf_size_in = 30, da_metric metric_in = da_sqeuclidean, T p_in = 2.0);
+    // Constructor for when being loaded from memory
+    kd_tree(const T *A_in, da_int lda_in);
 
     T single_pass_variance(da_int *indices, da_int n_indices, da_int dim);
 
@@ -239,6 +258,8 @@ template <typename T> class ball_tree : public binary_tree<ball_tree<T>, ball_no
     ball_tree(da_int n_samples_in, da_int n_features_in, const T *A_in, da_int lda_in,
               da_int leaf_size_in = 30, da_metric metric_in = da_sqeuclidean,
               T p_in = 2.0);
+    // Constructor for when being loaded from memory
+    ball_tree(const T *A_in, da_int lda_in);
 
     // Inherited functions used in tree construction and tree traversal to find neighbours
     da_status radius_neighbors_recursive(std::shared_ptr<ball_node<T>> current_node, T *X,

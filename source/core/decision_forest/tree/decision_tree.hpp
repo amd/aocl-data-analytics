@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -34,7 +34,9 @@
 #include "common/scoring.hpp"
 #include "common/tree_options_types.hpp"
 #include "da_omp.hpp"
+#include "da_utils.hpp"
 #include "macros.h"
+#include "model_persistence.hpp"
 #include "options.hpp"
 
 #include <deque>
@@ -82,6 +84,8 @@ template <typename T> class node {
     da_int const_feat_idx = std::numeric_limits<da_int>::max();
     da_int children_const_idx = std::numeric_limits<da_int>::max();
     void dummy();
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer);
 };
 
 template <typename T> struct split {
@@ -113,15 +117,38 @@ template <typename T> struct split {
     void copy(split const &sp);
 };
 
+/* Per-thread workspace for split computation */
+template <typename T> struct split_workspace {
+    // Class count buffers for left/right children
+    std::vector<da_int> count_left_classes;
+    std::vector<da_int> count_right_classes;
+
+    // Raw data buffers
+    std::vector<T> feature_values;
+    std::vector<da_int> cat_feat_table;
+
+    // Histogram buffers
+    std::vector<da_int> node_hist;
+    std::vector<da_int> hist_count_samples;
+
+    // Local copy of samples_idx node range
+    // (only allocated for sorting based splits)
+    std::vector<da_int> samples_idx_local;
+
+    // Results
+    split<T> best_split;
+    std::vector<da_int> const_feats;
+};
+
 /* Compute the impurity of a node containing n_samples samples.
- * On input, count_classes[i] is assumed to contain the number of
- * occurrences of class i within the node samples. */
+* On input, count_classes[i] is assumed to contain the number of
+* occurrences of class i within the node samples. */
 template <class T>
 using score_fun_t = typename std::function<T(da_int, da_int, std::vector<da_int> &)>;
 
 template <typename T> class decision_tree : public basic_handle<T> {
 
-    bool model_trained = false;
+    bool init_done = false;
     da_int predict_proba_opt = true;
 
     // user data. Never modified by the classifier
@@ -166,42 +193,35 @@ template <typename T> class decision_tree : public basic_handle<T> {
     //                 for testing purposes
     // count_classes: size n_class. Used to count the number of occurrences of all classes in a set
     //                of samples
-    // count_left|right_classes: same as count classes for potential children
     // bootstrap_sample_frequency: size n_samples. Used to store the frequency of each sample if bootstrap
     //                             is selected.
     std::vector<da_int> samples_idx;
     da_int *samples_subset = nullptr;
     std::vector<da_int> count_classes;
-    std::vector<da_int> count_left_classes, count_right_classes;
     std::vector<da_int> bootstrap_sample_frequency;
 
     // Used when splits are computed on raw data (no histograms)
-    // feature_values: size n_samples. used to copy and sort the feature values while computing
-    //                 the score of a node
     // max_cat: The maximum number of different categories if categorical variables are present in X
-    // cat_feat_table: size n_class x max_cat. used to find split for categorical data
-    std::vector<T> feature_values;
     std::vector<da_int> cat_feat;
     da_int max_cat = 0;
-    std::vector<da_int> cat_feat_table;
 
     // Histogram: data is quantized into max_bin categories
     // X_binned: class containing the binned X and auxialliary routines
     // internal_bins: true if the bins are computed inside the tree
-    // node_hist: n_class * max_bin. work matrix to store histogram data for a specific split.
-    // hist_count_samples: size max_cat. Used to count the number of unique samples in each
-    //                     category for a given split.
-    // hist_feat_value: n_obs. work memory used by the histogram splitting functions based on sort ().
     bool internal_bins = false;
     bins<T> *X_binned = nullptr;
-    std::vector<da_int> node_hist;
-    std::vector<da_int> hist_count_samples;
-    std::vector<da_int> hist_feat_values;
 
     // features_idx: size n_features. Vector containing all the indices of the features.
     //               primarily used to pick a random subselection of indices to consider
     //               for splitting a node
     std::vector<da_int> features_idx;
+
+    // thread_workspace(n_thrads_split): per-thread workspaces for parallel feature evaluation
+    //        When executed in serial, thread_workspaces[0] is used.
+    // selected_features (n_features): pre-selected features for parallel split evaluation
+    da_int n_threads_split = 1;
+    std::vector<split_workspace<T>> thread_workspaces;
+    std::vector<da_int> selected_features;
 
     // Random number generation
     std::mt19937 mt_engine;
@@ -221,17 +241,22 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_int usr_max_bins;
     T cat_tol;
     da_int cat_split_strat;
+    da_int max_threads = 0;
+
+    da_status tree_serialization(da_model_persistence::serialization_buffer &buffer);
 
   public:
     // Constructor for public interfaces
     decision_tree(da_errors::da_error_t &err);
+    // Constructor for forest model loading
+    decision_tree() = default;
     // Constructor bypassing the optional parameters for internal forest use
     // Values will NOT be checked
     decision_tree(bins<T> *X_binned, da_int max_depth, da_int min_node_sample,
                   da_int method, da_int nfeat_split, da_int seed, T min_split_score,
                   T feat_thresh, T min_improvement, bool bootstrap, da_int check_cat_data,
                   da_int opt_max_cat, da_int use_hist, da_int usr_max_bins, T cat_tol,
-                  da_int cat_split_strat);
+                  da_int cat_split_strat, da_int max_threads);
     ~decision_tree();
 
     // Memory management
@@ -241,7 +266,7 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_status init_working_memory_hist();
     da_status resize_tree(size_t new_size);
     void clear_working_memory();
-    void refresh();
+    void refresh() override;
 
     // Public training
     da_status set_training_data(da_int n_samples, da_int n_features, const T *X,
@@ -257,33 +282,44 @@ template <typename T> class decision_tree : public basic_handle<T> {
                                 da_int end_idx, std::vector<da_int> &weights);
 
     // Splitting functions
-    bool compute_best_split(const node<T> &nd, da_int feat_idx, split<T> &sp);
+    bool compute_best_split(const node<T> &nd, da_int feat_idx, split<T> &sp,
+                            split_workspace<T> &ws, std::vector<da_int> &samp);
     template <typename U>
     bool update_split_sorted(da_int sidx, da_int &next_idx, da_int end_idx, da_int ns,
                              da_int &ns_left, da_int &ns_right, T &left_score,
-                             T &right_score, T &split_score, std::vector<U> &fv);
+                             T &right_score, T &split_score, std::vector<U> &fv,
+                             split_workspace<T> &ws, std::vector<da_int> &samp);
 
     // Split: raw data
-    void update_feature_values(da_int start_idx, da_int end_idx, da_int feat_idx);
-    void split_raw_onevall(const node<T> &current_node, da_int feat_idx, split<T> &sp);
-    void update_count_left(da_int start_idx, da_int end_idx, da_int &ns_left);
+    void update_feature_values(da_int start_idx, da_int end_idx, da_int feat_idx,
+                               split_workspace<T> &ws, std::vector<da_int> &samp);
+    void split_raw_onevall(const node<T> &current_node, da_int feat_idx, split<T> &sp,
+                           split_workspace<T> &ws, std::vector<da_int> &samp);
     void update_count_left(da_int start_idx, da_int end_idx, da_int &ns_left,
-                           std::vector<da_int> &weights);
-    void update_count_right(da_int start_idx, da_int end_idx, da_int &ns_right);
+                           split_workspace<T> &ws, std::vector<da_int> &samp);
+    void update_count_left(da_int start_idx, da_int end_idx, da_int &ns_left,
+                           std::vector<da_int> &weights, split_workspace<T> &ws,
+                           std::vector<da_int> &samp);
     void update_count_right(da_int start_idx, da_int end_idx, da_int &ns_right,
-                            std::vector<da_int> &weights);
-    void split_raw_continuous(const node<T> &current_node, split<T> &sp);
-    bool compute_best_split_raw(const node<T> &nd, da_int feat_idx, split<T> &sp);
+                            split_workspace<T> &ws, std::vector<da_int> &samp);
+    void update_count_right(da_int start_idx, da_int end_idx, da_int &ns_right,
+                            std::vector<da_int> &weights, split_workspace<T> &ws,
+                            std::vector<da_int> &samp);
+    void split_raw_continuous(const node<T> &current_node, split<T> &sp,
+                              split_workspace<T> &ws, std::vector<da_int> &samp);
+    bool compute_best_split_raw(const node<T> &nd, da_int feat_idx, split<T> &sp,
+                                split_workspace<T> &ws, std::vector<da_int> &samp);
     // Split: binned data
-    bool update_node_histogram(const node<T> &nd, da_int feat_idx);
     bool update_node_histogram(const node<T> &nd, da_int feat_idx,
-                               std::vector<da_int> &weights);
-    bool compute_best_split_hist(const node<T> &nd, da_int feat_idx, split<T> &sp);
-    bool compute_best_split_hist_sort(const node<T> &nd, da_int feat_idx, split<T> &sp);
+                               split_workspace<T> &ws);
+    bool update_node_histogram(const node<T> &nd, da_int feat_idx,
+                               std::vector<da_int> &weights, split_workspace<T> &ws);
+    bool compute_best_split_hist(const node<T> &nd, da_int feat_idx, split<T> &sp,
+                                 split_workspace<T> &ws);
     void split_hist_onevall(const node<T> &nd, da_int &ns_left, da_int &ns_ritgh,
-                            da_int cat_start_idx);
+                            da_int cat_start_idx, split_workspace<T> &ws);
     void split_hist_ordered(const node<T> &nd, da_int &ns_left, da_int &ns_ritgh,
-                            da_int cat_start_idx);
+                            da_int cat_start_idx, split_workspace<T> &ws);
 
     // partition functions
     // raw data
@@ -293,7 +329,12 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_int partition_samples_hist_ordered(const node<T> &nd);
     da_int partition_samples_hist_onevall(const node<T> &nd);
 
+    // Tree training strategies
+    da_status fit_serial();
+    da_status fit_parallel();
+
     // tree building
+    da_status split_node_and_add_children(da_int node_idx, split<T> &best_split);
     da_status add_node(da_int parent_idx, bool is_left, T score, da_int split_idx);
     da_int get_next_node_idx();
 
@@ -307,9 +348,8 @@ template <typename T> class decision_tree : public basic_handle<T> {
     da_status score(da_int nsamp, da_int nfeat, const T *X_test, da_int ldx,
                     const da_int *y_test, T *accuracy);
 
-    da_status get_result(da_result query, da_int *dim, T *result);
-    da_status get_result([[maybe_unused]] da_result query, [[maybe_unused]] da_int *dim,
-                         [[maybe_unused]] da_int *result);
+    da_status get_result(da_result query, da_int *dim, T *result) override;
+    da_status get_result(da_result query, da_int *dim, da_int *result) override;
 
     // Getters for testing purposes
     std::vector<da_int> const &get_samples_idx();
@@ -320,11 +360,16 @@ template <typename T> class decision_tree : public basic_handle<T> {
     std::vector<da_int> const &get_count_left_classes();
     std::vector<da_int> const &get_count_right_classes();
     std::vector<da_int> const &get_features_idx();
+    std::vector<split_workspace<T>> const &get_thread_workspaces();
     bool model_is_trained();
     std::vector<node<T>> const &get_tree();
     da_int get_n_leaves() { return n_leaves; }
     // Setters for testing purposes
     void set_bootstrap(bool bs);
+
+    da_status serialize(da_model_persistence::serialization_buffer &buffer) override;
+    da_status save_model(da_model_persistence::serialization_buffer &buffer) override;
+    da_status load_model(da_model_persistence::serialization_buffer &buffer) override;
 };
 
 } // namespace da_decision_forest

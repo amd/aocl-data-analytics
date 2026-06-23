@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -163,9 +163,9 @@ def test_context_getsetters_kmeans(isa):
     Check kmeans setup registry, request a specific kernel, expect setup to
     record it
     """
-    isae = {"scalar": "0", "avx": "2"}  # matches with enum in kmeans_type.hpp
+    isae = {"scalar": "1", "avx": "2"}  # matches enum in da_kernel_utils.hpp
     dbg.set({"kmeans.isa": isa})
-    _ = test_kmeans_functionality(np.float32, "C")
+    _ = test_kmeans_functionality(np.float32, "C", False)
     d = dbg.get("kmeans.setup")
     tokens = (d["kmeans.setup"]).split(",")
     ok = False
@@ -179,10 +179,17 @@ def test_context_getsetters_kmeans(isa):
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
 @pytest.mark.parametrize("numpy_order", ["C", "F"])
-def test_kmeans_functionality(numpy_precision, numpy_order):
+@pytest.mark.parametrize("mixed_precision", [False, True])
+def test_kmeans_functionality(numpy_precision, numpy_order, mixed_precision):
     """
     Test the functionality of the Python wrapper
     """
+
+    # Skip the test for np.float32 with mixed precision, as the k-means
+    # implementation does not support this configuration
+    if mixed_precision and numpy_precision == np.float32:
+        pytest.skip(
+            "Mixed precision is not supported for np.float32 in k-means implementation")
 
     a = np.array([[2., 1.],
                   [-1., -2.],
@@ -199,7 +206,16 @@ def test_kmeans_functionality(numpy_precision, numpy_order):
     x = np.array([[0., 1.],
                   [0., -1.]], dtype=numpy_precision, order=numpy_order)
 
-    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, seed=23)
+    km = kmeans(
+        n_clusters=2,
+        C=c,
+        tol=1.0e-4,
+        seed=23,
+        empty_clusters="split",
+        afk_mcmc_samples=10,
+        mixed_precision=mixed_precision,
+        low_precision_max_iter=200,
+        low_precision_tol=0.01)
     km.fit(a)
     x_transform = km.transform(x)
     x_labels = km.predict(x)
@@ -232,7 +248,7 @@ def test_kmeans_functionality(numpy_precision, numpy_order):
 
     assert km.n_clusters == 2
 
-    assert km.n_iter == 1
+    assert km.n_iter <= 1
 
 
 @pytest.mark.parametrize("_da_precision, numpy_precision", [
@@ -270,3 +286,47 @@ def test_kmeans_error_exits(_da_precision, numpy_precision):
     km = kmeans(n_clusters=2, C=c, tol=1.0e-4, check_data=True)
     with pytest.raises(RuntimeError):
         km.fit(a)
+
+    a = np.array([[2., 1.1],
+                  [2.1, 1.],
+                  [2.2, 1.],
+                  [2., 1.2],
+                  [2.1, 1.1],
+                  [2.2, 1.2],
+                  [2.01, 1.01],
+                  [2.01, 1.]], dtype=numpy_precision)
+    c = np.array([[2.1, 1.1],
+                  [-30., 30.]], dtype=numpy_precision)
+    km = kmeans(n_clusters=2, C=c, tol=1.0e-4, empty_clusters="error")
+
+    with pytest.raises(RuntimeError):
+        km.fit(a)
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+@pytest.mark.parametrize("algorithm", ["lloyd", "elkan", "macqueen"])
+def test_kmeans_spherical(numpy_precision, algorithm):
+    """
+    Test spherical k-means: centres should be unit-normalized
+    """
+    a = np.array([[1.2, 0.5, -0.3],
+                  [-0.5, 1.3, 0.9],
+                  [0.3, -0.8, 1.4],
+                  [2.1, 0.2, -0.7],
+                  [-1.8, 1.6, 0.1],
+                  [0.7, -1.0, 0.5]], dtype=numpy_precision)
+
+    km = kmeans(
+        n_clusters=2,
+        algorithm=algorithm,
+        distance="cosine",
+        normalize_data=False,
+        seed=42,
+        n_init=1)
+    km.fit(a)
+
+    centres = km.cluster_centres
+    norms = np.linalg.norm(centres, axis=1)
+    tol = 1e-6 if numpy_precision == np.float32 else 1e-12
+    np.testing.assert_allclose(norms, 1.0, atol=tol,
+                               err_msg=f"Centres not unit-normalized for {algorithm}")

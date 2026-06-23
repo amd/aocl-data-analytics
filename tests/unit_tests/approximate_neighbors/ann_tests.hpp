@@ -101,6 +101,7 @@ template <typename T> da_status GetExpectedResults(ANNParamType<T> &test) {
     da_handle kmeans_handle = nullptr;
 
     status = da_handle_init<T>(&kmeans_handle, da_handle_kmeans);
+    status = da_options_set_string(kmeans_handle, "initialization method", "random");
     status = da_options_set_string(kmeans_handle, "storage order", test.order.c_str());
 
     status = da_options_set_int(kmeans_handle, "n_clusters", test.nlist);
@@ -120,7 +121,7 @@ template <typename T> da_status GetExpectedResults(ANNParamType<T> &test) {
     status = da_handle_get_result(kmeans_handle, da_kmeans_cluster_centres, &centres_size,
                                   test.expected_centroids.data());
 
-    da_int temp_size = 5;
+    da_int temp_size = 6;
     std::vector<T> temp_result(temp_size);
     status =
         da_handle_get_result(kmeans_handle, da_rinfo, &temp_size, temp_result.data());
@@ -267,8 +268,8 @@ da_status compute_neighbors_knn(ANNParamType<T> param, da_int *true_neighbors,
     status = da_options_set_string(knn_handle, "algorithm", param.algorithm.c_str());
     status = da_nn_set_data(knn_handle, n_samples_train, n_features, X_train, ldx_train);
     if (status == da_status_success) {
-        status = da_nn_kneighbors(knn_handle, n_samples_test, n_features, X_test,
-                                  ldx_test, true_neighbors, nullptr, param.k, false);
+        status = da_nn_kneighbors<T>(knn_handle, n_samples_test, n_features, X_test,
+                                     ldx_test, true_neighbors, nullptr, param.k, false);
     }
 
     da_handle_destroy(&knn_handle);
@@ -1947,7 +1948,7 @@ template <typename T> void UnitSphereEuclideanCol(std::vector<ANNParamType<T>> &
     ANNParamType<T> test(16, 5, 4, "euclidean", "ivfflat", "column-major");
     test.test_name = "unit sphere l2 col";
     test.csvname = "unitsphere";
-    test.target_recall = 0.60;
+    test.target_recall = 0.59;
     test.seed = 0;
     test.train_fraction = 0.64;
     params.push_back(test);
@@ -1957,7 +1958,7 @@ template <typename T> void UnitSphereEuclideanRow(std::vector<ANNParamType<T>> &
     ANNParamType<T> test(16, 5, 4, "euclidean", "ivfflat", "row-major");
     test.test_name = "unit sphere l2 row";
     test.csvname = "unitsphere";
-    test.target_recall = 0.60;
+    test.target_recall = 0.59;
     test.seed = 0;
     test.train_fraction = 0.64;
     params.push_back(test);

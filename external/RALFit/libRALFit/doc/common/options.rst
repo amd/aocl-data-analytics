@@ -22,6 +22,8 @@
 
 .. |maxit| replace:: gives the number of iterations the algorithm is allowed to take before being stopped.  This is not accessed if |nlls_iterate| is used. 
 
+.. |maxtime| replace:: gives the amount of time (in seconds) the algorithm is allowed to take before being stopped.  This is not enforced if |nlls_iterate| is used.
+
 .. |model| replace:: specifies the model, :math:`m_k(\cdot)`, used.  Possible values are:
 
 .. |type_of_method| replace:: specifies the type of globalization method used.  Possible values are:

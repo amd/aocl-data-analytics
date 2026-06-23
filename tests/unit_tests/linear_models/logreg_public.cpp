@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -113,15 +113,23 @@ const logregParam logregPosValuesD[] = {
     // Multinomial RSC tests
     {"multinomialNoInterceptRSC", "multinomial", {}, {{"logistic constraint", "rsc"}}, {}, {}},
     {"multinomialInterceptRSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
-    {"sep_data_4_4RSC", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {}},
     {"sep_data_8_5_indep1RSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
     {"sep_data_big_scaleRSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "rsc"}}, {}, {{"lambda", 1.0}}},
+    // RSC order tests
+    {"sep_data_4_4_RSC_Intr_Col", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "rsc"}, {"storage order", "column-major"}}, {}, {}},
+    {"sep_data_4_4_RSC_Intr_Row", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "rsc"}, {"storage order", "row-major"}}, {}, {}},
+    {"sep_data_4_4_RSC_NoIntr_Col", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "rsc"}, {"storage order", "column-major"}}, {}, {}},
+    {"sep_data_4_4_RSC_NoIntr_Row", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "rsc"}, {"storage order", "row-major"}}, {}, {}},
     // Multinomial SSC tests
     {"multinomialNoInterceptSSC", "multinomial", {}, {{"logistic constraint", "ssc"}}, {}, {}},
     {"multinomialInterceptSSC", "multinomial", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
-    {"sep_data_4_4SSC", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {}},
     {"sep_data_8_5_indep1SSC", "sep_classes_8_5_indep1", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
     {"sep_data_big_scaleSSC", "sep_classes_big_scale", {{"intercept", 1}}, {{"logistic constraint", "ssc"}}, {}, {{"lambda", 1.0}}},
+    // SSC order tests [intercept, storage order]
+    {"sep_data_4_4_SSC_Intr_Col", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "ssc"}, {"storage order", "column-major"}}, {}, {}},
+    {"sep_data_4_4_SSC_Intr_Row", "sep_classes_4_4", {{"intercept", 1}}, {{"logistic constraint", "ssc"}, {"storage order", "row-major"}}, {}, {}},
+    {"sep_data_4_4_SSC_NoIntr_Col", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "ssc"}, {"storage order", "column-major"}}, {}, {}},
+    {"sep_data_4_4_SSC_NoIntr_Row", "sep_classes_4_4", {{"intercept", 0}}, {{"logistic constraint", "ssc"}, {"storage order", "row-major"}}, {}, {}},
 };
 const logregParam logregPosValuesF[] = {
     // Multinomial RSC tests

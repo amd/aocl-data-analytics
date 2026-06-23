@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -103,7 +103,7 @@ def test_double_solve(precision):
     a = np.array([[1, 2, 3], [0.22, 5, 4.1], [3, 6, 1]], dtype=precision)
     skpatch()
     from sklearn.decomposition import PCA
-    pca_da = PCA(n_components=3)
+    pca_da = PCA(n_components=3, svd_solver='randomized', random_state=42)
     pca_da = pca_da.fit(a)
     pca_da = pca_da.fit(a)
 
@@ -119,9 +119,10 @@ def test_pca_errors():
     with pytest.raises(ValueError):
         pca = PCA(n_components=0.5)
 
-    with pytest.warns(RuntimeWarning):
-        pca = PCA(n_components=3, n_oversamples=2)
+    with pytest.raises(ValueError):
+        pca = PCA(n_components=2, random_state=np.random.RandomState(42))
 
+    pca = PCA(n_components=3, n_oversamples=2)
     pca.fit(a)
 
     # Test unsupported functions

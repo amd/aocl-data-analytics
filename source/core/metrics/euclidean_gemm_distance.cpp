@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 #include "aoclda_types.h"
 #include "da_cblas.hh"
 #include "da_error.hpp"
+#include "da_simd_math.hpp"
 #include "da_syrk.hpp"
 #include "da_utils.hpp"
 #include "macros.h"
@@ -151,17 +152,9 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
 
         if (!square) {
             if (order == column_major) {
-                for (da_int j = 0; j < n; j++) {
-                    for (da_int i = 0; i < m; i++) {
-                        D[i + j * ldd] = std::sqrt(D[i + j * ldd]);
-                    }
-                }
+                da_simd_math::sqrt_matrix(m, n, D, ldd);
             } else {
-                for (da_int i = 0; i < m; i++) {
-                    for (da_int j = 0; j < n; j++) {
-                        D[i * ldd + j] = std::sqrt(D[i * ldd + j]);
-                    }
-                }
+                da_simd_math::sqrt_matrix(n, m, D, ldd);
             }
         }
     } else {
@@ -188,20 +181,17 @@ void euclidean_gemm_distance(da_order order, da_int m, da_int n, da_int k, const
             if (order == column_major) {
                 for (da_int j = 0; j < m; j++) {
                     if (!square) {
-                        for (da_int i = 0; i < j; i++) {
-                            D[i + j * ldd] = std::sqrt(D[i + j * ldd]);
-                        }
+                        da_simd_math::sqrt_vec(D + j * ldd, j);
                     }
                     D[j + j * ldd] = 0.0;
                 }
             } else {
-                for (da_int j = 0; j < m; j++) {
-                    if (!square) {
-                        for (da_int i = 0; i < j; i++) {
-                            D[i * ldd + j] = std::sqrt(D[i * ldd + j]);
-                        }
+                for (da_int i = 0; i < m; i++) {
+                    da_int len = m - i - 1;
+                    if (len > 0 && !square) {
+                        da_simd_math::sqrt_vec(D + i * ldd + (i + 1), len);
                     }
-                    D[j + j * ldd] = 0.0;
+                    D[i * ldd + i] = 0.0;
                 }
             }
         }

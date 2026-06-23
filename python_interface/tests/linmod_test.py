@@ -1,4 +1,4 @@
-# Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+# Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
@@ -33,8 +33,8 @@ import pytest
 from aoclda.linear_model import linmod
 
 
-@pytest.fixture(scope="function")
-def no_fortran(request):
+@pytest.fixture(scope="function", name="no_fortran")
+def fixture_no_fortran(request):
     return request.config.no_fortran
 
 
@@ -46,7 +46,7 @@ def test_linear_regression(numpy_precision, numpy_order):
                   [5, 7, None, None], [6, 9, None, None]],
                  dtype=numpy_precision, order=numpy_order)
     y = np.array([3., 6.5, 10., 12., 13., 19.], dtype=numpy_precision)
-    tol = np.sqrt(np.finfo(numpy_precision).eps)
+    tol = np.sqrt(np.finfo(numpy_precision).eps)  # pylint: disable=no-member
 
     # compute linear regression without intercept
     lmod = linmod("mse")
@@ -66,6 +66,15 @@ def test_linear_regression(numpy_precision, numpy_order):
         [2.35, 0.35, 0.43333333333333535], dtype=numpy_precision)
     norm = np.linalg.norm(np.abs(lmod.coef) - np.abs(expected_coef))
     assert norm < tol
+
+    if numpy_precision == np.float64:
+        # check using mixed precision works
+        lmodm = linmod("mse", intercept=True, mixed_precision=True, solver="coord")
+        lmodm.fit(X[:, 0:2], y)
+        lmod = linmod("mse", intercept=True, mixed_precision=False, solver="coord")
+        lmod.fit(X[:, 0:2], y)
+        norm = np.linalg.norm(np.abs(lmodm.coef - lmod.coef))
+        assert norm < np.sqrt(tol)
 
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
@@ -174,7 +183,9 @@ def test_warmstart_underdetermined(numpy_precision, numpy_order):
     # Do first run
     model = linmod(mod="mse", solver="sparse_cg", reg_lambda=2.0,
                    intercept=False, warm_start=True)
+    assert model.trained is False  # test @property
     model.fit(X, y)
+    assert model.trained is True
     primal_coef = model.coef
     dual_coef = model.dual_coef
     primal_coef_expected = np.array(
@@ -290,7 +301,9 @@ def test_warmstart_logistic(no_fortran, problem, numpy_precision, numpy_order):
 
     # Do first run with warm start (usual case)
     model = linmod(**problem_copy, warm_start=True)
+    assert model.trained is False  # test @property
     model.fit(X, y)
+    assert model.trained is True  # test @property
     assert model.n_iter > 1
     first_coef = model.coef
     assert first_coef == pytest.approx(true_coefs, abs=1e-4)
@@ -439,7 +452,7 @@ def test_linmod_all_dtypes(numpy_precision, numpy_order):
 
     lmod = linmod("mse")
     lmod.fit(x_train, y_train)
-    preds = lmod.predict(x_test)
+    _ = lmod.predict(x_test)
 
 
 @pytest.mark.parametrize("numpy_precision", [np.float32])
@@ -469,7 +482,7 @@ def test_linmod_multiple_orders(numpy_precision, numpy_orders):
     lmod = linmod("mse")
     lmod.fit(x_train, y_train)
     with pytest.warns(UserWarning):
-        preds = lmod.predict(x_test)
+        _ = lmod.predict(x_test)
     x_train = np.array(x_train, order=numpy_orders[1])
     with pytest.warns(UserWarning):
         lmod.fit(x_train, y_train)
@@ -502,6 +515,34 @@ def test_linmod_multiple_dtypes(numpy_precisions, numpy_order):
 
     lmod = linmod("mse")
     lmod.fit(x_train, y_train)
-    preds = lmod.predict(x_test)
+    _ = lmod.predict(x_test)
     x_train = np.array(x_train, dtype=numpy_precisions[1])
     lmod.fit(x_train, y_train)
+
+
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+@pytest.mark.parametrize("intercept", [True, False])
+@pytest.mark.parametrize("constr", ["ssc", "rsc"])
+def test_logit_storage_order(no_fortran, constr, intercept, numpy_order):
+    """
+    Test for storage order of logit model this includes training and inference
+    """
+    if no_fortran:
+        pytest.skip("Skipping test due to no_fortran flag")
+    X = np.reshape([0.5112507, -0.8260241, -0.1424458, -0.4039709, 0.3485765, 0.3567505, -0.257416,
+                    1.432360, 0.9424596, 1.836593, 2.111865, 1.916961, 0.9455847, 1.334214, -2.279365,
+                    -2.850008, -3.496761, -2.906845, -2.386532,
+                    -0.7558991, -0.1399068, -0.9634618, 0.4722355, -0.2858268, -0.4037604, 0.162241,
+                    1.123676, 1.1810599, 1.327981, 1.368268, 1.735552, 2.7652231, 1.239765, 2.297571,
+                    2.633976, 1.875603, 2.045181, 1.610652], shape=(19, 2), order='F')
+    X = np.asfortranarray(X) if numpy_order == "F" else np.ascontiguousarray(X)
+    y = np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2])
+    l = linmod("logistic", intercept=1 if intercept else 0, constraint=constr)
+    l.fit(X, y)
+    scr = l.score(X, y)
+    dapr = l.predict(X)
+    if intercept:
+        assert scr == 1.0
+        assert np.array_equal(dapr, y)
+    else:
+        assert scr > 0.89

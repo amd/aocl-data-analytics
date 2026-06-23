@@ -25,6 +25,9 @@
  *
  */
 
+#ifndef DA_QR_HPP
+#define DA_QR_HPP
+
 #include "aoclda.h"
 #include "context.hpp"
 #include "da_cblas.hh"
@@ -436,3 +439,5 @@ da_status da_qr_apply(da_int n, std::vector<T> &A, da_int lda, std::vector<T> &t
     return da_status_success;
 }
 } // namespace ARCH
+
+#endif // DA_QR_HPP

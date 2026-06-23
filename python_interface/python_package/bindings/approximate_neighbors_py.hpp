@@ -74,10 +74,12 @@ class approximate_neighbors : public pyda_handle {
 
         if (check_data == true) {
             std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }
+
+    approximate_neighbors(da_precision prec) { this->precision = prec; }
     ~approximate_neighbors() { da_handle_destroy(&handle); }
 
     void set_n_probe_opt(da_int n_probe) {
@@ -170,8 +172,8 @@ class approximate_neighbors : public pyda_handle {
         }
 
         auto k_ind = py::array_t<da_int>(shape, strides);
-        status = da_approx_nn_kneighbors(handle, n_queries, n_features, X.data(), ldx,
-                                         k_ind.mutable_data(), nullptr, req_neigh, 0);
+        status = da_approx_nn_kneighbors<T>(handle, n_queries, n_features, X.data(), ldx,
+                                            k_ind.mutable_data(), nullptr, req_neigh, 0);
         exception_check(status);
         return k_ind;
     }
@@ -220,7 +222,7 @@ class approximate_neighbors : public pyda_handle {
         da_int dim = 4;
 
         if (precision == da_single) {
-            float rinfo[4];
+            float rinfo[4] = {0.0f, 0.0f, 0.0f, 0.0f};
             *stride_size = sizeof(float);
             status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
             *n_list = (da_int)rinfo[0];
@@ -228,7 +230,7 @@ class approximate_neighbors : public pyda_handle {
             *n_features = (da_int)rinfo[2];
             *kmeans_iter = (da_int)rinfo[3];
         } else {
-            double rinfo[4];
+            double rinfo[4] = {0.0, 0.0, 0.0, 0.0};
             *stride_size = sizeof(double);
             status = da_handle_get_result(handle, da_rinfo, &dim, rinfo);
             *n_list = (da_int)rinfo[0];
@@ -320,6 +322,14 @@ class approximate_neighbors : public pyda_handle {
         da_int stride_size;
         get_rinfo(&n_list, &n_index, &n_features, &kmeans_iter, &stride_size);
         return kmeans_iter;
+    }
+
+    void save_data(py::dict &state) override {
+        state["internal_neigh"] = int64_t(this->internal_neigh);
+    }
+
+    void load_data(py::dict &state) override {
+        this->internal_neigh = da_int(state["internal_neigh"].cast<int64_t>());
     }
 };
 

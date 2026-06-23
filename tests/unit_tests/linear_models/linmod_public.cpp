@@ -34,6 +34,152 @@ namespace {
 
 const da_int print_level{2};
 
+/* test the use of mixed precision iterative refinement for double precision computations */
+TEST(linmod, mixedPrecisionIterativeRefinement) {
+    // problem data
+    da_int n = 4;
+    da_int m_vals[2] = {3, 5}; // Enable overdetermined and underdetermined tests
+    double Ad[20] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1, 2, 1, 6, 3, 2, 5, 7, 0, 1, 0};
+    double bd[5] = {1, 1, 1, 1, 1};
+    double bd_logistic[5] = {0, 1, 0, 1, 0};
+    da_int nx = 0;
+    double x_double[5], x_mixed[5];
+    const double tol = 1e-4;
+    da_int intercepts[2] = {0, 1};
+    double alpha = 0.0, lambda = 5.0;
+
+    da_handle handle_double = nullptr, handle_mixed = nullptr;
+
+#ifdef NO_FORTRAN
+    std::vector<std::string> solvers = {"coord", "cg"};
+#else
+    std::vector<std::string> solvers = {"coord", "cg", "lbfgs"};
+#endif
+
+    for (auto &solver : solvers) {
+        for (auto &intercept : intercepts) {
+            for (auto &m : m_vals) {
+                std::cout << "Testing solver: " << solver
+                          << " with intercept: " << intercept
+                          << " for problem size m=" << m << ", n=" << n << std::endl;
+                // Skip test if intercept is 1 and m < n
+                if (intercept == 1 && m < n) {
+                    continue;
+                }
+                // Solve in double precision first
+                EXPECT_EQ(da_handle_init<double>(&handle_double, da_handle_linmod),
+                          da_status_success);
+                if (solver == "lbfgs") {
+                    EXPECT_EQ(
+                        da_linmod_select_model_d(handle_double, linmod_model_logistic),
+                        da_status_success);
+                    EXPECT_EQ(da_linmod_define_features_d(handle_double, m, n, Ad, m,
+                                                          bd_logistic),
+                              da_status_success);
+                } else {
+                    EXPECT_EQ(da_linmod_select_model_d(handle_double, linmod_model_mse),
+                              da_status_success);
+                    EXPECT_EQ(da_linmod_define_features_d(handle_double, m, n, Ad, m, bd),
+                              da_status_success);
+                }
+
+                EXPECT_EQ(da_options_set_int(handle_double, "intercept", intercept),
+                          da_status_success);
+                EXPECT_EQ(da_options_set_real_d(handle_double, "alpha", alpha),
+                          da_status_success);
+                EXPECT_EQ(da_options_set_real_d(handle_double, "lambda", lambda),
+                          da_status_success);
+                EXPECT_EQ(da_options_set_string(handle_double, "scaling", "none"),
+                          da_status_success);
+                EXPECT_EQ(
+                    da_options_set_string(handle_double, "optim method", solver.c_str()),
+                    da_status_success);
+                EXPECT_EQ(da_linmod_fit_d(handle_double), da_status_success);
+                nx = 0;
+                EXPECT_EQ(da_handle_get_result_d(handle_double, da_result::da_linmod_coef,
+                                                 &nx, x_double),
+                          da_status_invalid_array_dimension);
+                EXPECT_EQ(da_handle_get_result_d(handle_double, da_result::da_linmod_coef,
+                                                 &nx, x_double),
+                          da_status_success);
+                da_handle_destroy(&handle_double);
+
+                // Now solve with mixed precision iterative refinement
+                EXPECT_EQ(da_handle_init<double>(&handle_mixed, da_handle_linmod),
+                          da_status_success);
+                if (solver == "lbfgs") {
+                    EXPECT_EQ(
+                        da_linmod_select_model_d(handle_mixed, linmod_model_logistic),
+                        da_status_success);
+                    EXPECT_EQ(da_linmod_define_features_d(handle_mixed, m, n, Ad, m,
+                                                          bd_logistic),
+                              da_status_success);
+                } else {
+                    EXPECT_EQ(da_linmod_select_model_d(handle_mixed, linmod_model_mse),
+                              da_status_success);
+                    EXPECT_EQ(da_linmod_define_features_d(handle_mixed, m, n, Ad, m, bd),
+                              da_status_success);
+                }
+
+                EXPECT_EQ(da_options_set_int(handle_mixed, "intercept", intercept),
+                          da_status_success);
+                EXPECT_EQ(da_options_set_real_d(handle_mixed, "alpha", alpha),
+                          da_status_success);
+                EXPECT_EQ(da_options_set_real_d(handle_mixed, "lambda", lambda),
+                          da_status_success);
+                EXPECT_EQ(da_options_set_string(handle_mixed, "scaling", "none"),
+                          da_status_success);
+                EXPECT_EQ(
+                    da_options_set_string(handle_mixed, "optim method", solver.c_str()),
+                    da_status_success);
+                EXPECT_EQ(da_options_set_string(handle_mixed, "mixed precision", "yes"),
+                          da_status_success);
+                EXPECT_EQ(da_linmod_fit_d(handle_mixed), da_status_success);
+                nx = 0;
+                EXPECT_EQ(da_handle_get_result_d(handle_mixed, da_result::da_linmod_coef,
+                                                 &nx, x_mixed),
+                          da_status_invalid_array_dimension);
+                EXPECT_EQ(da_handle_get_result_d(handle_mixed, da_result::da_linmod_coef,
+                                                 &nx, x_mixed),
+                          da_status_success);
+                da_handle_destroy(&handle_mixed);
+
+                EXPECT_ARR_NEAR(nx, x_double, x_mixed, tol);
+            }
+        }
+    }
+}
+
+TEST(linmod, mixedPrecisionErrors) {
+    // problem data
+    da_int n = 4;
+    da_int m = 5; // Enable overdetermined and underdetermined tests
+    double Ad[20] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1, 2, 1, 6, 3, 2, 5, 7, 0, 1, 0};
+    double bd[5] = {1, 1, 1, 1, 1};
+    float As[20] = {1, 2, 3, 4, 5, 1, 3, 5, 1, 1, 2, 1, 6, 3, 2, 5, 7, 0, 1, 0};
+    float bs[5] = {1, 1, 1, 1, 1};
+
+    // Check that setting mixed precision without a compatible solver returns an error
+    da_handle handle = nullptr;
+    EXPECT_EQ(da_handle_init<double>(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_d(handle, linmod_model_mse), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_d(handle, m, n, Ad, m, bd), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "optim method", "cholesky"),
+              da_status_success);
+    EXPECT_EQ(da_linmod_fit_d(handle), da_status_incompatible_options);
+    da_handle_destroy(&handle);
+
+    // Check that setting mixed precision for single precision data returns an error
+    EXPECT_EQ(da_handle_init<float>(&handle, da_handle_linmod), da_status_success);
+    EXPECT_EQ(da_linmod_select_model_s(handle, linmod_model_mse), da_status_success);
+    EXPECT_EQ(da_linmod_define_features_s(handle, m, n, As, m, bs), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "mixed precision", "yes"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "optim method", "cg"), da_status_success);
+    EXPECT_EQ(da_linmod_fit_s(handle), da_status_incompatible_options);
+    da_handle_destroy(&handle);
+}
+
 /* simple errors tests */
 TEST(linmod, badHandle) {
     da_handle handle = nullptr;
@@ -91,16 +237,16 @@ TEST(linmod, wrongType) {
     EXPECT_EQ(da_linmod_fit_s(handle_d), da_status_wrong_type);
 
     da_int nc = 1;
-    float *xf = 0;
-    double *xd = 0;
-    EXPECT_EQ(da_linmod_get_coef(handle_d, &nc, xf), da_status_wrong_type);
-    EXPECT_EQ(da_linmod_get_coef(handle_s, &nc, xd), da_status_wrong_type);
+    std::vector<float> xf(10);
+    std::vector<double> xd(10);
+    EXPECT_EQ(da_linmod_get_coef(handle_d, &nc, xf.data()), da_status_wrong_type);
+    EXPECT_EQ(da_linmod_get_coef(handle_s, &nc, xd.data()), da_status_wrong_type);
 
     float *predf = 0;
     double *predd = 0;
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, m, n, xf, m, predf),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_d, m, n, xf.data(), m, predf),
               da_status_wrong_type);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, m, n, xd, m, predd),
+    EXPECT_EQ(da_linmod_evaluate_model(handle_s, m, n, xd.data(), m, predd),
               da_status_wrong_type);
 
     da_handle_destroy(&handle_d);
@@ -128,7 +274,7 @@ TEST(linmod, invalidInput) {
 
     // define features
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, 1, bd),
-              da_status_invalid_array_dimension);
+              da_status_invalid_leading_dimension);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, 0, Ad, 1, bd),
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_define_features_d(handle_d, 0, n, Ad, 1, bd),
@@ -148,7 +294,7 @@ TEST(linmod, invalidInput) {
     EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, m, bd), da_status_success);
 
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, 0, bs),
-              da_status_invalid_array_dimension);
+              da_status_invalid_leading_dimension);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, 0, As, m, bs),
               da_status_invalid_input);
     EXPECT_EQ(da_linmod_define_features_s(handle_s, 0, n, As, m, bs),
@@ -185,9 +331,9 @@ TEST(linmod, invalidInput) {
     double pred[1];
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, 3, X, 1, pred),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, nullptr, 1, pred),
+    EXPECT_EQ(da_linmod_evaluate_model<double>(handle_d, 1, n, nullptr, 1, pred),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_d, 1, n, X, 1, nullptr),
+    EXPECT_EQ(da_linmod_evaluate_model<double>(handle_d, 1, n, X, 1, nullptr),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_d, 0, n, X, 1, pred),
               da_status_invalid_input);
@@ -197,9 +343,9 @@ TEST(linmod, invalidInput) {
     float preds[1];
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, 3, Xs, 1, preds),
               da_status_invalid_input);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, nullptr, 1, preds),
+    EXPECT_EQ(da_linmod_evaluate_model<float>(handle_s, 1, n, nullptr, 1, preds),
               da_status_invalid_pointer);
-    EXPECT_EQ(da_linmod_evaluate_model(handle_s, 1, n, Xs, 1, nullptr),
+    EXPECT_EQ(da_linmod_evaluate_model<float>(handle_s, 1, n, Xs, 1, nullptr),
               da_status_invalid_pointer);
     EXPECT_EQ(da_linmod_evaluate_model(handle_s, 0, n, Xs, 1, preds),
               da_status_invalid_input);
@@ -230,6 +376,12 @@ TEST(linmod, modOutOfDate) {
     EXPECT_EQ(da_linmod_define_features_s(handle_s, m, n, As, m, bs), da_status_success);
 
     // model not yet fitted
+    da_int dim = 1;
+    da_int trained = -1;
+    EXPECT_EQ(da_handle_get_result(handle_d, da_result::da_trained, &dim, &trained),
+              da_status_success);
+    EXPECT_EQ(trained, 0);
+
     da_int linfo{100};
     double info[100];
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_rinfo, &linfo, info),
@@ -384,49 +536,6 @@ TEST(linmod, wideMatrixProblems) {
     da_handle_destroy(&handle_d);
 }
 
-TEST(linmod, singularTallMatrix) {
-
-    // LAPACK does not always return an error for singular matrix with cholesky
-    GTEST_SKIP() << "LAPACK does not always return an error for a singular matrix with "
-                    "cholesky; test temporarily disabled.";
-
-    // problem data
-    da_int m = 5, n = 2;
-    double Ad[10] = {1, 1, 1, 4, 5, 1, 1, 1, 4, 5};
-    double bd[5] = {1, 1, 0, 1, 0};
-    da_handle handle_d = nullptr;
-
-    EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, m, bd), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
-              da_status_success);
-    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
-
-    // Cholesky factorization should not be able to compute on singular matrix
-    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_numerical_difficulties);
-
-    da_handle_destroy(&handle_d);
-}
-
-TEST(linmod, singularWideMatrix) {
-    // problem data
-    da_int m = 2, n = 5;
-    double Ad[10] = {1, 2, 2, 4, 3, 6, 4, 8, 5, 10};
-    double bd[2] = {1, 0};
-    da_handle handle_d = nullptr;
-
-    EXPECT_EQ(da_handle_init<double>(&handle_d, da_handle_linmod), da_status_success);
-    EXPECT_EQ(da_linmod_define_features_d(handle_d, m, n, Ad, m, bd), da_status_success);
-    EXPECT_EQ(da_options_set_string(handle_d, "optim method", "cholesky"),
-              da_status_success);
-    EXPECT_EQ(da_linmod_select_model_d(handle_d, linmod_model_mse), da_status_success);
-
-    // Cholesky factorization should not be able to compute on singular matrix
-    EXPECT_EQ(da_linmod_fit_d(handle_d), da_status_numerical_difficulties);
-
-    da_handle_destroy(&handle_d);
-}
-
 TEST(linmod, GetResultNegative) {
     // Test public interfaces (under linmod context)
     da_handle handle_d = nullptr;
@@ -526,6 +635,12 @@ TEST(linmod, CheckGetInfo) {
     EXPECT_EQ(da_linmod_fit<double>(handle_d), da_status_success);
     EXPECT_EQ(da_handle_get_result_d(handle_d, da_result::da_rinfo, &linfo, info),
               da_status_success);
+    // model fitted
+    da_int dim = 1;
+    da_int trained = 0;
+    EXPECT_EQ(da_handle_get_result(handle_d, da_result::da_trained, &dim, &trained),
+              da_status_success);
+    EXPECT_EQ(trained, 1);
     // so check that all (except index 0, 3 and 10-15) are -1.
     for (da_int i = 1; i < 100; ++i) {
         if (i == 3 || (i >= 10 && i <= 15))
@@ -1084,6 +1199,184 @@ void test_linmod_ldx_RowMajorShortFat(const params pr) {
     delete[] x_row;
 }
 
+typedef struct fallback_params_t {
+    std::string test_name;
+    da_int m; // number of samples
+    da_int n; // number of features
+    std::string scaling;
+    da_int icnt;
+    bool use_override;
+} fallback_params;
+
+// scaling="none" with intercept=0 triggers natural fallback
+// Other combos use override to ensure consistent fallback testing
+const fallback_params fallback_values_d[]{
+    // Tall matrix tests
+    {"tall/a", 6, 2, "auto", 0, false},
+    {"tall/a", 6, 2, "auto", 1, true},
+    {"tall/n", 6, 2, "none", 0, false},
+    {"tall/n", 6, 2, "none", 1, true},
+    {"tall/c", 6, 2, "centering", 0, true},
+    {"tall/c", 6, 2, "centering", 1, true},
+    {"tall/s", 6, 2, "scale only", 0, true},
+    {"tall/s", 6, 2, "scale only", 1, true},
+    {"tall/z", 6, 2, "standardize", 0, true},
+    {"tall/z", 6, 2, "standardize", 1, true},
+    // Wide matrix tests
+    {"wide/a", 2, 5, "auto", 0, false},
+    {"wide/a", 2, 5, "auto", 1, true},
+    {"wide/n", 2, 5, "none", 0, false},
+    {"wide/c", 2, 5, "centering", 0, true},
+    {"wide/c", 2, 5, "centering", 1, true},
+    {"wide/s", 2, 5, "scale only", 0, true},
+    {"wide/s", 2, 5, "scale only", 1, true},
+    {"wide/z", 2, 5, "standardize", 0, true},
+    {"wide/z", 2, 5, "standardize", 1, true},
+};
+
+const fallback_params fallback_values_f[]{
+    // Tall matrix tests
+    {"tall/a", 6, 2, "auto", 0, true},
+    {"tall/a", 6, 2, "auto", 1, true},
+    {"tall/n", 6, 2, "none", 0, true},
+    {"tall/n", 6, 2, "none", 1, true},
+    {"tall/c", 6, 2, "centering", 0, true},
+    {"tall/c", 6, 2, "centering", 1, true},
+    {"tall/s", 6, 2, "scale only", 0, true},
+    {"tall/s", 6, 2, "scale only", 1, true},
+    {"tall/z", 6, 2, "standardize", 0, true},
+    {"tall/z", 6, 2, "standardize", 1, true},
+    // Wide matrix tests
+    {"wide/a", 2, 5, "auto", 0, true},
+    {"wide/a", 2, 5, "auto", 1, true},
+    {"wide/n", 2, 5, "none", 0, true},
+    {"wide/c", 2, 5, "centering", 0, true},
+    {"wide/c", 2, 5, "centering", 1, true},
+    {"wide/s", 2, 5, "scale only", 0, true},
+    {"wide/s", 2, 5, "scale only", 1, true},
+    {"wide/z", 2, 5, "standardize", 0, true},
+    {"wide/z", 2, 5, "standardize", 1, true},
+};
+
+class linmodCholeskyFallbackDouble : public testing::TestWithParam<fallback_params> {};
+class linmodCholeskyFallbackFloat : public testing::TestWithParam<fallback_params> {};
+
+template <typename T> void test_cholesky_fallback(const fallback_params &pr);
+
+TEST_P(linmodCholeskyFallbackDouble, Fallback) {
+    const fallback_params &pr = GetParam();
+    test_cholesky_fallback<double>(pr);
+}
+
+TEST_P(linmodCholeskyFallbackFloat, Fallback) {
+    const fallback_params &pr = GetParam();
+    test_cholesky_fallback<float>(pr);
+}
+
+template <typename T> void test_cholesky_fallback(const fallback_params &pr) {
+    T tol = 10 * std::numeric_limits<T>::epsilon();
+    // Column-major data (rank-deficient)
+    T Ad_tall_cm[12] = {1, 1, 1, 3, 4, 5, 1, 1, 1, 3, 4, 5};
+    T Ad_wide_cm[10] = {1, 2, 2, 4, 3, 6, 4, 8, 5, 10};
+
+    // Row-major data
+    T Ad_tall_rm[12] = {1, 1, 1, 1, 1, 1, 3, 3, 4, 4, 5, 5};
+    T Ad_wide_rm[10] = {1, 2, 3, 4, 5, 2, 4, 6, 8, 10};
+
+    T bd_tall[6] = {1, 1, 0, 1, 0, 1};
+    T bd_wide[2] = {1, 0};
+
+    const char *storage_orders[] = {"column-major", "row-major"};
+
+    for (const char *order : storage_orders) {
+        bool is_row_major = (std::string(order) == "row-major");
+
+        // Select appropriate data based on dimensions and storage order
+        T *Ad = (pr.m == 6) ? (is_row_major ? Ad_tall_rm : Ad_tall_cm)
+                            : (is_row_major ? Ad_wide_rm : Ad_wide_cm);
+        T *bd = (pr.m == 6) ? bd_tall : bd_wide;
+        da_int ldA = is_row_major ? pr.n : pr.m;
+
+        da_handle handle = nullptr;
+
+        // Set override if needed
+        if (pr.use_override) {
+            EXPECT_EQ(da_debug_set("linmod.force_fallback", "true"), da_status_success);
+        }
+
+        da_int ncoef = pr.icnt ? pr.n + 1 : pr.n;
+        std::vector<T> coef_fallback(ncoef);
+        std::vector<T> coef_svd(ncoef);
+
+        EXPECT_EQ(da_handle_init<T>(&handle, da_handle_linmod), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "storage order", order),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_define_features(handle, pr.m, pr.n, Ad, ldA, bd),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "optim method", "cholesky"),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle, "scaling", pr.scaling.c_str()),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(handle, "intercept", pr.icnt), da_status_success);
+        EXPECT_EQ(da_linmod_select_model<T>(handle, linmod_model_mse), da_status_success);
+
+        // Cholesky should fail and fallback to svd
+        EXPECT_EQ(da_linmod_fit<T>(handle), da_status_success);
+
+        // Check that svd was used
+        char solver[100];
+        da_int buff = 100;
+        EXPECT_EQ(da_options_get_string(handle, "optim method", solver, &buff),
+                  da_status_success);
+        EXPECT_STREQ(solver, "svd");
+
+        // Extract fallback coefs
+        EXPECT_EQ(
+            da_handle_get_result(handle, da_linmod_coef, &ncoef, coef_fallback.data()),
+            da_status_success);
+
+        da_handle_destroy(&handle);
+
+        // reset override to be safe
+        if (pr.use_override) {
+            EXPECT_EQ(da_debug_set("linmod.force_fallback", ""), da_status_success);
+        }
+
+        // Create a fresh handle for explicit SVD solve
+        da_handle handle_svd = nullptr;
+        EXPECT_EQ(da_handle_init<T>(&handle_svd, da_handle_linmod), da_status_success);
+        EXPECT_EQ(da_options_set_string(handle_svd, "storage order", order),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_define_features(handle_svd, pr.m, pr.n, Ad, ldA, bd),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_string(handle_svd, "optim method", "svd"),
+                  da_status_success);
+
+        // Need SVD to mimick fallback behaviour for this special case
+        const char *scaling = pr.scaling.c_str();
+        if (pr.scaling == "none" && pr.icnt == 1)
+            scaling = "centering";
+
+        EXPECT_EQ(da_options_set_string(handle_svd, "scaling", scaling),
+                  da_status_success);
+        EXPECT_EQ(da_options_set_int(handle_svd, "intercept", pr.icnt),
+                  da_status_success);
+        EXPECT_EQ(da_linmod_select_model<T>(handle_svd, linmod_model_mse),
+                  da_status_success);
+
+        // Fit with svd
+        EXPECT_EQ(da_linmod_fit<T>(handle_svd), da_status_success);
+        // Extract svd coefs
+        EXPECT_EQ(
+            da_handle_get_result(handle_svd, da_linmod_coef, &ncoef, coef_svd.data()),
+            da_status_success);
+
+        EXPECT_ARR_NEAR(ncoef, coef_svd.data(), coef_fallback.data(), tol);
+
+        da_handle_destroy(&handle_svd);
+    }
+}
+
 // Test info is updated on partial fit
 TEST(linmod, InfoChkAtStop) {
     da_int m = 2, n = 2;
@@ -1137,6 +1430,10 @@ void PrintTo(const params &param, ::std::ostream *os) {
     *os << param.test_name << "/" << param.icnt;
 }
 
+void PrintTo(const fallback_params &param, ::std::ostream *os) {
+    *os << param.test_name << "/" << param.icnt;
+}
+
 INSTANTIATE_TEST_SUITE_P(WarmStartSuite, linmodWarmStart,
                          testing::ValuesIn(warmstart_values));
 
@@ -1144,4 +1441,9 @@ INSTANTIATE_TEST_SUITE_P(LDXSuite, linmodLDX_TallSkinny,
                          testing::ValuesIn(ldx_values_tallskinny));
 INSTANTIATE_TEST_SUITE_P(LDXSuite, linmodLDX_ShortFat,
                          testing::ValuesIn(ldx_values_shortfat));
+
+INSTANTIATE_TEST_SUITE_P(FallbackSuite, linmodCholeskyFallbackDouble,
+                         testing::ValuesIn(fallback_values_d));
+INSTANTIATE_TEST_SUITE_P(FallbackSuite, linmodCholeskyFallbackFloat,
+                         testing::ValuesIn(fallback_values_f));
 } // namespace

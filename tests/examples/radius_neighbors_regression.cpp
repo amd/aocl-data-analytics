@@ -50,7 +50,7 @@ int main() {
     da_int n_features = 3;
     da_int n_samples = 6;
     da_int n_queries = 3;
-    double radius = 5.0;
+    double radius = 3.5;
 
     std::vector<double> X_train{-1, -2, -3, 1, 2, 3,  -1, -1, -2,
                                 3,  5,  -1, 2, 3, -1, 1,  1,  2};
@@ -64,6 +64,9 @@ int main() {
     pass &= da_options_set_string(rnn_handle, "algorithm", "brute") == da_status_success;
     pass &= da_options_set_real_d(rnn_handle, "radius", radius) == da_status_success;
     pass &= da_options_set_string(rnn_handle, "weights", "uniform") == da_status_success;
+    // If no radius neighbors are found for a query point, the prediction will be the mean of the training targets.
+    pass &= da_options_set_string(rnn_handle, "outlier handling", "most frequent") ==
+            da_status_success;
     if (!pass) {
         std::cout << "Failure while setting up the optional parameters.\n";
         da_handle_print_error_message(rnn_handle);
@@ -201,8 +204,8 @@ int main() {
     std::vector<da_int> neighbors_indices_exp{1, 2, 0}; // expected result for validation
     std::vector<double> neighbors_distances_exp{
         3.00000, 2.00000, 3.16228}; // expected result for validation
-    std::vector<double> targets_exp{1.3333334, 1.0,
-                                    1.0}; // expected result for validation
+    std::vector<double> targets_exp{1.50000, 0.50000,
+                                    1.33333}; // expected result for validation
 
     bool incorrect_results = false;
     for (da_int i = 0; i < n_count; i++) {

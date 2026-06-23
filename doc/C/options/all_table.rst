@@ -46,7 +46,9 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
    "optim method", "string", ":math:`s=` `auto`", "Select optimization method to use.", ":math:`s=` `auto`, `bfgs`, `cg`, `chol`, `cholesky`, `coord`, `lbfgs`, `lbfgsb`, `qr`, `sparse_cg`, or `svd`."
+   "low precision convergence tol", "real", ":math:`r=10^{-3}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`"
    "scaling", "string", ":math:`s=` `auto`", "Scale or standardize feature matrix and response vector. Matrix is copied and then rescaled. Option key value auto indicates that rescaling type is chosen by the solver (this also includes no scaling).", ":math:`s=` `auto`, `centering`, `no`, `none`, `scale`, `scale only`, `standardise`, or `standardize`."
    "print options", "string", ":math:`s=` `no`", "Print options.", ":math:`s=` `no`, or `yes`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
@@ -56,14 +58,15 @@ The following options are supported.
    "optim convergence tol", "real", ":math:`r=10^{-4}`", "Tolerance to declare convergence for the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 < r < 1`"
    "intercept", "integer", ":math:`i=0`", "Add intercept variable to the model.", ":math:`0 \le i \le 1`"
    "optim iteration limit", "integer", ":math:`i=10000`", "Maximum number of iterations to perform in the optimization phase. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`1 \le i`"
+   "low precision iteration limit", "integer", ":math:`i=5000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`"
+   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
+   "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r \le 1`"
    "optim coord skip min", "integer", ":math:`i=2`", "Minimum times a coordinate change is smaller than coord skip tol to start skipping.", ":math:`2 \le i`"
    "optim coord skip max", "integer", ":math:`i=100`", "Maximum times a coordinate can be skipped, after this the coordinate is checked.", ":math:`10 \le i`"
    "debug", "integer", ":math:`i=0`", "Set debug level (internal use).", ":math:`0 \le i \le 3`"
    "logistic constraint", "string", ":math:`s=` `ssc`", "Affects only multinomial logistic regression. Type of constraint put on coefficients. This will affect number of coefficients returned. RSC - means we choose a reference category whose coefficients will be set to all 0. This results in K-1 class coefficients for problems with K classes. SSC - means the sum of coefficients class-wise for each feature is 0. It will result in K class coefficients for problems with K classes.", ":math:`s=` `reference category`, `rsc`, `ssc`, `symmetric`, or `symmetric side`."
    "optim time limit", "real", ":math:`r=10^6`", "Maximum time limit (in seconds). Solver will exit with a warning after this limit. Valid only for iterative solvers, e.g. L-BFGS-B, Coordinate Descent, etc.", ":math:`0 < r`"
    "lambda", "real", ":math:`r=0`", "Penalty coefficient for the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r`"
-   "alpha", "real", ":math:`r=0`", "Coefficient of alpha in the regularization terms: lambda( (1-alpha)/2 L2 + alpha L1 ).", ":math:`0 \le r \le 1`"
-   "optim progress factor", "real", ":math:`r=\frac{10}{\sqrt{2\,\varepsilon}}`", "Factor used to detect convergence of the iterative optimization step. See option in the corresponding optimization solver documentation.", ":math:`0 \le r`"
 
 
 .. _opts_principalcomponentanalysis:
@@ -77,13 +80,17 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
+   "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`."
+   "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`"
    "degrees of freedom", "string", ":math:`s=` `unbiased`", "Whether to use biased or unbiased estimators for standard deviations and variances.", ":math:`s=` `biased`, or `unbiased`."
    "pca method", "string", ":math:`s=` `covariance`", "Compute PCA based on the covariance or correlation matrix.", ":math:`s=` `correlation`, `covariance`, or `svd`."
    "whiten", "integer", ":math:`i=0`", "Whether or not we whiten when transforming the data.", ":math:`0 \le i \le 1`"
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`"
    "store u", "integer", ":math:`i=0`", "Whether or not to store the matrix U from the SVD.", ":math:`0 \le i \le 1`"
    "n_components", "integer", ":math:`i=1`", "Number of principal components to compute. If 0, then all components will be kept.", ":math:`0 \le i`"
-   "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, or `syevd`."
+   "svd solver", "string", ":math:`s=` `auto`", "Which LAPACK routine to use for the underlying singular value decomposition.", ":math:`s=` `auto`, `gesdd`, `gesvd`, `gesvdx`, `randomized`, or `syevd`."
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`"
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
 
 
@@ -98,15 +105,22 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
-   "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
-   "initialization method", "string", ":math:`s=` `random`", "How to determine the initial cluster centres.", ":math:`s=` `k-means++`, `random`, `random partitions`, or `supplied`."
+   "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`"
    "convergence tolerance", "real", ":math:`r=10^{-4}`", "Convergence tolerance.", ":math:`0 \le r`"
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
-   "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`"
-   "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`"
-   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
-   "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`"
+   "normalize data", "string", ":math:`s=` `yes`", "Whether to normalize the input data before clustering. This option is only used if distance is set to cosine.", ":math:`s=` `no`, or `yes`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+   "n_init", "integer", ":math:`i=10`", "Number of runs with different random seeds (ignored if you have specified initial cluster centres).", ":math:`1 \le i`"
+   "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "max_iter", "integer", ":math:`i=300`", "Maximum number of iterations.", ":math:`1 \le i`"
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
+   "initialization method", "string", ":math:`s=` `k-means++`", "How to determine the initial cluster centres.", ":math:`s=` `afk-mc2`, `k-means++`, `random`, `random partitions`, or `supplied`."
+   "algorithm", "string", ":math:`s=` `lloyd`", "Choice of underlying k-means algorithm.", ":math:`s=` `elkan`, `hartigan-wong`, `lloyd`, or `macqueen`."
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
+   "n_clusters", "integer", ":math:`i=1`", "Number of clusters required.", ":math:`1 \le i`"
+   "afk-mc2 samples", "integer", ":math:`i=50`", "Number of samples to take for the AFK-MC2 initialization method.", ":math:`1 \le i`"
+   "distance", "string", ":math:`s=` `euclidean`", "Distance metric used for clustering. Use 'euclidean' for standard k-means or 'cosine' for spherical k-means (not compatible with Hartigan-Wong).", ":math:`s=` `cosine`, or `euclidean`."
+   "empty clusters", "string", ":math:`s=` `ignore`", "How to deal with empty clusters at the end of a k-means iteration.", ":math:`s=` `error`, `ignore`, or `split`."
 
 
 .. _opts_dbscanclustering:
@@ -143,7 +157,7 @@ The following options are supported.
    
    "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
    "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
-   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
+   "category split strategy", "string", ":math:`s=` `ordered`", "Strategy to split categorical features. For a given categorical feature, 'one-vs-all' tries to split each categorical value from all the others while 'ordered' will try to split the smaller categories from the bigger ones.", ":math:`s=` `one-vs-all`, or `ordered`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
    "feature threshold", "real", ":math:`r=1e-05`", "Minimum difference in feature value required for splitting.", ":math:`0 \le r`"
@@ -171,6 +185,7 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
+   "maximum tree threads", "integer", ":math:`i=0`", "Maximum number of threads allocated to each tree for parallel feature evaluation. 0 means no cap.", ":math:`0 \le i`"
    "category split strategy", "string", ":math:`s=` `ordered`", "How to split categorical features: split one category from all other or consider them ordered.", ":math:`s=` `one-vs-all`, or `ordered`."
    "maximum bins", "integer", ":math:`i=256`", "Maximum number of bins in histograms.", ":math:`2 \le i \le 65535`"
    "histogram", "string", ":math:`s=` `no`", "Choose whether to use histograms constructed from the data matrix X.", ":math:`s=` `no`, or `yes`."
@@ -185,7 +200,7 @@ The following options are supported.
    "maximum depth", "integer", ":math:`i=29`", "Set the maximum depth of trees.", ":math:`0 \le i \le 29`"
    "scoring function", "string", ":math:`s=` `gini`", "Select scoring function to use.", ":math:`s=` `cross-entropy`, `entropy`, `gini`, `misclass`, `misclassification`, or `misclassification-error`."
    "minimum impurity decrease", "real", ":math:`r=0`", "Minimum score improvement needed to consider a split from the parent node.", ":math:`0 \le r`"
-   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i \le 2147483647`"
+   "block size", "integer", ":math:`i=256`", "Set the size of the blocks for parallel computations.", ":math:`1 \le i`"
    "features selection", "string", ":math:`s=` `sqrt`", "Select how many features to use for each split. 'custom' reads the 'maximum features' option, proportion reads the 'proportion features' option. 'all', 'sqrt' and 'log2' select respectively all, the square root or the base-2 logarithm of the total number of features.", ":math:`s=` `all`, `custom`, `log2`, `proportion`, or `sqrt`."
    "bootstrap", "string", ":math:`s=` `yes`", "Select whether to bootstrap the samples in the trees.", ":math:`s=` `no`, or `yes`."
    "bootstrap samples factor", "real", ":math:`r=1`", "Proportion of samples to draw from the data set to build each tree if 'bootstrap' was set to 'yes'.", ":math:`0 < r \le 1`"
@@ -239,14 +254,14 @@ The following options are supported.
    "ralfit convergence abs tol grd", "real", ":math:`r=500\;\sqrt{2\,\varepsilon}`", "Absolute tolerance on the gradient norm to declare convergence for the iterative optimization step. See details in optimization solver documentation.", ":math:`0 < r < 1`"
 
 
-.. _opts_k-nearestneighbors:
+.. _opts_nearestneighbors:
 
-k-Nearest Neighbors
+Nearest Neighbors
 ==============================================
 
 The following options are supported.
 
-.. csv-table:: :strong:`Table of Options for k-Nearest Neighbors.`
+.. csv-table:: :strong:`Table of Options for Nearest Neighbors.`
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
@@ -254,7 +269,10 @@ The following options are supported.
    "metric", "string", ":math:`s=` `euclidean`", "Metric used to compute the pairwise distance matrix.", ":math:`s=` `cityblock`, `cosine`, `euclidean`, `euclidean_gemm`, `l1`, `l2`, `manhattan`, `minkowski`, `sqeuclidean`, or `sqeuclidean_gemm`."
    "algorithm", "string", ":math:`s=` `auto`", "Algorithm used to compute the k-nearest neighbors.", ":math:`s=` `auto`, `ball tree`, `brute`, or `kd tree`."
    "radius", "real", ":math:`r=1`", "Maximum distance for the radius neighbors computation.", ":math:`0 \le r`"
-   "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of k-nearest neighbors.", ":math:`0 < r`"
+   "outlier target", "real", ":math:`r=0`", "Regression target for queries with no neighbors within the specified radius.", "There are no constraints on :math:`r`."
+   "minkowski parameter", "real", ":math:`r=2`", "Minkowski parameter for metric used for the computation of nearest neighbors.", ":math:`0 < r`"
+   "outlier handling", "string", ":math:`s=` `none`", "How to handle samples with no neighbors within the specified radius.", ":math:`s=` `manual`, `most frequent`, or `none`."
+   "outlier label", "integer", ":math:`i=0`", "Classification label for queries with no neighbors within the specified radius.", "There are no constraints on :math:`i`."
    "leaf size", "integer", ":math:`i=30`", "Leaf size for k-d tree.", ":math:`1 \le i`"
    "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
@@ -272,10 +290,13 @@ The following options are supported.
    :escape: ~
    :header: "Option name", "Type", "Default", "Description", "Constraints"
    
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
+   "low precision convergence tolerance", "real", ":math:`r=10^{-2}`", "If mixed precision iterative refinement is enabled, convergence tolerance for the low precision phase.", ":math:`0 \le r`"
    "tau", "real", ":math:`r=\varepsilon`", "Numerical stability parameter used in working set selection when kernel is not positive semi definite.", ":math:`0 \le r`"
    "kernel", "string", ":math:`s=` `rbf`", "Kernel function to use for the calculations.", ":math:`s=` `linear`, `poly`, `polynomial`, `rbf`, or `sigmoid`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
    "n_folds", "integer", ":math:`i=5`", "Number of folds to use with cross validation. Only used when predict probabilities is enabled.", ":math:`1 \le i`"
+   "low precision max_iter", "integer", ":math:`i=80000`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`0 \le i`"
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
    "cache size", "real", ":math:`r=-1`", "Size of the kernel cache in MB. The default value is -1.0 which automatically sets it to a value which will enable storage of the sampled kernel matrix. Increasing value of this option will result in faster training time.", ":math:`-1 \le r`"
    "degree", "integer", ":math:`i=3`", "Parameter for 'polynomial' kernel.", ":math:`1 \le i`"
@@ -284,11 +305,11 @@ The following options are supported.
    "nu", "real", ":math:`r=0.5`", "An upper bound on the fraction of margin errors and a lower bound of the fraction of support vectors. Applies to NuSVC and NuSVR.", ":math:`0 < r \le 1`"
    "coef0", "real", ":math:`r=0`", "Constant in 'polynomial' and 'sigmoid' kernels.", "There are no constraints on :math:`r`."
    "tolerance", "real", ":math:`r=10^{-3}`", "Convergence tolerance.", ":math:`0 < r`"
-   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
-   "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`"
+   "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`"
    "max_ws_size", "integer", ":math:`i=-1`", "Specifies the maximum working set size. A value divisible by 64 is recommended for optimal performance. Setting -1 automatically selects the optimal size based on the input data.", ":math:`-1 \le i`"
    "predict probabilities", "integer", ":math:`i=0`", "Evaluate class probabilities (in addition to class predictions).Needs to be 1 if calls to predict_proba or predict_log_probaare made after fit.", ":math:`0 \le i \le 1`"
-   "gamma", "real", ":math:`r=-1`", "Parameter for 'rbf', 'polynomial', and 'sigmoid' kernels. If the value is less than 0, it is set to 1/(n_features * Var(X)).", ":math:`-1 \le r`"
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
+   "epsilon", "real", ":math:`r=0.1`", "Defines the tolerance for errors in predictions by creating an acceptable margin (tube) within which errors are not penalized. Applies to SVR", ":math:`0 \le r`"
 
 
 .. _opts_interpolation:
@@ -328,6 +349,63 @@ The following options are supported.
    "number of neighbors", "integer", ":math:`i=5`", "Number of neighbors considered for k-nearest neighbors.", ":math:`1 \le i`"
    "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
    "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+
+
+.. _opts_kernelprincipalcomponentanalysis:
+
+Kernel Principal Component Analysis
+==============================================
+
+The following options are supported.
+
+.. csv-table:: :strong:`Table of Options for Kernel Principal Component Analysis.`
+   :escape: ~
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   
+   "coef0", "real", ":math:`r=1`", "Independent term for polynomial and sigmoid kernels.", "There are no constraints on :math:`r`."
+   "kernel", "string", ":math:`s=` `linear`", "Kernel function to use.", ":math:`s=` `linear`, `poly`, `precomputed`, `rbf`, or `sigmoid`."
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+   "n_oversamples", "integer", ":math:`i=10`", "Extra columns added to the random sample to reduce approximation error. This option is only used in the randomized solver.", ":math:`0 \le i`"
+   "n_components", "integer", ":math:`i=0`", "Number of kernel principal components to compute.", ":math:`0 \le i`"
+   "degree", "integer", ":math:`i=3`", "Degree for the polynomial kernel.", ":math:`1 \le i`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "fit inverse transform", "string", ":math:`s=` `no`", "Whether to fit the inverse transform.", ":math:`s=` `no`, or `yes`."
+   "gamma", "real", ":math:`r=-1`", "Kernel coefficient for rbf, poly, and sigmoid kernels.", "There are no constraints on :math:`r`."
+   "remove zero eig", "string", ":math:`s=` `no`", "Whether to remove components whose eigenvalue is zero.", ":math:`s=` `no`, or `yes`."
+   "power normalization", "string", ":math:`s=` `qr`", "Normalization method used in the randomized solver power iteration.", ":math:`s=` `lu`, `none`, or `qr`."
+   "alpha", "real", ":math:`r=1`", "Ridge regularization parameter for the inverse transform linear solve.", ":math:`0 < r`"
+   "copy data", "string", ":math:`s=` `yes`", "Whether or not to store a copy of the training data.", ":math:`s=` `no`, or `yes`."
+   "eigensolver", "string", ":math:`s=` `auto`", "Which method to use for computing the eigendecomposition of the kernel matrix", ":math:`s=` `auto`, `randomized`, or `syevd`."
+   "power iterations", "integer", ":math:`i=-1`", "Number of power iterations used in the randomized solver.", ":math:`-1 \le i`"
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results. This option is only used in the randomized solver.", ":math:`-1 \le i`"
+
+
+.. _opts_t-sne:
+
+t-SNE
+==============================================
+
+The following options are supported.
+
+.. csv-table:: :strong:`Table of Options for t-SNE.`
+   :escape: ~
+   :header: "Option name", "Type", "Default", "Description", "Constraints"
+   
+   "mixed precision", "string", ":math:`s=` `no`", "Whether to use mixed precision iterative refinement, in which lower precision arithmetic is used before switching to the working precision for the final iterations.", ":math:`s=` `no`, or `yes`."
+   "init", "string", ":math:`s=` `pca`", "Initialization method for the embedding.", ":math:`s=` `pca`, `random`, or `supplied`."
+   "low precision max_iter", "integer", ":math:`i=200`", "If mixed precision iterative refinement is enabled, maximum number of iterations for the low precision phase.", ":math:`1 \le i`"
+   "check data", "string", ":math:`s=` `no`", "Check input data for NaNs prior to performing computation.", ":math:`s=` `no`, or `yes`."
+   "n_components", "integer", ":math:`i=2`", "Number of embedding dimensions.", ":math:`1 \le i \le 3`"
+   "max_iter", "integer", ":math:`i=1000`", "Maximum number of gradient descent iterations.", ":math:`1 \le i`"
+   "seed", "integer", ":math:`i=0`", "Seed for random number generation; set to -1 for non-deterministic results.", ":math:`-1 \le i`"
+   "perplexity", "real", ":math:`r=30`", "Target perplexity for conditional probabilities.", ":math:`1 \le r`"
+   "n_iter_without_progress", "integer", ":math:`i=300`", "Stop if no progress is made for this many iterations.", ":math:`0 \le i`"
+   "early exaggeration", "real", ":math:`r=12`", "Exaggeration factor for early iterations.", ":math:`1 \le r`"
+   "storage order", "string", ":math:`s=` `column-major`", "Whether data is supplied and returned in row- or column-major order.", ":math:`s=` `c`, `column-major`, `f`, `fortran`, or `row-major`."
+   "learning rate", "real", ":math:`r=-1`", "Gradient descent learning rate. Use any non-positive value for auto: max(N / early_exaggeration / 4, 50).", "There are no constraints on :math:`r`."
+   "min_grad_norm", "real", ":math:`r=1e-07`", "Stop if the gradient norm is below this threshold.", ":math:`0 \le r`"
+   "theta", "real", ":math:`r=0.5`", "Barnes-Hut approximation parameter (0 for exact).", ":math:`0 \le r \le 1`"
+   "low precision min_grad_norm", "real", ":math:`r=0.0001`", "If mixed precision iterative refinement is enabled, gradient norm convergence threshold for the low precision phase.", ":math:`0 \le r`"
 
 
 .. _opts_datastore:

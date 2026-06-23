@@ -46,6 +46,7 @@ function(aoclda_add_dependencies OBJ_NAME)
             core/kernel_functions
             core/interpolation
             core/approximate_neighbors
+            core/dimension_reduction
             ${CMAKE_SOURCE_DIR}/external/Lbfgsb.3.0
             ${CMAKE_SOURCE_DIR}/external/RALFit
             ${CMAKE_SOURCE_DIR}/external/RALFit/libRALFit/include
@@ -70,9 +71,10 @@ endfunction()
 set(DA_LINMOD_PUBLIC core/linear_model/linmod_public.cpp)
 set(DA_BASIC_STATISTICS_PUBLIC
     core/basic_statistics/basic_statistics_public.cpp)
-set(DA_FACTORIZATION_PUBLIC core/factorization/pca_public.cpp)
+set(DA_FACTORIZATION_PUBLIC core/factorization/pca_public.cpp
+                            core/factorization/kernel_pca_public.cpp)
 set(DA_UTILS_PUBLIC core/utilities/utils_public.cpp
-                    core/utilities/aoclda_cpp_overloads.cpp)
+                    core/utilities/aoclda_c_wrapper.cpp)
 set(DA_OPTIONS_PUBLIC core/utilities/options_public.cpp)
 set(DA_DATA
     core/data_management/interval_set.cpp
@@ -84,8 +86,7 @@ set(DA_METRICS_PUBLIC core/metrics/pairwise_distances_public.cpp)
 set(DA_NEAREST_NEIGHBORS_PUBLIC
     core/nearest_neighbors/nearest_neighbors_public.cpp)
 set(DA_CLUSTERING_PUBLIC
-    core/clustering/kmeans_public.cpp core/clustering/dbscan_public.cpp
-    core/clustering/kmeans_select_simd.cpp)
+    core/clustering/kmeans/kmeans_public.cpp core/clustering/dbscan/dbscan_public.cpp)
 set(DA_DECISION_FOREST_PUBLIC core/decision_forest/decision_tree_public.cpp
                               core/decision_forest/decision_forest_public.cpp)
 set(DA_NLLS_PUBLIC core/nlls/nlls_public.cpp)
@@ -93,8 +94,7 @@ set(DA_NLLS_INTERNAL core/nlls/nlls.cpp)
 set(DA_HANDLE_PUBLIC core/utilities/da_handle.cpp
                      core/utilities/da_handle_public.cpp)
 set(DA_CSV_PUBLIC core/csv/tokenizer.c core/csv/read_csv_public.cpp)
-set(DA_SVM_PUBLIC core/svm/svm_public.cpp core/svm/svm_select_simd.cpp
-                  core/svm/svm_select_ws.cpp)
+set(DA_SVM_PUBLIC core/svm/svm_public.cpp)
 set(DA_KERNEL_FUNCTIONS_PUBLIC
     core/kernel_functions/kernel_functions_public.cpp
     core/kernel_functions/kernel_functions_select_simd.cpp)
@@ -102,6 +102,8 @@ set(DA_INTERPOLATION_PUBLIC
     core/interpolation/interpolation_public.cpp)
 set(DA_APPROXIMATE_NEIGHBORS_PUBLIC
     core/approximate_neighbors/approximate_neighbors_public.cpp)
+set(DA_MODEL_PERSISTENCE core/utilities/model_persistence.cpp)
+set(DA_DIMENSION_REDUCTION_PUBLIC core/dimension_reduction/tsne/tsne_public.cpp)
 
 # Internal APIs require multi-compilation for different zen architectures
 set(DA_BASIC_STATISTICS_INTERNAL
@@ -110,7 +112,8 @@ set(DA_BASIC_STATISTICS_INTERNAL
     core/basic_statistics/correlation_and_covariance.cpp
     core/basic_statistics/order_statistics.cpp
     core/basic_statistics/row_to_col_major.cpp)
-set(DA_FACTORIZATION_INTERNAL core/factorization/pca.cpp)
+set(DA_FACTORIZATION_INTERNAL core/factorization/pca/pca.cpp
+                              core/factorization/kernel_pca/kernel_pca.cpp)
 set(DA_DECISION_FOREST_INTERNAL
     core/decision_forest/common/histogram.cpp
     core/decision_forest/common/scoring.cpp
@@ -124,8 +127,8 @@ set(DA_NEAREST_NEIGHBORS_INTERNAL
     core/nearest_neighbors/ball_tree.cpp
     core/nearest_neighbors/binary_tree.cpp)
 set(DA_CLUSTERING_INTERNAL
-    core/clustering/kmeans.cpp core/clustering/dbscan.cpp
-    core/clustering/kmeans_kernels.cpp)
+    core/clustering/kmeans/kmeans.cpp core/clustering/dbscan/dbscan.cpp
+    core/clustering/kmeans/kmeans_kernels.cpp)
 set(DA_UTILS_INTERNAL
     core/utilities/da_utils.cpp
     core/utilities/train_test_split.cpp)
@@ -155,6 +158,10 @@ set(DA_INTERPOLATION_INTERNAL
     core/interpolation/cubic_spline/cubic_spline.cpp)
 set(DA_APPROXIMATE_NEIGHBORS_INTERNAL
     core/approximate_neighbors/approximate_neighbors.cpp)
+set(DA_DIMENSION_REDUCTION_INTERNAL
+    core/dimension_reduction/tsne/tsne.cpp
+    core/dimension_reduction/tsne/tsne_kernels.cpp
+    core/dimension_reduction/tsne/barnes_hut.cpp)
 
 set(DA_CORE_PUBLIC
     ${DA_LINMOD_PUBLIC}
@@ -175,7 +182,9 @@ set(DA_CORE_PUBLIC
     ${DA_SVM_PUBLIC}
     ${DA_KERNEL_FUNCTIONS_PUBLIC}
     ${DA_INTERPOLATION_PUBLIC}
-    ${DA_APPROXIMATE_NEIGHBORS_PUBLIC})
+    ${DA_APPROXIMATE_NEIGHBORS_PUBLIC}
+    ${DA_DIMENSION_REDUCTION_PUBLIC}
+    ${DA_MODEL_PERSISTENCE})
 
 set(DA_CORE_DYNAMIC_DISPATCH
     ${DA_FACTORIZATION_INTERNAL}
@@ -192,7 +201,8 @@ set(DA_CORE_DYNAMIC_DISPATCH
     ${DA_KERNEL_FUNCTIONS_INTERNAL}
     ${DA_METRICS_INTERNAL}
     ${DA_INTERPOLATION_INTERNAL}
-    ${DA_APPROXIMATE_NEIGHBORS_INTERNAL})
+    ${DA_APPROXIMATE_NEIGHBORS_INTERNAL}
+    ${DA_DIMENSION_REDUCTION_INTERNAL})
 
 if(ARCH STREQUAL "dynamic")
   # Build archs list
@@ -235,13 +245,13 @@ if(ARCH STREQUAL "dynamic")
   # Dynamic dispatch: get a list of compilation architectures and associated
   # compile definitions
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS})
-  target_compile_definitions(da_core_public PRIVATE ${DEFINITIONS})
+  set(ARCH_DEFS ${DEFINITIONS})
 elseif(ARCH STREQUAL "generic")
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS})
-  target_compile_definitions(da_core_public PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+  set(ARCH_DEFS generic_AVAILABLE;ZNVER_MAX=generic)
 elseif(ARCH STREQUAL "generic_avx512")
   target_compile_options(da_core_public PRIVATE ${GENERIC_FLAGS} ${GENERIC_AVX512_FLAGS})
-  target_compile_definitions(da_core_public PRIVATE generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
+  set(ARCH_DEFS generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
 elseif(ARCH STREQUAL "native")
   # For native builds we need to extract the architecture corresponding to the
   # -march=native flag in order to use the correct namespace in the source code
@@ -249,17 +259,14 @@ elseif(ARCH STREQUAL "native")
   set(NATIVE_NAMESPACE
       ${NATIVE_NAMESPACE}
       PARENT_SCOPE)
+  target_compile_options(da_core_public PRIVATE -march=native)
   if(NATIVE_NAMESPACE STREQUAL "generic")
-    target_compile_definitions(da_core_public
-                               PRIVATE generic_AVAILABLE;ZNVER_MAX=generic)
+    set(ARCH_DEFS generic_AVAILABLE;ZNVER_MAX=generic)
   elseif(NATIVE_NAMESPACE STREQUAL "generic_avx512")
-    target_compile_definitions(
-      da_core_public PRIVATE generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
+    set(ARCH_DEFS generic_avx512_AVAILABLE;ZNVER_MAX=generic_avx512)
   else()
     message(NOTICE "Building using znver${NATIVE_NAMESPACE} namespace.")
-    target_compile_definitions(
-      da_core_public
-      PRIVATE
+    set(ARCH_DEFS
         znver${NATIVE_NAMESPACE}_AVAILABLE;ZNVER_MAX=zen${NATIVE_NAMESPACE})
   endif()
 else()
@@ -267,9 +274,12 @@ else()
   # appropriate compile options
   target_compile_options(da_core_public PRIVATE -march=${ARCH})
   extract_znver_generation(ARCH MAX_ZNVER)
-  target_compile_definitions(
-    da_core_public PRIVATE ${ARCH}_AVAILABLE;ZNVER_MAX=zen${MAX_ZNVER})
+  set(ARCH_DEFS ${ARCH}_AVAILABLE;ZNVER_MAX=zen${MAX_ZNVER})
 endif()
+target_compile_definitions(da_core_public PRIVATE ${ARCH_DEFS})
+set(ARCH_DEFS
+    ${ARCH_DEFS}
+    PARENT_SCOPE)
 
 # Store for display purposes
 set(BUILD_ARCHS

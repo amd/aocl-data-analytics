@@ -132,9 +132,9 @@ template <typename T> void test_functionality(const ANNParamType<T> &param) {
     EXPECT_EQ(da_approx_nn_train_and_add<T>(handle), da_status_success);
 
     // Call with return_distance=false
-    EXPECT_EQ(da_approx_nn_kneighbors(handle, param.n_queries, param.n_features,
-                                      param.X_test.data(), param.ldx_test, k_ind.data(),
-                                      nullptr, param.k, false),
+    EXPECT_EQ(da_approx_nn_kneighbors<T>(handle, param.n_queries, param.n_features,
+                                         param.X_test.data(), param.ldx_test,
+                                         k_ind.data(), nullptr, param.k, false),
               da_status_success);
 
     if (!param.expected_kind.empty()) {
@@ -365,9 +365,9 @@ template <typename T> void test_ann_recall(const ANNParamType<T> &param) {
     std::vector<da_int> computed_indices(k_neigh * nsamples_test);
 
     T recall;
-    EXPECT_EQ(da_approx_nn_kneighbors(ann_handle, nsamples_test, nfeat, X_test.data(),
-                                      ldx_test, computed_indices.data(), nullptr, k_neigh,
-                                      false),
+    EXPECT_EQ(da_approx_nn_kneighbors<T>(ann_handle, nsamples_test, nfeat, X_test.data(),
+                                         ldx_test, computed_indices.data(), nullptr,
+                                         k_neigh, false),
               da_status_success);
 
     // Compute recall based on inputs and computed_indices
@@ -734,7 +734,16 @@ TYPED_TEST(ANNTest, MultipleCalls) {
                                                  param.n_features, param.X_train.data(),
                                                  param.ldx_train),
                   da_status_success);
+        // Check da_trained before training
+        da_int tr_dim = 1, tr_val = -1;
+        EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+                  da_status_success);
+        EXPECT_EQ(tr_val, 0);
         EXPECT_EQ(da_approx_nn_train<TypeParam>(handle), da_status_success);
+        // Check da_trained after training
+        EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+                  da_status_success);
+        EXPECT_EQ(tr_val, 1);
 
         EXPECT_EQ(da_approx_nn_add(handle, param.n_samples, param.n_features,
                                    param.X_train.data(), param.ldx_train),
@@ -798,8 +807,9 @@ TYPED_TEST(ANNTest, BadHandleTests) {
               da_status_handle_not_initialized);
 
     EXPECT_EQ(da_approx_nn_add(handle, 1, 1, &X, 1), da_status_handle_not_initialized);
-    EXPECT_EQ(da_approx_nn_kneighbors(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
-              da_status_handle_not_initialized);
+    EXPECT_EQ(
+        da_approx_nn_kneighbors<TypeParam>(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
+        da_status_handle_not_initialized);
 
     // Incorrect handle type
     EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_linmod), da_status_success);
@@ -808,8 +818,9 @@ TYPED_TEST(ANNTest, BadHandleTests) {
               da_status_invalid_handle_type);
 
     EXPECT_EQ(da_approx_nn_add(handle, 1, 1, &X, 1), da_status_invalid_handle_type);
-    EXPECT_EQ(da_approx_nn_kneighbors(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
-              da_status_invalid_handle_type);
+    EXPECT_EQ(
+        da_approx_nn_kneighbors<TypeParam>(handle, 1, 1, &X, 1, &I, nullptr, 1, false),
+        da_status_invalid_handle_type);
 
     da_handle_destroy(&handle);
 }

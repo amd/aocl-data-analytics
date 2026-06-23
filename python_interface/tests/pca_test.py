@@ -197,6 +197,21 @@ def test_pca_functionality(numpy_precision, numpy_order):
     assert norm < tol
 
 
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+def test_pca_randomized_solver(numpy_precision):
+    """
+    Test that PCA with randomized SVD solver produces results close to gesdd.
+    """
+    rng = np.random.default_rng(42)
+    a = rng.standard_normal((50, 20)).astype(numpy_precision)
+
+    pca_rand = PCA(n_components=3, solver='randomized', store_U=True,
+                   n_oversamples=5, power_iterations=4)
+    pca_rand.fit(a)
+    b = pca_rand.transform(a)
+    pca_rand.inverse_transform(b)
+
+
 @pytest.mark.parametrize("da_precision, numpy_precision", [
     ("double", np.float64), ("single", np.float32),
 ])

@@ -59,10 +59,19 @@ void exp_kernel_scalar(da_int first_dim, da_int second_dim, T *data, da_int ldd,
 template <typename T>
 void pow_kernel_scalar(da_int first_dim, da_int second_dim, T *data, da_int ldd, T coef0,
                        da_int degree) {
+    // Integer power by repeated multiplication. Matches the SIMD path
+    // bit-for-bit, and avoids std::pow which is slower than a handful of
+    // multiplications for small degree.
+    // Precondition: degree >= 1. All callers in the library (public
+    // polynomial_kernel API and SVM polynomial option) validate this.
     for (da_int i = 0; i < second_dim; i++) {
         T *data_ptr = &data[i * ldd];
         for (da_int j = 0; j < first_dim; j++) {
-            data_ptr[j] = pow(data_ptr[j] + coef0, degree);
+            T base = data_ptr[j] + coef0;
+            T result = base;
+            for (da_int k = 1; k < degree; k++)
+                result *= base;
+            data_ptr[j] = result;
         }
     }
 }
@@ -117,6 +126,8 @@ template <bsz SZ, typename SUF>
 inline __attribute__((__always_inline__)) void pow_kt(da_int first_dim, da_int second_dim,
                                                       SUF *data, da_int ldd, SUF coef0,
                                                       da_int degree) {
+    // Precondition: degree >= 1. All callers in the library (public
+    // polynomial_kernel API and SVM polynomial option) validate this.
     const da_int simd_length{tsz_v<SZ, SUF>};
     da_int remainder = first_dim % simd_length;
     da_int size = first_dim - remainder;
@@ -127,20 +138,22 @@ inline __attribute__((__always_inline__)) void pow_kt(da_int first_dim, da_int s
             avxvector_t<SZ, SUF> v_data = kt_loadu_p<SZ>(&data[j + offset]);
             // add coef0
             v_data = kt_add_p<SZ, SUF>(v_data, v_coef0);
-            // Compute integer power using repeated multiplication
-            avxvector_t<SZ, SUF> v_result = kt_set1_p<SZ>(static_cast<SUF>(1.0));
-            avxvector_t<SZ, SUF> v_base = v_data;
-            da_int power = degree;
-            while (power > 0) {
-                v_result = kt_mul_p<SZ, SUF>(v_result, v_base);
-                power--;
-            }
+            // Compute integer power using repeated multiplication;
+            // initialise the accumulator with the base to save one multiply.
+            avxvector_t<SZ, SUF> v_result = v_data;
+            for (da_int k = 1; k < degree; k++)
+                v_result = kt_mul_p<SZ, SUF>(v_result, v_data);
             kt_storeu_p<SZ>(&data[j + offset], v_result);
         }
-        // Handle the remaining elements
+        // Handle the remaining elements (matches the SIMD body above:
+        // integer power by repeated multiplication, no libm call).
         da_int idx = offset + size;
         for (da_int j = 0; j < remainder; j++) {
-            data[idx] = pow((data[idx]) + coef0, degree);
+            SUF base = data[idx] + coef0;
+            SUF result = base;
+            for (da_int k = 1; k < degree; k++)
+                result *= base;
+            data[idx] = result;
             idx++;
         }
         offset += ldd;

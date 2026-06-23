@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -103,7 +103,7 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
  * @rst
  * Compute the decision tree parameters given the data passed by :ref:`da_tree_set_training_data_? <da_tree_set_training_data>`.
  * Note that you can customize the model before using the fit function through the use of optional parameters,
- * see :ref:`this section <opts_decisionforests>` for a list of available options.
+ * see :ref:`this section <opts_decisiontrees>` for a list of available options.
  * @endrst
  *
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_tree.
@@ -119,8 +119,9 @@ da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
  *
  * \post
  * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enum:
- * - \p da_rinfo - return an array of size 5 containing \p n_features, \p n_samples, the number of samples the tree was
- *   trained on, the value of the random seed used to fit the tree and the depth of the tree.
+ * - \p da_rinfo - return an array of size 8 containing: \p n_features, \p n_samples, the number of samples the tree was
+ *   trained on, the value of the random seed used to fit the tree, the depth of the tree, the number of nodes,
+ *   the number of leaves, and the number of threads used in training.
  */
 da_status da_tree_fit_d(da_handle handle);
 da_status da_tree_fit_s(da_handle handle);
@@ -132,7 +133,7 @@ da_status da_tree_fit_s(da_handle handle);
  * @rst
  * Compute the decision forest parameters given the data passed by :ref:`da_forest_set_training_data_? <da_forest_set_training_data>`.
  * Note that you can customize the model before using the fit function through the use of optional parameters,
- * see :ref:`this section <opts_decisiontrees>` for a list of available options.
+ * see :ref:`this section <opts_decisionforests>` for a list of available options.
  * @endrst
  *
  * @param[inout] handle a @ref da_handle object, initialized with type @ref da_handle_decision_forest.
@@ -148,8 +149,9 @@ da_status da_tree_fit_s(da_handle handle);
  *
  * \post
  * After successful execution, \ref da_handle_get_result_s "da_handle_get_result_?" can be queried with the following enum:
- * - \p da_rinfo - return an array of size 5 containing \p n_features, \p n_samples, the number of samples the tree was
- *   trained on, the value of the random seed used by the RNG and \p n_tree, the total number of trees in the forest.
+ * - \p da_rinfo - return an array of size 6 containing \p n_features, \p n_samples, the number of samples the tree was
+ *   trained on, the value of the random seed used by the RNG and \p n_tree, the total number of trees in the forest,
+ *   and the number of threads used by individual trees.
 */
 da_status da_forest_fit_d(da_handle handle);
 da_status da_forest_fit_s(da_handle handle);
@@ -344,9 +346,9 @@ da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n
  *
  * @rst
  * After a model has been fitted using :ref:`da_forest_fit_? <da_forest_fit>`, it can be used to generate predicted labels on new data. This
- * function returns the decision forest class log probabilities in the array ``y_pred``.
+ * function returns the decision forest class log probabilities in the array ``y_log_proba``.
  *
- * For each data point ``i``, and class ``j``, the ``(i,j)`` element of ``y_proba`` will contain the class log probability
+ * For each data point ``i``, and class ``j``, the ``(i,j)`` element of ``y_log_proba`` will contain the class log probability
  * according to the decision forest, and the ``(i,j)`` element of
  * ``X_test`` should contain the feature ``j`` for observation ``i``.
  * @endrst

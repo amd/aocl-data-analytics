@@ -500,15 +500,23 @@ da_status nusvc<T>::initialisation(da_int &size, std::vector<T> &gradient,
                                    da_cache::LRUCache<T> &cache) {
     std::vector<T> alpha_diff;
     this->C = 1;
+
+    // Initialise response
+    for (da_int i = 0; i < size; i++) {
+        response[i] = this->y[i] == 0 ? -1.0 : this->y[i];
+    }
+
+    // For warm start, only response and C are needed
+    if (this->has_warm_start) {
+        return da_status_success;
+    }
+
+    // Initialise alpha
     try {
         alpha_diff.resize(size);
     } catch (std::bad_alloc &) {                           // LCOV_EXCL_LINE
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
-    }
-    // Initialise response and alpha
-    for (da_int i = 0; i < size; i++) {
-        response[i] = this->y[i] == 0 ? -1.0 : this->y[i];
     }
     T sum_pos = this->nu * this->n / 2;
     T sum_neg = sum_pos;
@@ -538,6 +546,17 @@ template <typename T>
 da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
                                    std::vector<T> &response, std::vector<T> &alpha,
                                    da_cache::LRUCache<T> &cache) {
+    // Initialise response (needed for both cold and warm start)
+    for (da_int i = 0; i < size; i++) {
+        response[i] = 1.0;
+        response[i + size] = -1.0;
+    }
+
+    // For warm start, only response is needed; alpha and gradient
+    // will be overwritten by the caller
+    if (this->has_warm_start)
+        return da_status_success;
+
     std::vector<T> alpha_diff;
     T sum = this->C * this->nu * size / 2;
     try {
@@ -546,12 +565,10 @@ da_status nusvr<T>::initialisation(da_int &size, std::vector<T> &gradient,
         return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                         "Memory allocation error");
     }
-    // Initialise response and alpha
+    // Initialise gradient and alpha
     for (da_int i = 0; i < size; i++) {
         gradient[i] = -this->y[i];
         gradient[i + size] = -this->y[i];
-        response[i] = 1.0;
-        response[i + size] = -1.0;
         alpha[i] = std::min(this->C, sum);
         alpha[i + size] = alpha[i];
         sum -= alpha[i];

@@ -34,13 +34,14 @@
 #include <unordered_map>
 
 enum dispatch_architecture {
-    generic = 0,
+    generic = 1,
     generic_avx512, // for non-Zen AVX512 enabled machines
-    zen2 = 2,
-    zen3 = 3,
-    zen4 = 4,
-    zen5 = 5,
-    zen_new = zen5, // Replace with next generation; needs to be AVX512F/DQ/VL compatible
+    zen2,
+    zen3,
+    zen4,
+    zen5,
+    zen6,
+    zen_new = zen6, // Replace with next generation; needs to be AVX512F/DQ/VL compatible
 };
 
 // ISA context preference
@@ -58,7 +59,8 @@ enum class context_isa_t {
     AVX512_VBMI = 10,
     AVX512_VNNI = 11,
     AVX512_VPOPCNTDQ = 12,
-    LENGTH = 13
+    AVX512_FP16 = 13,
+    LENGTH = 14
 };
 
 /* This function is borrowed from aoclsparse and used to query the environment variable and return
@@ -94,8 +96,8 @@ class context {
     dispatch_architecture local_arch = generic;
 
     // Set max_target_arch to the maximum Zen generation that was compiled, set by the ZNVER_MAX compile option
-    // For a dynamic dispatch build, this will likely be zen3, zen4 or zen5 depending on the compiler
-    // For a native or specific build this could be generic, generic_avx512, zen2, zen3, zen4 or zen5
+    // For a dynamic dispatch build, this will likely be zen3, zen4, zen5 or zen6 depending on the compiler
+    // For a native or specific build this could be generic, generic_avx512, zen2, zen3, zen4, zen5 or zen6
     dispatch_architecture max_target_arch = ZNVER_MAX;
 
     bool cpuflags[static_cast<int>(context_isa_t::LENGTH)];
@@ -123,6 +125,8 @@ class context {
                     this->arch = zen4;
                 } else if (env_arch == "zen5" && local_arch >= zen5) {
                     this->arch = zen5;
+                } else if (env_arch == "zen6" && local_arch >= zen6) {
+                    this->arch = zen6;
                 }
                 // don't change if "invalid"
             }
@@ -170,9 +174,15 @@ class context {
         this->cpuflags[static_cast<int>(context_isa_t::AVX512_VPOPCNTDQ)] =
             Cpu.hasFlag(Au::ECpuidFlag::avx512_vpopcntdq);
 
+        this->cpuflags[static_cast<int>(context_isa_t::AVX512_FP16)] =
+            Cpu.hasFlag(Au::ECpuidFlag::avx512_fp16);
+
         has_avx512 = this->cpuflags[static_cast<int>(context_isa_t::AVX512F)] &&
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512DQ)] &&
                      this->cpuflags[static_cast<int>(context_isa_t::AVX512VL)];
+
+        has_avx512_fp16 = this->cpuflags[static_cast<int>(context_isa_t::AVX512_FP16)];
+
         //LCOV_EXCL_START
         switch (uarch) {
         case Au::EUarch::Zen:
@@ -191,6 +201,9 @@ class context {
         case Au::EUarch::Zen5:
             local_arch = zen5;
             break;
+        case Au::EUarch::Zen6:
+            local_arch = zen6;
+            break;
         default:
             // Check to see if it is a new Zen model
             if (Cpu.isAMD()) {
@@ -207,9 +220,9 @@ class context {
 
         /*
 max target arch can be:
-  generic, generic_avx512, zen2, zen3, zen4, zen5
+  generic, generic_avx512, zen2, zen3, zen4, zen5, zen6
 local arch can be:
-  generic, generic_avx512, zen2, zen3, zen4, zen5
+  generic, generic_avx512, zen2, zen3, zen4, zen5, zen6
 */
 
         // Deal with the special case of Zen 4+ with AVX-512 support disabled by treating it as Zen 3
@@ -240,6 +253,9 @@ local arch can be:
 
     // shortcut to check if the architecture supports AVX512
     bool has_avx512 = false;
+
+    // shortcut to check if the architecture supports AVX512 FP16
+    bool has_avx512_fp16 = false;
 
     dispatch_architecture arch = generic;
 

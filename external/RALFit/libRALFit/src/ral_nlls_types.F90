@@ -1,4 +1,4 @@
-! Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+! Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 ! ral_nlls_types :: Globally defines the types used
 !
 ! Working precision (wp) for reals(Kind=wp)
@@ -18,6 +18,7 @@ module MODULE_PREC(ral_nlls_types)
 
    Integer, Parameter :: np = selected_real_kind(15) ! c_double
    Integer, Parameter :: lp = selected_real_kind(6) ! c_float
+   Integer, Parameter :: ktimer = c_int64_t ! 8 bytes integer
 
 #ifdef SINGLE_PRECISION
    Integer, Parameter :: wp = lp

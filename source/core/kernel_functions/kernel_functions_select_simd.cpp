@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,16 +30,10 @@
 /*
   This file contains a series of overloads for the select_simd_size function, which is used to determine
   the SIMD size for different architectures and data types. The function is specialized for
-  various architectures, including Zen2, Zen3, Zen4, and Zen5. Each specialization takes the working set size,
+  various architectures, including Zen2, Zen3, Zen4, Zen5, and Zen6. Each specialization takes the working set size,
   the architecture and the data type, and uses those to choose the optimal kernel type (AVX, AVX2, AVX512)
   and the appropriate padding required for memory allocation to ensure the simd length fits neatly in the kernels.
   */
-
-// Define a struct to hold threshold and corresponding kernel type
-struct KernelSelection {
-    da_int threshold;
-    vectorization_type kernel;
-};
 
 // Default lookup tables
 namespace da_kernel_functions {
@@ -122,84 +116,34 @@ void select_simd_size_avx512(da_int size, vectorization_type &kernel_type) {
                       : lookup_kernel_kf(da_kernel_functions::double_avx512_, size);
 }
 
+// Macro to generate architecture-specific specializations.
+// SELECT_FN is the helper function to delegate to
+// (either select_simd_size_default or select_simd_size_avx512).
+// clang-format off
+#define KF_SIMD_SPECIALIZATION(DISPATCH_NS, SELECT_FN)                                   \
+namespace DISPATCH_NS {                                                                  \
+namespace da_kernel_functions {                                                          \
+template <class T>                                                                       \
+void select_simd_size(da_int size, vectorization_type &kernel_type) {                     \
+    SELECT_FN<T>(size, kernel_type);                                                     \
+}                                                                                        \
+template void select_simd_size<float>(da_int, vectorization_type &);                     \
+template void select_simd_size<double>(da_int, vectorization_type &);                    \
+} /* namespace da_kernel_functions */                                                    \
+} /* namespace DISPATCH_NS */
+// clang-format on
+
 // Specializations for different architectures
 
-namespace da_dynamic_dispatch_generic {
-namespace da_kernel_functions {
-template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
+// AVX2-only architectures
+KF_SIMD_SPECIALIZATION(da_dynamic_dispatch_generic, select_simd_size_default)
+KF_SIMD_SPECIALIZATION(da_dynamic_dispatch_zen2, select_simd_size_default)
+KF_SIMD_SPECIALIZATION(da_dynamic_dispatch_zen3, select_simd_size_default)
 
-    select_simd_size_default<T>(size, kernel_type);
-}
+// AVX512-capable architectures
+KF_SIMD_SPECIALIZATION(da_dynamic_dispatch_generic_avx512, select_simd_size_avx512)
+KF_SIMD_SPECIALIZATION(da_dynamic_dispatch_zen4, select_simd_size_avx512)
+KF_SIMD_SPECIALIZATION(da_dynamic_dispatch_zen5, select_simd_size_avx512)
+KF_SIMD_SPECIALIZATION(da_dynamic_dispatch_zen6, select_simd_size_avx512)
 
-// Explicit instantiations
-template void select_simd_size<float>(da_int size, vectorization_type &kernel_type);
-template void select_simd_size<double>(da_int size, vectorization_type &kernel_type);
-
-} // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_generic
-
-namespace da_dynamic_dispatch_generic_avx512 {
-namespace da_kernel_functions {
-template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
-
-    select_simd_size_avx512<T>(size, kernel_type);
-}
-
-// Explicit instantiations
-template void select_simd_size<float>(da_int size, vectorization_type &kernel_type);
-template void select_simd_size<double>(da_int size, vectorization_type &kernel_type);
-
-} // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_generic_avx512
-
-namespace da_dynamic_dispatch_zen2 {
-namespace da_kernel_functions {
-template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
-
-    select_simd_size_default<T>(size, kernel_type);
-}
-
-// Explicit instantiations
-template void select_simd_size<float>(da_int size, vectorization_type &kernel_type);
-template void select_simd_size<double>(da_int size, vectorization_type &kernel_type);
-} // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_zen2
-
-namespace da_dynamic_dispatch_zen3 {
-namespace da_kernel_functions {
-template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
-
-    select_simd_size_default<T>(size, kernel_type);
-}
-
-// Explicit instantiations
-template void select_simd_size<float>(da_int size, vectorization_type &kernel_type);
-template void select_simd_size<double>(da_int size, vectorization_type &kernel_type);
-} // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_zen3
-
-namespace da_dynamic_dispatch_zen4 {
-namespace da_kernel_functions {
-template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
-
-    select_simd_size_avx512<T>(size, kernel_type);
-}
-
-// Explicit instantiations
-template void select_simd_size<float>(da_int size, vectorization_type &kernel_type);
-template void select_simd_size<double>(da_int size, vectorization_type &kernel_type);
-} // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_zen4
-
-namespace da_dynamic_dispatch_zen5 {
-namespace da_kernel_functions {
-template <class T> void select_simd_size(da_int size, vectorization_type &kernel_type) {
-
-    select_simd_size_avx512<T>(size, kernel_type);
-}
-
-// Explicit instantiations
-template void select_simd_size<float>(da_int size, vectorization_type &kernel_type);
-template void select_simd_size<double>(da_int size, vectorization_type &kernel_type);
-} // namespace da_kernel_functions
-} // namespace da_dynamic_dispatch_zen5
+#undef KF_SIMD_SPECIALIZATION

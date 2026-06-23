@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,199 +32,135 @@
 
 using namespace decision_forest_public;
 
-da_status da_forest_set_training_data_d(da_handle handle, da_int n_samples,
-                                        da_int n_features, da_int n_class,
-                                        const double *X, da_int ldx, const da_int *y,
-                                        const da_int *categorical_features) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (
-            decision_forest_set_data<da_decision_forest::decision_forest<double>, double>(
-                handle, n_samples, n_features, n_class, X, ldx, y,
-                categorical_features)));
-}
-
-da_status da_forest_set_training_data_s(da_handle handle, da_int n_samples,
-                                        da_int n_features, da_int n_class, const float *X,
-                                        da_int ldx, const da_int *y,
-                                        const da_int *categorical_features) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (
-            decision_forest_set_data<da_decision_forest::decision_forest<float>, float>(
-                handle, n_samples, n_features, n_class, X, ldx, y,
-                categorical_features)));
-}
-
-da_status da_forest_fit_d(da_handle handle) {
+template <typename T>
+da_status da_forest_set_training_data(da_handle handle, da_int n_samples,
+                                      da_int n_features, da_int n_class, const T *X,
+                                      da_int ldx, const da_int *y,
+                                      const da_int *categorical_features) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
 
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(
         handle->err,
-        return (decision_forest_fit<da_decision_forest::decision_forest<double>, double>(
-            handle)));
+        return (decision_forest_set_data<da_decision_forest::decision_forest<T>, T>(
+            handle, n_samples, n_features, n_class, X, ldx, y, categorical_features)));
 }
-da_status da_forest_fit_s(da_handle handle) {
+
+template <typename T> da_status da_forest_fit(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
 
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(
         handle->err,
-        return (decision_forest_fit<da_decision_forest::decision_forest<float>, float>(
-            handle)));
+        return (decision_forest_fit<da_decision_forest::decision_forest<T>, T>(handle)));
 }
 
-da_status da_forest_predict_d(da_handle handle, da_int n_samples, da_int n_features,
-                              const double *X_test, da_int ldx_test, da_int *y_pred) {
+template <typename T>
+da_status da_forest_predict(da_handle handle, da_int n_samples, da_int n_features,
+                            const T *X_test, da_int ldx_test, da_int *y_pred) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (
-            decision_forest_predict<da_decision_forest::decision_forest<double>, double>(
-                handle, n_samples, n_features, X_test, ldx_test, y_pred)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err,
+               return (decision_forest_predict<da_decision_forest::decision_forest<T>, T>(
+                   handle, n_samples, n_features, X_test, ldx_test, y_pred)));
 }
 
-da_status da_forest_predict_s(da_handle handle, da_int n_samples, da_int n_features,
-                              const float *X_test, da_int ldx_test, da_int *y_pred) {
+template <typename T>
+da_status da_forest_predict_proba(da_handle handle, da_int n_samples, da_int n_features,
+                                  const T *X_test, da_int ldx_test, T *y_pred,
+                                  da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (
-            decision_forest_predict<da_decision_forest::decision_forest<float>, float>(
-                handle, n_samples, n_features, X_test, ldx_test, y_pred)));
-}
 
-da_status da_forest_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
-                                    const double *X_test, da_int ldx_test, double *y_pred,
-                                    da_int n_class, da_int ldy) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(
         handle->err,
-        return (decision_forest_predict_proba<da_decision_forest::decision_forest<double>,
-                                              double>(
-            handle, n_samples, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
-}
-da_status da_forest_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
-                                    const float *X_test, da_int ldx_test, float *y_pred,
-                                    da_int n_class, da_int ldy) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (decision_forest_predict_proba<da_decision_forest::decision_forest<float>,
-                                              float>(
+        return (decision_forest_predict_proba<da_decision_forest::decision_forest<T>, T>(
             handle, n_samples, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
 }
 
-da_status da_forest_predict_log_proba_d(da_handle handle, da_int n_obs, da_int n_features,
-                                        const double *X_test, da_int ldx_test,
-                                        double *y_pred, da_int n_class, da_int ldy) {
+template <typename T>
+da_status da_forest_predict_log_proba(da_handle handle, da_int n_obs, da_int n_features,
+                                      const T *X_test, da_int ldx_test, T *y_pred,
+                                      da_int n_class, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err,
-               return (decision_forest_predict_log_proba<
-                       da_decision_forest::decision_forest<double>, double>(
-                   handle, n_obs, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
-}
 
-da_status da_forest_predict_log_proba_s(da_handle handle, da_int n_obs, da_int n_features,
-                                        const float *X_test, da_int ldx_test,
-                                        float *y_pred, da_int n_class, da_int ldy) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err,
-               return (decision_forest_predict_log_proba<
-                       da_decision_forest::decision_forest<float>, float>(
-                   handle, n_obs, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
-}
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
-da_status da_forest_score_d(da_handle handle, da_int n_samples, da_int n_features,
-                            const double *X_test, da_int ldx_test, const da_int *y_test,
-                            double *mean_accuracy) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // Clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
     DISPATCHER(
         handle->err,
         return (
-            decision_forest_score<da_decision_forest::decision_forest<double>, double>(
-                handle, n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy)));
+            decision_forest_predict_log_proba<da_decision_forest::decision_forest<T>, T>(
+                handle, n_obs, n_features, X_test, ldx_test, y_pred, n_class, ldy)));
 }
 
-da_status da_forest_score_s(da_handle handle, da_int n_samples, da_int n_features,
-                            const float *X_test, da_int ldx_test, const da_int *y_test,
-                            float *mean_accuracy) {
+template <typename T>
+da_status da_forest_score(da_handle handle, da_int n_samples, da_int n_features,
+                          const T *X_test, da_int ldx_test, const da_int *y_test,
+                          T *mean_accuracy) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // Clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(
         handle->err,
-        return (decision_forest_score<da_decision_forest::decision_forest<float>, float>(
+        return (decision_forest_score<da_decision_forest::decision_forest<T>, T>(
             handle, n_samples, n_features, X_test, ldx_test, y_test, mean_accuracy)));
 }
+
+template da_status da_forest_set_training_data<float>(da_handle, da_int, da_int, da_int,
+                                                      const float *, da_int,
+                                                      const da_int *, const da_int *);
+template da_status da_forest_set_training_data<double>(da_handle, da_int, da_int, da_int,
+                                                       const double *, da_int,
+                                                       const da_int *, const da_int *);
+template da_status da_forest_fit<float>(da_handle);
+template da_status da_forest_fit<double>(da_handle);
+template da_status da_forest_predict<float>(da_handle, da_int, da_int, const float *,
+                                            da_int, da_int *);
+template da_status da_forest_predict<double>(da_handle, da_int, da_int, const double *,
+                                             da_int, da_int *);
+template da_status da_forest_predict_proba<float>(da_handle, da_int, da_int,
+                                                  const float *, da_int, float *, da_int,
+                                                  da_int);
+template da_status da_forest_predict_proba<double>(da_handle, da_int, da_int,
+                                                   const double *, da_int, double *,
+                                                   da_int, da_int);
+template da_status da_forest_predict_log_proba<float>(da_handle, da_int, da_int,
+                                                      const float *, da_int, float *,
+                                                      da_int, da_int);
+template da_status da_forest_predict_log_proba<double>(da_handle, da_int, da_int,
+                                                       const double *, da_int, double *,
+                                                       da_int, da_int);
+template da_status da_forest_score<float>(da_handle, da_int, da_int, const float *,
+                                          da_int, const da_int *, float *);
+template da_status da_forest_score<double>(da_handle, da_int, da_int, const double *,
+                                           da_int, const da_int *, double *);

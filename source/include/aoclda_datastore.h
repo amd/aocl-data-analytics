@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2024 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -75,7 +75,7 @@ void da_datastore_destroy(da_datastore *store);
 void da_datastore_destroy(da_datastore *store);
 
 /**
- * @brief print The list and the values of all the optional parameter of a given @ref da_datastore.
+ * @brief Print the list and the values of all the optional parameters of a given @ref da_datastore.
  *
  * @param store the main @ref da_datastore.
  * @return @ref da_status. The function returns:
@@ -181,7 +181,7 @@ da_status da_data_load_col_str(da_datastore store, da_int n_rows, da_int n_cols,
  * @rst
  * The ``da_data_load_row_?`` routines will try to add rows at the bottom of the data store passed in the argument.
  * If data was already loaded in the store, the routines must be called repeatedly until the columns of the new blocks
- * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the store's structure).
+ * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the data store structure).
  * @endrst
  *
  * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row-major
@@ -223,7 +223,7 @@ da_status da_data_load_row_uint8(da_datastore store, da_int n_rows, da_int n_col
  * @rst
  * The ``da_data_load_row_str`` routine will try to add rows at the bottom of the data store passed in the argument.
  * If data was already loaded in the store, the routines must be called repeatedly until the columns of the new blocks
- * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the stores structure).
+ * match the structure of the existing store (see :ref:`the introduction section <datastores_intro>` for more details on the store's structure).
  * @endrst
  *
  * The new data is expected to be provided as an @p n_rows @f$\times @f$ @p n_cols dense block and can be passed in row-major
@@ -366,7 +366,7 @@ da_status da_data_select_non_missing(da_datastore store, const char *key,
  * @brief Remove the columns indexed by the values between @p lbound and @p ubound from an existing
  * selection.
  * Column indices are zero-based, meaning the index of the first column is 0 and the index of
- * the last one is @p n_rows-1.
+ * the last one is @p n_cols-1.
  *
  * A warning @ref da_status_invalid_input is returned if @p key does not designate a valid
  * selection.
@@ -542,7 +542,7 @@ da_status da_data_get_n_rows(da_datastore store, da_int *n_rows);
 
 /** \{ */
 /**
- * @brief Get the number of rows in the store.
+ * @brief Get the number of columns in the store.
  *
  * @param[in] store main data structure.
  * @param[out] n_cols contains the number of columns in @p store on output.

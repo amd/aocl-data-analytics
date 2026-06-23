@@ -324,6 +324,27 @@ def test_small_histograms(numpy_precision, numpy_order):
     assert score > 0.5 and score < 0.9
 
 
+def test_n_threads():
+    """
+    Test that the n_threads property returns the number of threads used.
+    The tree no longer exposes a max_threads option; only the internal heuristic
+    (bounded by n_features / 4) applies.
+    """
+    rng = np.random.default_rng(42)
+    n_samples, n_features = 50, 20
+    X_train = rng.standard_normal((n_samples, n_features)).astype(np.float64)
+    y_train = rng.integers(0, 4, size=n_samples).astype(np.int32)
+
+    tree = decision_tree(seed=42)
+    tree.fit(X_train, y_train)
+    assert tree.n_threads >= 1 and tree.n_threads <= n_features // 4
+
+    # n_threads should raise before fit (model info not available)
+    tree = decision_tree(seed=42)
+    with pytest.raises(RuntimeError):
+        tree.n_threads
+
+
 def test_setters():
     """
     Test that changing the optional parameters through the setters work as intended

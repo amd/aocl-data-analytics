@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -91,6 +91,13 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
             "are made after fit.",
             0, lbound_t::greaterequal, 1, ubound_t::lessequal, 0));
         opts.register_opt(oi);
+        oi = std::make_shared<OptionNumeric<da_int>>(OptionNumeric<da_int>(
+            "low precision max_iter",
+            "If mixed precision iterative refinement is enabled, maximum number of "
+            "iterations for the low precision phase.",
+            0, da_options::lbound_t::greaterequal, imax, da_options::ubound_t::p_inf,
+            80000));
+        opts.register_opt(oi);
 
         /* Float options */
         std::shared_ptr<OptionNumeric<T>> oT;
@@ -157,6 +164,13 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
             -1.0, da_options::lbound_t::greaterequal, rmax, da_options::ubound_t::p_inf,
             -1.0));
         opts.register_opt(oT);
+        oT = std::make_shared<OptionNumeric<T>>(OptionNumeric<T>(
+            "low precision convergence tolerance",
+            "If mixed precision iterative refinement is enabled, convergence tolerance "
+            "for the low precision phase.",
+            0, da_options::lbound_t::greaterequal, 0, da_options::ubound_t::p_inf,
+            static_cast<T>(1.0e-2), "10^{-2}"));
+        opts.register_opt(oT);
 
         /* String options */
         std::shared_ptr<OptionString> os;
@@ -169,6 +183,13 @@ inline da_status register_svm_options(da_options::OptionRegistry &opts,
                           {"poly", svm_kernel::polynomial},
                           {"sigmoid", svm_kernel::sigmoid}},
                          "rbf"));
+        opts.register_opt(os);
+        os = std::make_shared<OptionString>(OptionString(
+            "mixed precision",
+            "Whether to use mixed precision iterative refinement, in which "
+            "lower precision arithmetic is used before switching to the working "
+            "precision for the final iterations.",
+            {{"yes", 1}, {"no", 0}}, "no"));
         opts.register_opt(os);
 
     } catch (std::bad_alloc &) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2023-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -33,127 +33,85 @@
 
 using namespace linmod_public;
 
-da_status da_linmod_select_model_d(da_handle handle, linmod_model mod) {
+template <typename T>
+da_status da_linmod_select_model(da_handle handle, linmod_model mod) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(handle->err,
-               return (linmod_select_model<da_linmod::linear_model<double>, double>(
-                   handle, mod)));
+               return (linmod_select_model<da_linmod::linear_model<T>, T>(handle, mod)));
 }
 
-da_status da_linmod_select_model_s(da_handle handle, linmod_model mod) {
+template <typename T>
+da_status da_linmod_define_features(da_handle handle, da_int n_samples, da_int n_features,
+                                    const T *X, da_int ldx, const T *y) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(
-        handle->err,
-        return (linmod_select_model<da_linmod::linear_model<float>, float>(handle, mod)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (linmod_define_features<da_linmod::linear_model<T>, T>(
+                                handle, n_samples, n_features, X, ldx, y)));
 }
 
-da_status da_linmod_define_features_d(da_handle handle, da_int n_samples,
-                                      da_int n_features, const double *X, da_int ldx,
-                                      const double *y) {
+template <typename T>
+da_status da_linmod_fit_start(da_handle handle, da_int ncoefs, const T *coefs) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err,
-               return (linmod_define_features<da_linmod::linear_model<double>, double>(
-                   handle, n_samples, n_features, X, ldx, y)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (linmod_fit_start<da_linmod::linear_model<T>, T>(
+                                handle, ncoefs, coefs)));
 }
 
-da_status da_linmod_define_features_s(da_handle handle, da_int n_samples,
-                                      da_int n_features, const float *X, da_int ldx,
-                                      const float *y) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err,
-               return (linmod_define_features<da_linmod::linear_model<float>, float>(
-                   handle, n_samples, n_features, X, ldx, y)));
-}
-
-da_status da_linmod_fit_start_d(da_handle handle, da_int ncoefs, const double *coefs) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err,
-               return (linmod_fit_start<da_linmod::linear_model<double>, double>(
-                   handle, ncoefs, coefs)));
-}
-
-da_status da_linmod_fit_d(da_handle handle) {
+template <typename T> da_status da_linmod_fit(da_handle handle) {
     // Call fit with no initial starting point
-    return da_linmod_fit_start_d(handle, 0, nullptr);
+    return da_linmod_fit_start<T>(handle, 0, nullptr);
 }
 
-da_status da_linmod_fit_start_s(da_handle handle, da_int ncoefs, const float *coefs) {
+template <typename T>
+da_status da_linmod_evaluate_model(da_handle handle, da_int n_samples, da_int n_features,
+                                   const T *X, da_int ldx, T *predictions,
+                                   const T *observations, T *loss) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err,
-               return (linmod_fit_start<da_linmod::linear_model<float>, float>(
-                   handle, ncoefs, coefs)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (linmod_evaluate_model<da_linmod::linear_model<T>, T>(
+                                handle, n_samples, n_features, X, ldx, predictions,
+                                observations, loss)));
 }
 
-da_status da_linmod_fit_s(da_handle handle) {
-    return da_linmod_fit_start_s(handle, 0, nullptr);
-}
-
-da_status da_linmod_evaluate_model_d(da_handle handle, da_int n_samples,
-                                     da_int n_features, const double *X, da_int ldx,
-                                     double *predictions, double *observations,
-                                     double *loss) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(
-        handle->err,
-        return (linmod_evaluate_model<da_linmod::linear_model<double>, double>(
-            handle, n_samples, n_features, X, ldx, predictions, observations, loss)));
-}
-
-da_status da_linmod_evaluate_model_s(da_handle handle, da_int n_samples,
-                                     da_int n_features, const float *X, da_int ldx,
-                                     float *predictions, float *observations,
-                                     float *loss) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(
-        handle->err,
-        return (linmod_evaluate_model<da_linmod::linear_model<float>, float>(
-            handle, n_samples, n_features, X, ldx, predictions, observations, loss)));
-}
+template da_status da_linmod_select_model<float>(da_handle, linmod_model);
+template da_status da_linmod_select_model<double>(da_handle, linmod_model);
+template da_status da_linmod_define_features<float>(da_handle, da_int, da_int,
+                                                    const float *, da_int, const float *);
+template da_status da_linmod_define_features<double>(da_handle, da_int, da_int,
+                                                     const double *, da_int,
+                                                     const double *);
+template da_status da_linmod_fit_start<float>(da_handle, da_int, const float *);
+template da_status da_linmod_fit_start<double>(da_handle, da_int, const double *);
+template da_status da_linmod_fit<float>(da_handle);
+template da_status da_linmod_fit<double>(da_handle);
+template da_status da_linmod_evaluate_model<float>(da_handle, da_int, da_int,
+                                                   const float *, da_int, float *,
+                                                   const float *, float *);
+template da_status da_linmod_evaluate_model<double>(da_handle, da_int, da_int,
+                                                    const double *, da_int, double *,
+                                                    const double *, double *);

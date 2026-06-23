@@ -84,6 +84,7 @@ int main(void) {
    options.print_options = true;
    options.derivative_test_tol = 5.0e-4;
    options.fd_step = 1.0e-4;
+   options.maxtime = 5.0;
 
    // Call fitting routine
    ral_real x[2] = { 2.5, 0.25 }; // Initial guess

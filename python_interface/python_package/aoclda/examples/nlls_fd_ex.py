@@ -22,8 +22,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
-# pylint: disable = invalid-name, import-error, unused-argument,
-# missing-function-docstring, unused-variable
+# pylint: disable = invalid-name, import-error, unused-argument
+# pylint: disable = missing-function-docstring, unused-variable
 
 """
 Nonlinear data fitting example Python script
@@ -99,8 +99,9 @@ def nlls_fd_example():
     w[55:63] = 5.0
     w /= w.sum()
     blx = np.zeros(n_coef, dtype=np.float64)
-    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx)
-    ndf.fit(x, res, data=data, abs_gtol=1e-7, gtol=1.e-7, fd_step=5.e-7)
+    ndf = nlls(n_coef, n_res, weights=w, lower_bounds=blx, verbose=2)
+    ndf.fit(x, res, data=data, abs_gtol=1e-7, gtol=1.e-7, fd_step=5.e-7,
+            maxtime=5.0)
 
     print(f"Solution found in {ndf.n_iter} iterations")
     print(f"Residual norm at solution: {ndf.metrics['obj']:.4e}")

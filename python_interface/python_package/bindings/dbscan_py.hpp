@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -68,7 +68,7 @@ class DBSCAN : public pyda_handle {
         exception_check(status);
         if (check_data == true) {
             std::string yes_str = "yes";
-            status = da_options_set(handle, "check data", yes_str.data());
+            status = da_options_set(handle, "check data", yes_str.c_str());
             exception_check(status);
         }
     }

@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2023-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2023-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,6 +25,7 @@
 #define AOCLDA_OPTIONS_HPP_
 
 #include "aoclda.h"
+#include "model_persistence.hpp"
 
 #include <cctype>
 #include <cmath>
@@ -210,6 +211,8 @@ class OptionBase {
     // This is HIGHLY recommended to set to true while developing new options
     // but set to false once ready because it is not cheap to use.
 
+    virtual ~OptionBase() = default;
+
     da_status set_name(string &str) {
         name = str;
         if (strict) {
@@ -279,6 +282,15 @@ class OptionBase {
         }
         return da_status_success;
     }
+
+    // Functions to save/load specific option type
+    virtual da_status
+    serialize_option(da_model_persistence::serialization_buffer &buffer) = 0;
+    virtual da_status
+    deserialize_option(da_model_persistence::serialization_buffer &buffer) = 0;
+
+    // Function used to get the size of an option type
+    virtual size_t serialized_size() = 0;
 
   protected:
     // Name i.e. "Iteration Limit"
@@ -500,6 +512,15 @@ template <typename T> class OptionNumeric : public OptionBase {
         OptionNumeric::setby = setby;
         return status; // Compose error with status+errmsg
     };
+
+    da_status serialize_option(da_model_persistence::serialization_buffer &buffer) {
+        return buffer.serialize_data(this->value);
+    }
+    da_status deserialize_option(da_model_persistence::serialization_buffer &buffer) {
+        return buffer.deserialize_data(this->value);
+    }
+
+    size_t serialized_size() { return da_model_persistence::get_type_size(this->value); }
 };
 
 // Add OptionString class
@@ -678,6 +699,30 @@ class OptionString : public OptionBase {
             id = -1;
         }
     }
+    da_status query_map(string &value, da_int &id, bool find_by_value) {
+        // option("option name", "value", id)
+        // find_by_value true => given the value, it finds id
+        //              false => given the id, finds the value
+        if (find_by_value) {
+            // find the id based on value
+            auto pos = labels.find(value);
+            if (pos != labels.end()) {
+                id = pos->second;
+                return da_status_success;
+            }
+        } else {
+            if (labels.size() > 0) {
+                for (auto const &it : labels) {
+                    if (it.second == id) {
+                        value = it.first;
+                        return da_status_success;
+                    }
+                }
+            }
+        }
+        return da_status_option_not_found;
+    }
+
     da_status set(string value, setby_t setby = setby_t::user) {
         if (labels.size() != 0) {
             // Deal with categorical data slightly differently from freeform string options
@@ -711,6 +756,15 @@ class OptionString : public OptionBase {
         OptionString::setby = setby;
         return da_status_success;
     };
+
+    da_status serialize_option(da_model_persistence::serialization_buffer &buffer) {
+        return buffer.serialize_data(this->value);
+    }
+    da_status deserialize_option(da_model_persistence::serialization_buffer &buffer) {
+        return buffer.deserialize_data(this->value);
+    }
+
+    size_t serialized_size() { return da_model_persistence::get_type_size(this->value); }
 };
 
 // R E G I S T R Y
@@ -883,6 +937,99 @@ class OptionRegistry {
         }
         std::static_pointer_cast<OptionString>(search->second)->get(value, id);
         return da_status_success;
+    }
+
+    da_status save_registry(da_model_persistence::serialization_buffer &buffer) {
+        da_status status = da_status_success;
+
+        // Save registry size
+        da_int registry_size = (da_int)this->registry.size();
+        status = buffer.serialize_data(registry_size);
+        if (status != da_status_success)
+            return status;
+
+        for (const auto &[key, value] : this->registry) {
+            status = buffer.serialize_data(key);
+            if (status != da_status_success)
+                return status;
+
+            status = value->serialize_option(buffer);
+            if (status != da_status_success)
+                return status;
+        }
+        return status;
+    }
+
+    da_status load_registry(da_model_persistence::serialization_buffer &buffer) {
+        da_status status = da_status_success;
+
+        // Load saved registry size
+        da_int saved_registry_size;
+        status = buffer.deserialize_data(saved_registry_size);
+        if (status != da_status_success)
+            return status;
+
+        if (saved_registry_size > (da_int)this->registry.size() ||
+            saved_registry_size < 0)
+            return da_status_invalid_file_data;
+
+        for (da_int i = 0; i < saved_registry_size; ++i) {
+            std::string key;
+            status = buffer.deserialize_data(key);
+            if (status != da_status_success)
+                return status;
+
+            auto search = this->registry.find(key);
+
+            if (search != this->registry.end()) {
+                std::shared_ptr<OptionBase> &opt = search->second;
+                status = opt->deserialize_option(buffer);
+
+                if (status != da_status_success)
+                    return status;
+            } else {
+                return da_status_invalid_file_data;
+            }
+        }
+        return status;
+    }
+
+    // Returns the size required to serialize the register data.
+    size_t compute_serialized_size() {
+        size_t size = 0;
+
+        // registry.size() is saved first
+        size += da_model_persistence::get_type_size(da_int{});
+
+        for (const auto &[key, value] : this->registry) {
+            size += da_model_persistence::get_type_size(key);
+            size += value->serialized_size();
+        }
+        return size;
+    }
+
+    // Auxiliary function to query the id and categorical values of a string option
+    da_status query_map(string name, string &value, da_int &id,
+                        bool find_by_value = false) {
+        auto search = registry.find(name); // search assuming name is tidy
+        if (search == registry.end()) {
+            string oname{name};
+            OptionUtils::prep_str(oname); // this is expensive: done only if search failed
+            search = registry.find(oname); // search again using tidy oname
+            if (search == registry.end()) {
+                errmsg = "Option '" + oname + "' not found in the option registry";
+                return da_status_option_not_found;
+            }
+        }
+        option_t otype = search->second->get_option_t();
+        if (otype != option_t::opt_string) {
+            errmsg = "Option query_map for'" + name + "' of type " + option_tl[otype] +
+                     ", was called with the wrong storage type: " +
+                     option_tl[option_t::opt_string];
+            return da_status_option_wrong_type;
+        }
+        return std::static_pointer_cast<OptionString>(search->second)
+            ->query_map(value, id, find_by_value);
     }
 
     // Auxiliary

@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (C) 2025 Advanced Micro Devices, Inc.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,9 @@
 #include "dynamic_dispatch_includes.hpp"
 #undef ARCHITECTURE
 #define ARCHITECTURE zen5
+#include "dynamic_dispatch_includes.hpp"
+#undef ARCHITECTURE
+#define ARCHITECTURE zen6
 #include "dynamic_dispatch_includes.hpp"
 #undef ARCHITECTURE
 

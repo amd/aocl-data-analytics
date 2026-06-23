@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,13 +23,12 @@
 
 #ifndef SVM_TYPES_HPP
 #define SVM_TYPES_HPP
+#include "kernel_functions_types.hpp"
 #include <functional>
-
-#define SVM_MAX_BLOCK_SIZE da_int(256)
 
 namespace da_svm_types {
 
-enum svm_kernel { rbf = 0, linear, polynomial, sigmoid };
+using svm_kernel = da_kernel_functions_types::kernel_type;
 
 template <typename T> struct meta_kernel_f {
     using type = std::function<void(

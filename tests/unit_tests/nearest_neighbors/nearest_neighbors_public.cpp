@@ -149,12 +149,29 @@ template <typename T> void test_functionality(const NearestNeighborsParamType<T>
     da_int return_distance = 1;
     // Always sort the results for testing since trees can return neighbors in any order.
     da_int sort_results = 1;
+    // Check da_trained before radius neighbors computation
+    da_int tr_dim = 1, tr_val = -1;
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 0);
     // Compute radius neighbors for each query point. Last element has the total number of radius neighbors and can be used for memory allocation.
     EXPECT_EQ(da_nn_radius_neighbors(handle, param.n_queries, param.n_features,
                                      param.X_test.data(), param.ldx_test,
                                      param.radius_neigh, return_distance, sort_results),
               da_status_success)
         << da_handle_print_error_message(handle);
+    // Check da_trained after radius neighbors computation
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 1);
+    T fp_val{-1};
+    tr_val = -1;
+    // Trained models returns unknown query error
+    // otherwise it must return model not trained
+    EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &tr_dim, &fp_val),
+              da_status_unknown_query);
+    EXPECT_EQ(da_handle_get_result(handle, da_rinfo, &tr_dim, &tr_val),
+              da_status_unknown_query);
     da_int array_size = param.n_queries + 1;
     std::vector<da_int> radius_neigh_count(array_size);
     // Return array that contains the number of radius neighbors for each query point and the total number of radius neighbors.
@@ -443,6 +460,152 @@ TYPED_TEST(NearestNeighborsTest, AccuracyTestingZeroData_radius) {
     da_handle_destroy(&handle);
 }
 
+// Check outliers in prediction when radius neighbors are used.
+// We only test the prediction functionality.
+TYPED_TEST(NearestNeighborsTest, OutlierTesting) {
+    da_handle handle = nullptr;
+    da_int n_samples = 6;
+    da_int n_features = 3;
+    da_int n_queries = 3;
+    std::vector<TypeParam> X_train{-1., -2., -3., 1., 2., 3.,  -1., -1., -2.,
+                                   3.,  5.,  -1., 2., 3., -1., 1.,  1.,  2.};
+    std::vector<da_int> y_train_class{1, 2, 0, 1, 2, 2};
+    std::vector<TypeParam> y_train_regression{1.5, 2.2, 0.5, 1, 2.8, 5.2};
+    std::vector<TypeParam> X_test{-2., -1., 2., 2., -2., 1., 3., -1., -3.};
+    TypeParam tol = 10 * std::numeric_limits<TypeParam>::epsilon();
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_nn), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set_string(handle, "weights", "distance"), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set(handle, "radius", TypeParam(4.0)), da_status_success)
+        << da_handle_print_error_message(handle);
+    // Start testing with "most frequent" option
+    EXPECT_EQ(da_options_set_string(handle, "outlier handling", "most frequent"),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_nn_set_labels<TypeParam>(handle, n_samples, y_train_class.data()),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_nn_set_targets(handle, n_samples, y_train_regression.data()),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    // Test Regression
+    EXPECT_EQ(da_nn_set_data(handle, n_samples, n_features, X_train.data(), n_samples),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    std::vector<TypeParam> targets(n_queries);
+    EXPECT_EQ(da_nn_regressor_predict(handle, n_queries, n_features, X_test.data(),
+                                      n_queries, targets.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    std::vector<TypeParam> expected_targets = {1.6105221794760263, 0.887425886722793,
+                                               2.2};
+    EXPECT_ARR_NEAR(n_queries, targets.data(), expected_targets.data(), tol);
+
+    // Test Classification
+    da_int n_classes = 0; // Set n_classes to zero to do query for the required memory
+    EXPECT_EQ(da_nn_classes<TypeParam>(handle, &n_classes, nullptr), da_status_success)
+        << da_handle_print_error_message(handle);
+
+    std::vector<TypeParam> expected_proba{0.0,
+                                          0.6125741132772068,
+                                          0.0,
+                                          0.6304942401901729,
+                                          0.3874258867227931,
+                                          0.0,
+                                          0.36950575980982725,
+                                          0.0,
+                                          1.0};
+    std::vector<TypeParam> proba(n_classes * n_queries);
+    EXPECT_EQ(da_nn_classifier_predict_proba(handle, n_queries, n_features, X_test.data(),
+                                             n_queries, proba.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_ARR_NEAR(n_classes * n_queries, proba.data(), expected_proba.data(), tol);
+
+    std::vector<da_int> labels(n_queries);
+    EXPECT_EQ(da_nn_classifier_predict(handle, n_queries, n_features, X_test.data(),
+                                       n_queries, labels.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    std::vector<da_int> expected_labels{1, 0, 2};
+    EXPECT_ARR_NEAR(n_queries, labels.data(), expected_labels.data(), 0);
+
+    // Now test with "manual" option
+    EXPECT_EQ(da_options_set_string(handle, "outlier handling", "manual"),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set_int(handle, "outlier label", -999), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set(handle, "outlier target", TypeParam(-123)),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    EXPECT_EQ(da_nn_regressor_predict(handle, n_queries, n_features, X_test.data(),
+                                      n_queries, targets.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+
+    expected_targets =
+        std::vector<TypeParam>({1.6105221794760263, 0.887425886722793, -123.0});
+    EXPECT_ARR_NEAR(n_queries, targets.data(), expected_targets.data(), tol);
+
+    expected_proba =
+        std::vector<TypeParam>({0.0, 0.6125741132772068, 0.0, 0.6304942401901729,
+                                0.3874258867227931, 0.0, 0.36950575980982725, 0.0, 0.0});
+    EXPECT_EQ(da_nn_classifier_predict_proba(handle, n_queries, n_features, X_test.data(),
+                                             n_queries, proba.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+    EXPECT_ARR_NEAR(n_classes * n_queries, proba.data(), expected_proba.data(), tol);
+
+    EXPECT_EQ(da_nn_classifier_predict(handle, n_queries, n_features, X_test.data(),
+                                       n_queries, labels.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+    expected_labels = std::vector<da_int>({1, 0, -999});
+    EXPECT_ARR_NEAR(n_queries, labels.data(), expected_labels.data(), 0);
+
+    // Test again with different values for the outlier label and target
+    EXPECT_EQ(da_options_set_int(handle, "outlier label", 1), da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_EQ(da_options_set(handle, "outlier target",
+                             std::numeric_limits<TypeParam>::quiet_NaN()),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+
+    EXPECT_EQ(da_nn_regressor_predict(handle, n_queries, n_features, X_test.data(),
+                                      n_queries, targets.data(), radius_search_mode),
+              da_status_outlier_warning)
+        << da_handle_print_error_message(handle);
+
+    expected_targets =
+        std::vector<TypeParam>({1.6105221794760263, 0.887425886722793,
+                                std::numeric_limits<TypeParam>::quiet_NaN()});
+    EXPECT_ARR_NEAR(n_queries - 1, targets.data(), expected_targets.data(), tol);
+    EXPECT_TRUE(std::isnan(targets[2]));
+
+    expected_proba =
+        std::vector<TypeParam>({0.0, 0.6125741132772068, 0.0, 0.6304942401901729,
+                                0.3874258867227931, 1.0, 0.36950575980982725, 0.0, 0.0});
+    EXPECT_EQ(da_nn_classifier_predict_proba(handle, n_queries, n_features, X_test.data(),
+                                             n_queries, proba.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    EXPECT_ARR_NEAR(n_classes * n_queries, proba.data(), expected_proba.data(), tol);
+
+    EXPECT_EQ(da_nn_classifier_predict(handle, n_queries, n_features, X_test.data(),
+                                       n_queries, labels.data(), radius_search_mode),
+              da_status_success)
+        << da_handle_print_error_message(handle);
+    expected_labels = std::vector<da_int>({1, 0, 1});
+    EXPECT_ARR_NEAR(n_queries, labels.data(), expected_labels.data(), 0);
+
+    da_handle_destroy(&handle);
+}
+
 std::string ErrorExits_print(std::string param) {
     std::string ss = "Test for invalid value of " + param + " failed.";
     return ss;
@@ -560,9 +723,9 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
     da_int int_result;
     da_int dim = 1;
     EXPECT_EQ(da_handle_get_result(nn_handle, da_rinfo, &dim, &fp_result),
-              da_status_unknown_query);
+              da_status_no_data);
     EXPECT_EQ(da_handle_get_result(nn_handle, da_rinfo, &dim, &int_result),
-              da_status_unknown_query);
+              da_status_no_data);
 
     // Incorrect inputs in kneighbors()
     EXPECT_EQ(da_nn_kneighbors(nn_handle, -1, param.n_features, X.data(), param.ldx_test,
@@ -573,9 +736,9 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
                                ind.data(), dist.data(), param.n_neigh_kneighbors, 1),
               da_status_invalid_array_dimension)
         << ErrorExits_print("n_features");
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, nullptr,
-                               param.ldx_test, ind.data(), dist.data(),
-                               param.n_neigh_kneighbors, 1),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          nullptr, param.ldx_test, ind.data(),
+                                          dist.data(), param.n_neigh_kneighbors, 1),
               da_status_invalid_pointer)
         << ErrorExits_print("X_test");
     EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(), 0,
@@ -595,14 +758,14 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
                                param.n_neigh_kneighbors, 1),
               da_status_invalid_pointer)
         << ErrorExits_print("k_ind");
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 1),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 1),
               da_status_invalid_pointer)
         << ErrorExits_print("k_dist");
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_success)
         << "Testing that if distances are not required, k_dist can be nullptr";
 
@@ -630,9 +793,9 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
                                              X.data(), -1, proba.data(), knn_search_mode),
               da_status_invalid_leading_dimension)
         << ErrorExits_print("ldx_test");
-    EXPECT_EQ(da_nn_classifier_predict_proba(nn_handle, param.n_queries, param.n_features,
-                                             X.data(), param.ldx_test, nullptr,
-                                             knn_search_mode),
+    EXPECT_EQ(da_nn_classifier_predict_proba<TypeParam>(
+                  nn_handle, param.n_queries, param.n_features, X.data(), param.ldx_test,
+                  nullptr, knn_search_mode),
               da_status_invalid_pointer)
         << ErrorExits_print("proba");
     EXPECT_EQ(da_nn_classifier_predict_proba(nn_handle, param.n_queries, param.n_features,
@@ -663,9 +826,9 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
     // throw an error. Checking internal check_options_update() function.
     EXPECT_EQ(da_options_set_string(nn_handle, "algorithm", "auto"), da_status_success)
         << "Setting algorithm to k-d tree failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if algorithm option has been set, it cannot be changed "
            "after setting the training data failed.";
@@ -678,9 +841,9 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
 
     EXPECT_EQ(da_options_set(nn_handle, "leaf size", (da_int)10), da_status_success)
         << "Setting leaf size to 10 failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if leaf size option has been set, it cannot be changed "
            "after setting the training data failed.";
@@ -692,9 +855,9 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
 
     EXPECT_EQ(da_options_set(nn_handle, "metric", "minkowski"), da_status_success)
         << "Setting metric to minkowski failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if metric option has been set, it cannot be changed "
            "after setting the training data failed.";
@@ -707,9 +870,9 @@ TYPED_TEST(NearestNeighborsTest, ClassificationErrorExits) {
     EXPECT_EQ(da_options_set(nn_handle, "minkowski parameter", TypeParam(1.0)),
               da_status_success)
         << "Setting metric to minkowski failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if minkowski parameter option has been set, it cannot be "
            "changed "
@@ -831,9 +994,9 @@ TYPED_TEST(NearestNeighborsTest, RegressionErrorExits) {
                                ind.data(), dist.data(), param.n_neigh_kneighbors, 1),
               da_status_invalid_array_dimension)
         << ErrorExits_print("n_features");
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, nullptr,
-                               param.ldx_test, ind.data(), dist.data(),
-                               param.n_neigh_kneighbors, 1),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          nullptr, param.ldx_test, ind.data(),
+                                          dist.data(), param.n_neigh_kneighbors, 1),
               da_status_invalid_pointer)
         << ErrorExits_print("X_test");
     EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(), 0,
@@ -849,14 +1012,14 @@ TYPED_TEST(NearestNeighborsTest, RegressionErrorExits) {
                                param.n_neigh_kneighbors, 1),
               da_status_invalid_pointer)
         << ErrorExits_print("k_ind");
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 1),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 1),
               da_status_invalid_pointer)
         << ErrorExits_print("k_dist");
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_success)
         << "Testing that if distances are not required, k_dist can be nullptr";
 
@@ -877,8 +1040,9 @@ TYPED_TEST(NearestNeighborsTest, RegressionErrorExits) {
                                       X.data(), -1, y.data(), knn_search_mode),
               da_status_invalid_leading_dimension)
         << ErrorExits_print("ldx_test");
-    EXPECT_EQ(da_nn_regressor_predict(nn_handle, -1, param.n_features, X.data(),
-                                      param.ldx_test, nullptr, knn_search_mode),
+    EXPECT_EQ(da_nn_regressor_predict<TypeParam>(nn_handle, -1, param.n_features,
+                                                 X.data(), param.ldx_test, nullptr,
+                                                 knn_search_mode),
               da_status_invalid_pointer)
         << ErrorExits_print("y_test");
 
@@ -886,9 +1050,9 @@ TYPED_TEST(NearestNeighborsTest, RegressionErrorExits) {
     // throw an error. Checking internal check_options_update() function.
     EXPECT_EQ(da_options_set_string(nn_handle, "algorithm", "auto"), da_status_success)
         << "Setting algorithm to k-d tree failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if algorithm option has been set, it cannot be changed "
            "after setting the training data failed.";
@@ -901,9 +1065,9 @@ TYPED_TEST(NearestNeighborsTest, RegressionErrorExits) {
 
     EXPECT_EQ(da_options_set(nn_handle, "leaf size", (da_int)10), da_status_success)
         << "Setting leaf size to 10 failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if leaf size option has been set, it cannot be changed "
            "after setting the training data failed.";
@@ -915,9 +1079,9 @@ TYPED_TEST(NearestNeighborsTest, RegressionErrorExits) {
 
     EXPECT_EQ(da_options_set(nn_handle, "metric", "minkowski"), da_status_success)
         << "Setting metric to minkowski failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if metric option has been set, it cannot be changed "
            "after setting the training data failed.";
@@ -930,9 +1094,9 @@ TYPED_TEST(NearestNeighborsTest, RegressionErrorExits) {
     EXPECT_EQ(da_options_set(nn_handle, "minkowski parameter", TypeParam(1.0)),
               da_status_success)
         << "Setting metric to minkowski failed.";
-    EXPECT_EQ(da_nn_kneighbors(nn_handle, param.n_queries, param.n_features, X.data(),
-                               param.ldx_test, ind.data(), nullptr,
-                               param.n_neigh_kneighbors, 0),
+    EXPECT_EQ(da_nn_kneighbors<TypeParam>(nn_handle, param.n_queries, param.n_features,
+                                          X.data(), param.ldx_test, ind.data(), nullptr,
+                                          param.n_neigh_kneighbors, 0),
               da_status_option_locked)
         << "Testing that if minkowski parameter option has been set, it cannot be "
            "changed "

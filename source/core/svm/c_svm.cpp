@@ -257,9 +257,17 @@ template <typename T>
 da_status svc<T>::initialisation(da_int &size, std::vector<T> &gradient,
                                  std::vector<T> &response, std::vector<T> &alpha,
                                  [[maybe_unused]] da_cache::LRUCache<T> &cache) {
+    // Initialise response
     for (da_int i = 0; i < size; i++) {
-        gradient[i] = this->y[i] == 0 ? 1.0 : -this->y[i];
         response[i] = this->y[i] == 0 ? -1.0 : this->y[i];
+    }
+
+    // For warm start, only response is needed
+    if (this->has_warm_start)
+        return da_status_success;
+
+    for (da_int i = 0; i < size; i++) {
+        gradient[i] = -response[i];
         alpha[i] = 0;
     }
     return da_status_success;
@@ -269,11 +277,19 @@ template <typename T>
 da_status svr<T>::initialisation(da_int &size, std::vector<T> &gradient,
                                  std::vector<T> &response, std::vector<T> &alpha,
                                  [[maybe_unused]] da_cache::LRUCache<T> &cache) {
+    // Initialise response
+    for (da_int i = 0; i < size; i++) {
+        response[i] = 1.0;
+        response[i + size] = -1.0;
+    }
+
+    // For warm start, only response is needed
+    if (this->has_warm_start)
+        return da_status_success;
+
     for (da_int i = 0; i < size; i++) {
         gradient[i] = this->eps - this->y[i];
         gradient[i + size] = -this->eps - this->y[i];
-        response[i] = 1.0;
-        response[i + size] = -1.0;
         alpha[i] = 0;
         alpha[i + size] = 0;
     }

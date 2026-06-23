@@ -61,11 +61,11 @@ def test_nn_all_dtypes(numpy_precision, numpy_order, algo):
 
     nn = nearest_neighbors(algorithm=algo, radius=10.5)
     nn.fit(x_train, y_train)
-    k_dist, k_ind = nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
-    r_dist, r_ind = nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
-    proba = nn.classifier_predict_proba(x_test, "knn")
-    y_test_class = nn.classifier_predict(x_test, "radius_neighbors")
-    y_test_reg = nn.regressor_predict(x_test, "knn")
+    nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+    nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
+    nn.classifier_predict_proba(x_test, "knn")
+    nn.classifier_predict(x_test, "radius_neighbors")
+    nn.regressor_predict(x_test, "knn")
 
 
 @pytest.mark.parametrize("algo", ["auto", "brute", "kd_tree"])
@@ -95,13 +95,13 @@ def test_nearest_neighbors_multiple_orders(numpy_precision, numpy_orders, algo):
     nn = nearest_neighbors(algorithm=algo, radius=10.5)
     nn.fit(x_train, y_train)
     with pytest.warns(UserWarning):
-        k_dist, k_ind = nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+        nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
     with pytest.warns(UserWarning):
-        r_dist, r_ind = nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
+        nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
     with pytest.warns(UserWarning):
-        proba = nn.classifier_predict_proba(x_test, "radius_neighbors")
+        nn.classifier_predict_proba(x_test, "radius_neighbors")
     with pytest.warns(UserWarning):
-        y_test = nn.classifier_predict(x_test, "knn")
+        nn.classifier_predict(x_test, "knn")
     x_train = np.array(x_train, order=numpy_orders[1])
     with pytest.warns(UserWarning):
         nn.fit(x_train, y_train)
@@ -110,9 +110,9 @@ def test_nearest_neighbors_multiple_orders(numpy_precision, numpy_orders, algo):
     nn = nearest_neighbors(algorithm=algo, radius=10.5)
     nn.fit(x_train, y_train)
     with pytest.warns(UserWarning):
-        k_dist, k_ind = nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+        nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
     with pytest.warns(UserWarning):
-        y_test = nn.regressor_predict(x_test, "radius_neighbors")
+        nn.regressor_predict(x_test, "radius_neighbors")
     x_train = np.array(x_train, order=numpy_orders[1])
     with pytest.warns(UserWarning):
         nn.fit(x_train, y_train)
@@ -121,9 +121,9 @@ def test_nearest_neighbors_multiple_orders(numpy_precision, numpy_orders, algo):
     nn = nearest_neighbors(algorithm=algo)
     nn.fit(x_train)
     with pytest.warns(UserWarning):
-        k_dist, k_ind = nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+        nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
     with pytest.warns(UserWarning):
-        r_dist, r_ind = nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
+        nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
 
 
 @pytest.mark.parametrize("algo", ["auto", "brute", "kd_tree"])
@@ -153,25 +153,25 @@ def test_nearest_neighbors_multiple_dtypes(numpy_precisions, numpy_order, algo):
 
     nn = nearest_neighbors(algorithm=algo, radius=10.5)
     nn.fit(x_train, y_train)
-    k_dist, k_ind = nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
-    proba = nn.classifier_predict_proba(x_test, "radius_neighbors")
-    y_test = nn.classifier_predict(x_test, "knn")
+    nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+    nn.classifier_predict_proba(x_test, "radius_neighbors")
+    nn.classifier_predict(x_test, "knn")
     x_train = np.array(x_train, dtype=numpy_precisions[1])
     nn.fit(x_train, y_train)
 
     x_train = np.array(x_train, dtype=numpy_precisions[0])
     nn = nearest_neighbors(algorithm=algo, radius=10.5)
     nn.fit(x_train, y_train)
-    k_dist, k_ind = nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
-    y_test = nn.regressor_predict(x_test, "radius_neighbors")
+    nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+    nn.regressor_predict(x_test, "radius_neighbors")
     x_train = np.array(x_train, dtype=numpy_precisions[1])
     nn.fit(x_train, y_train)
 
     x_train = np.array(x_train, dtype=numpy_precisions[0])
     nn = nearest_neighbors(algorithm=algo)
     nn.fit(x_train)
-    k_dist, k_ind = nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
-    r_dist, r_ind = nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
+    nn.kneighbors(x_test, n_neighbors=3, return_distance=True)
+    nn.radius_neighbors(x_test, return_distance=True, radius=2.0)
 
 
 @pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
@@ -277,9 +277,90 @@ def test_nearest_neighbors_functionality(numpy_precision, numpy_order, algo):
     expected_r_dist = [np.array([3.]), np.array([2.]), np.array([])]
     expected_r_ind = [np.array([1]), np.array([2]), np.array([])]
 
-    for i in range(len(r_ind)):
-        assert r_dist[i] == pytest.approx(expected_r_dist[i], tol)
-        assert not np.any(r_ind[i] - expected_r_ind[i])
+    for i, (dist, ind) in enumerate(zip(r_dist, r_ind)):
+        assert dist == pytest.approx(expected_r_dist[i], tol)
+        assert not np.any(ind - expected_r_ind[i])
+
+
+@pytest.mark.parametrize("numpy_precision", [np.float64, np.float32])
+@pytest.mark.parametrize("numpy_order", ["C", "F"])
+@pytest.mark.parametrize("outlier", [None, -1, 'most_frequent'])
+def test_nearest_neighbors_outlier_functionality(numpy_precision, numpy_order, outlier):
+    # pylint: disable=possibly-used-before-assignment
+    # Test the functionality of the Python wrapper
+
+    x_train = np.array([[-1, -1, 2],
+                        [-2, -1, 3],
+                        [-3, -2, -1],
+                        [1, 3, 1],
+                        [2, 5, 1],
+                        [3, -1, 2]],
+                       dtype=numpy_precision, order=numpy_order)
+
+    y_train_labels = np.array([1, 2, 0, 1, 2, 2],
+                              dtype=numpy_precision, order=numpy_order)
+
+    y_train_targets = np.array([1.5, 2.3, 0.6, 1, 2.8, 5.2],
+                               dtype=numpy_precision, order=numpy_order)
+
+    x_test = np.array([[-2, 2, 3],
+                       [-1, -2, -1],
+                       [2, 1, -3]],
+                      dtype=numpy_precision, order=numpy_order)
+
+    # Expected results
+    if outlier == -1:
+        expected_proba = np.array([[0., 0.66666667, 0.33333333],
+                                   [0.5, 0.5, 0.0],
+                                   [0., 0., 0.]])
+        expected_labels = np.array([[1, 0, -1,]])
+        expected_targets = np.array([1.5999999999999999, 1.05, -1.])
+    elif outlier == 'most_frequent':
+        expected_proba = np.array([[0., 0.66666667, 0.33333333],
+                                   [0.5, 0.5, 0.0],
+                                   [0., 0., 1.]])
+        expected_labels = np.array([[1, 0, 2,]])
+        expected_targets = np.array([1.5999999999999999, 1.05, 2.233333333333335])
+    # Check we have the right answer
+    tol = np.sqrt(np.finfo(numpy_precision).eps)
+
+    nn = nearest_neighbors(radius=4.0, outlier_handling=outlier)
+    nn.fit(x_train, y_train_labels)
+    # for outlier flag set to None expect to throw a runtime error
+    if outlier is None:
+        with pytest.raises(RuntimeError):
+            nn.classifier_predict(X=x_test, search_mode="radius_neighbors")
+        with pytest.raises(RuntimeError):
+            nn.classifier_predict_proba(X=x_test, search_mode="radius_neighbors")
+        with pytest.raises(RuntimeError):
+            nn.regressor_predict(X=x_test, search_mode="radius_neighbors")
+    else:
+        # Classification predictions
+        if outlier == 'most_frequent':
+            proba = nn.classifier_predict_proba(x_test, "radius_neighbors")
+            y_test_labels = nn.classifier_predict(x_test, "radius_neighbors")
+        else:
+            with pytest.warns(RuntimeWarning):
+                proba = nn.classifier_predict_proba(x_test, "radius_neighbors")
+                y_test_labels = nn.classifier_predict(x_test, "radius_neighbors")
+        # Test predictions
+        assert proba.flags.f_contiguous == x_test.flags.f_contiguous
+        assert proba == pytest.approx(expected_proba, tol)
+        assert not np.any(y_test_labels - expected_labels)
+
+        # Regression predictions - need to pad the right type to outlier_handling
+        # and make it a float
+        if outlier == 'most_frequent':
+            nn = nearest_neighbors(radius=4.0, outlier_handling=outlier)
+            nn.fit(x_train, y_train_targets)
+            y_test_targets = nn.regressor_predict(x_test, "radius_neighbors")
+        else:
+            nn = nearest_neighbors(radius=4.0, outlier_handling=numpy_precision(outlier))
+            nn.fit(x_train, y_train_targets)
+            with pytest.warns(RuntimeWarning):
+                y_test_targets = nn.regressor_predict(x_test, "radius_neighbors")
+         # Test predictions
+        assert y_test_targets == pytest.approx(expected_targets, tol)
 
 
 @pytest.mark.parametrize("n_samples", [20, 500, 1234])
@@ -463,7 +544,7 @@ def test_nearest_neighbors_error_exits(numpy_precision):
     # Set up valid data
     x_train = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]],
                        dtype=numpy_precision)
-    y_train = np.array([[1, 2, 3]], dtype=numpy_precision)
+    y_train = np.array([1, 2, 3], dtype=numpy_precision)
     x_test = np.array([[1, 1, 2], [2, 2, 3]], dtype=numpy_precision)
 
     # Errors in nearest_neighbors when n_neighbors=None
@@ -520,3 +601,22 @@ def test_nearest_neighbors_error_exits(numpy_precision):
         nn.classifier_predict_proba(X=x_test, search_mode="radius_neighbors")
     with pytest.raises(ValueError):
         nn.regressor_predict(X=x_test, search_mode="radius_neighbors")
+
+    # Check errors for outliers in prediction with radius neighbors
+    # for classification and regression the outlier cannot be a string other
+    # than 'most_frequent'
+    nn = nearest_neighbors(radius=1.0, outlier_handling='invalid_string')
+    nn.fit(x_train, y_train)
+    with pytest.raises(ValueError):
+        nn.classifier_predict(X=x_test, search_mode="radius_neighbors")
+    with pytest.raises(ValueError):
+        nn.classifier_predict_proba(X=x_test, search_mode="radius_neighbors")
+    with pytest.raises(ValueError):
+        nn.regressor_predict(X=x_test, search_mode="radius_neighbors")
+    # for classification the outlier cannot be non-integer if not 'most_frequent' or None
+    nn = nearest_neighbors(radius=1.0, outlier_handling=1.8)
+    nn.fit(x_train, y_train)
+    with pytest.raises(ValueError):
+        nn.classifier_predict(X=x_test, search_mode="radius_neighbors")
+    with pytest.raises(ValueError):
+        nn.classifier_predict_proba(X=x_test, search_mode="radius_neighbors")

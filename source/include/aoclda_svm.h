@@ -93,7 +93,7 @@ da_status da_svm_select_model_s(da_handle handle, da_svm_model mod);
  * - @ref da_status_wrong_type - the floating point precision of the arguments is incompatible with the @p handle initialization.
  * - @ref da_status_invalid_handle_type - the @p handle has not been correctly initialized.
  * - @ref da_status_unknown_query - unknown SVM model has been selected. You can obtain further information using @ref da_handle_print_error_message.
- * - \ref da_status_invalid_leading_dimension - the constraint on \p lda was violated.
+ * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx was violated.
  */
 da_status da_svm_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
                             const double *X, da_int ldx, const double *y);
@@ -105,7 +105,7 @@ da_status da_svm_set_data_s(da_handle handle, da_int n_samples, da_int n_feature
  * @brief Fit the SVM model defined in the @p handle.
  *
  * Compute the SVM model defined by \ref da_svm_select_model_s "da_svm_select_model_?" on the data passed by the last call to the function \ref da_svm_set_data_s "da_svm_set_data_?".
- * 
+ *
  * @param[in,out] handle a @ref da_handle object, initialized with type @ref da_handle_svm.
  * @return @ref da_status. The function returns:
  * - @ref da_status_success - the operation was successfully completed.

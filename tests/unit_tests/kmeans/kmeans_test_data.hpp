@@ -63,10 +63,16 @@ template <typename T> struct KMeansParamType {
     da_int n_init = 1;
     da_int max_iter = 50;
     da_int seed = 0;
+    da_int afk_mcmc_samples = 200;
     T convergence_tolerance = (T)1e-4;
     std::string initialization_method;
     std::string algorithm;
     std::string order = "column-major";
+
+    da_int lp_max_iter = 1;
+    T lp_tol = (T)1e-2;
+    std::string mixed_precision = "no";
+    std::string empty_clusters = "ignore";
 
     std::vector<T> expected_rinfo;
     std::vector<T> expected_centres;
@@ -117,13 +123,67 @@ template <typename T> void Get1by1BaseData(KMeansParamType<T> &param) {
     param.initialization_method = "k-means++";
     param.algorithm = "elkan";
 
-    std::vector<double> expected_rinfo{1.0, 1.0, 1.0, 0.0, 0.0};
+    std::vector<double> expected_rinfo{1.0, 1.0, 1.0, 0.0, 0.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> expected_centres{2.1};
     param.expected_centres = convert_vector<double, T>(expected_centres);
     std::vector<da_int> expected_labels{0};
     param.expected_labels = expected_labels;
     std::vector<double> expected_X_transform{1.2};
+    param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
+    std::vector<da_int> expected_Y_labels{0};
+    param.expected_Y_labels = expected_Y_labels;
+
+    param.tol = 10 * std::numeric_limits<T>::epsilon();
+    param.expected_status = da_status_success;
+}
+
+template <typename T> void GetEmptyClusterBaseData(KMeansParamType<T> &param) {
+    param.test_name = "Empty cluster handling";
+
+    param.n_samples = 5;
+    param.n_features = 2;
+    std::vector<double> A{2.13, 2.11, 2.12, 2.13, 2.14, 2.11, 2.14, 2.13, 2.12, 2.13};
+    param.A = convert_vector<double, T>(A);
+    param.lda = 5;
+
+    std::vector<double> C{2.12, 100.0, 2.13, 100.0};
+    param.C = convert_vector<double, T>(C);
+    param.ldc = 2;
+
+    param.m_samples = 1;
+    param.m_features = 2;
+    std::vector<double> X{3.3, 3.3};
+    param.X = convert_vector<double, T>(X);
+    param.ldx = 1;
+    std::vector<double> X_transform{0.0, 0.0};
+    param.X_transform = convert_vector<double, T>(X_transform);
+    param.ldx_transform = 1;
+
+    param.k_samples = 1;
+    param.k_features = 2;
+    std::vector<double> Y{2.3, 2.4};
+    param.Y = convert_vector<double, T>(Y);
+    param.ldy = 1;
+    std::vector<da_int> Y_labels{0};
+    param.Y_labels = Y_labels;
+
+    param.n_clusters = 2;
+    param.n_init = 1;
+    param.max_iter = 30;
+    param.seed = 78;
+    param.convergence_tolerance = (T)1.0e-4;
+    param.initialization_method = "supplied";
+    param.algorithm = "lloyd";
+    param.empty_clusters = "ignore";
+
+    std::vector<double> expected_rinfo{5.0, 2.0, 2.0, 1.0, 0.00104, 0.0};
+    param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
+    std::vector<double> expected_centres{2.126, 0.0, 2.126, 0.0};
+    param.expected_centres = convert_vector<double, T>(expected_centres);
+    std::vector<da_int> expected_labels{0, 0, 0, 0, 0};
+    param.expected_labels = expected_labels;
+    std::vector<double> expected_X_transform{1.6602867222260123, 4.6669047558312133};
     param.expected_X_transform = convert_vector<double, T>(expected_X_transform);
     std::vector<da_int> expected_Y_labels{0};
     param.expected_Y_labels = expected_Y_labels;
@@ -171,7 +231,7 @@ template <typename T> void GetZeroBaseData(KMeansParamType<T> &param) {
     param.initialization_method = "supplied";
     param.algorithm = "hartigan-wong";
 
-    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 0.0, 0.0};
+    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 0.0, 0.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> expected_centres{0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     param.expected_centres = convert_vector<double, T>(expected_centres);
@@ -184,7 +244,7 @@ template <typename T> void GetZeroBaseData(KMeansParamType<T> &param) {
 
     param.tol = 100 * std::sqrt(std::numeric_limits<T>::epsilon());
     param.max_allowed_inertia = (T)0.0;
-    param.expected_status = da_status_success;
+    param.expected_status = da_status_empty_clusters;
 }
 
 template <typename T> void Get3ClustersBaseData(KMeansParamType<T> &param) {
@@ -227,7 +287,7 @@ template <typename T> void Get3ClustersBaseData(KMeansParamType<T> &param) {
     param.initialization_method = "supplied";
     param.algorithm = "hartigan-wong";
 
-    std::vector<double> expected_rinfo{10.0, 2.0, 3.0, 1.0, 0.185475};
+    std::vector<double> expected_rinfo{10.0, 2.0, 3.0, 1.0, 0.185475, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> expected_centres{1.05,   0.506667, -1.93333333333,
                                          0.9875, -2.0,     0.53666666666};
@@ -289,7 +349,7 @@ template <typename T> void GetRowMajorBaseData(KMeansParamType<T> &param) {
     param.algorithm = "hartigan-wong";
     param.order = "row-major";
 
-    std::vector<double> expected_rinfo{10.0, 2.0, 3.0, 1.0, 0.185475};
+    std::vector<double> expected_rinfo{10.0, 2.0, 3.0, 1.0, 0.185475, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> expected_centres{1.05, 0.9875,         0.506667,
                                          -2.0, -1.93333333333, 0.53666666666};
@@ -350,7 +410,7 @@ template <typename T> void GetSubarrayBaseData(KMeansParamType<T> &param) {
     param.initialization_method = "supplied";
     param.algorithm = "hartigan-wong";
 
-    std::vector<double> expected_rinfo{10.0, 2.0, 3.0, 1.0, 0.185475};
+    std::vector<double> expected_rinfo{10.0, 2.0, 3.0, 1.0, 0.185475, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> expected_centres{1.05,   0.506667, -1.93333333333,
                                          0.9875, -2.0,     0.53666666666};
@@ -438,7 +498,7 @@ template <typename T> void GetLargeBaseData(KMeansParamType<T> &param) {
     param.is_random = false;
     param.order = "column-major";
 
-    std::vector<double> expected_rinfo{80.0, 2.0, 16.0, 4.0, 45.78715};
+    std::vector<double> expected_rinfo{80.0, 2.0, 16.0, 4.0, 45.78715, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     std::vector<double> expected_centres{
         2.4666666667, 0.0,  1.02000,        -3.0, 2.42593,      0.0,   0.0,
@@ -517,6 +577,10 @@ template <typename T> void Get1by1Data(std::vector<KMeansParamType<T>> &params) 
     param.test_name =
         "1 x 1 data matrix with supplied initialization and macqueen algorithm";
     params.push_back(param);
+    param.initialization_method = "afk-mc2";
+    param.test_name =
+        "1 x 1 data matrix with afk-mc2 initialization and macqueen algorithm";
+    params.push_back(param);
 }
 
 template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &params) {
@@ -552,6 +616,11 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.initialization_method = "random partitions";
     param.test_name = "Data matrix in three distinct clusters with random partitions "
                       "initialization and Elkan algorithm";
+    params.push_back(param);
+    param.initialization_method = "afk-mc2";
+    param.test_name =
+        "Data matrix in three distinct clusters with afk-mc2 initialization "
+        "and Elkan algorithm";
     params.push_back(param);
     // Tests looking for n or 1 clusters
     param.n_init = 1;
@@ -600,6 +669,10 @@ template <typename T> void Get3ClustersData(std::vector<KMeansParamType<T>> &par
     param.algorithm = "lloyd";
     param.test_name = "Data matrix in three distinct clusters looking for 2 clusters "
                       "with k-means++ initialization and Lloyd algorithm";
+    params.push_back(param);
+    param.initialization_method = "afk-mc2";
+    param.test_name = "Data matrix in three distinct clusters looking for 2 clusters "
+                      "with afk-mc2 initialization and Lloyd algorithm";
     params.push_back(param);
     param.initialization_method = "random";
     param.algorithm = "elkan";
@@ -650,7 +723,7 @@ template <typename T> void GetZeroData(std::vector<KMeansParamType<T>> &params) 
     param.algorithm = "elkan";
     param.initialization_method = "k-means++";
     param.n_init = 3;
-    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 2.0, 0.0};
+    std::vector<double> expected_rinfo{5.0, 3.0, 2.0, 2.0, 0.0, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
     param.expected_status = da_status_success;
     param.test_name += " with k-means++ initialization and Elkan algorithm";
@@ -659,6 +732,9 @@ template <typename T> void GetZeroData(std::vector<KMeansParamType<T>> &params) 
     param.algorithm = "lloyd";
     param.initialization_method = "random";
     param.test_name = "Zero data matrix with random initialization and Lloyd algorithm";
+    params.push_back(param);
+    param.initialization_method = "afk-mc2";
+    param.test_name = "Zero data matrix with afk-mc2 initialization and Lloyd algorithm";
     params.push_back(param);
     param.algorithm = "macqueen";
     param.initialization_method = "random partitions";
@@ -686,6 +762,48 @@ template <typename T> void GetLargeData(std::vector<KMeansParamType<T>> &params)
     params.push_back(param);
     param.algorithm = "elkan";
     param.test_name += " with Elkan algorithm";
+    params.push_back(param);
+}
+
+template <typename T> void GetEmptyClusterData(std::vector<KMeansParamType<T>> &params) {
+    // Tests with a data matrix designed to produce empty clusters with some algorithms and not others, to test the empty cluster handling code paths
+    KMeansParamType<T> param;
+    GetEmptyClusterBaseData(param);
+    params.push_back(param);
+    param.empty_clusters = "split";
+    param.expected_rinfo[4] = (T)0.000475;
+    param.expected_centres[0] = 2.13;
+    param.expected_centres[1] = 2.11;
+    param.expected_centres[2] = 2.1225;
+    param.expected_centres[3] = 2.14;
+    param.expected_labels[1] = 1;
+    param.expected_X_transform[0] = 1.6599416405404137;
+    param.expected_X_transform[1] = 1.6618363336983584;
+    param.expected_Y_labels[0] = 1;
+    param.test_name += " with empty cluster strategy set to split";
+    params.push_back(param);
+    // Repeat with Elkan and MacQueen algorithms
+    param.algorithm = "elkan";
+    params.push_back(param);
+    param.algorithm = "macqueen";
+    params.push_back(param);
+    //Test error exits
+    param.empty_clusters = "error";
+    param.expected_status = da_status_empty_clusters;
+    param.test_name = "Empty clusters with empty cluster strategy set to error";
+    params.push_back(param);
+    param.algorithm = "hartigan-wong";
+    params.push_back(param);
+    //Test with all sample identical with n_init>1 to force empty clusters
+    param.n_init = 2;
+    param.n_clusters = 4;
+    param.expected_status = da_status_empty_clusters;
+    param.test_name = "All samples identical with n_init>1 to force empty clusters";
+    param.algorithm = "lloyd";
+    param.is_random = true;
+    param.initialization_method = "random";
+    param.A = convert_vector<double, T>(
+        std::vector<double>(param.n_samples * param.n_features, 1.0));
     params.push_back(param);
 }
 
@@ -721,8 +839,8 @@ template <typename T> void GetManyClustersData(std::vector<KMeansParamType<T>> &
     param.lda = param.n_samples;
     param.ldc = param.n_clusters;
 
-    std::vector<double> expected_rinfo{(T)param.n_samples, (T)param.n_features,
-                                       (T)param.n_clusters, 2.0, 0.01};
+    std::vector<double> expected_rinfo{
+        (T)param.n_samples, (T)param.n_features, (T)param.n_clusters, 2.0, 0.01, 0.0};
     param.expected_rinfo = convert_vector<double, T>(expected_rinfo);
 
     param.n_init = 1;
@@ -768,6 +886,10 @@ template <typename T> void GetSubarrayData(std::vector<KMeansParamType<T>> &para
     param.test_name = "Data matrix in three distinct clusters stored in subarrays with "
                       "k-means++ initialization and Elkan algorithm";
     params.push_back(param);
+    param.initialization_method = "afk-mc2";
+    param.test_name = "Data matrix in three distinct clusters stored in subarrays with "
+                      "afk-mc2 initialization and Elkan algorithm";
+    params.push_back(param);
     param.initialization_method = "random";
     param.test_name = "Data matrix in three distinct clusters stored in subarrays with "
                       "random initialization and Elkan algorithm";
@@ -803,6 +925,10 @@ template <typename T> void GetRowMajorData(std::vector<KMeansParamType<T>> &para
                       "with k-means++ initialization and Elkan algorithm";
     param.is_random = true;
     params.push_back(param);
+    param.initialization_method = "afk-mc2";
+    param.test_name = "Data matrix in three distinct clusters stored in row major format "
+                      "with afk-mc2 initialization and Elkan algorithm";
+    params.push_back(param);
     param.seed = 12345;
     param.is_random = true;
     param.initialization_method = "random";
@@ -815,6 +941,33 @@ template <typename T> void GetRowMajorData(std::vector<KMeansParamType<T>> &para
     params.push_back(param);
 }
 
+template <typename T>
+void GetIterativeRefinementData(std::vector<KMeansParamType<T>> &params) {
+    // Tests using mixed precision iterative refinement
+    KMeansParamType<T> param;
+    Get3ClustersBaseData(param);
+    param.test_name = "Data matrix in three distinct clusters with mixed precision "
+                      "iterative refinement";
+    param.mixed_precision = "yes";
+    param.lp_max_iter = 1;
+
+    param.expected_rinfo[3] = std::is_same<T, double>::value ? (T)0.0 : (T)1.0;
+    param.expected_rinfo[5] = std::is_same<T, double>::value ? (T)1.0 : (T)0.0;
+    param.algorithm = "lloyd";
+    params.push_back(param);
+    KMeansParamType<T> param2;
+    GetLargeBaseData(param2);
+    param2.test_name = "Larger data matrix to test vectorized kernels with mixed "
+                       "precision iterative refinement";
+    param2.mixed_precision = "yes";
+    param2.lp_max_iter = 3;
+    param2.expected_rinfo[3] = std::is_same<T, double>::value ? (T)1.0 : (T)4.0;
+    param2.expected_rinfo[5] = std::is_same<T, double>::value ? (T)3.0 : (T)0.0;
+    param2.lp_tol = (T)1.0e-3;
+    param2.algorithm = "lloyd";
+    params.push_back(param2);
+}
+
 template <typename T> void GetKMeansData(std::vector<KMeansParamType<T>> &params) {
     Get1by1Data(params);
     Get3ClustersData(params);
@@ -824,4 +977,6 @@ template <typename T> void GetKMeansData(std::vector<KMeansParamType<T>> &params
     GetRowMajorData(params);
     GetLargeData(params);
     GetManyClustersData(params);
+    GetIterativeRefinementData(params);
+    GetEmptyClusterData(params);
 }

@@ -413,12 +413,6 @@ class RadiusNeighborsClassifier(RadiusNeighborsClassifier_sklearn):
         self.metric_params = metric_params
         self.n_jobs = n_jobs
 
-        if (outlier_label is not None):
-            warnings.warn(
-                "The parameter outlier_label is not supported \
-                 and has been ignored.",
-                category=RuntimeWarning)
-
         # Check for unsupported attributes
         if (metric_params is not None or n_jobs is not None):
             warnings.warn(
@@ -449,6 +443,7 @@ class RadiusNeighborsClassifier(RadiusNeighborsClassifier_sklearn):
             weights=self.weights,
             algorithm=self.algorithm,
             metric=self.metric,
+            outlier_handling=self.outlier_label,
             p=self.p)
 
     def fit(self, X, y):
@@ -517,7 +512,6 @@ class RadiusNeighborsRegressor(RadiusNeighborsRegressor_sklearn):
         leaf_size=30,
         p=2,
         metric='minkowski',
-        outlier_label=None,
         metric_params=None,
         n_jobs=None
     ):
@@ -559,12 +553,15 @@ class RadiusNeighborsRegressor(RadiusNeighborsRegressor_sklearn):
         if metric not in available_metrics:
             raise ValueError(
                 "Invalid metric provided, available options are ", available_metrics)
-
+        # outlier_handling doesn't exist for regression but by default it sets the
+        # targets to NaN for outliers
+        outlier_handling = float('nan')
         self.nn_model = nearest_neighbors_da(
             radius=self.radius,
             weights=self.weights,
             algorithm=self.algorithm,
             metric=self.metric,
+            outlier_handling=outlier_handling,
             p=self.p)
 
     def fit(self, X, y):

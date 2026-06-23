@@ -1,5 +1,5 @@
 /* ************************************************************************
- * Copyright (c) 2024-2025 Advanced Micro Devices, Inc.
+ * Copyright (c) 2024-2026 Advanced Micro Devices, Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,224 +29,159 @@
 
 using namespace svm_public;
 
-da_status da_svm_select_model_d(da_handle handle, da_svm_model mod) {
+template <typename T> da_status da_svm_select_model(da_handle handle, da_svm_model mod) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err,
-               return (svm_select_model<da_svm::svm<double>, double>(handle, mod)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (svm_select_model<da_svm::svm<T>, T>(handle, mod)));
 }
 
-da_status da_svm_select_model_s(da_handle handle, da_svm_model mod) {
+template <typename T>
+da_status da_svm_set_data(da_handle handle, da_int n_samples, da_int n_features,
+                          const T *X, da_int ldx_train, const T *y) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err,
-               return (svm_select_model<da_svm::svm<float>, float>(handle, mod)));
-}
 
-da_status da_svm_set_data_d(da_handle handle, da_int n_samples, da_int n_features,
-                            const double *X, da_int ldx_train, const double *y) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (svm_set_data<da_svm::svm<double>, double>(
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (svm_set_data<da_svm::svm<T>, T>(
                                 handle, n_samples, n_features, X, ldx_train, y)));
 }
 
-da_status da_svm_set_data_s(da_handle handle, da_int n_samples, da_int n_features,
-                            const float *X, da_int ldx_train, const float *y) {
+template <typename T> da_status da_svm_compute(da_handle handle) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (svm_set_data<da_svm::svm<float>, float>(
-                                handle, n_samples, n_features, X, ldx_train, y)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (svm_compute<da_svm::svm<T>, T>(handle)));
 }
 
-da_status da_svm_compute_d(da_handle handle) {
+template <typename T>
+da_status da_svm_predict(da_handle handle, da_int n_samples, da_int n_features,
+                         const T *X_test, da_int ldx_test, T *predictions) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (svm_compute<da_svm::svm<double>, double>(handle)));
-}
 
-da_status da_svm_compute_s(da_handle handle) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (svm_compute<da_svm::svm<float>, float>(handle)));
-}
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
 
-da_status da_svm_predict_d(da_handle handle, da_int n_samples, da_int n_features,
-                           const double *X_test, da_int ldx_test, double *predictions) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
     DISPATCHER(handle->err,
-               return (svm_predict<da_svm::svm<double>, double>(
-                   handle, n_samples, n_features, X_test, ldx_test, predictions)));
+               return (svm_predict<da_svm::svm<T>, T>(handle, n_samples, n_features,
+                                                      X_test, ldx_test, predictions)));
 }
 
-da_status da_svm_predict_s(da_handle handle, da_int n_samples, da_int n_features,
-                           const float *X_test, da_int ldx_test, float *predictions) {
+template <typename T>
+da_status da_svm_decision_function(da_handle handle, da_int n_samples, da_int n_features,
+                                   const T *X_test, da_int ldx_test,
+                                   da_svm_decision_function_shape shape,
+                                   T *decision_values, da_int ldd) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err,
-               return (svm_predict<da_svm::svm<float>, float>(
-                   handle, n_samples, n_features, X_test, ldx_test, predictions)));
-}
 
-da_status da_svm_decision_function_d(da_handle handle, da_int n_samples,
-                                     da_int n_features, const double *X_test,
-                                     da_int ldx_test,
-                                     da_svm_decision_function_shape shape,
-                                     double *decision_values, da_int ldd) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err, return (svm_decision_function<da_svm::svm<double>, double>(
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err, return (svm_decision_function<da_svm::svm<T>, T>(
                                 handle, n_samples, n_features, X_test, ldx_test, shape,
                                 decision_values, ldd)));
 }
 
-da_status da_svm_decision_function_s(da_handle handle, da_int n_samples,
-                                     da_int n_features, const float *X_test,
-                                     da_int ldx_test,
-                                     da_svm_decision_function_shape shape,
-                                     float *decision_values, da_int ldd) {
+template <typename T>
+da_status da_svm_score(da_handle handle, da_int n_samples, da_int n_features,
+                       const T *X_test, da_int ldx_test, const T *y_test, T *score) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err, return (svm_decision_function<da_svm::svm<float>, float>(
-                                handle, n_samples, n_features, X_test, ldx_test, shape,
-                                decision_values, ldd)));
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
+    DISPATCHER(handle->err,
+               return (svm_score<da_svm::svm<T>, T>(handle, n_samples, n_features, X_test,
+                                                    ldx_test, y_test, score)));
 }
 
-da_status da_svm_score_d(da_handle handle, da_int n_samples, da_int n_features,
-                         const double *X_test, da_int ldx_test, const double *y_test,
-                         double *score) {
+template <typename T>
+da_status da_svm_predict_proba(da_handle handle, da_int n_samples, da_int n_features,
+                               const T *X_test, da_int ldx_test, T *y_proba, da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err,
-               return (svm_score<da_svm::svm<double>, double>(
-                   handle, n_samples, n_features, X_test, ldx_test, y_test, score)));
-}
 
-da_status da_svm_score_s(da_handle handle, da_int n_samples, da_int n_features,
-                         const float *X_test, da_int ldx_test, const float *y_test,
-                         float *score) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(handle->err,
-               return (svm_score<da_svm::svm<float>, float>(
-                   handle, n_samples, n_features, X_test, ldx_test, y_test, score)));
-}
-da_status da_svm_predict_proba_d(da_handle handle, da_int n_samples, da_int n_features,
-                                 const double *X_test, da_int ldx_test, double *y_proba,
-                                 da_int ldy) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err,
-               return (svm_predict_proba<da_svm::svm<double>, double>(
+               return (svm_predict_proba<da_svm::svm<T>, T>(
                    handle, n_samples, n_features, X_test, ldx_test, y_proba, ldy)));
 }
 
-da_status da_svm_predict_proba_s(da_handle handle, da_int n_samples, da_int n_features,
-                                 const float *X_test, da_int ldx_test, float *y_proba,
-                                 da_int ldy) {
+template <typename T>
+da_status da_svm_predict_log_proba(da_handle handle, da_int n_samples, da_int n_features,
+                                   const T *X_test, da_int ldx_test, T *y_log_proba,
+                                   da_int ldy) {
     if (!handle)
         return da_status_handle_not_initialized;
     handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
+
+    da_status status = handle->check_precision<T>();
+    if (status != da_status_success)
+        return da_error_trace(handle->err, status, "Wrong precision type.");
+
     DISPATCHER(handle->err,
-               return (svm_predict_proba<da_svm::svm<float>, float>(
-                   handle, n_samples, n_features, X_test, ldx_test, y_proba, ldy)));
-}
-da_status da_svm_predict_log_proba_d(da_handle handle, da_int n_samples,
-                                     da_int n_features, const double *X_test,
-                                     da_int ldx_test, double *y_log_proba, da_int ldy) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_double)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than double.");
-    DISPATCHER(handle->err,
-               return (svm_predict_log_proba<da_svm::svm<double>, double>(
+               return (svm_predict_log_proba<da_svm::svm<T>, T>(
                    handle, n_samples, n_features, X_test, ldx_test, y_log_proba, ldy)));
 }
 
-da_status da_svm_predict_log_proba_s(da_handle handle, da_int n_samples,
-                                     da_int n_features, const float *X_test,
-                                     da_int ldx_test, float *y_log_proba, da_int ldy) {
-    if (!handle)
-        return da_status_handle_not_initialized;
-    handle->clear(); // clean up handle logs
-    if (handle->precision != da_single)
-        return da_error(
-            handle->err, da_status_wrong_type,
-            "The handle was initialized with a different precision type than single.");
-    DISPATCHER(handle->err,
-               return (svm_predict_log_proba<da_svm::svm<float>, float>(
-                   handle, n_samples, n_features, X_test, ldx_test, y_log_proba, ldy)));
-}
+template da_status da_svm_select_model<float>(da_handle, da_svm_model);
+template da_status da_svm_select_model<double>(da_handle, da_svm_model);
+template da_status da_svm_set_data<float>(da_handle, da_int, da_int, const float *,
+                                          da_int, const float *);
+template da_status da_svm_set_data<double>(da_handle, da_int, da_int, const double *,
+                                           da_int, const double *);
+template da_status da_svm_compute<float>(da_handle);
+template da_status da_svm_compute<double>(da_handle);
+template da_status da_svm_predict<float>(da_handle, da_int, da_int, const float *, da_int,
+                                         float *);
+template da_status da_svm_predict<double>(da_handle, da_int, da_int, const double *,
+                                          da_int, double *);
+template da_status da_svm_decision_function<float>(da_handle, da_int, da_int,
+                                                   const float *, da_int,
+                                                   da_svm_decision_function_shape,
+                                                   float *, da_int);
+template da_status da_svm_decision_function<double>(da_handle, da_int, da_int,
+                                                    const double *, da_int,
+                                                    da_svm_decision_function_shape,
+                                                    double *, da_int);
+template da_status da_svm_score<float>(da_handle, da_int, da_int, const float *, da_int,
+                                       const float *, float *);
+template da_status da_svm_score<double>(da_handle, da_int, da_int, const double *, da_int,
+                                        const double *, double *);
+template da_status da_svm_predict_proba<float>(da_handle, da_int, da_int, const float *,
+                                               da_int, float *, da_int);
+template da_status da_svm_predict_proba<double>(da_handle, da_int, da_int, const double *,
+                                                da_int, double *, da_int);
+template da_status da_svm_predict_log_proba<float>(da_handle, da_int, da_int,
+                                                   const float *, da_int, float *,
+                                                   da_int);
+template da_status da_svm_predict_log_proba<double>(da_handle, da_int, da_int,
+                                                    const double *, da_int, double *,
+                                                    da_int);

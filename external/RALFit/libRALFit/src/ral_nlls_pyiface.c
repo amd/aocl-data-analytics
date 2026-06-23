@@ -1,6 +1,6 @@
 // Copyright (c) 2016, The Science and Technology Facilities Council (STFC)
 // All rights reserved.
-// Copyright (C) 2024 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 #include <Python.h>
@@ -322,6 +322,15 @@ bool set_opts(struct ral_nlls_options *options, PyObject *pyoptions) {
             return false;
          }
          options->maxit = (int) v;
+         continue;
+      }
+      if(strcmp(key_name, "maxtime")==0) {
+         double v = PyFloat_AsDouble(value);
+         if(v<=0.0 || PyErr_Occurred()) {
+            PyErr_SetString(PyExc_RuntimeError, "options['maxtime'] must be a positive float.");
+            return false;
+         }
+         options->maxtime = v;
          continue;
       }
       if(strcmp(key_name, "model")==0) {

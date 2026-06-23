@@ -25,6 +25,7 @@ module MODULE_PREC(ral_nlls_ciface)
      logical(c_bool) :: print_options
      integer(ral_c_int) :: print_header
      integer(ral_c_int) :: maxit
+     real(ral_c_real) :: maxtime
      integer(ral_c_int) :: model
      integer(ral_c_int) :: type_of_method
      integer(ral_c_int) :: nlls_method
@@ -205,6 +206,7 @@ contains
     foptions%print_options = coptions%print_options
     foptions%print_header = coptions%print_header
     foptions%maxit = coptions%maxit
+    foptions%maxtime = coptions%maxtime
     foptions%model = coptions%model
     foptions%type_of_method = coptions%type_of_method
     foptions%nlls_method = coptions%nlls_method
@@ -426,6 +428,7 @@ subroutine IFACE_PREC(ral_nlls_default_options)(coptions) bind(C)
   coptions%print_options = foptions%print_options
   coptions%print_header = foptions%print_header
   coptions%maxit = foptions%maxit
+  coptions%maxtime = foptions%maxtime
   coptions%model = foptions%model
   coptions%type_of_method = foptions%type_of_method
   coptions%nlls_method = foptions%nlls_method

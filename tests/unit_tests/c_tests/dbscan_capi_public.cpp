@@ -1,0 +1,105 @@
+/*
+ * Copyright (C) 2026 Advanced Micro Devices, Inc. All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software without
+ *    specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+#include "aoclda.h"
+#include "gtest/gtest.h"
+
+/*
+ * Test the DBSCAN C API (double precision).
+ * Based on tests/examples/dbscan.cpp
+ */
+TEST(DbscanCAPI, BasicDouble) {
+    da_handle handle = nullptr;
+
+    // Input data: 10 samples, 2 features (column-major)
+    double A[20] = {2.0, -1.0, 3.0, 2.0, -3.0, -2.0, -2.0, 1.0, 2.0, -2.0,
+                    1.0, -2.0, 2.0, 3.0, -2.0, -1.0, -3.0, 2.0, 2.0, -2.0};
+
+    da_int n_samples = 10, n_features = 2, lda = 10, min_samples = 4;
+    double eps = 1.1;
+
+    EXPECT_EQ(da_handle_init_d(&handle, da_handle_dbscan), da_status_success);
+    EXPECT_EQ(da_dbscan_set_data_d(handle, n_samples, n_features, A, lda),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "min samples", min_samples), da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle, "eps", eps), da_status_success);
+    EXPECT_EQ(da_dbscan_compute_d(handle), da_status_success);
+
+    // Extract results
+    da_int n_clusters = 0, n_core_samples = 0, dim = 1;
+    EXPECT_EQ(da_handle_get_result_int(handle, da_dbscan_n_clusters, &dim, &n_clusters),
+              da_status_success);
+    EXPECT_EQ(
+        da_handle_get_result_int(handle, da_dbscan_n_core_samples, &dim, &n_core_samples),
+        da_status_success);
+    EXPECT_EQ(n_clusters, 2);
+
+    da_int labels[10];
+    EXPECT_EQ(da_handle_get_result_int(handle, da_dbscan_labels, &n_samples, labels),
+              da_status_success);
+
+    da_int labels_exp[10] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1};
+    for (da_int i = 0; i < n_samples; i++)
+        EXPECT_EQ(labels[i], labels_exp[i]);
+
+    da_handle_destroy(&handle);
+}
+
+/*
+ * Test the DBSCAN C API (single precision).
+ */
+TEST(DbscanCAPI, BasicFloat) {
+    da_handle handle = nullptr;
+
+    float A[20] = {2.0f, -1.0f, 3.0f, 2.0f, -3.0f, -2.0f, -2.0f, 1.0f, 2.0f, -2.0f,
+                   1.0f, -2.0f, 2.0f, 3.0f, -2.0f, -1.0f, -3.0f, 2.0f, 2.0f, -2.0f};
+
+    da_int n_samples = 10, n_features = 2, lda = 10, min_samples = 4;
+    float eps = 1.1f;
+
+    EXPECT_EQ(da_handle_init_s(&handle, da_handle_dbscan), da_status_success);
+    EXPECT_EQ(da_dbscan_set_data_s(handle, n_samples, n_features, A, lda),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "min samples", min_samples), da_status_success);
+    EXPECT_EQ(da_options_set_real_s(handle, "eps", eps), da_status_success);
+    EXPECT_EQ(da_dbscan_compute_s(handle), da_status_success);
+
+    da_int n_clusters = 0, dim = 1;
+    EXPECT_EQ(da_handle_get_result_int(handle, da_dbscan_n_clusters, &dim, &n_clusters),
+              da_status_success);
+    EXPECT_EQ(n_clusters, 2);
+
+    da_int labels[10];
+    EXPECT_EQ(da_handle_get_result_int(handle, da_dbscan_labels, &n_samples, labels),
+              da_status_success);
+
+    da_int labels_exp[10] = {0, 1, 0, 0, 1, 1, 1, 0, 0, 1};
+    for (da_int i = 0; i < n_samples; i++)
+        EXPECT_EQ(labels[i], labels_exp[i]);
+
+    da_handle_destroy(&handle);
+}

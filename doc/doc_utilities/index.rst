@@ -68,7 +68,7 @@ It is also possible to add and pretty-print an entire file using
 
 Most extensions are understood: C, Python, etc.
 
-If the file is too long or ancillary, then in can be displayed in a dropdownd form (html only),
+If the file is too long or ancillary, then it can be displayed in a dropdown form (html only),
 for this add the following
 
 .. code-block::

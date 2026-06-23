@@ -44,10 +44,12 @@ enum da_result_ {
     // General purpose data 1..100
     da_rinfo =
         1, ///< General information array, containing a variety of metrics. See each solver's documentation for further information, since each solver stores different information in this array.
+    da_trained =
+        2, ///< Flag indicating whether the model in the handle has been successfully trained (1) or not (0). This result may be queried before and after calling a training routine; before successful training it returns 0.
     // Linear models 101..200
     da_linmod_coef =
         101, ///< Optimal fitted coefficients produced by the last call to a linear regression solver.
-    da_linmod_dual_coef, ///< Optimal fitted dual coefficients produced by the last call to a linear regression solver. Only available for CG solver and when number of columns is greater or equal to number of rows.
+    da_linmod_dual_coef, ///< Optimal fitted dual coefficients produced by the last call to a linear regression solver. Only available for CG solver and when number of columns is greater than or equal to number of rows.
     // Factorization 201..300
     da_pca_scores = 201, ///< Matrix of scores computed by the PCA API.
     da_pca_variance, ///< The variance explained by each component computed by the PCA API.
@@ -58,6 +60,14 @@ enum da_result_ {
     da_pca_u, ///< The matrix @f$U@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     da_pca_sigma, ///< The nonzero diagonal entries of @f$\Sigma@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
     da_pca_vt, ///< The matrix @f$V^T@f$ from the singular value decomposition @f$A = U\Sigma V^T@f$, computed as part of a PCA computation.
+    da_kernel_pca_n_components, ///< The number of principal components computed by the Kernel PCA API.
+    da_kernel_pca_eigenvalues, ///< Eigenvalues of the kernel matrix computed by the Kernel PCA API.
+    da_kernel_pca_eigenvectors, ///< Eigenvectors of the kernel matrix computed by the Kernel PCA API.
+    da_kernel_pca_scores,    ///< Matrix of scores computed by the Kernel PCA API.
+    da_kernel_pca_dual_coef, ///< Dual coefficients from the kernel ridge regression inverse transform learned by the Kernel PCA API.
+    da_kernel_pca_gamma, ///< The resolved gamma parameter used in the Kernel PCA computation.
+    da_kernel_pca_X_fit, ///< Training data matrix used to fit the Kernel PCA model.
+
     // Nonlinear Optimization 301..400
     // Random Forests 401..500
     // Clustering 501...600
@@ -92,7 +102,8 @@ enum da_result_ {
     da_approx_nn_list_sizes, ///< Number of vectors added to each centroid
     // Interpolation 901..1000
     da_cubic_spline_coefficients = 901,
-    // ...
+    // t-SNE 1001..1100
+    da_tsne_embedding = 1001, ///< Low-dimensional embedding computed by <i>t</i>-SNE.
 };
 
 /** @brief Alias for the \ref da_result_ enum. */

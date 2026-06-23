@@ -146,6 +146,7 @@ program nlls_example2
    options%exact_second_derivatives = .true.
    options%maxit = 50
    options%print_level = 4
+   options%maxtime = 10.0
 
    do inner_method = 1,3
 

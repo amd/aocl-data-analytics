@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -78,8 +78,20 @@ TEST(nlls, double_nlls_example_box_fortran) {
               da_status_success);
     EXPECT_EQ(da_options_set_real_d(handle, "finite differences step", 1e-6),
               da_status_success);
+    EXPECT_EQ(da_options_set_real_d(handle, "time limit", 10.0), da_status_success);
+
+    // Check da_trained before fitting
+    da_int tr_dim = 1, tr_val = -1;
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 0);
 
     EXPECT_EQ(da_nlls_fit_d(handle, n_coef, coef, (void *)&udata), da_status_success);
+
+    // Check da_trained after fitting
+    EXPECT_EQ(da_handle_get_result(handle, da_result::da_trained, &tr_dim, &tr_val),
+              da_status_success);
+    EXPECT_EQ(tr_val, 1);
 
     EXPECT_NEAR(coef[0], coef_exp[0], tol);
     EXPECT_NEAR(coef[1], coef_exp[1], tol);
@@ -121,12 +133,12 @@ TEST(nlls, ifaceChecks) {
     // exercise define_residuals
     da_int n = 1;
     da_int m = 1;
-    EXPECT_EQ(
-        da_nlls_define_residuals(nullptr, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
-        da_status_handle_not_initialized);
-    EXPECT_EQ(
-        da_nlls_define_residuals(nullptr, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
-        da_status_handle_not_initialized);
+    EXPECT_EQ(da_nlls_define_residuals<T>(nullptr, n, m, eval_r<T>, eval_J<T>, nullptr,
+                                          nullptr),
+              da_status_handle_not_initialized);
+    EXPECT_EQ(da_nlls_define_residuals<S>(nullptr, n, m, eval_r<S>, eval_J<S>, nullptr,
+                                          nullptr),
+              da_status_handle_not_initialized);
 
     // get results without training
     da_int dim{2};
@@ -146,40 +158,40 @@ TEST(nlls, ifaceChecks) {
         da_status_unknown_query);
     // eval_r
     EXPECT_EQ(
-        da_nlls_define_residuals(handle_d, n, m, nullptr, eval_J<T>, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle_d, n, m, nullptr, eval_J<T>, nullptr, nullptr),
         da_status_invalid_input);
     EXPECT_EQ(
-        da_nlls_define_residuals(handle_s, n, m, nullptr, eval_J<S>, nullptr, nullptr),
+        da_nlls_define_residuals<S>(handle_s, n, m, nullptr, eval_J<S>, nullptr, nullptr),
         da_status_invalid_input);
     n = -1;
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
-        da_status_invalid_input);
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
-        da_status_invalid_input);
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr,
+                                          nullptr),
+              da_status_invalid_input);
+    EXPECT_EQ(da_nlls_define_residuals<S>(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr,
+                                          nullptr),
+              da_status_invalid_input);
     n = 1;
     m = -1;
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
-        da_status_invalid_input);
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
-        da_status_invalid_input);
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr,
+                                          nullptr),
+              da_status_invalid_input);
+    EXPECT_EQ(da_nlls_define_residuals<S>(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr,
+                                          nullptr),
+              da_status_invalid_input);
     m = 5;
     EXPECT_EQ(
-        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, nullptr, nullptr, nullptr),
+        da_nlls_define_residuals<T>(handle_d, n, m, eval_r<T>, nullptr, nullptr, nullptr),
         da_status_success);
     EXPECT_EQ(
-        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, nullptr, nullptr, nullptr),
+        da_nlls_define_residuals<S>(handle_s, n, m, eval_r<S>, nullptr, nullptr, nullptr),
         da_status_success);
     n = 2;
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr, nullptr),
-        da_status_success);
-    EXPECT_EQ(
-        da_nlls_define_residuals(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr, nullptr),
-        da_status_success);
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle_d, n, m, eval_r<T>, eval_J<T>, nullptr,
+                                          nullptr),
+              da_status_success);
+    EXPECT_EQ(da_nlls_define_residuals<S>(handle_s, n, m, eval_r<S>, eval_J<S>, nullptr,
+                                          nullptr),
+              da_status_success);
 
     // exercise define bounds
     std::vector<T> lower_bounds_d = {0.0, -1.0}, upper_bounds_d = {1.0, 2.0};
@@ -196,9 +208,9 @@ TEST(nlls, ifaceChecks) {
         da_nlls_define_bounds(handle_s, n, lower_bounds_s.data(), upper_bounds_s.data()),
         da_status_invalid_input);
     n = 2;
-    EXPECT_EQ(da_nlls_define_bounds(handle_d, n, nullptr, upper_bounds_d.data()),
+    EXPECT_EQ(da_nlls_define_bounds<double>(handle_d, n, nullptr, upper_bounds_d.data()),
               da_status_success);
-    EXPECT_EQ(da_nlls_define_bounds(handle_s, n, lower_bounds_s.data(), nullptr),
+    EXPECT_EQ(da_nlls_define_bounds<float>(handle_s, n, lower_bounds_s.data(), nullptr),
               da_status_success);
 
     T weights_d[5];
@@ -222,6 +234,12 @@ TEST(nlls, ifaceChecks) {
     // remove weights
     m = 0;
     EXPECT_EQ(da_nlls_define_weights(handle_s, m, (S *)nullptr), da_status_success);
+
+    // valid time
+    EXPECT_EQ(da_options_set(handle_d, "time limit", 0.1), da_status_success);
+    // invalid time
+    EXPECT_EQ(da_options_set(handle_d, "time limit", 0.0),
+              da_status_option_invalid_value);
     da_handle_destroy(&handle_d);
     da_handle_destroy(&handle_s);
 }
@@ -237,8 +255,8 @@ TEST(nlls, solverCheckX0Rubbish) {
     da_int n = 1;
     da_int m = 1;
     T x[1]{0};
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r_fail<T>, eval_J<T>, nullptr,
-                                       nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n, m, eval_r_fail<T>, eval_J<T>,
+                                          nullptr, nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, nullptr), da_status_operation_failed);
 
@@ -251,7 +269,7 @@ TEST(nlls, solverCheckX0Rubbish) {
     n = 2;
     m = 5;
     T x2[2]{0, 0};
-    EXPECT_EQ(da_nlls_define_residuals(
+    EXPECT_EQ(da_nlls_define_residuals<T>(
                   handle, n, m, template_nlls_example_box_c::eval_r<T>,
                   template_nlls_example_box_c::eval_J_wrong<T>, eval_HF<T>, nullptr),
               da_status_success);
@@ -278,8 +296,8 @@ TEST(nlls, solverCheckMaxIt) {
     da_handle handle{nullptr};
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J_wrong<T>,
-                                       eval_HF<T>, nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J_wrong<T>,
+                                          eval_HF<T>, nullptr),
               da_status_success);
     EXPECT_EQ(da_options_set(handle, "ralfit iteration limit", da_int(1)),
               da_status_success);
@@ -310,8 +328,8 @@ TEST(nlls, solverCheckUsrStop) {
     da_handle handle{nullptr};
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J_wrong<T>,
-                                       eval_HF<T>, nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J_wrong<T>,
+                                          eval_HF<T>, nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, upper_bounds),
               da_status_success);
@@ -350,13 +368,40 @@ TEST(nlls, solverCheckNumDifficulties) {
     da_handle handle{nullptr};
     EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r<T>, eval_J_bad<T>, eval_HF<T>,
-                                       nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J_bad<T>,
+                                          eval_HF<T>, nullptr),
               da_status_success);
     EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, upper_bounds),
               da_status_success);
     EXPECT_EQ(da_options_set(handle, "Storage Order", "Fortran"), da_status_success);
     EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_numerical_difficulties);
+    da_handle_destroy(&handle);
+}
+
+TEST(nlls, solverCheckMaxTime) {
+    using namespace template_nlls_example_box_c;
+    using T = double;
+    // Data to be fitted
+    const da_int m = 5;
+    const da_int n = 2;
+    T t[]{1.0, 2.0, 4.0, 5.0, 8.0};
+    T y[]{3.0, 4.0, 6.0, 11.0, 20.0};
+    struct params_type<T> params {
+        t, y, da_int(-2)
+    };
+
+    // Call fitting routine
+    T x[n]{1.0, 1.0}; // Initial guess
+
+    da_handle handle{nullptr};
+    EXPECT_EQ(da_handle_init<T>(&handle, da_handle_type::da_handle_nlls),
+              da_status_success);
+    EXPECT_EQ(da_nlls_define_residuals<T>(handle, n, m, eval_r<T>, eval_J<T>, eval_HF<T>,
+                                          nullptr),
+              da_status_success);
+    EXPECT_EQ(da_options_set(handle, "time limit", 1.0e-3), da_status_success);
+    EXPECT_EQ(da_options_set(handle, "Storage Order", "Fortran"), da_status_success);
+    EXPECT_EQ(da_nlls_fit(handle, n, x, &params), da_status_maxtime);
     da_handle_destroy(&handle);
 }
 
@@ -366,11 +411,11 @@ TEST(nlls, wrongType) {
     EXPECT_EQ(da_handle_init<float>(&handle, da_handle_type::da_handle_nlls),
               da_status_success);
     da_int n{2}, m{5};
-    EXPECT_EQ(da_nlls_define_residuals(handle, n, m, eval_r<double>, eval_J<double>,
-                                       nullptr, nullptr),
+    EXPECT_EQ(da_nlls_define_residuals<double>(handle, n, m, eval_r<double>,
+                                               eval_J<double>, nullptr, nullptr),
               da_status_wrong_type);
     double lower_bounds[2]{0};
-    EXPECT_EQ(da_nlls_define_bounds(handle, n, lower_bounds, nullptr),
+    EXPECT_EQ(da_nlls_define_bounds<double>(handle, n, lower_bounds, nullptr),
               da_status_wrong_type);
     double x[2]{0};
     EXPECT_EQ(da_nlls_fit(handle, n, x, nullptr), da_status_wrong_type);

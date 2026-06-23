@@ -40,6 +40,7 @@
 #include "nearest_neighbors_py.hpp"
 #include "nlls_py.hpp"
 #include "svm_py.hpp"
+#include "tsne_py.hpp"
 #include "utils_py.hpp"
 #include <iostream>
 #include <optional>
@@ -182,41 +183,50 @@ PYBIND11_MODULE(_aoclda, m) {
     /**********************************/
     auto m_linmod = m.def_submodule("linear_model", "Linear models.");
     py::class_<linmod, pyda_handle>(m_linmod, "pybind_linmod")
-        .def(py::init<std::string, std::optional<da_int>, bool, std::string, std::string,
-                      std::string, bool, std::string &, bool>(),
-             py::arg("mod"), py::arg("max_iter") = py::none(),
-             py::arg("intercept") = false, py::arg("solver") = "auto",
-             py::arg("scaling") = "auto", py::arg("constraint") = "ssc",
-             py::arg("warm_start") = false, py::arg("precision") = "double",
-             py::arg("check_data") = false)
+        .def(
+            py::init<std::string, std::optional<da_int>, bool, std::string, std::string,
+                     std::string, bool, bool, std::optional<da_int>, std::string, bool>(),
+            py::arg("mod"), py::arg("max_iter") = py::none(),
+            py::arg("intercept") = false, py::arg("solver") = "auto",
+            py::arg("scaling") = "auto", py::arg("constraint") = "ssc",
+            py::arg("warm_start") = false, py::arg("mixed_precision") = false,
+            py::arg("low_precision_max_iter") = 200, py::arg("precision") = "double",
+            py::arg("check_data") = false)
         .def("pybind_fit", &linmod::fit<float>, "Computes the model", "X"_a, "y"_a,
              py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
              py::arg("reg_lambda") = (float)0.0, py::arg("reg_alpha") = (float)0.0,
-             py::arg("tol") = (float)0.0001)
+             py::arg("tol") = (float)0.0001, py::arg("low_precision_tol") = (float)0.01)
         .def("pybind_fit", &linmod::fit<double>, "Computes the model", "X"_a, "y"_a,
              py::arg("x0") = py::none(), py::arg("progress_factor") = py::none(),
              py::arg("reg_lambda") = (double)0.0, py::arg("reg_alpha") = (double)0.0,
-             py::arg("tol") = (double)0.0001)
-        .def("pybind_predict", &linmod::predict<double>, "Evaluate the model on X", "X"_a)
-        .def("pybind_predict", &linmod::predict<float>, "Evaluate the model on X", "X"_a)
+             py::arg("tol") = (double)0.0001, py::arg("low_precision_tol") = (double)0.01)
+        .def("pybind_predict", &linmod::predict<double>, "Evaluate the model on X", "X"_a,
+             py::arg("observations") = py::none())
+        .def("pybind_predict", &linmod::predict<float>, "Evaluate the model on X", "X"_a,
+             py::arg("observations") = py::none())
+        .def("get_model_trained", &linmod::get_model_trained)
         .def("get_coef", &linmod::get_coef)
         .def("get_dual_coef", &linmod::get_dual_coef)
         .def("get_loss", &linmod::get_loss)
         .def("get_norm_gradient_loss", &linmod::get_norm_gradient_loss)
         .def("get_n_iter", &linmod::get_n_iter)
-        .def("get_time", &linmod::get_time);
+        .def("get_time", &linmod::get_time)
+        .def(py::pickle([](linmod &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<linmod>(t); }));
 
     /**********************************/
     /*  Principal Component Analysis  */
     /**********************************/
     auto m_factorization = m.def_submodule("factorization", "Matrix factorizations.");
     py::class_<pca, pyda_handle>(m_factorization, "pybind_PCA")
-        .def(py::init<da_int, std::string, std::string, std::string, bool, std::string &,
-                      bool, bool>(),
+        .def(py::init<da_int, std::string, std::string, std::string, bool, std::string,
+                      bool, da_int, da_int, std::string, da_int, bool>(),
              py::arg("n_components") = 1, py::arg("bias") = "unbiased",
              py::arg("method") = "covariance", py::arg("solver") = "gesdd",
              py::arg("store_U") = false, py::arg("precision") = "double",
-             py::arg("whiten") = false, py::arg("check_data") = false)
+             py::arg("whiten") = false, py::arg("n_oversamples") = 10,
+             py::arg("power_iterations") = -1, py::arg("power_normalization") = "qr",
+             py::arg("seed") = -1, py::arg("check_data") = false)
         .def("pybind_fit", &pca::fit<float>, "Fit the principal component analysis",
              "A"_a)
         .def("pybind_fit", &pca::fit<double>, "Fit the principal component analysis",
@@ -240,7 +250,92 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_column_sdevs", &pca::get_column_sdevs)
         .def("get_n_samples", &pca::get_n_samples)
         .def("get_n_features", &pca::get_n_features)
-        .def("get_n_components", &pca::get_n_components);
+        .def("get_n_components", &pca::get_n_components)
+        .def(py::pickle([](pca &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<pca>(t); }));
+
+    /****************************************/
+    /*  Kernel Principal Component Analysis */
+    /****************************************/
+    py::class_<kernel_pca, pyda_handle>(m_factorization, "pybind_KernelPCA")
+        .def(py::init<da_int, std::string, std::string, da_int, bool, bool, std::string,
+                      bool, da_int, da_int, std::string, da_int, bool>(),
+             py::arg("n_components") = 0, py::arg("kernel") = "linear",
+             py::arg("eigensolver") = "syevd", py::arg("degree") = 3,
+             py::arg("fit_inverse_transform") = false, py::arg("remove_zero_eig") = false,
+             py::arg("precision") = "double", py::arg("copy_X") = true,
+             py::arg("n_oversamples") = 10, py::arg("power_iterations") = -1,
+             py::arg("power_normalization") = "qr", py::arg("seed") = -1,
+             py::arg("check_data") = false)
+        .def("pybind_fit", &kernel_pca::fit<float>,
+             "Fit the kernel principal component analysis", "A"_a, "gamma"_a, "coef0"_a,
+             "alpha"_a, py::keep_alive<1, 2>())
+        .def("pybind_fit", &kernel_pca::fit<double>,
+             "Fit the kernel principal component analysis", "A"_a, "gamma"_a, "coef0"_a,
+             "alpha"_a, py::keep_alive<1, 2>())
+        .def("pybind_transform", &kernel_pca::transform<float>,
+             "Transform using computed kernel PCA", "X"_a)
+        .def("pybind_transform", &kernel_pca::transform<double>,
+             "Transform using computed kernel PCA", "X"_a)
+        .def("pybind_inverse_transform", &kernel_pca::inverse_transform<float>,
+             "Inverse transform using computed kernel PCA", "Y"_a)
+        .def("pybind_inverse_transform", &kernel_pca::inverse_transform<double>,
+             "Inverse transform using computed kernel PCA", "Y"_a)
+        .def("get_eigenvalues", &kernel_pca::get_eigenvalues)
+        .def("get_eigenvectors", &kernel_pca::get_eigenvectors)
+        .def("get_scores", &kernel_pca::get_scores)
+        .def("get_dual_coef", &kernel_pca::get_dual_coef)
+        .def("get_gamma", &kernel_pca::get_gamma)
+        .def("get_X_fit", &kernel_pca::get_X_fit)
+        .def("get_n_samples", &kernel_pca::get_n_samples)
+        .def("get_n_features", &kernel_pca::get_n_features)
+        .def("get_n_components", &kernel_pca::get_n_components)
+        .def(py::pickle(
+            [](kernel_pca &p) { return p.save_model(); },
+            [](py::dict t) { return pyda_handle::load_model<kernel_pca>(t); }));
+
+    /**********************************/
+    /*       t-SNE embedding          */
+    /**********************************/
+    auto m_dimension_reduction =
+        m.def_submodule("dimension_reduction", "Dimension reduction algorithms.");
+    py::class_<tsne, pyda_handle>(m_dimension_reduction, "pybind_tsne")
+        .def(py::init<da_int, da_int, std::string, da_int, std::string, bool, bool,
+                      da_int>(),
+             py::arg("n_components") = 2, py::arg("max_iter") = 1000,
+             py::arg("init") = "pca", py::arg("seed") = -1,
+             py::arg("precision") = "double", py::arg("check_data") = false,
+             py::arg("mixed_precision") = false, py::arg("low_precision_max_iter") = 200)
+        .def("pybind_fit", &tsne::fit<float>, "Fit t-SNE", "X"_a,
+             py::arg("perplexity") = 30.0, py::arg("learning_rate") = -1.0,
+             py::arg("early_exaggeration") = 12.0, py::arg("theta") = 0.5,
+             py::arg("n_iter_without_progress") = 300, py::arg("min_grad_norm") = 1e-7,
+             py::arg("init_embedding") = py::none(),
+             py::arg("low_precision_min_grad_norm") = 1e-4)
+        .def("pybind_fit", &tsne::fit<double>, "Fit t-SNE", "X"_a,
+             py::arg("perplexity") = 30.0, py::arg("learning_rate") = -1.0,
+             py::arg("early_exaggeration") = 12.0, py::arg("theta") = 0.5,
+             py::arg("n_iter_without_progress") = 300, py::arg("min_grad_norm") = 1e-7,
+             py::arg("init_embedding") = py::none(),
+             py::arg("low_precision_min_grad_norm") = 1e-4)
+        .def("pybind_fit_transform", &tsne::fit_transform<float>,
+             "Fit t-SNE and return embedding", "X"_a, py::arg("perplexity") = 30.0,
+             py::arg("learning_rate") = -1.0, py::arg("early_exaggeration") = 12.0,
+             py::arg("theta") = 0.5, py::arg("n_iter_without_progress") = 300,
+             py::arg("min_grad_norm") = 1e-7, py::arg("init_embedding") = py::none(),
+             py::arg("low_precision_min_grad_norm") = 1e-4)
+        .def("pybind_fit_transform", &tsne::fit_transform<double>,
+             "Fit t-SNE and return embedding", "X"_a, py::arg("perplexity") = 30.0,
+             py::arg("learning_rate") = -1.0, py::arg("early_exaggeration") = 12.0,
+             py::arg("theta") = 0.5, py::arg("n_iter_without_progress") = 300,
+             py::arg("min_grad_norm") = 1e-7, py::arg("init_embedding") = py::none(),
+             py::arg("low_precision_min_grad_norm") = 1e-4)
+        .def("get_embedding", &tsne::get_embedding)
+        .def("get_n_samples", &tsne::get_n_samples)
+        .def("get_n_features", &tsne::get_n_features)
+        .def("get_n_components", &tsne::get_n_components)
+        .def("get_n_iter", &tsne::get_n_iter)
+        .def("get_kl_divergence", &tsne::get_kl_divergence);
 
     /**********************************/
     /*       k-means clustering       */
@@ -248,15 +343,21 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_clustering = m.def_submodule("clustering", "Clustering algorithms.");
     py::class_<kmeans, pyda_handle>(m_clustering, "pybind_kmeans")
         .def(py::init<da_int, std::string, da_int, da_int, da_int, std::string,
-                      std::string &, bool>(),
+                      std::string, bool, std::string, da_int, bool, da_int, std::string,
+                      bool>(),
              py::arg("n_clusters") = 1, py::arg("initialization_method") = "k-means++",
              py::arg("n_init") = 10, py::arg("max_iter") = 300, py::arg("seed") = -1,
-             py::arg("algorithm") = "elkan", py::arg("precision") = "double",
+             py::arg("algorithm") = "lloyd", py::arg("distance") = "euclidean",
+             py::arg("normalize_data") = false, py::arg("empty_clusters") = "ignore",
+             py::arg("afk_mcmc_samples") = 50, py::arg("mixed_precision") = false,
+             py::arg("low_precision_max_iter") = 200, py::arg("precision") = "double",
              py::arg("check_data") = false)
         .def("pybind_fit", &kmeans::fit<float>, "Fit the k-means clusters", "A"_a,
-             "C"_a = py::none(), py::arg("convergence_tolerance") = (float)1.0e-4)
+             "C"_a = py::none(), py::arg("convergence_tolerance") = (float)1.0e-4,
+             py::arg("low_precision_convergence_tolerance") = (float)1.0e-2)
         .def("pybind_fit", &kmeans::fit<double>, "Fit the k-means clusters", "A"_a,
-             "C"_a = py::none(), py::arg("convergence_tolerance") = (double)1.0e-4)
+             "C"_a = py::none(), py::arg("convergence_tolerance") = (double)1.0e-4,
+             py::arg("low_precision_convergence_tolerance") = (double)1.0e-2)
         .def("pybind_transform", &kmeans::transform<float>,
              "Transform using computed k-means clusters", "X"_a)
         .def("pybind_transform", &kmeans::transform<double>,
@@ -271,14 +372,16 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_samples", &kmeans::get_n_samples)
         .def("get_n_features", &kmeans::get_n_features)
         .def("get_n_clusters", &kmeans::get_n_clusters)
-        .def("get_n_iter", &kmeans::get_n_iter);
+        .def("get_n_iter", &kmeans::get_n_iter)
+        .def(py::pickle([](kmeans &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<kmeans>(t); }));
 
     /**********************************/
     /*       DBSCAN clustering        */
     /**********************************/
 
     py::class_<DBSCAN, pyda_handle>(m_clustering, "pybind_DBSCAN")
-        .def(py::init<da_int, std::string, std::string, da_int, std::string &, bool>(),
+        .def(py::init<da_int, std::string, std::string, da_int, std::string, bool>(),
              py::arg("min_samples") = 5, py::arg("metric") = "euclidean",
              py::arg("algorithm") = "brute", py::arg("leaf_size") = 30,
              py::arg("precision") = "double", py::arg("check_data") = false)
@@ -338,7 +441,10 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("set_max_features_opt", &decision_tree::set_max_features_opt,
              "Set option for feature selection", py::arg("max_features") = 0)
         .def("get_max_features_opt", &decision_tree::get_max_features_opt,
-             "Get option for feature selection");
+             "Get option for feature selection")
+        .def(py::pickle(
+            [](decision_tree &p) { return p.save_model(); },
+            [](py::dict t) { return pyda_handle::load_model<decision_tree>(t); }));
 
     /**********************************/
     /*       Decision Forests         */
@@ -346,7 +452,8 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_decision_forest = m.def_submodule("decision_forest", "Decision forests.");
     py::class_<decision_forest, pyda_handle>(m_decision_forest, "pybind_decision_forest")
         .def(py::init<da_int, std::string, da_int, da_int, da_int, bool, std::string,
-                      da_int, std::string, bool, da_int, da_int, std::string, bool>(),
+                      da_int, std::string, bool, da_int, da_int, std::string, da_int,
+                      bool>(),
              py::arg("n_trees") = 100, py::arg("criterion") = "gini",
              py::arg("seed") = -1, py::arg("max_depth") = 29,
              py::arg("min_samples_split") = 2, py::arg("bootstrap") = true,
@@ -354,7 +461,7 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("precision") = "double", py::arg("histogram") = "no",
              py::arg("maximum_bins") = 256, py::arg("block_size") = 256,
              py::arg("category_split_strategy") = "ordered",
-             py::arg("check_data") = false)
+             py::arg("max_tree_threads") = 0, py::arg("check_data") = false)
         .def("pybind_fit", &decision_forest::fit<float>, "Fit the decision forest", "X"_a,
              "y"_a, py::arg("samples factor") = (float)1.0,
              py::arg("min_impurity_decrease") = (float)0.0,
@@ -392,7 +499,10 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_max_features_opt", &decision_forest::get_max_features_opt,
              "Get option for feature selection")
         .def("get_features_selection_opt", &decision_forest::get_features_selection_opt,
-             "Get option for feature selection");
+             "Get option for feature selection")
+        .def(py::pickle(
+            [](decision_forest &p) { return p.save_model(); },
+            [](py::dict t) { return pyda_handle::load_model<decision_forest>(t); }));
 
     /**********************************/
     /*     Nonlinear Data Fitting     */
@@ -415,14 +525,17 @@ PYBIND11_MODULE(_aoclda, m) {
              py::arg("abs_ftol") = (float)1.0e-8, py::arg("gtol") = (float)1.0e-8,
              py::arg("abs_gtol") = (float)1.0e-5, py::arg("xtol") = (float)2.22e-16,
              py::arg("reg_term") = (float)0.0, py::arg("maxit") = (da_int)100,
-             py::arg("fd_step") = (float)1.0e-7, py::arg("fd_ttol") = (float)1.0e-4)
+             py::arg("fd_step") = (float)1.0e-7, py::arg("fd_ttol") = (float)1.0e-4,
+             py::arg("maxtime") = (float)1.0e6)
         .def("pybind_fit", &nlls::fit<double>, "Fit data and train the model", "x"_a,
              "fun"_a, "jac"_a, "hes"_a = py::none(), "hep"_a = py::none(),
              "data"_a = py::none(), py::arg("ftol") = (double)1.0e-8,
              py::arg("abs_ftol") = (double)1.0e-8, py::arg("gtol") = (double)1.0e-8,
              py::arg("abs_gtol") = (double)1.0e-5, py::arg("xtol") = (double)2.22e-16,
              py::arg("reg_term") = (double)0.0, py::arg("maxit") = (da_int)100,
-             py::arg("fd_step") = (double)1.0e-7, py::arg("fd_ttol") = (double)1.0e-4)
+             py::arg("fd_step") = (double)1.0e-7, py::arg("fd_ttol") = (double)1.0e-4,
+             py::arg("maxtime") = (double)1.0e6)
+
         // hidden @properties
         .def("_get_precision", &nlls::get_precision) // -> string
         // @properties
@@ -462,6 +575,13 @@ PYBIND11_MODULE(_aoclda, m) {
              "Set the targets for the fitted data", "y"_a)
         .def("pybind_set_targets", &nearest_neighbors::set_targets<double>,
              "Set the targets for the fitted data", "y"_a)
+        .def("pybind_set_outlier_info", &nearest_neighbors::set_outlier_info<float>,
+             "Set the outlier information", py::arg("outlier_handling") = "none",
+             py::arg("outlier_label") = (da_int)0, py::arg("outlier_target") = (float)0.0)
+        .def("pybind_set_outlier_info", &nearest_neighbors::set_outlier_info<double>,
+             "Set the outlier information", py::arg("outlier_handling") = "none",
+             py::arg("outlier_label") = (da_int)0,
+             py::arg("outlier_target") = (double)0.0)
         .def("pybind_kneighbors_indices", &nearest_neighbors::kneighbors_indices<float>,
              "Compute the indices of the k-nearest neighbors", "X"_a,
              py::arg("n_neighbors") = (da_int)0)
@@ -514,7 +634,10 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("pybind_radius_neighbors", &nearest_neighbors::radius_neighbors<double>,
              "Compute the indices of the radius neighbors and the corresponding "
              "distances",
-             "X"_a, py::arg("radius") = (double)1.0, py::arg("sort_results") = false);
+             "X"_a, py::arg("radius") = (double)1.0, py::arg("sort_results") = false)
+        .def(py::pickle(
+            [](nearest_neighbors &p) { return p.save_model(); },
+            [](py::dict t) { return pyda_handle::load_model<nearest_neighbors>(t); }));
 
     /***************************************/
     /*     Approximate Nearest Neighbors   */
@@ -568,7 +691,11 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_n_list", &approximate_neighbors::get_n_list)
         .def("get_n_index", &approximate_neighbors::get_n_index)
         .def("get_n_features", &approximate_neighbors::get_n_features)
-        .def("get_kmeans_iter", &approximate_neighbors::get_kmeans_iter);
+        .def("get_kmeans_iter", &approximate_neighbors::get_kmeans_iter)
+        .def(py::pickle([](approximate_neighbors &p) { return p.save_model(); },
+                        [](py::dict t) {
+                            return pyda_handle::load_model<approximate_neighbors>(t);
+                        }));
 
     /**********************************/
     /*         Pairwise Distances     */
@@ -611,19 +738,20 @@ PYBIND11_MODULE(_aoclda, m) {
     auto m_svm = m.def_submodule("svm", "Support Vector Machine");
     // SVC
     py::class_<py_svc, pyda_handle>(m_svm, "pybind_svc")
-        .def(py::init<std::string, da_int, da_int, da_int, da_int, da_int, std::string,
-                      bool &>(),
+        .def(py::init<std::string, da_int, da_int, da_int, da_int, da_int, bool, da_int,
+                      std::string, bool &>(),
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
              py::arg("probability") = 0, py::arg("seed") = 0, py::arg("max_ws_size") = -1,
+             py::arg("mixed_precision") = false, py::arg("low_precision_max_iter") = 200,
              py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &py_svc::fit<float>, "Fit the SVC model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("gamma") = 1,
              py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_fit", &py_svc::fit<double>, "Fit the SVC model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("gamma") = 1,
              py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
@@ -657,21 +785,25 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_probA", &py_svm::get_probA)
         .def("get_probB", &py_svm::get_probB)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_svc &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_svc>(t); }));
     // SVR
     py::class_<py_svr, pyda_handle>(m_svm, "pybind_svr")
-        .def(py::init<std::string, da_int, da_int, da_int, std::string, bool &>(),
+        .def(py::init<std::string, da_int, da_int, da_int, bool, da_int, std::string,
+                      bool &>(),
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
-             py::arg("max_ws_size") = -1, py::arg("precision") = "double",
+             py::arg("max_ws_size") = -1, py::arg("mixed_precision") = false,
+             py::arg("low_precision_max_iter") = 200, py::arg("precision") = "double",
              py::arg("check_data") = false)
         .def("pybind_fit", &py_svr::fit<float>, "Fit the SVR model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("epsilon") = 0.1,
              py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_fit", &py_svr::fit<double>, "Fit the SVR model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("C") = 1.0, py::arg("epsilon") = 0.1,
              py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
@@ -688,22 +820,25 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_svr &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_svr>(t); }));
     // nuSVC
     py::class_<py_nusvc, pyda_handle>(m_svm, "pybind_nusvc")
-        .def(py::init<std::string, da_int, da_int, da_int, da_int, da_int, std::string,
-                      bool &>(),
+        .def(py::init<std::string, da_int, da_int, da_int, da_int, da_int, bool, da_int,
+                      std::string, bool &>(),
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
              py::arg("probability") = 0, py::arg("seed") = 0, py::arg("max_ws_size") = -1,
+             py::arg("mixed_precision") = false, py::arg("low_precision_max_iter") = 200,
              py::arg("precision") = "double", py::arg("check_data") = false)
         .def("pybind_fit", &py_nusvc::fit<float>, "Fit the nuSVC model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("gamma") = 1,
              py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_fit", &py_nusvc::fit<double>, "Fit the nuSVC model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("gamma") = 1,
              py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
@@ -737,21 +872,25 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_probA", &py_svm::get_probA)
         .def("get_probB", &py_svm::get_probB)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_nusvc &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_nusvc>(t); }));
     // nuSVR
     py::class_<py_nusvr, pyda_handle>(m_svm, "pybind_nusvr")
-        .def(py::init<std::string, da_int, da_int, da_int, std::string, bool &>(),
+        .def(py::init<std::string, da_int, da_int, da_int, bool, da_int, std::string,
+                      bool &>(),
              py::arg("kernel") = "rbf", py::arg("degree") = 3, py::arg("max_iter") = -1,
-             py::arg("max_ws_size") = -1, py::arg("precision") = "double",
+             py::arg("max_ws_size") = -1, py::arg("mixed_precision") = false,
+             py::arg("low_precision_max_iter") = 200, py::arg("precision") = "double",
              py::arg("check_data") = false)
         .def("pybind_fit", &py_nusvr::fit<float>, "Fit the nuSVR model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("C") = 1.0,
              py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_fit", &py_nusvr::fit<double>, "Fit the nuSVR model", "X"_a, "y"_a,
              py::arg("tau") = py::none(), py::arg("nu") = 0.5, py::arg("C") = 1.0,
              py::arg("gamma") = 1, py::arg("coef0") = 0.0, py::arg("tol") = 0.001,
-             py::arg("cache_size") = 200.0)
+             py::arg("low_precision_tol") = 0.01, py::arg("cache_size") = 200.0)
         .def("pybind_predict", &py_svm::predict<float>,
              "Compute the predicted labels for the test data", "X"_a)
         .def("pybind_predict", &py_svm::predict<double>,
@@ -768,5 +907,7 @@ PYBIND11_MODULE(_aoclda, m) {
         .def("get_dual_coef", &py_svm::get_dual_coef)
         .def("get_bias", &py_svm::get_bias)
         .def("get_support_vectors_idx", &py_svm::get_support_vectors_idx)
-        .def("get_sv", &py_svm::get_sv);
+        .def("get_sv", &py_svm::get_sv)
+        .def(py::pickle([](py_nusvr &p) { return p.save_model(); },
+                        [](py::dict t) { return pyda_handle::load_model<py_nusvr>(t); }));
 }
