@@ -15,7 +15,7 @@ tags
 '.*/[lL]icen[sc]e\.txt'
 '.*.rst'
 '.*.bib'
-'.*.md'
+'.*\.md'
 '.*.jinja'
 tools/pr\.html
 doc/Doxyfile

@@ -189,9 +189,10 @@ TEST(BasicStatsCAPI, QuantileDouble) {
     double X[20] = {1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0, 2.0, 8.0,
                     4.0, 6.0, 9.0, 5.0, 4.0, 3.0, 1.0, 1.0, 2.0, 2.0};
     da_int n_rows = 4, n_cols = 5, ldx = 4;
+    double q = 0.5;
 
     double quantile[5];
-    EXPECT_EQ(da_quantile_d(column_major, da_axis_col, n_rows, n_cols, X, ldx, 0.5,
+    EXPECT_EQ(da_quantile_d(column_major, da_axis_col, n_rows, n_cols, X, ldx, &q, 1,
                             quantile, da_quantile_type_7),
               da_status_success);
 }
@@ -200,9 +201,10 @@ TEST(BasicStatsCAPI, QuantileFloat) {
     float X[20] = {1.0f, 2.0f, 3.0f, 4.0f, 4.0f, 3.0f, 2.0f, 1.0f, 2.0f, 8.0f,
                    4.0f, 6.0f, 9.0f, 5.0f, 4.0f, 3.0f, 1.0f, 1.0f, 2.0f, 2.0f};
     da_int n_rows = 4, n_cols = 5, ldx = 4;
+    float q = 0.5f;
 
     float quantile[5];
-    EXPECT_EQ(da_quantile_s(column_major, da_axis_col, n_rows, n_cols, X, ldx, 0.5f,
+    EXPECT_EQ(da_quantile_s(column_major, da_axis_col, n_rows, n_cols, X, ldx, &q, 1,
                             quantile, da_quantile_type_7),
               da_status_success);
 }

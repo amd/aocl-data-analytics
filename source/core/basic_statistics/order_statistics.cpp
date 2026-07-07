@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -27,398 +27,383 @@
 
 #include "aoclda.h"
 #include "basic_statistics.hpp"
+#include "da_std.hpp"
 #include "macros.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <type_traits>
 #include <vector>
 
 namespace ARCH {
 
 namespace da_basic_statistics {
 
-/* This routine uses the partial sort routine std::nth_element to correctly place the kth element of x.
-   It uses the index array to do the sorting, so x is not itself reordered. */
+/*  Given two adjacent or equal indices (idx1 and idx2) within [0, length), partially sort x
+    to retrieve the values at those positions. When idx1 != idx2, only one nth_element call is
+    performed and the adjacent value is obtained via min/max on the
+    already-partitioned portion. */
 template <typename T>
-da_status indexed_partial_sort(const T *x, da_int length, da_int stride, da_int *xindex,
-                               da_int k, da_int dim1, bool two_d, T &stat) {
-    try {
-        if (two_d) {
-            // Deal with special case of 2d array, in which case stride corresponds to ldx
-            std::nth_element(xindex, xindex + k, xindex + length,
-                             [x, stride, dim1](da_int i, da_int j) {
-                                 return x[stride * (i / dim1) + i % dim1] <
-                                        x[stride * (j / dim1) + j % dim1];
-                             });
-            stat = x[stride * (xindex[k] / dim1) + xindex[k] % dim1];
+da_status quick_selection(T *x, da_int length, da_int idx1, da_int idx2, T &val1,
+                          T &val2) {
+    if (idx1 > idx2)
+        std::swap(idx1, idx2);
 
+    if (idx2 - idx1 != 0 && idx2 - idx1 != 1)
+        return da_status_internal_error;
+
+    if (idx1 == idx2) {
+        std::nth_element(x, x + idx1, x + length);
+        val1 = x[idx1];
+        val2 = x[idx1];
+    } else {
+        if (idx1 < length - 1 - idx2) {
+            // Small quantile: find idx2 first, then max of left portion
+            std::nth_element(x, x + idx2, x + length);
+            val2 = x[idx2];
+            val1 = *std::max_element(x, x + idx2);
         } else {
-            std::nth_element(xindex, xindex + k, xindex + length,
-                             [x, stride](da_int i, da_int j) {
-                                 return x[i * stride] < x[j * stride];
-                             });
-            stat = x[xindex[k] * stride];
+            // Large quantile: find idx1 first, then min of small right portion
+            std::nth_element(x, x + idx1, x + length);
+            val1 = x[idx1];
+            val2 = *std::min_element(x + idx2, x + length);
         }
-        return da_status_success;
-    } catch (std::bad_alloc const &) {
-        return da_status_memory_error; // LCOV_EXCL_LINE
     }
+
+    return da_status_success;
+}
+
+template <typename T>
+da_status validate_quantile_parameters(da_order order, da_int n, da_int p, const T *x,
+                                       da_int ldx, const T *q, da_int n_q, T *quantiles) {
+    if (x == nullptr || q == nullptr || quantiles == nullptr)
+        return da_status_invalid_pointer;
+
+    if (n < 1 || p < 1)
+        return da_status_invalid_array_dimension;
+
+    if (n_q < 1)
+        return da_status_invalid_input;
+
+    if (order == column_major) {
+        if (n > ldx)
+            return da_status_invalid_leading_dimension;
+    } else if (order == row_major) {
+        if (p > ldx)
+            return da_status_invalid_leading_dimension;
+    }
+
+    return da_status_success;
+}
+
+// Snap to nearest integer to correct float rounding noise
+template <typename T> inline double denoise_cast(double val) {
+    if constexpr (std::is_same_v<T, float>) {
+        double r = std::round(val);
+        double tol = std::min(0.25, std::max(1.0, std::abs(val)) *
+                                        std::numeric_limits<float>::epsilon() * 2.0);
+        if (std::abs(val - r) <= tol)
+            val = r;
+    }
+    return val;
+}
+
+template <typename T>
+inline da_status get_quantile_indices(const T *q, da_int n_q, da_int length,
+                                      da_quantile_type quantile_type,
+                                      std::vector<double> &h) {
+    for (da_int i = 0; i < n_q; ++i) {
+        if (q[i] < 0 || q[i] > 1)
+            return da_status_invalid_input;
+
+        double qi = static_cast<double>(q[i]);
+
+        // We could combine some of these, but this is perhaps clearer
+        switch (quantile_type) {
+        case da_quantile_type_1:
+            h[i] = denoise_cast<T>(length * qi);
+            break;
+        case da_quantile_type_2:
+            h[i] = denoise_cast<T>(length * qi) + 0.5;
+            break;
+        case da_quantile_type_3:
+            h[i] = denoise_cast<T>(length * qi) - 0.5;
+            break;
+        case da_quantile_type_4:
+            h[i] = denoise_cast<T>(length * qi);
+            break;
+        case da_quantile_type_5:
+            h[i] = denoise_cast<T>(length * qi) + 0.5;
+            break;
+        case da_quantile_type_6:
+            h[i] = denoise_cast<T>((length + 1) * qi);
+            break;
+        case da_quantile_type_7:
+            h[i] = denoise_cast<T>((length - 1) * qi) + 1;
+            break;
+        case da_quantile_type_8: {
+            double third = 1.0 / 3.0;
+            h[i] = denoise_cast<T>((length + third) * qi) + third;
+            break;
+        }
+        case da_quantile_type_9:
+            h[i] = denoise_cast<T>((length + 0.25) * qi) + 3.0 / 8.0;
+            break;
+
+        default:
+            return da_status_internal_error; // LCOV_EXCL_LINE
+            break;
+        }
+        h[i] -= 1.0;
+    }
+    return da_status_success;
 }
 
 /* Compute the qth quantile of x along the specified axis */
 template <typename T>
-da_status quantile(da_order order, da_axis axis_in, da_int n_in, da_int p_in, const T *x,
-                   da_int ldx, T q, T *quant, da_quantile_type quantile_type) {
+da_status quantile(da_order order, da_axis axis, da_int n, da_int p, const T *x,
+                   da_int ldx, const T *q, da_int n_q, T *quantiles,
+                   da_quantile_type quantile_type) {
 
-    da_int n, p;
-    da_axis axis;
-
-    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
-    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
+    // ** q range is validated inside get_quantile_indices() and not here
+    da_status status =
+        validate_quantile_parameters(order, n, p, x, ldx, q, n_q, quantiles);
     if (status != da_status_success)
         return status;
 
-    if (q < 0 || q > 1)
-        return da_status_invalid_input;
-    if (x == nullptr || quant == nullptr)
-        return da_status_invalid_pointer;
+    // Set number of stats per quantile and length of working axis.
+    da_int num_stats, length;
 
-    // With a little bit of logic here we can deal with the different choices of axis all in one go
-    da_int num_stats, length, stride, spacing, dim1, dim2;
-    bool two_d;
-
+    // In case of mixed axis and order request, matrix will be transposed later to match axis.
     switch (axis) {
     case da_axis_col:
         num_stats = p;
-        dim1 = n;
-        stride = 1;
-        spacing = ldx;
-        dim2 = 1;
-        two_d = false;
+        length = n;
         break;
     case da_axis_row:
         num_stats = n;
-        dim1 = p;
-        stride = ldx;
-        spacing = 1;
-        dim2 = 1;
-        two_d = false;
+        length = p;
         break;
     case da_axis_all:
-        dim2 = p;
         num_stats = 1;
-        dim1 = n;
-        spacing = 1;
-        stride = ldx;
-        two_d = true;
+        length = n * p;
         break;
-
     default:
         return da_status_internal_error; // LCOV_EXCL_LINE
         break;
     }
 
-    T h;
-    length = dim1 * dim2;
+    // Fractional indices. double is used to avoid non-adjacent h1 and h2 indices
+    // for really big arrays.
+    std::vector<double> h;
+    try {
+        h.resize(n_q);
+    } catch (std::bad_alloc const &) {
+        return da_status_memory_error; // LCOV_EXCL_LINE
+    }
 
-    // Special case of statistics based on a single element
+    status = get_quantile_indices(q, n_q, length, quantile_type, h);
+    if (status != da_status_success)
+        return status;
+
+    // Sort quantile indices for faster selection while preserving output order.
+    std::vector<da_int> sorted_h_idx(n_q);
+    da_std::iota(sorted_h_idx.begin(), sorted_h_idx.end(), 0);
+    std::sort(sorted_h_idx.begin(), sorted_h_idx.end(),
+              [&h](da_int a, da_int b) { return h[a] < h[b]; });
+
+    // Transpose x when quantiles axis doesn't match input order for faster computation
+    bool transpose_x = ((order == column_major) && (axis == da_axis_row)) ||
+                       ((order == row_major) && (axis == da_axis_col));
+
+    // Early exit in case length == 1, where copying of X can be skipped
     if (length == 1) {
-        for (da_int i = 0; i < num_stats; i++)
-            quant[i] = x[i * spacing];
+        for (da_int i = 0; i < num_stats; ++i) {
+            da_int stride = transpose_x ? 1 : ldx;
+            for (da_int j = 0; j < n_q; ++j) {
+                da_int idx = order == row_major ? j * num_stats + i : i * n_q + j;
+                quantiles[idx] = x[i * stride];
+            }
+        }
         return da_status_success;
     }
 
-    // We could combine some of these, but this is perhaps clearer
-    switch (quantile_type) {
-    case da_quantile_type_1:
-        h = length * q;
-        break;
-    case da_quantile_type_2:
-        h = length * q + (T)0.5;
-        break;
-    case da_quantile_type_3:
-        h = length * q - (T)0.5;
-        break;
-    case da_quantile_type_4:
-        h = length * q;
-        break;
-    case da_quantile_type_5:
-        h = length * q + (T)0.5;
-        break;
-    case da_quantile_type_6:
-        h = (length + 1) * q;
-        break;
-    case da_quantile_type_7:
-        h = (length - 1) * q + 1;
-        break;
-    case da_quantile_type_8: {
-        T third = (T)1.0 / (T)3.0;
-        h = (length + third) * q + third;
-        break;
-    }
-    case da_quantile_type_9:
-        h = (length + (T)0.25) * q + (T)3.0 / (T)8.0;
-        break;
-
-    default:
-        return da_status_internal_error; // LCOV_EXCL_LINE
-        break;
-    }
-
-    // Account for 0 array indexing in C++
-    h -= (T)1.0;
-
-    // Declaring this vector allows us to sort in place, moving elements of xindex, instead of x
-    da_int *xindex;
+    // Create a copy of x (either partial (for axes col and row) or full (for axis all))
+    // to work on in the selection step
+    std::vector<T> copy_x;
     try {
-        xindex = new da_int[length];
+        da_int copy_size = axis == da_axis_all ? (n * p) : length;
+        copy_x.resize(copy_size);
     } catch (std::bad_alloc const &) {
-        return da_status_memory_error;
+        return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
+    da_int ldx_internal = ldx;
+
+    if (axis == da_axis_all) {
+        da_int dim1 = order == column_major ? n : p;
+        da_int dim2 = order == column_major ? p : n;
+        for (da_int i = 0; i < dim2; ++i) {
+            std::copy(x + i * ldx, x + i * ldx + dim1, copy_x.begin() + i * dim1);
+        }
+        // Since copying only usable data, equal ldx to the proper dimension.
+        ldx_internal = order == column_major ? n : p;
+    }
+
+    // Initial pointer to copy_x
+    T *work = copy_x.data();
     da_int izero = 0;
 
-    for (da_int i = 0; i < num_stats; i++) {
+    for (da_int i = 0; i < num_stats; ++i) {
+        da_int last_ceil = 0;
+        da_int last_floor = 0;
+        da_int h1, h2;
+        T tmp1 = 0;
+        T tmp2 = 0;
 
-        for (da_int j = 0; j < length; j++)
-            xindex[j] = j;
-
-        // There are 4 possibilities for the precise logic of forming the statistic here; we need to use std::clamp to guard against illegal array indexing
-        switch (quantile_type) {
-        case da_quantile_type_1: {
-            da_int hceil = std::clamp((da_int)std::ceil(h), izero, length - 1);
-            status = indexed_partial_sort(&x[i * spacing], length, stride, xindex, hceil,
-                                          dim1, two_d, quant[i]);
-            break;
+        if (axis == da_axis_all) {
+            work = copy_x.data() + i * ldx_internal;
+        } else {
+            if (!transpose_x) {
+                std::copy(x + i * ldx_internal, x + i * ldx_internal + length, work);
+            } else {
+                for (da_int j = 0; j < length; ++j) {
+                    work[j] = x[i + j * ldx_internal];
+                }
+            }
         }
-        case da_quantile_type_2: {
-            da_int h1 = std::clamp((da_int)std::ceil(h - (T)0.5), izero, length - 1);
-            da_int h2 = std::clamp((da_int)std::floor(h + (T)0.5), izero, length - 1);
+
+        for (da_int j = 0; j < n_q; ++j) {
+
+            da_int orig_h_idx = sorted_h_idx[j];
+
+            switch (quantile_type) {
+            case da_quantile_type_1: {
+                h1 = std::clamp((da_int)std::ceil(h[orig_h_idx]), izero, length - 1);
+                h2 = h1;
+                break;
+            }
+            case da_quantile_type_2: {
+                h1 =
+                    std::clamp((da_int)std::ceil(h[orig_h_idx] - 0.5), izero, length - 1);
+                h2 = std::clamp((da_int)std::floor(h[orig_h_idx] + 0.5), izero,
+                                length - 1);
+                break;
+            }
+            case da_quantile_type_3: {
+                h1 = std::clamp((da_int)std::nearbyint(h[orig_h_idx]), izero, length - 1);
+                h2 = h1;
+                break;
+            }
+            default: {
+                h1 = std::clamp((da_int)std::floor(h[orig_h_idx]), izero, length - 1);
+                h2 = std::clamp((da_int)std::ceil(h[orig_h_idx]), izero, length - 1);
+                break;
+            }
+            }
+
+            // j == 0 make sure it runs on the first iterration when h1 and h2 are both 0.
+            if (j == 0 || h1 != last_floor || h2 != last_ceil) {
+                status = quick_selection(work + last_ceil, length - last_ceil,
+                                         h1 - last_ceil, h2 - last_ceil, tmp1, tmp2);
+                if (status != da_status_success)
+                    return status;
+            }
+
+            da_int idx =
+                order == row_major ? orig_h_idx * num_stats + i : i * n_q + orig_h_idx;
             if (h1 == h2) {
-                status = indexed_partial_sort(&x[i * spacing], length, stride, xindex, h1,
-                                              dim1, two_d, quant[i]);
-            } else {
-                T tmp1, tmp2;
-                status = indexed_partial_sort(&x[i * spacing], length, stride, xindex, h1,
-                                              dim1, two_d, tmp1);
-                // h2 = h1+1 so just find the minimum value of the upper part of the array now
-                status = indexed_partial_sort(&x[i * spacing], length - h1 - 1, stride,
-                                              &xindex[h1 + 1], izero, dim1, two_d, tmp2);
-                quant[i] = (T)0.5 * (tmp1 + tmp2);
+                quantiles[idx] = tmp1;
+            } else if (quantile_type == da_quantile_type_2) {
+                quantiles[idx] = (T)0.5 * (tmp1 + tmp2);
+            } else if (quantile_type != da_quantile_type_1 &&
+                       quantile_type != da_quantile_type_3) {
+                quantiles[idx] = tmp1 + (h[orig_h_idx] - h1) * (tmp2 - tmp1);
             }
-            break;
-        }
-        case da_quantile_type_3: {
-            da_int hint = std::clamp((da_int)std::nearbyint(h), izero, length - 1);
-            status = indexed_partial_sort(&x[i * spacing], length, stride, xindex, hint,
-                                          dim1, two_d, quant[i]);
-            break;
-        }
-        default: {
-            da_int hceil = std::clamp((da_int)std::ceil(h), izero, length - 1);
-            da_int hfloor = std::clamp((da_int)std::floor(h), izero, length - 1);
-            if (hceil == hfloor) {
-                status = indexed_partial_sort(&x[i * spacing], length, stride, xindex,
-                                              hfloor, dim1, two_d, quant[i]);
-            } else {
-                T tmp1, tmp2;
-                status = indexed_partial_sort(&x[i * spacing], length, stride, xindex,
-                                              hfloor, dim1, two_d, tmp1);
-                // hceil = hfloor+1 so just find the minimum value of the upper part of the array now
-                status =
-                    indexed_partial_sort(&x[i * spacing], length - hfloor - 1, stride,
-                                         &xindex[hfloor + 1], izero, dim1, two_d, tmp2);
-                quant[i] = tmp1 + (h - hfloor) * (tmp2 - tmp1);
-            }
-            break;
-        }
-        }
 
-        if (status != da_status_success) {
-            delete[] xindex;
-            return status;
+            last_floor = h1;
+            last_ceil = h2;
         }
     }
 
-    delete[] xindex;
     return da_status_success;
 }
 
 /* Compute min/max, hinges and median along specified axis */
 template <typename T>
-da_status five_point_summary(da_order order, da_axis axis_in, da_int n_in, da_int p_in,
-                             const T *x, da_int ldx, T *minimum, T *lower_hinge,
-                             T *median, T *upper_hinge, T *maximum) {
-
-    da_int n, p;
-    da_axis axis;
-
-    // If we are in row-major we can switch the axis and n and p and work as if we were in column-major
-    da_status status = row_to_col_major(order, axis_in, n_in, p_in, ldx, axis, n, p);
-    if (status != da_status_success)
-        return status;
-
-    // Quantile enables user to choose a method, but for this simple routine we will use a default of type 6
-    // Note, we are not directly calling quantile here because efficiencies are possible in the sorting stage due to computing multiple statistics
+da_status five_point_summary(da_order order, da_axis axis, da_int n, da_int p, const T *x,
+                             da_int ldx, T *minimum, T *lower_hinge, T *median,
+                             T *upper_hinge, T *maximum) {
 
     if (x == nullptr || minimum == nullptr || lower_hinge == nullptr ||
         median == nullptr || upper_hinge == nullptr || maximum == nullptr)
         return da_status_invalid_pointer;
 
-    // With a little bit of logic we can deal with the choice of axis all in one go
-    da_int num_stats, length, stride, spacing, dim1, dim2;
-    bool two_d;
+    // validate n and p here to make sure non-negative values are
+    // passsed to the memory allocation later
+    if (n < 1 || p < 1)
+        return da_status_invalid_array_dimension;
 
-    switch (axis) {
-    case da_axis_col:
-        num_stats = p;
-        dim1 = n;
-        stride = 1;
-        spacing = ldx;
-        dim2 = 1;
-        two_d = false;
-        break;
-    case da_axis_row:
-        num_stats = n;
-        dim1 = p;
-        stride = ldx;
-        spacing = 1;
-        dim2 = 1;
-        two_d = false;
-        break;
-    case da_axis_all:
-        dim2 = p;
-        num_stats = 1;
-        dim1 = n;
-        spacing = 1;
-        stride = ldx;
-        two_d = true;
-        break;
+    // Run quantiles() for the five points needed.
+    std::vector<T> q = {T(0.0), T(0.25), T(0.5), T(0.75), T(1.0)};
+    da_int n_q = 5;
 
-    default:
-        return da_status_internal_error; // LCOV_EXCL_LINE
-        break;
+    // Compute size of quantiles
+    size_t quantiles_size = 0;
+    da_int quantiles_axis_size = 0;
+    if (axis == da_axis_col) {
+        quantiles_size = p * n_q;
+        quantiles_axis_size = p;
+    } else if (axis == da_axis_row) {
+        quantiles_size = n * n_q;
+        quantiles_axis_size = n;
+    } else {
+        quantiles_size = n_q;
+        quantiles_axis_size = 1;
     }
 
-    length = dim1 * dim2;
-
-    // Special case of statistics based on a single element
-    if (length == 1) {
-        for (da_int i = 0; i < num_stats; i++) {
-            median[i] = x[i * spacing];
-            maximum[i] = x[i * spacing];
-            minimum[i] = x[i * spacing];
-            upper_hinge[i] = x[i * spacing];
-            lower_hinge[i] = x[i * spacing];
-        }
-        return da_status_success;
-    }
-
-    T h_median = (length + 1) * (T)0.5 - (T)1.0;
-    T h_upper = (length + 1) * (T)0.75 - (T)1.0;
-    T h_lower = (length + 1) * (T)0.25 - (T)1.0;
-
-    da_int izero = 0;
-
-    da_int h_median_floor = std::clamp((da_int)std::floor(h_median), izero, length - 1);
-    da_int h_median_ceil = std::clamp((da_int)std::ceil(h_median), izero, length - 1);
-    da_int h_upper_floor = std::clamp((da_int)std::floor(h_upper), izero, length - 1);
-    da_int h_upper_ceil = std::clamp((da_int)std::ceil(h_upper), izero, length - 1);
-    da_int h_lower_floor = std::clamp((da_int)std::floor(h_lower), izero, length - 1);
-    da_int h_lower_ceil = std::clamp((da_int)std::ceil(h_lower), izero, length - 1);
-    da_int h_maximum = length - 1;
-    da_int h_minimum = 0;
-
-    // Declaring this vector allows us to sort in place, moving elements of xindex, instead of x
-    da_int *xindex;
+    std::vector<T> quantiles;
     try {
-        xindex = new da_int[length];
+        quantiles.resize(quantiles_size);
     } catch (std::bad_alloc const &) {
         return da_status_memory_error; // LCOV_EXCL_LINE
     }
 
-    for (da_int i = 0; i < num_stats; i++) {
+    da_status status = quantile(order, axis, n, p, x, ldx, q.data(), n_q,
+                                quantiles.data(), da_quantile_type_6);
+    if (status != da_status_success)
+        return status;
 
-        for (da_int j = 0; j < length; j++)
-            xindex[j] = j;
-
-        // Compute the median first
-        T tmp1, tmp2;
-        if (h_median_floor == h_median_ceil) {
-            status = indexed_partial_sort(&x[i * spacing], length, stride, xindex,
-                                          h_median_floor, dim1, two_d, median[i]);
-        } else {
-            status = indexed_partial_sort(&x[i * spacing], length, stride, xindex,
-                                          h_median_floor, dim1, two_d, tmp1);
-            // h_median_ceil = h_median_floor+1 so just find the minimum value of the upper part of the array now
-            status =
-                indexed_partial_sort(&x[i * spacing], length - h_median_floor - 1, stride,
-                                     &xindex[(std::min)(h_median_floor + 1, length - 1)],
-                                     izero, dim1, two_d, tmp2);
-            median[i] = tmp1 + (h_median - h_median_floor) * (tmp2 - tmp1);
-        }
-
-        // We can now use the fact that we've got a partially ordered array to save a lot of work for the hinges and max/min
-        if (h_lower_floor == h_lower_ceil) {
-            status = indexed_partial_sort(&x[i * spacing], h_median_floor, stride, xindex,
-                                          h_lower_ceil, dim1, two_d, lower_hinge[i]);
-        } else {
-            status = indexed_partial_sort(&x[i * spacing], h_median_floor, stride, xindex,
-                                          h_lower_ceil, dim1, two_d, tmp2);
-            // h_lower_ceil = h_lower_floor+1 so just find the maximum value of the lower part of the array now
-            status = indexed_partial_sort(&x[i * spacing], h_lower_ceil, stride, xindex,
-                                          h_lower_floor, dim1, two_d, tmp1);
-            lower_hinge[i] = tmp1 + (h_lower - h_lower_floor) * (tmp2 - tmp1);
-        }
-        status = indexed_partial_sort(&x[i * spacing], h_lower_floor, stride, xindex,
-                                      h_minimum, dim1, two_d, minimum[i]);
-
-        if (h_upper_floor == h_upper_ceil) {
-            status =
-                indexed_partial_sort(&x[i * spacing], length - h_median_ceil - 1, stride,
-                                     &xindex[(std::min)(h_median_ceil + 1, length - 1)],
-                                     (std::max)(h_upper_floor - h_median_ceil - 1, izero),
-                                     dim1, two_d, upper_hinge[i]);
-        } else {
-            if (h_median_ceil == h_upper_floor) {
-                status =
-                    indexed_partial_sort(&x[i * spacing], length - h_median_ceil, stride,
-                                         &xindex[(std::min)(h_median_ceil, length - 1)],
-                                         izero, dim1, two_d, tmp1);
-            } else {
-                status = indexed_partial_sort(
-                    &x[i * spacing], length - h_median_ceil - 1, stride,
-                    &xindex[(std::min)(h_median_ceil + 1, length - 1)],
-                    (std::max)(h_upper_floor - h_median_ceil - 1, izero), dim1, two_d,
-                    tmp1);
-            }
-            // h_upper_ceil = h_upper_floor+1 so just find the minimum value of the upper part of the array now
-            status =
-                indexed_partial_sort(&x[i * spacing], length - h_upper_floor - 1, stride,
-                                     &xindex[(std::min)(h_upper_floor + 1, length - 1)],
-                                     izero, dim1, two_d, tmp2);
-            upper_hinge[i] = tmp1 + (h_upper - h_upper_floor) * (tmp2 - tmp1);
-        }
-        status = indexed_partial_sort(&x[i * spacing], length - h_upper_ceil - 1, stride,
-                                      &xindex[(std::min)(h_upper_ceil + 1, length - 1)],
-                                      (std::max)(h_maximum - h_upper_ceil - 1, izero),
-                                      dim1, two_d, maximum[i]);
-
-        if (status != da_status_success) {
-            delete[] xindex;
-            return status;
+    if (order == row_major) {
+        std::copy(quantiles.begin(), quantiles.begin() + quantiles_axis_size, minimum);
+        std::copy(quantiles.begin() + quantiles_axis_size,
+                  quantiles.begin() + (quantiles_axis_size * 2), lower_hinge);
+        std::copy(quantiles.begin() + (quantiles_axis_size * 2),
+                  quantiles.begin() + (quantiles_axis_size * 3), median);
+        std::copy(quantiles.begin() + (quantiles_axis_size * 3),
+                  quantiles.begin() + (quantiles_axis_size * 4), upper_hinge);
+        std::copy(quantiles.begin() + (quantiles_axis_size * 4),
+                  quantiles.begin() + (quantiles_axis_size * 5), maximum);
+    } else {
+        for (da_int i = 0; i < quantiles_axis_size; ++i) {
+            minimum[i] = quantiles[i * n_q];
+            lower_hinge[i] = quantiles[i * n_q + 1];
+            median[i] = quantiles[i * n_q + 2];
+            upper_hinge[i] = quantiles[i * n_q + 3];
+            maximum[i] = quantiles[i * n_q + 4];
         }
     }
 
-    delete[] xindex;
     return da_status_success;
 }
 
-template da_status quantile<float>(da_order order, da_axis axis_in, da_int n_in,
-                                   da_int p_in, const float *x, da_int ldx, float q,
-                                   float *quant, da_quantile_type quantile_type);
-template da_status quantile<double>(da_order order, da_axis axis_in, da_int n_in,
-                                    da_int p_in, const double *x, da_int ldx, double q,
-                                    double *quant, da_quantile_type quantile_type);
+template da_status quantile<float>(da_order order, da_axis axis, da_int n, da_int p,
+                                   const float *x, da_int ldx, const float *q, da_int n_q,
+                                   float *quantiles, da_quantile_type quantile_type);
+template da_status quantile<double>(da_order order, da_axis axis, da_int n, da_int p,
+                                    const double *x, da_int ldx, const double *q,
+                                    da_int n_q, double *quantiles,
+                                    da_quantile_type quantile_type);
 template da_status five_point_summary<float>(da_order order, da_axis axis_in, da_int n_in,
                                              da_int p_in, const float *x, da_int ldx,
                                              float *minimum, float *lower_hinge,

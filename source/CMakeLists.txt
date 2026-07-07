@@ -96,8 +96,7 @@ set(DA_HANDLE_PUBLIC core/utilities/da_handle.cpp
 set(DA_CSV_PUBLIC core/csv/tokenizer.c core/csv/read_csv_public.cpp)
 set(DA_SVM_PUBLIC core/svm/svm_public.cpp)
 set(DA_KERNEL_FUNCTIONS_PUBLIC
-    core/kernel_functions/kernel_functions_public.cpp
-    core/kernel_functions/kernel_functions_select_simd.cpp)
+    core/kernel_functions/kernel_functions_public.cpp)
 set(DA_INTERPOLATION_PUBLIC
     core/interpolation/interpolation_public.cpp)
 set(DA_APPROXIMATE_NEIGHBORS_PUBLIC

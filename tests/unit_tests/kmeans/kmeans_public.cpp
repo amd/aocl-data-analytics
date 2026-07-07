@@ -1201,3 +1201,131 @@ TYPED_TEST(KMeansTest, SphericalKMeans) {
         }
     }
 }
+
+/*
+ * Test that compute does not crash on non-finite or extreme-magnitude
+ * input. Covers NaN with n_init = 1, NaN with n_init > 1 (exercises a
+ * different swap path inside perform_kmeans), and finite input whose
+ * squared distances overflow to +inf.
+ */
+TYPED_TEST(KMeansTest, NonFiniteInputDoesNotCrash) {
+    struct Scenario {
+        const char *name;
+        bool use_nan;
+        da_int n_init;
+    };
+
+    // Magnitude whose square overflows to +inf for TypeParam.
+    const TypeParam M = std::sqrt(std::numeric_limits<TypeParam>::max()) * TypeParam(2);
+
+    const Scenario scenarios[] = {
+        {"NaN, n_init=1", true, 1},
+        {"NaN, n_init=4", true, 4},
+        {"Inf-inertia, n_init=1", false, 1},
+    };
+
+    for (const auto &sc : scenarios) {
+        std::vector<TypeParam> A{1.0, 1.1, 0.5,  0.49, -2.0, -2.0, 0.53, 0.9,  1.2, -1.8,
+                                 1.0, 1.2, -2.0, -1.9, 0.5,  0.51, -2.1, 0.95, 0.8, 0.6};
+        if (sc.use_nan) {
+            A[3] = std::numeric_limits<TypeParam>::quiet_NaN();
+        } else {
+            for (da_int i = 0; i < 10; ++i) {
+                TypeParam sign = (i < 5) ? TypeParam(1) : TypeParam(-1);
+                A[i] = sign * M;
+                A[i + 10] = sign * M;
+            }
+        }
+
+        da_int n_samples = 10, n_features = 2, n_clusters = 3, lda = 10;
+
+        da_handle handle = nullptr;
+        EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans), da_status_success)
+            << sc.name;
+        EXPECT_EQ(da_kmeans_set_data(handle, n_samples, n_features, A.data(), lda),
+                  da_status_success)
+            << sc.name;
+        EXPECT_EQ(da_options_set_int(handle, "n_clusters", n_clusters), da_status_success)
+            << sc.name;
+        EXPECT_EQ(da_options_set_string(handle, "algorithm", "lloyd"), da_status_success)
+            << sc.name;
+        EXPECT_EQ(da_options_set_int(handle, "n_init", sc.n_init), da_status_success)
+            << sc.name;
+        EXPECT_EQ(da_options_set_int(handle, "seed", 42), da_status_success) << sc.name;
+
+        // Reaching this line without crashing is the assertion.
+        da_status s = da_kmeans_compute<TypeParam>(handle);
+        (void)s;
+
+        da_handle_destroy(&handle);
+    }
+}
+
+/*
+ * Test that labels returned after max_iter = 1 agree with predict()
+ * on the training data and with argmin against the final centres.
+ */
+TYPED_TEST(KMeansTest, MaxIter1LabelsConsistentWithPredict) {
+    da_handle handle = nullptr;
+
+    std::vector<TypeParam> A{1.0, 1.1, 0.5,  0.49, -2.0, -2.0, 0.53, 0.9,  1.2, -1.8,
+                             1.0, 1.2, -2.0, -1.9, 0.5,  0.51, -2.1, 0.95, 0.8, 0.6};
+    // Initial centres chosen so the first Lloyd step moves some points
+    // between clusters.
+    std::vector<TypeParam> C{1.0, 0.5, -2.0, 1.0, 0.5, -2.0};
+
+    da_int n_samples = 10, n_features = 2, n_clusters = 3, lda = 10, ldc = 3;
+
+    EXPECT_EQ(da_handle_init<TypeParam>(&handle, da_handle_kmeans), da_status_success);
+    EXPECT_EQ(da_kmeans_set_data(handle, n_samples, n_features, A.data(), lda),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_clusters", n_clusters), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "algorithm", "lloyd"), da_status_success);
+    EXPECT_EQ(da_options_set_string(handle, "initialization method", "supplied"),
+              da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "n_init", 1), da_status_success);
+    EXPECT_EQ(da_options_set_int(handle, "max_iter", 1), da_status_success);
+    EXPECT_EQ(da_kmeans_set_init_centres(handle, C.data(), ldc), da_status_success);
+
+    da_status s = da_kmeans_compute<TypeParam>(handle);
+    ASSERT_TRUE(s == da_status_success || s == da_status_maxit);
+
+    da_int ldim = n_samples;
+    std::vector<da_int> labels(n_samples, -1);
+    EXPECT_EQ(da_handle_get_result_int(handle, da_kmeans_labels, &ldim, labels.data()),
+              da_status_success);
+
+    da_int cdim = n_clusters * n_features;
+    std::vector<TypeParam> C_final(cdim, TypeParam(0));
+    EXPECT_EQ(
+        da_handle_get_result(handle, da_kmeans_cluster_centres, &cdim, C_final.data()),
+        da_status_success);
+
+    std::vector<da_int> predicted(n_samples, -1);
+    EXPECT_EQ(
+        da_kmeans_predict(handle, n_samples, n_features, A.data(), lda, predicted.data()),
+        da_status_success);
+
+    for (da_int i = 0; i < n_samples; ++i) {
+        // Labels must match predict() on the training data.
+        EXPECT_EQ(predicted[i], labels[i]);
+
+        // Labels must match argmin against the final centres.
+        TypeParam best = std::numeric_limits<TypeParam>::infinity();
+        da_int best_j = 0;
+        for (da_int j = 0; j < n_clusters; ++j) {
+            TypeParam d = TypeParam(0);
+            for (da_int f = 0; f < n_features; ++f) {
+                TypeParam diff = A[i + f * n_samples] - C_final[j + f * n_clusters];
+                d += diff * diff;
+            }
+            if (d < best) {
+                best = d;
+                best_j = j;
+            }
+        }
+        EXPECT_EQ(labels[i], best_j);
+    }
+
+    da_handle_destroy(&handle);
+}

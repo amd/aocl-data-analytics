@@ -349,15 +349,15 @@ da_status da_moment_s(da_order order, da_axis axis, da_int n_rows, da_int n_cols
 }
 
 da_status da_quantile_d(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
-                        const double *X, da_int ldx, double q, double *quantile,
-                        da_quantile_type quantile_type) {
-    return da_quantile<double>(order, axis, n_rows, n_cols, X, ldx, q, quantile,
+                        const double *X, da_int ldx, const double *q, da_int n_q,
+                        double *quantiles, da_quantile_type quantile_type) {
+    return da_quantile<double>(order, axis, n_rows, n_cols, X, ldx, q, n_q, quantiles,
                                quantile_type);
 }
 da_status da_quantile_s(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
-                        const float *X, da_int ldx, float q, float *quantile,
-                        da_quantile_type quantile_type) {
-    return da_quantile<float>(order, axis, n_rows, n_cols, X, ldx, q, quantile,
+                        const float *X, da_int ldx, const float *q, da_int n_q,
+                        float *quantiles, da_quantile_type quantile_type) {
+    return da_quantile<float>(order, axis, n_rows, n_cols, X, ldx, q, n_q, quantiles,
                               quantile_type);
 }
 

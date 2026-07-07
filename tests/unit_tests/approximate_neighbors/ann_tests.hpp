@@ -83,6 +83,10 @@ template <typename T> struct ANNParamType {
     // off if necessary.
     bool allow_empty_lists = false;
 
+    // Override computed block sizes via da_debug_set (0 = use computed default)
+    da_int query_blk_sz_override{0};
+    da_int list_blk_sz_override{0};
+
     ANNParamType(){};
     ANNParamType(da_int nlist, da_int nprobe, da_int k, std::string metric,
                  std::string algorithm, std::string order)
@@ -251,106 +255,98 @@ inline void smaller_values_and_indices(da_int n, T *D, da_int k, da_int *k_ind, 
     }
 }
 
-// For most distances, we can simply use the knn api to get exact neighbors
+// Compute exact k nearest neighbours for any metric. Output indices are always row-major.
+// For non-IP metrics the KNN API is used directly; for inner product a GEMM fallback is used.
+// n_features must be passed explicitly because param.n_features may not be set for recall tests.
 template <typename T>
-da_status compute_neighbors_knn(ANNParamType<T> param, da_int *true_neighbors,
-                                const T *X_train, da_int n_samples_train,
-                                da_int n_features, da_int ldx_train, const T *X_test,
-                                da_int n_samples_test, da_int ldx_test) {
-    da_status status;
-    da_handle knn_handle = nullptr;
+da_status compute_exact_knn(const ANNParamType<T> &param, da_int n_features,
+                            da_int *indices, const T *X_train, da_int n_train,
+                            da_int ldx_train, const T *X_test, da_int n_test,
+                            da_int ldx_test) {
+    da_status status = da_status_success;
+    const da_int nf = n_features, k = param.k;
 
-    status = da_handle_init<T>(&knn_handle, da_handle_nn);
-    status = da_options_set_string(knn_handle, "storage order", param.order.c_str());
+    if (param.metric != "inner product") {
+        da_handle knn_handle = nullptr;
+        status = da_handle_init<T>(&knn_handle, da_handle_nn);
+        status = da_options_set_string(knn_handle, "storage order", param.order.c_str());
+        status = da_options_set_int(knn_handle, "number of neighbors", k);
+        status = da_options_set_string(knn_handle, "metric", param.metric.c_str());
+        status = da_options_set_string(knn_handle, "algorithm", "brute");
+        status = da_nn_set_data(knn_handle, n_train, nf, X_train, ldx_train);
+        if (status == da_status_success)
+            status = da_nn_kneighbors<T>(knn_handle, n_test, nf, X_test, ldx_test,
+                                         indices, nullptr, k, false);
+        da_handle_destroy(&knn_handle);
 
-    status = da_options_set_int(knn_handle, "number of neighbors", param.k);
-    status = da_options_set_string(knn_handle, "metric", param.metric.c_str());
-    status = da_options_set_string(knn_handle, "algorithm", param.algorithm.c_str());
-    status = da_nn_set_data(knn_handle, n_samples_train, n_features, X_train, ldx_train);
-    if (status == da_status_success) {
-        status = da_nn_kneighbors<T>(knn_handle, n_samples_test, n_features, X_test,
-                                     ldx_test, true_neighbors, nullptr, param.k, false);
+        // The KNN API returns output in storage order; transpose to row-major if needed
+        if (param.order == "column-major") {
+            std::vector<da_int> tmp(n_test * k);
+            for (da_int q = 0; q < n_test; q++)
+                for (da_int j = 0; j < k; j++)
+                    tmp[q * k + j] = indices[q + j * n_test];
+            std::copy(tmp.begin(), tmp.end(), indices);
+        }
+    } else {
+        // Inner product: compute pairwise distances via GEMM so each query's distances
+        // are contiguous, then k-select per query. Output is always row-major.
+        std::vector<T> distances((size_t)n_test * n_train, T(0));
+        std::vector<T> kdist(k);
+        if (param.order == "row-major") {
+            datest_blas::cblas_gemm(CblasRowMajor, CblasNoTrans, CblasTrans, n_test,
+                                    n_train, nf, -(T)1.0, X_test, ldx_test, X_train,
+                                    ldx_train, (T)0.0, distances.data(), n_train);
+        } else {
+            datest_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, n_train,
+                                    n_test, nf, -(T)1.0, X_train, ldx_train, X_test,
+                                    ldx_test, (T)0.0, distances.data(), n_train);
+        }
+        for (da_int q = 0; q < n_test; q++) {
+            std::copy_n(distances.data() + q * n_train, k, kdist.data());
+            smaller_values_and_indices(n_train, distances.data() + q * n_train, k,
+                                       indices + q * k, kdist.data(), 0, true);
+            datest_blas::cblas_scal(k, (T)-1.0, kdist.data(), 1);
+            // Sort the k selected indices by ascending distance so ground-truth order
+            // matches the sorted output returned by IVF.
+            std::vector<da_int> order(k);
+            std::iota(order.begin(), order.end(), 0);
+            std::sort(order.begin(), order.end(),
+                      [&](da_int a, da_int b) { return kdist[a] > kdist[b]; });
+            std::vector<da_int> sorted_ind(k);
+            for (da_int j = 0; j < k; j++)
+                sorted_ind[j] = indices[q * k + order[j]];
+            std::copy(sorted_ind.begin(), sorted_ind.end(), indices + q * k);
+        }
     }
-
-    da_handle_destroy(&knn_handle);
     return status;
 }
 
-// For inner product based search we need a separate helper
 template <typename T>
-da_status compute_neighbors_ip(ANNParamType<T> param, da_int *true_neighbors,
-                               const T *X_train, da_int n_samples_train,
-                               da_int n_features, da_int ldx_train, const T *X_test,
-                               da_int n_samples_test, da_int ldx_test) {
-    std::vector<T> distances(n_samples_test * n_samples_train, 0.0);
-    std::vector<T> kdist(param.k);
-    // Perform the gemm calls so the distances for each query are contiguous in memory
-    if (param.order == "row-major") {
-        datest_blas::cblas_gemm(CblasRowMajor, CblasNoTrans, CblasTrans, n_samples_test,
-                                n_samples_train, n_features, -(T)1.0, X_test, ldx_test,
-                                X_train, ldx_train, (T)0.0, distances.data(),
-                                n_samples_train);
-    } else {
-        datest_blas::cblas_gemm(CblasColMajor, CblasNoTrans, CblasTrans, n_samples_train,
-                                n_samples_test, n_features, -(T)1.0, X_train, ldx_train,
-                                X_test, ldx_test, (T)0.0, distances.data(),
-                                n_samples_train);
-    }
-
-    for (da_int i = 0; i < n_samples_test; i++) {
-        std::copy_n(distances.data() + i * n_samples_train, param.k, kdist.data());
-        smaller_values_and_indices(n_samples_train,
-                                   distances.data() + i * n_samples_train, param.k,
-                                   true_neighbors + i * param.k, kdist.data(), 0, true);
-    }
-
-    return da_status_success;
-}
-
-template <typename T>
-T compute_recall(ANNParamType<T> param, da_int *approx_neighbors, const T *X_train,
-                 da_int n_samples_train, da_int n_features, da_int ldx_train,
+T compute_recall(ANNParamType<T> param, da_int n_features, da_int *approx_neighbors,
+                 const T *X_train, da_int n_samples_train, da_int ldx_train,
                  const T *X_test, da_int n_samples_test, da_int ldx_test) {
 
+    // compute_exact_knn always returns row-major indices
     std::vector<da_int> true_neighbors(n_samples_test * param.k);
-    if (param.metric == "inner product") {
-        compute_neighbors_ip(param, true_neighbors.data(), X_train, n_samples_train,
-                             n_features, ldx_train, X_test, n_samples_test, ldx_test);
-    } else {
-        compute_neighbors_knn(param, true_neighbors.data(), X_train, n_samples_train,
-                              n_features, ldx_train, X_test, n_samples_test, ldx_test);
-    }
+    compute_exact_knn(param, n_features, true_neighbors.data(), X_train, n_samples_train,
+                      ldx_train, X_test, n_samples_test, ldx_test);
 
-    // Recall = fraction of true nearest neighbors found by approximate search
-    // If data is column major, do some transposes so the indices returned by each query are contiguous in memory
-    // Don't need to tranpose true_neighbors for inner product as we handled that with the gemm formulation
+    // approx_neighbors is in storage order; transpose to row-major for column-major inputs
     if (param.order == "column-major") {
-        // transpose in place
 #if defined(AOCLDA_ILP64)
-        if (param.metric != "inner product") {
-            datest_blas::imatcopy('T', n_samples_test, param.k, 1.0,
-                                  reinterpret_cast<double *>(true_neighbors.data()),
-                                  n_samples_test, param.k);
-        }
         datest_blas::imatcopy('T', n_samples_test, param.k, 1.0,
                               reinterpret_cast<double *>(approx_neighbors),
                               n_samples_test, param.k);
 #else
-        if (param.metric != "inner product") {
-            datest_blas::imatcopy('T', n_samples_test, param.k, 1.0,
-                                  reinterpret_cast<float *>(true_neighbors.data()),
-                                  n_samples_test, param.k);
-        }
         datest_blas::imatcopy('T', n_samples_test, param.k, 1.0,
                               reinterpret_cast<float *>(approx_neighbors), n_samples_test,
                               param.k);
 #endif
     }
 
-    // now each row is contiguous and contains the indices for each query
+    // Both arrays are now row-major: true_neighbors[q*k..q*k+k-1] for each query q
     da_int count = 0;
     for (da_int i = 0; i < n_samples_test; i++) {
-        // simple approach: create a set of true_neighbors and check each approx_neighbor (which != -1)
         std::unordered_set<da_int> true_set(true_neighbors.data() + i * param.k,
                                             true_neighbors.data() + (i + 1) * param.k);
         for (da_int j = 0; j < param.k; j++) {
@@ -1993,4 +1989,155 @@ template <typename T> void GetANNRecallData(std::vector<ANNParamType<T>> &params
     UnitSphereEuclideanRow(params);
     UnitSphereIPCol(params);
     UnitSphereIPRow(params);
+}
+
+// Generate one IVF blocking test case with random data in the requested storage layout.
+// ld_extra is added to both ldx_train and ldx_test (padding columns/rows with zeros).
+template <typename T>
+ANNParamType<T>
+IVFBlockingTestData(da_int n_samples, da_int n_features, da_int n_list, da_int k,
+                    da_int query_blk_sz_override, da_int list_blk_sz_override,
+                    const std::string &metric, const std::string &order, da_int ld_extra,
+                    da_int n_queries, const std::string &test_name) {
+    ANNParamType<T> param;
+    param.test_name = test_name;
+    param.n_samples = n_samples;
+    param.n_features = n_features;
+    param.nlist = n_list;
+    param.nprobe = n_list; // full probe → exact recall
+    param.k = k;
+    param.metric = metric;
+    param.order = order;
+    param.n_queries = n_queries;
+    param.seed = 42;
+    param.kmeans_iter = 10;
+    param.algorithm = "ivfflat";
+    param.query_blk_sz_override = query_blk_sz_override;
+    param.list_blk_sz_override = list_blk_sz_override;
+
+    // Generate dense row-major data with fixed seeds
+    std::mt19937 rng_train(42);
+    std::uniform_real_distribution<T> dist(T(0.5), T(10.0));
+    std::vector<T> X_train_rm(n_samples * n_features);
+    for (auto &v : X_train_rm)
+        v = dist(rng_train);
+
+    std::mt19937 rng_test(99);
+    std::vector<T> X_test_rm(n_queries * n_features);
+    for (auto &v : X_test_rm)
+        v = dist(rng_test);
+
+    if (order == "row-major") {
+        param.ldx_train = n_features + ld_extra;
+        param.ldx_test = n_features + ld_extra;
+
+        param.X_train.assign((size_t)n_samples * param.ldx_train, T(0));
+        for (da_int i = 0; i < n_samples; i++)
+            for (da_int j = 0; j < n_features; j++)
+                param.X_train[i * param.ldx_train + j] = X_train_rm[i * n_features + j];
+
+        param.X_test.assign((size_t)n_queries * param.ldx_test, T(0));
+        for (da_int i = 0; i < n_queries; i++)
+            for (da_int j = 0; j < n_features; j++)
+                param.X_test[i * param.ldx_test + j] = X_test_rm[i * n_features + j];
+    } else {
+        param.ldx_train = n_samples + ld_extra;
+        param.ldx_test = n_queries + ld_extra;
+
+        param.X_train.assign((size_t)param.ldx_train * n_features, T(0));
+        for (da_int i = 0; i < n_samples; i++)
+            for (da_int j = 0; j < n_features; j++)
+                param.X_train[(size_t)j * param.ldx_train + i] =
+                    X_train_rm[i * n_features + j];
+
+        param.X_test.assign((size_t)param.ldx_test * n_features, T(0));
+        for (da_int i = 0; i < n_queries; i++)
+            for (da_int j = 0; j < n_features; j++)
+                param.X_test[(size_t)j * param.ldx_test + i] =
+                    X_test_rm[i * n_features + j];
+    }
+
+    return param;
+}
+
+template <typename T> void GetIVFBlockingTests(std::vector<ANNParamType<T>> &params) {
+    // Helper macro to avoid repetition: push one case per n_queries value
+    auto add = [&](da_int ns, da_int nf, da_int nl, da_int k, da_int q_ov, da_int l_ov,
+                   const std::string &metric, const std::string &order, da_int ld_extra,
+                   std::initializer_list<int> nqs, const std::string &prefix) {
+        for (int nq : nqs)
+            params.push_back(IVFBlockingTestData<T>(ns, nf, nl, k, q_ov, l_ov, metric,
+                                                    order, ld_extra, (da_int)nq,
+                                                    prefix + "_nq" + std::to_string(nq)));
+    };
+
+    // --- sqeuclidean row-major ---
+    add(200, 4, 8, 10, 1, 1, "sqeuclidean", "row-major", 0, {16, 24, 40},
+        "sqeuc_row_q1_l1");
+    add(200, 4, 8, 10, 4, 3, "sqeuclidean", "row-major", 0, {9, 17, 40},
+        "sqeuc_row_q4_l3");
+    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "row-major", 0, {6, 8, 9, 16, 17, 24, 40},
+        "sqeuc_row_q8_l7");
+    add(200, 4, 8, 10, 8, 8, "sqeuclidean", "row-major", 0, {16, 24}, "sqeuc_row_q8_l8");
+    add(200, 4, 8, 10, 16, 7, "sqeuclidean", "row-major", 0, {24, 40},
+        "sqeuc_row_q16_l7");
+    add(200, 4, 8, 10, 32, 15, "sqeuclidean", "row-major", 0, {40, 64},
+        "sqeuc_row_q32_l15");
+
+    // --- sqeuclidean column-major ---
+    add(200, 4, 8, 10, 4, 3, "sqeuclidean", "column-major", 0, {8, 9, 24},
+        "sqeuc_col_q4_l3");
+    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "column-major", 0, {8, 9, 24, 40},
+        "sqeuc_col_q8_l7");
+    add(200, 4, 8, 10, 16, 15, "sqeuclidean", "column-major", 0, {24, 40},
+        "sqeuc_col_q16_l15");
+
+    // --- sqeuclidean padded row-major (+3) ---
+    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "row-major", 3, {8, 9, 24, 40},
+        "sqeuc_row_pad3_q8_l7");
+    add(200, 4, 8, 10, 1, 1, "sqeuclidean", "row-major", 3, {9, 16},
+        "sqeuc_row_pad3_q1_l1");
+
+    // --- sqeuclidean padded column-major (+7) ---
+    add(200, 4, 8, 10, 8, 7, "sqeuclidean", "column-major", 7, {8, 24},
+        "sqeuc_col_pad7_q8_l7");
+
+    // --- inner product row-major ---
+    add(200, 4, 8, 10, 1, 1, "inner product", "row-major", 0, {16, 24}, "ip_row_q1_l1");
+    add(200, 4, 8, 10, 8, 7, "inner product", "row-major", 0, {8, 9, 24, 40},
+        "ip_row_q8_l7");
+    add(200, 4, 8, 10, 16, 7, "inner product", "row-major", 0, {24, 40}, "ip_row_q16_l7");
+    add(200, 4, 8, 10, 32, 15, "inner product", "row-major", 0, {40, 64},
+        "ip_row_q32_l15");
+
+    // --- inner product column-major ---
+    add(200, 4, 8, 10, 8, 8, "inner product", "column-major", 0, {8, 24, 40},
+        "ip_col_q8_l8");
+
+    // --- inner product padded row-major (+3) ---
+    add(200, 4, 8, 10, 8, 7, "inner product", "row-major", 3, {8, 24},
+        "ip_row_pad3_q8_l7");
+
+    // --- cosine row-major ---
+    add(200, 4, 8, 10, 4, 3, "cosine", "row-major", 0, {9, 17}, "cosine_row_q4_l3");
+    add(200, 4, 8, 10, 8, 7, "cosine", "row-major", 0, {8, 9, 24, 40},
+        "cosine_row_q8_l7");
+    add(200, 4, 8, 10, 16, 15, "cosine", "row-major", 0, {24, 40}, "cosine_row_q16_l15");
+    add(200, 4, 8, 10, 32, 15, "cosine", "row-major", 0, {40, 64}, "cosine_row_q32_l15");
+
+    // --- cosine column-major ---
+    add(200, 4, 8, 10, 8, 7, "cosine", "column-major", 0, {8, 24, 40},
+        "cosine_col_q8_l7");
+
+    // --- cosine padded row-major (+3) ---
+    add(200, 4, 8, 10, 8, 7, "cosine", "row-major", 3, {8, 24}, "cosine_row_pad3_q8_l7");
+
+    // --- cosine padded column-major (+7) ---
+    add(200, 4, 8, 10, 8, 7, "cosine", "column-major", 7, {8, 24},
+        "cosine_col_pad7_q8_l7");
+
+    // --- large cases
+    add(1000, 6, 16, 10, 8, 7, "sqeuclidean", "row-major", 0, {500, 2000}, "large_q8_l7");
+    add(1000, 6, 16, 10, 32, 15, "sqeuclidean", "row-major", 0, {500, 2000},
+        "large_q32_l15");
 }

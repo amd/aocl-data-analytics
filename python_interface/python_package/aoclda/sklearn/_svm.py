@@ -27,8 +27,20 @@
 """
 Patching scikit learn svm: SVC, SVR, nuSVC, nuSVR
 """
-# pylint: disable = missing-function-docstring, too-many-ancestors,
-# useless-return, super-init-not-called
+# pylint: disable=missing-function-docstring
+# pylint: disable=too-many-ancestors
+# pylint: disable=useless-return
+# pylint: disable=super-init-not-called
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-arguments
+# pylint: disable=too-many-positional-arguments
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-public-methods
+# pylint: disable=arguments-differ
+
+# Note: probability, probA_ and probB_ will be deprecated in scikit-learn 1.11 since their
+# implementation is not thread-safe, but we keep them for backward compatibility with older versions
+# of scikit-learn (our implementation is thread-safe).
 
 import warnings
 import numpy as np

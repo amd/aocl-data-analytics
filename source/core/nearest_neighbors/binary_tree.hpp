@@ -20,6 +20,9 @@
  * THE SOFTWARE.
  *
  * ************************************************************************ */
+#ifndef BINARY_TREE_HPP
+#define BINARY_TREE_HPP
+
 #include "da_error.hpp"
 #include "da_utils.hpp"
 #include "da_vector.hpp"
@@ -110,6 +113,9 @@ template <typename T> struct ball_node : public node<T> {
 // Lightweight partial MaxHeap implementation to keep track of tree searches
 template <typename T> class MaxHeap {
   public:
+    // Default constructor for use with std::vector
+    MaxHeap() : indices(nullptr), distances(nullptr), capacity(0), size(0) {}
+
     // Constructor from existing arrays of indices and distances
     MaxHeap(da_int capacity, da_int *indices, T *distances);
 
@@ -298,3 +304,5 @@ template <typename T> class ball_tree : public binary_tree<ball_tree<T>, ball_no
 } // namespace da_binary_tree
 
 } // namespace ARCH
+
+#endif

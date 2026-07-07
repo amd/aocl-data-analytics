@@ -310,23 +310,24 @@ da_status da_moment_s(da_order order, da_axis axis, da_int n_rows, da_int n_cols
  * \param[in] n_cols the number of columns in the data matrix. Constraint: \p n_cols @f$\ge 1@f$.
  * \param[in] X the \p n_rows @f$\times @f$ \p n_cols data matrix.
  * \param[in] ldx the leading dimension of the data matrix. Constraint: \p ldx @f$\ge@f$ \p n_rows if \p order = \p column_major, or \p ldx @f$\ge@f$ \p n_cols if \p order = \p row_major.
- * \param[in] q the quantile required. Constraint: q must lie in the interval [0,1].
- * \param[out] quantile the array which will hold the computed quantiles. If \p axis = \ref da_axis_col the array must be at least of size @f$n_cols@f$. If \p axis = \ref da_axis_row the array must be at least of size @f$n_rows@f$. If \p axis = \ref da_axis_all the array must be at least of size 1.
+ * \param[in] q the quantiles required. Constraint: All q[i] must lie in the interval [0,1].
+ * \param[in] n_q the number of quantiles inside \p q. Constraint: \p n_q @f$\ge 1@f$.
+ * \param[out] quantiles output array of shape @f$n_q \times n_{\text{cols}}@f$ if \p axis = \ref da_axis_col, @f$n_q \times n_{\text{rows}}@f$ if \p axis = \ref da_axis_row, or @f$n_q \times 1@f$ if \p axis = \ref da_axis_all. Stored in the same layout as \p order.
  * \param[in] quantile_type specifies the method used to compute the quantiles.
  * \return \ref da_status. The function returns:
  * - \ref da_status_success - the operation was successfully completed.
  * - \ref da_status_invalid_leading_dimension - the constraint on \p ldx was violated.
- * - \ref da_status_invalid_pointer - one of the arrays \p X or \p quantile is null.
+ * - \ref da_status_invalid_pointer - one of the arrays \p X, \p q or \p quantiles is null.
  * - \ref da_status_invalid_array_dimension - either \p n_rows @f$< 1@f$ or \p n_cols @f$< 1@f$.
- * - \ref da_status_invalid_input - \p q is not in the interval @f$[0,1]@f$.
+ * - \ref da_status_invalid_input - \p q is not in the interval @f$[0,1]@f$, or \p n_q is not @f$\ge 1@f$.
  * - \ref da_status_memory_error - a memory allocation error occurred.
  */
 da_status da_quantile_d(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
-                        const double *X, da_int ldx, double q, double *quantile,
-                        da_quantile_type quantile_type);
+                        const double *X, da_int ldx, const double *q, da_int n_q,
+                        double *quantiles, da_quantile_type quantile_type);
 da_status da_quantile_s(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
-                        const float *X, da_int ldx, float q, float *quantile,
-                        da_quantile_type quantile_type);
+                        const float *X, da_int ldx, const float *q, da_int n_q,
+                        float *quantiles, da_quantile_type quantile_type);
 /** \} */
 
 /** \{

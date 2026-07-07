@@ -51,6 +51,7 @@
 #undef METRICS_KERNELS_HPP
 #undef DA_RANDSVD_HPP
 #undef DA_QR_HPP
+#undef BINARY_TREE_HPP
 
 // Decision forest headers
 #undef DECISION_TREE_HPP

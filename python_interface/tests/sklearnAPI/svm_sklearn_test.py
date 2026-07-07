@@ -137,6 +137,14 @@ def test_svm(
     assert da_support_vectors == pytest.approx(sk_support_vectors, tol)
     assert da_n_support == pytest.approx(sk_n_support, 1e-10)
     assert da_n_features_in_ == sk_n_features_in_
+    # Drop params that differ purely due to upstream sklearn version changes:
+    # - 'probability' is deprecated in upstream sklearn >=1.8 for SVC/NuSVC
+    #   (value reported as 'deprecated'); the aocl-da patch keeps it as a
+    #   valid bool because its implementation is thread-safe.
+    # - 'cache_size' is reported as float in newer sklearn vs int in our patch.
+    for k in ('probability', 'cache_size'):
+        da_params.pop(k, None)
+        sk_params.pop(k, None)
     assert da_params == sk_params
     assert da_n_iter.all() > 0
 

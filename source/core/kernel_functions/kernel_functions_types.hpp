@@ -37,7 +37,7 @@ template <typename T>
 using exp_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, const T *);
 
 template <typename T>
-using pow_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, const T *, da_int);
+using pow_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T, da_int);
 
 template <typename T> using tanh_kernel_func_t = void (*)(da_int, da_int, T *, da_int, T);
 } // namespace da_kernel_functions_types

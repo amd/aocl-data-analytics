@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -32,6 +32,8 @@
 #include "da_error.hpp"
 #include "da_syrk.hpp"
 #include "da_utils.hpp"
+#include "kernel_functions_simd.hpp"
+#include "kf_tuning_tables.hpp"
 #include "macros.h"
 #include "miscellaneous.hpp"
 #include "pairwise_distances.hpp"
@@ -45,66 +47,83 @@ namespace da_kernel_functions {
 using namespace da_kernel_functions_types;
 using namespace std::string_literals;
 
-// Move the function pointer selection outside the loop
+// clang-format off
+// EXPONENTIAL KERNEL IMPLEMENTATIONS ==========================================
+inline const kernel_implementations<exp_kernel_func_t<float>, exp_kernel_func_t<double>>
+    kf_exp_implementations = {
+{{ // float map
+            /* scalar    */ exp_kernel_scalar<float>,
+            /* avx (sse) */ exp_kt<bsz::b128, float>,
+            /* avx2      */ exp_kt<bsz::b256, float>,
+ORL_AVX512F(/* avx512    */ exp_kt<bsz::b512, float>)
+}},
+{{ // double map
+            /* scalar    */ exp_kernel_scalar<double>,
+            /* avx (sse) */ exp_kt<bsz::b128, double>,
+            /* avx2      */ exp_kt<bsz::b256, double>,
+ORL_AVX512F(/* avx512    */ exp_kt<bsz::b512, double>)
+}}
+};
+// POWER KERNEL IMPLEMENTATIONS ==========================================
+inline const kernel_implementations<pow_kernel_func_t<float>, pow_kernel_func_t<double>>
+    kf_pow_implementations = {
+{{ // float map
+            /* scalar    */ pow_kernel_scalar<float>,
+            /* avx (sse) */ pow_kt<bsz::b128, float>,
+            /* avx2      */ pow_kt<bsz::b256, float>,
+ORL_AVX512F(/* avx512    */ pow_kt<bsz::b512, float>)
+}},
+{{ // double map
+            /* scalar    */ pow_kernel_scalar<double>,
+            /* avx (sse) */ pow_kt<bsz::b128, double>,
+            /* avx2      */ pow_kt<bsz::b256, double>,
+ORL_AVX512F(/* avx512    */ pow_kt<bsz::b512, double>)
+}}
+};
+// TANHKERNEL IMPLEMENTATIONS ==========================================
+inline const kernel_implementations<tanh_kernel_func_t<float>, tanh_kernel_func_t<double>>
+    kf_tanh_implementations = {
+{{ // float map
+            /* scalar    */ tanh_kernel_scalar<float>,
+            /* avx (sse) */ tanh_kt<bsz::b128, float>,
+            /* avx2      */ tanh_kt<bsz::b256, float>,
+ORL_AVX512F(/* avx512    */ tanh_kt<bsz::b512, float>)
+}},
+{{ // double map
+            /* scalar    */ tanh_kernel_scalar<double>,
+            /* avx (sse) */ tanh_kt<bsz::b128, double>,
+            /* avx2      */ tanh_kt<bsz::b256, double>,
+ORL_AVX512F(/* avx512    */ tanh_kt<bsz::b512, double>)
+}}
+};
+// =============================================================================
+// clang-format on
 
 template <typename T>
-exp_kernel_func_t<T> select_exp_kernel_function(vectorization_type vec_enum) {
-    switch (vec_enum) {
-    case scalar:
-        return &exp_kernel<T, vectorization_type::scalar>;
-    case avx:
-        return &exp_kernel<T, vectorization_type::avx>;
-    case avx2:
-        return &exp_kernel<T, vectorization_type::avx2>;
-    case avx512:
-#ifdef __AVX512F__
-        return &exp_kernel<T, vectorization_type::avx512>;
+exp_kernel_func_t<T> select_exp_kernel_function(vectorization_type isa) {
+#ifdef USE_SCALAR_MATH
+    return kf_exp_implementations.get<T>(vectorization_type::scalar);
 #else
-        return &exp_kernel<T, vectorization_type::avx2>;
+    return kf_exp_implementations.get<T>(isa);
 #endif
-    default:
-        return &exp_kernel<T, vectorization_type::scalar>;
-    }
 }
 
 template <typename T>
-pow_kernel_func_t<T> select_pow_kernel_function(vectorization_type vec_enum) {
-    switch (vec_enum) {
-    case scalar:
-        return &pow_kernel<T, vectorization_type::scalar>;
-    case avx:
-        return &pow_kernel<T, vectorization_type::avx>;
-    case avx2:
-        return &pow_kernel<T, vectorization_type::avx2>;
-    case avx512:
-#ifdef __AVX512F__
-        return &pow_kernel<T, vectorization_type::avx512>;
+pow_kernel_func_t<T> select_pow_kernel_function(vectorization_type isa) {
+#ifdef USE_SCALAR_MATH
+    return kf_pow_implementations.get<T>(vectorization_type::scalar);
 #else
-        return &pow_kernel<T, vectorization_type::avx2>;
+    return kf_pow_implementations.get<T>(isa);
 #endif
-    default:
-        return &pow_kernel<T, vectorization_type::scalar>;
-    }
 }
 
 template <typename T>
-tanh_kernel_func_t<T> select_tanh_kernel_function(vectorization_type vec_enum) {
-    switch (vec_enum) {
-    case scalar:
-        return &tanh_kernel<T, vectorization_type::scalar>;
-    case avx:
-        return &tanh_kernel<T, vectorization_type::avx>;
-    case avx2:
-        return &tanh_kernel<T, vectorization_type::avx2>;
-    case avx512:
-#ifdef __AVX512F__
-        return &tanh_kernel<T, vectorization_type::avx512>;
+tanh_kernel_func_t<T> select_tanh_kernel_function(vectorization_type isa) {
+#ifdef USE_SCALAR_MATH
+    return kf_tanh_implementations.get<T>(vectorization_type::scalar);
 #else
-        return &tanh_kernel<T, vectorization_type::avx2>;
+    return kf_tanh_implementations.get<T>(isa);
 #endif
-    default:
-        return &tanh_kernel<T, vectorization_type::scalar>;
-    }
 }
 
 /*
@@ -188,8 +207,9 @@ da_status rbf_kernel(da_order order, da_int m, da_int n, da_int k, const T *X, d
         return status;
     // Get vectorisation
     da_int first_dim = (order == column_major) ? m : n;
-    vectorization_type vectorisation;
-    select_simd_size<T>(first_dim, vectorisation);
+    vectorization_type vectorisation =
+        Oracle<KernelSelection>(::da_kernel_functions::kf_tuning, tid<T>(), first_dim,
+                                oracle_lt<da_int>, "kf.isa");
     // Add telemetry
     context_set_hidden_settings("kf.setup"s,
                                 "kernel.type="s + std::to_string(vectorisation));
@@ -239,8 +259,9 @@ da_status polynomial_kernel(da_order order, da_int m, da_int n, da_int k, const 
     }
     // Get vectorisation
     da_int first_dim = (order == column_major) ? m : n;
-    vectorization_type vectorisation;
-    select_simd_size<T>(first_dim, vectorisation);
+    vectorization_type vectorisation =
+        Oracle<KernelSelection>(::da_kernel_functions::kf_tuning, tid<T>(), first_dim,
+                                oracle_lt<da_int>, "kf.isa");
     // Add telemetry
     context_set_hidden_settings("kf.setup"s,
                                 "kernel.type="s + std::to_string(vectorisation));
@@ -270,8 +291,9 @@ da_status sigmoid_kernel(da_order order, da_int m, da_int n, da_int k, const T *
     }
     // Get vectorisation
     da_int first_dim = (order == column_major) ? m : n;
-    vectorization_type vectorisation;
-    select_simd_size<T>(first_dim, vectorisation);
+    vectorization_type vectorisation =
+        Oracle<KernelSelection>(::da_kernel_functions::kf_tuning, tid<T>(), first_dim,
+                                oracle_lt<da_int>, "kf.isa");
     // Add telemetry
     context_set_hidden_settings("kf.setup"s,
                                 "kernel.type="s + std::to_string(vectorisation));
@@ -423,6 +445,8 @@ inline void kernel_setup(da_order order, da_int m, da_int n, da_int k, const T *
         if (X_is_Y) {
             da_syrk(order, da_upper, da_no_trans, m, k, gamma, X, ldx, (T)0.0, D, ldd);
             // After syrk D matrix is upper triangular, this loop is to make D symmetric
+            // This copies n**2 / 2 - n elements; *_kernel_func can be changed to operate over
+            // the triangular part of symmetric matrix and avoid the copying...
             fill_upper_triangular(order, m, D, ldd);
         } else {
             da_blas::cblas_gemm(cblas_order, CblasNoTrans, CblasTrans, m, n, k, gamma, X,

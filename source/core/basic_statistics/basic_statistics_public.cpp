@@ -86,11 +86,11 @@ da_status da_moment(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
 
 template <typename T>
 da_status da_quantile(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
-                      const T *X, da_int ldx, T q, T *quant,
+                      const T *X, da_int ldx, const T *q, da_int n_q, T *quantiles,
                       da_quantile_type quantile_type) {
     DISPATCHER(nosave_stats,
                return (da_basic_statistics::quantile(order, axis, n_rows, n_cols, X, ldx,
-                                                     q, quant, quantile_type)));
+                                                     q, n_q, quantiles, quantile_type)));
 }
 
 template <typename T>
@@ -155,9 +155,11 @@ template da_status da_moment<float>(da_order, da_axis, da_int, da_int, const flo
 template da_status da_moment<double>(da_order, da_axis, da_int, da_int, const double *,
                                      da_int, da_int, da_int, double *, double *);
 template da_status da_quantile<float>(da_order, da_axis, da_int, da_int, const float *,
-                                      da_int, float, float *, da_quantile_type);
+                                      da_int, const float *, da_int, float *,
+                                      da_quantile_type);
 template da_status da_quantile<double>(da_order, da_axis, da_int, da_int, const double *,
-                                       da_int, double, double *, da_quantile_type);
+                                       da_int, const double *, da_int, double *,
+                                       da_quantile_type);
 template da_status da_five_point_summary<float>(da_order, da_axis, da_int, da_int,
                                                 const float *, da_int, float *, float *,
                                                 float *, float *, float *);

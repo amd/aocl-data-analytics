@@ -31,8 +31,11 @@ from ._aoclda.basic_stats import (
     pybind_mean, pybind_harmonic_mean, pybind_geometric_mean, pybind_variance,
     pybind_skewness, pybind_kurtosis, pybind_moment, pybind_quantile,
     pybind_five_point_summary, pybind_standardize, pybind_covariance_matrix,
-    pybind_correlation_matrix)
+    pybind_correlation_matrix
+)
 from ._internal_utils import check_convert_data
+
+import numpy as np
 
 
 def mean(X, axis="col"):
@@ -238,7 +241,7 @@ def quantile(X, q, method="linear", axis="col"):
         correspond to the 9 different quantile types commonly used (see :cite:t:`da_hyfa96` \
         for further details). These can specified using the ``method`` parameter. In each \
         case a number :math:`h` is computed, corresponding to the approximate location in the \
-        data array of the required quantile ``q``.
+        data array of the required quantiles ``q``.
 
         Note:
 
@@ -256,7 +259,8 @@ def quantile(X, q, method="linear", axis="col"):
 
         Args:
             X (array-like): data matrix of shape (:nref:`n_samples`, :nref:`n_features`).
-            q (float): the quantile required, must lie in the interval [0,1].
+            q (float | array-like): the quantile(s) required, must lie in the interval [0,1].
+                Can be a single scalar or a 1D array of quantile values.
             method (str, optional): specifies the method used to compute the quantiles.
 
                 - If ``method = 'inverted_cdf'`` :math:`h=n\times q`, return \
@@ -297,10 +301,15 @@ def quantile(X, q, method="linear", axis="col"):
             axis (str, optional): The axis over which quantiles are calculated.
 
         Returns:
-            numpy.ndarray: Depending on ``axis`` can have shape (:nref:`n_samples`, ),
-            (:nref:`n_features`, ) or (1, ): Calculated quantiles.
+            numpy.ndarray: A 1D array if ``axis='all'`` or ``len(q) == 1``.
+            Otherwise, a 2D array of shape (``len(q)``, num_stats) where
+            num_stats is :nref:`n_features` for ``axis='col'`` or
+            :nref:`n_samples` for ``axis='row'``.
     """
-    X, _, _ = check_convert_data(X, dtype='float', force_dtype=True)
+    X, _, dtype = check_convert_data(X, dtype='float', force_dtype=True)
+    if isinstance(q, (int, float)):
+        q = np.array([q])
+    q, _, _ = check_convert_data(q, dtype=dtype, force_dtype=True)
 
     return pybind_quantile(X, q, method, axis)
 
@@ -333,13 +342,9 @@ def five_point_summary(X, axis="col"):
     return pybind_five_point_summary(X, axis)
 
 
-def standardize(X,
-                shift=None,
-                scale=None,
-                dof=0,
-                reverse=False,
-                inplace=False,
-                axis="col"):
+def standardize(
+    X, shift=None, scale=None, dof=0, reverse=False, inplace=False, axis="col"
+):
     r"""
         Standardize a data matrix along the specified axis.
 
@@ -401,10 +406,12 @@ def standardize(X,
     X, order, dtype = check_convert_data(X, dtype='float', force_dtype=True)
     if shift is not None:
         shift, _, _ = check_convert_data(
-            shift, order=order, dtype=dtype, force_dtype=True)
+            shift, order=order, dtype=dtype, force_dtype=True
+        )
     if scale is not None:
         scale, _, _ = check_convert_data(
-            scale, order=order, dtype=dtype, force_dtype=True)
+            scale, order=order, dtype=dtype, force_dtype=True
+        )
     return pybind_standardize(X, shift, scale, dof, reverse, inplace, axis)
 
 

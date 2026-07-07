@@ -30,6 +30,7 @@
 #include "aoclda.h"
 #include "approximate_neighbors_options.hpp"
 #include "basic_handle.hpp"
+#include "binary_tree.hpp"
 #include "da_error.hpp"
 #include "da_vector.hpp"
 #include "macros.h"
@@ -94,6 +95,13 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     da_int n_index;
     // Inner vector contains rows assigned to each centroid
     std::vector<da_vector::da_vector<T>> indexed_vectors;
+    // Squared L2 norms of every indexed vector, parallel structure to indexed_vectors
+    // list_norms[list_idx][i] == ||indexed_vectors[list_idx][i]||^2
+    // Only populated for euclidean metric; computed once in add_ivfflat
+    std::vector<da_vector::da_vector<T>> list_norms;
+    // Squared L2 norms of each centroid; only populated for euclidean metric
+    // Computed once in train_ivfflat after k-means converges
+    std::vector<T> centroid_norms;
     // For each list: list_assignments maps each row in indexed_vectors to a global index
     // which is returned at search time. Global index runs from 0 to n_index-1
     // and each sample is indexed by the order it is added.
@@ -101,6 +109,29 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     // list_sizes stores the number of rows added to each list
     // old_list_sizes is needed for bookkeeping when add is called more than once
     std::vector<da_int> list_sizes, old_list_sizes;
+
+    void update_heaps_from_list_blk(da_int this_list_blk_sz, da_int q_count,
+                                    const da_int *list_blk_global_idx,
+                                    const T *fine_distances, da_int block_start,
+                                    const da_int *queries_processed,
+                                    da_binary_tree::MaxHeap<T> *heaps);
+
+    da_status ivfflat_search_query_parallel(da_int n_queries, da_int n_features,
+                                            da_int k_neigh, bool return_distance,
+                                            const T *X_test_ptr, da_int ldx_test,
+                                            const T *centroids_ptr,
+                                            da_int ld_centroids_local,
+                                            da_int query_blk_sz, da_int list_blk_sz,
+                                            da_int n_blocks, da_int final_query_blk_sz,
+                                            da_int n_threads, da_int *n_ind, T *n_dist);
+
+    da_status ivf_search(da_int n_queries, da_int n_features, const T *X_test,
+                         da_int ldx_test, da_int *n_ind, T *n_dist, da_int k_neigh,
+                         bool return_distance);
+
+    da_status kneighbors_compute_ivfflat(da_int n_queries, da_int n_features,
+                                         const T *X_test, da_int ldx_test, da_int *n_ind,
+                                         T *n_dist, da_int n_neigh, bool return_distance);
 
   public:
     ~approximate_neighbors();
@@ -148,18 +179,6 @@ template <typename T> class approximate_neighbors : public basic_handle<T> {
     da_status kneighbors(da_int n_queries, da_int n_features, const T *X_test,
                          da_int ldx_test, da_int *n_ind, T *n_dist, da_int k_neigh = 0,
                          bool return_distance = 0);
-
-    da_status euclidean_search(da_int n_queries, da_int n_features, const T *X_test,
-                               da_int ldx_test, da_int *n_ind, T *n_dist, da_int k_neigh,
-                               bool return_distance);
-    da_status inner_product_search(da_int n_queries, da_int n_features, const T *X_test,
-                                   da_int ldx_test, da_int *n_ind, T *n_dist,
-                                   da_int k_neigh, bool return_distance);
-
-    // ivfflat searching
-    da_status kneighbors_compute_ivfflat(da_int n_queries, da_int n_features,
-                                         const T *X_test, da_int ldx_test, da_int *n_ind,
-                                         T *n_dist, da_int n_neigh, bool return_distance);
 
     // Model storage
     da_status serialize(da_model_persistence::serialization_buffer &buffer) override;

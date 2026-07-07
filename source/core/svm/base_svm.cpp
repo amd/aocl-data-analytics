@@ -31,8 +31,10 @@
 #include "da_error.hpp"
 #include "da_omp.hpp"
 #include "da_std.hpp"
+#include "da_utils.hpp"
 #include "da_vector.hpp"
 #include "kernel_functions.hpp"
+#include "kf_tuning_tables.hpp"
 #include "macros.h"
 #include "miscellaneous.hpp"
 #include "options.hpp"
@@ -407,13 +409,15 @@ void base_svm<T>::decision_function_loop(
                outer_block_size, inner_block_count, outer_block_count,                   \
                inner_block_remainder, outer_block_remainder, n_support, kernel_matrices, \
                local_decisions, sv_norms, test_norms, sv_matrix, support_coefficients,   \
-               gamma, degree, coef0, kernel_f, vectorisation_full)
+               gamma, degree, coef0, kernel_f, vectorisation_full,                       \
+               ::da_kernel_functions::kf_tuning)
     for (da_int block_idx = 0; block_idx < total_blocks; block_idx++) {
         da_int outer_sample_block_idx = block_idx / inner_block_count;
         da_int inner_block_idx = block_idx % inner_block_count;
-        da_int tid = omp_get_thread_num();
-        T *my_kernel = kernel_matrices.data() + tid * inner_block_size * outer_block_size;
-        T *my_decision = local_decisions.data() + tid * outer_block_size;
+        da_int thid = omp_get_thread_num();
+        T *my_kernel =
+            kernel_matrices.data() + thid * inner_block_size * outer_block_size;
+        T *my_decision = local_decisions.data() + thid * outer_block_size;
 
         bool last_inner =
             inner_block_remainder > 0 && inner_block_idx == inner_block_count - 1;
@@ -422,9 +426,11 @@ void base_svm<T>::decision_function_loop(
         da_int cur_inner = last_inner ? inner_block_remainder : inner_block_size;
         da_int cur_outer = last_outer ? outer_block_remainder : outer_block_size;
         vectorization_type vectorisation = vectorisation_full;
-        if (last_inner || last_outer)
-            da_kernel_functions::select_simd_size<T>(std::max(cur_inner, cur_outer),
-                                                     vectorisation);
+        if (last_inner || last_outer) {
+            vectorisation = Oracle<KernelSelection>(
+                ::da_kernel_functions::kf_tuning, tid<T>(),
+                std::max(cur_inner, cur_outer), oracle_lt<da_int>, "kf.isa");
+        }
 
         da_int sample_start = outer_sample_block_idx * outer_block_size;
         const T *X_test_block = X_test + sample_start;
@@ -516,9 +522,9 @@ da_status base_svm<T>::decision_function(da_int nsamples, da_int nfeat, const T 
         }
     }
     // Precompute SIMD type for the common (full-size) blocks
-    vectorization_type vectorisation_full;
-    da_kernel_functions::select_simd_size<T>(std::max(inner_block_size, outer_block_size),
-                                             vectorisation_full);
+    vectorization_type vectorisation_full = Oracle<KernelSelection>(
+        ::da_kernel_functions::kf_tuning, tid<T>(),
+        std::max(inner_block_size, outer_block_size), oracle_lt<da_int>, "kf.isa");
 
     if (use_precomputed_norms)
         decision_function_loop<true>(
@@ -596,7 +602,7 @@ void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
 #pragma omp parallel for if (idx_to_compute_count > 64)                                  \
     num_threads(n_threads_get_slices) default(none)                                      \
     shared(idx, idx_to_compute, idx_to_compute_count, X_temp, kernel_temp, X, n, p,      \
-               ldx_2)
+               ldx_2, ::da_kernel_functions::kf_tuning)
         // Get the relevant slices of original matrix (working set)
         // Note: it would be more efficient to operate on row-major order
         for (da_int i = 0; i < idx_to_compute_count; i++) {
@@ -607,8 +613,9 @@ void base_svm<T>::kernel_compute(std::vector<da_int> &idx, da_int &idx_size,
         }
 
         // Call to appropriate kernel function. Note that only idx_to_compute_count columns of kernel_temp will be filled.
-        vectorization_type vectorisation;
-        da_kernel_functions::select_simd_size<T>(n, vectorisation);
+        vectorization_type vectorisation = Oracle<KernelSelection>(
+            ::da_kernel_functions::kf_tuning, tid<T>(), n, oracle_lt<da_int>, "kf.isa");
+
         // Variables used in euclidean_distance interface, 1 means to use precomputed norms, 2 means to compute norms
         da_int compute_X_norms = 1;
         da_int compute_y_norms = 2;

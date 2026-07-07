@@ -18,11 +18,11 @@ teams:
 
     assistants:
       - type: PRSummary
-        enabled: true
+        enabled: false
       - type: CodingStandard
         enabled: true
       - type: AIReviewCommentFix
-        enabled: true
+        enabled: false
       - type: CodeQLHistorical
         enabled: true
       - type: CodeQLScheduled

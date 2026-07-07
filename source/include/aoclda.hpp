@@ -89,7 +89,7 @@ da_status da_moment(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
                     T *mean, T *moment);
 template <typename T>
 da_status da_quantile(da_order order, da_axis axis, da_int n_rows, da_int n_cols,
-                      const T *X, da_int ldx, T q, T *quantile,
+                      const T *X, da_int ldx, const T *q, da_int n_q, T *quantiles,
                       da_quantile_type quantile_type);
 template <typename T>
 da_status da_five_point_summary(da_order order, da_axis axis, da_int n_rows,

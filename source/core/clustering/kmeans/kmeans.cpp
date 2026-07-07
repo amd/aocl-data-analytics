@@ -32,6 +32,7 @@
 #include "miscellaneous.hpp"
 #include "model_persistence.hpp"
 #include "pairwise_distances.hpp"
+#include <cmath>
 #include <cstdlib>
 #include <limits>
 #include <numeric>
@@ -306,7 +307,7 @@ da_status kmeans<T>::set_init_centres(const T *C_in, da_int ldc_in) {
     if (this->order == row_major) {
         // Transpose C to column-major
         try {
-            C_temp = new T[n_clusters * n_features];
+            C_temp = new T[(size_t)n_clusters * (size_t)n_features];
             ARCH::da_utils::copy_transpose_2D_array_row_to_column_major<T>(
                 n_clusters, n_features, C_in, ldc_in, C_temp, n_clusters);
             C = C_temp;
@@ -446,7 +447,7 @@ template <typename T> da_status kmeans<T>::compute() {
             this->A_order = row_major;
             if (this->order == column_major) {
                 // Transpose A to row-major
-                A_temp = new T[n_samples * n_features];
+                A_temp = new T[(size_t)n_samples * (size_t)n_features];
                 ARCH::da_utils::copy_transpose_2D_array_column_to_row_major<T>(
                     n_samples, n_features, A_usr, lda_usr, A_temp, n_features);
                 this->A = A_temp;
@@ -462,7 +463,7 @@ template <typename T> da_status kmeans<T>::compute() {
             this->A_order = column_major;
             if (this->order == row_major) {
                 // Transpose A to column-major
-                A_temp = new T[n_samples * n_features];
+                A_temp = new T[(size_t)n_samples * (size_t)n_features];
                 ARCH::da_utils::copy_transpose_2D_array_row_to_column_major<T>(
                     n_samples, n_features, A_usr, lda_usr, A_temp, n_samples);
                 this->A = A_temp;
@@ -483,7 +484,7 @@ template <typename T> da_status kmeans<T>::compute() {
                 this->A_order = column_major;
                 if (this->order == row_major) {
                     // Transpose A to column-major
-                    A_temp = new T[n_samples * n_features];
+                    A_temp = new T[(size_t)n_samples * (size_t)n_features];
                     ARCH::da_utils::copy_transpose_2D_array_row_to_column_major<T>(
                         n_samples, n_features, A_usr, lda_usr, A_temp, n_samples);
                     this->A = A_temp;
@@ -546,8 +547,8 @@ template <typename T> da_status kmeans<T>::compute() {
 
     // Initialize some arrays
     try {
-        current_cluster_centres->resize(n_clusters * n_features, 0.0);
-        previous_cluster_centres->resize(n_clusters * n_features, 0.0);
+        current_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, 0.0);
+        previous_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, 0.0);
         thd_cluster_centres.resize(n_threads);
         thd_work1.resize(n_threads);
         thd_work2.resize(n_threads);
@@ -556,14 +557,15 @@ template <typename T> da_status kmeans<T>::compute() {
         thd_work_int.resize(n_threads);
         if (use_mixed_precision) {
             // We will need to store a lower precision copy of A and C
-            A_lp.resize(n_samples * n_features);
-            C_lp.resize(n_clusters * n_features);
+            A_lp.resize((size_t)n_samples * (size_t)n_features);
+            C_lp.resize((size_t)n_clusters * (size_t)n_features);
         }
         // Allocate per-thread storage with padding to avoid false sharing
         da_int pad_T = 128 / sizeof(T);
         da_int pad_int = 128 / sizeof(da_int);
         for (da_int t = 0; t < n_threads; t++) {
-            thd_cluster_centres[t].resize(n_clusters * n_features + pad_T, 0.0);
+            thd_cluster_centres[t].resize((size_t)n_clusters * (size_t)n_features + pad_T,
+                                          0.0);
             thd_work1[t].resize(n_clusters + pad_T, 0.0);
             thd_work2[t].resize(n_clusters + pad_T, 0.0);
             thd_work3[t].resize(n_clusters + pad_T, 0.0);
@@ -579,7 +581,7 @@ template <typename T> da_status kmeans<T>::compute() {
         current_labels->resize(n_samples, 0);
         previous_labels->resize(n_samples, 0);
         if (n_init > 1) {
-            best_cluster_centres->resize(n_clusters * n_features, 0.0);
+            best_cluster_centres->resize((size_t)n_clusters * (size_t)n_features, 0.0);
             best_labels->resize(n_samples, 0);
         }
     } catch (std::bad_alloc const &) {
@@ -596,17 +598,19 @@ template <typename T> da_status kmeans<T>::compute() {
 
         switch (algorithm) {
         case elkan:
-            workcc1.resize(n_clusters * n_clusters, 0.0);
-            workcs1.resize(n_samples * (n_clusters + padding), 0.0);
+            workcc1.resize((size_t)n_clusters * (size_t)n_clusters, 0.0);
+            workcs1.resize((size_t)n_samples * (size_t)(n_clusters + padding), 0.0);
             works1.resize(n_samples, 0.0);
             break;
         case macqueen:
-            workcs1.resize(max_block_size * n_clusters, 0.0);
+            workcs1.resize((size_t)max_block_size * (size_t)n_clusters, 0.0);
             workc2.resize(n_clusters, 0.0);
             works1.resize(n_samples, 0.0);
             break;
         case lloyd:
-            workcs1.resize(max_block_size * (n_clusters + padding) * n_threads, 0.0);
+            workcs1.resize((size_t)max_block_size * (size_t)(n_clusters + padding) *
+                               (size_t)n_threads,
+                           0.0);
             works1.resize(n_samples, 0.0);
             break;
         case hartigan_wong:
@@ -709,8 +713,11 @@ template <typename T> da_status kmeans<T>::compute() {
 
         valid_run_found = true;
 
-        // Check if it's the best run yet
-        if (current_inertia < best_inertia) {
+        // Check if it's the best run yet. Also accept the first valid run
+        // unconditionally so best_cluster_centres is populated even when
+        // current_inertia is non-finite (e.g. NaN/Inf input poisons the
+        // comparison and would otherwise leave best_cluster_centres empty).
+        if (current_inertia < best_inertia || best_cluster_centres->empty()) {
             best_inertia = current_inertia;
             best_n_iter = current_n_iter;
             best_lp_n_iter = lp_n_iter;
@@ -842,7 +849,7 @@ da_status kmeans<T>::transform(da_int m_samples, da_int m_features, const T *X,
         // For row-major, we will transpose the cluster centres to row-major format
         std::vector<T> C_row_major;
         try {
-            C_row_major.resize(n_clusters * n_features);
+            C_row_major.resize((size_t)n_clusters * (size_t)n_features);
         } catch (std::bad_alloc const &) {
             return da_error(this->err, da_status_memory_error, // LCOV_EXCL_LINE
                             "Memory allocation failed.");
@@ -904,7 +911,8 @@ da_status kmeans<T>::predict(da_int k_samples, da_int k_features, const T *Y, da
     assign_lloyd_kernel(predict_kernel, padding, n_clusters);
 
     try {
-        y_work.resize(max_block_size * (n_clusters + padding) * n_threads);
+        y_work.resize((size_t)max_block_size * (size_t)(n_clusters + padding) *
+                      (size_t)n_threads);
         // Add padding to workc1 if needed but don't overwrite existing values
         workc1.resize(n_clusters + padding);
     } catch (std::bad_alloc const &) {
@@ -1001,8 +1009,11 @@ template <typename T> void kmeans<T>::perform_kmeans() {
             break;
         }
     }
-    if (converged == 1) {
-        // Tolerance-based convergence: means we should rerun labelling step without recomputing centres
+    if (converged == 1 || current_n_iter == max_iter) {
+        // Tolerance-based convergence OR max_iter exit: rerun the labelling
+        // step against the latest centres without recomputing them, so the
+        // returned labels are always consistent with cluster_centres and
+        // with predict() on the training data.
         std::swap(previous_labels, current_labels);
         std::swap(previous_cluster_centres, current_cluster_centres);
         // Perform one more iteration to update labels, but without updating the cluster centres
@@ -1496,8 +1507,17 @@ template <typename T> void kmeans<T>::kmeans_plusplus() {
     // In works3 form the distance of each point in A to the first chosen centre
     compute_distances_to_point(random_int, works3.data());
 
-    // Numerical errors could cause one of the distances to be slightly negative, leading to undefined behaviour in std::discrete_distribution
+    // Numerical errors could cause one of the distances to be slightly
+    // negative, and non-finite input data (NaN/Inf) could make a distance
+    // NaN or Inf. Both lead to undefined behaviour or an assertion failure
+    // in std::discrete_distribution (the weight sum is no longer > 0), so
+    // clamp negative and non-finite distances to zero before using works3
+    // as a weight vector.
     works3[random_int] = (T)0.0;
+    for (da_int i = 0; i < n_samples; i++) {
+        if (!std::isfinite(works3[i]) || works3[i] < (T)0.0)
+            works3[i] = (T)0.0;
+    }
 
     // Need to catch an edge case where all points are the same
     bool coincident_points = true;

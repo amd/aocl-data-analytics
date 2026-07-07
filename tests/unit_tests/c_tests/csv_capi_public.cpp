@@ -52,10 +52,14 @@ TEST(CsvCAPI, ReadDouble) {
     EXPECT_EQ(n_rows, 3);
     EXPECT_EQ(n_cols, 5);
 
-    if (A)
+    if (A != nullptr) {
         free(A);
-    if (headings)
+    }
+
+    if (headings != nullptr) {
         da_delete_string_array(&headings, n_cols);
+    }
+
     da_datastore_destroy(&store);
 }
 
@@ -77,10 +81,14 @@ TEST(CsvCAPI, ReadFloat) {
     EXPECT_EQ(n_rows, 3);
     EXPECT_EQ(n_cols, 5);
 
-    if (A)
+    if (A != nullptr) {
         free(A);
-    if (headings)
+    }
+
+    if (headings != nullptr) {
         da_delete_string_array(&headings, n_cols);
+    }
+
     da_datastore_destroy(&store);
 }
 
@@ -106,10 +114,14 @@ TEST(CsvCAPI, ReadInt) {
     EXPECT_EQ(da_read_csv_int(store, filepath, &A, &n_rows, &n_cols, &headings),
               da_status_success);
 
-    if (A)
+    if (A != nullptr) {
         free(A);
-    if (headings)
+    }
+
+    if (headings != nullptr) {
         da_delete_string_array(&headings, n_cols);
+    }
+
     da_datastore_destroy(&store);
 }
 
@@ -131,10 +143,14 @@ TEST(CsvCAPI, ReadUint8) {
     EXPECT_EQ(n_rows, 2);
     EXPECT_EQ(n_cols, 4);
 
-    if (A)
+    if (A != nullptr) {
         free(A);
-    if (headings)
+    }
+
+    if (headings != nullptr) {
         da_delete_string_array(&headings, n_cols);
+    }
+
     da_datastore_destroy(&store);
 }
 
@@ -156,10 +172,14 @@ TEST(CsvCAPI, ReadString) {
     EXPECT_EQ(n_rows, 3);
     EXPECT_EQ(n_cols, 4);
 
-    if (A)
+    if (A != nullptr) {
         EXPECT_EQ(da_delete_string_array(&A, n_rows * n_cols), da_status_success);
-    if (headings)
+    }
+
+    if (headings != nullptr) {
         da_delete_string_array(&headings, n_cols);
+    }
+
     da_datastore_destroy(&store);
 }
 

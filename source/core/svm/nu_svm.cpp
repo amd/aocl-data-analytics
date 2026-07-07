@@ -32,6 +32,7 @@
 #include "da_std.hpp"
 #include "da_utils.hpp"
 #include "kernel_functions.hpp"
+#include "kf_tuning_tables.hpp"
 #include "macros.h"
 #include "svm.hpp"
 #include <boost/sort/spreadsort/float_sort.hpp>
@@ -403,7 +404,7 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
                      gradient_threads)                                                   \
     shared(n_blocks, block_size, residual, index_aux, cache, n, p, ldx_2, degree, coef0, \
                gamma, kernel_f, X, x_norm_aux, alpha_diff, gradient_local,               \
-               gradient_size, threading_error)
+               gradient_size, threading_error, ::da_kernel_functions::kf_tuning)
     // Loop over blocks and residual
     for (da_int i = 0; i <= n_blocks; i++) {
         da_int current_block_size = (i < n_blocks) ? block_size : residual;
@@ -433,8 +434,8 @@ da_status nusvm<T>::initialise_gradient(std::vector<T> &alpha_diff, da_int count
         }
 
         // Call to appropriate kernel function. Note that only idx_to_compute_count columns of kernel_temp will be filled.
-        vectorization_type vectorisation;
-        da_kernel_functions::select_simd_size<T>(n, vectorisation);
+        vectorization_type vectorisation = Oracle<KernelSelection>(
+            ::da_kernel_functions::kf_tuning, tid<T>(), n, oracle_lt<da_int>, "kf.isa");
         // Variables used in euclidean_distance interface, 1 means to use precomputed norms, 2 means to compute norms
         da_int compute_X_norms = 1;
         da_int compute_y_norms = 2;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2025 Advanced Micro Devices, Inc. All rights reserved.
+ * Copyright (C) 2024-2026 Advanced Micro Devices, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -54,9 +54,24 @@ void test_kernel_across_isa(
     const std::unordered_map<std::string, vectorization_type> &isa_list, da_int count,
     KernelSelector kernel_selector, KernelExecutor kernel_executor) {
     for (const auto &isa : isa_list) {
-        std::cout << "Dataset: " << std::to_string(count)
-                  << ", vectorisation: " << isa.first << std::endl;
         auto kernel_func = kernel_selector(isa.second);
+
+        std::cout << "Dataset: " << std::to_string(count)
+                  << ", vectorisation: " << isa.first;
+
+        if (!kernel_func) {
+            // Build does not have support for this ISA
+            std::cout << " SKIP (ISA not supported by this build)\n";
+            continue;
+        }
+        if (isa.second == vectorization_type::avx512 &&
+            !context::get_context()->has_avx512) {
+            // Local machine does not have AVX-512 support
+            std::cout << " SKIP (ISA not supported on this machine)\n";
+            continue;
+        }
+
+        std::cout << std::endl;
         std::vector<T> outcome = input;
         kernel_executor(kernel_func, outcome);
 
@@ -80,10 +95,7 @@ TYPED_TEST(kernel_internal_test, math_func) {
     std::vector<test_math_func_vec_type<TypeParam>> params;
 
     std::unordered_map<std::string, vectorization_type> isa_list = {
-        {"avx", avx},
-        {"avx2", avx2},
-        // will trickle down to AVX2 where is AVX512 not available
-        {"avx512", avx512}};
+        {"avx", avx}, {"avx2", avx2}, {"avx512", avx512}};
 
     for (auto &data_fun : set_test_data) {
         data_fun(data);
@@ -91,9 +103,10 @@ TYPED_TEST(kernel_internal_test, math_func) {
         // EXP KERNEL TEST
         std::cout << "EXP TEST" << std::endl;
         std::vector<TypeParam> expected = data.input;
-        exp_kernel<TypeParam, scalar>(data.first_dim, data.second_dim, expected.data(),
-                                      data.first_dim, data.multiplier, data.X_norm.data(),
-                                      data.Y_norm.data());
+        exp_kernel_func_t<TypeParam> exp_kf =
+            select_exp_kernel_function<TypeParam>(vectorization_type::scalar);
+        exp_kf(data.first_dim, data.second_dim, expected.data(), data.first_dim,
+               data.multiplier, data.X_norm.data(), data.Y_norm.data());
         test_kernel_across_isa<TypeParam>(
             data.input, expected, isa_list, count,
             [](vectorization_type vt) {
@@ -108,8 +121,10 @@ TYPED_TEST(kernel_internal_test, math_func) {
         // POW KERNEL TEST
         std::cout << "POW TEST" << std::endl;
         expected = data.input;
-        pow_kernel<TypeParam, scalar>(data.first_dim, data.second_dim, expected.data(),
-                                      data.first_dim, data.coef0, data.power);
+        pow_kernel_func_t<TypeParam> pow_kf =
+            select_pow_kernel_function<TypeParam>(vectorization_type::scalar);
+        pow_kf(data.first_dim, data.second_dim, expected.data(), data.first_dim,
+               data.coef0, data.power);
         test_kernel_across_isa<TypeParam>(
             data.input, expected, isa_list, count,
             [](vectorization_type vt) {
@@ -123,8 +138,10 @@ TYPED_TEST(kernel_internal_test, math_func) {
         // TANH KERNEL TEST
         std::cout << "TANH TEST" << std::endl;
         expected = data.input;
-        tanh_kernel<TypeParam, scalar>(data.first_dim, data.second_dim, expected.data(),
-                                       data.first_dim, data.coef0);
+        tanh_kernel_func_t<TypeParam> tanh_kf =
+            select_tanh_kernel_function<TypeParam>(vectorization_type::scalar);
+        tanh_kf(data.first_dim, data.second_dim, expected.data(), data.first_dim,
+                data.coef0);
         test_kernel_across_isa<TypeParam>(
             data.input, expected, isa_list, count,
             [](vectorization_type vt) {
